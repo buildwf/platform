@@ -1,27 +1,24 @@
-import { NavigationContext } from '@void/react';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it } from 'vite-plus/test';
-import type { PageObject } from 'void/pages-protocol';
 import { AdminNavigationFallback } from '../../src/admin/react/AdminNavigationFallback.tsx';
+import { SpaContext, type PageObject } from '../../src/admin/react/spa.tsx';
 
 it('renders the destination skeleton outside the Void page context', () => {
   const initialPageData: PageObject = {
     component: 'dashboard',
     props: { platformName: 'e2e Void', username: 'admin' },
-    params: {},
     shared: {},
     url: '/admin/',
-    errors: null,
   };
   const markup = renderToStaticMarkup(
     createElement(
-      NavigationContext.Provider,
+      SpaContext,
       {
         value: {
-          state: 'loading',
-          location: new URL('https://void.example/admin/users'),
-          method: 'GET',
+          page: initialPageData,
+          pending: new URL('https://void.example/admin/users'),
+          visit: async () => {},
         },
       },
       createElement(AdminNavigationFallback, { initialPageData }),
@@ -36,22 +33,20 @@ it('renders the destination skeleton outside the Void page context', () => {
 it('renders the Zero Trust skeleton for client navigation', () => {
   const markup = renderToStaticMarkup(
     createElement(
-      NavigationContext.Provider,
+      SpaContext,
       {
         value: {
-          state: 'loading',
-          location: new URL('https://void.example/admin/zero-trust'),
-          method: 'GET',
+          page: { component: 'dashboard', props: {}, shared: {}, url: '/admin/' },
+          pending: new URL('https://void.example/admin/zero-trust'),
+          visit: async () => {},
         },
       },
       createElement(AdminNavigationFallback, {
         initialPageData: {
           component: 'dashboard',
           props: { platformName: 'e2e Void', username: 'admin' },
-          params: {},
           shared: {},
           url: '/admin/',
-          errors: null,
         },
       }),
     ),

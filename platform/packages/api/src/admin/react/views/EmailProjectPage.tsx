@@ -9,7 +9,6 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@astryxdesign/core/Table';
-import { Link } from '@void/react';
 import { useRequest, useView } from 'react-fate';
 import {
   DEFAULT_EMAIL_BURST_LIMIT as DEFAULT_BURST_LIMIT,
@@ -17,6 +16,7 @@ import {
 } from '../../../email/limits.ts';
 import { EmailProjectView, emailProjectRequest } from '../../fate/views.ts';
 import { type AdminPageProps } from '../page-utils.ts';
+import { Link } from '../spa.tsx';
 import { STATUS_COLORS, formatDateTime } from './format.ts';
 import { FormNumberInput, FormTextInput } from './FormControls.tsx';
 import { Layout } from './Layout.tsx';

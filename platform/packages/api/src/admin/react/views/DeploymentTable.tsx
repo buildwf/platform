@@ -2,9 +2,9 @@
 
 import { Table, pixel, proportional, type TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
-import { Link } from '@void/react';
 import type { CSSProperties } from 'react';
 import type { Deployment } from '../../../types.ts';
+import { Link } from '../spa.tsx';
 import { CopyButton } from './CopyButton.tsx';
 import { formatDateTime } from './format.ts';
 

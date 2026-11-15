@@ -11,7 +11,6 @@ import {
   afterEach,
   vi,
 } from 'vite-plus/test';
-import { deserializePageData } from 'void/pages-server';
 import { createAdminFateClient } from '../../src/admin/fate/client.ts';
 import {
   DeploymentDetailView,
@@ -45,6 +44,7 @@ import {
   projects,
   users,
 } from '../../src/schema.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 import {
   setupEnv,
   teardownEnv,
@@ -326,7 +326,7 @@ describe('auth middleware', () => {
     const user = await createTestUser(env.db, 'regular');
     const res = await req('/admin/', user.adminJwt);
     expect(res.status).toBe(403);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('Sign in with an administrator account for this platform.');
     expect(html).toContain('href="/admin/logout"');
     expect(html).not.toContain('suspended');
@@ -381,7 +381,7 @@ describe('auth middleware', () => {
         { ...env, PLATFORM_INSTALLATION_ID: installed ? 'inst_test' : undefined },
       );
       expect(response.status).toBe(200);
-      const html = visibleMarkup(await response.text());
+      const html = visibleMarkup(await adminHtml(response));
       const checks = html.split('id="health-checks"')[1]?.split('</ul>')[0];
       expect(checks).toBeDefined();
       expect(checks?.match(/class="void-admin-health-check"/g)).toHaveLength(names.length);
@@ -404,9 +404,9 @@ describe('auth middleware', () => {
   test('serves authenticated React pages and Void navigation data', async () => {
     const admin = await createTestUser(env.db, 'react-admin', 'github', undefined, 'free', 'admin');
     const htmlResponse = await req('/admin/', admin.adminJwt);
-    const html = await htmlResponse.text();
-    expect(html).toContain('id="__VOID_PAGE_DATA__"');
-    expect(html).toContain('<div id="app">');
+    const html = await adminHtml(htmlResponse);
+    expect(html).toContain('id="void-admin-page"');
+    expect(html).toContain('<div id="void-admin-root">');
     expect(html).toContain('src="/admin/client.js"');
     expect(html).toContain('href="/admin/style.css"');
     expect(html).toContain('class="astryx-app-shell');
@@ -642,7 +642,7 @@ describe('auth middleware', () => {
     const admin = await createTestUser(env.db, 'admin', 'github', undefined, 'free', 'admin');
     const dashboard = await req('/admin/', admin.adminJwt);
     expect(dashboard.status).toBe(200);
-    expect(await dashboard.text()).not.toContain('href="/admin/platform"');
+    expect(await adminHtml(dashboard)).not.toContain('href="/admin/platform"');
 
     for (const path of ['/admin/platform', '/admin/platform/api']) {
       const response = await req(path, admin.adminJwt);
@@ -653,7 +653,7 @@ describe('auth middleware', () => {
   test('uses the installation name in admin login and page titles', async () => {
     const namedEnv = { ...env, PLATFORM_DISPLAY_NAME: '<Example Platform>' };
     const login = await app.fetch(new Request('http://localhost/admin/login'), namedEnv);
-    expect(await login.text()).toContain(
+    expect(await adminHtml(login)).toContain(
       '<title>Admin Login · &lt;Example Platform&gt; · Void</title>',
     );
 
@@ -666,7 +666,7 @@ describe('auth middleware', () => {
         namedEnv,
       );
       expect(response.status).toBe(200);
-      expect(await response.text()).toContain(
+      expect(await adminHtml(response)).toContain(
         `<title>${path === '/admin/' ? 'Dashboard' : 'Users'} · &lt;Example Platform&gt; · Void</title>`,
       );
     }
@@ -689,7 +689,7 @@ describe('auth middleware', () => {
     const res = await req('/admin/', admin.adminJwt);
 
     expect(res.status).toBe(403);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('Administrator access suspended');
     expect(html).toContain('Contact another platform administrator to restore access.');
     expect(html).toContain('href="/admin/logout"');
@@ -766,7 +766,7 @@ describe('auth middleware', () => {
       );
       expect(res.status).toBe(403);
       expect(res.headers.get('content-type')).toContain('text/html');
-      const html = await res.text();
+      const html = await adminHtml(res);
       expect(html).toContain('Refresh the dashboard and try again.');
       expect(html).toContain('href="/admin/"');
       expect(html).not.toContain(origin);
@@ -820,10 +820,11 @@ const configuringZeroTrust = {
 };
 
 function pageSnapshot(html: string): string {
-  const match =
-    /<script id="__VOID_PAGE_DATA__" type="application\/json">([\s\S]*?)<\/script>/.exec(html);
+  const match = /<script type="application\/json" id="void-admin-page">([\s\S]*?)<\/script>/.exec(
+    html,
+  );
   expect(match).not.toBeNull();
-  const page = deserializePageData(match![1]!) as { shared: { adminFateSnapshot?: unknown } };
+  const page = JSON.parse(match![1]!) as { shared: { adminFateSnapshot?: unknown } };
   expect(page.shared.adminFateSnapshot).toBeDefined();
   return JSON.stringify(page.shared.adminFateSnapshot);
 }
@@ -899,7 +900,7 @@ describe('admin Zero Trust', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('Cache-Control')).toBe('no-store');
     expect(res.headers.get('Referrer-Policy')).toBe('strict-origin');
-    const html = await res.text();
+    const html = await adminHtml(res);
     const visible = visibleMarkup(html);
     expect(visible).toContain('Project Zero Trust');
     expect(visible).toContain('Protect new projects by default');
@@ -932,7 +933,7 @@ describe('admin Zero Trust', () => {
 
     const res = await req('/admin/zero-trust', admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     const visible = visibleMarkup(html);
     expect(visible).toContain('Enabled');
     expect(visible).toContain('Not checked');
@@ -950,7 +951,7 @@ describe('admin Zero Trust', () => {
 
     const checked = await req('/admin/zero-trust?check=1', admin.adminJwt);
     expect(checked.status).toBe(200);
-    const checkedHtml = await checked.text();
+    const checkedHtml = await adminHtml(checked);
     expect(visibleMarkup(checkedHtml)).toContain('Missing or drifted');
     expectNoZeroTrustSecrets(checkedHtml);
     expectNoZeroTrustSecrets(pageSnapshot(checkedHtml));
@@ -983,7 +984,7 @@ describe('admin Zero Trust', () => {
       fateQuery('zeroTrust', '/admin/zero-trust', fields),
     );
     expect(page.status).toBe(200);
-    const text = await page.text();
+    const text = await adminHtml(page);
     expectNoZeroTrustSecrets(text);
     const body = JSON.parse(text) as {
       results: Array<{ ok: boolean; data?: Record<string, unknown> }>;
@@ -1030,7 +1031,7 @@ describe('admin Zero Trust', () => {
     expect(pageObject.component).toBe('zeroTrust');
     expect(pageObject.shared).not.toHaveProperty('adminFateSnapshot');
 
-    const dashboard = await (await req('/admin/', admin.adminJwt)).text();
+    const dashboard = await adminHtml(await req('/admin/', admin.adminJwt));
     expect(dashboard).toContain('href="/admin/zero-trust"');
   });
 
@@ -1051,7 +1052,7 @@ describe('admin Zero Trust', () => {
     });
 
     const projectPage = visibleMarkup(
-      await (await req(`/admin/projects/${project.id}`, admin.adminJwt)).text(),
+      await adminHtml(await req(`/admin/projects/${project.id}`, admin.adminJwt)),
     );
     expect(projectPage).toContain('AI Gateway logging');
     // Same wording as `void platform project show`.
@@ -1059,7 +1060,7 @@ describe('admin Zero Trust', () => {
       'off (set on project; plan &quot;free&quot; default: metadata) — pending (expected by ',
     );
     const userPage = visibleMarkup(
-      await (await req(`/admin/users/${admin.id}`, admin.adminJwt)).text(),
+      await adminHtml(await req(`/admin/users/${admin.id}`, admin.adminJwt)),
     );
     expect(userPage).toContain('AI Gateway logging default');
     expect(userPage).toContain('metadata');
@@ -1069,7 +1070,7 @@ describe('admin Zero Trust', () => {
     const admin = await createTestUser(env.db, 'zt-project', 'github', undefined, 'free', 'admin');
     const project = await createTestProject(env.db, admin.id, 'zt-project-off');
 
-    const html = await (await req(`/admin/projects/${project.id}`, admin.adminJwt)).text();
+    const html = await adminHtml(await req(`/admin/projects/${project.id}`, admin.adminJwt));
     const visible = visibleMarkup(html);
     expect(html).toContain('id="zero-trust"');
     expect(visible).toContain('Platform: not configured');
@@ -1094,7 +1095,7 @@ describe('admin Zero Trust', () => {
     // fetch and only show up as this log line.
     const logged = vi.spyOn(console, 'error');
 
-    const html = await (await req(`/admin/projects/${project.id}`, admin.adminJwt)).text();
+    const html = await adminHtml(await req(`/admin/projects/${project.id}`, admin.adminJwt));
     const visible = visibleMarkup(html);
     expect(visible).toContain('Platform: enabled');
     expect(visible).toContain('Desired: protected');
@@ -1132,7 +1133,7 @@ describe('admin Zero Trust', () => {
       }),
     );
 
-    const html = await (await req(`/admin/projects/${project.id}`, admin.adminJwt)).text();
+    const html = await adminHtml(await req(`/admin/projects/${project.id}`, admin.adminJwt));
     expect(visibleMarkup(html)).toContain('Platform: enabled, configuring');
     expect(visibleMarkup(html)).toContain('A Zero Trust reconcile operation is running.');
     expect(html).not.toContain(`action="/admin/projects/${project.id}/zero-trust"`);
@@ -1146,7 +1147,7 @@ describe('admin Zero Trust', () => {
       .insert(platformSettings)
       .values(zeroTrustSetting({ lastError: 'Access token was revoked' }));
 
-    const html = await (await req(`/admin/projects/${project.id}`, admin.adminJwt)).text();
+    const html = await adminHtml(await req(`/admin/projects/${project.id}`, admin.adminJwt));
     const visible = visibleMarkup(html);
     expect(visible).toContain('Platform: enabled, needs attention');
     expect(visible).toContain('Platform Zero Trust status: needs attention.');
@@ -1171,7 +1172,9 @@ describe('admin Zero Trust', () => {
     });
 
     expect(res.status).toBe(400);
-    expect(visibleMarkup(await res.text())).toContain('Project protection must be true or false.');
+    expect(visibleMarkup(await adminHtml(res))).toContain(
+      'Project protection must be true or false.',
+    );
   });
 
   test('renders an invalid installation form as an admin error page', async () => {
@@ -1191,7 +1194,7 @@ describe('admin Zero Trust', () => {
     expect(res.status).toBe(400);
     expect(res.headers.get('Cache-Control')).toBe('no-store');
     expect(res.headers.get('Referrer-Policy')).toBe('strict-origin');
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(visibleMarkup(html)).toContain('identity providers must contain between 1 and 16 ids');
     expect(html).not.toContain('form-token-value');
   });
@@ -1247,7 +1250,7 @@ describe('GET /admin/ (dashboard)', () => {
 
     const res = await req('/admin/', admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('Dashboard');
     expect(html).toContain('Users');
     expect(html).toContain('Projects');
@@ -1670,7 +1673,7 @@ describe('GET /admin/ (dashboard)', () => {
     });
     const response = await req('/admin/', admin.adminJwt);
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain('Top Projects by Traffic (last hour)');
+    expect(await adminHtml(response)).toContain('Top Projects by Traffic (last hour)');
     expect(
       fetchMock.mock.calls.some(([url]) => String(url).includes('/analytics_engine/sql')),
     ).toBe(false);
@@ -1680,7 +1683,7 @@ describe('GET /admin/ (dashboard)', () => {
     const admin = await createTestUser(env.db, 'admin1b', 'github', undefined, 'free', 'admin');
     mockCfApi();
     const res = await req('/admin/', admin.adminJwt);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('href="/admin/users"');
     expect(html).toContain('href="/admin/projects"');
     expect(html).toContain('href="/admin/deployments"');
@@ -1737,7 +1740,7 @@ describe('GET /admin/ (dashboard)', () => {
         ],
       }),
     });
-    const response = await res.text();
+    const response = await adminHtml(res);
     expect(res.status, response).toBe(200);
     const betaIndex = response.indexOf('"slug":"beta"');
     const alphaIndex = response.indexOf('"slug":"alpha"');
@@ -1784,7 +1787,7 @@ describe('GET /admin/ (dashboard)', () => {
         ],
       }),
     });
-    expect(res.status, await res.text()).toBe(200);
+    expect(res.status, await adminHtml(res)).toBe(200);
     expect(fetchMock).toHaveBeenCalled();
 
     vi.restoreAllMocks();
@@ -1798,7 +1801,7 @@ describe('GET /admin/users', () => {
 
     const res = await req('/admin/users', admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('user2');
   });
 
@@ -1811,13 +1814,13 @@ describe('GET /admin/users', () => {
 
     const res1 = await req('/admin/users', admin.adminJwt);
     expect(res1.status).toBe(200);
-    const html1 = await res1.text();
+    const html1 = await adminHtml(res1);
     expect(visibleMarkup(html1)).toContain('1 / 2');
     expect(html1).toContain('?page=2');
 
     const res2 = await req('/admin/users?page=2', admin.adminJwt);
     expect(res2.status).toBe(200);
-    const html2 = await res2.text();
+    const html2 = await adminHtml(res2);
     expect(visibleMarkup(html2)).toContain('2 / 2');
   });
 
@@ -1828,7 +1831,7 @@ describe('GET /admin/users', () => {
 
     const res = await req('/admin/users?search=findable', admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('findable');
     expect(html).toContain('name="search" value="findable"');
     expect(html).toContain('role="combobox"');
@@ -1843,7 +1846,7 @@ describe('GET /admin/users/:id', () => {
 
     const res = await req(`/admin/users/${user.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('detailuser');
     expect(html).toContain('Plan');
     expect(html).toContain('Suspension');
@@ -1856,7 +1859,7 @@ describe('GET /admin/users/:id', () => {
 
     const res = await req(`/admin/users/${user.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('>Plan<');
     expect(html).toContain('Requests / month');
     expect(html).toContain('3,000,000');
@@ -1879,7 +1882,7 @@ describe('GET /admin/users/:id', () => {
 
     const res = await req(`/admin/users/${user.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     // Should show "2 / 100" (2 deploys today, free tier limit 100)
     expect(visibleMarkup(html)).toContain('2 / 100');
 
@@ -2467,7 +2470,7 @@ describe('GET /admin/projects', () => {
     const displayedTime = 'Jan 2, 3:04 AM';
     for (const response of [projectsResponse, projectResponse, deploymentsResponse]) {
       expect(response.status).toBe(200);
-      expect(visibleMarkup(await response.text())).toContain(displayedTime);
+      expect(visibleMarkup(await adminHtml(response))).toContain(displayedTime);
     }
   });
 
@@ -2478,7 +2481,7 @@ describe('GET /admin/projects', () => {
 
     const res = await req('/admin/projects', admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('my-proj');
     const projectLink = visibleMarkup(html).match(
       /<a\b[^>]*href="https:\/\/my-proj\.void\.app"[^>]*>[\s\S]*?<\/a>/,
@@ -2501,14 +2504,14 @@ describe('GET /admin/projects', () => {
     // Page 1: should have 20 projects and a Next link
     const res1 = await req('/admin/projects?page=1', admin.adminJwt);
     expect(res1.status).toBe(200);
-    const html1 = await res1.text();
+    const html1 = await adminHtml(res1);
     expect(visibleMarkup(html1)).toContain('1 / 2');
     expect(html1).toContain('?page=2');
 
     // Page 2: should have 1 project and no Next link
     const res2 = await req('/admin/projects?page=2', admin.adminJwt);
     expect(res2.status).toBe(200);
-    const html2 = await res2.text();
+    const html2 = await adminHtml(res2);
     expect(visibleMarkup(html2)).toContain('2 / 2');
     expect(html2).toContain('?page=1');
   });
@@ -2537,7 +2540,7 @@ describe('GET /admin/projects', () => {
 
     const res = await req('/admin/projects?search=latest-owner', admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('name="search" value="latest-owner"');
     expect(html).toContain('role="combobox"');
     const alphaRow = tableRowContaining(html, `/admin/projects/${alpha.id}`);
@@ -2559,7 +2562,7 @@ describe('GET /admin/projects/:id', () => {
 
     const res = await req(`/admin/projects/${project.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('detail-proj');
     expect(html).toContain('Resources');
     expect(html).toContain('Recent Deployments');
@@ -2624,7 +2627,7 @@ describe('GET /admin/projects/:id', () => {
         )
       ).status,
     ).toBe(404);
-    const detail = await (await req(`/admin/projects/${project.id}`, admin.adminJwt)).text();
+    const detail = await adminHtml(await req(`/admin/projects/${project.id}`, admin.adminJwt));
     expect(visibleMarkup(detail)).toContain('Team members (2)');
     expect(detail).toContain(`/admin/projects/${project.id}/team/${teammate.id}/role`);
     expect(detail).not.toContain(`/admin/projects/${project.id}/team/${owner.id}/remove`);
@@ -2769,9 +2772,9 @@ describe('GET /admin/projects/:id', () => {
       status: 'revoked',
       revoked_by_user_id: admin.id,
     });
-    expect(await (await req(`/admin/projects/${project.id}`, admin.adminJwt)).text()).not.toContain(
-      'Pending invitations (1)',
-    );
+    expect(
+      await adminHtml(await req(`/admin/projects/${project.id}`, admin.adminJwt)),
+    ).not.toContain('Pending invitations (1)');
   });
 
   test('shows deployment error in project detail table', async () => {
@@ -2781,7 +2784,7 @@ describe('GET /admin/projects/:id', () => {
 
     const res = await req(`/admin/projects/${project.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('worker upload failed: 500');
   });
 
@@ -2792,7 +2795,7 @@ describe('GET /admin/projects/:id', () => {
 
     const res = await req(`/admin/projects/${project.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain(`/admin/deployments/${deployment.id}`);
   });
 });
@@ -2808,7 +2811,7 @@ describe('GET /admin/deployments', () => {
 
     const res = await req('/admin/deployments', admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('Deployments');
     expect(html).toContain(`/admin/projects/${project.id}`);
     expect(html).toContain('live');
@@ -2823,7 +2826,7 @@ describe('GET /admin/deployments', () => {
 
     const res = await req('/admin/deployments', admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('migration failed: syntax');
   });
 
@@ -2836,7 +2839,7 @@ describe('GET /admin/deployments', () => {
 
     const res = await req('/admin/deployments?search=0.8.9', admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('name="search" value="0.8.9"');
     expect(html).toContain('role="combobox"');
     expect(html).toContain('search-cli-version');
@@ -2858,7 +2861,7 @@ describe('GET /admin/deployments', () => {
 
     const res = await req('/admin/cli-versions', admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('CLI Versions');
     expect(html).toContain('Last 30 Days');
     expect(html).toContain('All Time');
@@ -2875,13 +2878,13 @@ describe('GET /admin/deployments', () => {
 
     const res1 = await req('/admin/deployments?page=1', admin.adminJwt);
     expect(res1.status).toBe(200);
-    const html1 = await res1.text();
+    const html1 = await adminHtml(res1);
     expect(visibleMarkup(html1)).toContain('1 / 2');
     expect(html1).toContain('?page=2');
 
     const res2 = await req('/admin/deployments?page=2', admin.adminJwt);
     expect(res2.status).toBe(200);
-    const html2 = await res2.text();
+    const html2 = await adminHtml(res2);
     expect(visibleMarkup(html2)).toContain('2 / 2');
     expect(html2).toContain('?page=1');
   });
@@ -2897,7 +2900,7 @@ describe('GET /admin/deployments/:id', () => {
 
     const res = await req(`/admin/deployments/${deployment.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain(deployment.id);
     expect(html).toContain('depldetail-proj');
     expect(html).toContain('live');
@@ -2919,7 +2922,7 @@ describe('GET /admin/deployments/:id', () => {
 
     const res = await req(`/admin/deployments/${deployment.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('Error');
     expect(html).toContain('worker upload failed: internal error');
   });
@@ -2943,7 +2946,7 @@ describe('GET /admin/deployments/:id', () => {
 
     const res = await req(`/admin/deployments/${id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('Manifest');
     expect(html).toContain('D1');
     expect(html).toContain('DB');
@@ -3071,7 +3074,7 @@ describe('GET /admin/deployments/:id', () => {
 
     const res = await req(`/admin/deployments/${deployment.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('Deploy Control');
     expect(html).toContain('Cancel Deploy');
     expect(html).toContain(`/admin/deployments/${deployment.id}/cancel`);
@@ -3110,7 +3113,7 @@ describe('GET /admin/login', () => {
   test('renders login page without auth', async () => {
     const res = await app.fetch(new Request('http://localhost/admin/login'), env);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('Sign in to administer');
     expect(html).toContain('Void Platform');
     expect(html).toContain('aria-label="Void"');
@@ -3145,7 +3148,7 @@ describe('GET /admin/login', () => {
     });
     try {
       const res = await app.fetch(new Request('http://localhost/admin/login'), env);
-      const html = await res.text();
+      const html = await adminHtml(res);
       expect(visibleMarkup(html)).toContain('Sign in with GitHub');
       expect(html).not.toContain('Sign in with Google');
     } finally {
@@ -3227,7 +3230,7 @@ describe('GET /admin/login', () => {
         env,
       );
       expect(callback.status).toBe(400);
-      const html = await callback.text();
+      const html = await adminHtml(callback);
       expect(html).toContain('GitHub rejected the callback URL.');
       expect(html).toContain('Error code: github_redirect_uri_mismatch');
       expect(html).toContain('Callback URL: http://localhost/auth/callback');
@@ -3347,7 +3350,7 @@ describe('POST /admin/projects/:id/owner', () => {
     });
 
     expect(response.status).toBe(200);
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(visibleMarkup(html)).toContain(`Transfer Ownership: ${project.slug}`);
     expect(html).toContain(owner.login);
     expect(html).toContain(target.login);
@@ -3403,7 +3406,7 @@ describe('POST /admin/projects/:id/owner', () => {
     });
 
     expect(response.status).toBe(200);
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(visibleMarkup(html)).toContain(`Converge Ownership State: ${project.slug}`);
     expect(html).toContain('This is a convergence-only operation');
     expect(html).toContain(`detach from <code>${formerOwner.id}</code>`);
@@ -3494,7 +3497,7 @@ describe('POST /admin/projects/:id/delete', () => {
 
     const res = await req(`/admin/projects/${project.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('Danger Zone');
     expect(html).toContain('Delete Project');
     expect(html).toContain(`/admin/projects/${project.id}/delete`);
@@ -3546,7 +3549,7 @@ describe('POST /admin/users/:id/delete', () => {
 
     const res = await req(`/admin/users/${user.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('Danger Zone');
     expect(html).toContain('Delete User');
     expect(html).toContain(`/admin/users/${user.id}/delete`);
@@ -3715,7 +3718,7 @@ describe('GET /admin/deployments/:id (logs section)', () => {
 
     const res = await req(`/admin/deployments/${deployment.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('Runtime Logs');
     expect(html).toContain('Live Tail');
     expect(html).toContain('log-entries');
@@ -3735,12 +3738,14 @@ describe('GET /admin/deployments/:id (logs section)', () => {
 
     const res = await req(`/admin/deployments/${deployment.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('role="combobox"');
     expect(html).toContain('placeholder="Filter logs"');
     expect(
-      deserializePageData(
-        html.match(/<script id="__VOID_PAGE_DATA__"[^>]*>([\s\S]*?)<\/script>/)![1],
+      JSON.parse(
+        html.match(
+          /<script type="application\/json" id="void-admin-page">([\s\S]*?)<\/script>/,
+        )![1]!,
       ),
     ).toMatchObject({ component: 'deploymentDetail' });
     expect(html).toContain('src="/admin/client.js"');
@@ -3766,7 +3771,7 @@ describe('GET /admin/deployments/:id (logs section)', () => {
 
     const res = await req(`/admin/deployments/${deployment.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).not.toContain('Runtime Logs');
   });
 });
@@ -3776,7 +3781,7 @@ describe('GET /admin/signup-control', () => {
     const admin = await createTestUser(env.db, 'admin-sc1', 'github', undefined, 'free', 'admin');
     const res = await req('/admin/signup-control', admin.adminJwt);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(visibleMarkup(html)).toContain('>Access</h1>');
     expect(visibleMarkup(html)).toContain('Signup is open to anyone with an enabled login');
     expect(html).toContain('Share these details manually');
@@ -3791,7 +3796,7 @@ describe('GET /admin/signup-control', () => {
       JSON.stringify([{ type: 'github', pattern: 'octocat', note: 'Test' }]),
     );
     const res = await req('/admin/signup-control', admin.adminJwt);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('octocat');
     expect(html).toContain('Test');
     await env.ROUTING.delete('signup:allowlist');
@@ -3818,7 +3823,7 @@ describe('GET /admin/signup-control', () => {
     );
 
     const res = await req('/admin/signup-control', admin.adminJwt);
-    const html = await res.text();
+    const html = await adminHtml(res);
 
     function rowFor(pattern: string): string {
       const markup = html.slice(html.indexOf('<div id="app">'));
@@ -3840,7 +3845,7 @@ describe('GET /admin/signup-control', () => {
   test('nav bar has a single Access link', async () => {
     const admin = await createTestUser(env.db, 'admin-sc2b', 'github', undefined, 'free', 'admin');
     const res = await req('/admin/signup-control', admin.adminJwt);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('href="/admin/signup-control"');
     expect(visibleMarkup(html)).toContain('Access');
     expect(html).not.toContain('href="/admin/invitations"');
@@ -3903,7 +3908,7 @@ describe('POST /admin/signup-control/add + delete', () => {
       secret: { ciphertext: 'unused', iv: 'unused', keyVersion: 'unused' },
     });
     const page = await req('/admin/signup-control', admin.adminJwt);
-    const html = await page.text();
+    const html = await adminHtml(page);
     expect(html).toContain('Exact provider subject');
     expect(visibleMarkup(html)).toContain('Company SSO (company)');
 
@@ -3999,7 +4004,7 @@ describe('POST /admin/signup-control/add + delete', () => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' } as Record<string, string>,
     });
     expect(res.status).toBe(400);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('href="/admin/"');
     expect(html).toContain('Refresh dashboard');
   });
@@ -4031,7 +4036,7 @@ describe('POST /admin/invitations/send', () => {
     await env.ROUTING.put('signup:enabled', 'true');
     try {
       const before = await req('/admin/signup-control', admin.adminJwt);
-      expect(visibleMarkup(await before.text())).toContain('Create invitations');
+      expect(visibleMarkup(await adminHtml(before))).toContain('Create invitations');
 
       const response = await req('/admin/invitations/send', admin.adminJwt, {
         method: 'POST',
@@ -4042,7 +4047,7 @@ describe('POST /admin/invitations/send', () => {
       expect(response.headers.get('Location')).toBe('/admin/signup-control?result=invited');
 
       const page = await req('/admin/signup-control?result=invited', admin.adminJwt);
-      const visible = visibleMarkup((await page.text()).split('<div id="app">')[1] ?? '');
+      const visible = visibleMarkup((await adminHtml(page)).split('<div id="app">')[1] ?? '');
       expect(visible).toContain('Invitations created. Share the platform link below');
       expect(visible).toContain('Email off');
       expect(visible.split('Direct grants')[1]?.split('Invitation history')[0]).not.toContain(
@@ -4089,7 +4094,7 @@ describe('POST /admin/invitations/send', () => {
         })),
       ]);
       const first = visibleMarkup(
-        (await (await req('/admin/signup-control', admin.adminJwt)).text()).split(
+        (await adminHtml(await req('/admin/signup-control', admin.adminJwt))).split(
           '<div id="app">',
         )[1] ?? '',
       );
@@ -4097,7 +4102,7 @@ describe('POST /admin/invitations/send', () => {
         'older@example.com',
       );
       const second = visibleMarkup(
-        (await (await req('/admin/signup-control?page=2', admin.adminJwt)).text()).split(
+        (await adminHtml(await req('/admin/signup-control?page=2', admin.adminJwt))).split(
           '<div id="app">',
         )[1] ?? '',
       );
@@ -4172,7 +4177,7 @@ describe('GET /signup-restricted', () => {
   test('explains administrator-controlled signup without auth', async () => {
     const res = await app.fetch(new Request('http://localhost/signup-restricted'), env);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('Signup Restricted');
     expect(html).toContain('require administrator approval');
   });

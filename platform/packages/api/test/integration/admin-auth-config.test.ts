@@ -14,6 +14,7 @@ import {
   platformAuthSettings,
   platformLoginConnections,
 } from '../../src/schema.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 import { clearTables, createTestUser, setupEnv, teardownEnv, type TestEnv } from './helpers.ts';
 import { nativeFormSubmission } from './native-form-browser.ts';
 
@@ -65,7 +66,7 @@ describe('browser authentication configuration', () => {
       { ...env, PLATFORM_AUTH_DATABASE_UNCACHED: 'false' },
     );
     expect(response.status).toBe(503);
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(html).toContain('Platform authentication requires an uncached database connection.');
     expect(html).toMatch(
       /<a\b(?=[^>]*class="[^"]*astryx-button)(?=[^>]*href="\/admin\/logout")[^>]*>[\s\S]*?Sign in again[\s\S]*?<\/a>/,
@@ -116,7 +117,7 @@ describe('browser authentication configuration', () => {
   it('links from authentication settings to the unified Access page without secrets', async () => {
     const response = await request(home);
     expect(response.status).toBe(200);
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(html).toContain('Platform protection');
     expect(html).toContain('Enable Cloudflare Access');
     expect(html).toContain('Disable Cloudflare Access');
@@ -125,12 +126,12 @@ describe('browser authentication configuration', () => {
     expect(html).toContain('Manage access');
     expect(html).toContain('href="/admin/signup-control"');
     expect(html).not.toContain('name="mode" value="public"');
-    const accessPage = await (await request('/admin/signup-control')).text();
+    const accessPage = await adminHtml(await request('/admin/signup-control'));
     expect(accessPage).toContain('Signup policy');
     expect(accessPage).toContain('name="mode" value="public"');
     expect(html).not.toContain(env.GITHUB_CLIENT_SECRET);
     expect(html).not.toContain(env.GOOGLE_CLIENT_SECRET);
-    const editor = await (await request(`${home}/connections/google`)).text();
+    const editor = await adminHtml(await request(`${home}/connections/google`));
     expect(editor.toLowerCase()).toContain('autocomplete="new-password"');
     expect(editor).not.toContain(env.GOOGLE_CLIENT_SECRET);
   });
@@ -151,7 +152,7 @@ describe('browser authentication configuration', () => {
     });
     const pending = (await readLoginRevision(env.db, 'google', 2))!;
     expect(await readLoginSecret(env, pending)).toBe(env.GOOGLE_CLIENT_SECRET);
-    const html = await (await request(home)).text();
+    const html = await adminHtml(await request(home));
     expect(html).toContain('&lt;script&gt;');
     expect(html).not.toContain('<script>alert(1)</script>');
     const audit = JSON.stringify(await env.db.select().from(operatorEvents));
@@ -218,7 +219,7 @@ describe('browser authentication configuration', () => {
   it('uses the same last-admin safeguards as the CLI and records the actual rejected status', async () => {
     const response = await request(`${home}/connections/github/disable`, { revision: '1' });
     expect(response.status).toBe(409);
-    expect(await response.text()).toContain('linked alternative');
+    expect(await adminHtml(response)).toContain('linked alternative');
     expect((await readLoginConnection(env.db, 'github'))?.enabled).toBe(true);
     expect(await env.db.select().from(operatorEvents)).toMatchObject([
       { status: 'failed', http_status: 409 },

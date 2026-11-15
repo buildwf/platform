@@ -10,10 +10,10 @@ import {
   TableRow,
 } from '@astryxdesign/core/Table';
 import { Heading, Text } from '@astryxdesign/core/Text';
-import { Link } from '@void/react';
 import { Suspense, useSyncExternalStore, type ReactElement, type ReactNode } from 'react';
 import { useListView, useRequest, useView, type Deferred, type ViewRef } from 'react-fate';
 import { DashboardView, dashboardRequest, TopProjectView } from '../../fate/views.ts';
+import { Link } from '../spa.tsx';
 import { AdminCard } from './AdminCard.tsx';
 import { DeploymentTable } from './DeploymentTable.tsx';
 import { formatDateTime, formatNumber } from './format.ts';

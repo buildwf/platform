@@ -11,6 +11,7 @@ import {
 import app from '../../src/index.ts';
 import { writePlanCatalog } from '../../src/plans.ts';
 import { builds } from '../../src/schema.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 import { verifyDeployToken, verifyPrerenderToken } from '../helpers/project-token.ts';
 import {
   createTestBuild,
@@ -104,7 +105,7 @@ describe('dynamic plan enforcement', () => {
       env,
     );
     expect(response.status).toBe(200);
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(html).toContain('Studio');
     expect(html).toMatch(/Requests \/ month[\s\S]*?>42</);
   });

@@ -1,6 +1,7 @@
 import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from '@void/platform';
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
 import app from '../../src/index.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 import { setupEnv, teardownEnv, type TestEnv } from './helpers.ts';
 
 let env: TestEnv;
@@ -27,7 +28,7 @@ describe('platform onboarding pages', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toContain('text/html');
     expect(response.headers.get('Cache-Control')).toBe('no-store');
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(html).toContain('<h1 id="void-auth-title">Welcome to &lt;Example Platform&gt;</h1>');
     expect(html).toContain('<title>Welcome · &lt;Example Platform&gt; · Void</title>');
     expect(html).toContain('npm install -g void');
@@ -71,7 +72,7 @@ describe('platform onboarding pages', () => {
       },
     );
     expect(response.status).toBe(200);
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(html).toContain('&lt;Example Platform&gt;');
     expect(html).toContain('<title>Get Started · &lt;Example Platform&gt; · Void</title>');
     expect(html).not.toContain('<Example Platform>');
@@ -92,7 +93,7 @@ describe('platform onboarding pages', () => {
       }),
       { ...env, PLATFORM_INSTALLATION_ID: 'example-installation' },
     );
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(html).toContain('Get Started with Void Platform');
     // `escapeHtml` escapes the quotes too; the browser renders them back.
     expect(html).toContain('void connect &#39;api.example.com&#39;');
@@ -110,7 +111,7 @@ describe('platform onboarding pages', () => {
     );
 
     expect(response.status).toBe(200);
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(html).toContain('<title>Accept Project Invitation · Void Platform</title>');
     expect(html).toContain('void connect &#39;api.example.com&#39;');
     expect(html).toContain('void project team accept pinv_a1b2c3d4e5f6');
@@ -135,7 +136,7 @@ describe('platform onboarding pages', () => {
     );
 
     expect(response.status).toBe(200);
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(html).toContain('<title>Get Started · Void Platform</title>');
     expect(html).not.toContain('void project team accept');
     expect(html).not.toContain('evil.example');
@@ -151,7 +152,7 @@ describe('platform onboarding pages', () => {
         env,
       );
       expect(response.status).toBe(200);
-      const html = await response.text();
+      const html = await adminHtml(response);
       expect(html).toContain('Void Platform');
       expect(html).not.toContain('Void Cloud');
       if (path === '/') {
@@ -164,7 +165,7 @@ describe('platform onboarding pages', () => {
     'preserves the hosted name at %s',
     async (origin) => {
       const response = await app.fetch(new Request(`${origin}/signup-restricted`), env);
-      expect(await response.text()).toContain(
+      expect(await adminHtml(response)).toContain(
         'New accounts on Void Cloud require administrator approval.',
       );
     },
@@ -177,7 +178,7 @@ describe('platform onboarding pages', () => {
       PLATFORM_INSTALLATION_ID: 'example-installation',
     });
     expect(response.status).toBe(200);
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(html).toContain(
       'New accounts on &lt;Example Platform&gt; require administrator approval.',
     );

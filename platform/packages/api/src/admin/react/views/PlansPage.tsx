@@ -16,13 +16,13 @@ import {
   type EditablePlanLimit,
   type PlatformPlanDefinition,
 } from '@void/platform/plans';
-import { Link } from '@void/react';
 import { useEffect, useState } from 'react';
 import { useRequest, useView } from 'react-fate';
 import type { AiLoggingMode, PlanAiLoggingSettings } from '../../../ai-logging-policy.ts';
 import { PlansView, plansRequest } from '../../fate/views.ts';
 import type { AdminPlanPreview, AdminPlanProgress } from '../../plans.ts';
 import type { AdminPageProps } from '../page-utils.ts';
+import { Link } from '../spa.tsx';
 import { FormCheckbox, FormNumberInput, FormSelector, FormTextInput } from './FormControls.tsx';
 import { Layout } from './Layout.tsx';
 import { PageStack } from './PageStack.tsx';

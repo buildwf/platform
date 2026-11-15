@@ -9,10 +9,10 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@astryxdesign/core/Table';
-import { Link } from '@void/react';
 import { useRequest, useView } from 'react-fate';
 import { ProjectDetailView, projectDetailRequest } from '../../fate/views.ts';
 import { type AdminPageProps } from '../page-utils.ts';
+import { Link } from '../spa.tsx';
 import { BuildTable } from './BuildTable.tsx';
 import { DeploymentTable } from './DeploymentTable.tsx';
 import { formatAiLoggingStatus, formatDateTime } from './format.ts';

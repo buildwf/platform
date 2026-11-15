@@ -36,6 +36,7 @@ import {
   users,
   projects,
 } from '../../src/schema.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 import { failAiLoggingWrites } from './ai-logging-helpers.ts';
 import {
   setupEnv,
@@ -86,7 +87,7 @@ async function authorize(extra: Record<string, string> = {}) {
   const response = await request('/oauth/authorize?' + params, {
     headers: { Cookie: 'void_oauth_user=' + user.jwt },
   });
-  const html = await response.text();
+  const html = await adminHtml(response);
   return {
     response,
     html,
@@ -466,7 +467,7 @@ describe('registered OAuth applications', () => {
       },
     });
     expect(response.status).toBe(200);
-    expect(await response.text()).toBe('ready');
+    expect(await adminHtml(response)).toBe('ready');
     expect(forwarded!.url).toBe(preview.url + '/hello');
     expect([...forwarded!.headers.keys()]).not.toContain('cookie');
     expect([...forwarded!.headers.keys()]).not.toContain('authorization');
@@ -792,7 +793,7 @@ describe('registered OAuth applications', () => {
     const [stored] = await env.db.select().from(oauthClients).where(eq(oauthClients.id, clientId));
     expect(stored!.secret_hash).not.toBe(clientSecret);
     const listed = await request('/admin/connected-apps', { headers });
-    expect(await listed.text()).not.toContain(clientSecret);
+    expect(await adminHtml(listed)).not.toContain(clientSecret);
     expect(
       (await request('/admin/connected-apps/' + clientId + '/disable', { method: 'POST', headers }))
         .status,
@@ -815,7 +816,7 @@ describe('registered OAuth applications', () => {
       code_challenge_method: 'S256',
     });
     const started = await request('/oauth/authorize?' + params);
-    const html = await started.text();
+    const html = await adminHtml(started);
     const requestId = html.match(/\/oauth\/login\?request=([^&"]+)/)![1]!;
     const proof = cookies(started);
     const bridge = await request('/oauth/login?request=' + requestId + '&provider=github', {
@@ -861,7 +862,7 @@ describe('registered OAuth applications', () => {
     const consent = await request('/oauth/authorize?request=' + requestId, {
       headers: { Cookie: proof + '; ' + cookies(signedIn) },
     });
-    expect(await consent.text()).toContain('Connect application');
+    expect(await adminHtml(consent)).toContain('Connect application');
   });
   it('returns only identity and rejects the grant on account and administrator APIs', async () => {
     const { token } = await connect();

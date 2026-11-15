@@ -30,6 +30,7 @@ import {
   users,
 } from '../../src/schema.ts';
 import { putAllowlist } from '../../src/signup-allowlist.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 import { clearTables, createTestUser, setupEnv, teardownEnv, type TestEnv } from './helpers.ts';
 
 let env: TestEnv;
@@ -377,7 +378,7 @@ describe('configured platform login routes', () => {
       cookie: start.headers.get('Set-Cookie')!.split(';')[0]!,
     });
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain('employee@example.com');
+    expect(await adminHtml(response)).toContain('employee@example.com');
     expect(
       await env.db
         .select()
@@ -532,7 +533,7 @@ describe('configured platform login routes', () => {
       }),
       env,
     );
-    expect(await page.text()).toContain('employee@example.com');
+    expect(await adminHtml(page)).toContain('employee@example.com');
     expect(
       await env.db
         .select()
@@ -721,7 +722,7 @@ describe('configured platform login routes', () => {
       env,
     );
     expect(page.status).toBe(400);
-    const html = await page.text();
+    const html = await adminHtml(page);
     expect(html).toContain('GitHub rejected this platform’s client ID or client secret.');
     expect(html).toContain('Error code: github_incorrect_client_credentials');
     expect(html).toContain(`Callback URL: ${origin}/auth/callback`);
@@ -912,7 +913,7 @@ describe('configured platform login routes', () => {
 
   it('shows dynamic admin login methods and never falls back to disabled methods', async () => {
     const response = await app.fetch(new Request(`${origin}/admin/login`), env);
-    expect((await response.text()).replaceAll('<!-- -->', '')).toContain(
+    expect((await adminHtml(response)).replaceAll('<!-- -->', '')).toContain(
       'Sign in with Company SSO',
     );
     await env.db
@@ -992,7 +993,7 @@ describe('configured platform login routes', () => {
     expect(
       (await operator('/connections/company/enable', { revision: 2, testId: launch.id })).status,
     ).toBe(200);
-    const listing = await (await operator('')).text();
+    const listing = await adminHtml(await operator(''));
     expect(listing).toContain('Updated company SSO');
     expect(listing).not.toContain('client-secret');
     expect(listing).not.toContain('ciphertext');

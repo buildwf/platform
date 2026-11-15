@@ -17,6 +17,7 @@ import { afterAll, beforeAll, beforeEach, expect, it } from 'vite-plus/test';
 import { importLegacyAuthentication } from '../../src/auth/configuration.ts';
 import { app } from '../../src/index.ts';
 import { users } from '../../src/schema.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 import { clearTables, createTestUser, setupEnv, teardownEnv, type TestEnv } from './helpers.ts';
 
 let env: TestEnv;
@@ -92,7 +93,7 @@ it.each(['staging', 'sandbox-drain'])(
     const response = await request('/admin/status.json', admin.adminJwt, {}, trafficState);
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('private, no-store');
-    const body = await response.text();
+    const body = await adminHtml(response);
     expect(JSON.parse(body)).toMatchObject({
       traffic: 'paused',
       checkpoint: { operation: { action: 'rollback', phase: 'waiting-for-sandbox-drain' } },
@@ -101,7 +102,7 @@ it.each(['staging', 'sandbox-drain'])(
     expect(body).not.toContain('resources');
     const html = await request('/admin/status', admin.adminJwt, {}, trafficState);
     expect(html.status).toBe(200);
-    expect(await html.text()).toContain('Waiting for Sandbox drain');
+    expect(await adminHtml(html)).toContain('Waiting for Sandbox drain');
   },
 );
 
@@ -164,7 +165,7 @@ it('reports unavailable checkpoints without exposing database errors or inventin
   const response = await request('/admin/status.json');
   expect(response.status).toBe(503);
   expect(await response.json()).toEqual({ error: 'Platform status is temporarily unavailable' });
-  const html = await (await request('/admin/status')).text();
+  const html = await adminHtml(await request('/admin/status'));
   expect(html).toContain('Live status is unavailable');
   expect(html).toContain('Unknown');
   expect(html).not.toContain('waiting-for-sandbox-drain');
@@ -178,7 +179,7 @@ it('omits empty operation details when no installation checkpoint is configured'
     { ...env, PLATFORM_INSTALLATION_ID: undefined, PLATFORM_TRAFFIC_STATE: '' },
   );
   expect(response.status).toBe(200);
-  const html = await response.text();
+  const html = await adminHtml(response);
   expect(html).toContain('Traffic enabled');
   expect(html).toContain(
     'Maintenance mode is off. The platform is allowing requests to your apps.',
@@ -197,7 +198,7 @@ it('shows installation failure even when the last recorded operation completed',
     operation: { ...manifest.operation!, phase: 'complete' },
   };
   await save();
-  const html = await (await request('/admin/status')).text();
+  const html = await adminHtml(await request('/admin/status'));
   expect(html).toContain('Operation needs attention');
   expect(html).toContain('Next step');
   expect(html).not.toContain('The lifecycle operation completed.');

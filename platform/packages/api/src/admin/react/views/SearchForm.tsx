@@ -1,7 +1,6 @@
 /** @jsxImportSource react */
 
 import { Button } from '@astryxdesign/core/Button';
-import { useRouter } from '@void/react';
 import { useCallback } from 'react';
 import { useFateClient } from 'react-fate';
 import {
@@ -12,6 +11,7 @@ import {
   UserSuggestionsView,
   userSuggestionsRequest,
 } from '../../fate/views.ts';
+import { useRouter } from '../spa.tsx';
 import { SearchTypeahead, type SearchSuggestion } from './SearchTypeahead.tsx';
 
 export function SearchForm({

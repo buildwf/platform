@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { renderOperationError } from '../../src/admin/operation-error.tsx';
 import type { ApiEnv } from '../../src/env.ts';
 import { OperatorError } from '../../src/operator/common.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 
 describe('admin operation rejection rendering', () => {
   it('preserves the explanation and status while escaping text and offering a recovery button', async () => {
@@ -13,7 +14,7 @@ describe('admin operation rejection rendering', () => {
     });
     const response = await app.request('/action', { method: 'POST' });
     expect(response.status).toBe(409);
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(html).toContain('Cannot remove &lt;script&gt;owner&lt;/script&gt;.');
     expect(html).toContain('href="/admin/"');
     expect(html).toContain('Refresh dashboard');
@@ -27,7 +28,7 @@ describe('admin operation rejection rendering', () => {
     });
     const response = await app.request('/action', { method: 'POST' });
     expect(response.status).toBe(401);
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(html).toMatch(
       /<a\b[^>]*\shref="\/admin\/logout"[^>]*>[\s\S]*?Sign in again[\s\S]*?<\/a>/,
     );
@@ -47,6 +48,6 @@ describe('admin operation rejection rendering', () => {
 
     const response = await app.request('/admin');
     expect(response.status).toBe(500);
-    expect(await response.text()).toBe('Internal Server Error');
+    expect(await adminHtml(response)).toBe('Internal Server Error');
   });
 });

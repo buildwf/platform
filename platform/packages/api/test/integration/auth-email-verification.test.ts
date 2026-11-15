@@ -24,6 +24,7 @@ import {
   oauthAccounts,
   users,
 } from '../../src/schema.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 import {
   setupEnv,
   teardownEnv,
@@ -1192,7 +1193,7 @@ describe('email match never reaches an administrator account', () => {
 
     expect(res.status).toBe(409);
     expect(res.headers.get('content-type')).toContain('text/html');
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('This login is not linked');
     expect(html).toContain('Sign in again with the GitHub or Google account you used before.');
     expect(html).not.toContain('contact your platform administrator');

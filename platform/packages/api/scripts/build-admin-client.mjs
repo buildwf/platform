@@ -20,12 +20,6 @@ await build({
   ],
   define: { 'process.env.NODE_ENV': JSON.stringify('production') },
   resolve: {
-    alias: {
-      '@void/react/pages-client': source('packages/react/src/runtime/pages-client.ts'),
-      '@void/react': source('packages/react/src/runtime/index.ts'),
-      'void/pages-client': source('packages/void/src/pages/client.ts'),
-      'void/pages-prefetch': source('packages/void/src/pages/prefetch.ts'),
-    },
     dedupe: ['react', 'react-dom'],
   },
   build: {

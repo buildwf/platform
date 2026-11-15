@@ -2,10 +2,10 @@
 
 import { Button } from '@astryxdesign/core/Button';
 import { Table, TableBody, TableCell, TableHeaderCell, TableRow } from '@astryxdesign/core/Table';
-import { Link } from '@void/react';
 import { useRequest, useView } from 'react-fate';
 import { DeploymentDetailView, deploymentDetailRequest } from '../../fate/views.ts';
 import { type AdminPageProps } from '../page-utils.ts';
+import { Link } from '../spa.tsx';
 import { CopyButton } from './CopyButton.tsx';
 import { DeploymentLogs } from './DeploymentLogs.tsx';
 import { DeploymentManifestCard } from './DeploymentManifestCard.tsx';

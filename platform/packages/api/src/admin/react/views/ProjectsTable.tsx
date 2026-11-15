@@ -8,8 +8,8 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@astryxdesign/core/Table';
-import { Link } from '@void/react';
 import type { Project } from '../../../types.ts';
+import { Link } from '../spa.tsx';
 import { formatDateTime } from './format.ts';
 import { ProjectUrlLink } from './ProjectUrlLink.tsx';
 

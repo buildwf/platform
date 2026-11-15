@@ -40,6 +40,7 @@ import {
   operatorEvents,
   users,
 } from '../../src/schema.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 import {
   clearTables,
   createTestBuild,
@@ -811,7 +812,7 @@ describe('provider-independent first administrator setup', () => {
       ...bindings(),
       PLATFORM_DISPLAY_NAME: '<Example Platform>',
     });
-    expect(await setupPage.text()).toContain(
+    expect(await adminHtml(setupPage)).toContain(
       '<title>Set up administrator · &lt;Example Platform&gt; · Void</title>',
     );
     expect((await form('/auth/bootstrap', { code: randomLoginProof() })).status).toBe(403);
@@ -820,7 +821,7 @@ describe('provider-independent first administrator setup', () => {
     ).toBe(403);
     const callback = await authenticateSetup();
     expect(callback.status).toBe(200);
-    const callbackHtml = await callback.text();
+    const callbackHtml = await adminHtml(callback);
     expect(callbackHtml).toContain('administrator@example.com');
     expect(callbackHtml).toContain('<title>Confirm platform administrator · Void Platform</title>');
     expect(await env.db.select().from(users)).toHaveLength(0);
@@ -903,7 +904,7 @@ describe('provider-independent first administrator setup', () => {
       bindings(),
     );
     expect(page.status).toBe(400);
-    const html = await page.text();
+    const html = await adminHtml(page);
     expect(html).toContain('The provider refused the token request.');
     expect(html).toContain('Error code: oidc_token_failed');
     expect(html).toContain(`Callback URL: ${origin}/auth/callback`);

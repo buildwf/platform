@@ -11,7 +11,6 @@ import {
   test,
   vi,
 } from 'vite-plus/test';
-import { decodePageData } from 'void/pages-server';
 import type { AdminPlanPreview, AdminPlanProgress } from '../../src/admin/plans.ts';
 import { PLAN_AI_LOGGING_PAGE_SIZE } from '../../src/ai-logging-plans.ts';
 import { PLAN_AI_LOGGING_SETTING } from '../../src/ai-logging-policy.ts';
@@ -19,6 +18,7 @@ import { app } from '../../src/index.ts';
 import { readPlanCatalog } from '../../src/plans.ts';
 import { getPlatformSetting } from '../../src/platform-settings.ts';
 import { operatorEvents, users } from '../../src/schema.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 import {
   clearTables,
   createTestProject,
@@ -96,8 +96,7 @@ async function preview(action: string, id: string, fields: Record<string, string
     { 'X-VoidPages': 'true' },
   );
   expect(response.status).toBe(200);
-  return (decodePageData(await response.json()) as { props: { preview: AdminPlanPreview } }).props
-    .preview;
+  return ((await response.json()) as { props: { preview: AdminPlanPreview } }).props.preview;
 }
 function apply(change: AdminPlanPreview) {
   return request(
@@ -131,7 +130,7 @@ describe('administrator plan dashboard', () => {
       replacementPlanId: 'free',
     });
     expect(response.status).toBe(200);
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(html).toContain('Move accounts to');
     expect(html).toContain('Maximum app CPU per request (ms)');
     expect(html).toContain('100,000,000');
@@ -166,16 +165,16 @@ describe('administrator plan dashboard', () => {
       expect(response.status).toBe(200);
       expect(response.headers.get('Referrer-Policy')).toBe('strict-origin');
       expect(response.headers.get('Cache-Control')).toContain('no-store');
-      const html = await response.text();
+      const html = await adminHtml(response);
       expect(html).toContain('href="/admin/config/plans"');
-      expect(html).toContain('__VOID_PAGE_DATA__');
+      expect(html).toContain('void-admin-page');
       if (path.endsWith('/free/edit')) {
         expect(html).toContain('value="3000000"');
         expect(html).toContain('Review changes');
         expect(html).toContain('Replacement plan');
       }
       const navigation = await request(path, undefined, { 'X-VoidPages': 'true' });
-      expect(decodePageData(await navigation.json())).toMatchObject({
+      expect(await navigation.json()).toMatchObject({
         component: path === home ? 'plans' : 'planEdit',
       });
     }
@@ -216,7 +215,7 @@ describe('administrator plan dashboard', () => {
     expect(saved.status).toBe(303);
     expect(saved.headers.get('Location')).toBe(`${home}/free/edit?notice=plan-saved&revision=1`);
     const updated = await request(saved.headers.get('Location')!);
-    expect(await updated.text()).toContain('Edit Starter');
+    expect(await adminHtml(updated)).toContain('Edit Starter');
     expect((await apply(proposed)).status).toBe(409);
     expect(
       (
@@ -252,7 +251,7 @@ describe('administrator plan dashboard', () => {
 
   test('reviews and saves the AI Gateway logging default from the edit form', async () => {
     const edit = await request(`${home}/pro/edit`);
-    expect(await edit.text()).toContain('AI Gateway logging default');
+    expect(await adminHtml(edit)).toContain('AI Gateway logging default');
     const proposed = await preview('set', 'pro', {
       ...(await editFields('pro')),
       aiLogging: 'metadata',
@@ -266,7 +265,7 @@ describe('administrator plan dashboard', () => {
       revision: '0',
       aiLogging: 'metadata',
     });
-    const html = await review.text();
+    const html = await adminHtml(review);
     expect(html).toContain('AI Gateway logging default');
     expect(html).toContain('Metadata only');
     expect((await apply(proposed)).status).toBe(303);
@@ -278,7 +277,7 @@ describe('administrator plan dashboard', () => {
   test('an untouched AI logging selector keeps a newer saved default', async () => {
     const off = await preview('set', 'pro', { ...(await editFields('pro')), aiLogging: 'off' });
     expect((await apply(off)).status).toBe(303);
-    expect(await (await request(`${home}/pro/edit`)).text()).toContain('name="aiLoggingInitial"');
+    expect(await adminHtml(await request(`${home}/pro/edit`))).toContain('name="aiLoggingInitial"');
     // A form loaded from a cached read before that change still shows Inherit. Only the
     // name changes, so the review must not clear the saved default.
     const renamed = await preview('set', 'pro', {
@@ -311,7 +310,7 @@ describe('administrator plan dashboard', () => {
     }
     const change = await preview('set', 'pro', { ...(await editFields('pro')), aiLogging: 'off' });
     const applied = await apply(change);
-    expect(decodePageData(await applied.json())).toMatchObject({
+    expect(await applied.json()).toMatchObject({
       component: 'planProgress',
       props: {
         initial: {
@@ -324,7 +323,7 @@ describe('administrator plan dashboard', () => {
         },
       },
     });
-    const plans = await (await request(home)).text();
+    const plans = await adminHtml(await request(home));
     expect(plans).toContain('AI logging publish pending');
     expect(plans).toContain('Continue AI logging publish');
     expect(plans.replaceAll('<!-- -->', '')).toContain(
@@ -340,13 +339,13 @@ describe('administrator plan dashboard', () => {
     expect(await getPlatformSetting(env.db, PLAN_AI_LOGGING_SETTING)).toMatchObject({
       publish: { complete: true },
     });
-    expect(await (await request(home)).text()).not.toContain('AI logging publish pending');
+    expect(await adminHtml(await request(home))).not.toContain('AI logging publish pending');
   });
 
   test('adds reserved-looking IDs, defaults, archives, restores, resets and removes with account replacement', async () => {
     const add = await preview('add', 'new', { name: 'New plan', copyFrom: 'pro' });
     expect((await apply(add)).status).toBe(303);
-    expect(await (await request(`${home}/new/edit`)).text()).toContain('Edit New plan');
+    expect(await adminHtml(await request(`${home}/new/edit`))).toContain('Edit New plan');
     expect((await apply(await preview('default', 'new'))).status).toBe(303);
     expect((await readPlanCatalog(env.db)).defaultPlanId).toBe('new');
     expect((await apply(await preview('default', 'free'))).status).toBe(303);
@@ -386,7 +385,7 @@ describe('administrator plan dashboard', () => {
       requestsPerMonth: '1000',
     });
     const result = await apply(change);
-    expect(decodePageData(await result.json())).toMatchObject({
+    expect(await result.json()).toMatchObject({
       component: 'planProgress',
       props: {
         initial: { complete: false, error: expect.any(String), processed: 0, revision: 1 },
@@ -394,8 +393,8 @@ describe('administrator plan dashboard', () => {
         returnTo: `${home}/free/edit?notice=plan-saved&revision=1`,
       },
     });
-    expect(await (await request(home)).text()).toContain('Continue account updates');
-    expect(await (await request(`${home}/free/edit`)).text()).not.toContain('Review changes');
+    expect(await adminHtml(await request(home))).toContain('Continue account updates');
+    expect(await adminHtml(await request(`${home}/free/edit`))).not.toContain('Review changes');
     failedAccount = undefined;
     const response = await app.fetch(
       new Request(`${origin}${home}/sync`, {

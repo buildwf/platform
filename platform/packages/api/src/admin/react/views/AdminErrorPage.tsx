@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 
-import { Link } from '@void/react';
+import { Link } from '../spa.tsx';
 import { AuthPage } from './AuthPage.tsx';
 export function AdminErrorPage({
   message,

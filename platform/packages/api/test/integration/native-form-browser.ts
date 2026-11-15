@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { chromium, type Browser } from 'playwright';
 import { afterAll } from 'vite-plus/test';
 import { app } from '../../src/index.ts';
@@ -25,7 +26,7 @@ export async function nativeFormSubmission(input: {
   noReferrer?: boolean;
 }) {
   browser ??= chromium.launch();
-  const context = await (await browser).newContext({ javaScriptEnabled: false });
+  const context = await (await browser).newContext();
   let pagePolicy: string | null = null;
   let submission:
     | { origin: string | undefined; referrer: string | undefined; status: number }
@@ -45,8 +46,32 @@ export async function nativeFormSubmission(input: {
     await page.route('**/*', async (route) => {
       const request = route.request();
       const url = new URL(request.url());
-      if (url.origin !== input.origin || request.resourceType() !== 'document') {
+      if (url.origin !== input.origin) {
         await route.abort();
+        return;
+      }
+      // The admin SPA needs its bundle and data requests; only documents are recorded below.
+      if (url.pathname === '/admin/client.js' || url.pathname === '/admin/style.css') {
+        await route.fulfill({
+          contentType: url.pathname.endsWith('.js') ? 'text/javascript' : 'text/css',
+          body: await readFile(new URL(`../../dist/admin-assets${url.pathname}`, import.meta.url)),
+        });
+        return;
+      }
+      if (request.resourceType() !== 'document') {
+        const response = await app.fetch(
+          new Request(request.url(), {
+            method: request.method(),
+            headers: await request.allHeaders(),
+            ...(request.method() === 'POST' ? { body: request.postData() ?? '' } : {}),
+          }),
+          input.env,
+        );
+        await route.fulfill({
+          status: response.status,
+          headers: Object.fromEntries(response.headers),
+          body: Buffer.from(await response.arrayBuffer()),
+        });
         return;
       }
       const headers = await request.allHeaders();
@@ -85,6 +110,8 @@ export async function nativeFormSubmission(input: {
       });
     });
     await page.goto(`${input.origin}${input.path}`);
+    // The admin is an SPA: wait for it to render; the form itself still submits natively.
+    await page.locator('[data-hydrated="true"]').waitFor();
     for (const [name, value] of Object.entries(input.fields)) {
       await page.locator(`input[name="${name}"]`).fill(value);
     }

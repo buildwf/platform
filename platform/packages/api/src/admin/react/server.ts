@@ -1,10 +1,9 @@
-import { renderReactPage } from '@void/react/pages-server';
 import type { Context } from 'hono';
-import type { PageObject } from 'void/pages-protocol';
 import type { ApiEnv } from '../../env.ts';
 import { formatPlatformPageTitle } from '../../platform-identity.ts';
 import type { createAdminFateClient } from '../fate/client.ts';
-import { adminComponents, adminLayoutTree, type AdminPageId } from './pages.ts';
+import type { AdminPageId } from './pages.ts';
+import type { PageObject } from './spa.tsx';
 
 export async function renderAdminPage(
   context: Context<ApiEnv>,
@@ -21,7 +20,6 @@ export async function renderAdminPage(
   const pageObj: PageObject = {
     component,
     props,
-    params: {},
     shared: {
       platformName,
       adminPageUrl: pathname + search,
@@ -29,14 +27,8 @@ export async function renderAdminPage(
       ...(options.fateSnapshot ? { adminFateSnapshot: options.fateSnapshot } : {}),
     },
     url: pathname + search,
-    errors: null,
     head: {
       title: formatPlatformPageTitle(title, platformName),
-      htmlAttrs: { lang: 'en', 'data-astryx-theme': 'neutral' },
-      meta: [
-        { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      ],
     },
   };
   const headers = {
@@ -47,18 +39,20 @@ export async function renderAdminPage(
   if (context.req.header('X-VoidPages') === 'true') {
     return Response.json(pageObj, { headers, status: options.status ?? 200 });
   }
-  const stream = await renderReactPage({
-    pageObj,
-    components: adminComponents,
-    layoutTree: adminLayoutTree,
-    assetTags: {
-      css: '<link rel="stylesheet" href="/admin/style.css">',
-      preloads: '',
-      body: '<script src="/admin/client.js" defer></script>',
-    },
-  });
-  return new Response(stream, {
+  // SPA shell: no server rendering. The page object rides along as JSON for the client router.
+  // TODO(eeao): drop the embedded page object once views load their data through eeao procedures.
+  const json = JSON.stringify(pageObj).replace(/</g, '\\u003c');
+  const htmlTitle = escapeHtml(pageObj.head?.title ?? platformName);
+  const html = `<!doctype html><html lang="en" data-astryx-theme="neutral"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${htmlTitle}</title><link rel="stylesheet" href="/admin/style.css"></head><body><div id="void-admin-root"></div><script type="application/json" id="void-admin-page">${json}</script><script src="/admin/client.js" defer></script></body></html>`;
+  return new Response(html, {
     status: options.status ?? 200,
     headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' },
   });
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(
+    /[&<>"]/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!,
+  );
 }

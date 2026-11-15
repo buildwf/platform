@@ -14,12 +14,12 @@ import {
 } from '@astryxdesign/core/Table';
 import { Heading } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
-import { Link } from '@void/react';
 import { Check, Copy } from 'lucide-react';
 import { createElement, useState, type FocusEvent } from 'react';
 import { useRequest, useView } from 'react-fate';
 import { SignupView, signupRequest } from '../../fate/views.ts';
 import { type AdminPageProps } from '../page-utils.ts';
+import { Link } from '../spa.tsx';
 import { AdminCard } from './AdminCard.tsx';
 import { formatDateTime } from './format.ts';
 import { FormCheckbox, FormSelector, FormTextArea, FormTextInput } from './FormControls.tsx';

@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 /**
  * Control-plane coverage for `void/email`.
  *
@@ -26,8 +27,6 @@
  *    other project verified it, so we mail our own confirmation link and the
  *    row stays `pending` / `platform` until the recipient clicks).
  */
-
-import { eq } from 'drizzle-orm';
 import {
   afterAll,
   afterEach,
@@ -65,6 +64,7 @@ import {
   projects,
   users,
 } from '../../src/schema.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 import { callsByTag, stubCustomerCf } from './email-domain-cf-stub.ts';
 import {
   cfError,
@@ -620,7 +620,7 @@ describe('GET /projects/:id/email/destinations', () => {
     const res = await listDestinations(project.id, intruder.jwt);
 
     expect(res.status).toBe(403);
-    expect(await res.text()).not.toContain('secret@example.com');
+    expect(await adminHtml(res)).not.toContain('secret@example.com');
   });
 
   it('requires settings access to list destination addresses', async () => {
@@ -653,11 +653,11 @@ describe('GET /projects/:id/email/destinations', () => {
 
     const denied = await listDestinations(project.id, collaborator.jwt);
     expect(denied.status).toBe(403);
-    expect(await denied.text()).not.toContain('private@example.com');
+    expect(await adminHtml(denied)).not.toContain('private@example.com');
 
     const allowed = await listDestinations(project.id, admin.jwt);
     expect(allowed.status).toBe(200);
-    expect(await allowed.text()).toContain('private@example.com');
+    expect(await adminHtml(allowed)).toContain('private@example.com');
   });
 
   it('refreshes pending rows that CF now reports verified', async () => {
@@ -1912,7 +1912,7 @@ describe('/email/destinations/confirm', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('cache-control')).toBe('no-store');
     expect(res.headers.get('referrer-policy')).toBe('no-referrer');
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('shared@example.com');
     expect(html).toContain('<form method="post"');
     expect(html).toContain(`action="?token=${token}"`);
@@ -1926,10 +1926,10 @@ describe('/email/destinations/confirm', () => {
     expect(row?.verified_at).toBeNull();
     expect(await readVerifiedDestinations(project.id)).toEqual([]);
 
-    expect(await (await confirm(token)).text()).toContain("You've authorized");
+    expect(await adminHtml(await confirm(token))).toContain("You've authorized");
     const again = await confirm(token);
     expect(again.status).toBe(200);
-    expect(await again.text()).toContain('Already confirmed');
+    expect(await adminHtml(again)).toContain('Already confirmed');
   });
 
   it('flips the row to verified and renders the success page', async () => {
@@ -1940,7 +1940,7 @@ describe('/email/destinations/confirm', () => {
 
     const res = await confirm(token);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('Email confirmed');
     expect(html).toContain('shared@example.com');
 
@@ -1980,7 +1980,7 @@ describe('/email/destinations/confirm', () => {
     });
     const response = await confirm(await makeToken(project.id, did, 'shared@example.com'));
     expect(response.status).toBe(404);
-    expect(await response.text()).toContain('Destination not found');
+    expect(await adminHtml(response)).toContain('Destination not found');
     expect(await readVerifiedDestinations(project.id)).toEqual([]);
     expect(await env.db.select().from(emailDestinationCleanups)).toMatchObject([
       { cf_destination_id: 'cf-tag-shared', status: 'pending' },
@@ -2110,7 +2110,7 @@ describe('/email/destinations/confirm', () => {
       await makeToken(project.id, 'edst_already_verified', 'shared@example.com'),
     );
     expect(res.status).toBe(200);
-    expect(await res.text()).toContain('Already confirmed');
+    expect(await adminHtml(res)).toContain('Already confirmed');
   });
 
   it('confirms end to end: the emailed link is the one that flips the row', async () => {

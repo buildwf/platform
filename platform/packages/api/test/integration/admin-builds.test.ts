@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vite-plus/test';
-import { deserializePageData } from 'void/pages-server';
 import { updateBuildStatus } from '../../src/db.ts';
 import { app } from '../../src/index.ts';
 import { builds } from '../../src/schema.ts';
 import { BUILD_INSTANCE_LARGE } from '../../src/tiers.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 import {
   createTestBuild,
   setupEnv,
@@ -288,7 +288,7 @@ describe('project detail Builds section', () => {
 
     const res = await req(`/admin/projects/${project.id}`, cookie);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
 
     expect(html).toContain('Builds');
     // Both builds link to their build pages.
@@ -315,7 +315,7 @@ describe('project detail Builds section', () => {
 
     const res = await req(`/admin/projects/${project.id}`, cookie);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain('Builds');
     expect(html).toContain('No builds.');
   });
@@ -338,7 +338,7 @@ describe('GET /admin/builds/:id (build page)', () => {
 
     const res = await req(`/admin/builds/${build.id}`, cookie);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
 
     expect(html).toContain(build.id);
     expect(html).toContain('container');
@@ -347,8 +347,10 @@ describe('GET /admin/builds/:id (build page)', () => {
     // The React log panel receives the build ID and starts with its loading state.
     expect(html).toContain('id="build-log"');
     expect(
-      deserializePageData(
-        html.match(/<script id="__VOID_PAGE_DATA__"[^>]*>([\s\S]*?)<\/script>/)![1],
+      JSON.parse(
+        html.match(
+          /<script type="application\/json" id="void-admin-page">([\s\S]*?)<\/script>/,
+        )![1]!,
       ),
     ).toMatchObject({ component: 'buildDetail' });
     expect(html).toContain('Loading logs...');
@@ -373,7 +375,7 @@ describe('GET /admin/builds/:id (build page)', () => {
 
     const res = await req(`/admin/builds/${build.id}`, cookie);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
 
     // External link present; no live log panel.
     expect(html).toContain('View logs on GitHub');
@@ -395,7 +397,7 @@ describe('GET /admin/builds/:id (build page)', () => {
 
     const res = await req(`/admin/builds/${build.id}`, cookie);
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain(`/admin/deployments/${deployment.id}`);
   });
 

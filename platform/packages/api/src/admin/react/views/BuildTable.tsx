@@ -8,10 +8,10 @@ import {
   TableHeaderCell,
   TableRow,
 } from '@astryxdesign/core/Table';
-import { Link } from '@void/react';
 import type { CSSProperties } from 'react';
 import { ACTIVE_BUILD_STATUSES } from '../../../build-status.ts';
 import type { Build } from '../../../types.ts';
+import { Link } from '../spa.tsx';
 import { formatDateTime, parseUtcDate } from './format.ts';
 
 const STATUS_SYMBOL: Record<Build['status'], string> = {

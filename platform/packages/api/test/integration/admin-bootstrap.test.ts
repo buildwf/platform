@@ -12,6 +12,7 @@ import {
 import { verifyJwt } from '../../src/auth/jwt.ts';
 import { app } from '../../src/index.ts';
 import { oauthAccounts, projects, users } from '../../src/schema.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 import { clearTables, createTestUser, setupEnv, teardownEnv, type TestEnv } from './helpers.ts';
 
 let env: TestEnv;
@@ -149,7 +150,7 @@ describe('first administrator dashboard login', () => {
       const response = await login();
       expect(response.status).toBe(403);
       expect(response.headers.get('Set-Cookie')).not.toContain('admin_token=');
-      const html = await response.text();
+      const html = await adminHtml(response);
       expect(html).toContain('Sign in with an administrator account for this platform.');
       expect(html).toContain('href="/admin/logout"');
       expect(await env.db.select().from(users)).toHaveLength(0);
@@ -230,7 +231,7 @@ describe('first administrator dashboard login', () => {
     const response = await login();
     expect(response.status).toBe(403);
     expect(response.headers.get('Set-Cookie')).not.toContain('admin_token=');
-    const html = await response.text();
+    const html = await adminHtml(response);
     expect(html).toContain('Administrator access suspended');
     expect(html).toContain('Contact another platform administrator to restore access.');
     expect(html).toContain('href="/admin/logout"');

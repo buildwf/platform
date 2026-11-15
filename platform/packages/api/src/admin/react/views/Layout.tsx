@@ -4,7 +4,6 @@ import { AppShell } from '@astryxdesign/core/AppShell';
 import { DropdownMenu } from '@astryxdesign/core/DropdownMenu';
 import { SideNav, SideNavItem, SideNavSection } from '@astryxdesign/core/SideNav';
 import { TopNav, TopNavHeading } from '@astryxdesign/core/TopNav';
-import { useNavigation, useRouter } from '@void/react';
 import {
   FolderKanban,
   Activity,
@@ -21,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { formatPlatformPageTitle } from '../../../platform-identity.ts';
+import { useNavigation, useRouter } from '../spa.tsx';
 import { PageStack } from './PageStack.tsx';
 import { VoidLogo } from './VoidLogo.tsx';
 

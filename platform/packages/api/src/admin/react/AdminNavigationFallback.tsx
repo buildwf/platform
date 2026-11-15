@@ -2,10 +2,10 @@
 
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Heading } from '@astryxdesign/core/Text';
-import { useNavigation } from '@void/react';
-import type { PageObject } from 'void/pages-protocol';
 import { AdminUiProviders } from './AdminProviders.tsx';
 import { matchAdminRoute, type AdminPageId } from './pages.ts';
+import { useNavigation } from './spa.tsx';
+import type { PageObject } from './spa.tsx';
 import { Layout } from './views/Layout.tsx';
 import { SectionStack } from './views/SectionStack.tsx';
 

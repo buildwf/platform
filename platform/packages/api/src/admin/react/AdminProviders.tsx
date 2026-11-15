@@ -4,11 +4,11 @@ import { LayerProvider } from '@astryxdesign/core/Layer';
 import { LinkProvider } from '@astryxdesign/core/Link';
 import { Theme } from '@astryxdesign/core/theme';
 import { neutralTheme } from '@astryxdesign/theme-neutral/built';
-import { Link, useShared } from '@void/react';
 import { useMemo, type ReactNode } from 'react';
 import { FateClient } from 'react-fate';
 import { createAdminFateClient } from '../fate/client.ts';
 import { AdminFateErrorBoundary } from './AdminFateErrorBoundary.tsx';
+import { Link, useShared } from './spa.tsx';
 
 type AdminShared = {
   platformName?: string;

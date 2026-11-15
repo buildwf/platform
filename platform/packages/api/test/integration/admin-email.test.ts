@@ -19,6 +19,7 @@ import { emailDomainRoutes, emailZoneConnections } from '../../src/email/connect
 import { generateId } from '../../src/id.ts';
 import { app } from '../../src/index.ts';
 import { emailDestinationCleanups, emailDestinations, operatorEvents } from '../../src/schema.ts';
+import { adminHtml } from '../helpers/admin-html.tsx';
 import { stubCustomerCf, callsByTag } from './email-domain-cf-stub.ts';
 import {
   setupEnv,
@@ -157,7 +158,7 @@ describe('email disabled on this platform', () => {
       bindings,
     );
     expect(document.status).toBe(200);
-    const html = await document.text();
+    const html = await adminHtml(document);
     expect(html).toContain('void-admin-content');
     expect(html).toContain('Authentication');
     expect(html).toContain('Email is not enabled on this platform.');
@@ -289,7 +290,7 @@ describe('GET /admin/email/:projectId', () => {
     const res = await get(`/admin/email/${projectId}`, adminJwt);
 
     expect(res.status).toBe(200);
-    const html = await res.text();
+    const html = await adminHtml(res);
     expect(html).toContain(slug);
     expect(visibleMarkup(html)).toContain('7 / 200');
     expect(html).toContain('Outbound recipient attempts');
@@ -304,7 +305,7 @@ describe('GET /admin/email/:projectId', () => {
     await setProjectEmailLimits(env.db, projectId, { monthly: 1000 });
     await setProjectEmailSuspended(env.db, projectId, true);
 
-    const html = await (await get(`/admin/email/${projectId}`, adminJwt)).text();
+    const html = await adminHtml(await get(`/admin/email/${projectId}`, adminJwt));
 
     expect(visibleMarkup(html)).toContain('0 / 1000');
     expect(visibleMarkup(html)).toContain('(override)');
@@ -606,7 +607,7 @@ describe('admin email domain controls', () => {
     const unknownAdd = await post(`/admin/email/${unknownProject.id}/domains/add`, adminJwt, {
       domain: 'unknown.example.com',
     });
-    expect({ status: unknownAdd.status, html: await unknownAdd.text() }).toMatchObject({
+    expect({ status: unknownAdd.status, html: await adminHtml(unknownAdd) }).toMatchObject({
       status: 409,
       html: expect.stringContaining('unknown'),
     });
@@ -618,7 +619,7 @@ describe('admin email domain controls', () => {
       domain: 'blocked.example.net',
     });
     expect(blockedAdd.status).toBe(409);
-    expect(await blockedAdd.text()).toContain('blocked');
+    expect(await adminHtml(blockedAdd)).toContain('blocked');
     delete failures.routingDns;
 
     const rotateProject = await project('blocked-rotate');
@@ -635,7 +636,7 @@ describe('admin email domain controls', () => {
       adminJwt,
     );
     expect(blockedRotate.status).toBe(409);
-    expect(await blockedRotate.text()).toContain('blocked');
+    expect(await adminHtml(blockedRotate)).toContain('blocked');
     delete failures.secretPut;
 
     const removeProject = await project('unknown-remove');
@@ -653,7 +654,7 @@ describe('admin email domain controls', () => {
       { confirm: removeProject.slug },
     );
     expect(unknownRemove.status).toBe(409);
-    expect(await unknownRemove.text()).toContain('unknown');
+    expect(await adminHtml(unknownRemove)).toContain('unknown');
 
     const failedEvents = (await env.db.select().from(operatorEvents))
       .filter((event) => event.status === 'failed')
@@ -700,7 +701,7 @@ describe('admin email domain controls', () => {
       domain: 'example.com',
     });
     expect(add.status).toBe(302);
-    const html = await (await get(`/admin/email/${projectId}`, adminJwt)).text();
+    const html = await adminHtml(await get(`/admin/email/${projectId}`, adminJwt));
     expect(html).toContain('example.com');
     expect(html).toContain('Rotate secret');
     expect(html).not.toContain(env.CF_API_TOKEN);
