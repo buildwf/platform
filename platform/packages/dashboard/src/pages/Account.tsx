@@ -1,8 +1,6 @@
 import { Button } from '@astryxdesign/core/Button';
 import { VStack } from '@astryxdesign/core/VStack';
-import type { Props } from './account.server.ts';
-
-export const layout = 'dashboard';
+import type { Props } from '../../server/account.ts';
 
 export default function AccountPage({ methods, error }: Props) {
   return (
@@ -15,7 +13,7 @@ export default function AccountPage({ methods, error }: Props) {
       {error && <p>{error}</p>}
       <VStack gap={2}>
         {methods.map((method) => (
-          <form key={method.id} method="post">
+          <form key={method.id} method="post" action="/api/page/account">
             <input type="hidden" name="connectionId" value={method.id} />
             <Button label={`Link ${method.label}`} type="submit" />
           </form>

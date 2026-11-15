@@ -870,9 +870,6 @@ importers:
       '@void/platform':
         specifier: workspace:*
         version: link:../../../packages/platform
-      '@void/react':
-        specifier: workspace:*
-        version: link:../../../packages/react
       '@xterm/headless':
         specifier: ^6.0.0
         version: 6.0.0
@@ -995,9 +992,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.3.0
         version: 19.3.0(@types/react@19.3.0)
-      '@void/react':
-        specifier: workspace:*
-        version: link:../../../packages/react
+      '@vitejs/plugin-react':
+        specifier: 'catalog:'
+        version: 6.3.0(@voidzero-dev/vite-plus-core@1.6.0(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)(typescript@7.0.2)(yaml@2.9.1))
       '@voidcloud/api':
         specifier: workspace:*
         version: link:../api

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
-import { loader } from '../../pages/auth/callback.server.ts';
+import { loader } from '../../server/auth-callback.ts';
 
 function createApp(fetchImpl: typeof fetch) {
   const app = new Hono();

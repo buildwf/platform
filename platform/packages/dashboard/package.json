@@ -25,7 +25,7 @@
     "@cloudflare/workers-types": "catalog:platform",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@void/react": "workspace:*",
+    "@vitejs/plugin-react": "catalog:",
     "@voidcloud/api": "workspace:*",
     "typescript": "catalog:",
     "vite": "catalog:",

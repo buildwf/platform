@@ -1,5 +1,5 @@
 import { browserPageLogo, browserPageStyles } from '@void/platform/browser-page';
-import type { Props } from './login.server.ts';
+import type { Props } from '../../server/login.ts';
 
 export default function LoginPage({ methods, platformName, unavailable, devLoginUrl }: Props) {
   return (

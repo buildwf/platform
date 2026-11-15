@@ -1,11 +1,12 @@
 # @voidcloud/dashboard
 
-Optional authentication frontend for a Void platform, built as a React Pages
-mode app. The administrator UI is served by the API Worker.
+Optional authentication frontend for a Void platform, built as a React SPA
+with Void server routes. The administrator UI is served by the API Worker.
 
 ## Architecture
 
-- **React Pages mode** - `voidPlugin()` + `voidReact()`, SSR with client hydration.
+- **React SPA** - `index.html` + `src/`, with `voidPlugin()` serving `routes/`. Each page
+  loads its data from an internal `/api/page/*` endpoint (to be replaced by eeao procedures).
 - **Auth** - enabled platform login methods via the API's `/auth/login` flow. The JWT is
   stored in an httpOnly cookie (`void_token`). Middleware validates the token with
   `GET /me`.

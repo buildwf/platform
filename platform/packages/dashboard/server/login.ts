@@ -1,9 +1,9 @@
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { defineHandler, defineHead } from 'void';
+import { defineHandler } from 'void';
 import { fetchApi, getPublicApiUrl } from '../lib/api.ts';
 import { isLocalDashboardHost } from '../lib/origin.ts';
 import { createPkceChallenge, createPkceVerifier } from '../lib/pkce.ts';
-import { discoveryDisplayName, platformPageTitle } from '../lib/platform-title.ts';
+import { discoveryDisplayName } from '../lib/platform-title.ts';
 
 export type Props = Readonly<{
   methods: ReadonlyArray<{ id: string; label: string; url: string }>;
@@ -11,10 +11,6 @@ export type Props = Readonly<{
   unavailable?: boolean;
   devLoginUrl?: string;
 }>;
-
-export const head = defineHead<Props>((_context, props) => ({
-  title: platformPageTitle('Sign in', props.platformName),
-}));
 
 export const loader = defineHandler<Props>(async (context) => {
   const platformUrl = getPublicApiUrl(context);

@@ -1,9 +1,7 @@
 import { Button } from '@astryxdesign/core/Button';
 import { HStack } from '@astryxdesign/core/HStack';
 import { VStack } from '@astryxdesign/core/VStack';
-import type { Props } from './index.server.ts';
-
-export const layout = 'dashboard';
+import type { Props } from '../../server/home.ts';
 
 export default function AuthenticatedPage({ user }: Props) {
   return (

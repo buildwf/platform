@@ -1,8 +1,8 @@
 import type { Context } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { defineHandler } from 'void';
-import { fetchApi, getApiErrorMessage, readApiJson } from '../../lib/api.ts';
-import { isLocalDashboardHost } from '../../lib/origin.ts';
+import { fetchApi, getApiErrorMessage, readApiJson } from '../lib/api.ts';
+import { isLocalDashboardHost } from '../lib/origin.ts';
 
 function loginUrl(context: Context): string {
   return `${requestOrigin(context)}/login`;

@@ -4,49 +4,50 @@ import { getCurrentUser, type API } from '../lib/api.ts';
 
 export type DashboardUser = API<'me'>;
 
-export type DashboardShared = Readonly<{
-  user: DashboardUser | null;
-}>;
-
 declare module 'void' {
   interface CloudContextVariables {
     token: string;
     dashboardUser: DashboardUser;
-    shared: DashboardShared;
   }
 }
 
-const PUBLIC_PATHS = new Set(['/favicon.svg', '/login', '/logout']);
+const PUBLIC_PATHS = new Set(['/favicon.svg', '/login', '/logout', '/api/page/login']);
 const PUBLIC_PREFIXES = ['/assets/', '/auth/'];
 
 export function isPublicDashboardPath(path: string): boolean {
   return PUBLIC_PATHS.has(path) || PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
+/** Signed-in pages and the SPA's data endpoints; scripts, styles and other assets stay public. */
+export function isProtectedDashboardPath(path: string): boolean {
+  return path === '/' || path === '/account' || path.startsWith('/api/');
+}
+
 export default defineMiddleware(async (context, next) => {
   const path = context.req.path;
 
-  if (isPublicDashboardPath(path)) {
-    context.set('shared', { user: null });
+  if (isPublicDashboardPath(path) || !isProtectedDashboardPath(path)) {
     return next();
   }
 
+  // The SPA's data requests get a status it can act on instead of a redirect to an HTML page.
+  const signIn = () =>
+    path.startsWith('/api/')
+      ? context.json({ error: 'Sign in required' }, 401)
+      : context.redirect('/login');
   const token = getCookie(context, 'void_token');
   if (!token) {
-    context.set('shared', { user: null });
-    return context.redirect('/login');
+    return signIn();
   }
 
   context.set('token', token);
   const user = await getCurrentUser(context);
   if (!user) {
     deleteCookie(context, 'void_token', { path: '/' });
-    context.set('shared', { user: null });
-    return context.redirect('/login');
+    return signIn();
   }
 
   context.set('dashboardUser', user);
-  context.set('shared', { user });
 
   return next();
 });

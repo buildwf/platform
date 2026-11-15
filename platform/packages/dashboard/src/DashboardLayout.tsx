@@ -1,16 +1,15 @@
 import { Theme } from '@astryxdesign/core/theme';
 import { neutralTheme } from '@astryxdesign/theme-neutral/built';
-import { useShared } from '@void/react';
 import { LogOut } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { DashboardShared } from '../../middleware/01.auth.ts';
-import blueskyIcon from '../../ui/assets/icons/bluesky.svg';
-import discordIcon from '../../ui/assets/icons/discord.svg';
-import githubIcon from '../../ui/assets/icons/github.svg';
-import xIcon from '../../ui/assets/icons/x.svg';
-import { AppHeader, FooterNav } from '../../ui/index.ts';
-import '../../ui/styles/index.css';
-import Layout from '../layout.tsx';
+import type { DashboardUser } from '../middleware/01.auth.ts';
+import blueskyIcon from '../ui/assets/icons/bluesky.svg';
+import discordIcon from '../ui/assets/icons/discord.svg';
+import githubIcon from '../ui/assets/icons/github.svg';
+import xIcon from '../ui/assets/icons/x.svg';
+import { AppHeader, FooterNav } from '../ui/index.ts';
+import '../ui/styles/index.css';
+import Layout from './Layout.tsx';
 
 const footerConfig = {
   nav: [
@@ -41,9 +40,13 @@ function FlexibleFooterSpacer() {
   return <div aria-hidden="true" className="wrapper dashboard-footer-spacer" />;
 }
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { user } = useShared<DashboardShared>();
-
+export default function DashboardLayout({
+  children,
+  user,
+}: {
+  children: ReactNode;
+  user: DashboardUser | null;
+}) {
   if (!user) {
     return <Layout>{children}</Layout>;
   }

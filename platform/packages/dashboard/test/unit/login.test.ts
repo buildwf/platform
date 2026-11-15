@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import { fetchApi } from '../../lib/api.ts';
-import { head, loader } from '../../pages/login.server.ts';
+import { platformPageTitle } from '../../lib/platform-title.ts';
+import { loader } from '../../server/login.ts';
 
 afterEach(() => vi.unstubAllGlobals());
 describe('dashboard login discovery', () => {
@@ -29,7 +30,7 @@ describe('dashboard login discovery', () => {
       ],
     });
     expect(response.headers.get('Cache-Control')).toBe('no-store');
-    expect(head({} as never, { platformName: 'Example Platform', methods: [] })?.title).toBe(
+    expect(platformPageTitle('Sign in', 'Example Platform')).toBe(
       'Sign in · Example Platform · Void',
     );
   });
@@ -125,7 +126,7 @@ describe('dashboard login discovery', () => {
 describe('login presentation', () => {
   it('escapes the platform and provider names without changing the login URL', async () => {
     const { renderToStaticMarkup } = await import('react-dom/server');
-    const { default: LoginPage } = await import('../../pages/login.tsx');
+    const { default: LoginPage } = await import('../../src/pages/Login.tsx');
     const url =
       'https://api.example.com/auth/login?provider=company&redirect=https%3A%2F%2Fdash.example.com%2Fauth%2Fcallback';
     const html = renderToStaticMarkup(

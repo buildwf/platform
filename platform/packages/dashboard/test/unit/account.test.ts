@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
-import { action, head, loader } from '../../pages/account.server.ts';
+import { platformPageTitle } from '../../lib/platform-title.ts';
+import { action, loader } from '../../server/account.ts';
 
 const app = new Hono().post('/account', async (context) => action(context as never));
 
@@ -36,7 +37,9 @@ describe('account linking error responses', () => {
     });
     const props = await response.json<{ platformName: string; methods: [] }>();
     expect(props.platformName).toBe('Example Platform');
-    expect(head({} as never, props)?.title).toBe('Login methods · Example Platform · Void');
+    expect(platformPageTitle('Login methods', props.platformName)).toBe(
+      'Login methods · Example Platform · Void',
+    );
   });
 
   it('keeps the account page available when discovery times out', async () => {

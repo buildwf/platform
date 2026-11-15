@@ -1,16 +1,15 @@
-import { defineHandler, defineHead } from 'void';
+import { defineHandler } from 'void';
 import { fetchApi, getApiErrorMessage, readApiJson } from '../lib/api.ts';
 import { dashboardRequestOrigin } from '../lib/origin.ts';
-import { discoveryDisplayName, platformPageTitle } from '../lib/platform-title.ts';
+import { discoveryDisplayName } from '../lib/platform-title.ts';
+import type { DashboardUser } from '../middleware/01.auth.ts';
 
 export type Props = {
+  user?: DashboardUser;
   methods: Array<{ id: string; label: string }>;
   platformName: string;
   error?: string;
 };
-export const head = defineHead<Props>((_context, props) => ({
-  title: platformPageTitle('Login methods', props.platformName),
-}));
 export const loader = defineHandler<Props>(async (context) => {
   try {
     const response = await fetchApi(context, '/.well-known/void-platform');
@@ -22,11 +21,13 @@ export const loader = defineHandler<Props>(async (context) => {
       authentication?: { methods?: Props['methods'] };
     };
     return {
+      user: context.get('dashboardUser'),
       methods: discovery.authentication?.methods ?? [],
       platformName: discoveryDisplayName(discovery),
     };
   } catch {
     return {
+      user: context.get('dashboardUser'),
       methods: [],
       platformName: 'Void Cloud',
       error: 'Login methods are unavailable. Try again shortly.',

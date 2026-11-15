@@ -2,14 +2,11 @@
 import { defineConfig } from 'void/config';
 
 export default defineConfig({
-  head: {
-    link: [
-      {
-        rel: 'icon',
-        type: 'image/svg+xml',
-        href: '/favicon.svg',
-      },
-    ],
+  routing: {
+    headers: {
+      // No dashboard page is meant to be framed; this covers the SPA shell served from assets.
+      '/*': ['X-Frame-Options: DENY', "Content-Security-Policy: frame-ancestors 'none'"],
+    },
   },
   cloudflare: {
     name: 'void-dashboard',
