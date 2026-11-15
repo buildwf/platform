@@ -1,0 +1,1645 @@
+import { Hono } from 'hono';
+import { HTTPException } from 'hono/http-exception';
+import { describe, expect, it, vi } from 'vite-plus/test';
+import { PAGES_PROTOCOL_VERSION } from '../../../edge/src/pages-protocol.ts';
+import { defer } from '../../src/pages/defer.ts';
+import {
+  handlePageGet,
+  handlePageMutation,
+  flattenValidationErrors,
+  ValidationError,
+} from '../../src/pages/protocol.ts';
+import {
+  deserializePageData,
+  decodePageData,
+  serializePageData,
+} from '../../src/pages/serialize.ts';
+import { defineHandler, type CloudContext, type CloudEnv } from '../../src/runtime/handler.ts';
+import { createRoutingRuntime } from '../../src/runtime/routing.ts';
+
+type RenderPage = { component: string };
+type PageResponse = {
+  component: string;
+  props: Record<string, unknown>;
+  params?: Record<string, string>;
+  url: string;
+  errors: Record<string, string> | null;
+  shared?: Record<string, unknown>;
+  deferred?: Array<string>;
+  deferredKeys?: Record<string, string>;
+};
+
+async function json<T>(response: Response): Promise<T> {
+  return decodePageData<T>(await response.json());
+}
+
+/** Create a minimal Hono context for testing */
+function createTestContext(
+  method: string,
+  path: string,
+  options: {
+    headers?: Record<string, string>;
+    routePattern?: string;
+    shared?: Record<string, unknown>;
+  } = {},
+): Promise<CloudContext> {
+  const app = new Hono<CloudEnv>();
+  app.use(createRoutingRuntime(app as unknown as Hono, { nodeTarget: true }).contextMiddleware);
+  let resolveContext!: (c: CloudContext) => void;
+  const contextPromise = new Promise<CloudContext>((resolve) => {
+    resolveContext = resolve;
+  });
+
+  app.use(async (c, next) => {
+    if (options.shared) {
+      c.set('shared', options.shared);
+    }
+    await next();
+  });
+
+  app.all(options.routePattern ?? '*', (c) => {
+    resolveContext!(c as unknown as CloudContext);
+    return c.text('ok');
+  });
+
+  const url = `http://localhost${path}`;
+  const req = new Request(url, { method, headers: options.headers });
+  app.fetch(req);
+
+  return contextPromise;
+}
+
+const mockRenderFn = vi.fn(async (pageObj: RenderPage) => `<html>${pageObj.component}</html>`);
+const mockGetAssetTags = vi.fn(async () => ({ css: '', preloads: '', body: '' }));
+
+describe('handlePageGet', () => {
+  it.each(['plain', 'validated', 'middleware'] as const)(
+    'preserves rich loader and shared data for %s handlers and action reloads',
+    async (kind) => {
+      const values = { date: new Date('2026-11-08'), count: 42n, map: new Map([['x', 1]]) };
+      const leaf = () => values;
+      const validated = defineHandler.withValidator({})(leaf);
+      const handler =
+        kind === 'plain'
+          ? defineHandler(leaf)
+          : kind === 'validated'
+            ? validated
+            : defineHandler(async (c, next) => {
+                await next();
+                c.header('X-Middleware', 'ran');
+              }, validated);
+      const render = vi.fn(
+        async (page: { props: Record<string, unknown>; shared: Record<string, unknown> }) => {
+          expect(page.props).toEqual(values);
+          expect(page.shared).toEqual(values);
+          return 'rendered';
+        },
+      );
+      const htmlContext = await createTestContext('GET', '/rich', { shared: values });
+      expect(
+        await (
+          await handlePageGet(handler, undefined, htmlContext, 'rich', render, mockGetAssetTags)
+        ).text(),
+      ).toBe('rendered');
+      expect(render).toHaveBeenCalledOnce();
+      const c = await createTestContext('POST', '/rich', {
+        shared: values,
+        headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+      });
+      const response = await handlePageMutation(
+        () => undefined,
+        handler,
+        undefined,
+        c,
+        'rich',
+        render,
+        mockGetAssetTags,
+      );
+      expect(deserializePageData(await response.text())).toMatchObject({
+        props: values,
+        shared: values,
+      });
+      if (kind === 'middleware') {
+        expect(response.headers.get('X-Middleware')).toBe('ran');
+      }
+    },
+  );
+
+  it('keeps validated API handlers on ordinary JSON', async () => {
+    const handler = defineHandler.withValidator({})(() => ({ date: new Date('2026-11-08') }));
+    const response = (await handler(await createTestContext('GET', '/api'))) as Response;
+    expect(await response.json()).toEqual({ date: '2026-11-08T00:00:00.000Z' });
+  });
+
+  describe.each([
+    { name: 'HTML', spa: false, deferred: false, contentType: 'text/html; charset=utf-8' },
+    { name: 'JSON', spa: true, deferred: false, contentType: 'application/json' },
+    { name: 'streamed HTML', spa: false, deferred: true, contentType: 'text/html; charset=utf-8' },
+    { name: 'streamed NDJSON', spa: true, deferred: true, contentType: 'application/x-ndjson' },
+  ])('$name cache negotiation', ({ spa, deferred, contentType }) => {
+    it('preserves negotiation when head varies metadata by language', async () => {
+      const app = new Hono<CloudEnv>();
+      app.get('/users', (c) =>
+        handlePageGet(
+          () => (deferred ? { users: defer(async () => []) } : { users: [] }),
+          (ctx) => {
+            ctx.header('Vary', 'Accept-Language');
+            return { title: ctx.req.header('Accept-Language') ?? 'en' };
+          },
+          c,
+          'users',
+          mockRenderFn,
+          mockGetAssetTags,
+        ),
+      );
+      const response = await app.request('/users', {
+        headers: {
+          'Accept-Language': 'de',
+          ...(spa ? { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION } : {}),
+        },
+      });
+      await response.text();
+      expect(response.headers.get('Content-Type')).toBe(contentType);
+      expect(response.headers.get('Vary')).toBe(
+        'Accept-Language, X-VoidPages, X-VoidPages-Version',
+      );
+    });
+
+    it.each([
+      { existing: undefined, expected: 'X-VoidPages, X-VoidPages-Version' },
+      {
+        existing: 'Accept-Language',
+        expected: 'Accept-Language, X-VoidPages, X-VoidPages-Version',
+      },
+      {
+        existing: 'Accept-Language, x-voidpages',
+        expected: 'Accept-Language, x-voidpages, X-VoidPages-Version',
+      },
+      { existing: '*', expected: '*' },
+    ])(
+      'sets Vary without losing or duplicating existing values ($existing)',
+      async ({ existing, expected }) => {
+        const app = new Hono<CloudEnv>();
+        app.get('/users', (c) =>
+          handlePageGet(
+            (ctx) => {
+              if (existing) {
+                ctx.header('Vary', existing);
+              }
+              return deferred ? { users: defer(async () => []) } : { users: [] };
+            },
+            undefined,
+            c,
+            'users',
+            mockRenderFn,
+            mockGetAssetTags,
+          ),
+        );
+        const response = await app.request('/users', {
+          headers: spa
+            ? { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION }
+            : {},
+        });
+        // Consume streams even if a header assertion fails.
+        await response.text();
+        expect(response.headers.get('Content-Type')).toBe(contentType);
+        expect(response.headers.get('X-VoidPages')).toBe(spa ? 'true' : null);
+        expect(response.headers.get('Vary')).toBe(expected);
+      },
+    );
+  });
+
+  it.each([false, true])('does not vary HTML-only island pages (deferred=%s)', async (deferred) => {
+    const c = await createTestContext('GET', '/users', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+    const response = await handlePageGet(
+      () => (deferred ? { users: defer(async () => []) } : { users: [] }),
+      undefined,
+      c,
+      'users',
+      mockRenderFn,
+      mockGetAssetTags,
+      undefined,
+      { renderMode: 'island' },
+    );
+    await response.text();
+    expect(response.headers.get('Content-Type')).toBe('text/html; charset=utf-8');
+    expect(response.headers.get('Vary')).toBeNull();
+  });
+
+  it('returns JSON page object when X-VoidPages header present', async () => {
+    const c = await createTestContext('GET', '/users', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    const handler = vi.fn(() => ({ users: [1, 2, 3] }));
+    const response = await handlePageGet(
+      handler,
+      undefined,
+      c,
+      'users',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    expect(response.headers.get('X-VoidPages')).toBe('true');
+    expect(response.headers.get('Vary')).toBe('X-VoidPages, X-VoidPages-Version');
+    const body = await json<PageResponse>(response);
+    expect(body.component).toBe('users');
+    expect(body.props).toEqual({ users: [1, 2, 3] });
+    expect(body.url).toBe('/users');
+    expect(body.errors).toBeNull();
+    expect(body.deferred).toBeUndefined();
+  });
+
+  it('preserves headers set by loaders on X-VoidPages JSON responses', async () => {
+    const c = await createTestContext('GET', '/users', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    const handler = vi.fn((ctx: CloudContext) => {
+      ctx.header('Set-Cookie', 'void_auth_nonce=abc; Path=/auth; HttpOnly');
+      return { users: [] };
+    });
+    const response = await handlePageGet(
+      handler,
+      undefined,
+      c,
+      'users',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    expect(response.headers.get('Set-Cookie')).toContain('void_auth_nonce=abc');
+    expect(response.headers.get('X-VoidPages')).toBe('true');
+  });
+
+  it('includes route params in page objects without requiring loader props', async () => {
+    const c = await createTestContext('GET', '/posts/abc-123?preview=true', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+      routePattern: '/posts/:id',
+    });
+
+    const response = await handlePageGet(
+      undefined,
+      undefined,
+      c,
+      'posts/[id]',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    const body = await json<PageResponse>(response);
+    expect(body.props).toEqual({});
+    expect(body.params).toEqual({ id: 'abc-123' });
+    expect(body.url).toBe('/posts/abc-123?preview=true');
+  });
+
+  it('passes route params to rendered page objects', async () => {
+    const c = await createTestContext('GET', '/posts/abc-123', {
+      routePattern: '/posts/:id',
+    });
+    const renderFn = vi.fn(async () => '<html>post</html>');
+
+    await handlePageGet(undefined, undefined, c, 'posts/[id]', renderFn, mockGetAssetTags);
+
+    expect(renderFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        component: 'posts/[id]',
+        params: { id: 'abc-123' },
+        props: {},
+        url: '/posts/abc-123',
+      }),
+      expect.anything(),
+      'http://localhost/posts/abc-123',
+    );
+  });
+
+  it('calls renderFn and returns HTML when no X-VoidPages header', async () => {
+    const c = await createTestContext('GET', '/users');
+
+    const handler = vi.fn(() => ({ users: [] }));
+    const response = await handlePageGet(
+      handler,
+      undefined,
+      c,
+      'users',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8');
+    const html = await response.text();
+    expect(html).toContain('users');
+  });
+
+  it('preserves headers set by loaders on rendered HTML responses', async () => {
+    const c = await createTestContext('GET', '/login');
+
+    const handler = vi.fn((ctx: CloudContext) => {
+      ctx.header('Set-Cookie', 'void_auth_nonce=abc; Path=/auth; HttpOnly');
+      return { githubUrl: '/auth/github' };
+    });
+    const response = await handlePageGet(
+      handler,
+      undefined,
+      c,
+      'login',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    expect(response.headers.get('Set-Cookie')).toContain('void_auth_nonce=abc');
+    expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8');
+  });
+
+  it('passes through redirect Response from loader', async () => {
+    const c = await createTestContext('GET', '/auth/callback');
+
+    const redirect = new Response(null, {
+      status: 302,
+      headers: { Location: '/' },
+    });
+    const handler = vi.fn(() => redirect);
+    const renderFn = vi.fn(async (pageObj: RenderPage) => `<html>${pageObj.component}</html>`);
+    const response = await handlePageGet(
+      handler,
+      undefined,
+      c,
+      'callback',
+      renderFn,
+      mockGetAssetTags,
+    );
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get('Location')).toBe('/');
+    expect(renderFn).not.toHaveBeenCalled();
+  });
+
+  it('island=true always renders HTML even with X-VoidPages header', async () => {
+    const c = await createTestContext('GET', '/', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    const renderFn = vi.fn(async () => '<html>island</html>');
+    const response = await handlePageGet(
+      undefined,
+      undefined,
+      c,
+      'index',
+      renderFn,
+      mockGetAssetTags,
+      undefined,
+      { renderMode: 'island' },
+    );
+
+    expect(response.headers.get('content-type')).toContain('text/html');
+    expect(renderFn).toHaveBeenCalled();
+  });
+
+  it('serializes dev CSS records with a nonce before rendering HTML', async () => {
+    const c = await createTestContext('GET', '/styled');
+    const renderFn = vi.fn(
+      async (_pageObj: RenderPage, assetTags) => `<html><head>${assetTags.css}</head></html>`,
+    );
+    const response = await handlePageGet(undefined, undefined, c, 'styled', renderFn, async () => ({
+      css: '',
+      preloads: '',
+      body: '',
+      devCss: [{ url: '/pages/styled.tsx?x=1', css: '.x:before{content:"</STYLE>"}' }],
+    }));
+
+    const html = await response.text();
+    expect(html).toContain('data-vite-dev-id="/pages/styled.tsx?x=1"');
+    expect(html).toContain('nonce="');
+    expect(html).toContain('<\\/style>');
+    expect(html).not.toContain('</STYLE>');
+  });
+
+  it('adds a quoted dev CSS nonce source to strict style CSP responses', async () => {
+    const c = await createTestContext('GET', '/styled');
+    const response = await handlePageGet(
+      (ctx: CloudContext) => {
+        ctx.header('Content-Security-Policy', "default-src 'self'; style-src 'self'");
+        return {};
+      },
+      undefined,
+      c,
+      'styled',
+      vi.fn(async (_pageObj: RenderPage, assetTags) => `<html>${assetTags.css}</html>`),
+      async () => ({
+        css: '',
+        preloads: '',
+        body: '',
+        devCss: [{ url: '/pages/styled.css', css: '.x{color:red}' }],
+      }),
+    );
+
+    const csp = response.headers.get('content-security-policy') ?? '';
+    expect(csp).toContain("style-src 'self' 'nonce-");
+    expect(csp).not.toContain("style-src 'self' nonce-");
+  });
+
+  it('adds style-src with a quoted nonce when only default-src is present', async () => {
+    const c = await createTestContext('GET', '/styled');
+    const response = await handlePageGet(
+      (ctx: CloudContext) => {
+        ctx.header('Content-Security-Policy', "default-src 'self'");
+        return {};
+      },
+      undefined,
+      c,
+      'styled',
+      vi.fn(async (_pageObj: RenderPage, assetTags) => `<html>${assetTags.css}</html>`),
+      async () => ({
+        css: '',
+        preloads: '',
+        body: '',
+        devCss: [{ url: '/pages/styled.css', css: '.x{color:red}' }],
+      }),
+    );
+
+    const csp = response.headers.get('content-security-policy') ?? '';
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("style-src 'self' 'nonce-");
+  });
+
+  it('adds the generated dev CSS nonce when CSP already has another nonce', async () => {
+    const c = await createTestContext('GET', '/styled');
+    const response = await handlePageGet(
+      (ctx: CloudContext) => {
+        ctx.header('Content-Security-Policy', "style-src 'self' 'nonce-existing'");
+        return {};
+      },
+      undefined,
+      c,
+      'styled',
+      vi.fn(async (_pageObj: RenderPage, assetTags) => `<html>${assetTags.css}</html>`),
+      async () => ({
+        css: '',
+        preloads: '',
+        body: '',
+        devCss: [{ url: '/pages/styled.css', css: '.x{color:red}' }],
+      }),
+    );
+
+    const html = await response.text();
+    const nonce = html.match(/nonce="([^"]+)"/)?.[1];
+    expect(nonce).toBeTruthy();
+    const csp = response.headers.get('content-security-policy') ?? '';
+    expect(csp).toContain("'nonce-existing'");
+    expect(csp).toContain(`'nonce-${nonce}'`);
+  });
+
+  it('attaches prepared asset tags to render errors for styled 500 pages', async () => {
+    const c = await createTestContext('GET', '/styled');
+    const error = new Error('render failed');
+
+    await expect(
+      handlePageGet(
+        undefined,
+        undefined,
+        c,
+        'styled',
+        vi.fn(async () => {
+          throw error;
+        }),
+        async () => ({
+          css: '',
+          preloads: '',
+          body: '',
+          devCss: [{ url: '/pages/styled.css', id: '/root/pages/styled.css', css: '.x{}' }],
+        }),
+      ),
+    ).rejects.toThrow(error);
+
+    expect(
+      (error as Error & { __voidPageAssetTags?: { css: string } }).__voidPageAssetTags?.css,
+    ).toContain('data-vite-dev-id="/root/pages/styled.css"');
+  });
+
+  it('includes shared data from context', async () => {
+    const c = await createTestContext('GET', '/', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+      shared: { auth: { user: { name: 'Test' } } },
+    });
+
+    const response = await handlePageGet(
+      undefined,
+      undefined,
+      c,
+      'index',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    const body = await json<PageResponse>(response);
+    expect(body.shared).toEqual({ auth: { user: { name: 'Test' } } });
+  });
+
+  it('uses shared data the loader updates', async () => {
+    const c = await createTestContext('GET', '/', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+      shared: { count: 2 },
+    });
+
+    const response = await handlePageGet(
+      (ctx: CloudContext) => {
+        ctx.set('shared', { ...(ctx.get('shared') as object), count: 77 });
+        return {};
+      },
+      undefined,
+      c,
+      'index',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    expect((await json<PageResponse>(response)).shared).toEqual({ count: 77 });
+  });
+
+  it('prefetch request — resolves deferred props inline as plain JSON', async () => {
+    const c = await createTestContext('GET', '/dashboard', {
+      headers: {
+        'x-voidpages': 'true',
+        'X-VoidPages-Version': PAGES_PROTOCOL_VERSION,
+        purpose: 'prefetch',
+      },
+    });
+
+    const handler = vi.fn(() => ({
+      stats: { count: 42 },
+      usage: defer(async () => ({ requests: 1200 })),
+    }));
+
+    const response = await handlePageGet(
+      handler,
+      undefined,
+      c,
+      'dashboard',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    expect(response.headers.get('content-type')).not.toContain('ndjson');
+    expect(response.headers.get('X-VoidPages')).toBe('true');
+
+    const body = await json<PageResponse & { props: { usage: { requests: number } } }>(response);
+    expect(body.props.usage).toEqual({ requests: 1200 });
+    expect(body.deferred).toBeUndefined();
+    // deferredKeys is preserved so clients can wrap resolved values
+    expect(body.deferredKeys).toEqual({ usage: 'usage' });
+  });
+
+  it.each([
+    { dev: false, message: 'Internal Server Error' },
+    { dev: true, message: 'db down' },
+  ])(
+    'prefetch request — sends a failed deferred group as an inline error (dev=$dev)',
+    async ({ dev, message }) => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const c = await createTestContext('GET', '/dashboard', {
+        headers: {
+          'x-voidpages': 'true',
+          'X-VoidPages-Version': PAGES_PROTOCOL_VERSION,
+          purpose: 'prefetch',
+        },
+      });
+      const error = new Error('db down');
+
+      try {
+        const response = await handlePageGet(
+          () => ({
+            stats: { count: 1 },
+            usage: defer(async () => {
+              throw error;
+            }),
+            ok: defer(async () => 1),
+          }),
+          undefined,
+          c,
+          'dashboard',
+          mockRenderFn,
+          mockGetAssetTags,
+          undefined,
+          { dev },
+        );
+
+        const body = await json<PageResponse & { deferredErrors?: Record<string, string> }>(
+          response,
+        );
+        expect(body.deferredErrors).toEqual({ usage: message });
+        expect(body.props).toEqual({ stats: { count: 1 }, ok: 1 });
+        expect(body.deferredKeys).toEqual({ usage: 'usage', ok: 'ok' });
+        expect(consoleError).toHaveBeenCalledExactlyOnceWith(error);
+      } finally {
+        consoleError.mockRestore();
+      }
+    },
+  );
+
+  it('prefetch request — resolves empty deferred results like the stream does', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const c = await createTestContext('GET', '/dashboard', {
+      headers: {
+        'x-voidpages': 'true',
+        'X-VoidPages-Version': PAGES_PROTOCOL_VERSION,
+        purpose: 'prefetch',
+      },
+    });
+
+    try {
+      const response = await handlePageGet(
+        () => ({
+          post: defer(async () => undefined),
+          a: defer('g', async () => null),
+          b: defer('g', async () => null),
+        }),
+        undefined,
+        c,
+        'dashboard',
+        mockRenderFn,
+        mockGetAssetTags,
+      );
+
+      const body = await json<PageResponse & { deferredErrors?: Record<string, string> }>(response);
+      expect(body.props).toEqual({ post: null });
+      expect(body.deferredErrors).toBeUndefined();
+      expect(body.deferredKeys).toEqual({ post: 'post', a: 'g', b: 'g' });
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+});
+
+describe('handlePageMutation', () => {
+  it.each([false, true])(
+    'preserves negotiation when action page head varies metadata (spa=%s)',
+    async (spa) => {
+      const app = new Hono<CloudEnv>();
+      app.post('/users', (c) =>
+        handlePageMutation(
+          () => undefined,
+          () => ({ users: [] }),
+          (ctx) => {
+            ctx.header('Vary', 'Accept-Language');
+            return { title: ctx.req.header('Accept-Language') ?? 'en' };
+          },
+          c,
+          'users',
+          mockRenderFn,
+          mockGetAssetTags,
+        ),
+      );
+      const response = await app.request('/users', {
+        method: 'POST',
+        headers: {
+          'Accept-Language': 'de',
+          ...(spa ? { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION } : {}),
+        },
+      });
+      await response.text();
+      expect(response.headers.get('Vary')).toBe(
+        'Accept-Language, X-VoidPages, X-VoidPages-Version',
+      );
+    },
+  );
+
+  it.each([false, true])('varies re-rendered action pages by X-VoidPages (spa=%s)', async (spa) => {
+    const c = await createTestContext('POST', '/users', {
+      headers: spa ? { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION } : {},
+    });
+    const response = await handlePageMutation(
+      () => undefined,
+      (ctx) => {
+        ctx.header('Vary', 'Accept-Language');
+        return { users: [] };
+      },
+      undefined,
+      c,
+      'users',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+    await response.text();
+    expect(response.headers.get('Vary')).toBe('Accept-Language, X-VoidPages, X-VoidPages-Version');
+  });
+
+  it.each<Record<string, string>>([
+    { origin: 'https://attacker.test' },
+    { origin: 'http://sibling.localhost', 'sec-fetch-site': 'same-site' },
+    { origin: 'null' },
+    { origin: 'http://localhost:3000' },
+    { origin: 'https://localhost' },
+    { 'sec-fetch-site': 'cross-site' },
+    { 'sec-fetch-site': 'same-site' },
+    { referer: 'https://attacker.test/form' },
+  ])('rejects cross-origin page actions before invoking application code: %j', async (headers) => {
+    for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+      const c = await createTestContext(method, '/settings', {
+        headers: { ...headers, cookie: 'session=victim' },
+      });
+      const action = vi.fn(() => new Response(null, { status: 204 }));
+      const loader = vi.fn(() => ({}));
+      const render = vi.fn(async () => '');
+      const assets = vi.fn(async () => ({ css: '', preloads: '', body: '' }));
+      const response = await handlePageMutation(
+        action,
+        loader,
+        undefined,
+        c,
+        'settings',
+        render,
+        assets,
+      );
+      expect(response.status).toBe(403);
+      expect(action).not.toHaveBeenCalled();
+      expect(loader).not.toHaveBeenCalled();
+      expect(render).not.toHaveBeenCalled();
+      expect(assets).not.toHaveBeenCalled();
+    }
+  });
+
+  it.each<Record<string, string>>([
+    { origin: 'http://localhost', 'sec-fetch-site': 'same-origin' },
+    { 'sec-fetch-site': 'same-origin' },
+    { referer: 'http://localhost/form' },
+    {},
+  ])(
+    'allows same-origin browser actions and requests without browser metadata: %j',
+    async (headers) => {
+      const c = await createTestContext('POST', '/settings', {
+        headers: headers,
+      });
+      const action = vi.fn(() => Response.redirect('http://localhost/settings', 303));
+      const response = await handlePageMutation(
+        action,
+        undefined,
+        undefined,
+        c,
+        'settings',
+        mockRenderFn,
+        mockGetAssetTags,
+      );
+      expect(response.status).toBe(303);
+      expect(action).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('void return — re-runs GET, returns fresh props', async () => {
+    const c = await createTestContext('POST', '/users', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    const mutationHandler = vi.fn(() => undefined);
+    const getHandler = vi.fn(() => ({ users: ['new'] }));
+
+    const response = await handlePageMutation(
+      mutationHandler,
+      getHandler,
+      undefined,
+      c,
+      'users',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    const body = await json<PageResponse>(response);
+    expect(body.props).toEqual({ users: ['new'] });
+    expect(body.errors).toBeNull();
+  });
+
+  it('includes the request query string in mutation page object URLs', async () => {
+    const c = await createTestContext('POST', '/users?page=2', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    const response = await handlePageMutation(
+      () => undefined,
+      () => ({ users: [] }),
+      undefined,
+      c,
+      'users',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    const body = await json<PageResponse>(response);
+    expect(body.url).toBe('/users?page=2');
+  });
+
+  it('Response redirect — passes through', async () => {
+    const c = await createTestContext('POST', '/users', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    const redirect = new Response(null, {
+      status: 302,
+      headers: { Location: '/users/1' },
+    });
+    const mutationHandler = vi.fn(() => redirect);
+
+    const response = await handlePageMutation(
+      mutationHandler,
+      undefined,
+      undefined,
+      c,
+      'users',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get('Location')).toBe('/users/1');
+  });
+
+  it('ValidationError thrown — re-runs GET with errors', async () => {
+    const c = await createTestContext('POST', '/users', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    const mutationHandler = vi.fn(() => {
+      throw new ValidationError({ name: 'required' });
+    });
+    const getHandler = vi.fn(() => ({ users: [] }));
+
+    const response = await handlePageMutation(
+      mutationHandler,
+      getHandler,
+      undefined,
+      c,
+      'users',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    const body = await json<PageResponse>(response);
+    expect(body.errors).toEqual({ name: 'required' });
+    expect(body.props).toEqual({ users: [] });
+  });
+
+  it.each([true, false])(
+    'sends shared data the action updates (page JSON: %s)',
+    async (pagesRequest) => {
+      const c = await createTestContext('POST', '/users', {
+        headers: pagesRequest
+          ? { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION }
+          : {},
+        shared: { count: 2 },
+      });
+      const render = vi.fn(async (_page: { shared: unknown }) => '<html></html>');
+
+      const response = await handlePageMutation(
+        (ctx: CloudContext) => {
+          ctx.set('shared', { ...(ctx.get('shared') as object), count: 99 });
+        },
+        () => ({}),
+        undefined,
+        c,
+        'users',
+        render,
+        mockGetAssetTags,
+      );
+
+      const shared = pagesRequest
+        ? (await json<PageResponse>(response)).shared
+        : render.mock.lastCall?.[0].shared;
+      expect(shared).toEqual({ count: 99 });
+    },
+  );
+
+  it('keeps the shared data an action updated before a ValidationError', async () => {
+    const c = await createTestContext('POST', '/users', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+      shared: { count: 2 },
+    });
+
+    const response = await handlePageMutation(
+      (ctx: CloudContext) => {
+        ctx.set('shared', { ...(ctx.get('shared') as object), count: 99 });
+        throw new ValidationError({ name: 'required' });
+      },
+      () => ({}),
+      undefined,
+      c,
+      'users',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    const body = await json<PageResponse>(response);
+    expect(body.errors).toEqual({ name: 'required' });
+    expect(body.shared).toEqual({ count: 99 });
+  });
+
+  it('keeps the middleware shared data when the action leaves it alone', async () => {
+    const c = await createTestContext('POST', '/users', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+      shared: { count: 2 },
+    });
+
+    const response = await handlePageMutation(
+      () => undefined,
+      () => ({}),
+      undefined,
+      c,
+      'users',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    expect((await json<PageResponse>(response)).shared).toEqual({ count: 2 });
+  });
+
+  it('ValidationError HTML responses include collected dev CSS', async () => {
+    const c = await createTestContext('POST', '/users');
+    const mutationHandler = vi.fn(() => {
+      throw new ValidationError({ name: 'required' });
+    });
+    const getHandler = vi.fn(() => ({ users: [] }));
+    const renderFn = vi.fn(
+      async (_pageObj: RenderPage, assetTags) => `<html><head>${assetTags.css}</head></html>`,
+    );
+
+    const response = await handlePageMutation(
+      mutationHandler,
+      getHandler,
+      undefined,
+      c,
+      'users',
+      renderFn,
+      async () => ({
+        css: '',
+        preloads: '',
+        body: '',
+        devCss: [{ url: '/pages/users.css', css: '.error{color:red}' }],
+      }),
+    );
+
+    const html = await response.text();
+    expect(html).toContain('data-vite-dev-id="/pages/users.css"');
+    expect(html).toContain('.error{color:red}');
+  });
+
+  it('Response 400 (withValidator) — extracts errors, re-runs GET', async () => {
+    const c = await createTestContext('POST', '/users', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    const validationResponse = Response.json(
+      {
+        issues: [
+          {
+            slot: 'body',
+            issues: [{ message: 'required', path: 'name' }],
+          },
+        ],
+      },
+      { status: 400 },
+    );
+    const mutationHandler = vi.fn(() => validationResponse);
+    const getHandler = vi.fn(() => ({ users: [] }));
+
+    const response = await handlePageMutation(
+      mutationHandler,
+      getHandler,
+      undefined,
+      c,
+      'users',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    const body = await json<PageResponse>(response);
+    expect(body.errors).toEqual({ name: 'required' });
+  });
+
+  it.each([
+    {
+      name: 'JSON without withValidator issues',
+      response: () => Response.json({ error: 'Slug taken' }, { status: 400 }),
+      body: '{"error":"Slug taken"}',
+    },
+    {
+      name: 'text',
+      response: () => new Response('Missing title', { status: 400 }),
+      body: 'Missing title',
+    },
+  ])('Response 400 with $name passes through unchanged', async ({ response, body }) => {
+    const c = await createTestContext('POST', '/users', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+    const getHandler = vi.fn(() => ({ users: [] }));
+
+    const result = await handlePageMutation(
+      () => response(),
+      getHandler,
+      undefined,
+      c,
+      'users',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    expect(result.status).toBe(400);
+    expect(await result.text()).toBe(body);
+    expect(getHandler).not.toHaveBeenCalled();
+  });
+
+  it.each<{
+    name: string;
+    headers: Record<string, string>;
+    action: () => undefined;
+    loader: (c: CloudContext) => Response | Promise<Response>;
+    status: number;
+  }>([
+    {
+      name: 'void action passes through a loader redirect',
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+      action: () => undefined,
+      loader: (c: CloudContext) => c.redirect('/posts'),
+      status: 302,
+    },
+    {
+      name: 'void action passes through a loader 404',
+      headers: {},
+      action: () => undefined,
+      loader: (c: CloudContext) => c.notFound(),
+      status: 404,
+    },
+    {
+      name: 'ValidationError passes through a loader redirect',
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+      action: () => {
+        throw new ValidationError({ title: 'required' });
+      },
+      loader: (c: CloudContext) => c.redirect('/posts'),
+      status: 302,
+    },
+  ])('$name', async ({ headers, action, loader, status }) => {
+    const c = await createTestContext('POST', '/posts/1', { headers });
+    const render = vi.fn(async () => '<html></html>');
+
+    const response = await handlePageMutation(
+      action,
+      loader,
+      undefined,
+      c,
+      'post',
+      render,
+      mockGetAssetTags,
+    );
+
+    expect(response.status).toBe(status);
+    expect(response.headers.get('Location')).toBe(status === 302 ? '/posts' : null);
+    expect(render).not.toHaveBeenCalled();
+  });
+
+  it('Response 204 (void from withValidator) — re-runs GET', async () => {
+    const c = await createTestContext('POST', '/users', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    const voidResponse = new Response(null, { status: 204 });
+    const mutationHandler = vi.fn(() => voidResponse);
+    const getHandler = vi.fn(() => ({ users: ['created'] }));
+
+    const response = await handlePageMutation(
+      mutationHandler,
+      getHandler,
+      undefined,
+      c,
+      'users',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    const body = await json<PageResponse>(response);
+    expect(body.props).toEqual({ users: ['created'] });
+    expect(body.errors).toBeNull();
+  });
+
+  it('post-mutation HTML rerenders include collected dev CSS', async () => {
+    const c = await createTestContext('POST', '/users');
+    const renderFn = vi.fn(
+      async (_pageObj: RenderPage, assetTags) => `<html><head>${assetTags.css}</head></html>`,
+    );
+
+    const response = await handlePageMutation(
+      () => undefined,
+      () => ({ users: ['created'] }),
+      undefined,
+      c,
+      'users',
+      renderFn,
+      async () => ({
+        css: '',
+        preloads: '',
+        body: '',
+        devCss: [{ url: '/pages/users.css', css: '.created{color:green}' }],
+      }),
+    );
+
+    const html = await response.text();
+    expect(html).toContain('data-vite-dev-id="/pages/users.css"');
+    expect(html).toContain('.created{color:green}');
+  });
+
+  it('re-throws non-ValidationError errors', async () => {
+    const c = await createTestContext('POST', '/users', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    const mutationHandler = vi.fn(() => {
+      throw new Error('boom');
+    });
+
+    await expect(
+      handlePageMutation(
+        mutationHandler,
+        undefined,
+        undefined,
+        c,
+        'users',
+        mockRenderFn,
+        mockGetAssetTags,
+      ),
+    ).rejects.toThrow('boom');
+  });
+
+  it('island mutation — ValidationError returns JSON 422', async () => {
+    const c = await createTestContext('POST', '/contact');
+
+    const mutationHandler = vi.fn(() => {
+      throw new ValidationError({ email: 'required' });
+    });
+
+    const response = await handlePageMutation(
+      mutationHandler,
+      undefined,
+      undefined,
+      c,
+      'contact',
+      mockRenderFn,
+      mockGetAssetTags,
+      undefined,
+      { renderMode: 'island' },
+    );
+
+    expect(response.status).toBe(422);
+    const body = await json<{ errors: Record<string, string> }>(response);
+    expect(body.errors).toEqual({ email: 'required' });
+  });
+
+  it('island mutation — withValidator 400 returns JSON 422', async () => {
+    const c = await createTestContext('POST', '/contact');
+
+    const validationResponse = Response.json(
+      {
+        issues: [
+          {
+            slot: 'body',
+            issues: [{ message: 'required', path: 'email' }],
+          },
+        ],
+      },
+      { status: 400 },
+    );
+    const mutationHandler = vi.fn(() => validationResponse);
+
+    const response = await handlePageMutation(
+      mutationHandler,
+      undefined,
+      undefined,
+      c,
+      'contact',
+      mockRenderFn,
+      mockGetAssetTags,
+      undefined,
+      { renderMode: 'island' },
+    );
+
+    expect(response.status).toBe(422);
+    const body = await json<{ errors: Record<string, string> }>(response);
+    expect(body.errors).toEqual({ email: 'required' });
+  });
+
+  it('island mutation — success returns JSON 200', async () => {
+    const c = await createTestContext('POST', '/contact');
+
+    const mutationHandler = vi.fn(() => undefined);
+
+    const response = await handlePageMutation(
+      mutationHandler,
+      undefined,
+      undefined,
+      c,
+      'contact',
+      mockRenderFn,
+      mockGetAssetTags,
+      undefined,
+      { renderMode: 'island' },
+    );
+
+    expect(response.status).toBe(200);
+    const body = await json<{ success: boolean }>(response);
+    expect(body.success).toBe(true);
+  });
+
+  it('island mutation — redirect passes through', async () => {
+    const c = await createTestContext('POST', '/contact');
+
+    const redirect = new Response(null, {
+      status: 302,
+      headers: { Location: '/dashboard' },
+    });
+    const mutationHandler = vi.fn(() => redirect);
+
+    const response = await handlePageMutation(
+      mutationHandler,
+      undefined,
+      undefined,
+      c,
+      'contact',
+      mockRenderFn,
+      mockGetAssetTags,
+      undefined,
+      { renderMode: 'island' },
+    );
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get('Location')).toBe('/dashboard');
+  });
+});
+
+describe('handlePageGet with deferred props', () => {
+  it('SPA — streams NDJSON with immediate props first, then deferred', async () => {
+    const c = await createTestContext('GET', '/dashboard', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    const handler = vi.fn(() => ({
+      projects: [1, 2],
+      usage: defer(() => Promise.resolve({ requests: 100 })),
+    }));
+
+    const response = await handlePageGet(
+      handler,
+      undefined,
+      c,
+      'dashboard',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    expect(response.headers.get('content-type')).toBe('application/x-ndjson');
+    const text = await response.text();
+    const lines = text.trim().split('\n');
+    expect(lines.length).toBe(2);
+
+    const pageObj = deserializePageData<
+      PageResponse & { __deferred: string; data: unknown; error: string }
+    >(lines[0]);
+    expect(pageObj.props).toEqual({
+      projects: [1, 2],
+      usage: { value: null, loading: true, error: null },
+    });
+    expect(pageObj.deferred).toEqual(['usage']);
+    expect(pageObj.deferredKeys).toEqual({ usage: 'usage' });
+
+    const deferredLine = deserializePageData<
+      PageResponse & { __deferred: string; data: unknown; error: string }
+    >(lines[1]);
+    expect(deferredLine.__deferred).toBe('usage');
+    expect(deferredLine.data).toEqual({ requests: 100 });
+  });
+
+  it('SPA — streams null for a deferred resolver that returns undefined', async () => {
+    const c = await createTestContext('GET', '/post', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    const response = await handlePageGet(
+      () => ({ title: 'x', post: defer(() => Promise.resolve(undefined)) }),
+      undefined,
+      c,
+      'post',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    const lines = (await response.text()).trim().split('\n');
+    expect(
+      deserializePageData<PageResponse & { __deferred: string; data: unknown; error: string }>(
+        lines[1],
+      ),
+    ).toEqual({ __deferred: 'post', data: undefined });
+  });
+
+  it('SPA — dev streams the raw error for a failed deferred resolver', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const c = await createTestContext('GET', '/dashboard', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    const handler = vi.fn(() => ({
+      projects: [],
+      usage: defer(() => Promise.reject(new Error('timeout'))),
+    }));
+
+    try {
+      const response = await handlePageGet(
+        handler,
+        undefined,
+        c,
+        'dashboard',
+        mockRenderFn,
+        mockGetAssetTags,
+        undefined,
+        { dev: true },
+      );
+
+      const text = await response.text();
+      const lines = text.trim().split('\n');
+      expect(lines.length).toBe(2);
+
+      const deferredLine = deserializePageData<
+        PageResponse & { __deferred: string; data: unknown; error: string }
+      >(lines[1]);
+      expect(deferredLine.__deferred).toBe('usage');
+      expect(deferredLine.error).toBe('timeout');
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('SPA — production streams a generic error and logs the original', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const c = await createTestContext('GET', '/dashboard', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+    const error = new Error('db 10.0.0.5 refused');
+
+    try {
+      const response = await handlePageGet(
+        () => ({ usage: defer(() => Promise.reject(error)) }),
+        undefined,
+        c,
+        'dashboard',
+        mockRenderFn,
+        mockGetAssetTags,
+      );
+
+      const text = await response.text();
+      expect(text).not.toContain('10.0.0.5');
+      expect(
+        deserializePageData<PageResponse & { __deferred: string; data: unknown; error: string }>(
+          text.trim().split('\n')[1],
+        ),
+      ).toEqual({
+        __deferred: 'usage',
+        error: 'Internal Server Error',
+      });
+      expect(consoleError).toHaveBeenCalledWith(error);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('SSR — production rejects deferred props with a generic error', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const c = await createTestContext('GET', '/dashboard');
+    const error = new Error('db 10.0.0.5 refused');
+
+    try {
+      const response = await handlePageGet(
+        () => ({ usage: defer(() => Promise.reject(error)) }),
+        undefined,
+        c,
+        'dashboard',
+        mockRenderFn,
+        mockGetAssetTags,
+      );
+
+      const text = await response.text();
+      expect(text).not.toContain('10.0.0.5');
+      expect(text).toContain('window.__rejectDeferred("usage",');
+      expect(text).toContain('"Internal Server Error"');
+      expect(consoleError).toHaveBeenCalledWith(error);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('SPA — production keeps HTTPException messages for deferred props', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const c = await createTestContext('GET', '/dashboard', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    try {
+      const response = await handlePageGet(
+        () => ({
+          usage: defer(() =>
+            Promise.reject(new HTTPException(403, { message: 'Upgrade required' })),
+          ),
+        }),
+        undefined,
+        c,
+        'dashboard',
+        mockRenderFn,
+        mockGetAssetTags,
+      );
+
+      const text = await response.text();
+      expect(
+        deserializePageData<PageResponse & { __deferred: string; data: unknown; error: string }>(
+          text.trim().split('\n')[1],
+        ),
+      ).toEqual({
+        __deferred: 'usage',
+        error: 'Upgrade required',
+      });
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('SSR — streams HTML then deferred script tags', async () => {
+    const c = await createTestContext('GET', '/dashboard');
+
+    const handler = vi.fn(() => ({
+      projects: [1],
+      usage: defer(() => Promise.resolve({ requests: 100 })),
+    }));
+
+    const renderFn = vi.fn(
+      async (pageObj: RenderPage) =>
+        `<script id="__VOID_PAGE_DATA__" type="application/json">${JSON.stringify(pageObj)}</script><div id="app"></div>`,
+    );
+
+    const response = await handlePageGet(
+      handler,
+      undefined,
+      c,
+      'dashboard',
+      renderFn,
+      mockGetAssetTags,
+    );
+
+    const text = await response.text();
+    expect(text).toContain('__VOID_PAGE_DATA__');
+    expect(text).toContain('"deferred":["usage"]');
+    expect(text).toContain('window.__resolveDeferred("usage",');
+    expect(text).toContain(serializePageData({ requests: 100 }));
+  });
+
+  it('client-only page — returns an empty app shell with initial page data', async () => {
+    const c = await createTestContext('GET', '/analytics');
+
+    const handler = vi.fn(() => ({ title: 'Analytics' }));
+    const renderFn = Object.assign(
+      vi.fn(async () => '<html>server rendered</html>'),
+      {
+        preambleScript: '<script type="module">window.__reactPreamble = true</script>',
+      },
+    );
+    const response = await handlePageGet(
+      handler,
+      () => ({ title: 'Analytics | App' }),
+      c,
+      'analytics',
+      renderFn,
+      mockGetAssetTags,
+      undefined,
+      { renderMode: 'client' },
+    );
+
+    const html = await response.text();
+    expect(renderFn).not.toHaveBeenCalled();
+    expect(html).toContain('<title>Analytics | App</title>');
+    expect(html).toContain('window.__reactPreamble = true');
+    expect(html).toContain('<div id="app" data-void-ssr="false"></div>');
+    expect(html).toContain('__VOID_PAGE_DATA__');
+    expect(
+      deserializePageData(
+        html.match(/<script id="__VOID_PAGE_DATA__"[^>]*>([\s\S]*?)<\/script>/)![1],
+      ),
+    ).toMatchObject({ component: 'analytics', props: { title: 'Analytics' } });
+    expect(html).not.toContain('server rendered');
+  });
+
+  it('client-only page — streams deferred script tags after the shell', async () => {
+    const c = await createTestContext('GET', '/analytics');
+
+    const response = await handlePageGet(
+      () => ({
+        title: 'Analytics',
+        stats: defer(() => Promise.resolve({ visits: 12 })),
+      }),
+      undefined,
+      c,
+      'analytics',
+      mockRenderFn,
+      mockGetAssetTags,
+      undefined,
+      { renderMode: 'client' },
+    );
+
+    const html = await response.text();
+    expect(html).toContain('<div id="app" data-void-ssr="false"></div>');
+    expect(
+      deserializePageData<{ deferred: Array<string> }>(
+        html.match(/<script id="__VOID_PAGE_DATA__"[^>]*>([\s\S]*?)<\/script>/)![1],
+      ).deferred,
+    ).toEqual(['stats']);
+    expect(html).toContain('window.__resolveDeferred("stats",');
+    expect(html).toContain(serializePageData({ visits: 12 }));
+  });
+
+  it('deferred named group — resolves all keys together', async () => {
+    const c = await createTestContext('GET', '/dashboard', {
+      headers: { 'x-voidpages': 'true', 'X-VoidPages-Version': PAGES_PROTOCOL_VERSION },
+    });
+
+    const analyticsResolver = () =>
+      Promise.resolve({ metrics: { count: 5 }, chart: { data: [1] } });
+
+    const analytics = defer('analytics', analyticsResolver);
+    const handler = vi.fn(() => ({
+      projects: [1],
+      metrics: analytics,
+      chart: analytics,
+    }));
+
+    const response = await handlePageGet(
+      handler,
+      undefined,
+      c,
+      'dashboard',
+      mockRenderFn,
+      mockGetAssetTags,
+    );
+
+    const text = await response.text();
+    const lines = text.trim().split('\n');
+    expect(lines.length).toBe(2);
+
+    const pageObj = deserializePageData<
+      PageResponse & { __deferred: string; data: unknown; error: string }
+    >(lines[0]);
+    expect(pageObj.deferred).toEqual(['analytics']);
+    expect(pageObj.deferredKeys).toEqual({ metrics: 'analytics', chart: 'analytics' });
+
+    const deferredLine = deserializePageData<
+      PageResponse & { __deferred: string; data: unknown; error: string }
+    >(lines[1]);
+    expect(deferredLine.__deferred).toBe('analytics');
+    expect(deferredLine.data).toHaveProperty('metrics');
+    expect(deferredLine.data).toHaveProperty('chart');
+  });
+});
+
+describe('flattenValidationErrors', () => {
+  it('flattens nested issues format into flat map', () => {
+    const body = {
+      issues: [
+        {
+          slot: 'body',
+          issues: [
+            { message: 'required', path: 'name' },
+            { message: 'invalid', path: 'email' },
+          ],
+        },
+      ],
+    };
+
+    expect(flattenValidationErrors(body)).toEqual({
+      name: 'required',
+      email: 'invalid',
+    });
+  });
+
+  it('uses slot as key fallback when no path', () => {
+    const body = {
+      issues: [
+        {
+          slot: 'body',
+          issues: [{ message: 'invalid body' }],
+        },
+      ],
+    };
+
+    expect(flattenValidationErrors(body)).toEqual({
+      body: 'invalid body',
+    });
+  });
+
+  it('returns empty object for null/undefined input', () => {
+    expect(flattenValidationErrors(null)).toEqual({});
+    expect(flattenValidationErrors(undefined)).toEqual({});
+  });
+});

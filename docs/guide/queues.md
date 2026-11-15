@@ -1,0 +1,151 @@
+---
+description: 'Process work asynchronously with a consumer in queues/, then send it typed messages from your app.'
+outline: deep
+---
+
+# Queues
+
+Use queues to process work asynchronously, such as sending emails or handling uploads. Define a consumer in `queues/`, then send it typed messages from your app.
+
+## Defining queues
+
+Create a consumer in `queues/`. TypeScript and JavaScript files are supported (`.ts`, `.mts`, `.js`, `.mjs`). Its path determines the queue name: `queues/emails.ts` creates `emails`, and `queues/order/notifications.ts` creates `order-notifications`. Each queue must have a unique name.
+
+The resulting name must follow Cloudflare's queue naming rules: 1–63 characters, only letters, digits, and `-`, beginning and ending with a letter or digit. On `void deploy --platform cloudflare`, the Cloudflare queue also carries the Worker name, so the limit applies to that full name; see [Cloudflare queue names](#cloudflare-queue-names).
+
+Export a default handler wrapped with [`defineQueue<T>`](../reference/api/handlers.md#definequeue-t-handler). `T` defines the message body for both the consumer and calls to `send()`:
+
+```ts
+// queues/emails.ts
+import { defineQueue } from 'void';
+
+interface Message {
+  to: string;
+  subject: string;
+}
+
+export default defineQueue<Message>(async (batch, env) => {
+  for (const msg of batch.messages) {
+    console.log(`Send to ${msg.body.to}: ${msg.body.subject}`);
+    msg.ack(); // Acknowledge successful processing
+  }
+});
+```
+
+Files or directories starting with `_` are ignored.
+
+## Sending messages
+
+Import the typed `queues` proxy from `void/queues` to send messages. Each queue is available as a property matching its name, with full type safety from the consumer's `defineQueue<T>` generic.
+
+```ts
+// routes/api/orders.ts
+import { defineHandler } from 'void';
+import { queues } from 'void/queues';
+
+export const POST = defineHandler(async (c) => {
+  const order = await c.req.json();
+  // Fully typed: body must match the
+  // Message interface from queues/emails.ts
+  await queues.emails.send({
+    to: order.email,
+    subject: 'Order confirmed',
+  });
+  return c.json({ ok: true });
+});
+```
+
+## Per-message acknowledgment
+
+Each message in the batch has `ack()` and `retry()` methods matching the [Cloudflare Queues API](https://developers.cloudflare.com/queues/configuration/consumer-concurrency/):
+
+```ts
+export default defineQueue<Message>(async (batch, env) => {
+  for (const msg of batch.messages) {
+    try {
+      await processMessage(msg.body);
+      msg.ack(); // Remove from queue
+    } catch {
+      msg.retry({ delaySeconds: 30 }); // Re-deliver after 30s
+    }
+  }
+});
+```
+
+- `msg.ack()`: acknowledge the message and remove it from the queue
+- `msg.retry(options?)`: retry the message, optionally with a `{ delaySeconds }` delay
+- `batch.ackAll()`: acknowledge all messages in the batch
+- `batch.retryAll(options?)`: retry all messages in the batch
+
+The first `ack()` or `retry()` call wins for each message. Messages without an explicit decision are acknowledged when the handler succeeds and retried when it throws. Void logs handler errors automatically.
+
+The `timestamp` field on each message is a `Date` object.
+
+## Consumer options
+
+Export named constants to configure how Cloudflare delivers batches to your consumer:
+
+```ts
+// queues/emails.ts
+import { defineQueue } from 'void';
+
+interface Message {
+  to: string;
+  subject: string;
+}
+
+export const maxBatchSize = 50;
+export const maxBatchTimeout = 10; // seconds
+export const maxRetries = 5;
+export const retryDelay = 30; // seconds
+
+export default defineQueue<Message>(async (batch, env) => {
+  for (const msg of batch.messages) {
+    console.log(`Send to ${msg.body.to}: ${msg.body.subject}`);
+  }
+});
+```
+
+- `maxBatchSize`: maximum number of messages per batch (default `10`)
+- `maxBatchTimeout`: maximum seconds to wait before delivering an incomplete batch (default `5`)
+- `maxRetries`: maximum number of retries before delivery is exhausted (default `3`)
+- `retryDelay`: seconds to wait between retries (default `0`)
+
+Export each option directly from the queue file as a whole number, such as `export const maxRetries = 5`. Computed values and re-exports aren't supported; repeat shared settings in each queue file.
+
+Void-managed queues do not configure a dead-letter queue. Cloudflare permanently
+deletes messages that exhaust their retries without one; see
+[Cloudflare's dead-letter queue guide](https://developers.cloudflare.com/queues/configuration/dead-letter-queues/).
+
+Void provisions queues and connects their producers and consumers when you deploy.
+
+### Cloudflare queue names
+
+With `void deploy --platform cloudflare`, queue names include the Worker name: `queues/jobs.ts` in `app-staging` creates `app-staging-jobs`. Underscores in the Worker name become hyphens. Your app uses `queues.jobs.send()` in every environment.
+
+Keep the full name within 63 characters and unique within the account. Each Cloudflare queue supports one consumer; Void reports naming or consumer conflicts during deploy.
+
+Existing deployments keep their queues and messages. To adopt the new naming, pause producers, drain the old queue, remove its Worker consumer in Cloudflare, and redeploy. Check that the old queue is empty before deleting it.
+
+## Local development
+
+In native Void apps, sending a message through a queue binding automatically invokes the consumer in Miniflare. Local delivery uses the same handler as production.
+
+You can also manually dispatch a batch by POSTing to the dev endpoint Void exposes:
+
+```
+POST /__void/queue
+Content-Type: application/json
+{ "queue": "<queue-name>", "messages": [{ "id": "1", "timestamp": <unix_ms>, "body": <any>, "attempts": 1 }] }
+```
+
+The endpoint requires a local dev trigger token. Void prints a paste-ready curl command with the current token when the dev server starts.
+
+```bash
+curl -X POST http://localhost:5173/__void/queue \
+  -H "Content-Type: application/json" \
+  -H "x-void-dev-trigger: <printed-token>" \
+  -d '{"queue":"my-queue","messages":[{"id":"1","timestamp":'"$(date +%s000)"',"body":{"hello":"world"},"attempts":1}]}'
+```
+
+In supported meta-frameworks, use `/__void/queue` to test a consumer manually. It runs inside the framework adapter's development runtime with that adapter's bindings. Sending to a queue binding doesn't automatically invoke the consumer in this mode.

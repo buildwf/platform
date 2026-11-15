@@ -1,0 +1,340 @@
+---
+description: 'Vite plugins and client runtimes for React, Vue, Svelte, and Solid pages.'
+outline: deep
+---
+
+# Pages Adapters {#framework-adaptors}
+
+Framework adaptors for [Pages Routing](../../guide/pages-routing/overview). Each adaptor provides a Vite plugin and client-side runtime.
+
+## Error components
+
+All four adapters export `PageError` and `ErrorPageProps` for [`_not-found` and `_error` components](../../guide/pages-routing/errors):
+
+```ts
+// Also exported by @void/react, @void/vue, @void/svelte, and @void/solid.
+import type { ErrorPageProps, PageError } from 'void/pages';
+```
+
+`PageError` has a numeric `status` and a string `message`. `ErrorPageProps` contains `{ error: PageError }`.
+
+## Navigation destinations {#navigation-destinations}
+
+Build a URL with [`routeUrl()`](./types.md#routeurl-path-options) and pass it to `Link`'s `href`. All four adapters use the [`Href`](./types.md#route-types) type for links.
+
+The router's `visit(destination, options?)`, `prefetch(destination, options?)`, and `flush(destination, method?)` accept [`RouteUrlInput`](./types.md#route-types): a string, `URL`, or typed destination object.
+
+With [`routing.typedRoutes`](../config.md#routing-typedroutes), `href` and router strings must match one of your routes, or be a same-page or external URL. Without it, both accept any string.
+
+See [Typed navigation](../../guide/pages-routing/overview.md#typed-navigation) for framework examples.
+
+## Prefetching {#prefetching}
+
+`Link`'s `prefetch` prop takes `true`, `false`, a strategy, or an array of strategies:
+
+```ts
+type LinkPrefetchStrategy = 'hover' | 'click' | 'mount' | 'visible';
+```
+
+| Value               | Loads the page                                                                                |
+| ------------------- | --------------------------------------------------------------------------------------------- |
+| `'hover'` or `true` | When the pointer rests on the link for `hoverDelay`, when it gets keyboard focus, or on touch |
+| `'click'`           | When the mouse button or finger goes down, just before the click                              |
+| `'mount'`           | As soon as the link renders                                                                   |
+| `'visible'`         | Once the link has stayed in view for 300 ms. Links scrolled quickly past are skipped          |
+| `false`             | Never                                                                                         |
+
+Combine strategies with an array such as `['visible', 'hover']`. The first one triggered loads the page; later triggers reuse it.
+
+Only same-origin GET links prefetch. `Link` skips prefetching when Chromium reports data saver or a 2G connection. Calling `router.prefetch()` explicitly still loads the page.
+
+Set `cacheFor` in milliseconds or as a duration such as `'5m'`. To show cached data while refreshing it in the background, use a pair such as `['30s', '5m']`: the page stays fresh for 30 seconds and can be reused for up to 5 minutes.
+
+Each adapter plugin's `prefetch` option sets app-wide values:
+
+| Option            | Default | Description                                                                                                                                                                                                 |
+| ----------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `defaultStrategy` | `false` | The `prefetch` value for every `Link` that doesn't set its own. A `Link`'s own `prefetch` replaces it, and `prefetch={false}` turns it off. Links with a non-GET `method` or `reloadDocument` don't use it. |
+| `hoverDelay`      | `75`    | Milliseconds the pointer rests on a link before `'hover'` prefetches.                                                                                                                                       |
+| `cacheFor`        | `'30s'` | The `cacheFor` value for every `Link` that doesn't set its own.                                                                                                                                             |
+
+## `@void/vue` {#void-vue}
+
+### `voidVue(options?)` {#voidvue-options}
+
+Imported from `"@void/vue/plugin"`. Returns an array of Vite plugins that handle Vue SFC compilation and SSR or hydration entry generation. It already includes `@vitejs/plugin-vue`, so you do not need to install or configure that separately.
+
+```ts
+import { voidVue } from '@void/vue/plugin';
+
+export default defineConfig({
+  plugins: [voidPlugin(), voidVue()],
+});
+```
+
+**Signature:**
+
+```ts
+function voidVue(options?: VoidVueOptions): Plugin[];
+```
+
+**Options:**
+
+```ts
+interface VoidVueOptions {
+  vue?: VuePluginOptions; // passed through to @vitejs/plugin-vue
+  viewTransitions?: boolean; // enable View Transitions API for navigations
+  prefetch?: {
+    defaultStrategy?: boolean | LinkPrefetchStrategy | LinkPrefetchStrategy[]; // default: false
+    hoverDelay?: number; // default: 75 (ms)
+    cacheFor?: number | string | [string, string]; // default: '30s'
+  };
+}
+```
+
+### Vue Runtime {#vue-runtime}
+
+Imported from `"@void/vue"`.
+
+| Export                             | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Link`                             | Vue component for SPA navigation. Renders `<a>` for GET, `<button>` for non-GET methods. Props: `href`, `method`, `data`, `prefetch`, `cacheFor`, `preserveScroll`, `preserveState`, `replace`, `reloadDocument`, `viewTransition`, `activeMatch`, `onNavigate`. Adds `aria-current="page"` and `data-void-active` to the link to the current page ([active links](../../guide/pages-routing/overview.md#active-links)), and `data-void-pending` to links to a page while it loads ([pending links](../../guide/pages-routing/overview.md#pending-links)). |
+| `useRouter()`                      | Returns the Void Router with current route state (`url`, `path`, `query`, `params`) and navigation methods: `visit`, `refresh`, awaitable `prefetch`, `flush`, `flushAll`.                                                                                                                                                                                                                                                                                                                                                                                 |
+| `useParams()`                      | Returns dynamic route params for the page currently being rendered. Pass the page's pattern as the type argument, such as `useParams<'/users/[id]'>()`, to type them.                                                                                                                                                                                                                                                                                                                                                                                      |
+| `useNavigation()`                  | Returns pending navigation state: `{ state, location, method }`, where `state` is `"idle"`, `"loading"`, or `"submitting"` and `location` is the pending destination.                                                                                                                                                                                                                                                                                                                                                                                      |
+| `useForm(url, defaults, options?)` | Typed reactive form helper bound to a page action URL. Returns `{ data, post, put, patch, delete, pending, errors, error, hasChanges, wasSuccessful, recentlySuccessful, reset, setError, clearErrors, clearError }`.                                                                                                                                                                                                                                                                                                                                      |
+| `useIslandForm(defaults)`          | Form helper for island components. Same form state as `useForm()`, plus `submit(url, method)`. `post(url)`, `put(url)`, `patch(url)`, and `delete(url)` take the action URL and submit with `fetch()`. With [`routing.typedRoutes`](../config.md#routing-typedroutes), the URL is a [`RouteUrl`](./types.md#route-types).                                                                                                                                                                                                                                  |
+| `action(url, options?)`            | Awaitable one-shot page action helper. Uses `POST` by default and accepts `{ data, method, params, preserveScroll }`, where `method` can be `"PUT"`, `"PATCH"`, or `"DELETE"`. Returns an [`ActionResult`](../../guide/pages-routing/actions-and-forms.md#action-helper).                                                                                                                                                                                                                                                                                  |
+| `isVoidActionError(error)`         | Checks and narrows `error` to `VoidActionError`, including thrown `401`, `403`, and `500` errors. See [Handling action errors](../../guide/pages-routing/actions-and-forms.md#validation-errors).                                                                                                                                                                                                                                                                                                                                                          |
+| `isCallSiteActionError(error)`     | Recognizes the expected errors returned by `action()`, such as `409` or `422`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `getValidationErrors(body)`        | Returns the field-error map from a failed action's `error.body`, or `null` when the body has no field errors. Use it to show validation errors from `action()`.                                                                                                                                                                                                                                                                                                                                                                                            |
+| `useShared()`                      | Returns shared data. Middleware sets it with `c.set("shared", {...})`; a loader or action can update it. See [Shared data](../../guide/pages-routing/layouts.md#shared-data).                                                                                                                                                                                                                                                                                                                                                                              |
+
+Vue `Link` GET `data` is merged into the rendered `href` query string. Primitive values are serialized with `String(value)`, arrays become repeated keys, `null` and `undefined` are omitted, and nested objects throw. `prefetch` and `reloadDocument` are GET-only and throw for mutation links.
+
+Vue GET navigation remounts the page so `useForm()` picks up the destination record's URL and defaults; layouts persist. Mutations and `router.refresh()` preserve page state by default. Set `preserveState` explicitly to override the default for navigation within the same record.
+
+## `@void/react` {#void-react}
+
+### `voidReact(options?)` {#voidreact-options}
+
+Imported from `"@void/react/plugin"`. Returns an array of Vite plugins that handle SSR and hydration entry generation. It already includes `@vitejs/plugin-react`, so you do not need to install or configure that separately.
+
+```ts
+import { voidReact } from '@void/react/plugin';
+
+export default defineConfig({
+  plugins: [voidPlugin(), voidReact()],
+});
+```
+
+**Signature:**
+
+```ts
+function voidReact(options?: VoidReactOptions): Plugin[];
+```
+
+**Options:**
+
+```ts
+interface VoidReactOptions {
+  react?: ReactPluginOptions; // passed through to @vitejs/plugin-react
+  viewTransitions?: boolean; // enable View Transitions API for navigations
+  prefetch?: {
+    defaultStrategy?: boolean | LinkPrefetchStrategy | LinkPrefetchStrategy[]; // default: false
+    hoverDelay?: number; // default: 75 (ms)
+    cacheFor?: number | string | [string, string]; // default: '30s'
+  };
+}
+```
+
+### React Runtime {#react-runtime}
+
+Imported from `"@void/react"`.
+
+| Export                             | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Link`                             | React component for SPA navigation. Renders `<a>` for GET, `<button>` for non-GET methods. Props: `href`, `method`, `data`, `prefetch`, `cacheFor`, `preserveScroll`, `preserveState`, `replace`, `reloadDocument`, `viewTransition`, `activeMatch`, `onNavigate`. Adds `aria-current="page"` and `data-void-active` to the link to the current page ([active links](../../guide/pages-routing/overview.md#active-links)), and `data-void-pending` to links to a page while it loads ([pending links](../../guide/pages-routing/overview.md#pending-links)). |
+| `useRouter()`                      | Returns the Void Router with current route state (`url`, `path`, `query`, `params`) and navigation methods: `visit`, `refresh`, awaitable `prefetch`, `flush`, `flushAll`. React navigations are scheduled as transitions.                                                                                                                                                                                                                                                                                                                                   |
+| `useParams()`                      | Returns dynamic route params for the page currently being rendered. Pass the page's pattern as the type argument, such as `useParams<'/users/[id]'>()`, to type them.                                                                                                                                                                                                                                                                                                                                                                                        |
+| `useNavigation()`                  | Returns pending navigation state: `{ state, location, method }`, where `state` is `"idle"`, `"loading"`, or `"submitting"` and `location` is the pending destination.                                                                                                                                                                                                                                                                                                                                                                                        |
+| `useForm(url, defaults, options?)` | Form helper hook. Returns `{ data, setData, post, put, patch, delete, pending, errors, error, hasChanges, wasSuccessful, recentlySuccessful, reset, setError, clearErrors, clearError }`.                                                                                                                                                                                                                                                                                                                                                                    |
+| `useIslandForm(defaults)`          | Form helper hook for island components. Same form state as `useForm()`. `post(url)`, `put(url)`, `patch(url)`, and `delete(url)` take the action URL and submit with `fetch()`. With [`routing.typedRoutes`](../config.md#routing-typedroutes), the URL is a [`RouteUrl`](./types.md#route-types).                                                                                                                                                                                                                                                           |
+| `action(url, options?)`            | Awaitable one-shot page action helper. Uses `POST` by default and accepts `{ data, method, params, preserveScroll }`, where `method` can be `"PUT"`, `"PATCH"`, or `"DELETE"`. Returns an [`ActionResult`](../../guide/pages-routing/actions-and-forms.md#action-helper).                                                                                                                                                                                                                                                                                    |
+| `isVoidActionError(error)`         | Checks and narrows `error` to `VoidActionError`, including thrown `401`, `403`, and `500` errors. See [Handling action errors](../../guide/pages-routing/actions-and-forms.md#validation-errors).                                                                                                                                                                                                                                                                                                                                                            |
+| `isCallSiteActionError(error)`     | Recognizes the expected errors returned by `action()`, such as `409` or `422`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `getValidationErrors(body)`        | Returns the field-error map from a failed action's `error.body`, or `null` when the body has no field errors. Use it to show validation errors from `action()`.                                                                                                                                                                                                                                                                                                                                                                                              |
+| `useShared()`                      | Returns shared data. Middleware sets it with `c.set("shared", {...})`; a loader or action can update it. See [Shared data](../../guide/pages-routing/layouts.md#shared-data).                                                                                                                                                                                                                                                                                                                                                                                |
+| `Deferred<T>`                      | React-only prop type for `defer()` results. It is `Promise<T>` and is consumed with React `use()`.                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+
+React `Link` GET `data` is merged into the rendered `href` query string. Primitive values are serialized with `String(value)`, arrays become repeated keys, `null` and `undefined` are omitted, and nested objects throw. `prefetch` and `reloadDocument` are GET-only and throw for mutation links.
+
+React `useForm()` accepts `onSuccess?: () => void | Promise<void>` and `onError?: (error: Record<string, string> | VoidActionError) => void | Promise<void>`. `pending` stays true until callbacks finish. See [submission callbacks](../../guide/pages-routing/actions-and-forms.md#react-submission-callbacks).
+
+React deferred props returned from `defer()` are Suspense resources. Read them
+with React's `use()` inside a `<Suspense>` boundary. React Pages requires React
+19 and uses streaming SSR for the initial deferred shell. Rejections throw from
+`use()`, so use a normal React error boundary for custom deferred error UI. Vue,
+Svelte, and Solid keep the `{ loading, value, error }` deferred state object.
+When explicitly annotating props, import `Deferred` from the framework adapter
+package (`@void/react`, `@void/vue`, `@void/svelte`, or `@void/solid`) so the
+type matches that adapter's client runtime shape.
+
+### React navigation completion {#react-navigation-completion}
+
+By default, `await router.visit()` and `await router.refresh()` wait for React to commit the updated page and URL. You can also request this explicitly with `{ resolveOn: 'commit' }`.
+
+When awaiting navigation inside `startTransition`, a `<form action>`, `useActionState`, or an async `useForm()` callback, pass `{ resolveOn: 'data' }`:
+
+```tsx
+startTransition(async () => {
+  await saveUser();
+  await router.refresh({ resolveOn: 'data' });
+});
+
+await router.visit('/account', { resolveOn: 'data' });
+```
+
+With `'data'`, the promise resolves when page data is ready, so the Action can finish before React commits. The transition can stay pending through Suspense.
+
+The DOM and URL may still show the previous page after `await`. Use an effect or ref callback for work that needs the updated DOM.
+
+## `@void/svelte` {#void-svelte}
+
+### `voidSvelte(options?)` {#voidsvelte-options}
+
+Imported from `"@void/svelte/plugin"`. Returns an array of Vite plugins that handle SSR and hydration entry generation for Svelte 5. It already includes `@sveltejs/vite-plugin-svelte`, so you do not need to install or configure that separately.
+
+```ts
+import { voidSvelte } from '@void/svelte/plugin';
+
+export default defineConfig({
+  plugins: [voidPlugin(), voidSvelte()],
+});
+```
+
+**Signature:**
+
+```ts
+function voidSvelte(options?: VoidSvelteOptions): Plugin[];
+```
+
+**Options:**
+
+```ts
+interface VoidSvelteOptions {
+  svelte?: SveltePluginOptions; // passed through to @sveltejs/vite-plugin-svelte
+  viewTransitions?: boolean; // enable View Transitions API
+  prefetch?: {
+    defaultStrategy?: boolean | LinkPrefetchStrategy | LinkPrefetchStrategy[]; // default: false
+    hoverDelay?: number; // default: 75 (ms)
+    cacheFor?: number | string | [string, string]; // default: '30s'
+  };
+}
+```
+
+### Svelte Runtime {#svelte-runtime}
+
+Imported from `"@void/svelte"`.
+
+| Export                             | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Link`                             | Svelte component for SPA navigation. Renders `<a>` for GET, `<button>` for non-GET methods. Props: `href`, `method`, `data`, `prefetch`, `cacheFor`, `preserveScroll`, `preserveState`, `replace`, `reloadDocument`, `viewTransition`, `activeMatch`, `onNavigate`. Adds `aria-current="page"` and `data-void-active` to the link to the current page ([active links](../../guide/pages-routing/overview.md#active-links)), and `data-void-pending` to links to a page while it loads ([pending links](../../guide/pages-routing/overview.md#pending-links)). |
+| `useForm(url, defaults, options?)` | Form helper using Svelte 5 runes. Returns `{ data, post, put, patch, delete, pending, errors, error, hasChanges, wasSuccessful, recentlySuccessful, reset, setError, clearErrors, clearError }`.                                                                                                                                                                                                                                                                                                                                                              |
+| `useIslandForm(defaults)`          | Form helper for island components. Same form state as `useForm()`, plus `submit(url, method)`. `post(url)`, `put(url)`, `patch(url)`, and `delete(url)` take the action URL and submit with `fetch()`. With [`routing.typedRoutes`](../config.md#routing-typedroutes), the URL is a [`RouteUrl`](./types.md#route-types).                                                                                                                                                                                                                                     |
+| `action(url, options?)`            | Awaitable one-shot page action helper. Uses `POST` by default and accepts `{ data, method, params, preserveScroll }`, where `method` can be `"PUT"`, `"PATCH"`, or `"DELETE"`. Returns an [`ActionResult`](../../guide/pages-routing/actions-and-forms.md#action-helper).                                                                                                                                                                                                                                                                                     |
+| `isVoidActionError(error)`         | Checks and narrows `error` to `VoidActionError`, including thrown `401`, `403`, and `500` errors. See [Handling action errors](../../guide/pages-routing/actions-and-forms.md#validation-errors).                                                                                                                                                                                                                                                                                                                                                             |
+| `isCallSiteActionError(error)`     | Recognizes the expected errors returned by `action()`, such as `409` or `422`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `getValidationErrors(body)`        | Returns the field-error map from a failed action's `error.body`, or `null` when the body has no field errors. Use it to show validation errors from `action()`.                                                                                                                                                                                                                                                                                                                                                                                               |
+| `useShared()`                      | Returns shared data. Middleware sets it with `c.set("shared", {...})`; a loader or action can update it. See [Shared data](../../guide/pages-routing/layouts.md#shared-data).                                                                                                                                                                                                                                                                                                                                                                                 |
+| `useRouter()`                      | Returns the Void Router with current route state (`url`, `path`, `query`, `params`) and navigation methods: `visit`, `refresh`, awaitable `prefetch`, `flush`, `flushAll`.                                                                                                                                                                                                                                                                                                                                                                                    |
+| `useParams()`                      | Returns dynamic route params for the page currently being rendered. Pass the page's pattern as the type argument, such as `useParams<'/users/[id]'>()`, to type them.                                                                                                                                                                                                                                                                                                                                                                                         |
+| `useNavigation()`                  | Returns pending navigation state: `{ state, location, method }`, where `state` is `"idle"`, `"loading"`, or `"submitting"` and `location` is the pending destination.                                                                                                                                                                                                                                                                                                                                                                                         |
+
+Svelte `Link` GET `data` is merged into the rendered `href` query string. Primitive values are serialized with `String(value)`, arrays become repeated keys, `null` and `undefined` are omitted, and nested objects throw. `prefetch` and `reloadDocument` are GET-only and throw for mutation links.
+
+## `@void/solid` {#void-solid}
+
+### `voidSolid(options?)` {#voidsolid-options}
+
+Imported from `"@void/solid/plugin"`. Returns an array of Vite plugins that handle SSR and hydration entry generation for Solid. It already includes `vite-plugin-solid`, so you do not need to install or configure that separately.
+
+```ts
+import { voidSolid } from '@void/solid/plugin';
+
+export default defineConfig({
+  plugins: [voidPlugin(), voidSolid()],
+});
+```
+
+**Signature:**
+
+```ts
+function voidSolid(options?: VoidSolidOptions): Plugin[];
+```
+
+**Options:**
+
+```ts
+interface VoidSolidOptions {
+  solid?: SolidPluginOptions; // passed through to vite-plugin-solid
+  viewTransitions?: boolean; // enable View Transitions API
+  prefetch?: {
+    defaultStrategy?: boolean | LinkPrefetchStrategy | LinkPrefetchStrategy[]; // default: false
+    hoverDelay?: number; // default: 75 (ms)
+    cacheFor?: number | string | [string, string]; // default: '30s'
+  };
+}
+```
+
+### Solid Runtime {#solid-runtime}
+
+Imported from `"@void/solid"`.
+
+| Export                             | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Link`                             | Solid component for SPA navigation. Renders `<a>` for GET, `<button>` for non-GET methods. Props: `href`, `method`, `data`, `prefetch`, `cacheFor`, `preserveScroll`, `preserveState`, `replace`, `reloadDocument`, `viewTransition`, `activeMatch`, `onNavigate`. Adds `aria-current="page"` and `data-void-active` to the link to the current page ([active links](../../guide/pages-routing/overview.md#active-links)), and `data-void-pending` to links to a page while it loads ([pending links](../../guide/pages-routing/overview.md#pending-links)). |
+| `useForm(url, defaults, options?)` | Form helper using Solid stores. Returns `{ data, setData, post, put, patch, delete, pending, errors, error, hasChanges, wasSuccessful, recentlySuccessful, reset, setError, clearErrors, clearError }`.                                                                                                                                                                                                                                                                                                                                                      |
+| `useIslandForm(defaults)`          | Form helper for island components. Same form state as `useForm()`. `post(url)`, `put(url)`, `patch(url)`, and `delete(url)` take the action URL and submit with `fetch()`. With [`routing.typedRoutes`](../config.md#routing-typedroutes), the URL is a [`RouteUrl`](./types.md#route-types).                                                                                                                                                                                                                                                                |
+| `action(url, options?)`            | Awaitable one-shot page action helper. Uses `POST` by default and accepts `{ data, method, params, preserveScroll }`, where `method` can be `"PUT"`, `"PATCH"`, or `"DELETE"`. Returns an [`ActionResult`](../../guide/pages-routing/actions-and-forms.md#action-helper).                                                                                                                                                                                                                                                                                    |
+| `isVoidActionError(error)`         | Checks and narrows `error` to `VoidActionError`, including thrown `401`, `403`, and `500` errors. See [Handling action errors](../../guide/pages-routing/actions-and-forms.md#validation-errors).                                                                                                                                                                                                                                                                                                                                                            |
+| `isCallSiteActionError(error)`     | Recognizes the expected errors returned by `action()`, such as `409` or `422`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `getValidationErrors(body)`        | Returns the field-error map from a failed action's `error.body`, or `null` when the body has no field errors. Use it to show validation errors from `action()`.                                                                                                                                                                                                                                                                                                                                                                                              |
+| `useShared()`                      | Returns shared data. Middleware sets it with `c.set("shared", {...})`; a loader or action can update it. See [Shared data](../../guide/pages-routing/layouts.md#shared-data).                                                                                                                                                                                                                                                                                                                                                                                |
+| `useRouter()`                      | Returns the Void Router with current route state (`url`, `path`, `query`, `params`) and navigation methods: `visit`, `refresh`, awaitable `prefetch`, `flush`, `flushAll`.                                                                                                                                                                                                                                                                                                                                                                                   |
+| `useParams()`                      | Returns dynamic route params for the page currently being rendered. Pass the page's pattern as the type argument, such as `useParams<'/users/[id]'>()`, to type them.                                                                                                                                                                                                                                                                                                                                                                                        |
+| `useNavigation()`                  | Returns pending navigation state: `{ state, location, method }`, where `state` is `"idle"`, `"loading"`, or `"submitting"` and `location` is the pending destination.                                                                                                                                                                                                                                                                                                                                                                                        |
+
+Solid `Link` GET `data` is merged into the rendered `href` query string. Primitive values are serialized with `String(value)`, arrays become repeated keys, `null` and `undefined` are omitted, and nested objects throw. `prefetch` and `reloadDocument` are GET-only and throw for mutation links.
+
+Solid re-creates the page on GET navigation and whenever the route or its params change, so `useForm()` picks up the destination record's URL and defaults; layouts persist. Within the same record, back/forward, mutations, and `router.refresh()` keep the page and update its props in place, as do resolved deferred props, so read props inside JSX or memos instead of copying them in the component body. Set `preserveState` explicitly to override the default for navigation within the same record.
+
+## Markdown Package {#markdown-package}
+
+The optional `@void/md` package adds Markdown pages to Pages Routing. Install it alongside a Pages adapter and add `voidMarkdown()` to your Vite plugins.
+
+```ts
+import { voidMarkdown } from '@void/md/plugin';
+
+export default defineConfig({
+  plugins: [voidPlugin(), voidReact(), voidMarkdown()],
+});
+```
+
+| Import path                  | Contents                                                                                 |
+| ---------------------------- | ---------------------------------------------------------------------------------------- |
+| `@void/md/plugin`            | `voidMarkdown(options?)`, `MarkdownOptions`, `MdPage`                                    |
+| `@void/md`                   | `useFrontmatter()`, `MdPage`                                                             |
+| `@void/md/pages`             | Generated metadata for Markdown pages, used for navigation, sidebars, and search indexes |
+| `@void/md/theme.css`         | Full Markdown theme styles                                                               |
+| `@void/md/theme-content.css` | Content-only Markdown styles for apps that provide their own shell/layout                |
+
+`FrontmatterContext` and `setFrontmatter()` are deprecated. Use `useFrontmatter()`.
+
+See [Markdown Pages](../../guide/pages-routing/markdown.md) for setup and framework-specific examples.
+
+## Form
+
+Each Pages adapter exports `Form`. Pass the object returned by `useForm()` as `form`; `method` defaults to `post`. It renders validation and action errors, preserves controlled input, and respects known quota retry deadlines without submitting automatically. `renderError` customizes action-error presentation; Svelte uses a snippet. See [Actions and Forms](../../guide/pages-routing/actions-and-forms.md).
+
+Pass `{ throwOnError: false }` as the third argument to `useForm()` to show HTTP failures inline. Validation errors populate `form.errors`; other HTTP failures populate `form.error`. React also calls `onError`. Unexpected failures still throw, and cancelled submissions don't set a form error. See [Handling action errors](../../guide/pages-routing/actions-and-forms.md#validation-errors).

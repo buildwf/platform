@@ -1,0 +1,70 @@
+body {
+  background: #f6f6f6;
+}
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-links a {
+  margin: 0 10px;
+}
+
+.nav-links a:first-child {
+  margin-left: 0;
+}
+
+/* Auto (system) dark mode */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) body {
+    background: #161718;
+    color: #e2e8f0;
+  }
+}
+
+/* Explicit dark mode */
+:root[data-theme='dark'] body {
+  background: #161718;
+  color: #e2e8f0;
+}
+
+/* Theme toggle (was scoped to _ThemeToggle.vue) */
+.theme-toggle {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.25em 0.75em;
+  font-size: 0.85em;
+  cursor: pointer;
+  background: transparent;
+  color: inherit;
+}
+
+.theme-toggle:hover {
+  background: #f1f5f9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .theme-toggle {
+    border-color: #334155;
+  }
+
+  :root:not([data-theme='light']) .theme-toggle:hover {
+    background: #1e293b;
+  }
+}
+
+:root[data-theme='dark'] .theme-toggle {
+  border-color: #334155;
+}
+
+:root[data-theme='dark'] .theme-toggle:hover {
+  background: #1e293b;
+}

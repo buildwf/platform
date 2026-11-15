@@ -1,0 +1,176 @@
+---
+description: 'Set a page title and metadata with head(), middleware, or site-wide defaults.'
+outline: deep
+---
+
+# Head Management
+
+Set page titles and metadata with `head()`, middleware, or site-wide defaults. Page values take precedence over middleware and config.
+
+## Page titles and metadata
+
+Export a `head()` function from your `.server.ts` file. It receives the Hono context and the resolved loader props, and returns a `HeadDescriptor`:
+
+```ts
+// pages/posts/[slug].server.ts
+import { defineHandler, defineHead } from 'void';
+import type { PageParams } from 'void/routes';
+
+export interface Props {
+  post: { title: string; excerpt: string; slug: string };
+}
+
+export const loader = defineHandler<Props>(async (c) => {
+  const { slug } = c.req.param() as PageParams<'/posts/[slug]'>;
+  const post = await getPost(slug);
+  return { post };
+});
+
+export const head = defineHead<Props>((c, props) => {
+  // [!code highlight]
+  return {
+    title: props.post.title,
+    meta: [
+      { name: 'description', content: props.post.excerpt },
+      { property: 'og:title', content: props.post.title },
+    ],
+  };
+});
+```
+
+`head()` runs server-side only, after the loader resolves.
+
+## Site defaults
+
+Set site-wide head defaults in `void.config.ts`:
+
+```json
+{
+  "head": {
+    "titleTemplate": "%s | My Site",
+    "htmlAttrs": { "lang": "en" },
+    "meta": [
+      { "charset": "utf-8" },
+      { "name": "viewport", "content": "width=device-width, initial-scale=1" }
+    ]
+  }
+}
+```
+
+`titleTemplate` wraps the page title. `%s` is replaced with whatever `head()` returns as `title`. A page returning `{ title: "About" }` with the template above produces `<title>About | My Site</title>`.
+
+## Middleware defaults
+
+Set `headDefaults` in middleware to apply defaults to every page. For example, a theme script can run before first paint:
+
+```ts
+// middleware/01.head.ts
+import { defineMiddleware } from 'void';
+
+export default defineMiddleware(async (c, next) => {
+  c.set('headDefaults', {
+    script: [
+      {
+        innerHTML: `const t = localStorage.getItem("theme");
+        if (t) document.documentElement.dataset.theme = t;`,
+      },
+    ],
+  });
+  await next();
+});
+```
+
+`headDefaults` also accepts `titleTemplate`, which replaces the config's template for the requests the middleware runs on. Use it to give one section of the site its own title suffix:
+
+```ts
+// middleware/admin.ts
+import { defineMiddleware } from 'void';
+
+export default defineMiddleware(async (c, next) => {
+  if (c.req.path.startsWith('/admin')) {
+    c.set('headDefaults', { ...c.get('headDefaults'), titleTemplate: '%s | Admin' });
+  }
+  await next();
+});
+```
+
+A page returning `{ title: "Users" }` under `/admin` produces `<title>Users | Admin</title>`. Other pages keep the config's template.
+
+To drop the suffix entirely for a section, including the config's, set the template to an empty string: `c.set('headDefaults', { ...c.get('headDefaults'), titleTemplate: '' })`. A page returning `{ title: "Users" }` under `/admin` then produces `<title>Users</title>`.
+
+## Precedence
+
+When multiple layers provide head data, they merge with this precedence:
+
+| Field       | Behavior                                                                                                             |
+| ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| `title`     | Page wins. `titleTemplate` from middleware, or else from config, wraps the winning title.                            |
+| `meta`      | Deduplicates by `name` or `property`. Page entries override matching keys, and non-conflicting entries are appended. |
+| `link`      | Concatenated: config first, then middleware, then page.                                                              |
+| `script`    | Concatenated: config first, then middleware, then page.                                                              |
+| `htmlAttrs` | Shallow merge, page wins conflicts.                                                                                  |
+| `bodyAttrs` | Shallow merge, page wins conflicts.                                                                                  |
+
+## Absolute crawler URLs
+
+Social crawlers and link previews only read an absolute URL. These meta tags are resolved against the request URL when their `content` is a relative path, so you can write them without knowing the origin:
+
+- `og:image`, `og:image:url`, `og:image:secure_url`
+- `og:video`, `og:video:url`, `og:video:secure_url`
+- `og:audio`, `og:audio:url`, `og:audio:secure_url`
+- `og:url`
+- `twitter:image`
+
+```ts
+// void.config.ts
+import { defineConfig } from 'void/config';
+
+export default defineConfig({
+  head: {
+    meta: [{ property: 'og:image', content: '/og-image.jpg' }], // [!code highlight]
+  },
+});
+```
+
+A request to `https://example.com/posts/hello` renders `<meta property="og:image" content="https://example.com/og-image.jpg">`. Values that are already absolute, and every other tag, are left as written. Config, middleware and page values resolve the same way, and the client receives the same absolute value on navigation.
+
+Prerendered pages keep the value relative, because the build does not know the site's origin.
+
+## HeadDescriptor
+
+```ts
+interface HeadDescriptor {
+  title?: string;
+  meta?: Array<{
+    name?: string;
+    property?: string;
+    content?: string;
+    charset?: string;
+  }>;
+  link?: Array<{ rel: string; href: string; [key: string]: string | undefined }>;
+  script?: Array<{ src?: string; innerHTML?: string; [key: string]: string | undefined }>;
+  htmlAttrs?: Record<string, string>;
+  bodyAttrs?: Record<string, string>;
+}
+```
+
+## Markdown pages
+
+Markdown pages (`.md` files) automatically generate head tags from frontmatter. You do not need a `.server.ts` file:
+
+```md
+---
+title: Getting Started
+description: Learn how to use Void
+---
+
+Your content here...
+```
+
+This produces `<title>Getting Started</title>` and `<meta name="description" content="Learn how to use Void">`, with `titleTemplate` applied if configured.
+
+## Client-side updates
+
+Titles, meta tags, and links update automatically on client-side navigation.
+
+`script`, `htmlAttrs`, and `bodyAttrs` are SSR-only. They are not re-applied on client-side navigation.
