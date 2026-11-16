@@ -39,11 +39,7 @@ const SCRIPT_LANG_RE = /[?&]lang\.([a-z0-9]+)/i;
 /**
  * Cheap prefilter shared with the fold plugin: is this a client script
  * module that mentions `void/env`? Anything we'd want to parse is JS/TS or
- * has a script sub-resource (Vue/Svelte SFC virtual chunks include a
- * `lang.tsx` / `lang.ts` / `lang.js` query). SFC files themselves
- * (`.svelte`, `.vue`, `.astro`) are accepted because both plugins run with
- * `enforce: 'post'`, after the framework compiler has turned them into
- * plain JS. The `void/env` substring check lets most files skip the AST
+ * has a script sub-resource (a `lang.tsx` / `lang.ts` / `lang.js` query). The `void/env` substring check lets most files skip the AST
  * walk; a false positive only means an unneeded parse.
  */
 export function isVoidEnvScriptCandidate(id: string, code: string): boolean {
@@ -53,8 +49,7 @@ export function isVoidEnvScriptCandidate(id: string, code: string): boolean {
   const langMatch = SCRIPT_LANG_RE.exec(id);
   const isScriptQuery = langMatch !== null && /^(?:m?[jt]sx?|cjs)$/i.test(langMatch[1]!);
   const isPlainScript = /\.(?:[mc]?[jt]sx?)(?:\?|$)/.test(id);
-  const isSfc = /\.(?:svelte|vue|astro)(?:\?|$)/.test(id);
-  if (!isScriptQuery && !isPlainScript && !isSfc) {
+  if (!isScriptQuery && !isPlainScript) {
     return false;
   }
   return code.includes('void/env');
@@ -237,11 +232,7 @@ function recordHit(node: AstMemberExpression, hits: Array<Hit>): void {
 export function envClientGuardPlugin(root: string): Plugin {
   return {
     name: 'void:env-client-guard',
-    // Run after framework SFC compilers (svelte, vue, astro) so that when we
-    // see a `.svelte` / `.vue` / `.astro` id the `code` we get is already
-    // plain JS we can parse. Without this, our AST walk runs against the raw
-    // SFC source and `parseSync` bails — the server-only leak then slips
-    // through to runtime. `.ts`/`.tsx` files don't care about order.
+    // Run after other transforms so the `code` we get is plain JS we can parse.
     enforce: 'post',
     async transform(code, id) {
       // Only run on the client environment. SSR, worker, RSC etc. legitimately

@@ -3,9 +3,6 @@ import { describe, expect, it, vi } from 'vite-plus/test';
 const mocks = vi.hoisted(() => ({
   client: vi.fn((options?: unknown) => ({ framework: 'client', options })),
   react: vi.fn((options?: unknown) => ({ framework: 'react', options })),
-  solid: vi.fn((options?: unknown) => ({ framework: 'solid', options })),
-  svelte: vi.fn((options?: unknown) => ({ framework: 'svelte', options })),
-  vue: vi.fn((options?: unknown) => ({ framework: 'vue', options })),
 }));
 
 vi.mock('better-auth/client', () => ({
@@ -14,18 +11,6 @@ vi.mock('better-auth/client', () => ({
 
 vi.mock('better-auth/react', () => ({
   createAuthClient: mocks.react,
-}));
-
-vi.mock('better-auth/vue', () => ({
-  createAuthClient: mocks.vue,
-}));
-
-vi.mock('better-auth/svelte', () => ({
-  createAuthClient: mocks.svelte,
-}));
-
-vi.mock('better-auth/solid', () => ({
-  createAuthClient: mocks.solid,
 }));
 
 describe('client runtimes', () => {

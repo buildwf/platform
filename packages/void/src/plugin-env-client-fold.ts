@@ -79,8 +79,7 @@ export function envClientFoldPlugin(): Plugin {
   return {
     name: 'void:env-client-fold',
     apply: 'build',
-    // Run after SFC compilers (Svelte/Vue/Astro) so the `.svelte` / `.vue` /
-    // `.astro` id arrives as compiled JS we can parse and fold.
+    // Run after other transforms so the code arrives as plain JS we can parse and fold.
     enforce: 'post',
     configResolved(config: ResolvedConfig) {
       // Vite runs configResolved hooks concurrently. Keep the shared env object

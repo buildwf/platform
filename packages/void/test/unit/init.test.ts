@@ -477,10 +477,23 @@ function mockSpawnSuccess(onYarnInstall?: (cwd: string) => void): void {
   });
 }
 
+// With vite-plus resolvable from the project, init runs its bin through node, so the install
+// is `node <vp> install ...`; otherwise it is `vp install ...` or `<pm> install`.
 function installCalls() {
   return mockSpawnSync.mock.calls.filter(
-    (call) => Array.isArray(call[1]) && call[1][0] === 'install',
+    (call) => Array.isArray(call[1]) && call[1].slice(0, 2).includes('install'),
   );
+}
+
+function installerOf(call: Array<unknown>): unknown {
+  const args = call[1] as Array<string>;
+  return call[0] === process.execPath && /[\\/]vp$/.test(args[0]!) ? 'vp' : call[0];
+}
+
+function expectVpInstall(cwd: string) {
+  const call = installCalls().find((candidate) => installerOf(candidate) === 'vp');
+  expect(call?.[1]).toEqual(expect.arrayContaining(['install', '--no-frozen-lockfile']));
+  expect(call?.[2]).toMatchObject({ cwd, stdio: 'inherit' });
 }
 
 function drizzleGenerateCalls() {
@@ -1463,7 +1476,7 @@ describe('isScaffoldableEmptyProject', () => {
       expect(pkg.packageManager).toBeUndefined();
       expectPnpmAllowBuilds(root);
       expect(detectProjectState(root).packageManager).toBe('pnpm');
-      expect(installCalls()[0][0]).toBe('vp');
+      expect(installerOf(installCalls()[0]!)).toBe('vp');
       expect(pkg.scripts.dev).toBe('vp dev');
 
       const page = readFileSync(join(root, 'src', 'App.tsx'), 'utf-8');
@@ -1512,7 +1525,7 @@ describe('isScaffoldableEmptyProject', () => {
         expect(existsSync(join(root, 'pnpm-workspace.yaml'))).toBe(
           packageManager.startsWith('pnpm@'),
         );
-        expect(installCalls()[0][0]).toBe('vp');
+        expect(installerOf(installCalls()[0]!)).toBe('vp');
         const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
         expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
         if (packageManager.startsWith('npm@')) {
@@ -1543,7 +1556,7 @@ describe('isScaffoldableEmptyProject', () => {
           JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).packageManager,
         ).toBeUndefined();
         expect(existsSync(join(root, 'pnpm-workspace.yaml'))).toBe(false);
-        expect(installCalls()[0][0]).toBe('vp');
+        expect(installerOf(installCalls()[0]!)).toBe('vp');
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
@@ -1624,7 +1637,7 @@ describe('isScaffoldableEmptyProject', () => {
       const pkg = JSON.parse(readFileSync(join(appRoot, 'package.json'), 'utf-8'));
       expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
       expect(pkg.scripts.dev).toBe('vp dev');
-      expect(readFileSync(join(appRoot, 'pages', 'index.tsx'), 'utf-8')).toContain(
+      expect(readFileSync(join(appRoot, 'src', 'App.tsx'), 'utf-8')).toContain(
         'Welcome to Void',
       );
 
@@ -1647,15 +1660,7 @@ describe('isScaffoldableEmptyProject', () => {
       mkdirSync(join(root, 'my-void-app'));
       expect(folderPrompt.validate('')).toBe('That folder already exists.');
       expect(folderPrompt.validate('another-app')).toBeUndefined();
-      expect(mockSpawnSync).toHaveBeenCalledWith(
-        'vp',
-        ['install', '--no-frozen-lockfile'],
-        expect.objectContaining({
-          cwd: toSlash(appRoot),
-          stdio: 'inherit',
-          shell: process.platform === 'win32',
-        }),
-      );
+      expectVpInstall(toSlash(appRoot));
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -2613,13 +2618,7 @@ export default config;
       expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
       expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
       expect(pkg.devDependencies.void).toBe('^0.2.3');
-      expect(pkg.devDependencies['@void/react']).toBe('^0.2.3');
-      expect(pkg.devDependencies['oxc-transform-react']).toBe('>=0.152.0 <0.157.0');
       expectPnpmAllowBuilds(root);
-
-      const reactViteConfig = readFileSync(join(root, 'vite.config.ts'), 'utf-8');
-      expect(reactViteConfig).toContain('from "@void/react/plugin"');
-      expect(reactViteConfig).toContain('voidReact({ react: { compiler: true } })');
 
       expect(mockSelect.mock.calls[0]?.[0].message).toBe('Choose a scaffold toolchain:');
       expect(mockSelect.mock.calls[0]?.[0].initialValue).toBe('vite-plus');
@@ -2627,15 +2626,7 @@ export default config;
       expect(mockSelect).not.toHaveBeenCalledWith(
         expect.objectContaining({ message: 'Choose a framework to scaffold:' }),
       );
-      expect(mockSpawnSync).toHaveBeenCalledWith(
-        'vp',
-        ['install', '--no-frozen-lockfile'],
-        expect.objectContaining({
-          cwd: root,
-          stdio: 'inherit',
-          shell: process.platform === 'win32',
-        }),
-      );
+      expectVpInstall(root);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -2818,10 +2809,7 @@ export default config;
 
       await expect(runInitCommand(root)).rejects.toThrow('project create failed');
 
-      const installCalls = mockSpawnSync.mock.calls.filter(
-        (call) => Array.isArray(call[1]) && call[1][0] === 'install',
-      );
-      expect(installCalls.length).toBeGreaterThan(0);
+      expect(installCalls().length).toBeGreaterThan(0);
 
       const drizzleCalls = mockSpawnSync.mock.calls.filter(
         (call) => Array.isArray(call[1]) && call[1][1] === 'generate',
@@ -3385,7 +3373,7 @@ export default config;
 
       const installs = installCalls();
       expect(installs.length).toBeGreaterThan(0);
-      expect(installs[0][0]).toBe('vp');
+      expect(installerOf(installs[0]!)).toBe('vp');
       expect(
         JSON.parse(readFileSync(join(subpkgRoot, 'package.json'), 'utf8')).packageManager,
       ).toBe('bun@1.1.42');

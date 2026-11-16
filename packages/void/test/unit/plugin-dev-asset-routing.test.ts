@@ -702,7 +702,6 @@ describe('voidPlugin dev asset routing', () => {
       '!/@id/*',
       '!/@fs/*',
       '!/@react-refresh',
-      '!/@svelte/*',
       '!/node_modules/*',
       '!/__uno.css',
       '/**',

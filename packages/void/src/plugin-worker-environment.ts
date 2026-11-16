@@ -21,7 +21,6 @@ export const DEV_ASSET_ROUTING_EXCLUSIONS: Array<string> = [
   '!/@id/*',
   '!/@fs/*',
   '!/@react-refresh',
-  '!/@svelte/*',
   '!/node_modules/*',
   '!/__uno.css',
 ];

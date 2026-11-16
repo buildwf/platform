@@ -632,7 +632,7 @@ export function routingPlugin(
         // needing to be hoisted into the user's node_modules (pnpm
         // strict mode). Without this, Vite discovers them lazily on
         // first auth page load, triggering a disruptive program reload.
-        const betterAuthSubpaths = ['client', 'react', 'vue', 'svelte', 'solid'];
+        const betterAuthSubpaths = ['client', 'react'];
         const resolvedAliases = betterAuthSubpaths.flatMap((sub) => {
           try {
             return [
