@@ -57,10 +57,6 @@ const ERRORS = {
 
 type Refusal = { code: keyof typeof ERRORS; message?: string };
 
-function isRefusal(value: unknown): value is Refusal {
-  return typeof value === 'object' && value !== null && 'code' in value && !('id' in value);
-}
-
 /** The refusal for a Cloudflare 4xx a caller can act on, or null for any other failure. */
 function cloudflareRefusal(error: unknown): Refusal | null {
   if (!(error instanceof CloudflareApiError)) return null;
@@ -224,11 +220,11 @@ export const add = procedure('domains.add')
       await rollbackCreatedHostname();
       throw error;
     }
-    if (isRefusal(result)) {
+    if (result.code) {
       await rollbackCreatedHostname();
-      return fail(result.code, result.message);
+      return fail(result.code, 'message' in result ? result.message : undefined);
     }
-    return result;
+    return { ...result, ssl_validation_records: [...(result.ssl_validation_records ?? [])] };
   });
 
 /** Under the project lock: the caller still holds `capability`, and the project is not going away. */
@@ -259,7 +255,7 @@ export const list = procedure('domains.list')
   .cli({ command: 'domains list', description: 'List custom domains' })
   .handler(async ({ env, ctx, input, fail }) => {
     if (capabilityRefusal(env)) return fail('CAPABILITY_UNAVAILABLE');
-    return getDomainsByProjectId(ctx.db, input.projectId);
+    return [...(await getDomainsByProjectId(ctx.db, input.projectId))];
   });
 
 export const status = procedure('domains.status')
@@ -297,7 +293,7 @@ export const status = procedure('domains.status')
       awaiting_deployment: awaitingDeployment,
       verification_errors: cf.verification_errors,
       ownership_verification: cf.ownership_verification,
-      ssl_validation_records: cf.ssl.validation_records ?? [],
+      ssl_validation_records: [...(cf.ssl.validation_records ?? [])],
     };
   });
 
