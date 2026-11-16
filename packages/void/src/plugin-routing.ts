@@ -39,6 +39,7 @@ import { generateQueueTypes } from './codegen/queue-types.ts';
 import { generateRouteTypes } from './codegen/route-types.ts';
 import { writeFileIfChanged } from './codegen/write-if-changed.ts';
 import { readConfig, getDatabaseDialect } from './config.ts';
+import { readAppIdentity } from './procedures/scan.ts';
 import { readProjectPaths } from './project-paths.ts';
 import { readDeployBuildQueueNames } from './queues/cloudflare-names.ts';
 import {
@@ -139,6 +140,7 @@ export function routingPlugin(
   const middlewareDir = paths.middlewareDir;
   const jobsDir = paths.cronsDir;
   const queuesDir = paths.queuesDir;
+  const proceduresDir = paths.proceduresDir;
   const emailDir = paths.emailDir;
   const authConfigPaths = new Set(paths.authConfigCandidates.map((path) => normalizePath(path)));
   let authConfigEnvironment: RunnableDevEnvironment | undefined;
@@ -150,6 +152,7 @@ export function routingPlugin(
   const normalizedMiddlewareDir = normalizePath(middlewareDir);
   const normalizedJobsDir = normalizePath(jobsDir);
   const normalizedQueuesDir = normalizePath(queuesDir);
+  const normalizedProceduresDir = normalizePath(proceduresDir);
   const normalizedEmailDir = normalizePath(emailDir);
 
   function hasEmailHandlers(): boolean {
@@ -238,6 +241,11 @@ export function routingPlugin(
     auth: null,
     managedDispatch: false,
     bindingHandlerPath: resolveFile('#self/remote/binding-handler'),
+    procedures: {
+      dir: proceduresDir,
+      runtimePath: resolveFile('#self/runtime/procedures'),
+      ...readAppIdentity(root),
+    },
     bindingNames: options.bindingNames,
   };
 
@@ -800,6 +808,7 @@ export function routingPlugin(
           isInDirectory(normalizedPath, normalizedMiddlewareDir) ||
           isInDirectory(normalizedPath, normalizedJobsDir) ||
           isInDirectory(normalizedPath, normalizedQueuesDir) ||
+          isInDirectory(normalizedPath, normalizedProceduresDir) ||
           isInDirectory(normalizedPath, normalizedEmailDir) ||
           authConfigChanged ||
           authImportCreated ||

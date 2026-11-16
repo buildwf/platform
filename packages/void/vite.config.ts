@@ -69,6 +69,8 @@ export default defineConfig({
       'src/runtime/response.ts',
       'src/runtime/routing.ts',
       'src/runtime/validator.ts',
+      'src/runtime/procedure.ts',
+      'src/runtime/procedures.ts',
       'src/routes-stub.ts',
       'src/runtime/client.ts',
       'src/runtime/client-react.ts',

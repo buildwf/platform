@@ -27,6 +27,7 @@ export const DEFAULT_SCAN_DIRS = [
   'middleware',
   'queues',
   'crons',
+  'procedures',
   'email',
   'durable-objects',
   'src',

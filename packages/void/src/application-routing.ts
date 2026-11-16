@@ -14,6 +14,7 @@ export async function completeApplicationAnalysis(
       middleware: analysis.middleware,
       jobs: analysis.jobs,
       queues: analysis.queues,
+      procedures: analysis.procedures,
       websockets: analysis.websockets,
       email: analysis.email,
     },
