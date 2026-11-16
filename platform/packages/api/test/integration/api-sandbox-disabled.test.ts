@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
-import app from '../../src/index.ts';
+import rawApp from '../../src/index.ts';
 import { deployments } from '../../src/schema.ts';
 import {
   clearTables,
@@ -10,7 +10,10 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
+  withLegacyDeploy,
 } from './helpers.ts';
+
+const app = withLegacyDeploy(rawApp);
 
 let env: TestEnv;
 

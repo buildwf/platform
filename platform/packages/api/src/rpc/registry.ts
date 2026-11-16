@@ -4,6 +4,7 @@ import * as database from './procedures/database.ts';
 import * as deploy from './procedures/deploy.ts';
 import * as deployments from './procedures/deployments.ts';
 import * as domains from './procedures/domains.ts';
+import * as finalize from './procedures/finalize.ts';
 import * as me from './procedures/me.ts';
 import * as projects from './procedures/projects.ts';
 import * as secrets from './procedures/secrets.ts';
@@ -20,6 +21,7 @@ export const registry = defineRegistry([
   projects.resolve,
   projects.get,
   projects.resources,
+  finalize.finalize,
   deploy.preflight,
   deploy.uploadUrls,
   deploy.workerUploadUrls,

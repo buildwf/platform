@@ -8,7 +8,7 @@ import {
   afterEach,
   vi,
 } from 'vite-plus/test';
-import app from '../../src/index.ts';
+import rawApp from '../../src/index.ts';
 import {
   setupEnv,
   teardownEnv,
@@ -18,7 +18,10 @@ import {
   createTestProjectSecret,
   mockCfApi,
   type TestEnv,
+  withLegacyDeploy,
 } from './helpers.ts';
+
+const app = withLegacyDeploy(rawApp);
 
 let env: TestEnv;
 

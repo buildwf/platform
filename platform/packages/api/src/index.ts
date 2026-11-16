@@ -106,7 +106,6 @@ import { reconcileProxyTokenRotations } from './proxy-token-rotation.ts';
 import { oidcRoutes } from './routes/auth-oidc.ts';
 import auth from './routes/auth.ts';
 import deleteRoute from './routes/delete.ts';
-import deploy from './routes/deploy.ts';
 import emailConfirm from './routes/email-confirm.ts';
 import emailRoutes from './routes/email.ts';
 import { githubProjectRoutes, githubRoutes } from './routes/github.ts';
@@ -579,7 +578,6 @@ const app = new Hono<ApiEnv>()
   .use('/projects/*', authMiddleware)
   .route('/projects', projects)
   .route('/projects', projectZeroTrustRoutes)
-  .route('/projects', deploy)
   .route('/projects', deleteRoute)
   .route('/projects', emailRoutes)
   .route('/projects', githubProjectRoutes);

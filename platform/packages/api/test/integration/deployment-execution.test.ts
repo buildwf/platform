@@ -27,7 +27,7 @@ import {
 import * as execution from '../../src/deployment-execution.ts';
 import * as recovery from '../../src/deployment-recovery.ts';
 import type { ApiEnv } from '../../src/env.ts';
-import app, { FAST_CRON } from '../../src/index.ts';
+import rawApp, { FAST_CRON } from '../../src/index.ts';
 import * as cleanup from '../../src/provisioning/cleanup.ts';
 import * as deploy from '../../src/routes/deploy.ts';
 import {
@@ -54,7 +54,10 @@ import {
   teardownEnv,
   type TestEnv,
   rpcData,
+  withLegacyDeploy,
 } from './helpers.ts';
+
+const app = withLegacyDeploy(rawApp);
 
 let env: TestEnv;
 let send: ReturnType<typeof vi.fn>;
@@ -1306,7 +1309,8 @@ describe('durable execution of directly uploaded Worker modules', () => {
     );
     expect(other.status).toBe(409);
     expect(await other.json()).toEqual({
-      error: 'this Worker upload belongs to another deployment; run the deploy again',
+      event: 'error',
+      message: 'this Worker upload belongs to another deployment; run the deploy again',
     });
     expect(await keys(prefix)).toContain(`${prefix}0`);
     expect(await env.db.select().from(deploymentOperations)).toHaveLength(1);

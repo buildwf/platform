@@ -16,7 +16,7 @@ import {
 import { getDeployment, getProjectResources } from '../../src/db.ts';
 import { getDeploymentOperation, processDeploymentBatch } from '../../src/deployment-execution.ts';
 import type { ApiEnv } from '../../src/env.ts';
-import app from '../../src/index.ts';
+import rawApp from '../../src/index.ts';
 import {
   durableObjectWorkerName,
   deleteManagedDurableObject,
@@ -41,7 +41,10 @@ import {
   teardownEnv,
   type TestEnv,
   type MockCfApiHandle,
+  withLegacyDeploy,
 } from './helpers.ts';
+
+const app = withLegacyDeploy(rawApp);
 
 let env: TestEnv;
 let user: Awaited<ReturnType<typeof createTestUser>>;

@@ -1,5 +1,5 @@
 import { sql as drizzleSql } from 'drizzle-orm';
-import { Hono, type Context } from 'hono';
+import { Hono } from 'hono';
 import { findMissingR2Assets, persistedR2AssetSizes } from '../asset-inventory.ts';
 import { activeOAuthApproval, OAuthError } from '../auth/oauth.ts';
 import { uploadPool } from '../concurrency.ts';
@@ -33,11 +33,6 @@ import { listR2Objects, type WorkerModule } from '../worker-upload.ts';
 import { requireProjectRouteCapability } from './project-access.ts';
 
 export { MAX_ROUTING_RULES, validateManifestShape } from '@void/deploy-core';
-
-const app = new Hono<ApiEnv>();
-
-// Deploy to a project
-app.post('/:id/deploy', handleManifestOnlyDeploy);
 
 export async function executeQueuedDeployment(
   env: ApiEnv['Bindings'],
@@ -164,8 +159,6 @@ export async function executeQueuedDeployment(
     });
   }
 }
-
-export default app;
 
 export { databaseTimestampMs, settleDeploymentForSandboxDrain } from '../deploy/recovery.ts';
 

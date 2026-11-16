@@ -17,7 +17,7 @@ import {
   setActiveDeployment,
   updateDeploymentStatus,
 } from '../../src/db.ts';
-import app from '../../src/index.ts';
+import rawApp from '../../src/index.ts';
 import { getProjectDeploymentWorkerName, getProjectQueueName } from '../../src/naming.ts';
 import { reconcileProjectCleanupJobs } from '../../src/provisioning/cleanup.ts';
 import { durableObjectWorkerName } from '../../src/provisioning/durable-objects.ts';
@@ -74,7 +74,10 @@ import {
   type TestEnv,
   rpcRequest,
   rpcData,
+  withLegacyDeploy,
 } from './helpers.ts';
+
+const app = withLegacyDeploy(rawApp);
 
 let env: TestEnv;
 

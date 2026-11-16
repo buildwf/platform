@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vite-plus/test';
 import type { Db } from '../../src/db.ts';
-import app from '../../src/index.ts';
+import rawApp from '../../src/index.ts';
 import { MIN_CLI_VERSION } from '../../src/middleware/cli-version.ts';
 import { projects } from '../../src/schema.ts';
 import {
@@ -12,7 +12,11 @@ import {
   createTestProject,
   type TestEnv,
   rpcData,
+  rpcRequest,
+  withLegacyDeploy,
 } from './helpers.ts';
+
+const app = withLegacyDeploy(rawApp);
 import { setTestDb } from './setup.ts';
 
 let env: TestEnv;
@@ -42,35 +46,21 @@ type OutdatedBody = {
  * project-level authorization (404 / 403 / 410) for missing, foreign,
  * and deleting projects.
  *
- * Pre-direct-r2 CLIs (void@<0.7.0) send multipart bodies to /deploy, which
- * has no multipart handler. The gate's content-type sniff fires before any
- * JSON parse so those users see the upgrade message instead of an opaque
- * "invalid JSON body" 400 — but only on requests that are otherwise
- * authorized for the target project.
+ * The gate answers only requests that are otherwise authorized for the target project.
  */
 describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
-  it('rejects multipart POST /deploy with 426 cli_outdated (pre-direct-r2 CLI shape)', async () => {
+  it('rejects old X-Void-CLI-Version header on deploy.finalize', async () => {
     const user = await createTestUser(env.db);
-    const project = await createTestProject(env.db, user.id, 'mp-app');
+    const project = await createTestProject(env.db, user.id, 'finalize-old-app');
 
-    const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'multipart/form-data; boundary=----xyz',
-        },
-        body: '------xyz\r\nContent-Disposition: form-data; name="manifest"\r\n\r\n{}\r\n------xyz--\r\n',
-      }),
-      env,
-    );
+    const request = rpcRequest('deploy.finalize', user.jwt, { projectId: project.id, body: {} });
+    request.headers.set('X-Void-CLI-Version', '0.6.0');
+    const res = await app.fetch(request, env);
 
     expect(res.status).toBe(426);
-    const body = (await res.json()) as OutdatedBody;
-    expect(body.error).toBe('cli_outdated');
-    expect(body.minVersion).toBe(MIN_CLI_VERSION);
-    expect(body.message).toMatch(/multipart/i);
-    expect(body.message).toMatch(/npm i -g void@latest/);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe('CLI_OUTDATED');
+    expect(body.error.message).toContain(MIN_CLI_VERSION);
   });
 
   it('rejects old X-Void-CLI-Version header on POST /deploy/upload-urls', async () => {
@@ -190,24 +180,19 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
  * would be told to upgrade when in fact the upgrade won't fix anything.
  */
 describe('cliVersionGate — defers to project authorization', () => {
-  it('returns 404 (not 426) when project does not exist, even with multipart body', async () => {
+  it('returns 403 (not 426) when project does not exist, even with a stale version header', async () => {
     const user = await createTestUser(env.db);
 
-    const res = await app.fetch(
-      new Request('http://localhost/projects/proj_nonexistent/deploy', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'multipart/form-data; boundary=----xyz',
-        },
-        body: '------xyz--\r\n',
-      }),
-      env,
-    );
+    const request = rpcRequest('deploy.finalize', user.jwt, {
+      projectId: 'proj_nonexistent',
+      body: {},
+    });
+    request.headers.set('X-Void-CLI-Version', '0.6.0');
+    const res = await app.fetch(request, env);
 
-    expect(res.status).toBe(404);
-    const body = (await res.json()) as { error?: string };
-    expect(body.error).toBe('project not found');
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('FORBIDDEN');
   });
 
   it('returns 403 (not 426) when project belongs to another user, even with stale version header', async () => {
@@ -231,22 +216,14 @@ describe('cliVersionGate — defers to project authorization', () => {
     expect(res.status).toBe(403);
   });
 
-  it('returns 410 (not 426) when project is being deleted, even with multipart body', async () => {
+  it('returns 410 (not 426) when project is being deleted, even with a stale version header', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'deleting-app');
     await env.db.update(projects).set({ status: 'deleting' }).where(eq(projects.id, project.id));
 
-    const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'multipart/form-data; boundary=----xyz',
-        },
-        body: '------xyz--\r\n',
-      }),
-      env,
-    );
+    const request = rpcRequest('deploy.finalize', user.jwt, { projectId: project.id, body: {} });
+    request.headers.set('X-Void-CLI-Version', '0.6.0');
+    const res = await app.fetch(request, env);
 
     expect(res.status).toBe(410);
   });

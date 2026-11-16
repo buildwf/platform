@@ -9,7 +9,6 @@ import { readPlatformDiscoveryResponse } from './platform-discovery.ts';
 import {
   formatPlatformApiError,
   parsePlatformErrorBody,
-  platformErrorMessage,
   type ProjectPermission,
 } from './platform-errors.ts';
 import { normalizePlatformApiUrl } from './platform-registry.ts';
@@ -587,7 +586,6 @@ export const DEPLOY_POST_ATTEMPTS: number = DEPLOY_POST_MAX_RETRIES + 1;
 const DEPLOY_OBSERVATION_TIMEOUT_MS = 30_000;
 const DEPLOY_OBSERVATION_DEADLINE_MS = 30 * 60_000;
 const DEPLOY_OBSERVATION_BACKOFF_MS = [1000, 2000, 5000, 10_000, 30_000];
-const DEPLOY_EVENT_MAX_BYTES = 1024 * 1024;
 
 // Heartbeats carry no `seq`. Pipeline streams can omit `status`; observation
 // pages omit `heartbeat` when paging through a completed operation's events.
@@ -1224,39 +1222,50 @@ export class PlatformClient {
     projectId: string,
     payload: ManifestOnlyDeployPayload,
   ): AsyncGenerator<DeployEvent> {
-    const url = `${this.baseUrl}/projects/${projectId}/deploy`;
-    yield* this.streamDeployRequest(url, projectId, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.authHeaders,
-        'x-void-deploy-idempotency-key': crypto.randomUUID(),
-      },
-      body: JSON.stringify(payload),
-    });
-  }
-
-  private async *streamDeployRequest(
-    url: string,
-    projectId: string,
-    init: RequestInit,
-  ): AsyncGenerator<DeployEvent> {
     const cliLog = this.cliLog;
-    cliLog?.info('deploy_post', { url });
+    // One key for every attempt: a retry after a lost response returns the same deployment.
+    const idempotencyKey = crypto.randomUUID();
+    cliLog?.info('deploy_post', { projectId });
 
-    let res: Response;
+    let deploymentId: string | undefined;
+    let inline: Array<unknown> | undefined;
     let attempt = 0;
     while (true) {
       try {
-        res = await this.request(url, init);
+        ({ deploymentId, events: inline } = await this.rpc<{
+          deploymentId?: string;
+          events?: Array<unknown>;
+        }>(
+          'deploy.finalize',
+          'Deploy failed',
+          { projectId, body: payload, idempotencyKey },
+          { permission: 'deploy' },
+        ));
         break;
       } catch (err) {
+        if (err instanceof PlatformApiError) {
+          const parsed = err.status === 409 ? parsePlatformErrorBody(err.body) : null;
+          const inFlight = /deployment ([A-Za-z0-9_-]{1,128})$/.exec(parsed?.message ?? '')?.[1];
+          if (parsed?.error === 'deploy_in_progress' && inFlight) {
+            // A deployment is in flight: possibly an earlier attempt of this deploy.
+            cliLog?.warn('deploy_conflict', { projectId, deploymentId: inFlight });
+            yield {
+              event: 'error',
+              step: 'finalize',
+              message:
+                `${parsed.message} — it may be an earlier attempt of this deploy or a concurrent one; ` +
+                'inspect with `void project status` before redeploying',
+            };
+            return;
+          }
+          throw err;
+        }
         if (!(err instanceof TypeError) || attempt >= DEPLOY_POST_MAX_RETRIES) {
-          cliLog?.error('deploy_fetch_rejected', err, { url, attempts: attempt + 1 });
+          cliLog?.error('deploy_fetch_rejected', err, { projectId, attempts: attempt + 1 });
           throw err;
         }
         cliLog?.warn('deploy_fetch_retry', {
-          url,
+          projectId,
           attempt: attempt + 1,
           delayMs: DEPLOY_POST_BACKOFF_MS[attempt],
           error: err instanceof Error ? err.message : String(err),
@@ -1266,197 +1275,38 @@ export class PlatformClient {
       }
     }
 
-    const cfRay = res.headers.get('cf-ray');
-    const cfCacheStatus = res.headers.get('cf-cache-status');
-    cliLog?.info('deploy_response', {
-      status: res.status,
-      cfRay,
-      cfCacheStatus,
-      contentType: res.headers.get('content-type'),
-    });
-
-    if (!res.ok) {
-      const body = await res.text();
-      if (res.status === 409) {
-        // A deployment is in flight: possibly an earlier attempt of this deploy.
-        const parsed = parsePlatformErrorBody(body);
-        if (parsed?.deployment) {
-          cliLog?.warn('deploy_conflict', {
-            url,
-            deploymentId: parsed.deployment,
-            error: parsed.error,
-          });
-          yield {
-            event: 'error',
-            step: 'finalize',
-            message:
-              `${platformErrorMessage(parsed) ?? platformErrorMessage({ message: parsed.error }) ?? 'deploy in progress'}: deployment ${parsed.deployment} — ` +
-              'it may be an earlier attempt of this deploy or a concurrent one; ' +
-              'inspect with `void project status` before redeploying',
-          };
-          return;
-        }
+    if (deploymentId === undefined) {
+      // An inline deploy refused before it had an ID: its events end in the reason.
+      const failure = (inline ?? []).map(parseDeployEvent).find((event) => event.event === 'error');
+      if (failure) {
+        yield failure;
+        return;
       }
-      throw new PlatformApiError(
-        'Deploy failed',
-        res.status,
-        body,
-        isCloudflareAccessChallenge(res) ? undefined : 'deploy',
-      );
+      throw new Error('Platform returned no deployment receipt.');
     }
-
-    const receipt = res.headers.get('x-void-deployment-id');
-    const observationDeadline = Date.now() + DEPLOY_OBSERVATION_DEADLINE_MS;
-    if (receipt === null || !/^[A-Za-z0-9_-]{1,128}$/.test(receipt)) {
-      void res.body?.cancel().catch(() => {});
-      throw new Error(
-        receipt === null
-          ? 'Platform returned no deployment receipt.'
-          : 'Invalid deployment receipt from platform.',
-      );
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(deploymentId)) {
+      throw new Error('Invalid deployment receipt from platform.');
     }
+    // The platform owns execution independently of this observer.
+    yield { event: 'start', deploymentId };
     let cursor = 0;
-    let terminal = false;
-    // The platform owns execution independently of this observer. Capturing
-    // the ID before the first byte also permits recovery when start was lost.
-    if (!res.body) {
-      yield { event: 'start', deploymentId: receipt };
-      yield* this.followDeploymentEvents(projectId, receipt, cursor, observationDeadline);
-      return;
-    }
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let bytesRead = 0;
-    let firstByteAt: number | null = null;
-    const startedAt = Date.now();
-    let eventCount = 0;
-    let lastEventName = '<none>';
-    let streamFinished = false;
-    let readTimer: ReturnType<typeof setTimeout> | undefined;
-    const read = async () => {
-      const remaining = observationDeadline - Date.now();
-      if (remaining <= 0) {
-        throw new DeploymentObservationTimeoutError(receipt);
-      }
-      try {
-        return await Promise.race([
-          reader.read(),
-          new Promise<never>((_, reject) => {
-            readTimer = setTimeout(
-              () =>
-                reject(
-                  Date.now() >= observationDeadline
-                    ? new DeploymentObservationTimeoutError(receipt)
-                    : new TypeError('Deployment event stream timed out.'),
-                ),
-              Math.min(DEPLOY_OBSERVATION_TIMEOUT_MS, remaining),
-            );
-          }),
-        ]);
-      } finally {
-        clearTimeout(readTimer);
-      }
-    };
-    const parseLine = (line: string): SequencedDeployEvent | null => {
-      if (Buffer.byteLength(line) > DEPLOY_EVENT_MAX_BYTES) {
-        throw new DeploymentProtocolError('Deployment event exceeds the platform response limit.');
-      }
-      if (!line.trim()) {
-        return null;
-      }
-      const event = parseDeployEvent(JSON.parse(line));
+    // Without the Queue the platform ran the deploy inside the request and sent its events back.
+    for (const raw of inline ?? []) {
+      const event = parseDeployEvent(raw);
       if (event.seq !== undefined) {
-        if (event.seq <= cursor) {
-          return null;
-        }
+        if (event.seq <= cursor) continue;
         cursor = event.seq;
       }
-      eventCount++;
-      lastEventName = event.event;
-      cliLog?.info('deploy_event', { eventCount, event: lastEventName, raw: line.slice(0, 200) });
-      // The receipt already supplied start, but still advance its sequence.
-      if (event.event === 'start') {
-        return null;
-      }
-      terminal = event.event === 'done' || event.event === 'error';
-      return event;
-    };
-
-    try {
-      yield { event: 'start', deploymentId: receipt };
-      while (true) {
-        const { done, value } = await read();
-        if (Date.now() >= observationDeadline) {
-          throw new DeploymentObservationTimeoutError(receipt);
-        }
-        if (done) {
-          streamFinished = true;
-          buffer += decoder.decode();
-          const event = parseLine(buffer);
-          if (event) {
-            yield event;
-          }
-          cliLog?.info('deploy_stream_eof', {
-            bytesRead,
-            eventCount,
-            lastEvent: lastEventName,
-          });
-          break;
-        }
-        if (firstByteAt === null) {
-          firstByteAt = Date.now() - startedAt;
-          cliLog?.info('deploy_stream_ttfb', { ttfbMs: firstByteAt });
-        }
-        bytesRead += value.byteLength;
-        buffer += decoder.decode(value, { stream: true });
-
-        let newlineIdx;
-        while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
-          const line = buffer.slice(0, newlineIdx);
-          buffer = buffer.slice(newlineIdx + 1);
-          const event = parseLine(line);
-          if (event) {
-            yield event;
-            if (terminal) {
-              return;
-            }
-          }
-        }
-        if (Buffer.byteLength(buffer) > DEPLOY_EVENT_MAX_BYTES) {
-          throw new DeploymentProtocolError(
-            'Deployment event exceeds the platform response limit.',
-          );
-        }
-      }
-    } catch (err) {
-      cliLog?.error('deploy_stream_error', err, {
-        bytesRead,
-        eventCount,
-        lastEvent: lastEventName,
-      });
-      // Parse/protocol errors are not transient transport failures. Never hide
-      // them behind polling, and never replay a POST that yielded a receipt.
-      if (
-        err instanceof DeploymentObservationTimeoutError ||
-        err instanceof DeploymentProtocolError ||
-        err instanceof SyntaxError ||
-        (err instanceof DOMException && err.name === 'AbortError')
-      ) {
-        throw err;
-      }
-    } finally {
-      clearTimeout(readTimer);
-      if (!streamFinished) {
-        // An underlying cancellation can stall; observer cleanup must not wait
-        // indefinitely for a closed or broken network connection.
-        void reader.cancel().catch(() => {});
-      }
-      reader.releaseLock();
+      if (event.event === 'start') continue;
+      yield event;
+      if (event.event === 'done' || event.event === 'error') return;
     }
-    if (!terminal) {
-      yield* this.followDeploymentEvents(projectId, receipt, cursor, observationDeadline);
-    }
+    yield* this.followDeploymentEvents(
+      projectId,
+      deploymentId,
+      cursor,
+      Date.now() + DEPLOY_OBSERVATION_DEADLINE_MS,
+    );
   }
 
   private async *followDeploymentEvents(

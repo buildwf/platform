@@ -12,7 +12,7 @@ import {
 import { computeAssetHash } from '../../src/assets.ts';
 import { getProject } from '../../src/db.ts';
 import type { ApiEnv } from '../../src/env.ts';
-import app from '../../src/index.ts';
+import rawApp from '../../src/index.ts';
 import { deployments, domains, projects } from '../../src/schema.ts';
 import { configurePlatformZeroTrust } from '../../src/zero-trust/installation.ts';
 import { setProjectZeroTrustProtection } from '../../src/zero-trust/project.ts';
@@ -27,7 +27,10 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
+  withLegacyDeploy,
 } from './helpers.ts';
+
+const app = withLegacyDeploy(rawApp);
 
 let env: TestEnv;
 
