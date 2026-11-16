@@ -26,33 +26,9 @@ describe('resolveAssetConfig', () => {
     run_worker_first: ['/api', '/api/*', '/__void', '/__void/*'],
   };
 
-  it('uses none when SSR is enabled', () => {
-    expect(
-      resolveAssetConfig({
-        isSsr: true,
-        hasPages: false,
-        hasDocumentRoutes: false,
-        hasMiddleware: false,
-      }),
-    ).toEqual(NONE);
-  });
-
-  it('uses none when pages mode is enabled', () => {
-    expect(
-      resolveAssetConfig({
-        isSsr: false,
-        hasPages: true,
-        hasDocumentRoutes: false,
-        hasMiddleware: false,
-      }),
-    ).toEqual(NONE);
-  });
-
   it('keeps SPA handling when the project only has API routes', () => {
     expect(
       resolveAssetConfig({
-        isSsr: false,
-        hasPages: false,
         hasApiRoutes: true,
         hasDocumentRoutes: false,
         hasMiddleware: false,
@@ -63,8 +39,6 @@ describe('resolveAssetConfig', () => {
   it('uses none when the project has document routes', () => {
     expect(
       resolveAssetConfig({
-        isSsr: false,
-        hasPages: false,
         hasDocumentRoutes: true,
         hasMiddleware: false,
       }),
@@ -74,8 +48,6 @@ describe('resolveAssetConfig', () => {
   it('uses none when the project has document websocket routes', () => {
     expect(
       resolveAssetConfig({
-        isSsr: false,
-        hasPages: false,
         hasDocumentRoutes: false,
         hasMiddleware: false,
         hasWebSockets: true,
@@ -87,8 +59,6 @@ describe('resolveAssetConfig', () => {
     const routes = [{ pattern: '/api/chat' }];
     expect(
       resolveAssetConfig({
-        isSsr: false,
-        hasPages: false,
         hasApiRoutes: hasApiRoutes(routes),
         hasDocumentRoutes: false,
         hasMiddleware: false,
@@ -100,8 +70,6 @@ describe('resolveAssetConfig', () => {
   it('routes managed auth endpoints through the worker without owning all HTML', () => {
     expect(
       resolveAssetConfig({
-        isSsr: false,
-        hasPages: false,
         hasDocumentRoutes: false,
         hasMiddleware: false,
         authEnabled: true,
@@ -112,8 +80,6 @@ describe('resolveAssetConfig', () => {
   it('uses none for the common SPA + auth-middleware shape', () => {
     expect(
       resolveAssetConfig({
-        isSsr: false,
-        hasPages: false,
         hasDocumentRoutes: false,
         hasMiddleware: true,
       }),
@@ -123,8 +89,6 @@ describe('resolveAssetConfig', () => {
   it('uses none when live bindings are enabled', () => {
     expect(
       resolveAssetConfig({
-        isSsr: false,
-        hasPages: false,
         hasDocumentRoutes: false,
         hasMiddleware: false,
         liveEnabled: true,
@@ -135,8 +99,6 @@ describe('resolveAssetConfig', () => {
   it('uses single-page-application when no HTML-owning backend code is present', () => {
     expect(
       resolveAssetConfig({
-        isSsr: false,
-        hasPages: false,
         hasDocumentRoutes: false,
         hasMiddleware: false,
       }),
@@ -159,8 +121,6 @@ describe('resolveAssetConfig', () => {
 
   it('reports worker-owned HTML routing for document routes', () => {
     const inputs = {
-      isSsr: false,
-      hasPages: false,
       hasDocumentRoutes: true,
       hasMiddleware: false,
     };
@@ -170,8 +130,6 @@ describe('resolveAssetConfig', () => {
   it('resolves the complete request trigger policy', () => {
     expect(
       resolveAssetRoutingPolicy({
-        isSsr: false,
-        hasPages: false,
         hasDocumentRoutes: false,
         hasMiddleware: false,
       }),
@@ -184,8 +142,6 @@ describe('resolveAssetConfig', () => {
 
     expect(
       resolveAssetRoutingPolicy({
-        isSsr: false,
-        hasPages: false,
         hasDocumentRoutes: false,
         hasMiddleware: true,
       }),
@@ -198,8 +154,6 @@ describe('resolveAssetConfig', () => {
 
     expect(
       resolveAssetRoutingPolicy({
-        isSsr: false,
-        hasPages: false,
         hasApiRoutes: true,
         hasDocumentRoutes: false,
         hasMiddleware: false,
@@ -210,20 +164,6 @@ describe('resolveAssetConfig', () => {
       workerFirst: false,
       workerSpaFallback: false,
     });
-
-    expect(
-      resolveAssetRoutingPolicy({
-        isSsr: true,
-        hasPages: false,
-        hasDocumentRoutes: false,
-        hasMiddleware: false,
-      }),
-    ).toEqual({
-      assetConfig: NONE,
-      apiWorkerFirst: false,
-      workerFirst: true,
-      workerSpaFallback: false,
-    });
   });
 });
 
@@ -232,8 +172,6 @@ describe('resolveAssetRoutingPolicy — routing.notFound override', () => {
   const SPA_API_WORKER_FIRST = ['/api', '/api/*', '/__void', '/__void/*'];
 
   const ssgWithApi = {
-    isSsr: false,
-    hasPages: false,
     hasApiRoutes: true,
     hasDocumentRoutes: false,
     hasMiddleware: false,
@@ -266,8 +204,6 @@ describe('resolveAssetRoutingPolicy — routing.notFound override', () => {
 
   it('applies on the plain-asset branch too (no API routes)', () => {
     const inputs = {
-      isSsr: false,
-      hasPages: false,
       hasDocumentRoutes: false,
       hasMiddleware: false,
     } as const;
@@ -278,12 +214,7 @@ describe('resolveAssetRoutingPolicy — routing.notFound override', () => {
   });
 
   it('can also override the worker-first branch, which infers "none"', () => {
-    const workerFirst = {
-      isSsr: false,
-      hasPages: true,
-      hasDocumentRoutes: false,
-      hasMiddleware: false,
-    } as const;
+    const workerFirst = { hasDocumentRoutes: true, hasMiddleware: false } as const;
     expect(resolveAssetRoutingPolicy(workerFirst).assetConfig.not_found_handling).toBe('none');
     expect(resolveAssetRoutingPolicy({ ...workerFirst, notFound: '404-page' }).assetConfig).toEqual(
       {
@@ -298,8 +229,6 @@ describe('resolveAssetRoutingPolicy — routing.notFound override', () => {
 describe('resolveAssetRoutingPolicy — notFound on the worker-first SPA-fallback shape', () => {
   // middleware/ → workerOwnsHtmlRouting, no pages/, no SSR.
   const ssgWithMiddleware = {
-    isSsr: false,
-    hasPages: false,
     hasDocumentRoutes: false,
     hasMiddleware: true,
   } as const;
@@ -423,8 +352,6 @@ describe('generated serveWithAssets — routing.notFound end to end', () => {
   }
 
   const ssgWithMiddleware = {
-    isSsr: false,
-    hasPages: false,
     hasDocumentRoutes: false,
     hasMiddleware: true,
   } as const;
@@ -461,18 +388,6 @@ describe('generated serveWithAssets — routing.notFound end to end', () => {
     expect(
       await serveUnmatched({ ...ssgWithMiddleware, notFound: 'single-page-application' }),
     ).toEqual({ status: 200, body: '<html>SPA SHELL</html>' });
-  });
-
-  it('honors 404-page on the SSR shape, which never had a shell fallback', async () => {
-    expect(
-      await serveUnmatched({
-        isSsr: true,
-        hasPages: false,
-        hasDocumentRoutes: false,
-        hasMiddleware: false,
-        notFound: '404-page',
-      }),
-    ).toEqual({ status: 404, body: '<html>GENERATED 404</html>' });
   });
 
   for (const shape of [

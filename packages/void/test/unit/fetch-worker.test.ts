@@ -277,7 +277,7 @@ function evaluateClient(
   )({ fetch }, env, requestContext, createServerFetch, RuntimeFetchError);
 }
 
-describe.each([false, true])('server fetch documented options (nodeTarget: %s)', (nodeTarget) => {
+describe('server fetch documented options', () => {
   let app: Hono;
   let requestContext: AsyncLocalStorage<{ request: Request }>;
   let dispatch: ReturnType<typeof vi.fn<(...args: Array<unknown>) => Promise<Response>>>;
@@ -288,7 +288,7 @@ describe.each([false, true])('server fetch documented options (nodeTarget: %s)',
     requestContext = new AsyncLocalStorage();
     dispatch = vi.fn(async (...args: Array<unknown>) => app.fetch(args[0] as Request));
     client = evaluateClient(
-      (authClientPath) => compileWorkerClient(authClientPath, nodeTarget),
+      (authClientPath) => compileWorkerClient(authClientPath),
       dispatch,
       {},
       requestContext,
@@ -471,18 +471,15 @@ describe.each([false, true])('server fetch documented options (nodeTarget: %s)',
   });
 });
 
-it.each([false, true])(
-  'expands catch-all routes in generated clients (nodeTarget: %s)',
-  async (nodeTarget) => {
-    const fetch = vi.fn<(...args: Array<unknown>) => Promise<Response>>(async () =>
-      Response.json({ ok: true }),
-    );
-    const compile = (authClientPath: string) => compileWorkerClient(authClientPath, nodeTarget);
-    const client = evaluateClient(compile, fetch, {}, new AsyncLocalStorage());
-    await client.fetch('/files/:id2/:id/:path{.+}', {
-      params: { id: 'one', id2: 'two', path: 'docs/start here' },
-    });
-    const req = fetch.mock.calls[0]![0] as Request;
-    expect(new URL(req.url).pathname).toBe('/files/two/one/docs/start%20here');
-  },
-);
+it('expands catch-all routes in generated clients', async () => {
+  const fetch = vi.fn<(...args: Array<unknown>) => Promise<Response>>(async () =>
+    Response.json({ ok: true }),
+  );
+  const compile = (authClientPath: string) => compileWorkerClient(authClientPath);
+  const client = evaluateClient(compile, fetch, {}, new AsyncLocalStorage());
+  await client.fetch('/files/:id2/:id/:path{.+}', {
+    params: { id: 'one', id2: 'two', path: 'docs/start here' },
+  });
+  const req = fetch.mock.calls[0]![0] as Request;
+  expect(new URL(req.url).pathname).toBe('/files/two/one/docs/start%20here');
+});

@@ -10,9 +10,7 @@ import {
   envContext,
   asEnv,
   getRawRuntimeEnv,
-  INTERNAL_BINDING_EXACT_NAMES,
   INTERNAL_BINDING_PREFIXES,
-  isIsrActive,
   type RuntimeEnv,
 } from './env-raw.ts';
 
@@ -62,39 +60,32 @@ export function withRuntimeEnv<T>(env: unknown, fn: () => T): T {
   return envContext.run(resolved, () => runtimeRequestContext.run(scope, fn));
 }
 
-/** Whether `name` is a framework binding hidden from user code; `rawEnv` is the unfiltered env. */
-export function isInternalBinding(name: string, rawEnv: RuntimeEnv): boolean {
-  if (INTERNAL_BINDING_PREFIXES.some((p) => name.startsWith(p))) {
-    return true;
-  }
-  return (
-    isIsrActive(rawEnv) && (INTERNAL_BINDING_EXACT_NAMES as ReadonlyArray<string>).includes(name)
-  );
+/** Whether `name` is a framework binding hidden from user code. */
+export function isInternalBinding(name: string): boolean {
+  return INTERNAL_BINDING_PREFIXES.some((p) => name.startsWith(p));
 }
 
 function filterEnvProxy(env: RuntimeEnv): RuntimeEnv {
-  // The proxy target IS the raw env, so each trap consults `target` for the
-  // ISR-active gate — no extra `getRawRuntimeEnv()` call needed.
   return new Proxy(env, {
     get(target, prop, receiver) {
-      if (typeof prop === 'string' && isInternalBinding(prop, target)) {
+      if (typeof prop === 'string' && isInternalBinding(prop)) {
         return undefined;
       }
       return Reflect.get(target, prop, receiver);
     },
     has(target, prop) {
-      if (typeof prop === 'string' && isInternalBinding(prop, target)) {
+      if (typeof prop === 'string' && isInternalBinding(prop)) {
         return false;
       }
       return Reflect.has(target, prop);
     },
     ownKeys(target) {
       return Reflect.ownKeys(target).filter(
-        (key) => typeof key !== 'string' || !isInternalBinding(key, target),
+        (key) => typeof key !== 'string' || !isInternalBinding(key),
       );
     },
     getOwnPropertyDescriptor(target, prop) {
-      if (typeof prop === 'string' && isInternalBinding(prop, target)) {
+      if (typeof prop === 'string' && isInternalBinding(prop)) {
         return undefined;
       }
       return Reflect.getOwnPropertyDescriptor(target, prop);
@@ -109,7 +100,7 @@ export function getRuntimeEnv(): RuntimeEnv {
 
 export function getRuntimeBinding<T = unknown>(name: string): T | undefined {
   const raw = getRawRuntimeEnv();
-  if (isInternalBinding(name, raw)) {
+  if (isInternalBinding(name)) {
     return undefined;
   }
   return raw[name] as T | undefined;

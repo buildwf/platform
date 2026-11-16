@@ -595,29 +595,7 @@ describe('_validateEnvOnce — internal bindings stay hidden from void/env', () 
     },
   };
 
-  it('hides a schema-declared ISR_CACHE while ISR is active, even after boot validation', async () => {
-    defineEnv({ ISR_CACHE: passthrough, API_KEY: string() });
-
-    const fakeIsrKv = { __brand: 'isr-kv' };
-    // `__VOID_ISR_DEPLOYMENT_ID` present ⇒ ISR active ⇒ ISR_CACHE is internal.
-    const rawEnv = { ISR_CACHE: fakeIsrKv, API_KEY: 'sk_live', __VOID_ISR_DEPLOYMENT_ID: 'dep_1' };
-
-    await withRuntimeEnv(rawEnv, async () => {
-      // Boot validation runs before the first env read, as at worker boot.
-      await _validateEnvOnce(rawEnv);
-
-      expect((env as Record<string, unknown>).ISR_CACHE).toBeUndefined();
-      expect('ISR_CACHE' in env).toBe(false);
-      expect(Object.keys(env)).not.toContain('ISR_CACHE');
-      expect(getRuntimeBinding('ISR_CACHE')).toBeUndefined();
-      expect(() => requireRuntimeBinding('ISR_CACHE')).toThrow(
-        "env: Missing Cloudflare binding 'ISR_CACHE'.",
-      );
-      expect(env.API_KEY).toBe('sk_live');
-    });
-  });
-
-  it('exposes a schema-declared ISR_CACHE when ISR is inactive (no __VOID_ISR_DEPLOYMENT_ID)', async () => {
+  it('exposes a schema-declared ISR_CACHE as a user binding', async () => {
     defineEnv({ ISR_CACHE: passthrough, API_KEY: string() });
 
     const fakeIsrKv = { __brand: 'user-kv' };

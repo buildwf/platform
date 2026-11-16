@@ -277,28 +277,6 @@ describe('parseProjectArgs', () => {
     });
   });
 
-  describe('purge-cache', () => {
-    it('parses purge-cache', () => {
-      expect(parseProjectArgs(['purge-cache'])).toEqual({
-        subcommand: 'purge-cache',
-        projectSlug: '',
-      });
-    });
-
-    it('parses purge-cache with --project', () => {
-      expect(parseProjectArgs(['purge-cache', '--project', 'my-app'])).toEqual({
-        subcommand: 'purge-cache',
-        projectSlug: 'my-app',
-      });
-    });
-
-    it('errors on unexpected argument', () => {
-      expect(() => parseProjectArgs(['purge-cache', 'extra'])).toThrow(
-        "project: Unexpected argument 'extra'.",
-      );
-    });
-  });
-
   describe('unknown-flag rejection', () => {
     // status/link/rollback/cancel previously captured a leading flag as the positional id.
     it('rejects an unknown flag for status instead of capturing it as the name', () => {

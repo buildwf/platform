@@ -257,9 +257,8 @@ function deploy(
   options: {
     client?: InstanceType<typeof PlatformClient>;
     appType?: 'spa' | 'static';
-    routing?: Parameters<typeof runStaticDeploy>[10];
-    cliLog?: Parameters<typeof runStaticDeploy>[11];
-    notFound?: Parameters<typeof runStaticDeploy>[12];
+    routing?: Parameters<typeof runStaticDeploy>[6];
+    cliLog?: Parameters<typeof runStaticDeploy>[7];
   } = {},
 ): Promise<void> {
   return runStaticDeploy(
@@ -269,13 +268,8 @@ function deploy(
     { buildCommand: null, outputDir: assetsDir, appType: options.appType ?? 'spa' },
     true,
     undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
     options.routing,
     options.cliLog,
-    options.notFound,
   );
 }
 
@@ -435,28 +429,6 @@ describe('direct-to-R2 deploy flow', () => {
     },
   );
 
-  it('preserves routing rules already merged by the full-to-static path', async () => {
-    writeFileSync(join(assetsDir, '_headers'), '/about\n  X-Test: file-rule\n');
-    const headerRules = [
-      { pattern: '/about', headers: [['X-Test', 'config-rule']] as Array<[string, string]> },
-    ];
-    const state = installPlatformMocks();
-
-    await runStaticDeploy(
-      workdir,
-      { projectId: 'proj_t', slug: 'test' },
-      makeClient(),
-      { buildCommand: null, outputDir: assetsDir, appType: 'static' },
-      true,
-      undefined,
-      undefined,
-      headerRules,
-    );
-
-    const body = JSON.parse(state.finalizeCalls[0].init.body as string);
-    expect(body.manifest.headerRules).toEqual(headerRules);
-  });
-
   // A plain Vite MPA is detected as `spa`, so its notFound must reach the static manifest.
   it('threads routing.notFound into the finalize manifest (static path)', async () => {
     const state = installPlatformMocks();
@@ -469,21 +441,6 @@ describe('direct-to-R2 deploy flow', () => {
     // Overriding away from SPA must NOT leave the synthetic `/* -> /index.html`
     // fallback behind, or the shell would still be served via a rule.
     expect(body.manifest.fallbackRules).toBeUndefined();
-  });
-
-  // Calling convention of the "all pages prerendered -> static" redirect in
-  // `runFullDeploy`: it merged the routing RULES upstream and deliberately
-  // passes `routing: undefined`, so the notFound override has to ride the
-  // dedicated trailing param or it is silently dropped there too.
-  it('honors an explicit notFound when routing is undefined (full->static redirect shape)', async () => {
-    const state = installPlatformMocks();
-
-    await deploy({ appType: 'static', notFound: 'single-page-application' });
-
-    const body = JSON.parse(state.finalizeCalls[0].init.body as string);
-    expect(body.manifest.assetConfig).toEqual({
-      not_found_handling: 'single-page-application',
-    });
   });
 
   it('surfaces 4xx R2 PUT errors with asset path and hash', async () => {

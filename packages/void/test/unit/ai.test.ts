@@ -695,12 +695,10 @@ describe('AI usage-limit rejections', () => {
       const { envContext } = await import('../../src/runtime/env-raw.ts');
       const { ai } = await import('../../src/runtime/ai.ts');
       const { createHttpRouteHandler } = await import('../../src/runtime/routing.ts');
-      const { createErrorRenderer } = await import('../../src/runtime/routing-errors.ts');
       const direct = makeDirectAi({
         run: () => Response.json({}, { status: 429, headers: { 'Retry-After': '60' } }),
       });
       const app = new Hono();
-      app.onError(createErrorRenderer({ projectRoot: '/project', homeDir: '/home' }).onError);
       app.post(
         '/ai',
         createHttpRouteHandler(async () => ({ POST: () => ai[method]('model', {}) }), 'POST'),

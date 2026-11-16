@@ -24,10 +24,6 @@ export function formatDeploySummary(details: {
   d1MigrationsCurrent?: boolean;
   cronJobs?: number;
   queues?: number;
-  prerenderedPages?: number;
-  ssr?: boolean;
-  revalidate?: number | Record<string, number>;
-  framework?: string | true;
 }): string {
   const lines: Array<string> = [];
   if (details.workerName) {
@@ -62,22 +58,6 @@ export function formatDeploySummary(details: {
   }
   if (details.queues) {
     lines.push(`${formatCount(details.queues, 'queue')} configured`);
-  }
-  if (details.prerenderedPages) {
-    lines.push(`${formatCount(details.prerenderedPages, 'page')} prerendered`);
-  }
-  if (details.ssr) {
-    lines.push('SSR enabled');
-  }
-  if (details.revalidate) {
-    lines.push(
-      typeof details.revalidate === 'number'
-        ? `ISR revalidate: ${details.revalidate}s`
-        : `ISR revalidate: ${formatCount(Object.keys(details.revalidate).length, 'path rule')}`,
-    );
-  }
-  if (details.framework) {
-    lines.push(details.framework === true ? 'Framework mode' : `Framework: ${details.framework}`);
   }
   return lines.join('\n');
 }

@@ -122,8 +122,7 @@ export async function initializePackedProject(
   version,
   toolchain = 'vite',
 ) {
-  const frameworks = ['react', 'vue', 'svelte', 'solid'];
-  assert(frameworks.includes(framework), 'Unknown Pages framework');
+  assert.equal(framework, 'react', 'Unknown framework');
   assert(['npm', 'pnpm'].includes(manager), 'Unknown package manager');
   assert(['vite', 'vite-plus'].includes(toolchain), 'Unknown toolchain');
   assert(
@@ -151,14 +150,10 @@ export async function initializePackedProject(
     prompts: [
       { text: 'Initialize a git repository?', response: '\r' },
       {
-        text: 'Choose a Pages scaffold toolchain:',
+        text: 'Choose a scaffold toolchain:',
         response: toolchain === 'vite-plus' ? '\r' : '\x1b[B\r',
       },
-      {
-        text: 'Choose a Pages framework to scaffold:',
-        response: '\x1b[B'.repeat(frameworks.indexOf(framework)) + '\r',
-      },
-      { text: 'Choose a Pages starter:', response: '\r' },
+      { text: 'Choose a starter:', response: '\r' },
       {
         text: 'Could not detect your coding agent. Which one are you using?',
         response: '\x1b[B'.repeat(4) + '\r',

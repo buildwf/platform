@@ -6,10 +6,8 @@ import {
   readStoredResourceName,
   assertExistingCloudflareConfig,
   type ExistingCloudflareWorker,
-  type ApprovedCloudflareKvBinding,
 } from '@void/deploy-cloudflare';
 import { dirname, resolve } from 'pathslash';
-import { type RoutingConfig } from '../config.ts';
 import {
   deployPointerPath,
   desiredIdentityBindings,
@@ -117,15 +115,6 @@ export function deduplicateGeneratedCompatibilityFlags(
 /**
  * Check whether Void contributes worker-side routing rules.
  */
-export function hasConfiguredVoidWorkerRoutingRules(routing: RoutingConfig | undefined): boolean {
-  return (
-    routing !== undefined &&
-    [routing.redirects, routing.rewrites, routing.fallbacks, routing.headers].some(
-      (rules) => rules !== undefined && Object.keys(rules).length > 0,
-    )
-  );
-}
-
 /**
  * Remove the CF plugin's deploy pointer before building. The plugin rewrites it only when it
  * emits a Worker, so the post-build checks then accept only a pointer this build wrote.
@@ -626,7 +615,6 @@ export async function validateCloudflarePostBuildEnv(options: {
   schemaFacts: SelfHostSchemaFacts;
   authEnabled: boolean;
   existingWorker: ExistingCloudflareWorker | null;
-  approvedHandoffKv: Array<ApprovedCloudflareKvBinding>;
   deps: CloudflareDeployDeps;
   assertUploaderStillPinned: () => boolean;
 }): Promise<boolean> {
@@ -639,14 +627,13 @@ export async function validateCloudflarePostBuildEnv(options: {
     schemaFacts,
     authEnabled,
     existingWorker,
-    approvedHandoffKv,
     deps,
     assertUploaderStillPinned,
   } = options;
   const emitted = (deps.readEmittedWorkerVars ?? readEmittedWorkerVars)(root);
   if (existingWorker) {
     const generated = readGeneratedDeployConfig(root);
-    assertExistingCloudflareConfig(existingWorker, generated.config, true, approvedHandoffKv);
+    assertExistingCloudflareConfig(existingWorker, generated.config, true);
   }
   if (!emitted.ok) {
     log.error(

@@ -7,9 +7,8 @@ import { scanQueuesSync } from './queues/scan.ts';
 
 /**
  * Prints a one-shot hint on dev server start when the project has crons
- * or queues, explaining how to trigger them locally. Both default Void mode
- * and framework mode (SvelteKit, Nuxt, Analog, Astro, TanStack Start, React
- * Router, vinext) expose `/__void/scheduled` and `/__void/queue`.
+ * or queues, explaining how to trigger them locally through `/__void/scheduled`
+ * and `/__void/queue`.
  */
 export function devTriggersHintPlugin(root: string, devTriggerToken: string): Plugin {
   return {

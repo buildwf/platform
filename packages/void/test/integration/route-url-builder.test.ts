@@ -13,7 +13,6 @@ import { generateRouteTypes } from '../../src/codegen/route-types.ts';
 import { readConfig } from '../../src/config.ts';
 
 const packageRoot = join(import.meta.dirname, '../..');
-const adapterSource = (path: string) => JSON.stringify(join(packageRoot, '..', path));
 const roots: Array<string> = [];
 
 afterEach(() => {
@@ -28,12 +27,9 @@ import { getCookie } from 'hono/cookie';
 import { etag } from 'hono/etag';
 import { routeUrl, type Href, type RouteUrl } from 'void/routes';
 import { defineConfig } from 'void/config';
-import type { VoidRouter } from 'void/pages-client';
 import { defineHandler, defineMiddleware, type CloudContext } from 'void/handler';
-import { revalidate } from 'void/isr';
 import { connectLiveStream } from 'void/live/client';
 import { connectEventStream } from 'void/sse/client';
-import type { IslandFormState } from 'void/pages-client';
 declare const id: number;
 declare const dynamic: string;
 const user: RouteUrl = routeUrl('/users/:id', { params: { id } });
@@ -79,16 +75,6 @@ const empty: Href = '';
 // @ts-expect-error route URLs exclude external links
 const external: RouteUrl = 'https://vite.dev';
 void [plain, hrefs, unknown, unchecked, relative, protocolRelative, empty, external];
-declare const router: VoidRouter;
-void router.visit('/users/42');
-void router.visit(routeUrl('/about'));
-void router.visit({ pathname: '/users/:id', params: { id } });
-void router.prefetch(new URL('https://example.com'));
-router.flush('#details');
-// @ts-expect-error router navigation is checked
-void router.visit('/unknown');
-// @ts-expect-error router prefetches are checked
-void router.prefetch('../relative');
 declare const context: CloudContext;
 void context.rewrite('/users/42');
 void context.rewrite(user);
@@ -127,13 +113,6 @@ defineMiddleware(async (c, next) => {
   if (!getCookie(c, 'session')) return c.redirect('/about');
   await next();
 });
-void revalidate({ paths: ['/', '/about', \`/users/\${id}\`, user] });
-// @ts-expect-error revalidated paths are checked
-void revalidate({ paths: ['/unknown'] });
-declare const stored: string[];
-// @ts-expect-error unchecked string arrays are rejected
-void revalidate({ paths: stored });
-void revalidate({ paths: stored as RouteUrl[] });
 connectEventStream('/api/legacy');
 connectEventStream(\`/api/users/\${id}\`);
 connectEventStream(user);
@@ -158,14 +137,6 @@ connectLiveStream('/unknown');
 connectLiveStream('wss://example.com/live');
 // @ts-expect-error live streams reject unchecked strings
 connectLiveStream(dynamic);
-declare const island: IslandFormState<{ title: string }, 'setters'>;
-void island.post('/about');
-void island.post('/users/42?update');
-void island.delete(user);
-// @ts-expect-error unknown routes are rejected
-void island.post('/unknown');
-// @ts-expect-error external URLs are rejected
-void island.put('https://example.com');
 // Config rewrites keep placeholders and static files.
 defineConfig({
   routing: {
@@ -176,122 +147,6 @@ defineConfig({
 });
 `;
 
-const linkHrefCheck = `import type { Href } from 'void/routes';
-import type { LinkProps as ReactLinkProps } from ${adapterSource('react/src/runtime/link.tsx')};
-import type { Link as VueLink } from ${adapterSource('vue/src/runtime/link.ts')};
-import type { LinkProps as SvelteLinkProps } from ${adapterSource('svelte/src/runtime/link-props.ts')};
-type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
-type VueLinkProps = InstanceType<typeof VueLink>['$props'];
-const same: [
-  Same<ReactLinkProps['href'], Href>,
-  Same<VueLinkProps['href'], Href>,
-  Same<SvelteLinkProps['href'], Href>,
-] = [true, true, true];
-const known: [ReactLinkProps['href'], VueLinkProps['href'], SvelteLinkProps['href']] = [
-  '/users/42',
-  '/users/42',
-  '/users/42',
-];
-// @ts-expect-error React Link rejects unknown routes
-const react: ReactLinkProps['href'] = '/unknown';
-// @ts-expect-error Vue Link rejects unknown routes
-const vue: VueLinkProps['href'] = '/unknown';
-// @ts-expect-error Svelte Link rejects unknown routes
-const svelte: SvelteLinkProps['href'] = '/unknown';
-void [same, known, react, vue, svelte];
-`;
-
-// Svelte's implementation uses runes, so this tsc fixture covers the other adapters.
-// Svelte's `submit` takes the same `RouteUrl`, and `post`/`put`/`patch`/`delete` come from IslandFormState.
-const islandFormCheck = `import { useIslandForm as react } from ${adapterSource('react/src/runtime/use-island-form.ts')};
-import { useIslandForm as vue } from ${adapterSource('vue/src/runtime/use-island-form.ts')};
-import { useIslandForm as solid } from ${adapterSource('solid/src/runtime/use-island-form.ts')};
-const reactForm = react({ title: '' });
-const vueForm = vue({ title: '' });
-const solidForm = solid({ title: '' });
-void reactForm.post('/about');
-void vueForm.put('/users/42?update');
-void solidForm.delete('/api/legacy');
-void vueForm.submit('/about', 'POST');
-// @ts-expect-error unknown routes are rejected
-void reactForm.post('/unknown');
-// @ts-expect-error external URLs are rejected
-void solidForm.put('https://example.com');
-// @ts-expect-error Vue submit is a route URL
-void vueForm.submit('/unknown', 'POST');
-`;
-
-const solidLinkHrefCheck = `import type { Href } from 'void/routes';
-import type { LinkProps } from ${adapterSource('solid/src/runtime/link.tsx')};
-type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
-const same: Same<LinkProps['href'], Href> = true;
-const known: LinkProps['href'] = '/users/42';
-// @ts-expect-error Solid Link rejects unknown routes
-const unknown: LinkProps['href'] = '/unknown';
-void [same, known, unknown];
-`;
-
-// Page params typed through each adapter's useParams<Pattern>().
-const useParamsCheck = `import type { PagePath } from 'void/routes';
-import { useParams as react } from ${adapterSource('react/src/runtime/use-params.ts')};
-import { useParams as vue } from ${adapterSource('vue/src/runtime/use-params.ts')};
-import { useParams as svelte } from ${adapterSource('svelte/src/runtime/use-params.ts')};
-import { useParams as solid } from ${adapterSource('solid/src/runtime/use-params.ts')};
-type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
-const pages: Array<PagePath> = ['/', '/about', '/users/[id]', '/files/[...path]', '/wild/[...]', '/users/:id', '/files/:path{.+}', '/wild/*'];
-// @ts-expect-error HTTP routes are not pages
-const api: PagePath = '/api/users/:id';
-void [pages, api];
-type Either = '/users/:id' | '/files/:path{.+}';
-${['react', 'vue', 'svelte', 'solid']
-  .map(
-    (useParams) => `{
-  const user = ${useParams}<'/users/:id'>();
-  const bracketUser = ${useParams}<'/users/[id]'>();
-  const bracketFiles = ${useParams}<'/files/[...path]'>();
-  const bracketWild = ${useParams}<'/wild/[...]'>();
-  const aliases: [
-    Same<typeof bracketUser, typeof user>,
-    Same<typeof bracketFiles, { path: string }>,
-    Same<typeof bracketWild, {}>,
-  ] = [true, true, true];
-  void aliases;
-  const files = ${useParams}<'/files/:path{.+}'>();
-  const wild = ${useParams}<'/wild/*'>();
-  const about = ${useParams}<'/about'>();
-  const same: [
-    Same<typeof user, { id: string }>,
-    Same<typeof files, { path: string }>,
-    Same<typeof wild, {}>,
-    Same<typeof about, {}>,
-  ] = [true, true, true, true];
-  // @ts-expect-error misspelled params are rejected
-  void user.idd;
-  // @ts-expect-error static pages have no params
-  void about.id;
-  // @ts-expect-error unknown pages are rejected
-  ${useParams}<'/unknown'>();
-  // @ts-expect-error HTTP routes are not pages
-  ${useParams}<'/api/users/:id'>();
-  // A pattern union gives a union of params, not params from every pattern.
-  const either = ${useParams}<Either>();
-  const union: Same<typeof either, { id: string } | { path: string }> = true;
-  // @ts-expect-error a param of one pattern is not guaranteed
-  void either.id;
-  void union;
-  const untyped: Record<string, string> = ${useParams}();
-  const annotated: string = ${useParams}<{ slug: string }>().slug;
-  // Existing generic wrappers and ReturnType keep the record contract.
-  function wrapper<T extends Record<string, string>>(): T {
-    return ${useParams}<T>();
-  }
-  const derived: Same<ReturnType<typeof ${useParams}>, Record<string, string>> = true;
-  void [same, untyped, annotated, wrapper, derived];
-}
-`,
-  )
-  .join('')}`;
-
 async function createFixture({
   typedRoutes = false,
   extraFiles = {},
@@ -300,21 +155,25 @@ async function createFixture({
   roots.push(root);
   const files: Record<string, string> = {
     'check-typed.ts': typedCheck,
-    'check-links.ts': linkHrefCheck,
-    'check-solid-link.ts': solidLinkHrefCheck,
-    'check-use-params.ts': useParamsCheck,
     'package.json': '{"type":"module"}',
     'routes/api/users/[id].ts':
       "import { defineHandler } from 'void/handler'; export const GET = defineHandler(() => ({ ok: true }));",
     'routes/api/legacy.ts':
       "import { defineHandler } from 'void/handler'; export default defineHandler(() => ({ ok: true }));",
-    'pages/index.tsx': 'export default function Page() { return null; }',
-    'pages/about.tsx': 'export default function Page() { return null; }',
-    'pages/café menu.tsx': 'export default function Page() { return null; }',
-    'pages/café/[id].tsx': 'export default function Page() { return null; }',
-    'pages/users/[id].tsx': 'export default function Page() { return null; }',
-    'pages/files/[...path].tsx': 'export default function Page() { return null; }',
-    'pages/wild/[...].tsx': 'export default function Page() { return null; }',
+    'routes/index.ts':
+      "import { defineHandler } from 'void/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+    'routes/about.ts':
+      "import { defineHandler } from 'void/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+    'routes/café menu.ts':
+      "import { defineHandler } from 'void/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+    'routes/café/[id].ts':
+      "import { defineHandler } from 'void/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+    'routes/users/[id].ts':
+      "import { defineHandler } from 'void/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+    'routes/files/[...path].ts':
+      "import { defineHandler } from 'void/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+    'routes/wild/[...].ts':
+      "import { defineHandler } from 'void/handler'; export const GET = defineHandler(() => ({ ok: true }));",
     'check.ts': `import type { Context, MiddlewareHandler } from 'hono';
 import { getCookie } from 'hono/cookie';
 import {
@@ -323,7 +182,6 @@ import {
   type RouteOptions,
   type RoutePath,
 } from 'void/routes';
-import type { VoidRouter } from 'void/pages-client';
 import { defineHandler, defineMiddleware, type CloudContext, type CloudEnv } from 'void/handler';
 const path: RoutePath = '/users/:id';
 const options: RouteOptions<typeof path> = { params: { id: 123 }, query: { tab: 'activity' }, hash: 'details' };
@@ -363,12 +221,6 @@ void url;
 const destination: RouteDestination = { pathname: '/users/:id', params: { id: 123 }, query: { tab: 'activity' } };
 const bracketDestination: RouteDestination = { pathname: '/users/[id]', params: { id: 123 } };
 void bracketDestination;
-declare const router: VoidRouter;
-void router.visit(destination);
-void router.prefetch(destination);
-router.flush(destination);
-// @ts-expect-error destinations require path params
-void router.visit({ pathname: '/users/:id' });
 declare const honoContext: Context<CloudEnv>;
 const context: CloudContext = honoContext;
 const nativeContext: Context<CloudEnv> = context;
@@ -409,13 +261,9 @@ defineMiddleware(async c => c.redirect(destination));
   const { scan } = await analyzeApplication(root, {
     config: readConfig(root),
   });
-  const { dts } = generateRouteTypes(
-    scan,
-    join(root, 'routes'),
-    join(root, '.void'),
-    join(root, 'pages'),
-    { typedRoutes },
-  );
+  const { dts } = generateRouteTypes(scan, join(root, 'routes'), join(root, '.void'), {
+    typedRoutes,
+  });
   mkdirSync(join(root, '.void'));
   writeFileSync(join(root, '.void/routes.d.ts'), dts);
   writeFileSync(
@@ -463,7 +311,7 @@ function typecheck(
 
 describe('standalone routeUrl utility', () => {
   it.each(['generated', 'package'] as const)(
-    'preserves HTTP, WebSocket and page action contracts for both syntaxes through %s declarations',
+    'preserves HTTP and WebSocket contracts for both syntaxes through %s declarations',
     async (declarations) => {
       const root = await createFixture({
         extraFiles: {
@@ -472,23 +320,15 @@ type Schema<T> = { '~standard': { version: 1; vendor: string; validate: (value: 
 declare const message: Schema<{ text: string }>;
 export default defineRoom({ messages: { client: message, server: message } });
 `,
-          'pages/users/[id].server.ts': `import { defineHandler } from 'void/handler';
-type Schema<T> = { '~standard': { version: 1; vendor: string; validate: (value: unknown) => { value: T }; types?: { input: T; output: T } } };
-declare const body: Schema<{ name: string }>;
-export const actions = { save: defineHandler.withValidator({ body })(() => ({ ok: true })) };
-`,
           'check-aliases.ts': `import { fetch } from 'void/client';
 import { connect } from 'void/ws';
-import { createActionClient } from 'void/pages-client';
-import type { RouteMap, RoutePathMap, PagePathMap, PageActionMap, WebSocketRouteMap } from 'void/routes';
+import type { RouteMap, RoutePathMap, WebSocketRouteMap } from 'void/routes';
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 const aliases: [
   Same<RouteMap['/api/users/[id]'], RouteMap['/api/users/:id']>,
   Same<RoutePathMap['/files/[...path]'], RoutePathMap['/files/:path{.+}']>,
-  Same<PagePathMap['/users/[id]'], PagePathMap['/users/:id']>,
-  Same<PageActionMap['/users/[id]'], PageActionMap['/users/:id']>,
   Same<WebSocketRouteMap['/chat/[room]'], WebSocketRouteMap['/chat/:room']>,
-] = [true, true, true, true, true];
+] = [true, true, true];
 void aliases;
 const bracket = fetch('/api/users/[id]', { params: { id: '42' } });
 const legacy = fetch('/api/users/:id', { params: { id: '42' } });
@@ -510,19 +350,6 @@ connect('/chat/[room]', { params: { room: 'lobby' } }).on('message', (message) =
   void message.missing;
   void text;
 });
-const { action } = createActionClient();
-action('/users/[id]?save', { params: { id: '42' }, data: { name: 'Alice' } });
-action('/users/:id?save', { params: { id: '42' }, data: { name: 'Alice' } });
-// @ts-expect-error bracket actions require params
-action('/users/[id]?save');
-// @ts-expect-error legacy actions require params
-action('/users/:id?save');
-// @ts-expect-error bracket action bodies stay constrained
-action('/users/[id]?save', { params: { id: '42' }, data: { name: 42 } });
-// @ts-expect-error legacy action bodies stay constrained
-action('/users/:id?save', { params: { id: '42' }, data: { name: 42 } });
-// @ts-expect-error bracket action names stay constrained
-action('/users/[id]?missing', { params: { id: '42' } });
 `,
         },
       });
@@ -549,23 +376,12 @@ action('/users/[id]?missing', { params: { id: '42' } });
     },
   );
 
-  it.each(['generated', 'package'] as const)(
-    'types useParams<Pattern>() in every adapter through the %s declarations',
-    async (declarations) => {
-      const root = await createFixture();
-      expect(
-        typecheck(root, declarations, ['check-use-params.ts'], {
-          allowImportingTsExtensions: true,
-        }),
-      ).toEqual({ output: '', status: 0 });
-    },
-  );
-
-  it('lets a root dynamic page match any single-segment URL with routing.typedRoutes', async () => {
+  it('lets a root dynamic route match any single-segment URL with routing.typedRoutes', async () => {
     const root = await createFixture({
       typedRoutes: true,
       extraFiles: {
-        'pages/[slug].tsx': 'export default function Page() { return null; }',
+        'routes/[slug].ts':
+          "import { defineHandler } from 'void/handler'; export const GET = defineHandler(() => ({ ok: true }));",
         // Template literal types cannot exclude empty or slash-leading segments.
         'check-root-dynamic.ts': `import type { RouteUrl } from 'void/routes';
 const loose: Array<RouteUrl> = ['/anything', '/users/', '//example.com'];
@@ -577,46 +393,6 @@ void loose;
       output: '',
       status: 0,
     });
-  });
-
-  it('checks useIslandForm URLs in every adapter with routing.typedRoutes', async () => {
-    const root = await createFixture({
-      typedRoutes: true,
-      extraFiles: { 'check-island-form.ts': islandFormCheck },
-    });
-    expect(
-      typecheck(root, 'generated', ['check-island-form.ts'], {
-        allowImportingTsExtensions: true,
-      }),
-    ).toEqual({ output: '', status: 0 });
-  });
-
-  it('checks Link href in every adapter with routing.typedRoutes', async () => {
-    const root = await createFixture({ typedRoutes: true });
-    const tsSources = { allowImportingTsExtensions: true };
-    expect(
-      typecheck(root, 'generated', ['check-links.ts'], { ...tsSources, jsx: 'react-jsx' }),
-    ).toEqual({ output: '', status: 0 });
-    expect(
-      typecheck(root, 'generated', ['check-solid-link.ts'], {
-        ...tsSources,
-        jsx: 'preserve',
-        jsxImportSource: 'solid-js',
-      }),
-    ).toEqual({ output: '', status: 0 });
-  });
-
-  it('checks empty trailing-slash catch-alls through generated declarations', async () => {
-    const root = await createFixture({
-      typedRoutes: true,
-      extraFiles: {
-        'void.json': JSON.stringify({ routing: { trailingSlash: true } }),
-        'check-trailing.ts': `import type { RouteUrl } from 'void/routes';
-const paths: Array<RouteUrl> = ['/wild/', '/wild/a/b/'];
-void paths;`,
-      },
-    });
-    expect(typecheck(root, 'generated', ['check-trailing.ts'])).toEqual({ output: '', status: 0 });
   });
 
   it('checks URL strings through the package types alone with routing.typedRoutes', () => {
@@ -682,7 +458,10 @@ void [hrefs, route, emptyCatchAll, nestedCatchAll, unknown, external];
 
   it('preserves URLs created in another realm', async () => {
     const root = await createFixture();
-    writeFileSync(join(root, 'entry.ts'), "export { toUrlString } from 'void/pages-client';\n");
+    writeFileSync(
+      join(root, 'entry.ts'),
+      `export { toUrlString } from ${JSON.stringify(join(packageRoot, 'src/runtime/route-url.ts'))};\n`,
+    );
     await build({
       configFile: false,
       root,

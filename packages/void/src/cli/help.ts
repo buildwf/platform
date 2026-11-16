@@ -638,7 +638,6 @@ const HELP_TREE: HelpTree = {
       { command: 'rollback [deployId]', description: 'Roll back to a previous deployment' },
       { command: 'cancel [deployId]', description: 'Cancel an active deployment' },
       { command: 'delete [name]', description: 'Delete a project and all its resources' },
-      { command: 'purge-cache', description: 'Purge all cached pages (Void platform)' },
     ],
     children: {
       status: basicSubcommand(
@@ -816,11 +815,6 @@ const HELP_TREE: HelpTree = {
         usage: ['void project delete [name] [options]'],
         options: [{ command: '--force, -f', description: 'Delete without confirmation' }],
         examples: [{ command: 'void project delete my-app', description: 'Delete a project' }],
-      },
-      'purge-cache': {
-        summary: 'Purge all cached pages for a Void platform project.',
-        usage: ['void project purge-cache [options]'],
-        options: [{ command: '--project <name>', description: 'Project name override' }],
       },
     },
   },
@@ -1407,7 +1401,7 @@ const HELP_TREE: HelpTree = {
     },
   },
   gen: {
-    summary: 'Scaffold routes, models, background jobs, and framework entries.',
+    summary: 'Scaffold routes, models, and background jobs.',
     usage: ['void gen <command>'],
     commands: [
       {
@@ -1417,7 +1411,6 @@ const HELP_TREE: HelpTree = {
       { command: 'migration <name>', description: 'Generate an empty migration file' },
       { command: 'route <path>', description: 'Generate a route with handler exports' },
       { command: 'middleware <name>', description: 'Generate a numbered middleware file' },
-      { command: 'ssr', description: 'Generate SSR entry, client, and App component' },
       { command: 'cron <name>', description: 'Generate a cron job file' },
       { command: 'queue <name>', description: 'Generate a queue consumer file' },
     ],
@@ -1444,11 +1437,6 @@ const HELP_TREE: HelpTree = {
         'Generate a numbered middleware file.',
         'void gen middleware <name>',
       ),
-      ssr: {
-        summary: 'Generate SSR entry, client, and App component.',
-        usage: ['void gen ssr [options]'],
-        options: [{ command: '--react', description: 'Use React' }],
-      },
       cron: basicSubcommand('Generate a cron job file.', 'void gen cron <name>'),
       queue: basicSubcommand('Generate a queue consumer file.', 'void gen queue <name>'),
     },

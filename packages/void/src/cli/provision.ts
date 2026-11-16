@@ -41,7 +41,7 @@ import {
 export interface DesiredResourceSet {
   /** `migrationsDir` is config-relative and defaults to `./db/migrations`. */
   d1?: { binding: string; name: string; migrationsDir?: string };
-  /** KV namespaces (app KV + `ISR_CACHE`). Titles are NOT account-unique. */
+  /** KV namespaces. Titles are NOT account-unique. */
   kvNamespaces: Array<{ binding: string; title: string }>;
   /** R2 bucket — bucket names ARE account-unique. */
   r2?: { binding: string; bucketName: string };
@@ -55,7 +55,7 @@ export interface DesiredResourceSet {
 
 /** One DESIRED id-bearing resource absent (or placeholder-only) in the config. */
 export interface ProvisionDriftEntry {
-  /** Binding name (`DB`, `KV`, `ISR_CACHE`, `STORAGE`, `HYPERDRIVE`). */
+  /** Binding name (`DB`, `KV`, `STORAGE`, `HYPERDRIVE`). */
   binding: string;
   kind: 'd1' | 'kv' | 'r2' | 'hyperdrive';
   /** Resource name / KV title / bucket name the deploy wants. */

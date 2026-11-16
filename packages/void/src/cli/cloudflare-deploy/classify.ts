@@ -1,7 +1,6 @@
 import { type ApplicationAnalysis } from '../../application-analysis.ts';
 import { type VoidConfig } from '../../config.ts';
 import { assertNoRootSourceConventionConflicts } from '../../project-paths.ts';
-import { validateSsrEntry } from '../../ssr/entry.ts';
 import { getErrorMessage } from '../output.ts';
 import { detectPreset, hasBackendFiles } from '../preset.ts';
 import { syncWranglerDurableObjects, syncWranglerWebSockets } from '../wrangler.ts';
@@ -17,8 +16,7 @@ export type CloudflareDeployAppClassification =
 
 /**
  * Narrow native Cloudflare deploys to app shapes whose emitted Worker artifact
- * the current verifier understands. This runs before any account operation;
- * `runCloudflareDeploy` has already rejected node/bun/deno targets.
+ * the current verifier understands. This runs before any account operation.
  */
 export function classifyCloudflareDeployApp(
   root: string,
@@ -26,13 +24,7 @@ export function classifyCloudflareDeployApp(
   options: CloudflareDeployAppOptions,
   application: ApplicationAnalysis,
 ): CloudflareDeployAppClassification {
-  const framework = application.framework;
-
-  // Frameworks have their own Worker output. Their Vite dependency does not
-  // imply that the project is a standalone SPA.
-  const staticPreset = framework
-    ? null
-    : detectPreset(root, { dir: options.dir, spa: options.spa });
+  const staticPreset = detectPreset(root, { dir: options.dir, spa: options.spa });
   const configuredStatic =
     voidConfig.inference?.appType === 'static' || voidConfig.inference?.appType === 'spa';
   if (staticPreset || configuredStatic || options.dir || options.spa) {
@@ -46,12 +38,12 @@ export function classifyCloudflareDeployApp(
     );
   }
 
-  if (!framework && !hasBackendFiles(root)) {
+  if (!hasBackendFiles(root)) {
     return unsupported(
       [
         'deploy: --platform cloudflare found no Void backend to deploy.',
-        'A full Void app has at least one of: routes/, pages/, middleware, crons/, queues/,',
-        'email/, or an SSR entry. Add your server code, or use `void deploy` for a static site.',
+        'A full Void app has at least one of: routes/, middleware, crons/, queues/, or email/.',
+        'Add your server code, or use `void deploy` for a static site.',
       ].join('\n'),
     );
   }
@@ -59,7 +51,6 @@ export function classifyCloudflareDeployApp(
   try {
     const paths = application.paths;
     assertNoRootSourceConventionConflicts(paths);
-    validateSsrEntry(root, paths);
     syncWranglerDurableObjects(root, application.durableObjects);
     syncWranglerWebSockets(root, application.websockets);
   } catch (error) {

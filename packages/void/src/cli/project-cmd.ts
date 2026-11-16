@@ -105,13 +105,4 @@ export async function runProjectCommand(root: string, args: ProjectArgs): Promis
     const { runDeleteCommand } = await import('./delete.ts');
     return runDeleteCommand(root, args.name || undefined, { force: args.force });
   }
-  if (args.subcommand === 'purge-cache') {
-    if (cloudflare) {
-      throw new Error(
-        'project: `void project purge-cache` is available only for projects hosted on a Void platform. For a direct Cloudflare deploy, redeploy or purge the configured ISR KV namespace.',
-      );
-    }
-    const { runPurgeCacheCommand } = await import('./cache.ts');
-    return runPurgeCacheCommand(root, args.projectSlug || undefined);
-  }
 }

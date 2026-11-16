@@ -1,8 +1,6 @@
 import { join } from 'pathslash';
 import { globSync } from 'tinyglobby';
 import type { JobDefinition } from '../crons/scan.ts';
-import { scanPages } from '../pages/scan.ts';
-import type { PageScanResult } from '../pages/types.ts';
 import { readProjectPaths, type ProjectPaths } from '../project-paths.ts';
 import type { QueueDefinition } from '../queues/scan.ts';
 import { listRouteFiles } from '../shared/convention-files.ts';
@@ -23,7 +21,6 @@ export type ScanResult = {
   middleware: Array<MiddlewareDefinition>;
   jobs: Array<JobDefinition>;
   queues: Array<QueueDefinition>;
-  pages: PageScanResult;
   email?: EmailHandlersScan;
 };
 
@@ -48,27 +45,12 @@ function parseMiddlewareDefinitions(files: Array<string>): Array<MiddlewareDefin
     .sort((a, b) => a.order - b.order);
 }
 
-/** Add pages and HTTP methods to the inventories already resolved for this application phase. */
-export async function scanRoutes(
-  root: string,
-  options: {
-    trailingSlash?: boolean;
-    output?: 'server' | 'static';
-    paths: ProjectPaths;
-    inventory: Omit<ScanResult, 'pages'>;
-    checkPageRoutes?: boolean;
-    /** Keep only pages for this environment. Unset keeps every page. */
-    environment?: RouteEnvironment;
-  },
-): Promise<ScanResult> {
+/** Add HTTP methods to the inventories already resolved for this application phase. */
+export async function scanRoutes(options: {
+  paths: ProjectPaths;
+  inventory: ScanResult;
+}): Promise<ScanResult> {
   const { paths, inventory } = options;
-  const pages = await scanPages(root, {
-    trailingSlash: options.trailingSlash,
-    output: options.output,
-    paths,
-    checkRoutes: options.checkPageRoutes,
-    environment: options.environment,
-  });
   const routes = inventory.routes
     .map((route) => {
       const methods = detectHttpExports(join(paths.routesDir, route.filePath));
@@ -81,7 +63,7 @@ export async function scanRoutes(
       return { ...route, methods };
     })
     .sort(compareRouteSpecificity);
-  return { ...inventory, routes, pages };
+  return { ...inventory, routes };
 }
 
 export function scanMiddlewareSync(

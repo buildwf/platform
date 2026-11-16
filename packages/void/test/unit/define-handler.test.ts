@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import type { MiddlewareHandler } from 'hono';
 import { describe, expect, it, vi } from 'vite-plus/test';
-import { objectToFormData } from '../../src/pages/navigation-engine.ts';
 import {
   defineHandler,
   defineMiddleware,
@@ -11,6 +10,33 @@ import {
 import { convertReturnValue } from '../../src/runtime/response.ts';
 import { createHttpRouteHandler } from '../../src/runtime/routing.ts';
 import type { StandardSchemaV1 } from '../../src/standard-schema.ts';
+
+/** Encode nested values with bracket keys, as browser form libraries do. */
+function objectToFormData(
+  source: Record<string, unknown>,
+  form = new FormData(),
+  parentKey?: string,
+): FormData {
+  for (const [key, value] of Object.entries(source)) {
+    const composed = parentKey ? `${parentKey}[${key}]` : key;
+    if (value instanceof Blob) {
+      form.append(composed, value, value instanceof File ? value.name : undefined);
+    } else if (Array.isArray(value)) {
+      value.forEach((item, index) => objectToFormData({ [index]: item }, form, composed));
+    } else if (value instanceof Date) {
+      form.append(composed, value.toISOString());
+    } else if (typeof value === 'boolean') {
+      form.append(composed, value ? '1' : '0');
+    } else if (typeof value === 'string' || typeof value === 'number') {
+      form.append(composed, String(value));
+    } else if (value === null || value === undefined) {
+      form.append(composed, '');
+    } else {
+      objectToFormData(value as Record<string, unknown>, form, composed);
+    }
+  }
+  return form;
+}
 
 type ValidationIssueBody = {
   error: string;

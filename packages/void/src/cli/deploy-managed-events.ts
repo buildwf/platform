@@ -78,9 +78,6 @@ export function applyDeployEvent(event: DeployEvent, s: SpinnerResult): ApplyDep
           `until the owning script is removed.`,
       );
       return { kind: 'continue' };
-    case 'prerender':
-      s.message(`Prerendering ${event.pages} pages...`);
-      return { kind: 'continue' };
     case 'done':
       if (event.published === false) {
         // Committed-live in the DB but routing KV was not published. The

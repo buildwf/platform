@@ -13,8 +13,6 @@ export type DeployRuntimeFeatures = Readonly<{
   webSockets: boolean;
   live: boolean;
   sandbox: boolean;
-  isr: boolean;
-  prerender: boolean;
 }>;
 
 /** Canonical, target-neutral interpretation of a deployment manifest. */
@@ -31,14 +29,14 @@ export type DeployIntent = Readonly<{
  * This function performs no I/O and does not mutate the manifest.
  */
 export function createDeployIntent(manifest: DeployManifest): DeployIntent {
-  const appType = manifest.type ?? (manifest.framework ? 'framework' : 'void');
+  const appType = manifest.type ?? 'void';
   const webSockets = (manifest.websocket?.classes.length ?? 0) > 0;
   const live = manifest.live !== undefined;
   const sandbox = manifest.sandbox !== undefined;
 
   return {
     appType,
-    hasWorker: appType === 'void' || appType === 'framework',
+    hasWorker: appType === 'void',
     manifest,
     resourcePlan: createDeployResourcePlan(manifest),
     features: {
@@ -52,11 +50,6 @@ export function createDeployIntent(manifest: DeployManifest): DeployIntent {
       webSockets,
       live,
       sandbox,
-      isr:
-        manifest.revalidate !== undefined ||
-        manifest.pathRevalidate !== undefined ||
-        (manifest.pages?.some((page) => page.revalidate !== undefined) ?? false),
-      prerender: (manifest.prerender?.length ?? 0) > 0,
     },
   };
 }

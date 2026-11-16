@@ -11,8 +11,6 @@ describe('createDeployIntent', () => {
       migrations: { dialect: 'sqlite', pending: 2 },
       schedules: [{ name: 'cleanup', cron: '0 0 * * *' }],
       queues: [{ name: 'jobs', bindingName: 'QUEUE_JOBS' }],
-      revalidate: 60,
-      prerender: ['/'],
       live: {
         bindingName: 'LIVE',
         className: 'Live',
@@ -37,8 +35,6 @@ describe('createDeployIntent', () => {
       webSockets: false,
       live: true,
       sandbox: false,
-      isr: true,
-      prerender: true,
     });
     expect(intent.resourcePlan.resources).toContainEqual({ type: 'd1', bindingName: 'DB' });
   });
@@ -60,8 +56,5 @@ describe('createDeployIntent', () => {
 
   it('preserves the historical default app type', () => {
     expect(createDeployIntent({ version: 3, bindings: {} }).appType).toBe('void');
-    expect(createDeployIntent({ version: 3, framework: 'astro', bindings: {} }).appType).toBe(
-      'framework',
-    );
   });
 });

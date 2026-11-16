@@ -42,7 +42,6 @@ const ACCOUNT_ID = '0123456789abcdef0123456789abcdef';
 const WORKER_NAME = 'void-kitchen-sink';
 const REAL_D1_ID = '52b3bbc7-c473-4b26-9486-1345f5de61c4';
 const REAL_KV_ID = '7c07b54c9f2a4d1e8b3f6a0c153aa11a';
-const REAL_ISR_CACHE_ID = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
 const R2_BUCKET_NAME = 'void-kitchen-sink-storage';
 
 const OVERLAY_WRANGLER = {
@@ -50,11 +49,7 @@ const OVERLAY_WRANGLER = {
   account_id: ACCOUNT_ID,
   compatibility_date: '2026-02-24',
   d1_databases: [{ binding: 'DB', database_name: 'void-kitchen-sink-db', database_id: REAL_D1_ID }],
-  // kitchen-sink uses ISR, which adds the ISR_CACHE namespace.
-  kv_namespaces: [
-    { binding: 'KV', id: REAL_KV_ID },
-    { binding: 'ISR_CACHE', id: REAL_ISR_CACHE_ID },
-  ],
+  kv_namespaces: [{ binding: 'KV', id: REAL_KV_ID }],
   r2_buckets: [{ binding: 'STORAGE', bucket_name: R2_BUCKET_NAME }],
 };
 
@@ -146,9 +141,6 @@ describe('playground/kitchen-sink --platform cloudflare real-build deploy guard'
     );
     expect(pristineEmitted.kv_namespaces).toContainEqual(
       expect.objectContaining({ binding: 'KV', id: REAL_KV_ID }),
-    );
-    expect(pristineEmitted.kv_namespaces).toContainEqual(
-      expect.objectContaining({ binding: 'ISR_CACHE', id: REAL_ISR_CACHE_ID }),
     );
     expect(pristineEmitted.r2_buckets).toContainEqual(
       expect.objectContaining({ binding: 'STORAGE', bucket_name: R2_BUCKET_NAME }),

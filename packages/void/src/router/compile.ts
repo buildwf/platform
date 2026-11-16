@@ -4,25 +4,15 @@ import type { VoidAuthProvider } from '../auth/providers.ts';
 import type { DevRedirectRule, HeaderRule } from '../cli/types.ts';
 import type { NotFoundHandling } from '../config.ts';
 import type { MigrationPlanBundle } from '../migrations/plan.ts';
-import { createBoundaryManifest } from '../pages/boundary-plans.ts';
-import { resolveLayoutIds } from '../pages/layout-resolution.ts';
-import { patternToRegex } from '../pages/manifest.ts';
 import { cloudflareQueueName, type CloudflareQueueNames } from '../queues/cloudflare-names.ts';
 import { generateQueueResolverSource } from '../queues/dispatch.ts';
-import { INTERNAL_BINDING_EXACT_NAMES, INTERNAL_BINDING_PREFIXES } from '../runtime/env-raw.ts';
+import { INTERNAL_BINDING_PREFIXES } from '../runtime/env-raw.ts';
 import { ASSET_EXTENSIONS } from '../runtime/routing-assets.ts';
 import { DEFAULT_SANDBOX_CLASS_NAME } from '../sandbox/config.ts';
 import type { ScanResult } from './scan.ts';
 
 const FETCH_SERVER_PATH = fileURLToPath(import.meta.resolve('#self/runtime/fetch-server'));
 const ROUTING_RUNTIME_PATH = fileURLToPath(import.meta.resolve('#self/runtime/routing'));
-
-function pushDefaultErrorPageHelpers(lines: Array<string>, options: CompileOptions): void {
-  lines.push(
-    `const __errorRenderer = __createErrorRenderer(${JSON.stringify({ dev: options.dev === true, projectRoot: options.projectRoot, homeDir: options.homeDir })});`,
-  );
-  lines.push('app.onError(__errorRenderer.onError);');
-}
 
 export type AuthCompileOptions = {
   authRuntimePath: string;
@@ -34,7 +24,6 @@ export type AuthCompileOptions = {
 };
 
 export type CompileOptions = {
-  trailingSlash?: boolean;
   /** Absolute path to the hono module entry */
   honoPath: string;
   /** Absolute path to `hono/route` from the same Hono copy as `honoPath` */
@@ -47,8 +36,6 @@ export type CompileOptions = {
   projectRoot: string;
   /** Absolute path to the current user's home directory */
   homeDir: string;
-  /** Whether to inject React Fast Refresh preamble in dev SSR HTML. */
-  reactRefresh: boolean;
   /**
    * Whether the generated route module is being compiled for the Vite dev
    * server. Also picks the manual trigger auth rule: dev accepts only
@@ -63,8 +50,6 @@ export type CompileOptions = {
   devTriggerToken?: string;
   /** Auth configuration (null = disabled) */
   auth: AuthCompileOptions | null;
-  /** `node`/`bun`/`deno` target — omits executionCtx from ALS context */
-  nodeTarget?: boolean;
   /** Managed Cloudflare build whose dispatch worker owns edge routing. */
   managedDispatch?: boolean;
   /** Absolute path to the binding handler module (for /__void/* native binding access) */
@@ -90,8 +75,6 @@ export type CompileOptions = {
   fallbackRules?: Array<DevRedirectRule>;
   /** Resolved Vite build directory for hashed client assets. */
   assetsDir?: string;
-  /** Explicit prerender paths from void.json routing.prerender */
-  explicitPrerenderPaths?: Array<string>;
   /** Absolute path to the internal WebSocket runtime module */
   webSocketRuntimePath?: string;
   /** Absolute path to the internal Live runtime module */
@@ -102,28 +85,6 @@ export type CompileOptions = {
   webSocketTombstones?: Array<string>;
   /** Cloudflare queue names chosen by `void deploy --platform cloudflare`. */
   cloudflareQueueNames?: CloudflareQueueNames;
-};
-
-export type SsrCompileOptions = {
-  /** Absolute path to src/main.ssr.ts(x) */
-  serverEntryPath: string;
-  /** Relative project path for src/main.client.ts(x), e.g. src/main.client.tsx */
-  clientEntryRelativePath: string;
-};
-
-export type PagesCompileOptions = {
-  /** Absolute path to pages/ directory */
-  pagesDir: string;
-  /** Pages directory relative to Vite root, e.g. "pages" — used for manifest key lookup */
-  pagesDirRelative: string;
-  /** Virtual module ID for the client entry (used for asset tags) */
-  clientEntryId: string;
-  /** Virtual module ID for the islands client entry (used for island asset tags) */
-  islandClientEntryId?: string;
-  /** Virtual module ID for the md plugin's client entry (script execution) */
-  mdClientEntryId?: string;
-  /** Head config from void.json */
-  headConfig?: import('../pages/head.ts').HeadConfig;
 };
 
 /**
@@ -170,37 +131,19 @@ export function compileRouteTable(
   middlewareDir: string,
   jobsDir: string,
   queuesDir: string,
-  ssr: SsrCompileOptions | null,
   options: CompileOptions,
-  pages: PagesCompileOptions | null = null,
-  /**
-   * Merged ISR revalidate config (number | Record<string, number>) baked into
-   * the route table as `__VOID_ISR_REVALIDATE`. `undefined` (the default)
-   * emits `= undefined;` so non-ISR builds are unaffected — the const is only
-   * imported/used when the entry wires ISR.
-   */
-  mergedRevalidate?: number | Record<string, number>,
-  /** Ordered page TTL policy used by native ISR before the flat fallback map. */
-  isrPages?: ReadonlyArray<{ pattern: string; revalidate?: number }>,
-  /** Raw object-form routing.revalidate config for inherit-eligible pages. */
-  isrPathRevalidate?: Record<string, number>,
 ): string {
   const lines: Array<string> = [];
   const auth = options.auth;
   const webSockets = scan.websockets ?? [];
-  const managedDispatch =
-    options.nodeTarget !== true && options.dev !== true && options.managedDispatch === true;
+  const managedDispatch = options.dev !== true && options.managedDispatch === true;
 
   lines.push(`import { AsyncLocalStorage } from "node:async_hooks";`);
   lines.push(`import { Hono } from ${JSON.stringify(options.honoPath)};`);
   lines.push(
-    `import { createRoutingRuntime as __createRoutingRuntime, createHttpRouteHandler as __createHttpRouteHandler, createErrorRenderer as __createErrorRenderer, createPageGetHandler as __createPageGetHandler, createStaticNotFound as __createStaticNotFound, createPageMutationHandler as __createPageMutationHandler, createNamedActionMarker as __createNamedActionMarker, markRouteHandler as __markRouteHandler, createPagesFallback as __createPagesFallback, createModuleLoader as __createModuleLoader, createClientAssetTags as __createClientAssetTags, createManifestLoader as __createManifestLoader, createSsrFallback as __createSsrFallback, createAssetNotFound as __createAssetNotFound, buildPrerenderPath as __buildPrerenderPath } from ${JSON.stringify(ROUTING_RUNTIME_PATH)};`,
+    `import { createRoutingRuntime as __createRoutingRuntime, createHttpRouteHandler as __createHttpRouteHandler, createModuleLoader as __createModuleLoader, createAssetNotFound as __createAssetNotFound } from ${JSON.stringify(ROUTING_RUNTIME_PATH)};`,
   );
-  if (options.nodeTarget) {
-    lines.push(`const withRuntimeEnv = (_env, fn) => fn();`);
-  } else {
-    lines.push(`import { withRuntimeEnv } from ${JSON.stringify(options.runtimeEnvPath)};`);
-  }
+  lines.push(`import { withRuntimeEnv } from ${JSON.stringify(options.runtimeEnvPath)};`);
 
   if (auth) {
     const authImports = ['runVoidAuthMiddleware', 'handleVoidAuthRequest', 'runVoidAuthMigrations'];
@@ -262,17 +205,6 @@ export function compileRouteTable(
   for (const r of scan.routes) {
     routePatterns.push(r.pattern);
   }
-  if (
-    pages &&
-    (scan.pages.pages.length > 0 ||
-      scan.pages.boundaries?.some(
-        (boundary) => boundary.kind === 'not-found' && !boundary.directory,
-      ))
-  ) {
-    for (const p of scan.pages.pages) {
-      routePatterns.push(p.pattern);
-    }
-  }
   const usedExts = new Set<string>();
   for (const p of routePatterns) {
     const m = /\.([A-Za-z0-9]+)$/.exec(p);
@@ -282,7 +214,7 @@ export function compileRouteTable(
   }
   const blockedExts = ASSET_EXTENSIONS.filter((e) => !usedExts.has(e));
   lines.push(
-    `const __routingRuntime = __createRoutingRuntime(app, ${JSON.stringify({ dev: options.dev === true, nodeTarget: options.nodeTarget === true, managedDispatch, blockedAssetExtensions: blockedExts })});`,
+    `const __routingRuntime = __createRoutingRuntime(app, ${JSON.stringify({ dev: options.dev === true, managedDispatch, blockedAssetExtensions: blockedExts })});`,
   );
   lines.push('export const requestContext = __routingRuntime.requestContext;');
   lines.push('app.use(__routingRuntime.contextMiddleware);');
@@ -302,15 +234,6 @@ export function compileRouteTable(
   );
   if (emitEdgeRules && options.redirectRules?.length) {
     compileRoutingRulesMiddleware(lines, options.redirectRules, options.dev === true);
-  }
-
-  // After routing rules, which ignore the action key as platform dispatch does,
-  // and before auth and user middleware, so their c.redirect() drops it too.
-  if (pages && scan.pages.pages.some((page) => page.methods.includes('actions'))) {
-    lines.push(
-      `import { matchedRoutes as __matchedRoutes } from ${JSON.stringify(options.honoRoutePath)};`,
-    );
-    lines.push('app.use(__createNamedActionMarker(__matchedRoutes));');
   }
 
   const headerRules = emitEdgeRules ? options.headerRules : undefined;
@@ -359,13 +282,13 @@ export function compileRouteTable(
   }
 
   if (auth) {
-    lines.push('app.all("/api/auth", __markRouteHandler(async (c) => {');
+    lines.push('app.all("/api/auth", async (c) => {');
     lines.push('  return handleVoidAuthRequest(c, __voidAuthOptions, __voidAuthDatabase);');
-    lines.push('}));');
+    lines.push('});');
     lines.push('');
-    lines.push('app.all("/api/auth/*", __markRouteHandler(async (c) => {');
+    lines.push('app.all("/api/auth/*", async (c) => {');
     lines.push('  return handleVoidAuthRequest(c, __voidAuthOptions, __voidAuthDatabase);');
-    lines.push('}));');
+    lines.push('});');
     lines.push('');
   }
 
@@ -445,36 +368,18 @@ export function compileRouteTable(
     lines.push('');
   }
 
-  // Pages mode — generate page route handlers
-  const pageNames = createIdentifierNames();
-  if (
-    pages &&
-    (scan.pages.pages.length > 0 ||
-      scan.pages.boundaries?.some(
-        (boundary) => boundary.kind === 'not-found' && !boundary.directory,
-      ))
-  ) {
-    compilePageRoutes(lines, scan, pages, options, pageNames);
-  }
-
-  if (!pages || !createBoundaryManifest(scan.pages).root) {
-    lines.push(
-      'export async function __voidRenderStaticNotFound() { return new Response(null, { status: 204 }); }',
-    );
-  }
-
   // Ordinary HTTP hooks are fallbacks for WebSocket paths. Explicit API and
   // Pages handlers win for their methods; upgrades were forwarded above.
   for (let i = 0; i < webSockets.length; i++) {
     lines.push(
-      `app.all(${JSON.stringify(webSockets[i].pattern)}, __markRouteHandler((c) => __forwardWebSocketRequest(c.req.raw, c.env, __voidWebSocketRoutes[${i}])));`,
+      `app.all(${JSON.stringify(webSockets[i].pattern)}, (c) => __forwardWebSocketRequest(c.req.raw, c.env, __voidWebSocketRoutes[${i}]));`,
     );
   }
   if (webSockets.length > 0) {
     lines.push('');
   }
 
-  const trackAssetMisses = !options.nodeTarget && !managedDispatch;
+  const trackAssetMisses = !managedDispatch;
   const registerNotFound = (handler: string): void => {
     const tracked = trackAssetMisses ? `__routingRuntime.trackNotFound(${handler})` : handler;
     lines.push(`app.notFound(${tracked});`);
@@ -483,44 +388,13 @@ export function compileRouteTable(
     lines.push('app.notFound(__routingRuntime.trackNotFound());');
   }
   if (
-    pages &&
-    (scan.pages.pages.length > 0 ||
-      scan.pages.boundaries?.some(
-        (boundary) => boundary.kind === 'not-found' && !boundary.directory,
-      ))
-  ) {
-    const pagePatterns = options.trailingSlash
-      ? `[${scan.pages.pages.map((page) => patternToRegex(page.pattern)).join(', ')}]`
-      : 'undefined';
-    registerNotFound(
-      `__createPagesFallback({ ${createBoundaryManifest(scan.pages).root ? 'pageNotFound: __voidRootNotFound, ' : ''}routing: __routingRuntime, errors: __errorRenderer, assetsDir: ${JSON.stringify(options.assetsDir)}, fallbackRules: ${fallbackRulesJson}, trailingSlash: ${options.trailingSlash === true}, pagePatterns: ${pagePatterns} })`,
-    );
-  }
-
-  compilePrerenderCollector(lines, scan, ssr, options, pageNames, pages?.pagesDirRelative);
-
-  if (ssr) {
-    lines.push(
-      `const getClientAssetTags = __createClientAssetTags(${JSON.stringify({ entryId: ssr.clientEntryRelativePath, entryUrl: '/' + ssr.clientEntryRelativePath, kind: 'ssr', dev: options.dev === true, reactRefresh: options.reactRefresh })});`,
-    );
-    registerNotFound(
-      `__createSsrFallback({ routing: __routingRuntime, nodeTarget: ${JSON.stringify(options.nodeTarget === true)}, assetsDir: ${JSON.stringify(options.assetsDir)}, fallbackRules: ${fallbackRulesJson}, load: () => import(${JSON.stringify(ssr.serverEntryPath)}), assets: getClientAssetTags })`,
-    );
-  } else if (
     emitEdgeRules &&
     (options.fallbackRules?.length ||
       options.redirectRules?.some((rule) => rule.status === 200) ||
-      (!options.nodeTarget && options.headerRules?.length)) &&
-    !(
-      pages &&
-      (scan.pages.pages.length > 0 ||
-        scan.pages.boundaries?.some(
-          (boundary) => boundary.kind === 'not-found' && !boundary.directory,
-        ))
-    )
+      options.headerRules?.length)
   ) {
     registerNotFound(
-      `__createAssetNotFound({ routing: __routingRuntime, nodeTarget: ${JSON.stringify(options.nodeTarget === true)}, assetsDir: ${JSON.stringify(options.assetsDir)}, fallbackRules: ${fallbackRulesJson} })`,
+      `__createAssetNotFound({ routing: __routingRuntime, assetsDir: ${JSON.stringify(options.assetsDir)}, fallbackRules: ${fallbackRulesJson} })`,
     );
   }
 
@@ -591,7 +465,7 @@ export function compileRouteTable(
     lines.push('  await scheduled(controller, c.env, c.executionCtx);');
     lines.push('  return c.json({ ok: true });');
     lines.push('};');
-    lines.push('app.post("/__void/scheduled", __markRouteHandler(__scheduledHandler));');
+    lines.push('app.post("/__void/scheduled", __scheduledHandler);');
     lines.push('');
   }
 
@@ -679,7 +553,7 @@ export function compileRouteTable(
     lines.push('  const result = await __processQueue(payload, c.env);');
     lines.push('  return c.json(result);');
     lines.push('};');
-    lines.push('app.post("/__void/queue", __markRouteHandler(__queueHandler));');
+    lines.push('app.post("/__void/queue", __queueHandler);');
     lines.push('');
   }
 
@@ -825,20 +699,20 @@ export function compileRouteTable(
     lines.push('  return null;');
     lines.push('}');
     lines.push(
-      `app.post("/__void/migrate", __markRouteHandler((c) => __voidCreateMigrationRequestHandler(${auth ? 'true' : 'false'}, false)(c.req.raw)));`,
+      `app.post("/__void/migrate", (c) => __voidCreateMigrationRequestHandler(${auth ? 'true' : 'false'}, false)(c.req.raw));`,
     );
     lines.push(
-      `app.get("/__void/migrate/capabilities", __markRouteHandler((c) => __voidCreateMigrationRequestHandler(${auth ? 'true' : 'false'}, true)(c.req.raw)));`,
+      `app.get("/__void/migrate/capabilities", (c) => __voidCreateMigrationRequestHandler(${auth ? 'true' : 'false'}, true)(c.req.raw));`,
     );
     lines.push(
-      'app.post("/__void/migrate/app", __markRouteHandler((c) => __voidCreateMigrationRequestHandler(false, true)(c.req.raw)));',
+      'app.post("/__void/migrate/app", (c) => __voidCreateMigrationRequestHandler(false, true)(c.req.raw));',
     );
     lines.push(
-      'app.get("/__void/migrate/app/attempt/:attemptId", __markRouteHandler((c) => __voidCreateMigrationRequestHandler(false, true)(c.req.raw)));',
+      'app.get("/__void/migrate/app/attempt/:attemptId", (c) => __voidCreateMigrationRequestHandler(false, true)(c.req.raw));',
     );
     if (auth) {
       lines.push(
-        'app.post("/__void/migrate/auth", __markRouteHandler((c) => __voidCreateMigrationRequestHandler(true, true)(c.req.raw)));',
+        'app.post("/__void/migrate/auth", (c) => __voidCreateMigrationRequestHandler(true, true)(c.req.raw));',
       );
     }
     lines.push('');
@@ -853,14 +727,14 @@ export function compileRouteTable(
       `import { createBindingHandler as __createBindingHandler } from ${JSON.stringify(options.bindingHandlerPath)};`,
     );
     lines.push('let __voidBindingApp;');
-    lines.push('app.all("/__void/*", __markRouteHandler(async (c) => {');
+    lines.push('app.all("/__void/*", async (c) => {');
     lines.push(
       '  if (!__voidBindingApp) __voidBindingApp = __createBindingHandler(__getRawEnv());',
     );
     lines.push('  const url = new URL(c.req.url);');
     lines.push('  url.pathname = url.pathname.slice(7);');
     lines.push('  return __voidBindingApp.fetch(new Request(url.toString(), c.req.raw));');
-    lines.push('}));');
+    lines.push('});');
     lines.push('');
   }
 
@@ -881,282 +755,14 @@ export function compileRouteTable(
   // NODE_ENV=development still has DEV=true, and must keep the proxy-token /
   // build-key rule. Only the Vite dev server compiles with `dev: true`.
   lines.push(`const __VOID_SERVE = ${JSON.stringify(options.dev === true)};`);
-  // Baked ISR policy. The ordered page table preserves explicit opt-outs and
-  // object-config inheritance before the flat fallback map is consulted.
-  // `__VOID_ISR_DEPLOYMENT_ID` MUST be a COMPILE-TIME LITERAL —
-  // stringified here at build time exactly like `__VOID_BUILD_KEY` above — so every
-  // isolate of a deployment shares one id (edge-cache keys, KV keys, and the
-  // `revalidate()` purge path must all agree). A runtime `crypto.randomUUID()` in the
-  // emitted source would mint a fresh id per isolate and break cache reads + purge.
-  lines.push(`export const __VOID_ISR_REVALIDATE = ${JSON.stringify(mergedRevalidate)};`);
-  lines.push(`export const __VOID_ISR_PAGES = ${JSON.stringify(isrPages)};`);
-  lines.push(`export const __VOID_ISR_PATH_REVALIDATE = ${JSON.stringify(isrPathRevalidate)};`);
-  lines.push(`export const __VOID_ISR_DEPLOYMENT_ID = ${JSON.stringify(crypto.randomUUID())};`);
   lines.push('');
   lines.push(`export default app;`);
 
   return lines.join('\n');
 }
 
-function compilePrerenderCollector(
-  lines: Array<string>,
-  scan: ScanResult,
-  ssr: SsrCompileOptions | null,
-  options: CompileOptions,
-  pageNames: (componentId: string) => string,
-  pagesDirRelative: string | undefined,
-): void {
-  const staticPaths = scan.pages.pages
-    .filter((page) => page.shouldPrerender && page.params.length === 0 && !page.catchAll)
-    .map((page) => page.pattern);
-  const dynamicPages = scan.pages.pages.filter(
-    (page) =>
-      page.shouldPrerender &&
-      page.hasGetPrerenderPaths &&
-      (page.params.length > 0 || page.catchAll),
-  );
-  const explicitPaths = options.explicitPrerenderPaths ?? [];
-
-  lines.push(`export async function __voidCollectPrerenderPaths(request, env, ctx) {`);
-  lines.push(`  return withRuntimeEnv(env, async () => {`);
-  if (options.nodeTarget) {
-    lines.push(`    return requestContext.run({ request }, async () => {`);
-  } else {
-    lines.push(`    return requestContext.run({ request, executionCtx: ctx }, async () => {`);
-  }
-  lines.push(`      const paths = [];`);
-
-  for (const path of staticPaths) {
-    lines.push(`      paths.push(${JSON.stringify(path)});`);
-  }
-
-  for (const page of dynamicPages) {
-    const loaderName = `_pload_${pageNames(page.componentId)}`;
-    lines.push(`      {`);
-    lines.push(`        const mod = await ${loaderName}();`);
-    lines.push(`        if (typeof mod.getPrerenderPaths === "function") {`);
-    lines.push(`          const paramSets = await mod.getPrerenderPaths();`);
-    lines.push(`          if (Array.isArray(paramSets)) {`);
-    // Name the file that defines getPrerenderPaths() in build errors.
-    const file = [pagesDirRelative, page.serverPath ?? page.componentPath]
-      .filter(Boolean)
-      .join('/');
-    lines.push(`            for (let index = 0; index < paramSets.length; index++) {`);
-    lines.push(
-      `              paths.push(__buildPrerenderPath(${JSON.stringify(page.pattern)}, paramSets[index], ${JSON.stringify(file)}, index));`,
-    );
-    lines.push(`            }`);
-    lines.push(`          }`);
-    lines.push(`        }`);
-    lines.push(`      }`);
-  }
-
-  if (ssr) {
-    lines.push(`      {`);
-    lines.push(`        const mod = await import(${JSON.stringify(ssr.serverEntryPath)});`);
-    lines.push(`        if (typeof mod.getPrerenderPaths === "function") {`);
-    lines.push(`          const ssrPaths = await mod.getPrerenderPaths();`);
-    lines.push(`          if (Array.isArray(ssrPaths)) {`);
-    lines.push(`            for (const path of ssrPaths) {`);
-    lines.push(`              if (typeof path === "string") paths.push(path);`);
-    lines.push(`            }`);
-    lines.push(`          }`);
-    lines.push(`        }`);
-    lines.push(`      }`);
-  }
-
-  for (const path of explicitPaths) {
-    lines.push(`      paths.push(${JSON.stringify(path)});`);
-  }
-
-  lines.push(
-    options.trailingSlash
-      ? `      return [...new Set(paths.map((path) => path.endsWith("/") ? path : path + "/"))];`
-      : `      return [...new Set(paths)];`,
-  );
-  lines.push(`    });`);
-  lines.push(`  });`);
-  lines.push(`}`);
-  lines.push('');
-}
-
-function compilePageRoutes(
-  lines: Array<string>,
-  scan: ScanResult,
-  pages: PagesCompileOptions,
-  options: CompileOptions,
-  pageNames: (componentId: string) => string,
-): void {
-  // Import protocol helpers and renderer
-  lines.push(`import { renderPage } from "virtual:void-pages-renderer";`);
-  if (options.dev) {
-    lines.push(`import { getVoidPagesDevCss } from "virtual:void-pages-dev-assets";`);
-  }
-
-  // Import island renderer if any island pages exist
-  const hasIslandPages = scan.pages.pages.some((p) => p.renderMode === 'island');
-  if (hasIslandPages) {
-    lines.push(`import { renderIslandPage } from "virtual:void-islands-renderer";`);
-  }
-  lines.push('');
-  // Emit head config constant from void.json
-  lines.push(`const __voidHeadConfig = ${JSON.stringify(pages.headConfig ?? null)};`);
-  lines.push('');
-  pushDefaultErrorPageHelpers(lines, options);
-
-  // Build manifest-key mapping for each page and its layout chain
-  // so CSS collection can be scoped to the active route only
-  const relPagesDir = pages.pagesDirRelative;
-  const pageCssKeys: Record<string, Array<string>> = {};
-  const pageDevRootPhases: Record<string, Array<Array<string>>> = {};
-  const boundaryManifest = createBoundaryManifest(scan.pages);
-  const projectRoot = options.projectRoot;
-  const toDevRootUrl = (absolutePath: string): string =>
-    '/' + absolutePath.replaceAll('\\', '/').slice(projectRoot.replaceAll('\\', '/').length + 1);
-  const virtualDevUrl = (id: string): string => '/@id/__x00__' + id;
-  for (const page of scan.pages.pages) {
-    const keys: Array<string> = [];
-    const routeRootPhases: Array<Array<string>> = [
-      [
-        virtualDevUrl(
-          page.island ? (pages.islandClientEntryId ?? pages.clientEntryId) : pages.clientEntryId,
-        ),
-      ],
-    ];
-    if (page.island && pages.mdClientEntryId) {
-      routeRootPhases[0].push(virtualDevUrl(pages.mdClientEntryId));
-    }
-    const layoutIds = resolveLayoutIds(page, scan.pages.layouts, scan.pages.namedLayouts);
-    const layoutRoots: Array<string> = [];
-    for (const layoutId of layoutIds) {
-      // Map layout IDs back to file paths
-      const layout = scan.pages.layouts.find(
-        (l) => (l.directory ? `${l.directory}/layout` : 'layout') === layoutId,
-      );
-      if (layout) {
-        keys.push(`${relPagesDir}/${layout.filePath}`);
-        layoutRoots.push(toDevRootUrl(`${pages.pagesDir}/${layout.filePath}`));
-        continue;
-      }
-      const named = scan.pages.namedLayouts.find((nl) => {
-        const id = nl.directory ? `${nl.directory}/_layouts/${nl.name}` : `_layouts/${nl.name}`;
-        return id === layoutId;
-      });
-      if (named) {
-        keys.push(`${relPagesDir}/${named.filePath}`);
-        layoutRoots.push(toDevRootUrl(`${pages.pagesDir}/${named.filePath}`));
-      }
-    }
-    keys.push(`${relPagesDir}/${page.componentPath}`);
-    routeRootPhases.push(layoutRoots);
-    routeRootPhases.push([toDevRootUrl(`${pages.pagesDir}/${page.componentPath}`)]);
-    pageCssKeys[page.componentId] = keys;
-    pageDevRootPhases[page.componentId] = routeRootPhases.filter((phase) => phase.length > 0);
-  }
-  for (const plan of Object.values(boundaryManifest.plans)) {
-    const files = [...scan.pages.layouts, ...scan.pages.namedLayouts]
-      .filter((layout) => {
-        const id =
-          'name' in layout
-            ? layout.directory
-              ? layout.directory + '/_layouts/' + layout.name
-              : '_layouts/' + layout.name
-            : layout.directory
-              ? layout.directory + '/layout'
-              : 'layout';
-        const key = scan.pages.pages.some((page) => page.componentId === id)
-          ? id.replace(/(^|\/)([^/]+)$/, '$1_$2')
-          : id;
-        return plan.layouts.includes(key);
-      })
-      .map((layout) => layout.filePath);
-    files.push(plan.filePath);
-    pageCssKeys[plan.id] = files.map((file) => `${relPagesDir}/${file}`);
-    pageDevRootPhases[plan.id] = [
-      [virtualDevUrl(pages.clientEntryId)],
-      files.map((file) => toDevRootUrl(`${pages.pagesDir}/${file}`)),
-    ];
-  }
-  lines.push('const __loadPagesManifest = __createManifestLoader();');
-  const assetMetadata = {
-    pageCssKeys,
-    devRootPhases: options.dev ? pageDevRootPhases : undefined,
-    dev: options.dev === true,
-  };
-  const devCssOption = options.dev ? ', devCss: getVoidPagesDevCss' : '';
-  lines.push(
-    `const getPagesAssetTags = __createClientAssetTags({ ...${JSON.stringify({ ...assetMetadata, entryId: pages.clientEntryId, entryUrl: '/@id/__x00__' + pages.clientEntryId, kind: 'pages' })}${devCssOption} }, __loadPagesManifest);`,
-  );
-  if (hasIslandPages && pages.islandClientEntryId) {
-    lines.push(
-      `const getIslandsAssetTags = __createClientAssetTags({ ...${JSON.stringify({ ...assetMetadata, entryId: pages.islandClientEntryId, entryUrl: '/@id/__x00__' + pages.islandClientEntryId, extraEntryId: pages.mdClientEntryId, extraEntryUrl: pages.mdClientEntryId ? '/@id/__x00__' + pages.mdClientEntryId : undefined, kind: 'islands' })}${devCssOption} }, __loadPagesManifest);`,
-    );
-  }
-
-  if (boundaryManifest.root) {
-    const island = scan.pages.pages.length > 0 && scan.pages.pages.every((page) => page.island);
-    lines.push(
-      `const __voidRootNotFoundOptions = { componentId: ${JSON.stringify(boundaryManifest.root)}, load: async () => ({ loader: () => new Response(null, { status: 404 }) }), render: ${island ? 'renderIslandPage' : 'renderPage'}, assets: ${island && pages.islandClientEntryId ? 'getIslandsAssetTags' : 'getPagesAssetTags'}, headConfig: __voidHeadConfig, renderOptions: ${JSON.stringify({ renderMode: island ? 'island' : 'server', dev: options.dev === true, boundaries: { notFound: boundaryManifest.root, errors: boundaryManifest.rootErrors ?? [] } })} }; const __voidRootNotFound = __createPageGetHandler(__voidRootNotFoundOptions); export const __voidRenderStaticNotFound = __createStaticNotFound({ ...__voidRootNotFoundOptions, render: renderPage, assets: getPagesAssetTags });`,
-    );
-  }
-
-  // Generate lazy loaders and route registrations for each page
-  const seenServerFiles = new Set<string>();
-  for (const page of scan.pages.pages) {
-    const safeId = pageNames(page.componentId);
-
-    // Determine server module path
-    let serverImportPath: string | null = null;
-    if (page.serverPath) {
-      serverImportPath = `${pages.pagesDir}/${page.serverPath}`;
-    }
-
-    // Generate lazy loader for server module (if any)
-    if (serverImportPath && !seenServerFiles.has(serverImportPath)) {
-      seenServerFiles.add(serverImportPath);
-      const loaderName = `_pload_${safeId}`;
-      lines.push(
-        `const ${loaderName} = __createModuleLoader(() => import(${JSON.stringify(serverImportPath)}));`,
-      );
-    }
-
-    // Generate inline head function for markdown pages without .server.ts
-    let mdHeadRef: string | null = null;
-    if (!serverImportPath && page.metadata && (page.metadata.title || page.metadata.description)) {
-      const headObj: Record<string, unknown> = {};
-      if (page.metadata.title) {
-        headObj.title = page.metadata.title;
-      }
-      if (page.metadata.description) {
-        headObj.meta = [{ name: 'description', content: page.metadata.description }];
-      }
-      const headVarName = `__mdHead_${safeId}`;
-      lines.push(`const ${headVarName} = () => (${JSON.stringify(headObj)});`);
-      mdHeadRef = headVarName;
-    }
-
-    // Choose renderer and asset tags based on normalized render mode
-    const renderer = page.renderMode === 'island' ? 'renderIslandPage' : 'renderPage';
-    const assetTags =
-      page.renderMode === 'island' && pages.islandClientEntryId
-        ? 'getIslandsAssetTags'
-        : 'getPagesAssetTags';
-    const trailingCatchAll = options.trailingSlash && page.catchAll;
-    const pattern = trailingCatchAll ? page.pattern.slice(0, -1) : page.pattern;
-    const catchAllParam = page.pattern.match(/:([^/{}]+)\{\.\+\}\/$/)?.[1];
-    const routeOptions = `{ ${serverImportPath ? 'load: _pload_' + safeId + ', ' : ''}${mdHeadRef ? 'head: ' + mdHeadRef + ', ' : ''}${trailingCatchAll ? `trailingSlash: true, catchAllParam: ${JSON.stringify(catchAllParam)}, ` : ''}componentId: ${JSON.stringify(page.componentId)}, render: ${renderer}, assets: ${assetTags}, headConfig: __voidHeadConfig, renderOptions: ${JSON.stringify({ renderMode: page.renderMode, ...(options.dev === true ? { dev: true } : {}), ...(boundaryManifest.pages[page.componentId] && { boundaries: boundaryManifest.pages[page.componentId] }) })} }`;
-    lines.push(`app.get(${JSON.stringify(pattern)}, __createPageGetHandler(${routeOptions}));`);
-    if (page.methods.includes('action') || page.methods.includes('actions')) {
-      lines.push(
-        `app.on(["POST", "PUT", "PATCH", "DELETE"], ${JSON.stringify(pattern)}, __createPageMutationHandler({ ...${routeOptions}, namedActions: ${JSON.stringify(page.methods.includes('actions'))} }));`,
-      );
-    }
-  }
-  lines.push('');
-}
-
-/** Asset fallthrough shared by native Void workers and Class A framework wrappers. */
-export function compileAssetFallbackHelper(
+/** Asset fallthrough for native Void workers. */
+function compileAssetFallbackHelper(
   assetsDir = 'assets',
   serveSpaFallback = false,
   notFound: NotFoundHandling = 'none',
@@ -1170,7 +776,7 @@ export interface WorkerEntryOptions {
   /** Native readiness proves the actual served Worker version through this binding. */
   versionMetadataBinding?: string;
   /**
-   * Redirect public HTTP requests to HTTPS before ISR and the app. Native
+   * Redirect public HTTP requests to HTTPS before the app. Native
    * Cloudflare production builds only: managed dispatch enforces it there.
    */
   alwaysUseHttps?: boolean;
@@ -1203,14 +809,6 @@ export interface WorkerEntryOptions {
    * send the real internal error message to the client; builds never set it.
    */
   dev?: boolean;
-  /**
-   * When present, wraps the render path with the self-host ISR cache ladder.
-   * `runtimePath` is the import specifier for `handleIsr`. The deployment id is
-   * NOT passed here - the single source of truth is the compile-time
-   * `__VOID_ISR_DEPLOYMENT_ID` const imported from the route table. Absent
-   * for managed, dev, and non-ISR builds.
-   */
-  isr?: { runtimePath: string; queryAllowlist?: Record<string, Array<string>> };
   /**
    * Resolved `assetConfig.not_found_handling` for this build. Threaded to
    * `compileAssetFallbackHelper` so `routing.notFound: '404-page'` is honored
@@ -1260,7 +858,6 @@ export function compileWorkerEntry(options: WorkerEntryOptions = {}): string {
     hasEmail = false,
     live,
     dev = false,
-    isr,
     notFound = 'none',
     durableObjects = [],
   } = options;
@@ -1326,35 +923,22 @@ export function compileWorkerEntry(options: WorkerEntryOptions = {}): string {
     ? `import ${JSON.stringify(envSchemaModule.importPath)};\nimport { _validateEnvOnce } from ${JSON.stringify(envSchemaModule.helperPath)};\n`
     : '';
   const envValidateCall = envSchemaModule ? '  await _validateEnvOnce(env);\n' : '';
-  // Discovery reads route metadata in a build-time worker without remote
-  // secrets. Readiness and application requests must still validate at boot.
-  const exactNames = isr ? INTERNAL_BINDING_EXACT_NAMES : [];
   const filterBindingsHelper = `import { filterInternalBindings as __filterBindings, createWorkerFetch as __createWorkerFetch } from ${JSON.stringify(ROUTING_RUNTIME_PATH)};
-const __filterInternalBindings = (env) => __filterBindings(env, ${JSON.stringify(INTERNAL_BINDING_PREFIXES)}, ${JSON.stringify(exactNames)});
+const __filterInternalBindings = (env) => __filterBindings(env, ${JSON.stringify(INTERNAL_BINDING_PREFIXES)});
 `;
 
   const assetHelper = compileAssetFallbackHelper(assetsDir, serveSpaFallback, notFound);
 
-  // ISR wiring (self-host only, non-managed builds). When `isr` is absent
-  // every fragment below is an empty string.
-  const isrImport = isr
-    ? `import { handleIsr } from ${JSON.stringify(isr.runtimePath)};\nimport { __VOID_ISR_REVALIDATE, __VOID_ISR_PAGES, __VOID_ISR_PATH_REVALIDATE, __VOID_ISR_DEPLOYMENT_ID } from 'virtual:void-routes';\n`
-    : '';
-  const isrDeploymentStamp = isr
-    ? `  env.__VOID_ISR_DEPLOYMENT_ID ??= __VOID_ISR_DEPLOYMENT_ID;\n`
-    : '';
   const fetchHandler = `__createWorkerFetch({
     app, assets: serveWithAssets, withRawEnv: __withRawEnv, withRuntimeEnv,
-    staticNotFound: __voidRenderStaticNotFound,
     filterBindings: __filterInternalBindings,
-    internalRoute: __voidHandleInternalRoute,
-    collectPrerenderPaths: __voidCollectPrerenderPaths${alwaysUseHttps ? ', alwaysUseHttps: true' : ''}${versionMetadataBinding ? ', versionMetadataBinding: ' + JSON.stringify(versionMetadataBinding) : ''}${envSchemaModule ? ', validateEnv: _validateEnvOnce' : ''}${remotePath ? ', remoteEnv: (env) => ' + createRemoteEnvCall : ''}${hasEmail ? ', emailReceipt: __handleEmailReceipt' : ''}${isr ? ', isr: { deploymentId: __VOID_ISR_DEPLOYMENT_ID, handle: (request, env, ctx, render) => handleIsr(request, env, ctx, { revalidate: __VOID_ISR_REVALIDATE, pages: __VOID_ISR_PAGES, pathRevalidate: __VOID_ISR_PATH_REVALIDATE, deploymentId: __VOID_ISR_DEPLOYMENT_ID, queryAllowlist: ' + JSON.stringify(isr.queryAllowlist) + ' }, render) }' : ''}
+    internalRoute: __voidHandleInternalRoute${alwaysUseHttps ? ', alwaysUseHttps: true' : ''}${versionMetadataBinding ? ', versionMetadataBinding: ' + JSON.stringify(versionMetadataBinding) : ''}${envSchemaModule ? ', validateEnv: _validateEnvOnce' : ''}${remotePath ? ', remoteEnv: (env) => ' + createRemoteEnvCall : ''}${hasEmail ? ', emailReceipt: __handleEmailReceipt' : ''}
   })`;
   const remoteEnvSwap = remotePath
     ? `  if (env.__VOID_REMOTE === "1") env = ${createRemoteEnvCall};\n`
     : '';
   const scheduledHandler = `async function handleScheduled(controller, env, ctx) {
-${envValidateCall}${remoteEnvSwap}${isrDeploymentStamp}  const userEnv = __filterInternalBindings(env);
+${envValidateCall}${remoteEnvSwap}  const userEnv = __filterInternalBindings(env);
   return withRuntimeEnv(env, () => scheduled(controller, userEnv, ctx));
 }`;
 
@@ -1432,7 +1016,7 @@ ${queueMethodBody}${emailMethodBody}}`;
   const queueImport = hasQueues ? ', __processQueue' : '';
   const queueFunction = hasQueues
     ? `async function __voidQueue(batch, env, ctx) {
-${envValidateCall}${remoteEnvSwap}${isrDeploymentStamp}  const userEnv = __filterInternalBindings(env);
+${envValidateCall}${remoteEnvSwap}  const userEnv = __filterInternalBindings(env);
   const messages = [...batch.messages].map(m => ({
     id: m.id, timestamp: m.timestamp.toISOString(),
     body: m.body, attempts: m.attempts,
@@ -1454,8 +1038,8 @@ ${envValidateCall}${remoteEnvSwap}${isrDeploymentStamp}  const userEnv = __filte
 
 `
     : '';
-  return `${sandboxImport}${entryImport}${liveRuntimeImport}import app, { scheduled, __voidCollectPrerenderPaths, __voidRenderStaticNotFound, __voidHandleInternalRoute, __withRawEnv${queueImport}${emailImport}${webSocketClasses.length > 0 ? `, ${webSocketClasses.join(', ')}` : ''}${liveRouteImport} } from 'virtual:void-routes';
-${durableObjectImports}\n${runtimeEnvImport}${emailProxyImport}${envSchemaImport}${remoteImport}${isrImport}${filterBindingsHelper}${assetHelper}
+  return `${sandboxImport}${entryImport}${liveRuntimeImport}import app, { scheduled, __voidHandleInternalRoute, __withRawEnv${queueImport}${emailImport}${webSocketClasses.length > 0 ? `, ${webSocketClasses.join(', ')}` : ''}${liveRouteImport} } from 'virtual:void-routes';
+${durableObjectImports}\n${runtimeEnvImport}${emailProxyImport}${envSchemaImport}${remoteImport}${filterBindingsHelper}${assetHelper}
 ${fetchDeclaration}
 ${scheduledHandler}
 ${emailHandler}
@@ -1465,101 +1049,6 @@ ${liveExport}
 ${sandboxExport}
 ${durableObjectExports}
 ${entryClass}`;
-}
-
-/**
- * Generate the app module — exports the Hono app with static asset serving.
- * This is the entry imported by `vite preview` and can be used programmatically.
- */
-export function compileNodeApp(
-  target: 'node' | 'bun' | 'deno',
-  honoPath: string,
-  envSchemaModule?: { importPath: string; helperPath: string },
-): string {
-  const staticImport =
-    target === 'bun'
-      ? `import { serveStatic } from "hono/bun";`
-      : target === 'deno'
-        ? `import { serveStatic } from "hono/deno";`
-        : `import { serveStatic } from "@hono/node-server/serve-static";`;
-
-  const envSchemaImport = envSchemaModule
-    ? `import ${JSON.stringify(envSchemaModule.importPath)};\nimport { _validateEnvOnce } from ${JSON.stringify(envSchemaModule.helperPath)};\n`
-    : '';
-  const envSource = target === 'deno' ? 'Deno.env.toObject()' : 'process.env';
-  // Path discovery answers only the build-time prerender runner, which passes
-  // `{ __VOID_PRERENDER: "1" }` as the Hono env. HTTP servers never do: Node
-  // passes `{ incoming, outgoing }`, Bun its Server and Deno its handler info.
-  const discoveryRequest = `((c.req.method === "POST" && c.req.path === "/__void/prerender-paths") || (c.req.method === "GET" && c.req.path === "/__void/static-not-found")) && c.env?.__VOID_PRERENDER === "1"`;
-  const envMiddleware = envSchemaModule
-    ? `app.use("*", async (c, next) => { if (!(${discoveryRequest})) await _validateEnvOnce(${envSource}); return next(); });\n`
-    : '';
-
-  return `${staticImport}
-import { fileURLToPath } from "node:url";
-import { Hono } from ${JSON.stringify(honoPath)};
-import innerApp, { __voidCollectPrerenderPaths, __voidRenderStaticNotFound } from "virtual:void-routes";
-import { prerenderPathsResponse as __prerenderPathsResponse } from ${JSON.stringify(ROUTING_RUNTIME_PATH)};
-${envSchemaImport}
-// dist/client, created on first use so a server that supplies its own ASSETS
-// (a single executable, for one) never looks for a directory it doesn't have.
-let fileAssets;
-const clientAssets = () => {
-  if (!fileAssets) {
-    // Resolved by nodeTargetPlugin for this emitted chunk, including shared chunks.
-    const clientRoot = fileURLToPath(import.meta.voidClientDirectory);
-    const assetApp = new Hono();
-    assetApp.get("*", serveStatic({
-      root: clientRoot,
-      allowPercentInPath: true,
-      // Windows permits a trailing separator when opening a regular file.
-      // Directory URLs must look up an index so they cannot alias those files.
-      rewriteRequestPath: (path) => path.endsWith("/") ? path + "index.html" : path,
-    }));
-    fileAssets = { fetch: (request) => assetApp.fetch(request) };
-  }
-  return fileAssets;
-};
-const assetsFor = (c) => (typeof c.env?.ASSETS?.fetch === "function" ? c.env.ASSETS : clientAssets());
-const app = new Hono();
-${envMiddleware}app.post("/__void/prerender-paths", async (c) => {
-  if (c.env?.__VOID_PRERENDER !== "1") return c.notFound();
-  return __prerenderPathsResponse(() => __voidCollectPrerenderPaths(c.req.raw));
-});
-app.get("/__void/static-not-found", (c) => c.env?.__VOID_PRERENDER === "1" ? __voidRenderStaticNotFound(c.req.raw, { ...c.env, ASSETS: assetsFor(c) }) : c.notFound());
-app.get("/assets/*", (c) => assetsFor(c).fetch(c.req.raw));
-app.all("*", (c) => innerApp.fetch(c.req.raw, { ...c.env, ASSETS: assetsFor(c) }));
-export default app;`;
-}
-
-/**
- * Generate the server entry — imports the app and starts an HTTP server.
- * This is what users run with `node dist/ssr/index.js`.
- */
-export function compileNodeServer(target: 'node' | 'bun' | 'deno'): string {
-  if (target === 'bun') {
-    return `import app from "./app.js";
-
-const port = Number(process.env.PORT || 3000);
-Bun.serve({ fetch: app.fetch, port });
-console.log("Listening on http://localhost:" + port);`;
-  }
-
-  if (target === 'deno') {
-    return `import app from "./app.js";
-
-const port = Number(Deno.env.get("PORT") || 3000);
-Deno.serve({ port }, app.fetch);`;
-  }
-
-  // Node.js (default)
-  return `import { serve } from "@hono/node-server";
-import app from "./app.js";
-
-const port = Number(process.env.PORT || 3000);
-serve({ fetch: app.fetch, port }, (info) => {
-  console.log("Listening on http://localhost:" + info.port);
-});`;
 }
 
 /** Generate the browser client module: re-exports the HTTP fetch, stream, and auth clients. */
@@ -1588,11 +1077,10 @@ function compileRoutingRulesMiddleware(
 }
 
 /** Generate the server-side fetch client, which calls `app.fetch()` with the current request's credentials. */
-export function compileWorkerClient(authClientPath: string, nodeTarget = false): string {
-  const envImport = nodeTarget ? '' : 'import { env } from "cloudflare:workers";\n';
-  const dispatch = nodeTarget
-    ? 'app.fetch(request)'
-    : 'app.fetch(request, env, store?.executionCtx ?? { waitUntil() {}, passThroughOnException() {} })';
+export function compileWorkerClient(authClientPath: string): string {
+  const envImport = 'import { env } from "cloudflare:workers";\n';
+  const dispatch =
+    'app.fetch(request, env, store?.executionCtx ?? { waitUntil() {}, passThroughOnException() {} })';
   return `import app, { requestContext } from "virtual:void-routes";
 import { createServerFetch } from ${JSON.stringify(FETCH_SERVER_PATH)};
 export { FetchError } from ${JSON.stringify(FETCH_SERVER_PATH)};
@@ -1601,7 +1089,7 @@ ${envImport}export { auth, createAuthClient } from ${JSON.stringify(authClientPa
 export const fetch = createServerFetch(
   (request, store) => ${dispatch},
   () => requestContext.getStore(),
-  "${nodeTarget ? 'http://localhost' : 'http://worker.local'}",
+  "http://worker.local",
 );
 `;
 }

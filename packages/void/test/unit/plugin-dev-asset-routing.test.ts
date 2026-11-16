@@ -348,23 +348,6 @@ describe('voidPlugin dev asset routing', () => {
     return merged.assets as { not_found_handling?: string; run_worker_first?: Array<string> };
   }
 
-  it('keeps page requests on the worker while letting Vite internals bypass it', async () => {
-    const root = createPagesProjectRoot();
-    const assets = await resolveVoidPluginAssets(root);
-
-    expect(assets?.run_worker_first).toEqual([
-      '!/@vite/*',
-      '!/@id/*',
-      '!/@fs/*',
-      '!/@react-refresh',
-      '!/@svelte/*',
-      '!/node_modules/*',
-      '!/__uno.css',
-      '/**',
-    ]);
-    expect(assets?.not_found_handling).toBe('none');
-  });
-
   it.each([
     ['API-only projects', createApiOnlyProjectRoot, undefined],
     ['a dev-only API route in dev', createDevOnlyApiProjectRoot, undefined],

@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import { hasDeploySchemaDrift } from '../../src/cli/deploy-drift.ts';
 import { generateStarterMigration } from '../../src/cli/init.ts';
-import { createPagesStarterTemplate, type ScaffoldStarterMode } from '../../src/cli/template.ts';
+import { createSpaStarterTemplate, type ScaffoldStarterMode } from '../../src/cli/template.ts';
 
 vi.mock('@voidzero-dev/vite-plus-prompts', () => ({
   intro: vi.fn(),
@@ -61,15 +61,14 @@ describe('starter migration generation', { timeout: 30_000 }, () => {
   });
 });
 
-function createStarterApp(starterMode: Exclude<ScaffoldStarterMode, 'static'>): string {
+function createStarterApp(starterMode: Exclude<ScaffoldStarterMode, 'spa'>): string {
   const root = mkdtempSync(join(packageRoot, '.tmp-init-starter-'));
   tempDirs.push(root);
 
-  const template = createPagesStarterTemplate({
+  const template = createSpaStarterTemplate({
     framework: 'react',
     starterMode,
     voidPackageSpec: 'workspace:*',
-    adapterPackageSpec: 'workspace:*',
   });
 
   for (const [filePath, content] of Object.entries(template.files)) {

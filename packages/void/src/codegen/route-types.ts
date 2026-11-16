@@ -57,7 +57,6 @@ export function generateRouteTypes(
   scan: ScanResult,
   routesDir: string,
   outDir: string,
-  pagesDir?: string,
   options: { typedRoutes?: boolean } = {},
 ): RouteTypesResult {
   const lines: Array<string> = [];
@@ -182,7 +181,7 @@ export function generateRouteTypes(
   lines.push('  export interface RoutePathMap {');
   const paths = new Map<string, Set<string>>();
   // A route file without HTTP method exports serves every method through its default export.
-  for (const route of [...scan.routes, ...scan.pages.pages, ...(scan.websockets ?? [])]) {
+  for (const route of [...scan.routes, ...(scan.websockets ?? [])]) {
     const params = paths.get(route.pattern) ?? new Set<string>();
     for (const name of route.params) {
       params.add(name);
@@ -198,30 +197,6 @@ export function generateRouteTypes(
     legacyRouteAlias(lines, 'RoutePathMap', pattern);
   }
   lines.push('  }');
-  lines.push('');
-  lines.push('  export interface PagePathMap {');
-  // A .dev + .prod page pair shares one pattern and its params.
-  const pagePaths = new Map<string, Set<string>>();
-  for (const page of scan.pages.pages) {
-    const params = pagePaths.get(page.pattern) ?? new Set<string>();
-    for (const name of page.params) {
-      params.add(name);
-    }
-    if (page.pattern.split('/').includes('*')) {
-      params.add('*');
-    }
-    pagePaths.set(page.pattern, params);
-  }
-  for (const [pattern, params] of pagePaths) {
-    const names = [...params].map((name) => JSON.stringify(name)).join(' | ') || 'never';
-    lines.push(`    ${JSON.stringify(publicRoutePattern(pattern))}: ${names};`);
-    legacyRouteAlias(lines, 'PagePathMap', pattern);
-  }
-  lines.push('  }');
-  lines.push('  export type PagePath = keyof PagePathMap & string;');
-  lines.push('  export type PageParams<P extends PagePath> = P extends PagePath');
-  lines.push('    ? { [K in Exclude<PagePathMap[P], "*"> & string]: string }');
-  lines.push('    : never;');
   lines.push('');
   // `routeUrl()` returns `/caf%C3%A9%20menu` for `/café menu`, so accept that spelling too.
   lines.push('  export interface EncodedRoutePathMap {');
@@ -253,71 +228,6 @@ export function generateRouteTypes(
   lines.push('   * from any string.');
   lines.push('   */');
   lines.push('  export type RewriteDestination = RouteName | (string & {});');
-  lines.push('');
-  lines.push(
-    '  export type ParseActionUrl<U extends string> = U extends `${infer Base}?${infer Action}` ? {',
-  );
-  lines.push('    base: Base;');
-  lines.push('    action: Action extends `${infer Name}&${string}` ? Name : Action;');
-  lines.push('  } : {');
-  lines.push('    base: U;');
-  lines.push('    action: never;');
-  lines.push('  };');
-  lines.push('');
-  // A .dev + .prod page pair is a union of two page shapes. A type parameter
-  // makes these helpers read each shape on its own, as in void/routes.
-  lines.push('  type PageActionBody<P> = [Extract<P, { body: unknown }>] extends [never]');
-  lines.push('    ? Record<string, unknown>');
-  lines.push('    : Extract<P, { body: unknown }>["body"];');
-  lines.push('');
-  lines.push('  type PageNamedActionBody<P, K> = P extends { actions: infer A }');
-  lines.push('    ? K extends keyof A');
-  lines.push('      ? A[K] extends { body: infer B }');
-  lines.push('        ? B');
-  lines.push('        : Record<string, unknown>');
-  lines.push('      : never');
-  lines.push('    : never;');
-  lines.push('');
-  lines.push('  type PageActionUrl<K extends string, P> = P extends { body: any }');
-  lines.push('    ? K');
-  lines.push('    : P extends { actions: infer A }');
-  lines.push("      ? `${K}?${keyof A & string}${'' | `&${string}`}`");
-  lines.push('      : never;');
-  lines.push('');
-  lines.push('  export type ResolveActionBody<U extends string> =');
-  lines.push('    ParseActionUrl<U>["base"] extends keyof PageActionMap');
-  lines.push('      ? ParseActionUrl<U>["action"] extends never');
-  lines.push('        ? PageActionBody<PageActionMap[ParseActionUrl<U>["base"]]>');
-  lines.push(
-    '        : PageNamedActionBody<PageActionMap[ParseActionUrl<U>["base"]], ParseActionUrl<U>["action"]>',
-  );
-  lines.push('      : Record<string, unknown>;');
-  lines.push('');
-  lines.push('  export type ResolveActionParams<U extends string> =');
-  lines.push('    ParseActionUrl<U>["base"] extends keyof PageActionMap');
-  lines.push('      ? PageActionMap[ParseActionUrl<U>["base"]] extends { params: infer P }');
-  lines.push('        ? P');
-  lines.push('        : never');
-  lines.push('      : never;');
-  lines.push('');
-  lines.push('  export type HasActionParams<U extends string> =');
-  lines.push('    [ResolveActionParams<U>] extends [never]');
-  lines.push('      ? false');
-  lines.push('      : ResolveActionParams<U> extends Record<string, string> ? true : false;');
-  lines.push('');
-  lines.push('  type ActionFormBaseOptions = {');
-  lines.push('    resetOnSuccess?: boolean;');
-  lines.push('    throwOnError?: boolean;');
-  lines.push('  };');
-  lines.push('');
-  lines.push('  export type ActionFormOptions<U extends string> = ActionFormBaseOptions &');
-  lines.push('    (HasActionParams<U> extends true');
-  lines.push('      ? { params: ResolveActionParams<U> }');
-  lines.push('      : { params?: never });');
-  lines.push('');
-  lines.push('  export type ActionUrl = {');
-  lines.push('    [K in keyof PageActionMap]: PageActionUrl<K & string, PageActionMap[K]>;');
-  lines.push('  }[keyof PageActionMap]');
   lines.push('');
   lines.push('  interface RouteMap {');
 
@@ -389,73 +299,6 @@ export function generateRouteTypes(
   }
 
   lines.push('  }');
-
-  // PageActionMap — page actions for typed useForm
-  const actionPages = scan.pages.pages.filter(
-    (p) => p.methods.includes('action') || p.methods.includes('actions'),
-  );
-  if (actionPages.length > 0 && pagesDir) {
-    lines.push('  interface PageActionMap {');
-
-    // A .dev + .prod page pair shares one pattern: write one key and join the shapes
-    // with |. The page at that URL is one environment's page or the other's, so each
-    // page's own action body must type-check.
-    const bodiesByPattern = new Map<string, Array<Array<string>>>();
-    for (const page of actionPages) {
-      const hasAction = page.methods.includes('action');
-      const hasActions = page.methods.includes('actions');
-
-      if (hasAction && hasActions) {
-        throw new Error(
-          `pages: Page '${page.pattern}' exports both "action" and "actions". Use one or the other.`,
-        );
-      }
-
-      const body: Array<string> = [];
-
-      // Page actions are only detected in a companion .server file.
-      const importPath = relative(outDir, `${pagesDir}/${page.serverPath!}`);
-      if (hasActions) {
-        const actionsImport = `(typeof import(${JSON.stringify(importPath)}))["actions"]`;
-        body.push(`      actions: { [K in keyof ${actionsImport}]: {`);
-        body.push(
-          `        body: ExtractInput<${actionsImport}[K]["__validators"]> extends { body: infer B } ? B : Record<string, unknown>;`,
-        );
-        body.push('      } };');
-      } else {
-        const importExpr = `(typeof import(${JSON.stringify(importPath)}))["action"]`;
-        body.push(
-          `      body: ExtractInput<${importExpr}["__validators"]> extends { body: infer B } ? B : Record<string, unknown>;`,
-        );
-      }
-
-      if (page.params.length > 0) {
-        const paramsType = page.params.map((p) => `${p}: string`).join('; ');
-        body.push(`      params: { ${paramsType} };`);
-      }
-
-      const bodies = bodiesByPattern.get(page.pattern);
-      if (bodies) {
-        bodies.push(body);
-      } else {
-        bodiesByPattern.set(page.pattern, [body]);
-      }
-    }
-
-    for (const [pattern, bodies] of bodiesByPattern) {
-      lines.push(`    ${JSON.stringify(publicRoutePattern(pattern))}: {`);
-      bodies.forEach((body, index) => {
-        if (index > 0) {
-          lines.push('    } | {');
-        }
-        lines.push(...body);
-      });
-      lines.push('    };');
-      legacyRouteAlias(lines, 'PageActionMap', pattern);
-    }
-
-    lines.push('  }');
-  }
 
   lines.push('}');
   lines.push('');

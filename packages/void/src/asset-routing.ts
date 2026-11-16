@@ -3,8 +3,6 @@ import type { NotFoundHandling } from './config.ts';
 import type { RouteDefinition } from './router/parse-filename.ts';
 
 export type AssetRoutingInputs = {
-  isSsr: boolean;
-  hasPages: boolean;
   hasApiRoutes?: boolean;
   hasDocumentRoutes: boolean;
   hasMiddleware: boolean;
@@ -46,8 +44,6 @@ export function hasApiRoutes(routes: Array<Pick<RouteDefinition, 'pattern'>>): b
  */
 export function workerOwnsHtmlRouting(inputs: AssetRoutingInputs): boolean {
   return (
-    inputs.isSsr ||
-    inputs.hasPages ||
     inputs.hasDocumentRoutes ||
     inputs.hasMiddleware ||
     inputs.hasWebSockets === true ||
@@ -121,8 +117,6 @@ export function resolveAssetRoutingPolicy(inputs: AssetRoutingInputs): AssetRout
     // fallback off, or the shell would answer before that setting is consulted.
     workerSpaFallback:
       workerFirst &&
-      !inputs.isSsr &&
-      !inputs.hasPages &&
       (inputs.notFound === undefined || inputs.notFound === 'single-page-application'),
   };
 }

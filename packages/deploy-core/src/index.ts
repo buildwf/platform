@@ -262,15 +262,9 @@ export type DeployManifest = {
   schedules?: Array<ScheduleMeta>;
   queues?: Array<QueueMeta>;
   ssr?: boolean;
-  framework?: string;
-  type?: 'void' | 'spa' | 'static' | 'framework';
+  type?: 'void' | 'spa' | 'static';
   /** @deprecated Legacy v1 static deployment discriminator. */
   static?: 'spa' | 'ssg';
-  revalidate?: number | Record<string, number>;
-  revalidateQueryAllowlist?: Record<string, Array<string>>;
-  pages?: Array<{ pattern: string; revalidate?: number }>;
-  pathRevalidate?: Record<string, number>;
-  prerender?: Array<string>;
   assetConfig?: AssetConfig;
   vars?: Record<string, string>;
   workerMain?: string;
@@ -310,8 +304,6 @@ export type DeployEvent =
   | { event: 'worker_upload_done' }
   | { event: 'queue_setup'; queues: Array<string> }
   | { event: 'queue_consumer_conflict'; queue: string; ownerScript: string }
-  | { event: 'prerender'; pages: number }
-  | { event: 'prerender_done' }
   | {
       event: 'done';
       deployment: string;
@@ -326,7 +318,6 @@ export type DeployEvent =
 
 export {
   MANIFEST_REDIRECT_RULE_STATUSES,
-  MAX_REVALIDATE_QUERY_ALLOWLIST_ENTRIES,
   MAX_ROUTING_RULES,
   validateManifestShape,
 } from './validate.ts';

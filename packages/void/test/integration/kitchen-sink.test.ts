@@ -419,14 +419,6 @@ describe('playground/kitchen-sink', () => {
     expect(res.status).toBe(404);
   });
 
-  // Paths without a dot fall through to the notFound page.
-  it('returns an HTML Not Found page for /wp-admin', async () => {
-    const res = await fetch(`${BASE}/wp-admin`);
-    expect(res.status).toBe(404);
-    expect(res.headers.get('content-type')).toContain('text/html');
-    expect(await res.text()).toContain('Not Found');
-  });
-
   it.each(['/phpmyadmin', '/foo/bar/baz', '/wp-content/plugins/exploit'])(
     'returns the Not Found page for %s',
     async (path) => {
@@ -439,12 +431,6 @@ describe('playground/kitchen-sink', () => {
   it('returns 404 for POST to unknown paths', async () => {
     const res = await fetch(`${BASE}/nonexistent`, { method: 'POST' });
     expect(res.status).toBe(404);
-  });
-
-  it('redirects trailing slash to non-trailing-slash path', async () => {
-    const res = await fetch(`${BASE}/wp-content/`, { redirect: 'manual' });
-    expect(res.status).toBe(301);
-    expect(res.headers.get('location')).toContain('/wp-content');
   });
 });
 

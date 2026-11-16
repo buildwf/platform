@@ -71,10 +71,9 @@ export async function prepareProject(root: string): Promise<PrepareProjectResult
     removeGeneratedFile(outDir, 'auth.d.ts', removed);
   }
 
-  const hasRouteTypes =
-    scan.routes.length > 0 || (scan.websockets?.length ?? 0) > 0 || scan.pages.pages.length > 0;
+  const hasRouteTypes = scan.routes.length > 0 || (scan.websockets?.length ?? 0) > 0;
   if (hasRouteTypes) {
-    const { dts } = generateRouteTypes(scan, paths.routesDir, outDir, paths.pagesDir, {
+    const { dts } = generateRouteTypes(scan, paths.routesDir, outDir, {
       typedRoutes: config.routing?.typedRoutes,
     });
     writeGeneratedFile(outDir, 'routes.d.ts', dts, written);

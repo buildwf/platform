@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { toSlash } from 'pathslash';
@@ -7,7 +7,6 @@ import { resolveDistDir, resolveWorkerDirName } from '../../src/cli/build-output
 import type { PlatformClient, ProjectResponse } from '../../src/cli/client.ts';
 import {
   ensurePreviouslyDeployedLiveBindingConfig,
-  generateDeployWrapperIfNeeded,
   resolveDeployLiveBindingConfig,
   resolveDeployWorkerMain,
   resolveDeployWranglerCompat,
@@ -16,11 +15,7 @@ import {
   resolveStaticBuildCommand,
   toManifestSchedulesAndQueues,
 } from '../../src/cli/deploy-helpers.ts';
-import {
-  formatProjectCommand,
-  resolveProjectCommand,
-  FRAMEWORK_PRESETS,
-} from '../../src/cli/preset.ts';
+import { formatProjectCommand, resolveProjectCommand } from '../../src/cli/preset.ts';
 import {
   getRequestedProjectSlug,
   inferDefaultSlug,
@@ -114,57 +109,9 @@ describe('resolveDistDir', () => {
 
     expect(resolveDistDir(root)).toBe(toSlash(join(root, 'dist')));
   });
-
-  it('returns dist/ for tanstack-start preset', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-test-'));
-    tempDirs.push(root);
-    mkdirSync(join(root, 'dist'), { recursive: true });
-
-    expect(resolveDistDir(root, FRAMEWORK_PRESETS['tanstack-start'])).toBe(
-      toSlash(join(root, 'dist')),
-    );
-  });
-
-  it('returns build/ for react-router preset', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-test-'));
-    tempDirs.push(root);
-    mkdirSync(join(root, 'build'), { recursive: true });
-
-    expect(resolveDistDir(root, FRAMEWORK_PRESETS['react-router'])).toBe(
-      toSlash(join(root, 'build')),
-    );
-  });
-
-  it('throws with framework-specific message when build dir missing', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-test-'));
-    tempDirs.push(root);
-
-    expect(() => resolveDistDir(root, FRAMEWORK_PRESETS['react-router'])).toThrow(
-      "deploy: Build output directory 'build' not found",
-    );
-  });
-
-  it('uses the resolved build command in framework error messages', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-test-'));
-    tempDirs.push(root);
-
-    expect(() => resolveDistDir(root, FRAMEWORK_PRESETS['react-router'], 'vp build')).toThrow(
-      "Run 'vp build' first.",
-    );
-  });
 });
 
 describe('resolveDeployWranglerCompat', () => {
-  it('does not pin compatibility_date for non-Cloudflare targets', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-test-'));
-    tempDirs.push(root);
-
-    expect(resolveDeployWranglerCompat(root, { target: 'node' }, join(root, 'dist', 'ssr'))).toBe(
-      undefined,
-    );
-    expect(existsSync(join(root, 'void.json'))).toBe(false);
-  });
-
   it('upgrades auth deploy manifests to nodejs_compat even when root wrangler flags win', () => {
     const root = mkdtempSync(join(tmpdir(), 'void-test-'));
     tempDirs.push(root);
@@ -210,21 +157,6 @@ describe('resolveDeployWorkerMain', () => {
     );
 
     expect(resolveDeployWorkerMain({}, buildDir)).toBe('index.mjs');
-  });
-
-  it('does not set a Workers main module for non-Cloudflare deploy targets', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-test-'));
-    tempDirs.push(root);
-    const buildDir = join(root, 'dist', 'ssr');
-    mkdirSync(buildDir, { recursive: true });
-    writeFileSync(
-      join(buildDir, 'wrangler.json'),
-      JSON.stringify({
-        main: 'index.mjs',
-      }),
-    );
-
-    expect(resolveDeployWorkerMain({ target: 'node' }, buildDir)).toBeUndefined();
   });
 });
 
@@ -304,7 +236,6 @@ describe('resolveDeployLiveBindingConfig', () => {
 
     await expect(
       resolveDeployLiveBindingConfig(root, client, 'proj_1', {
-        isFrameworkMode: false,
         needsLive: false,
         webSockets: [],
       }),
@@ -348,7 +279,6 @@ describe('resolveDeployLiveBindingConfig', () => {
 
     await expect(
       resolveDeployLiveBindingConfig(root, client, 'proj_1', {
-        isFrameworkMode: false,
         needsLive: true,
         webSockets: [],
       }),
@@ -398,16 +328,6 @@ describe('resolveFullDeployBuildCommand', () => {
     });
   });
 
-  it('prefers inference.build over a framework build fallback', () => {
-    expect(
-      resolveFullDeployBuildCommand(
-        root,
-        'vp build',
-        FRAMEWORK_PRESETS['react-router'].buildCommand,
-      ),
-    ).toEqual({ label: 'vp build', command: 'vp build' });
-  });
-
   it.each([undefined, ''])(
     'falls back to the built-in vite build for inference.build %j',
     (build) => {
@@ -417,19 +337,6 @@ describe('resolveFullDeployBuildCommand', () => {
       });
     },
   );
-
-  it('uses a framework build command as the fallback when provided', () => {
-    expect(
-      resolveFullDeployBuildCommand(
-        root,
-        undefined,
-        FRAMEWORK_PRESETS['react-router'].buildCommand,
-      ),
-    ).toEqual({
-      label: formatProjectCommand(root, FRAMEWORK_PRESETS['react-router'].buildCommand),
-      command: resolveProjectCommand(root, FRAMEWORK_PRESETS['react-router'].buildCommand),
-    });
-  });
 });
 
 describe('resolveStaticDeployPreset', () => {
@@ -476,24 +383,6 @@ describe('resolveStaticDeployPreset', () => {
 });
 
 describe('resolveWorkerDirName', () => {
-  it('returns preset worker subdir for react-router', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-test-'));
-    tempDirs.push(root);
-    const buildDir = join(root, 'build');
-    mkdirSync(join(buildDir, 'server'), { recursive: true });
-
-    expect(resolveWorkerDirName(buildDir, FRAMEWORK_PRESETS['react-router'])).toBe('server');
-  });
-
-  it('returns preset worker subdir for tanstack-start', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-test-'));
-    tempDirs.push(root);
-    const dist = join(root, 'dist');
-    mkdirSync(join(dist, 'server'), { recursive: true });
-
-    expect(resolveWorkerDirName(dist, FRAMEWORK_PRESETS['tanstack-start'])).toBe('server');
-  });
-
   it('probes for ssr/ without a preset', () => {
     const root = mkdtempSync(join(tmpdir(), 'void-test-'));
     tempDirs.push(root);
@@ -503,28 +392,6 @@ describe('resolveWorkerDirName', () => {
     expect(resolveWorkerDirName(dist)).toBe('ssr');
   });
 
-  it('throws with framework-specific message when worker dir missing', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-test-'));
-    tempDirs.push(root);
-    const buildDir = join(root, 'build');
-    mkdirSync(buildDir, { recursive: true });
-
-    expect(() => resolveWorkerDirName(buildDir, FRAMEWORK_PRESETS['react-router'])).toThrow(
-      "deploy: Worker output 'build/server' not found",
-    );
-  });
-
-  it('uses the resolved build command when worker output is missing', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-test-'));
-    tempDirs.push(root);
-    const dist = join(root, 'dist');
-    mkdirSync(dist, { recursive: true });
-
-    expect(() => resolveWorkerDirName(dist, FRAMEWORK_PRESETS['react-router'], 'vp build')).toThrow(
-      "Run 'vp build' first.",
-    );
-  });
-
   it('throws when no worker dir exists without preset', () => {
     const root = mkdtempSync(join(tmpdir(), 'void-test-'));
     tempDirs.push(root);
@@ -532,38 +399,6 @@ describe('resolveWorkerDirName', () => {
     mkdirSync(dist, { recursive: true });
 
     expect(() => resolveWorkerDirName(dist)).toThrow('Worker output not found');
-  });
-});
-
-describe('generateDeployWrapperIfNeeded', () => {
-  it('wraps class-a framework worker output when migrations are present', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-test-'));
-    tempDirs.push(root);
-    const workerDir = join(root, 'dist', 'server');
-    mkdirSync(workerDir, { recursive: true });
-    writeFileSync(
-      join(workerDir, 'index.js'),
-      'export default { fetch() { return Response.json({ status: 500, unhandled: true, message: "HTTPError" }, { status: 500 }); } };',
-    );
-    mkdirSync(join(root, 'db', 'migrations'), { recursive: true });
-    writeFileSync(join(root, 'db', 'migrations', '001_init.sql'), 'CREATE TABLE users (id INT);');
-
-    const wrapped = await generateDeployWrapperIfNeeded(root, workerDir, 'index.js', {
-      crons: [],
-      queues: [],
-      hasMigrations: true,
-      migrationDialect: 'postgresql',
-    });
-
-    expect(wrapped).toBe(true);
-    expect(existsSync(join(workerDir, '__original.js'))).toBe(true);
-    expect(existsSync(join(workerDir, '__void_migration_handler.mjs'))).toBe(true);
-    const wrapper = readFileSync(join(workerDir, 'index.js'), 'utf-8');
-    expect(wrapper).toContain('import original from "./__original.js"');
-    expect(wrapper).toContain('createMigrationHandler');
-    expect(wrapper).toContain('/__void/migrate');
-    const handler = readFileSync(join(workerDir, '__void_migration_handler.mjs'), 'utf-8');
-    expect(handler).toContain('VALUES ($1, $2)');
   });
 });
 

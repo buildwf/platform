@@ -2,7 +2,6 @@ import { mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test';
 import {
-  buildFrameworkManifest,
   buildStaticManifest,
   readWranglerHtmlHandling,
   buildVoidManifest,
@@ -38,26 +37,6 @@ afterEach(() => {
 });
 
 describe('worker packaging', () => {
-  it.each([true, false, undefined])(
-    'preserves alwaysUseHttps %s in every app manifest',
-    (value) => {
-      const manifests = [
-        buildVoidManifest({ bindings: makeBindings(), alwaysUseHttps: value }),
-        buildStaticManifest({ appType: 'static', alwaysUseHttps: value }),
-        buildFrameworkManifest({
-          frameworkName: 'nuxt',
-          workerMain: 'index.mjs',
-          bindings: makeBindings(),
-          alwaysUseHttps: value,
-        }),
-      ];
-      for (const manifest of manifests) {
-        const published = JSON.parse(JSON.stringify(manifest));
-        expect(published.alwaysUseHttps).toBe(value);
-        expect(Object.hasOwn(published, 'alwaysUseHttps')).toBe(value !== undefined);
-      }
-    },
-  );
   it('marks Sandbox bundles as controller-capable and omits metadata for apps without Sandbox', () => {
     const manifest = buildVoidManifest({
       bindings: makeBindings({ needsSandbox: true }),
@@ -95,6 +74,21 @@ describe('worker packaging', () => {
     expect(workerFiles.has(manifest.workerMain!)).toBe(true);
     expect(workerFiles.has('wrangler.json')).toBe(false);
   });
+
+  it.each([true, false, undefined])(
+    'preserves alwaysUseHttps %s in every app manifest',
+    (value) => {
+      const manifests = [
+        buildVoidManifest({ bindings: makeBindings(), alwaysUseHttps: value }),
+        buildStaticManifest({ appType: 'static', alwaysUseHttps: value }),
+      ];
+      for (const manifest of manifests) {
+        const published = JSON.parse(JSON.stringify(manifest));
+        expect(published.alwaysUseHttps).toBe(value);
+        expect(Object.hasOwn(published, 'alwaysUseHttps')).toBe(value !== undefined);
+      }
+    },
+  );
 });
 
 describe('buildVoidManifest', () => {
@@ -129,31 +123,6 @@ describe('buildVoidManifest', () => {
     const manifest = buildVoidManifest({ bindings: makeBindings({ needsAI: true }) });
     expect(manifest.bindings.ai).toBe(true);
   });
-
-  it('carries revalidate into manifest.revalidate and omits it when unset or 0', () => {
-    const revalidate = { '/blog/:slug': 120, '*': 60 };
-    expect(
-      Object.entries(buildVoidManifest({ bindings: makeBindings(), revalidate }).revalidate ?? {}),
-    ).toEqual(Object.entries(revalidate));
-    expect(buildVoidManifest({ bindings: makeBindings() }).revalidate).toBeUndefined();
-    expect(
-      buildVoidManifest({ bindings: makeBindings(), revalidate: 0 }).revalidate,
-    ).toBeUndefined();
-  });
-
-  it('carries a pages array verbatim into manifest.pages', () => {
-    const pages = [
-      { pattern: '/docs/setup/install' },
-      { pattern: '/docs/:path{.+}', revalidate: 3600 },
-    ];
-    const manifest = buildVoidManifest({ bindings: makeBindings(), pages });
-    expect(manifest.pages).toEqual(pages);
-  });
-
-  it('omits manifest.pages when the pages array is empty or missing', () => {
-    expect(buildVoidManifest({ bindings: makeBindings(), pages: [] }).pages).toBeUndefined();
-    expect(buildVoidManifest({ bindings: makeBindings() }).pages).toBeUndefined();
-  });
 });
 
 describe('manifest limits (worker.limits.cpu_ms)', () => {
@@ -164,26 +133,6 @@ describe('manifest limits (worker.limits.cpu_ms)', () => {
 
   it('omits the limits key entirely when options.cpuMs is unset (void manifest)', () => {
     const manifest = buildVoidManifest({ bindings: makeBindings(), options: {} });
-    expect('limits' in manifest).toBe(false);
-  });
-
-  it('emits manifest.limits when packageOptions.cpuMs is set (framework manifest)', () => {
-    const manifest = buildFrameworkManifest({
-      frameworkName: 'astro',
-      workerMain: 'index.mjs',
-      bindings: makeBindings(),
-      packageOptions: { cpuMs: 30000 },
-    });
-    expect(manifest.limits).toEqual({ cpuMs: 30000 });
-  });
-
-  it('omits the limits key entirely when packageOptions.cpuMs is unset (framework manifest)', () => {
-    const manifest = buildFrameworkManifest({
-      frameworkName: 'astro',
-      workerMain: 'index.mjs',
-      bindings: makeBindings(),
-      packageOptions: {},
-    });
     expect('limits' in manifest).toBe(false);
   });
 });

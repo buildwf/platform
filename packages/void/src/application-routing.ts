@@ -3,17 +3,12 @@ import { scanRoutes, type ScanResult } from './router/scan.ts';
 
 export type CompleteApplicationAnalysis = ApplicationAnalysis & { scan: ScanResult };
 
-/** Complete route/page analysis using the same resource and handler inventories. */
+/** Complete route analysis using the same resource and handler inventories. */
 export async function completeApplicationAnalysis(
   analysis: ApplicationAnalysis,
 ): Promise<CompleteApplicationAnalysis> {
-  const scan = await scanRoutes(analysis.root, {
-    trailingSlash: analysis.config.routing?.trailingSlash,
-    output: analysis.config.output,
+  const scan = await scanRoutes({
     paths: analysis.paths,
-    // A framework app's pages/ follows that framework's rules, not Void Pages.
-    checkPageRoutes: !analysis.framework,
-    environment: analysis.framework ? undefined : analysis.environment,
     inventory: {
       routes: analysis.routes,
       middleware: analysis.middleware,

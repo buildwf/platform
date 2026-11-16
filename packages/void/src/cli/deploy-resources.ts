@@ -9,17 +9,11 @@ import { type ApplicationAnalysis } from '../application-analysis.ts';
 import { analyzeApplication, completeApplicationAnalysis } from '../application-routing.ts';
 import { MATERIALIZED_CLOUDFLARE_FILE } from '../cloudflare-config.ts';
 import { type DatabaseDialect, type VoidConfig } from '../config.ts';
-import { collectRevalidate, hasRevalidate } from '../isr-config.ts';
 import { scopedCloudflareQueueName } from '../queues/cloudflare-names.ts';
 import { hasEmailHandlers, type EmailHandlersScan } from '../router/email.ts';
 import { DEFAULT_VOID_AI_BINDING } from './deploy-binding-snapshot.ts';
 import { type CloudflareAuthSecretFailureReason } from './deploy-types.ts';
-import {
-  isRealD1Id,
-  isRealKvId,
-  type DesiredResourceSet,
-  type ProvisionDriftEntry,
-} from './provision.ts';
+import { isRealD1Id, type DesiredResourceSet, type ProvisionDriftEntry } from './provision.ts';
 
 /** Human labels for a drifted resource kind, used in guidance messages. */
 export const CLOUDFLARE_RESOURCE_LABELS: Record<ProvisionDriftEntry['kind'], string> = {
@@ -91,7 +85,7 @@ function toValidWorkerName(raw: string): string {
 
 /**
  * `<worker>-<suffix>` within the length cap. A long worker name is trimmed instead of the
- * suffix, so `KV` and `ISR_CACHE` never derive the same namespace title.
+ * suffix, so two resources never derive the same title.
  */
 function suffixedResourceName(workerName: string, suffix: string): string {
   const full = toValidWorkerName(`${workerName}-${suffix}`);
@@ -125,53 +119,6 @@ export function deriveWorkerName(root: string): string {
  * Fail when two KV bindings would share one namespace. KV titles are not account-unique and
  * the provisioner adopts a namespace by title, so check desired titles and recorded ids.
  */
-function assertDistinctKvNamespaces(
-  kvNamespaces: Array<{ binding: string; title: string }>,
-  config: Record<string, unknown>,
-  configPath: string,
-): void {
-  const bindingByTitle = new Map<string, string>();
-  for (const { binding, title } of kvNamespaces) {
-    const owner = bindingByTitle.get(title);
-    if (owner !== undefined) {
-      throw new Error(
-        `deploy: KV bindings ${JSON.stringify(owner)} and ${JSON.stringify(binding)} both resolve ` +
-          `to the namespace title ${JSON.stringify(title)}. KV titles are not account-unique, so ` +
-          `provisioning would put both bindings on ONE namespace. Give the worker a shorter ` +
-          `"name" in "${configPath}" so each binding derives its own title, then retry.`,
-      );
-    }
-    bindingByTitle.set(title, binding);
-  }
-
-  const managed = new Set(kvNamespaces.map((kv) => kv.binding));
-  const entries = config.kv_namespaces;
-  if (!Array.isArray(entries)) {
-    return;
-  }
-  const bindingById = new Map<string, string>();
-  for (const entry of entries) {
-    if (!entry || typeof entry !== 'object') {
-      continue;
-    }
-    const { binding, id } = entry as { binding?: unknown; id?: unknown };
-    if (typeof binding !== 'string' || !managed.has(binding) || !isRealKvId(id)) {
-      continue;
-    }
-    const owner = bindingById.get(id);
-    if (owner !== undefined && owner !== binding) {
-      throw new Error(
-        `deploy: KV bindings ${JSON.stringify(owner)} and ${JSON.stringify(binding)} in ` +
-          `"${configPath}" both point at KV namespace id ${JSON.stringify(id)}. They resolved to a ` +
-          `single namespace when they were provisioned, so the two bindings share one namespace ` +
-          `and one quota slot. Give one of them a fresh namespace (create it, or drop its entry ` +
-          `from "${configPath}" and rerun the deploy), then retry.`,
-      );
-    }
-    bindingById.set(id, binding);
-  }
-}
-
 /**
  * Desired Cloudflare resources, computed from source before the build and shared by the
  * provision and drift paths. Names prefer the value stored in the root config, so a
@@ -296,16 +243,6 @@ export async function computeDesiredCloudflareResources(
       `app uses ${dialect === 'mysql' ? 'MySQL' : 'PostgreSQL'} (needs a Hyperdrive config)`,
     );
   }
-
-  // ISR_CACHE is not in the import walk; this matches the build's `emitIsr` gate.
-  const pageScan = analysis.scan.pages;
-  if (hasRevalidate(collectRevalidate(voidConfig, pageScan))) {
-    const binding = 'ISR_CACHE';
-    desired.kvNamespaces.push({ binding, title: suffixedResourceName(workerName, 'isr-cache') });
-    reasons.set(binding, 'routes use `revalidate` (ISR) — needs an ISR_CACHE KV namespace');
-  }
-
-  assertDistinctKvNamespaces(desired.kvNamespaces, config, configPath);
 
   const expectedCrons = [...new Set(analysis.jobs.flatMap((job) => job.crons))];
   const emailHandlers = analysis.email;

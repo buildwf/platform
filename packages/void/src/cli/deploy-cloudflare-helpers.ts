@@ -5,7 +5,6 @@ import {
   parseRootWranglerConfig,
   readExistingCloudflareWorker,
   readWranglerTopLevelString,
-  type ApprovedCloudflareKvBinding,
   type CloudflareCommandRunner,
   type ExistingCloudflareWorker,
 } from '@void/deploy-cloudflare';
@@ -351,7 +350,6 @@ export function cloudflareCandidateActivationOptions(options: {
   pinnedHandoffLink: CloudflareLink | null;
   initialCloudflareCandidate: CloudflareCandidateReceipt | null;
   assertUploaderStillPinned: () => boolean;
-  approvedKv: ReadonlyArray<ApprovedCloudflareKvBinding>;
   staticAssetsBinding?: string;
   queueConsumerCleanup: ReturnType<typeof readWranglerManagedQueueCleanupCandidates>;
 }): Omit<
@@ -387,7 +385,7 @@ export function cloudflareCandidateActivationOptions(options: {
             workerName,
             versionId,
           });
-          assertCloudflareBindingsPreserved(existingWorker, uploaded, options.approvedKv, {
+          assertCloudflareBindingsPreserved(existingWorker, uploaded, {
             staticAssetsBinding: options.staticAssetsBinding,
           });
         }

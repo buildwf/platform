@@ -1,13 +1,9 @@
-import { readConfig, isNodeTarget } from '../config.ts';
-import { detectFramework } from '../plugin-inference.ts';
+import { readConfig } from '../config.ts';
 import { readCloudflareCandidate } from './cloudflare-candidate.ts';
 import { createCloudflareChildReporter } from './cloudflare-child-report.ts';
 import { readCloudflareLink } from './cloudflare-link.ts';
 import { withRecordedReadinessAccessOrigin } from './cloudflare-readiness.ts';
-import {
-  hasConfiguredVoidWorkerRoutingRules,
-  removeDeployPointer,
-} from './deploy-artifact-validation.ts';
+import { removeDeployPointer } from './deploy-artifact-validation.ts';
 import { buildCloudflareWorker } from './deploy-cloudflare-build.ts';
 import { migrateCloudflareWorker } from './deploy-cloudflare-migrate.ts';
 import {
@@ -17,7 +13,6 @@ import {
 import { publishCloudflareWorker } from './deploy-cloudflare-publish.ts';
 import {
   resolveCloudflareStaticPreset,
-  resolveCloudflareVoidStaticPreset,
   runCloudflareStaticDeploy,
 } from './deploy-cloudflare-static.ts';
 import { log } from './deploy-helpers.ts';
@@ -26,7 +21,6 @@ import { printDeploySuccess } from './deploy-summary.ts';
 import { type RunDeployOptions, type CloudflareDeployDeps } from './deploy-types.ts';
 import { renderAddressMap } from './email-cloudflare.ts';
 import { type CliLogger } from './log-file.ts';
-import { FRAMEWORK_PRESETS } from './preset.ts';
 
 /** Deploy to the user's own Cloudflare account through the guarded native Worker flow. */
 export async function runCloudflareDeploy(
@@ -63,39 +57,11 @@ export async function runCloudflareDeploy(
     );
     return exit(1);
   }
-  const detectedFramework = detectFramework(root);
-  const frameworkPreset = detectedFramework ? FRAMEWORK_PRESETS[detectedFramework.name] : undefined;
   cliLog.info('cloudflare_deploy_start', {
     provision: options.provision === true ? true : undefined,
   });
 
-  // Keep this guard ahead of the static branch, so a node/bun/deno project is never
-  // deployed as a Workers Assets app.
-  if (isNodeTarget(voidConfig.target)) {
-    log.error(
-      [
-        `deploy: --platform cloudflare is not supported for the "${voidConfig.target}" target.`,
-        'This backend deploys Cloudflare Workers only. Deploy a node/bun/deno build with its',
-        'own host/runtime, or use the default Cloudflare target for --platform cloudflare.',
-      ].join('\n'),
-    );
-    return exit(1);
-  }
-
-  if (detectedFramework?.class === 'a' && hasConfiguredVoidWorkerRoutingRules(voidConfig.routing)) {
-    log.error(
-      [
-        `deploy: native Cloudflare deployment cannot apply Void routing redirects, rewrites, fallbacks, or headers to ${detectedFramework.name}.`,
-        'This framework owns its Worker request handler, so these rules would otherwise be ignored.',
-        'Move the rules into the framework or its Cloudflare Worker, then retry.',
-      ].join('\n'),
-    );
-    return exit(1);
-  }
-
-  const staticPreset =
-    resolveCloudflareStaticPreset(root, voidConfig, options) ??
-    (await resolveCloudflareVoidStaticPreset(root, voidConfig));
+  const staticPreset = resolveCloudflareStaticPreset(root, voidConfig, options);
   if (staticPreset) {
     if (atomic) {
       log.error('deploy: atomic deployment is only for Workers with Durable Objects.');
@@ -114,19 +80,6 @@ export async function runCloudflareDeploy(
     );
   }
 
-  // After the static branch: a static framework build is served by the thin
-  // edge Worker, which applies the redirect itself.
-  if (detectedFramework && voidConfig.routing?.alwaysUseHttps === true) {
-    log.error(
-      [
-        `deploy: native Cloudflare deployment cannot apply Void routing.alwaysUseHttps to ${detectedFramework.name}.`,
-        'This framework owns its Worker request handler, so the HTTPS redirect would otherwise be ignored.',
-        "Redirect HTTP to HTTPS in the framework, or turn on Cloudflare's Always Use HTTPS setting for your zone, then remove routing.alwaysUseHttps and retry.",
-      ].join('\n'),
-    );
-    return exit(1);
-  }
-
   const source = await prepareCloudflareDeploySource(root, options, voidConfig);
   if (!source) {
     return exit(1);
@@ -140,7 +93,6 @@ export async function runCloudflareDeploy(
     cliLog,
     reporter,
     initialCloudflareLink,
-    detectedFramework,
     source,
   });
 
@@ -153,8 +105,6 @@ export async function runCloudflareDeploy(
     exit,
     atomic,
     skipMigrations: options.skipMigrations,
-    frameworkPreset,
-    detectedFramework,
     source,
     preflight,
   });
@@ -190,7 +140,6 @@ export async function runCloudflareDeploy(
       cliLog,
       reporter,
       atomic,
-      detectedFramework,
       initialCloudflareCandidate,
       source,
       preflight,

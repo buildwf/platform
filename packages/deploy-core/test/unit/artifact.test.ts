@@ -9,8 +9,7 @@ import {
 describe('deployment artifacts', () => {
   const manifest: DeployManifest = {
     version: 3,
-    type: 'framework',
-    framework: 'astro',
+    type: 'void',
     bindings: { kv: ['CACHE'] },
     assetConfig: { not_found_handling: 'none' },
   };

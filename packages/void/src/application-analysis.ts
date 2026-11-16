@@ -5,7 +5,7 @@ import { scanJobsSync } from './crons/scan.ts';
 import { scanDurableObjectModules } from './durable/scan.ts';
 import type { InferredBindings } from './inference/walk.ts';
 import { collectMigrations } from './migrations/collect.ts';
-import { detectFramework, FRAMEWORK_SCAN_DIRS, inferProjectBindings } from './plugin-inference.ts';
+import { inferProjectBindings } from './plugin-inference.ts';
 import { resolveProjectPaths } from './project-paths.ts';
 import { scanQueuesSync } from './queues/scan.ts';
 import { scanEmailHandlersSync } from './router/email.ts';
@@ -25,7 +25,6 @@ export type ApplicationAnalysis = {
   config: VoidConfig;
   environment?: RouteEnvironment;
   paths: ReturnType<typeof resolveProjectPaths>;
-  framework: ReturnType<typeof detectFramework>;
   bindings: InferredBindings;
   authConfigPath: string | null;
   authEnabled: boolean;
@@ -55,12 +54,10 @@ export function analyzeApplicationSync(
 ): ApplicationAnalysis {
   const { config, environment } = options;
   const paths = resolveProjectPaths(root, config);
-  const framework = detectFramework(root);
-  const scanDirs = config.inference?.scanDirs ?? (framework ? FRAMEWORK_SCAN_DIRS : undefined);
   const inferred = inferProjectBindings(
     root,
-    { paths, environment, filterPages: !framework, bindings: config.inference?.bindings },
-    scanDirs,
+    { paths, environment, bindings: config.inference?.bindings },
+    config.inference?.scanDirs,
   );
   const authConfigPath = findVoidAuthConfig(root, paths);
   const authEnabled = inferred.needsAuth || authConfigPath !== null || config.auth !== undefined;
@@ -112,7 +109,6 @@ export function analyzeApplicationSync(
     config,
     environment,
     paths,
-    framework,
     bindings,
     authConfigPath,
     authEnabled,

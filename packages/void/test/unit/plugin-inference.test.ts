@@ -2,11 +2,10 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
-import { analyzeApplicationSync } from '../../src/application-analysis.ts';
 import { LATEST_KNOWN_COMPAT_DATE } from '../../src/cli/wrangler.ts';
 import { readConfig } from '../../src/config.ts';
 import { voidPlugin } from '../../src/index.ts';
-import { inferProjectBindings, detectFramework } from '../../src/plugin-inference.ts';
+import { inferProjectBindings } from '../../src/plugin-inference.ts';
 import { getHookHandler } from '../helpers/vite-hooks.ts';
 
 const tempDirs: Array<string> = [];
@@ -63,31 +62,6 @@ describe('inferProjectBindings', () => {
     }
   });
 
-  it('infers bindings from src/main.ssr.tsx', () => {
-    const root = createTempRoot();
-    writeFileSync(
-      join(root, 'src', 'main.ssr.tsx'),
-      `
-      export async function render(request, env) {
-        await env.KV.put("k", "v");
-        return new Response("ok");
-      }
-      `,
-    );
-
-    expect(inferProjectBindings(root)).toEqual({
-      needsD1: false,
-      needsKV: true,
-      needsR2: false,
-      needsAuth: false,
-      needsQueues: false,
-      needsAI: false,
-      needsSandbox: false,
-      needsEmail: false,
-      needsLive: false,
-    });
-  });
-
   it.each(['ts', 'tsx', 'jsx'])(
     'filters route-only bindings in .%s for the selected environment',
     (ext) => {
@@ -111,33 +85,6 @@ describe('inferProjectBindings', () => {
       const production = inferProjectBindings(root, { environment: 'prod' }, ['routes']);
       expect(production.needsR2).toBe(false);
       expect(production.needsLive).toBe(false);
-    },
-  );
-
-  it.each(['tsx', 'jsx'])(
-    'infers JSX bindings from .server.%s companions under sourceDir',
-    (serverExt) => {
-      const root = createTempRoot();
-      writeFileSync(join(root, 'void.json'), JSON.stringify({ sourceDir: 'src' }));
-      mkdirSync(join(root, 'src/routes'), { recursive: true });
-      mkdirSync(join(root, 'src/pages'), { recursive: true });
-      writeFileSync(
-        join(root, `src/routes/report.prod.${serverExt}`),
-        `import { kv } from 'void/kv'; export const GET = () => <p>{kv.get('report')}</p>;`,
-      );
-      writeFileSync(
-        join(root, `src/pages/report.server.${serverExt}`),
-        `import { storage } from 'void/storage'; export const loader = () => <p>{storage.list()}</p>;`,
-      );
-
-      expect(inferProjectBindings(root, { environment: 'dev' })).toMatchObject({
-        needsKV: false,
-        needsR2: true,
-      });
-      expect(inferProjectBindings(root, { environment: 'prod' })).toMatchObject({
-        needsKV: true,
-        needsR2: true,
-      });
     },
   );
 
@@ -185,26 +132,6 @@ describe('inferProjectBindings', () => {
     });
   });
 
-  it('keeps unrelated hidden directories out of .well-known inference', () => {
-    const root = createTempRoot();
-    for (const directory of [
-      'routes/.cache',
-      'routes/.well-known/.cache',
-      'routes/nested/.well-known',
-      'pages/.well-known',
-    ]) {
-      mkdirSync(join(root, directory), { recursive: true });
-      writeFileSync(join(root, directory, 'hidden.tsx'), "import { storage } from 'void/storage';");
-    }
-    writeFileSync(
-      join(root, 'routes/.well-known/status.tsx'),
-      "import { kv } from 'void/kv'; export const GET = () => <p>Status</p>;",
-    );
-
-    expect(inferProjectBindings(root)).toMatchObject({ needsKV: true, needsR2: false });
-    expect(inferProjectBindings(root, undefined, ['pages']).needsKV).toBe(false);
-  });
-
   it('infers .well-known bindings in the configured source fallback with custom scan directories', () => {
     const root = createTempRoot();
     writeFileSync(join(root, 'void.json'), JSON.stringify({ sourceDir: 'app' }));
@@ -249,37 +176,11 @@ describe('inferProjectBindings', () => {
     mkdirSync(join(root, 'routes'), { recursive: true });
     mkdirSync(join(root, 'queues'), { recursive: true });
     writeFileSync(join(root, 'queues', 'sync.dev.ts'), "import { storage } from 'void/storage';");
-    mkdirSync(join(root, 'pages'), { recursive: true });
-    writeFileSync(join(root, 'pages', 'helper.dev.server.tsx'), "import { kv } from 'void/kv';");
+    writeFileSync(join(root, 'src', 'helper.dev.ts'), "import { kv } from 'void/kv';");
 
     const result = inferProjectBindings(root, { environment: 'prod' });
     expect(result.needsR2).toBe(true);
     expect(result.needsKV).toBe(true);
-  });
-
-  it('filters Void page files and companions by environment with filterPages', () => {
-    const root = createTempRoot();
-    mkdirSync(join(root, 'pages/_lib'), { recursive: true });
-    writeFileSync(join(root, 'pages/debug.dev.tsx'), 'export default () => null;');
-    writeFileSync(
-      join(root, 'pages/debug.dev.server.ts'),
-      "import { db } from 'void/db'; export const loader = () => db.select();",
-    );
-    writeFileSync(join(root, 'pages/_lib/x.dev.ts'), "import { kv } from 'void/kv';");
-    const infer = (environment?: 'dev' | 'prod', filterPages = true) =>
-      inferProjectBindings(root, { environment, filterPages }, ['pages']);
-
-    expect(infer('dev').needsD1).toBe(true);
-    expect(infer(undefined).needsD1).toBe(true);
-    // No binding for a feature only a .dev page uses.
-    expect(infer('prod')).toMatchObject({ needsD1: false, needsKV: true });
-    // Framework apps own pages/, so their files are not filtered.
-    expect(infer('prod', false).needsD1).toBe(true);
-
-    const analyze = (environment: 'dev' | 'prod') =>
-      analyzeApplicationSync(root, { config: readConfig(root), environment }).bindings.needsD1;
-    expect(analyze('dev')).toBe(true);
-    expect(analyze('prod')).toBe(false);
   });
 
   it('detects auth from void/client import with auth specifier in src/', () => {
@@ -290,22 +191,6 @@ describe('inferProjectBindings', () => {
       import { auth } from "void/client";
       export default function App() {
         auth.signIn;
-      }
-      `,
-    );
-
-    const result = inferProjectBindings(root);
-    expect(result.needsAuth).toBe(true);
-  });
-
-  it('detects auth from framework-specific void/client subpaths in src/', () => {
-    const root = createTempRoot();
-    writeFileSync(
-      join(root, 'src', 'App.tsx'),
-      `
-      import { auth } from "void/client/react";
-      export default function App() {
-        auth.useSession();
       }
       `,
     );
@@ -418,35 +303,67 @@ describe('inferProjectBindings', () => {
     expect(result.needsAuth).toBe(false);
   });
 
-  it('detects bindings from pages/ .server.ts files', () => {
+  it('keeps unrelated hidden directories out of .well-known inference', () => {
     const root = createTempRoot();
-    mkdirSync(join(root, 'pages'), { recursive: true });
+    for (const directory of [
+      'routes/.cache',
+      'routes/.well-known/.cache',
+      'routes/nested/.well-known',
+    ]) {
+      mkdirSync(join(root, directory), { recursive: true });
+      writeFileSync(join(root, directory, 'hidden.tsx'), "import { storage } from 'void/storage';");
+    }
     writeFileSync(
-      join(root, 'pages', 'index.server.ts'),
+      join(root, 'routes/.well-known/status.tsx'),
+      "import { kv } from 'void/kv'; export const GET = () => <p>Status</p>;",
+    );
+
+    expect(inferProjectBindings(root)).toMatchObject({ needsKV: true, needsR2: false });
+  });
+
+  it('detects auth from the React void/client subpath in src/', () => {
+    const root = createTempRoot();
+    writeFileSync(
+      join(root, 'src', 'App.tsx'),
       `
-      import { db } from "void/db";
-      export function loader() {
-        return db.select().from(users);
+      import { auth } from "void/client/react";
+      export default function App() {
+        auth.useSession();
       }
       `,
     );
 
     const result = inferProjectBindings(root);
-    expect(result.needsD1).toBe(true);
+    expect(result.needsAuth).toBe(true);
   });
 
-  it('does not scan src/ twice in framework mode', () => {
+  it('externalizes Cloudflare builtins for default worker builds', () => {
     const root = createTempRoot();
-    writeFileSync(
-      join(root, 'src', 'App.tsx'),
-      `
-      import { auth } from "void/client";
-      `,
-    );
+    writeCompatConfig(root);
+    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
 
-    // When scanDirs already includes "src", it should not double-scan
-    const result = inferProjectBindings(root, undefined, ['src', 'routes']);
-    expect(result.needsAuth).toBe(true);
+    try {
+      const plugins = voidPlugin();
+      const externalPlugin = plugins.find(
+        (plugin) => plugin.name === 'void:cloudflare-builtins-external',
+      );
+      const config = getHookHandler(externalPlugin?.config) as (
+        this: object,
+        config: import('vite').UserConfig,
+        env: import('vite').ConfigEnv,
+      ) => import('vite').UserConfig | void;
+
+      expect(externalPlugin).toBeTruthy();
+      const result = config.call({} as never, {}, { command: 'build', mode: 'production' });
+      const rootExternal = result?.build?.rollupOptions?.external as Array<unknown>;
+      expect(rootExternal).toBeTruthy();
+      expect(
+        rootExternal.some((value) => value instanceof RegExp && value.test('cloudflare:workers')),
+      ).toBe(true);
+      expect(result?.environments).toBeUndefined();
+    } finally {
+      cwd.mockRestore();
+    }
   });
 });
 
@@ -456,37 +373,6 @@ describe('detectFramework', () => {
       const dir = tempDirs.pop()!;
       rmSync(dir, { recursive: true, force: true });
     }
-  });
-
-  it('detects vinext-pages when no app/ directory', () => {
-    const root = createTempRoot();
-    writeFileSync(
-      join(root, 'package.json'),
-      JSON.stringify({ dependencies: { vinext: '^0.0.5', react: '^19.0.0' } }),
-    );
-    const result = detectFramework(root);
-    expect(result).toEqual({ name: 'vinext-pages', class: 'a' });
-  });
-
-  it('detects vinext-app when app/ directory exists', () => {
-    const root = createTempRoot();
-    mkdirSync(join(root, 'app'));
-    writeFileSync(
-      join(root, 'package.json'),
-      JSON.stringify({ dependencies: { vinext: '^0.0.5', react: '^19.0.0' } }),
-    );
-    const result = detectFramework(root);
-    expect(result).toEqual({ name: 'vinext-app', class: 'a' });
-  });
-
-  it('detects vinext-pages from devDependencies', () => {
-    const root = createTempRoot();
-    writeFileSync(
-      join(root, 'package.json'),
-      JSON.stringify({ devDependencies: { vinext: '^0.0.5' } }),
-    );
-    const result = detectFramework(root);
-    expect(result).toEqual({ name: 'vinext-pages', class: 'a' });
   });
 
   it('does not create void.json during plugin construction', () => {
@@ -522,48 +408,6 @@ describe('detectFramework', () => {
       expect(readConfig(root)).toEqual({
         worker: { compatibility_date: LATEST_KNOWN_COMPAT_DATE },
       });
-    } finally {
-      cwd.mockRestore();
-    }
-  });
-
-  it.each([
-    { kind: 'default worker builds', dependencies: undefined, compat: true },
-    {
-      kind: 'class A frameworks',
-      dependencies: { '@tanstack/react-start': '^1.0.0' },
-      compat: true,
-    },
-    { kind: 'class B/C server builds', dependencies: { '@sveltejs/kit': '^2.0.0' }, compat: false },
-  ])('externalizes Cloudflare builtins for $kind', ({ dependencies, compat }) => {
-    const root = createTempRoot();
-    if (compat) {
-      writeCompatConfig(root);
-    }
-    if (dependencies) {
-      writeFileSync(join(root, 'package.json'), JSON.stringify({ dependencies }));
-    }
-    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
-
-    try {
-      const plugins = voidPlugin();
-      const externalPlugin = plugins.find(
-        (plugin) => plugin.name === 'void:cloudflare-builtins-external',
-      );
-      const config = getHookHandler(externalPlugin?.config) as (
-        this: object,
-        config: import('vite').UserConfig,
-        env: import('vite').ConfigEnv,
-      ) => import('vite').UserConfig | void;
-
-      expect(externalPlugin).toBeTruthy();
-      const result = config.call({} as never, {}, { command: 'build', mode: 'production' });
-      const rootExternal = result?.build?.rollupOptions?.external as Array<unknown>;
-      expect(rootExternal).toBeTruthy();
-      expect(
-        rootExternal.some((value) => value instanceof RegExp && value.test('cloudflare:workers')),
-      ).toBe(true);
-      expect(result?.environments).toBeUndefined();
     } finally {
       cwd.mockRestore();
     }
@@ -605,22 +449,6 @@ describe('detectFramework', () => {
           'void/durable',
         ),
       ).toThrow('void/durable is server-only');
-    } finally {
-      cwd.mockRestore();
-    }
-  });
-
-  it('does not add Cloudflare builtin externalization for node targets', () => {
-    const root = createTempRoot();
-    writeFileSync(join(root, 'void.json'), JSON.stringify({ target: 'node' }));
-
-    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
-
-    try {
-      const plugins = voidPlugin();
-      expect(plugins.some((plugin) => plugin.name === 'void:cloudflare-builtins-external')).toBe(
-        false,
-      );
     } finally {
       cwd.mockRestore();
     }
@@ -680,170 +508,6 @@ describe('detectFramework', () => {
       expect(entry).toContain(
         'export const ShoppingCartDurableObject = __voidDurableObject0.class',
       );
-    } finally {
-      cwd.mockRestore();
-    }
-  });
-
-  it('rejects void/live on non-Cloudflare targets', () => {
-    const root = createTempRoot();
-    mkdirSync(join(root, 'routes'), { recursive: true });
-    writeFileSync(join(root, 'void.json'), JSON.stringify({ target: 'node' }));
-    writeFileSync(
-      join(root, 'routes', 'live.ts'),
-      `
-      import { defineLiveStream } from "void/live";
-      export const live = defineLiveStream({ id: "app" });
-      `,
-    );
-
-    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
-
-    try {
-      expect(() => voidPlugin()).toThrow('void/live requires target: "cloudflare"');
-    } finally {
-      cwd.mockRestore();
-    }
-  });
-
-  // `compileNodeApp` never imports `__emailHandler`, so on `node`/`bun`/`deno`
-  // an `email/` directory compiled cleanly into a bundle that could not
-  // receive mail. Same shape as the live / sandbox / durable-objects guards
-  // in the node-target branch.
-  for (const target of ['node', 'bun', 'deno'] as const) {
-    it(`rejects an email/ handler directory with target: "${target}"`, () => {
-      const root = createTempRoot();
-      mkdirSync(join(root, 'routes'), { recursive: true });
-      mkdirSync(join(root, 'email'), { recursive: true });
-      writeFileSync(join(root, 'void.json'), JSON.stringify({ target }));
-      writeFileSync(
-        join(root, 'routes', 'index.ts'),
-        'export const GET = () => new Response("ok");',
-      );
-      writeFileSync(
-        join(root, 'email', '_default.ts'),
-        `
-        import { defineEmail } from "void/email";
-        export default defineEmail(async () => {});
-        `,
-      );
-
-      const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
-
-      try {
-        expect(() => voidPlugin()).toThrow(
-          `email: inbound email handlers (email/) require target: "cloudflare". They are not available with target: '${target}'.`,
-        );
-      } finally {
-        cwd.mockRestore();
-      }
-    });
-  }
-
-  it('still builds a non-Cloudflare target without an email/ directory', () => {
-    const root = createTempRoot();
-    mkdirSync(join(root, 'routes'), { recursive: true });
-    writeFileSync(join(root, 'void.json'), JSON.stringify({ target: 'node' }));
-    writeFileSync(join(root, 'routes', 'index.ts'), 'export const GET = () => new Response("ok");');
-
-    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
-
-    try {
-      expect(() => voidPlugin()).not.toThrow();
-    } finally {
-      cwd.mockRestore();
-    }
-  });
-
-  it('rejects typed Durable Object modules in framework adapter mode', () => {
-    const root = createTempRoot();
-    mkdirSync(join(root, 'durable-objects'), { recursive: true });
-    writeFileSync(
-      join(root, 'package.json'),
-      JSON.stringify({ dependencies: { '@react-router/dev': '^7.0.0' } }),
-    );
-    writeFileSync(
-      join(root, 'durable-objects', 'counter.ts'),
-      'export default { class: class Counter {}, __bind() {} }',
-    );
-    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
-
-    try {
-      expect(() => voidPlugin()).toThrow(
-        'durable-objects/ is currently supported in Void apps only',
-      );
-    } finally {
-      cwd.mockRestore();
-    }
-  });
-
-  it('rejects an email/ handler directory in framework adapter mode', () => {
-    const root = createTempRoot();
-    writeFileSync(
-      join(root, 'package.json'),
-      JSON.stringify({ dependencies: { '@react-router/dev': '^7.0.0' } }),
-    );
-    mkdirSync(join(root, 'email'), { recursive: true });
-    writeFileSync(
-      join(root, 'email', '_default.ts'),
-      `
-      import { defineEmail } from "void/email";
-      export default defineEmail(async () => {});
-      `,
-    );
-
-    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
-
-    try {
-      expect(() => voidPlugin()).toThrow(
-        'email: inbound email handlers are only supported in Void apps',
-      );
-    } finally {
-      cwd.mockRestore();
-    }
-  });
-
-  it('allows sendEmail without an email/ directory in framework adapter mode', () => {
-    const root = createTempRoot();
-    writeFileSync(
-      join(root, 'package.json'),
-      JSON.stringify({ dependencies: { '@react-router/dev': '^7.0.0' } }),
-    );
-    writeFileSync(
-      join(root, 'src', 'mailer.ts'),
-      `
-      import { sendEmail } from "void/email";
-      export const send = () => sendEmail({ to: "a@b.dev", subject: "x", text: "y" });
-      `,
-    );
-
-    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
-
-    try {
-      expect(() => voidPlugin()).not.toThrow();
-    } finally {
-      cwd.mockRestore();
-    }
-  });
-
-  it('rejects void/live in framework adapter mode', () => {
-    const root = createTempRoot();
-    writeFileSync(
-      join(root, 'package.json'),
-      JSON.stringify({ dependencies: { '@react-router/dev': '^7.0.0' } }),
-    );
-    writeFileSync(
-      join(root, 'src', 'live.ts'),
-      `
-      import { defineLiveStream } from "void/live";
-      export const live = defineLiveStream({ id: "app" });
-      `,
-    );
-
-    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
-
-    try {
-      expect(() => voidPlugin()).toThrow('void/live is currently supported in Void apps only');
     } finally {
       cwd.mockRestore();
     }

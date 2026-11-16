@@ -7,21 +7,13 @@
  * them. Each file gets its own negative `run_worker_first` rule, because a
  * request matching a negative rule never reaches the Worker, even when the
  * file is missing. Misses and other paths in the folder keep the Worker's
- * not-found, SPA and page handling.
+ * not-found and SPA handling.
  * `routing.alwaysUseHttps` alone does not block this: hashed files are only
  * linked from pages the Worker has already moved to HTTPS.
  *
  * The asset layer does not know which files are fingerprinted, so a generated
  * `_headers` file gives every bypassed chunk the immutable policy the Worker
  * would have set.
- *
- * An `output: "static"` Pages build goes further when nothing site-wide must
- * run first (auth, live, `routing.alwaysUseHttps`): every file answers first,
- * and only paths with server code reach the Worker first. A page without a
- * server module prerenders the HTML the Worker would render, so its file can
- * answer. Hashed files keep their
- * immutable policy from the generated `_headers`, or stay on the Worker when
- * it cannot list them.
  */
 
 import { VOID_INTERNAL_WORKER_FIRST } from './asset-routing.ts';
@@ -32,8 +24,6 @@ export const GENERATED_ASSET_HEADERS_MARKER =
 const MAX_RUN_WORKER_FIRST_RULES = 100;
 /** Cloudflare limits each `run_worker_first` rule to 100 characters. */
 const MAX_RUN_WORKER_FIRST_RULE_LENGTH = 100;
-/** Cloudflare accepts at most 100 `_headers` rules. */
-const MAX_HEADERS_RULES = 100;
 
 const IMMUTABLE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 const AUTH_PATTERNS = ['/api/auth/*'];
@@ -47,25 +37,17 @@ export type AssetWorkerBypassFacts = {
   base: string;
   hasMiddleware: boolean;
   authEnabled: boolean;
-  liveEnabled: boolean;
-  /** Keeps pages on the Worker, which a direct HTTP request for a page needs. */
-  alwaysUseHttps: boolean;
   headerRuleCount: number;
   redirectRuleCount: number;
   fallbackRuleCount: number;
   /** Whether `_headers` or `_redirects` exists in Vite's `publicDir`. */
   publicEdgeFiles: boolean;
-  /** Every route, page, WebSocket, prerender and revalidate pattern. */
+  /** Every route and WebSocket pattern. */
   patterns: Array<string>;
   /** Vite's `build.assetsDir`. */
   assetsDir: string;
   /** Fingerprinted files the manifest marks immutable, relative to the client root. */
   immutableFiles: Array<string>;
-  /**
-   * For an `output: "static"` Pages build, the patterns with server code:
-   * routes, WebSockets, and pages that have a server module or parameters.
-   */
-  serverPatterns?: Array<string>;
 };
 
 export type AssetWorkerBypass = {
@@ -183,10 +165,7 @@ export function resolveAssetWorkerBypass(facts: AssetWorkerBypassFacts): AssetWo
       : [...new Set(facts.immutableFiles)]
           .filter((file) => file.startsWith(assetsDir + '/'))
           .sort();
-  return (
-    resolveStaticPageBypass(facts, assetsDir, files) ??
-    resolveHashedFileBypass(facts, assetsDir, files)
-  );
+  return resolveHashedFileBypass(facts, assetsDir, files);
 }
 
 /** One negative rule per hashed file, so only those files skip the Worker. */
@@ -216,88 +195,6 @@ function resolveHashedFileBypass(
     return null;
   }
   return { runWorkerFirst: rules, headers: renderGeneratedAssetHeaders(files) };
-}
-
-/**
- * Void's own paths, then every server pattern widened to the static prefix
- * before its first parameter: matching too much only keeps the Worker in
- * front. A request that matches no file still reaches the Worker, since these
- * builds use `not_found_handling: 'none'`. Hashed files get the generated
- * `_headers`, or stay on the Worker when it cannot list them all. Null when
- * site-wide behavior must run first or a pattern covers every path.
- */
-function resolveStaticPageBypass(
-  facts: AssetWorkerBypassFacts,
-  assetsDir: string | null,
-  files: Array<string>,
-): AssetWorkerBypass | null {
-  if (!facts.serverPatterns || facts.authEnabled || facts.liveEnabled || facts.alwaysUseHttps) {
-    return null;
-  }
-  const rules = new Set<string>();
-  for (const pattern of facts.serverPatterns) {
-    const patternRules = workerPathRules(pattern);
-    if (patternRules === null) {
-      return null;
-    }
-    for (const rule of patternRules) {
-      rules.add(rule);
-    }
-  }
-  let headers: string | null = null;
-  if (files.length > MAX_HEADERS_RULES || !files.every(isPlainPath)) {
-    if (!assetsDir || !isPlainPath(assetsDir)) {
-      return null;
-    }
-    rules.add('/' + assetsDir + '/*');
-  } else if (files.length > 0) {
-    headers = renderGeneratedAssetHeaders(files);
-  }
-  const runWorkerFirst = withoutRedundantRules([
-    ...VOID_INTERNAL_WORKER_FIRST,
-    ...[...rules].sort(),
-  ]);
-  return fitsRunWorkerFirstLimits(runWorkerFirst) ? { runWorkerFirst, headers } : null;
-}
-
-/**
- * The rules covering every path `pattern` matches; null when that is every
- * path. A trailing `*` also matches the path before it: `/api/*` matches `/api`.
- */
-function workerPathRules(pattern: string): Array<string> | null {
-  if (pattern === '/') {
-    return ['/'];
-  }
-  const segments = (pattern.startsWith('/') ? pattern.slice(1) : pattern).split('/');
-  const dynamic = segments.findIndex(
-    (segment) => segment.startsWith(':') || segment.includes('*') || segment.includes('{'),
-  );
-  if (dynamic === 0) {
-    return null;
-  }
-  const prefix = (dynamic === -1 ? segments : segments.slice(0, dynamic)).join('/');
-  if (!isPlainPath(prefix)) {
-    return null;
-  }
-  if (dynamic === -1) {
-    return ['/' + prefix];
-  }
-  const rule = '/' + prefix + '/*';
-  return dynamic === segments.length - 1 && segments[dynamic] === '*'
-    ? ['/' + prefix, rule]
-    : [rule];
-}
-
-/**
- * Leaves out each rule that a `/prefix/*` rule in the list already matches.
- * Cloudflare rejects a list with such a rule ("rule '/blog/*' makes it
- * redundant"), and the wider rule already sends those paths to the Worker.
- */
-function withoutRedundantRules(rules: Array<string>): Array<string> {
-  const prefixes = rules.filter((rule) => rule.endsWith('/*')).map((rule) => rule.slice(0, -1));
-  return rules.filter(
-    (rule) => !prefixes.some((prefix) => rule !== prefix + '*' && rule.startsWith(prefix)),
-  );
 }
 
 function fitsRunWorkerFirstLimits(rules: Array<string>): boolean {

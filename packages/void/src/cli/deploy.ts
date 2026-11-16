@@ -3,7 +3,6 @@ import { confirm, isCancel } from '@voidzero-dev/vite-plus-prompts';
 import { join } from 'pathslash';
 import { stashCloudflareDeployPointer } from '../cloudflare-config.ts';
 import { readConfig } from '../config.ts';
-import { detectFramework } from '../plugin-inference.ts';
 import { buildEnv } from '../shared/untrusted-env.ts';
 import { getApiUrl, getToken, getTokenSource } from './auth.ts';
 import { isExpiredTokenError, PlatformClient } from './client.ts';
@@ -35,7 +34,7 @@ import { buildDeployLogSummary } from './log-summary.ts';
 import { promptForLoginToken } from './login.ts';
 import { migrateLegacyVoidConfig } from './migrate.ts';
 import { listPlatformConnections } from './platform-registry.ts';
-import { detectPreset, FRAMEWORK_PRESETS } from './preset.ts';
+import { detectPreset } from './preset.ts';
 import {
   readDeploymentPlatform,
   readProjectConfig,
@@ -302,19 +301,13 @@ async function runManagedDeploy(
 
       // Resolve the app type: void.config.ts > CLI flags > auto-detection.
       const voidConfig = readConfig(root);
-      cliLog.info('config_resolved', {
-        target: voidConfig.target,
-        appType: voidConfig.inference?.appType,
-        output: voidConfig.output,
-      });
+      cliLog.info('config_resolved', { appType: voidConfig.inference?.appType });
 
       let preset = resolveStaticDeployPreset(root, voidConfig, {
         dir: options?.dir,
         spa: options?.spa,
       });
 
-      // Check for known framework after static overrides.
-      const detected = detectFramework(root);
       // Detect git commit before build (only when not skipping build). Same scrub as
       // `getGitCommit`: these git children can reach repo-configured hooks/credential helpers.
       const gitMetadata = collectGitDeployMetadata(
@@ -323,29 +316,8 @@ async function runManagedDeploy(
         process.env,
         buildEnv(),
       );
-      if (!preset && detected) {
-        cliLog.info('framework_detected', {
-          name: detected.name,
-          class: detected.class,
-        });
-        const fwPreset = FRAMEWORK_PRESETS[detected.name];
-        // Class A: preset is optional (e.g. vinext probes at runtime)
-        await runFullDeploy(
-          root,
-          config,
-          client,
-          voidConfig,
-          fwPreset,
-          options?.skipBuild,
-          gitMetadata,
-          detected,
-          cliLog,
-          options.skipMigrations,
-        );
-        return;
-      }
       if (!preset && !voidConfig.inference?.appType) {
-        // No configured app type and no detected framework — detect from project structure.
+        // No configured app type — detect from project structure.
         // `strictBackend` only here: this is the branch where the user has said
         // NOTHING about the app type, so an SSG project that also has a backend is
         // genuinely ambiguous and must be refused rather than silently deployed as
@@ -354,7 +326,7 @@ async function runManagedDeploy(
         // and keep working without the guard.
         preset = detectPreset(root, { spa: options?.spa, strictBackend: true });
       }
-      // appType === "void" or "framework" without a detected framework → full deploy.
+      // appType === "void" → full deploy.
 
       if (preset) {
         preset = {
@@ -372,10 +344,6 @@ async function runManagedDeploy(
           preset,
           options?.skipBuild,
           gitMetadata,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
           voidConfig.routing,
           cliLog,
         );
@@ -385,10 +353,8 @@ async function runManagedDeploy(
           config,
           client,
           voidConfig,
-          undefined,
           options?.skipBuild,
           gitMetadata,
-          undefined,
           cliLog,
           options.skipMigrations,
         );

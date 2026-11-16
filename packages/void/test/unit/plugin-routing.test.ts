@@ -282,40 +282,6 @@ describe('routingPlugin', () => {
     expect(readTsconfig().compilerOptions?.paths?.['void/db']).toEqual(['./db.d.ts']);
   });
 
-  it('bakes explicit page opt-outs into the native ISR policy', async () => {
-    const root = createTempRoot();
-    mkdirSync(join(root, 'pages'), { recursive: true });
-    writeFileSync(join(root, 'pages', 'private.tsx'), 'export default function Page() {}\n');
-    writeFileSync(join(root, 'pages', 'private.server.ts'), 'export const revalidate = 0;\n');
-    writeFileSync(
-      join(root, 'void.json'),
-      JSON.stringify({ routing: { revalidate: { '/private': 60 } } }),
-    );
-
-    const savedProjectId = process.env.VOID_DEPLOY_PROJECT_ID;
-    delete process.env.VOID_DEPLOY_PROJECT_ID;
-    try {
-      const plugin = createRoutingPlugin(root, { isAuthEnabled: () => false });
-      const load = getHookHandler(plugin.load) as (id: string) => Promise<string | undefined>;
-
-      runConfig(plugin, { command: 'build', mode: 'production' });
-      resolveConfig(plugin, 'build');
-      await runBuildStart(plugin);
-      const routes = await load('virtual:void-routes');
-
-      expect(routes).toContain(
-        'export const __VOID_ISR_PAGES = [{"pattern":"/private","revalidate":0}];',
-      );
-      expect(routes).toContain('export const __VOID_ISR_PATH_REVALIDATE = {"/private":60};');
-    } finally {
-      if (savedProjectId === undefined) {
-        delete process.env.VOID_DEPLOY_PROJECT_ID;
-      } else {
-        process.env.VOID_DEPLOY_PROJECT_ID = savedProjectId;
-      }
-    }
-  });
-
   it('resolves explicit framework client subpaths to framework auth clients', async () => {
     const root = createBareTempRoot();
     const plugin = createRoutingPlugin(root, { isAuthEnabled: () => false });
@@ -416,87 +382,6 @@ describe('routingPlugin', () => {
     },
   );
 
-  it('invalidates page renderer modules before route table reloads for new pages', async () => {
-    const root = createTempRoot();
-    mkdirSync(join(root, 'pages'), { recursive: true });
-    writeFileSync(
-      join(root, 'pages', 'index.tsx'),
-      'export default function Index() { return null; }',
-    );
-
-    const plugin = createRoutingPlugin(root, { isAuthEnabled: () => false });
-    const { emit, invalidated } = await startDevServer(plugin, PAGE_MODULE_IDS);
-
-    writeFileSync(
-      join(root, 'pages', 'test.tsx'),
-      'export default function Test() { return null; }',
-    );
-    await emit('add', join(root, 'pages', 'test.tsx'));
-
-    expect(invalidated).toEqual(PAGE_MODULE_IDS);
-  });
-
-  it.each([
-    ['logs it', [], 1],
-    ['leaves the log to the adapter pages plugin', [{ name: 'void-react:pages' }], 0],
-  ])(
-    'keeps the last route table when a page added in dev clashes, and %s',
-    async (_, plugins, logs) => {
-      const root = createTempRoot();
-      mkdirSync(join(root, 'pages', 'about'), { recursive: true });
-      const flatPath = join(root, 'pages', 'about.tsx');
-      writeFileSync(flatPath, 'export default function About() { return null; }');
-
-      const plugin = createRoutingPlugin(root, { isAuthEnabled: () => false });
-      resolveConfig(plugin, 'serve', plugins);
-      const { emit, invalidated, logError } = await startDevServer(plugin, PAGE_MODULE_IDS);
-
-      // Moving about.tsx to about/index.tsx adds the new file before the old one goes.
-      const indexPath = join(root, 'pages', 'about', 'index.tsx');
-      writeFileSync(indexPath, 'export default function About() { return null; }');
-      await emit('add', indexPath);
-
-      expect(logError).toHaveBeenCalledTimes(logs);
-      if (logs) {
-        expect(logError.mock.calls[0][0]).toContain(
-          'pages: Multiple page files resolve to the same route:',
-        );
-      }
-      expect(invalidated).toEqual([]);
-
-      rmSync(flatPath);
-      await emit('unlink', flatPath);
-
-      expect(logError).toHaveBeenCalledTimes(logs);
-      expect(invalidated).toEqual(PAGE_MODULE_IDS);
-    },
-  );
-
-  it('ignores a .prod page added next to its .dev page in dev', async () => {
-    const root = createTempRoot();
-    mkdirSync(join(root, 'pages'), { recursive: true });
-    const action = 'export const action = () => ({});';
-    writeFileSync(join(root, 'pages', 'home.dev.tsx'), 'export default () => null;');
-    writeFileSync(join(root, 'pages', 'home.dev.server.ts'), action);
-
-    const plugin = createRoutingPlugin(root, { isAuthEnabled: () => false });
-    runConfig(plugin, { command: 'serve', mode: 'development' });
-    resolveConfig(plugin, 'serve');
-    await runBuildStart(plugin);
-    const { emit, logError } = await startDevServer(plugin, PAGE_MODULE_IDS);
-    const typesPath = join(root, '.void', 'routes.d.ts');
-    const before = readFileSync(typesPath, 'utf8');
-    expect(before).toContain('pages/home.dev.server.ts');
-
-    writeFileSync(join(root, 'pages', 'home.prod.server.ts'), action);
-    const prodPath = join(root, 'pages', 'home.prod.tsx');
-    writeFileSync(prodPath, 'export default () => null;');
-    await emit('add', prodPath);
-
-    expect(logError).not.toHaveBeenCalled();
-    expect(readFileSync(typesPath, 'utf8')).toBe(before);
-  });
-
   it('keeps page and route modules for saves that change no scanned facts', async () => {
     const root = createTempRoot();
     mkdirSync(join(root, 'pages'), { recursive: true });
@@ -526,14 +411,7 @@ describe('routingPlugin', () => {
 
   it('regenerates the route table when a save changes scanned facts', async () => {
     const root = createTempRoot();
-    mkdirSync(join(root, 'pages'), { recursive: true });
-    const serverPath = join(root, 'pages', 'index.server.ts');
     const routePath = join(root, 'routes', 'health.ts');
-    writeFileSync(
-      join(root, 'pages', 'index.tsx'),
-      'export default function Index() { return null; }',
-    );
-    writeFileSync(serverPath, 'export const loader = () => ({});');
     writeFileSync(routePath, 'export const GET = () => new Response("ok");');
 
     const plugin = createRoutingPlugin(root, { isAuthEnabled: () => false });
@@ -542,20 +420,12 @@ describe('routingPlugin', () => {
     const { emit, invalidated } = await startDevServer(plugin, PAGE_MODULE_IDS);
 
     writeFileSync(
-      serverPath,
-      'export const loader = () => ({});\nexport const action = () => ({});',
-    );
-    await emit('change', serverPath);
-
-    expect(invalidated).toEqual(['virtual:void-routes']);
-
-    writeFileSync(
       routePath,
       'export const GET = () => new Response("ok");\nexport const POST = () => new Response("ok");',
     );
     await emit('change', routePath);
 
-    expect(invalidated).toEqual(['virtual:void-routes', 'virtual:void-routes']);
+    expect(invalidated).toEqual(['virtual:void-routes']);
   });
 
   it.each([
@@ -805,39 +675,31 @@ describe('routingPlugin', () => {
   });
 
   it.each([
-    { target: undefined, auth: false, files: ['routes.d.ts', 'queues.d.ts', 'entry.ts'] },
-    {
-      target: 'node' as const,
-      auth: false,
-      files: ['routes.d.ts', 'queues.d.ts', 'app.ts', 'index.ts'],
-    },
-    { target: undefined, auth: true, files: ['better-auth-db.ts', 'better-auth-schema.ts'] },
-  ])(
-    'repairs deleted generated files for target $target with auth $auth',
-    async ({ target, auth, files }) => {
-      const root = createTempRoot();
-      const routePath = join(root, 'routes', 'health.ts');
-      writeFileSync(routePath, 'export const GET = () => new Response();');
-      const plugin = createRoutingPlugin(root, { target, isAuthEnabled: () => auth });
-      resolveConfig(plugin, 'serve');
-      await runBuildStart(plugin);
-      const { emit, invalidated } = await startDevServer(plugin, ['virtual:void-routes']);
-      const outputs = files.map((file) => {
-        const path = join(root, '.void', file);
-        const content = readFileSync(path, 'utf8');
-        rmSync(path);
-        return { path, content };
-      });
-      writeFileSync(routePath, 'export const GET = () => new Response("updated");');
-      await emit('change', routePath);
-      for (const { path, content } of outputs) {
-        expect(readFileSync(path, 'utf8')).toBe(content);
-      }
-      expect(invalidated).toEqual(['virtual:void-routes']);
-      await emit('change', routePath);
-      expect(invalidated).toEqual(['virtual:void-routes']);
-    },
-  );
+    { auth: false, files: ['routes.d.ts', 'queues.d.ts', 'entry.ts'] },
+    { auth: true, files: ['better-auth-db.ts', 'better-auth-schema.ts'] },
+  ])('repairs deleted generated files with auth $auth', async ({ auth, files }) => {
+    const root = createTempRoot();
+    const routePath = join(root, 'routes', 'health.ts');
+    writeFileSync(routePath, 'export const GET = () => new Response();');
+    const plugin = createRoutingPlugin(root, { isAuthEnabled: () => auth });
+    resolveConfig(plugin, 'serve');
+    await runBuildStart(plugin);
+    const { emit, invalidated } = await startDevServer(plugin, ['virtual:void-routes']);
+    const outputs = files.map((file) => {
+      const path = join(root, '.void', file);
+      const content = readFileSync(path, 'utf8');
+      rmSync(path);
+      return { path, content };
+    });
+    writeFileSync(routePath, 'export const GET = () => new Response("updated");');
+    await emit('change', routePath);
+    for (const { path, content } of outputs) {
+      expect(readFileSync(path, 'utf8')).toBe(content);
+    }
+    expect(invalidated).toEqual(['virtual:void-routes']);
+    await emit('change', routePath);
+    expect(invalidated).toEqual(['virtual:void-routes']);
+  });
 
   it.each([
     { command: 'serve' as const, isPreview: false, declared: true },
@@ -1004,21 +866,6 @@ describe('routingPlugin', () => {
     expect(readFileSync(join(root, '.void', 'routes.d.ts'), 'utf-8')).toContain(
       '../src/routes/api.ts',
     );
-  });
-
-  it('invalidates sourceDir page manifest changes during dev', async () => {
-    const root = createBareTempRoot();
-    writeFileSync(join(root, 'void.json'), JSON.stringify({ sourceDir: 'src' }));
-    mkdirSync(join(root, 'src', 'pages'), { recursive: true });
-
-    const plugin = createRoutingPlugin(root, { isAuthEnabled: () => false });
-    const { emit, invalidated } = await startDevServer(plugin, PAGE_MODULE_IDS);
-
-    const pagePath = join(root, 'src', 'pages', 'test.tsx');
-    writeFileSync(pagePath, 'export default function Test() { return null; }');
-    await emit('add', pagePath);
-
-    expect(invalidated).toEqual(PAGE_MODULE_IDS);
   });
 
   // Manual trigger auth is baked into the route table: dev accepts only the
@@ -1270,13 +1117,6 @@ describe('routingPlugin native asset Worker bypass', () => {
         writeFileSync(join(root, 'routes', 'assets', '[id].ts'), 'export const GET = () => "";\n');
       },
     ],
-    [
-      'a page under the assets folder',
-      (root) => {
-        mkdirSync(join(root, 'pages', 'assets'), { recursive: true });
-        writeFileSync(join(root, 'pages', 'assets', '[id].tsx'), 'export default () => null;\n');
-      },
-    ],
     ['a redirect rule', () => {}, { routing: { redirects: { '/old': '/new' } } }],
     ['a fallback rule', () => {}, { routing: { fallbacks: { '/*': '/index.html' } } }],
     [
@@ -1286,12 +1126,6 @@ describe('routingPlugin native asset Worker bypass', () => {
         writeFileSync(join(root, 'public', '_redirects'), '');
       },
     ],
-    [
-      'a revalidate key under the assets folder',
-      () => {},
-      { routing: { revalidate: { '/assets/*': 60 } } },
-    ],
-    ['a prerender path under the assets folder', () => {}, { prerenderPaths: ['/assets/page'] }],
   ])('leaves the output unchanged for %s', async (_name, prepare, options, base) => {
     const root = createBuildRoot();
     prepare(root);
@@ -1347,61 +1181,5 @@ describe('routingPlugin native asset Worker bypass', () => {
     await runClientBuild(root);
     expect(existsSync(join(root, 'dist', 'ssr', 'wrangler.json'))).toBe(false);
     expect(existsSync(headersPath(root))).toBe(false);
-  });
-
-  describe('output: "static" pages', () => {
-    const PAGE_RULE = ['/__void', '/__void/*', '/api/hello', '/contact', '/items/*', '/products'];
-
-    function createPagesRoot(output = 'static'): string {
-      const root = createBuildRoot({ route: false });
-      const page = 'export default () => null;\n';
-      for (const [file, source] of Object.entries({
-        'void.json': JSON.stringify({ output }),
-        'pages/index.tsx': page,
-        'pages/about.tsx': page,
-        'pages/products.tsx': page,
-        'pages/products.server.ts': 'export const loader = () => ({});\n',
-        'pages/contact.tsx': page,
-        'pages/contact.server.ts': 'export const action = () => ({});\n',
-        'pages/items/[id].tsx': page,
-        'routes/api/hello.ts': 'export const GET = () => "hi";\n',
-      })) {
-        mkdirSync(dirname(join(root, file)), { recursive: true });
-        writeFileSync(join(root, file), source);
-      }
-      return root;
-    }
-
-    it('lists only paths with server code for the Worker and keeps the immutable _headers', async () => {
-      const root = createPagesRoot();
-      await runClientBuild(root);
-      expect(JSON.parse(wranglerText(root)).assets.run_worker_first).toEqual(PAGE_RULE);
-      expect(readFileSync(headersPath(root), 'utf8')).toContain(`/${CHUNK}\n`);
-    });
-
-    it.each<[string, string, Parameters<typeof runClientBuild>[1]]>([
-      ['output: "server"', 'server', {}],
-      ['routing.alwaysUseHttps', 'static', { routing: { alwaysUseHttps: true } }],
-      ['live updates', 'static', { live: { bindingName: 'LIVE', className: 'Live' } }],
-    ])('keeps every page on the Worker with %s', async (_name, output, options) => {
-      const root = createPagesRoot(output);
-      await runClientBuild(root, options);
-      expect(JSON.parse(wranglerText(root)).assets.run_worker_first).toEqual(['/**', `!/${CHUNK}`]);
-    });
-
-    it('refreshes an earlier page rule on a client-only watch rebuild', async () => {
-      const root = createPagesRoot();
-      writeEarlierRule(root, ['/__void', '/__void/*', '/old']);
-      await runClientBuild(root);
-      expect(JSON.parse(wranglerText(root)).assets.run_worker_first).toEqual(PAGE_RULE);
-    });
-
-    it('sends every path to the Worker again when a client-only rebuild is not eligible', async () => {
-      const root = createPagesRoot();
-      writeEarlierRule(root, PAGE_RULE);
-      await runClientBuild(root, { routing: { headers: { '/*': ['X-Frame-Options: DENY'] } } });
-      expect(wranglerText(root)).toBe(WRANGLER);
-      expect(existsSync(headersPath(root))).toBe(false);
-    });
   });
 });

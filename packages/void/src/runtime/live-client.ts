@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import type { LiveClientEvent, LiveControlOperation, LiveControlResponse } from './live.ts';
 import type { RequestUrl } from './route-url.ts';
 

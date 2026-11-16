@@ -7,7 +7,6 @@ import {
   hasPackageDependency,
   readPackageJson,
 } from '../shared/package-json.ts';
-import { getSsrServerEntryPath, hasSsrEntry } from '../ssr/entry.ts';
 
 /** Build output conventions for a known SSG (static site generator). */
 export type SsgPreset = {
@@ -47,65 +46,6 @@ export const SSG_PRESETS: Record<string, SsgPreset> = {
     buildCommand: 'docusaurus build',
     outputDir: 'build',
     appType: 'static',
-  },
-};
-
-/** Build output conventions for a meta-framework. */
-export type FrameworkPreset = {
-  /** How native Cloudflare deployment obtains the Wrangler artifact. */
-  cloudflareArtifact: 'vite-plugin';
-  /** Compatibility flags required by a standalone framework Worker. */
-  cloudflareCompatibilityFlags?: ReadonlyArray<string>;
-  /** Default build command (overridable via void.config.ts `build`). */
-  buildCommand: string;
-  /** Directory containing the worker entry, relative to project root. */
-  workerDir: string;
-  /** Worker entry module filename within workerDir. */
-  workerMain: string;
-  /** Directory containing static assets, relative to project root. */
-  assetsDir: string;
-  /** URL-level prefix for hashed/immutable assets (used by dispatch for cache headers + edge cache keys). */
-  hashedAssetsPrefix?: string;
-  /** Whether the worker entry needs bundling (bare imports not resolved by framework build). */
-  bundle?: boolean;
-};
-
-/**
- * Known output conventions for meta-frameworks.
- * Keyed by the framework name from `detectFramework()`.
- *
- * Class A frameworks (tanstack-start, react-router, vinext) use the project's
- * Vite-compatible build command (`vite build` or `vp build`) and have their
- * output structure determined by the framework's Vite plugin.
- */
-export const FRAMEWORK_PRESETS: Record<string, FrameworkPreset> = {
-  'tanstack-start': {
-    cloudflareArtifact: 'vite-plugin',
-    buildCommand: 'vite build',
-    workerDir: 'dist/server',
-    workerMain: 'index.js',
-    assetsDir: 'dist/client',
-  },
-  'react-router': {
-    cloudflareArtifact: 'vite-plugin',
-    buildCommand: 'vite build',
-    workerDir: 'build/server',
-    workerMain: 'index.js',
-    assetsDir: 'build/client',
-  },
-  'vinext-app': {
-    cloudflareArtifact: 'vite-plugin',
-    buildCommand: 'vite build',
-    workerDir: 'dist/server',
-    workerMain: 'index.js',
-    assetsDir: 'dist/client',
-  },
-  'vinext-pages': {
-    cloudflareArtifact: 'vite-plugin',
-    buildCommand: 'vite build',
-    workerDir: 'dist/ssr',
-    workerMain: 'index.js',
-    assetsDir: 'dist/client',
   },
 };
 
@@ -347,7 +287,7 @@ function detectViteBinary(root: string): 'vite' | 'vp' {
 
 /**
  * Every backend source in the project that requires a full worker deploy, named
- * relative to the root (e.g. `routes/`, `src/main.ssr.tsx`).
+ * relative to the root (e.g. `routes/`).
  *
  * Returned as a list rather than a boolean so a caller that has to REJECT a
  * static deploy can tell the user exactly what would have been dropped.
@@ -360,10 +300,6 @@ export function findBackendSources(root: string): Array<string> {
       found.push(`${relative(root, dir)}/`);
     }
   }
-  const ssrEntry = getSsrServerEntryPath(root, paths);
-  if (ssrEntry) {
-    found.push(relative(root, ssrEntry));
-  }
   return found;
 }
 
@@ -372,16 +308,9 @@ export function findBackendSources(root: string): Array<string> {
  */
 export function hasBackendFiles(root: string): boolean {
   const paths = readProjectPaths(root);
-  return backendDirs(paths).some((dir) => existsSync(dir)) || hasSsrEntry(root, paths);
+  return backendDirs(paths).some((dir) => existsSync(dir));
 }
 
 function backendDirs(paths: ProjectPaths): Array<string> {
-  return [
-    paths.routesDir,
-    paths.pagesDir,
-    paths.middlewareDir,
-    paths.cronsDir,
-    paths.queuesDir,
-    paths.emailDir,
-  ];
+  return [paths.routesDir, paths.middlewareDir, paths.cronsDir, paths.queuesDir, paths.emailDir];
 }

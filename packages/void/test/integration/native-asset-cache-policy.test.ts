@@ -33,8 +33,6 @@ function bypassFacts(overrides: Partial<AssetWorkerBypassFacts>): AssetWorkerByp
     base: '/',
     hasMiddleware: false,
     authEnabled: false,
-    liveEnabled: false,
-    alwaysUseHttps: false,
     headerRuleCount: 0,
     redirectRuleCount: 0,
     fallbackRuleCount: 0,
@@ -193,13 +191,11 @@ beforeAll(async () => {
     `
     import { Hono } from ${JSON.stringify(fileURLToPath(import.meta.resolve('hono')))};
     import { compress } from ${JSON.stringify(fileURLToPath(import.meta.resolve('hono/compress')))};
-    import { createPagesFallback, createSsrFallback, createAssetNotFound } from ${JSON.stringify(runtimeSource('routing-pages.ts'))};
     import { applyAssetCachePolicy, createAssetFallback } from ${JSON.stringify(runtimeSource('routing-worker.ts'))};
-    import { createRoutingRuntime } from ${JSON.stringify(runtimeSource('routing.ts'))};
-    import { createErrorRenderer } from ${JSON.stringify(runtimeSource('routing-errors.ts'))};
+    import { createAssetNotFound, createRoutingRuntime } from ${JSON.stringify(runtimeSource('routing.ts'))};
     const apps = {};
-    for (const mode of ['pages', 'ssr', 'static', 'headers', 'compressed']) {
-      const pages = mode === 'pages' || mode === 'compressed';
+    for (const mode of ['app', 'static', 'headers', 'compressed']) {
+      const routes = mode === 'app' || mode === 'compressed';
       const app = new Hono();
       const routing = createRoutingRuntime(app, {});
       app.use(routing.contextMiddleware);
@@ -210,12 +206,8 @@ beforeAll(async () => {
         ] }]));
         app.get('/health', (c) => c.text('healthy', 200, { 'cache-control': 'private, no-store' }));
       }
-      app.notFound(routing.trackNotFound(pages
-        ? createPagesFallback({ routing, assetsDir: 'static', errors: createErrorRenderer({ projectRoot: '/fixture', homeDir: '/home' }) })
-        : mode === 'ssr'
-          ? createSsrFallback({ routing, assetsDir: 'static', load: async () => ({ render: () => new Response('document') }), assets: async () => ({ css: '', body: '', preloads: '' }) })
-          : createAssetNotFound({ routing, assetsDir: 'static' })));
-      if (pages) {
+      app.notFound(routing.trackNotFound(createAssetNotFound({ routing, assetsDir: 'static' })));
+      if (routes) {
         if (mode === 'compressed') app.use(compress());
         app.use('/api/files/clone-original.json', async (c, next) => {
           await next();
@@ -223,7 +215,7 @@ beforeAll(async () => {
         });
         app.use('/api/files/pipe.json', async (c, next) => {
           await next();
-          c.res = new Response(c.res.body.pipeThrough(new TransformStream()), c.res);
+          if (c.res.body) c.res = new Response(c.res.body.pipeThrough(new TransformStream()), c.res);
         });
         app.use('/rewrite-miss', async (c, next) => {
           c.res.headers.set('X-Previous-Header', 'present');
@@ -262,9 +254,9 @@ beforeAll(async () => {
         const result = applyAssetCachePolicy(key, original, 'static');
         return Response.json({ immutable, originalContentType: original.headers.get('content-type'), resultContentType: result.headers.get('content-type'), originalPolicy: original.headers.get('cache-control'), resultPolicy: result.headers.get('cache-control'), body: [...new Uint8Array(await result.arrayBuffer())] });
       }
-      const mode = url.searchParams.get('mode') ?? 'pages';
+      const mode = url.searchParams.get('mode') ?? 'app';
       if (mode === 'native' || mode === 'compressed') {
-        return outer(request, env, await apps[mode === 'native' ? 'pages' : mode].fetch(request, env, context));
+        return outer(request, env, await apps[mode === 'native' ? 'app' : mode].fetch(request, env, context));
       }
       return mode === 'outer'
         ? outer(request, env, new Response('not found', { status: 404 }))
@@ -316,7 +308,7 @@ afterAll(async () => {
 });
 
 describe('native asset cache policy in real Workers', () => {
-  it.each(['pages', 'ssr', 'static', 'outer'])(
+  it.each(['app', 'static', 'outer'])(
     'normalizes successful native ASSETS responses in %s',
     async (mode) => {
       for (let attempt = 0; attempt < 2; attempt++) {
@@ -336,7 +328,7 @@ describe('native asset cache policy in real Workers', () => {
     },
   );
 
-  it.each(['pages', 'ssr', 'static', 'outer'])(
+  it.each(['app', 'static', 'outer'])(
     'preserves authored privacy, unhashed/HTML defaults and missing files in %s',
     async (mode) => {
       for (const [file, policy] of [
@@ -677,156 +669,32 @@ describe('native static edge Worker routing in real Workers', () => {
   });
 });
 
-describe('native output: "static" pages in real Workers', () => {
-  let hybridDirectory: string;
-  let hybrid: Miniflare | undefined;
-
-  beforeAll(async () => {
-    hybridDirectory = mkdtempSync(join(tmpdir(), 'void-native-static-pages-'));
-    const assets = join(hybridDirectory, 'client');
-    mkdirSync(join(assets, 'assets'), { recursive: true });
-    mkdirSync(join(assets, '_void', 'pages'), { recursive: true });
-    // `output: "static"` prerenders every page, including the ones with a loader.
-    for (const page of ['index', 'about', 'products', 'contact']) {
-      writeFileSync(join(assets, `${page}.html`), `<h1>${page} file</h1>`);
-    }
-    writeFileSync(join(assets, '_void/pages/about.json'), '{"component":"about"}');
-    writeFileSync(join(assets, 'vue.svg'), '<svg></svg>');
-    // The `/proxy/*` route also answers `/proxy`, so this file must not.
-    writeFileSync(join(assets, 'proxy.html'), '<h1>proxy file</h1>');
-    writeFileSync(join(assets, 'assets/app-abcdefgh.js'), 'export const value = 1;');
-    // `/items/tags/:tag` and `/api/hello` sit under the rules of `/items/:id` and
-    // `/api/:name`. Miniflare rejects a list that names them too, as Cloudflare does.
-    const serverPatterns = [
-      '/products',
-      '/contact',
-      '/items/:id',
-      '/items/tags/:tag',
-      '/api/hello',
-      '/api/:name',
-      '/proxy/*',
-    ];
-    const plan = resolveAssetWorkerBypass(
-      bypassFacts({
-        patterns: ['/', '/about', ...serverPatterns],
-        immutableFiles: ['assets/app-abcdefgh.js'],
-        serverPatterns,
-      }),
-    )!;
-    writeFileSync(join(assets, '_headers'), plan.headers!);
-    hybrid = new Miniflare(
-      convertV4MiniflareOptions({
-        compatibilityDate: '2026-07-01',
-        modules: true,
-        script: `export default { async fetch(request, env) {
-          const url = new URL(request.url);
-          const response = url.pathname === '/__void/ready'
-            ? Response.json({ ready: true })
-            : request.method !== 'GET'
-              ? new Response('action ran')
-              : url.pathname === '/products'
-                ? new Response('<h1>products live</h1>')
-                : await env.ASSETS.fetch(request);
-          const marked = new Response(response.body, response);
-          marked.headers.set('x-void-worker', '1');
-          return marked;
-        } };`,
-        assets: {
-          directory: assets,
-          binding: 'ASSETS',
-          run_worker_first: plan.runWorkerFirst,
-          routerConfig: { has_user_worker: true },
-          assetConfig: { html_handling: 'auto-trailing-slash', not_found_handling: 'none' },
-        },
-      }),
-    );
-  });
-
-  afterAll(async () => {
-    await hybrid?.dispose();
-    if (hybridDirectory) {
-      rmSync(hybridDirectory, { recursive: true, force: true });
-    }
-  });
-
-  it('serves pages without server code, public files, page data and chunks without the Worker', async () => {
-    for (const [path, body] of [
-      ['/', '<h1>index file</h1>'],
-      ['/about', '<h1>about file</h1>'],
-      ['/vue.svg', '<svg></svg>'],
-      ['/_void/pages/about.json', '{"component":"about"}'],
-    ]) {
-      const response = await hybrid!.dispatchFetch(`https://app.test${path}`);
-      expect(response.status, path).toBe(200);
-      expect(response.headers.has('x-void-worker'), path).toBe(false);
-      expect(await response.text(), path).toBe(body);
-    }
-    const chunk = await hybrid!.dispatchFetch('https://app.test/assets/app-abcdefgh.js');
-    expect(chunk.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
-    expect(chunk.headers.has('x-void-worker')).toBe(false);
-    await chunk.arrayBuffer();
-  });
-
-  it('sends pages with server code, routes, misses and /__void to the Worker', async () => {
-    const products = await hybrid!.dispatchFetch('https://app.test/products');
-    expect(products.headers.get('x-void-worker')).toBe('1');
-    expect(await products.text()).toBe('<h1>products live</h1>');
-    const action = await hybrid!.dispatchFetch('https://app.test/contact', { method: 'POST' });
-    expect(action.headers.get('x-void-worker')).toBe('1');
-    expect(await action.text()).toBe('action ran');
-    for (const path of [
-      '/items/42',
-      '/items/tags/new',
-      '/api/hello',
-      '/api/someone',
-      '/proxy',
-      '/proxy/a/b',
-      '/missing',
-      '/__void/ready',
-    ]) {
-      const response = await hybrid!.dispatchFetch(`https://app.test${path}`);
-      expect(response.headers.get('x-void-worker'), path).toBe('1');
-      await response.arrayBuffer();
-    }
-  });
-
-  it('answers a POST to a page without server code from the asset layer', async () => {
-    const response = await hybrid!.dispatchFetch('https://app.test/about', { method: 'POST' });
-    expect(response.status).toBe(405);
-    expect(response.headers.has('x-void-worker')).toBe(false);
-    await response.arrayBuffer();
-  });
+it.each(['GET', 'HEAD'])('preserves intentional 404s and serves assets for %s', async (method) => {
+  const cases = [
+    ['/api/data.json', 404, '{"error":"missing"}'],
+    ['/api/files/hidden.json', 200, '{"static":"hidden"}'],
+    ['/api/files/open.json', 200, '{"static":"api miss"}'],
+    ['/api/files/probe.json', 200, '{"static":"probe"}'],
+    ['/api/files/clone.json', 200, '{"static":"clone"}'],
+    ['/rewrite-miss', 200, 'rewrite asset'],
+    ['/files/open.json', 200, '{"static":"open"}'],
+  ] as const;
+  for (const [path, status, body] of cases) {
+    const response = await runtime!.dispatchFetch('https://app.test' + path + '?mode=native', {
+      method,
+    });
+    expect(response.status, path).toBe(status);
+    expect(await response.text(), path).toBe(method === 'GET' ? body : '');
+  }
 });
 
-it.each(['GET', 'HEAD'])(
-  'preserves intentional 404s and serves real asset misses for %s',
-  async (method) => {
-    const cases = [
-      ['/api/data.json', 404, '{"error":"missing"}'],
-      ['/api/files/hidden.json', 404, 'Hidden'],
-      ['/api/files/open.json', 200, '{"static":"api miss"}'],
-      ['/api/files/probe.json', 200, '{"static":"probe"}'],
-      ['/api/files/clone.json', 200, '{"static":"clone"}'],
-      ['/rewrite-miss', 200, 'rewrite asset'],
-      ['/files/open.json', 200, '{"static":"open"}'],
-    ] as const;
-    for (const [path, status, body] of cases) {
-      const response = await runtime!.dispatchFetch('https://app.test' + path + '?mode=native', {
-        method,
-      });
-      expect(response.status, path).toBe(status);
-      expect(await response.text(), path).toBe(method === 'GET' ? body : '');
-    }
-  },
-);
-
-it('keeps asset misses and intentional 404s distinct through compression', async () => {
+it('keeps assets and intentional 404s distinct through compression', async () => {
   const cases = [
     ['/api/files/compressed.json', 200, '{"static":"compressed"}'],
     ['/api/files/clone.json', 200, '{"static":"clone"}'],
     ['/api/files/clone-original.json', 200, '{"static":"clone original"}'],
     ['/api/files/pipe.json', 200, '{"static":"pipe"}'],
-    ['/api/files/hidden.json', 404, 'Hidden'],
+    ['/api/files/hidden.json', 200, '{"static":"hidden"}'],
     ['/api/data.json', 404, '{"error":"missing"}'],
   ] as const;
   for (const method of ['GET', 'HEAD']) {
@@ -841,9 +709,12 @@ it('keeps asset misses and intentional 404s distinct through compression', async
       expect(response.status, `${method} ${path}`).toBe(status);
       const bytes = new Uint8Array(await response.arrayBuffer());
 
-      // Intentional 404s keep the compressed body; successful fallbacks replace it with the asset.
+      // Route middleware such as compress() also applies to assets served from the Worker.
       const text =
-        method === 'GET' && status === 404
+        method === 'GET' &&
+        // Miniflare reports a Worker's own encoding as mf-content-encoding.
+        (response.headers.get('content-encoding') ??
+          response.headers.get('mf-content-encoding')) === 'gzip'
           ? gunzipSync(bytes).toString()
           : new TextDecoder().decode(bytes);
       expect(text, `${method} ${path}`).toBe(method === 'GET' ? body : '');

@@ -48,7 +48,6 @@ export const projectSubcommands: Array<SubcommandDef> = [
     arg: '[name]',
     description: 'Delete a project (omit name to delete linked project)',
   },
-  { name: 'purge-cache', description: 'Purge all cached pages (Void platform)' },
 ];
 
 export type ProjectArgs =
@@ -120,8 +119,7 @@ export type ProjectArgs =
   | { subcommand: 'requests'; status: string; range: string }
   | { subcommand: 'rollback'; deployId: string; platform?: 'cloudflare' }
   | { subcommand: 'cancel'; deployId: string }
-  | { subcommand: 'delete'; name: string; force: boolean }
-  | { subcommand: 'purge-cache'; projectSlug: string };
+  | { subcommand: 'delete'; name: string; force: boolean };
 
 export function parseProjectArgs(args: Array<string>): ProjectArgs {
   const [subcommand, ...rest] = args;
@@ -316,20 +314,8 @@ export function parseProjectArgs(args: Array<string>): ProjectArgs {
     return { subcommand, name, force };
   }
 
-  if (subcommand === 'purge-cache') {
-    let projectSlug = '';
-    for (let i = 0; i < rest.length; i++) {
-      if (rest[i] === '--project' && rest[i + 1]) {
-        projectSlug = rest[++i];
-      } else {
-        throw new Error(`project: Unexpected argument '${rest[i]}'.`);
-      }
-    }
-    return { subcommand, projectSlug };
-  }
-
   throw new Error(
-    'project: Usage: void project <status|link|list|team|token|zero-trust|logs|requests|rollback|cancel|delete|purge-cache>.',
+    'project: Usage: void project <status|link|list|team|token|zero-trust|logs|requests|rollback|cancel|delete>.',
   );
 }
 

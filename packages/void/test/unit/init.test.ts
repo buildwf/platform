@@ -98,11 +98,10 @@ describe('init Git arguments', () => {
     try {
       mockSelect
         .mockResolvedValueOnce('vite')
-        .mockResolvedValueOnce('react')
-        .mockResolvedValueOnce('static')
+        .mockResolvedValueOnce('spa')
         .mockResolvedValueOnce('none');
       await runInitCommand(root, parseInitArgs([flag]));
-      expect(existsSync(join(root, 'pages', 'index.tsx'))).toBe(true);
+      expect(existsSync(join(root, 'src', 'App.tsx'))).toBe(true);
       expect(existsSync(join(root, '.gitignore'))).toBe(true);
       const gitCalls = mockSpawnSync.mock.calls.filter(([command]) => command === 'git');
       expect(gitCalls).toHaveLength(flag === '--git' ? 1 : 0);
@@ -142,11 +141,11 @@ describe('init scaffold arguments', () => {
         'vite',
         '--framework=react',
         '--starter',
-        'static',
+        'spa',
         '--deploy',
         'none',
       ]),
-    ).toMatchObject({ toolchain: 'vite', framework: 'react', starter: 'static', deploy: 'none' });
+    ).toMatchObject({ toolchain: 'vite', framework: 'react', starter: 'spa', deploy: 'none' });
     expect(parseInitArgs([])).toMatchObject({
       toolchain: undefined,
       framework: undefined,
@@ -170,13 +169,13 @@ describe('init scaffold arguments', () => {
           '--framework',
           'react',
           '--starter',
-          'static',
+          'spa',
           '--deploy',
           'none',
         ]),
       );
       expect(mockSelect).not.toHaveBeenCalled();
-      expect(existsSync(join(root, 'pages', 'index.tsx'))).toBe(true);
+      expect(existsSync(join(root, 'src', 'App.tsx'))).toBe(true);
       expect(readDeploymentPlatform(root)).toBe('none');
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -188,7 +187,7 @@ describe('init scaffold arguments', () => {
     try {
       Object.defineProperty(process.stdin, 'isTTY', { configurable: true, get: () => false });
       await expect(runInitCommand(root, parseInitArgs(['--toolchain', 'vite']))).rejects.toThrow(
-        'init: Pass --framework (react) when running without an interactive terminal.',
+        'init: Pass --starter (sqlite, postgresql, mysql, spa) when running without an interactive terminal.',
       );
       expect(mockSelect).not.toHaveBeenCalled();
       expect(readdirSync(root)).toEqual([]);
@@ -199,7 +198,7 @@ describe('init scaffold arguments', () => {
 
   it('keeps a missing deployment choice retryable without a terminal', async () => {
     const root = mkdtempSync(join(tmpdir(), 'void-init-flags-retry-'));
-    const flags = ['--toolchain', 'vite', '--framework', 'react', '--starter', 'static'];
+    const flags = ['--toolchain', 'vite', '--framework', 'react', '--starter', 'spa'];
     try {
       Object.defineProperty(process.stdin, 'isTTY', { configurable: true, get: () => false });
       await expect(runInitCommand(root, parseInitArgs(flags))).rejects.toThrow(
@@ -211,7 +210,7 @@ describe('init scaffold arguments', () => {
 
       await runInitCommand(root, parseInitArgs([...flags, '--deploy', 'none']));
       expect(mockSelect).not.toHaveBeenCalled();
-      expect(existsSync(join(root, 'pages', 'index.tsx'))).toBe(true);
+      expect(existsSync(join(root, 'src', 'App.tsx'))).toBe(true);
       expect(readDeploymentPlatform(root)).toBe('none');
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -502,7 +501,7 @@ function writeInstalledVoid(dir: string): void {
   );
 }
 
-/** An existing Vite app, so init offers the demo instead of the Pages starter. */
+/** An existing Vite app, so init offers the demo instead of the starter. */
 function writeExistingViteApp(
   root: string,
   options: { void?: string; packageManager?: string } = {},
@@ -1208,7 +1207,7 @@ describe('isScaffoldableEmptyProject', () => {
     });
   });
 
-  it('returns true when only void and a single Pages adapter are installed', () => {
+  it('returns true when only void and the React plugin are installed', () => {
     withTempDir((root) => {
       writeFileSync(
         join(root, 'package.json'),
@@ -1217,7 +1216,7 @@ describe('isScaffoldableEmptyProject', () => {
             name: 'my-app',
             devDependencies: {
               void: '^0.2.3',
-              '@void/react': '^0.2.3',
+              '@vitejs/plugin-react': '^6.3.0',
             },
           },
           null,
@@ -1275,7 +1274,7 @@ describe('isScaffoldableEmptyProject', () => {
             },
             devDependencies: {
               void: '^0.2.3',
-              '@void/react': '^0.2.3',
+              '@vitejs/plugin-react': '^6.3.0',
               vite: '^8.0.10',
               'vite-plus': '^0.1.21',
               typescript: '^7.0.2',
@@ -1308,10 +1307,7 @@ describe('isScaffoldableEmptyProject', () => {
           2,
         ) + '\n',
       );
-      mockSelect
-        .mockResolvedValueOnce('vite')
-        .mockResolvedValueOnce('react')
-        .mockResolvedValueOnce('static');
+      mockSelect.mockResolvedValueOnce('vite').mockResolvedValueOnce('spa');
       mockConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
 
       await runInitCommand(root);
@@ -1358,13 +1354,10 @@ describe('isScaffoldableEmptyProject', () => {
     });
   });
 
-  it('scaffolds a React Pages starter with D1 in an empty directory', async () => {
+  it('scaffolds a React SPA starter with D1 in an empty directory', async () => {
     const root = mkdtempSync(join(tmpdir(), 'void-init-'));
     try {
-      mockSelect
-        .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
-        .mockResolvedValueOnce('sqlite');
+      mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('sqlite');
       mockConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
 
       await runInitCommand(root);
@@ -1377,35 +1370,31 @@ describe('isScaffoldableEmptyProject', () => {
       expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
       expect(pkg.devDependencies.void).toBeDefined();
       expect(pkg.devDependencies.typescript).toBeDefined();
-      expect(pkg.devDependencies['@void/react']).toBeDefined();
+      expect(pkg.devDependencies['@vitejs/plugin-react']).toBeDefined();
       expect(pkg.devDependencies['@types/react']).toBeDefined();
       expect(pkg.devDependencies['@types/react-dom']).toBeDefined();
-      expect(pkg.devDependencies['oxc-transform-react']).toBeDefined();
       expect(pkg.scripts.dev).toBe('vp dev');
       expect(pkg.scripts.build).toBe('vp build');
       expect(pkg.scripts.preview).toBe('vp preview');
       expect(pkg.scripts.postinstall).toBe('void prepare');
 
       const reactViteConfig = readFileSync(join(root, 'vite.config.ts'), 'utf-8');
-      expect(reactViteConfig).toContain('from "@void/react/plugin"');
-      expect(reactViteConfig).toContain('voidReact({ react: { compiler: true } })');
-      const page = readFileSync(join(root, 'pages', 'index.tsx'), 'utf-8');
+      expect(reactViteConfig).toContain('from "@vitejs/plugin-react"');
+      expect(reactViteConfig).toContain('plugins: [react(), voidPlugin()]');
+      expect(readFileSync(join(root, 'index.html'), 'utf-8')).toContain('src="/src/main.tsx"');
+      expect(readFileSync(join(root, 'src', 'main.tsx'), 'utf-8')).toContain(
+        'import "./style.css"',
+      );
+      const page = readFileSync(join(root, 'src', 'App.tsx'), 'utf-8');
       expect(page).toContain('Welcome to Void');
-      expect(page).toContain('The list below is loaded from your database in');
+      expect(page).toContain('The list below is loaded from');
       expect(page).toContain('href="/api/hello"');
-      expect(page).toContain('void db seed');
-      expect(page).not.toContain('no database or server code yet');
-      expect(page).not.toContain('Void +');
       expect(page).toContain('src="/react.svg"');
-      expect(page).toContain('import "./style.css"');
-      expect(page).toContain('messages.map');
-      expect(page).toContain('useForm');
-      expect(page).toContain('<Form form={form}');
-      expect(page).toContain('No messages yet.');
-      expect(readFileSync(join(root, 'pages', 'style.css'), 'utf-8')).toContain(
+      expect(page).toContain('fetch("/api/messages")');
+      expect(readFileSync(join(root, 'src', 'style.css'), 'utf-8')).toContain(
         'prefers-color-scheme: dark',
       );
-      expect(readFileSync(join(root, 'pages', 'vite-env.d.ts'), 'utf-8')).toContain(
+      expect(readFileSync(join(root, 'src', 'vite-env.d.ts'), 'utf-8')).toContain(
         'reference types="vite/client"',
       );
       expect(readFileSync(join(root, 'public', 'void.svg'), 'utf-8')).toContain('<svg');
@@ -1415,7 +1404,7 @@ describe('isScaffoldableEmptyProject', () => {
       expect(readFileSync(join(root, 'public', 'icons.svg'), 'utf-8')).toContain(
         'id="documentation-icon"',
       );
-      expect(readFileSync(join(root, 'pages', 'index.server.ts'), 'utf-8')).toContain(
+      expect(readFileSync(join(root, 'routes', 'api', 'messages.ts'), 'utf-8')).toContain(
         'import { messages } from "@schema";',
       );
       expect(readFileSync(join(root, 'routes', 'api', 'hello.ts'), 'utf-8')).toContain(
@@ -1436,8 +1425,6 @@ describe('isScaffoldableEmptyProject', () => {
       expect(() => readFileSync(join(root, 'routes', 'api', 'hello.get.ts'), 'utf-8')).toThrow(
         /ENOENT/,
       );
-      expect(() => readFileSync(join(root, 'index.html'), 'utf-8')).toThrow(/ENOENT/);
-      expect(() => readFileSync(join(root, 'src', 'main.ts'), 'utf-8')).toThrow(/ENOENT/);
       expect(readConfig(root)).toEqual({
         routing: { typedRoutes: true },
         worker: {
@@ -1450,20 +1437,17 @@ describe('isScaffoldableEmptyProject', () => {
 
       const tsconfig = JSON.parse(readFileSync(join(root, 'tsconfig.json'), 'utf-8'));
       expect(tsconfig.compilerOptions.jsx).toBe('react-jsx');
-      expect(tsconfig.include).toContain('pages');
+      expect(tsconfig.include).toContain('src');
       expect(tsconfig.include).toContain('db');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
-  it('scaffolds a static Pages starter without database files', async () => {
+  it('scaffolds an SPA-only starter without database files', async () => {
     const root = mkdtempSync(join(tmpdir(), 'void-init-'));
     try {
-      mockSelect
-        .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
-        .mockResolvedValueOnce('static');
+      mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('spa');
       mockConfirm.mockResolvedValueOnce(false);
 
       await runInitCommand(root);
@@ -1473,7 +1457,7 @@ describe('isScaffoldableEmptyProject', () => {
       expect(pkg.dependencies['react-dom']).toBeDefined();
       expect(pkg.dependencies.hono).toBeDefined();
       expect(pkg.devDependencies.void).toBeDefined();
-      expect(pkg.devDependencies['@void/react']).toBeDefined();
+      expect(pkg.devDependencies['@vitejs/plugin-react']).toBeDefined();
       expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
       expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
       expect(pkg.packageManager).toBeUndefined();
@@ -1482,17 +1466,14 @@ describe('isScaffoldableEmptyProject', () => {
       expect(installCalls()[0][0]).toBe('vp');
       expect(pkg.scripts.dev).toBe('vp dev');
 
-      const page = readFileSync(join(root, 'pages', 'index.tsx'), 'utf-8');
+      const page = readFileSync(join(root, 'src', 'App.tsx'), 'utf-8');
       expect(page).toContain('Welcome to Void');
-      expect(page).toContain(
-        'This starter is running in Pages mode with no database or server code yet.',
-      );
-      expect(page).toContain('you want to grow into full-stack features.');
+      expect(page).toContain('This starter is a React single-page app with no backend yet.');
+      expect(page).toContain('features.');
       expect(page).not.toContain('href="/api/hello"');
-      expect(page).not.toContain('useForm');
-      expect(page).not.toContain('<Form');
+      expect(page).not.toContain('void/client');
 
-      expect(() => readFileSync(join(root, 'pages', 'index.server.ts'), 'utf-8')).toThrow();
+      expect(() => readFileSync(join(root, 'routes', 'api', 'messages.ts'), 'utf-8')).toThrow();
       expect(() => readFileSync(join(root, 'routes', 'api', 'hello.ts'), 'utf-8')).toThrow();
       expect(() => readFileSync(join(root, 'db', 'schema.ts'), 'utf-8')).toThrow();
       expect(() => readFileSync(join(root, 'db', 'seed.ts'), 'utf-8')).toThrow();
@@ -1519,10 +1500,7 @@ describe('isScaffoldableEmptyProject', () => {
           join(root, 'package.json'),
           JSON.stringify({ private: true, packageManager }),
         );
-        mockSelect
-          .mockResolvedValueOnce('vite-plus')
-          .mockResolvedValueOnce('react')
-          .mockResolvedValueOnce('static');
+        mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('spa');
         mockConfirm.mockResolvedValueOnce(false);
 
         await runInitCommand(root);
@@ -1556,10 +1534,7 @@ describe('isScaffoldableEmptyProject', () => {
       const root = mkdtempSync(join(tmpdir(), 'void-init-'));
       try {
         writeFileSync(join(root, lockfile), '');
-        mockSelect
-          .mockResolvedValueOnce('vite-plus')
-          .mockResolvedValueOnce('react')
-          .mockResolvedValueOnce('static');
+        mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('spa');
         mockConfirm.mockResolvedValueOnce(false);
 
         await runInitCommand(root);
@@ -1607,10 +1582,7 @@ describe('isScaffoldableEmptyProject', () => {
       mkdirSync(join(root, 'node_modules', 'void'), { recursive: true });
       writeFileSync(join(root, 'node_modules', 'void', 'package.json'), '{"name":"void"}\n');
 
-      mockSelect
-        .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
-        .mockResolvedValueOnce('static');
+      mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('spa');
       mockConfirm.mockResolvedValueOnce(false);
 
       await runInitCommand(root);
@@ -1620,14 +1592,13 @@ describe('isScaffoldableEmptyProject', () => {
       expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
       expect(pkg.devDependencies.void).toBe('^0.8.9');
       expect(readFileSync(join(root, 'vite.config.ts'), 'utf-8')).toContain(
-        'voidReact({ react: { compiler: true } })',
+        'plugins: [react(), voidPlugin()]',
       );
       expectPnpmAllowBuilds(root);
 
-      expect(mockSelect.mock.calls[0]?.[0].message).toBe('Choose a Pages scaffold toolchain:');
+      expect(mockSelect.mock.calls[0]?.[0].message).toBe('Choose a scaffold toolchain:');
       expect(mockSelect.mock.calls[0]?.[0].initialValue).toBe('vite-plus');
-      expect(mockSelect.mock.calls[1]?.[0].message).toBe('Choose a Pages framework to scaffold:');
-      expect(mockSelect.mock.calls[2]?.[0].message).toBe('Choose a Pages starter:');
+      expect(mockSelect.mock.calls[1]?.[0].message).toBe('Choose a starter:');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -1640,8 +1611,7 @@ describe('isScaffoldableEmptyProject', () => {
       mockSelect
         .mockResolvedValueOnce('subfolder')
         .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
-        .mockResolvedValueOnce('static');
+        .mockResolvedValueOnce('spa');
       mockText.mockResolvedValueOnce('my-new-app');
       mockConfirm.mockResolvedValueOnce(false);
 
@@ -1820,9 +1790,9 @@ describe('isScaffoldableEmptyProject', () => {
         join(root, 'package.json'),
         JSON.stringify(
           {
-            name: 'existing-react-router-app',
+            name: 'existing-vite-app',
             private: true,
-            dependencies: { '@react-router/dev': '^7.0.0' },
+            devDependencies: { vite: '^8.0.0' },
           },
           null,
           2,
@@ -1844,7 +1814,9 @@ describe('isScaffoldableEmptyProject', () => {
         .mockResolvedValueOnce('none')
         .mockResolvedValueOnce('void')
         .mockResolvedValueOnce('proj_789');
+      // Confirms: demo code (declined), workflow, link, overwrite.
       mockConfirm
+        .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(true);
@@ -2620,7 +2592,7 @@ export default config;
             private: true,
             devDependencies: {
               void: '^0.2.3',
-              '@void/react': '^0.2.3',
+              '@vitejs/plugin-react': '^6.3.0',
               vite: '^8.0.10',
               'vite-plus': '^0.1.21',
             },
@@ -2649,11 +2621,11 @@ export default config;
       expect(reactViteConfig).toContain('from "@void/react/plugin"');
       expect(reactViteConfig).toContain('voidReact({ react: { compiler: true } })');
 
-      expect(mockSelect.mock.calls[0]?.[0].message).toBe('Choose a Pages scaffold toolchain:');
+      expect(mockSelect.mock.calls[0]?.[0].message).toBe('Choose a scaffold toolchain:');
       expect(mockSelect.mock.calls[0]?.[0].initialValue).toBe('vite-plus');
-      expect(mockSelect.mock.calls[1]?.[0].message).toBe('Choose a Pages starter:');
+      expect(mockSelect.mock.calls[1]?.[0].message).toBe('Choose a starter:');
       expect(mockSelect).not.toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Choose a Pages framework to scaffold:' }),
+        expect.objectContaining({ message: 'Choose a framework to scaffold:' }),
       );
       expect(mockSpawnSync).toHaveBeenCalledWith(
         'vp',
@@ -2799,7 +2771,6 @@ export default config;
     try {
       mockSelect
         .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
         .mockResolvedValueOnce('sqlite')
         .mockResolvedValueOnce('void')
         .mockResolvedValueOnce('github');
@@ -2838,7 +2809,6 @@ export default config;
     try {
       mockSelect
         .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
         .mockResolvedValueOnce('sqlite')
         .mockResolvedValueOnce('void')
         .mockResolvedValueOnce('github');
@@ -2878,7 +2848,6 @@ export default config;
       ]);
       mockSelect
         .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
         .mockResolvedValueOnce('sqlite')
         .mockResolvedValueOnce('void')
         .mockResolvedValueOnce('proj_456');
@@ -3302,23 +3271,20 @@ export default config;
       const subpkgRoot = join(wsroot, 'packages', 'my-new-app');
       mkdirSync(subpkgRoot, { recursive: true });
 
-      mockSelect
-        .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
-        .mockResolvedValueOnce('sqlite');
+      mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('sqlite');
       mockConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
 
       await runInitCommand(subpkgRoot);
 
       const pkg = JSON.parse(readFileSync(join(subpkgRoot, 'package.json'), 'utf-8'));
       expect(pkg.devDependencies.void).toBeDefined();
-      expect(pkg.devDependencies['@void/react']).toBeDefined();
+      expect(pkg.devDependencies['@vitejs/plugin-react']).toBeDefined();
       expect(installCalls()).toHaveLength(0);
       expect(drizzleGenerateCalls()).toHaveLength(0);
       const notes = workspaceNotes();
       expect(notes.length).toBeGreaterThan(0);
       const body = String(notes[0][0]);
-      expect(body).toMatch(/Scaffolded the Pages starter/);
+      expect(body).toMatch(/Scaffolded the starter/);
       expect(body).toMatch(/void db generate/);
       expect(body).toContain(toSlash(wsroot));
     } finally {
@@ -3334,10 +3300,7 @@ export default config;
       const subpkgRoot = join(wsroot, 'packages', 'static-starter');
       mkdirSync(subpkgRoot, { recursive: true });
 
-      mockSelect
-        .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
-        .mockResolvedValueOnce('static');
+      mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('spa');
       mockConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
 
       await runInitCommand(subpkgRoot);
@@ -3415,10 +3378,7 @@ export default config;
         ) + '\n',
       );
 
-      mockSelect
-        .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
-        .mockResolvedValueOnce('sqlite');
+      mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('sqlite');
       mockConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
 
       await runInitCommand(subpkgRoot);
@@ -3444,10 +3404,7 @@ export default config;
       mkdirSync(subpkgRoot, { recursive: true });
       writeFileSync(join(subpkgRoot, 'package-lock.json'), '{}\n');
 
-      mockSelect
-        .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
-        .mockResolvedValueOnce('sqlite');
+      mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('sqlite');
       mockConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
 
       await runInitCommand(subpkgRoot);
@@ -3467,10 +3424,7 @@ export default config;
       const subpkgRoot = join(wsroot, 'packages', 'gha-skip');
       mkdirSync(subpkgRoot, { recursive: true });
 
-      mockSelect
-        .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
-        .mockResolvedValueOnce('sqlite');
+      mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('sqlite');
       mockConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
 
       await runInitCommand(subpkgRoot);
@@ -3489,10 +3443,7 @@ export default config;
       const appRoot = join(parent, 'my-app');
       mkdirSync(appRoot, { recursive: true });
 
-      mockSelect
-        .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
-        .mockResolvedValueOnce('sqlite');
+      mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('sqlite');
       mockConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
 
       await runInitCommand(appRoot);
@@ -3524,10 +3475,7 @@ export default config;
       const subpkgRoot = join(wsroot, 'packages', 'my-new-app');
       mkdirSync(subpkgRoot, { recursive: true });
 
-      mockSelect
-        .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
-        .mockResolvedValueOnce('sqlite');
+      mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('sqlite');
       mockConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
 
       await runInitCommand(subpkgRoot);
@@ -3546,10 +3494,7 @@ export default config;
     try {
       writeFileSync(join(root, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n");
 
-      mockSelect
-        .mockResolvedValueOnce('vite-plus')
-        .mockResolvedValueOnce('react')
-        .mockResolvedValueOnce('sqlite');
+      mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('sqlite');
       mockConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
 
       await runInitCommand(root);

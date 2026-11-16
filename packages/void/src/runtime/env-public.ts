@@ -30,7 +30,7 @@
 
 import { isUnmaskActive, redactMessage } from '../shared/env-mask.ts';
 import type { StandardSchemaV1 } from '../standard-schema.ts';
-import { getRawRuntimeEnv, type RuntimeEnv } from './env-raw.ts';
+import { getRawRuntimeEnv } from './env-raw.ts';
 import { getRuntimeEnv, isInternalBinding } from './env.ts';
 
 type AnyValidator = StandardSchemaV1<unknown, unknown>;
@@ -225,7 +225,7 @@ function seedValidated(rawEnv: unknown, values: Map<string, unknown>): void {
   for (const [key, value] of values) {
     // Internal bindings stay hidden even when the schema declares them. A value that a read
     // already returned stays the same object.
-    if (!isInternalBinding(key, rawEnv as RuntimeEnv) && !cache.has(key)) {
+    if (!isInternalBinding(key) && !cache.has(key)) {
       cache.set(key, value);
     }
   }
@@ -301,7 +301,7 @@ export class EnvValidationError extends Error {
 function readKey(key: string): unknown {
   // Internal bindings stay hidden even when the schema declares them.
   const rawEnv = getRawRuntimeEnv();
-  if (isInternalBinding(key, rawEnv)) {
+  if (isInternalBinding(key)) {
     return undefined;
   }
   const filtered = getRuntimeEnv() as Record<string, unknown>;

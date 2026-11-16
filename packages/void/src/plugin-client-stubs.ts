@@ -8,7 +8,6 @@ export function createClientStubsPlugin(): Plugin {
     'void/ai': 'export const ai = {};',
     'void/queues': 'export const queues = {};',
     'void/storage': 'export const storage = {}; export const createStorage = () => ({});',
-    'void/isr': 'export const revalidate = async () => {};',
     // Client stub must mirror the real runtime/sandbox.ts surface so any
     // client-side `instanceof` check for either runtime error doesn't crash with a
     // TypeError, and async `await getSandbox(...)` callers don't silently

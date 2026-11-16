@@ -1,8 +1,6 @@
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { type NotFoundHandling, type RoutingConfig } from '../config.ts';
-import { collectPages } from '../isr-config.ts';
-import type { PageScanResult } from '../pages/types.ts';
+import { type RoutingConfig } from '../config.ts';
 import { buildEnv } from '../shared/untrusted-env.ts';
 import { PlatformClient } from './client.ts';
 import { log } from './deploy-helpers.ts';
@@ -16,48 +14,9 @@ import { MANAGED_DEPLOY_BUILD_ENV } from './deploy-transport.ts';
 import { type GitDeployMetadata } from './git-metadata.ts';
 import { type CliLogger } from './log-file.ts';
 import { createSpinner, formatCount, note } from './output.ts';
-import { collectAndHashAssets, buildVoidManifest, buildStaticManifest } from './package.ts';
+import { collectAndHashAssets, buildStaticManifest } from './package.ts';
 import { type StaticPreset } from './preset.ts';
 import { type ProjectConfig } from './project.ts';
-import type { DeployManifest, DevRedirectRule, HeaderRule } from './types.ts';
-
-/**
- * Assemble the Void deploy manifest, deriving the route-aware ISR `pages` table
- * from the page scan. This is the single production seam that forwards
- * `pageScan` → `manifest.pages`; `runFullDeploy` calls it so the wiring is
- * exercised (and regression-guarded) by a unit test.
- *
- * `pages` is a Void pages-mode concept. In framework mode (Class-A frameworks
- * routed through `runFullDeploy`) we must NOT emit it — the framework owns its
- * own routing/ISR — so `isFrameworkMode` suppresses the table.
- */
-export function assembleVoidManifest(
-  pageScan: PageScanResult | null,
-  isFrameworkMode: boolean,
-  opts: Parameters<typeof buildVoidManifest>[0],
-  revalidateConfig?: number | Record<string, number> | undefined,
-  isrEnabled = true,
-): DeployManifest {
-  return buildVoidManifest({
-    ...opts,
-    ...(isrEnabled ? {} : { revalidate: undefined, prerender: undefined }),
-    // Bake each page's BUILD-time ISR TTL (3-state) from its own `export const
-    // revalidate` first, then a global-NUMBER `routing.revalidate`. A page under
-    // an OBJECT config bakes NO TTL (inherit-eligible) — see `collectPages`.
-    pages: isFrameworkMode ? undefined : collectPages(pageScan, revalidateConfig, isrEnabled),
-    // Ship the RAW per-path OBJECT config alongside so dispatch can resolve those
-    // inherit-eligible pages against the ACTUAL request path (honoring per-path
-    // `0` opt-outs a dynamic pattern straddles). Object form only: a number
-    // config is already baked into every `pages` entry, so it is never consulted.
-    pathRevalidate:
-      !isrEnabled ||
-      isFrameworkMode ||
-      revalidateConfig == null ||
-      typeof revalidateConfig !== 'object'
-        ? undefined
-        : revalidateConfig,
-  });
-}
 
 export async function runStaticDeploy(
   root: string,
@@ -66,20 +25,8 @@ export async function runStaticDeploy(
   preset: StaticPreset,
   skipBuild?: boolean,
   gitMetadata?: GitDeployMetadata,
-  hashedAssetsPrefix?: string,
-  headerRules?: Array<HeaderRule>,
-  redirectRules?: Array<DevRedirectRule>,
-  fallbackRules?: Array<DevRedirectRule>,
   routing?: RoutingConfig,
   cliLog?: CliLogger,
-  /**
-   * Explicit `routing.notFound`. Normally carried by `routing`, but the
-   * "all pages prerendered -> static" redirect in `runFullDeploy` passes
-   * `routing: undefined` (its rules were already merged upstream), so that
-   * call site hands the value over directly. Wins over `routing.notFound`.
-   */
-  notFound?: NotFoundHandling,
-  alwaysUseHttps?: boolean,
 ): Promise<void> {
   const typeLabel = preset.appType === 'spa' ? 'Static SPA' : 'Static Site';
   log.info(`${typeLabel} deploy`);
@@ -105,14 +52,10 @@ export async function runStaticDeploy(
     process.exit(1);
   }
 
-  // Full deploys can supply premerged rules; standalone static deploys still
-  // need file-based rules when no routing config was provided.
-  if (routing || (!headerRules && !redirectRules && !fallbackRules)) {
-    const merged = mergeAndLintRoutingRules(preset.outputDir, routing);
-    headerRules = merged.headerRules;
-    redirectRules = merged.redirectRules;
-    fallbackRules = merged.fallbackRules;
-  }
+  const { headerRules, redirectRules, fallbackRules } = mergeAndLintRoutingRules(
+    preset.outputDir,
+    routing,
+  );
 
   const s = createSpinner();
   const onProgress = (msg: string) => s.message(msg);
@@ -141,12 +84,12 @@ export async function runStaticDeploy(
 
   const manifest = buildStaticManifest({
     appType: preset.appType,
-    alwaysUseHttps: alwaysUseHttps ?? routing?.alwaysUseHttps,
-    hashedAssetsPrefix: hashedAssetsPrefix ?? 'assets',
+    alwaysUseHttps: routing?.alwaysUseHttps,
+    hashedAssetsPrefix: 'assets',
     headerRules,
     redirectRules,
     fallbackRules,
-    notFound: notFound ?? routing?.notFound,
+    notFound: routing?.notFound,
   });
   cliLog?.info('package_end', {
     mode: 'static',

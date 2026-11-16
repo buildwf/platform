@@ -15,13 +15,15 @@ import {
   resolveStaticDeployPreset,
 } from './cli/deploy-helpers.ts';
 import { mergeAndLintRoutingRules } from './cli/deploy-managed-events.ts';
-import { assembleVoidManifest } from './cli/deploy-managed-static.ts';
-import { buildStaticManifest, collectAndHashAssets, collectWorkerFiles } from './cli/package.ts';
+import {
+  buildStaticManifest,
+  buildVoidManifest,
+  collectAndHashAssets,
+  collectWorkerFiles,
+} from './cli/package.ts';
 import { detectPreset } from './cli/preset.ts';
-import { readConfig, isNodeTarget } from './config.ts';
-import { collectRevalidate } from './isr-config.ts';
+import { readConfig } from './config.ts';
 import { hasEmailHandlers } from './router/email.ts';
-import { validateSsrEntry } from './ssr/entry.ts';
 
 /**
  * A disposable Cloudflare Build Output directory. Experimental: it follows Cloudflare's draft
@@ -79,16 +81,12 @@ export async function prepareDeployArtifact(
 ): Promise<PreparedDeployArtifact> {
   root = resolve(root);
   const config = readConfig(root);
-  if (isNodeTarget(config.target) || config.output === 'static') {
-    throw new Error('Artifact preparation requires a Void Cloudflare Worker build.');
-  }
   let preset = resolveStaticDeployPreset(root, config);
   let analysis: Awaited<ReturnType<typeof analyzeApplication>> | undefined;
   if (!preset) {
     analysis = await analyzeApplication(root, { config, environment: 'prod' });
     if (
       !config.inference?.appType &&
-      !analysis.framework &&
       !analysis.durableObjects.length &&
       !analysis.websockets.length &&
       !Object.values(analysis.bindings).some(Boolean)
@@ -127,10 +125,8 @@ export async function prepareDeployArtifact(
       'Artifact preparation does not yet support Sandbox or Live resources. Use void deploy for those apps.',
     );
   }
-  if (config.routing?.prerender?.length || config.remote) {
-    throw new Error(
-      'Artifact preparation requires a build without remote data or deploy-time prerendering.',
-    );
+  if (config.remote) {
+    throw new Error('Artifact preparation requires a build without remote data.');
   }
   const dist = resolveDistDir(root);
   const workerDir = join(dist, resolveWorkerDirName(dist));
@@ -143,8 +139,6 @@ export async function prepareDeployArtifact(
     paths.sourceRelative,
   );
   const { schedules, queues } = toManifestSchedulesAndQueues(analysis.jobs, analysis.queues);
-  const pages = existsSync(paths.pagesDir);
-  const ssr = Boolean(validateSsrEntry(root, paths)) || pages;
   const compat = resolveDeployWranglerCompat(root, config, workerDir, { authEnabled, dialect });
   const workerMain = resolveDeployWorkerMain(config, workerDir);
   const workerFiles = collectWorkerFiles(workerDir);
@@ -153,50 +147,36 @@ export async function prepareDeployArtifact(
   }
   assertWorkerMainUploaded(workerFiles, workerMain);
   const rules = mergeAndLintRoutingRules(clientDir, config.routing);
-  const manifest = assembleVoidManifest(
-    pages ? scan.pages : null,
-    false,
-    {
-      bindings,
-      alwaysUseHttps: config.routing?.alwaysUseHttps,
-      vars: config.worker?.vars,
-      hasEmailHandlers: scan.email !== undefined && hasEmailHandlers(scan.email),
-      migrations,
-      schedules,
-      queues,
-      dialect,
-      webSockets: websockets,
-      durableObjects: analysis.durableObjects,
-      ssr:
-        ssr ||
-        scan.routes.length > 0 ||
-        scan.middleware.length > 0 ||
-        websockets.length > 0 ||
-        authEnabled,
-      revalidate: collectRevalidate(config, pages ? scan.pages : null),
-      assetConfig: resolveAssetConfig({
-        isSsr: ssr,
-        hasPages: pages,
-        hasApiRoutes: hasApiRoutes(scan.routes) || hasApiRoutes(websockets) || authEnabled,
-        hasDocumentRoutes: hasDocumentRoutes(scan.routes),
-        hasMiddleware: scan.middleware.length > 0,
-        hasWebSockets: hasDocumentRoutes(websockets),
-        authEnabled,
-        liveEnabled: false,
-        notFound: config.routing?.notFound,
-      }),
-      options: {
-        compatibilityDate: compat?.compatibilityDate,
-        compatibilityFlags: compat?.compatibilityFlags,
-        cpuMs: config.worker?.limits?.cpu_ms,
-        workerMain,
-        revalidateQueryAllowlist: config.routing?.revalidateQueryAllowlist,
-      },
-      ...rules,
+  const manifest = buildVoidManifest({
+    bindings,
+    alwaysUseHttps: config.routing?.alwaysUseHttps,
+    vars: config.worker?.vars,
+    hasEmailHandlers: scan.email !== undefined && hasEmailHandlers(scan.email),
+    migrations,
+    schedules,
+    queues,
+    dialect,
+    webSockets: websockets,
+    durableObjects: analysis.durableObjects,
+    ssr:
+      scan.routes.length > 0 || scan.middleware.length > 0 || websockets.length > 0 || authEnabled,
+    assetConfig: resolveAssetConfig({
+      hasApiRoutes: hasApiRoutes(scan.routes) || hasApiRoutes(websockets) || authEnabled,
+      hasDocumentRoutes: hasDocumentRoutes(scan.routes),
+      hasMiddleware: scan.middleware.length > 0,
+      hasWebSockets: hasDocumentRoutes(websockets),
+      authEnabled,
+      liveEnabled: false,
+      notFound: config.routing?.notFound,
+    }),
+    options: {
+      compatibilityDate: compat?.compatibilityDate,
+      compatibilityFlags: compat?.compatibilityFlags,
+      cpuMs: config.worker?.limits?.cpu_ms,
+      workerMain,
     },
-    config.routing?.revalidate,
-    config.routing?.isr !== false,
-  );
+    ...rules,
+  });
   const { assetManifest, assetFiles } = await collectAndHashAssets(clientDir);
   return {
     artifact: createDeployArtifact({

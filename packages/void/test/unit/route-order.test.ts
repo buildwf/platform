@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { patternToRegex } from '../../src/pages/manifest.ts';
 import { compareRouteSpecificity, routeSegmentKind } from '../../src/router/route-order.ts';
 
 function route(pattern: string) {
@@ -9,8 +8,21 @@ function route(pattern: string) {
   };
 }
 
+/** Hono's route syntax: `:name{.+}` crosses `/`, `:name` is one segment, `*` matches the rest. */
 function matches(pattern: string, url: string): boolean {
-  return new RegExp(patternToRegex(pattern).slice(1, -1)).test(url);
+  const source = pattern
+    .split('/')
+    .map((segment) =>
+      segment === '*'
+        ? '.*'
+        : segment.endsWith('{.+}')
+          ? '.+'
+          : segment.startsWith(':')
+            ? '[^/]+'
+            : segment,
+    )
+    .join('/');
+  return new RegExp(`^${source}$`).test(url);
 }
 
 describe('compareRouteSpecificity', () => {

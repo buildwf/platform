@@ -9,7 +9,6 @@ import { dirname, relative } from 'pathslash';
 import { type VoidConfig } from '../config.ts';
 import { collectMigrations } from '../migrations/collect.ts';
 import { SqliteMigrationError } from '../migrations/sqlite-validation.ts';
-import { detectFramework } from '../plugin-inference.ts';
 import { CLOUDFLARE_DEPLOY_BUILD_ENV, CLOUDFLARE_QUEUE_NAMES_BUILD_ENV } from '../shared/env.ts';
 import { CLOUDFLARE_PRESERVE_BINDINGS_BUILD_ENV } from '../shared/version-metadata.ts';
 import { prepareCfBuildOutput } from './cf-build-output.ts';
@@ -21,7 +20,6 @@ import {
 } from './deploy-artifact-validation.ts';
 import { DEPLOY_BINDING_IDENTITY_FIELDS, bindingIdentityKey } from './deploy-binding-snapshot.ts';
 import type { CloudflareDeploySource, CloudflarePreflight } from './deploy-cloudflare-preflight.ts';
-import { prepareCloudflareFrameworkArtifact } from './deploy-cloudflare-static.ts';
 import { log, getExitCode, resolveFullDeployBuildCommand } from './deploy-helpers.ts';
 import {
   validateAuthMigrationSchema,
@@ -35,7 +33,6 @@ import {
 } from './deploy-transport.ts';
 import { type CloudflareDeployDeps } from './deploy-types.ts';
 import { getErrorMessage } from './output.ts';
-import { type FrameworkPreset } from './preset.ts';
 import { deleteEnvVarCaseAware } from './provision.ts';
 
 export type CloudflareBuild = Awaited<ReturnType<typeof buildCloudflareWorker>>;
@@ -48,8 +45,6 @@ export async function buildCloudflareWorker(input: {
   readonly exit: (code: number) => never;
   readonly atomic: boolean;
   readonly skipMigrations?: boolean;
-  readonly frameworkPreset: FrameworkPreset | undefined;
-  readonly detectedFramework: ReturnType<typeof detectFramework>;
   readonly source: CloudflareDeploySource;
   readonly preflight: CloudflarePreflight;
 }): Promise<{
@@ -58,9 +53,8 @@ export async function buildCloudflareWorker(input: {
   generatedConfigPath: string;
   prepareBuildOutput: () => ReturnType<typeof prepareCfBuildOutput>;
 }> {
-  const { root, voidConfig, deps, exit, atomic, frameworkPreset, detectedFramework } = input;
-  const { configPath, needsAI, aiBindingName, migrationsDir, dialect, authEnabled, desired } =
-    input.source;
+  const { root, voidConfig, deps, exit, atomic } = input;
+  const { configPath, migrationsDir, dialect, authEnabled, desired } = input.source;
   const {
     accountId,
     apiBaseUrl,
@@ -70,7 +64,6 @@ export async function buildCloudflareWorker(input: {
     schemaFacts,
     assertUploaderStillPinned,
     runWrangler,
-    approvedHandoffKv,
     bindingIdentitySnapshot,
   } = input.preflight;
 
@@ -97,11 +90,7 @@ export async function buildCloudflareWorker(input: {
   const runBuild =
     deps.runBuild ??
     ((env: NodeJS.ProcessEnv) => {
-      const command = resolveFullDeployBuildCommand(
-        root,
-        voidConfig.inference?.build,
-        frameworkPreset?.buildCommand,
-      ).command;
+      const command = resolveFullDeployBuildCommand(root, voidConfig.inference?.build).command;
       execSync(command, { cwd: root, stdio: 'inherit', env });
     });
   // The build runs project code without credentials, but it can edit files, including the
@@ -113,28 +102,6 @@ export async function buildCloudflareWorker(input: {
     return exit(getExitCode(err));
   }
   log.step('Preparing deployment...');
-  if (detectedFramework && frameworkPreset) {
-    try {
-      await (deps.prepareFrameworkArtifact ?? prepareCloudflareFrameworkArtifact)({
-        root,
-        configPath,
-        accountId,
-        workerName,
-        voidConfig,
-        framework: detectedFramework,
-        preset: frameworkPreset,
-        requiredSecretNames: schemaFacts.requiredKeys,
-        ai: needsAI ? { binding: aiBindingName } : undefined,
-        preserveBindings: existingWorker !== null,
-        cloudflareQueueNames: desired.queueNames,
-      });
-    } catch (error) {
-      log.error(
-        `deploy: could not prepare ${detectedFramework.name} for Cloudflare — ${getErrorMessage(error)}`,
-      );
-      return exit(1);
-    }
-  }
   if (!assertUploaderStillPinned()) {
     return exit(1);
   }
@@ -200,7 +167,6 @@ export async function buildCloudflareWorker(input: {
       schemaFacts,
       authEnabled,
       existingWorker,
-      approvedHandoffKv,
       deps,
       assertUploaderStillPinned,
     }))

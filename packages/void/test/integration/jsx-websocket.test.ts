@@ -75,7 +75,6 @@ export default ${helper}({
         join(root, 'middleware'),
         join(root, 'crons'),
         join(root, 'queues'),
-        null,
         {
           honoPath: import.meta.resolve('hono'),
           honoRoutePath: import.meta.resolve('hono/route'),
@@ -83,7 +82,6 @@ export default ${helper}({
           webSocketRuntimePath: join(repository, 'packages/void/src/runtime/ws-server.ts'),
           projectRoot: root,
           homeDir: root,
-          reactRefresh: false,
           auth: null,
           dev: environment === 'dev',
         },

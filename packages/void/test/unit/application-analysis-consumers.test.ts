@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import type { ResolvedConfig } from 'vite';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import { computeDesiredCloudflareResources } from '../../src/cli/deploy-resources.ts';
-import { buildFrameworkManifest, buildVoidManifest } from '../../src/cli/package.ts';
+import { buildVoidManifest } from '../../src/cli/package.ts';
 import { readConfig, type VoidConfig } from '../../src/config.ts';
 
 type CloudflarePluginConfig = {
@@ -114,45 +114,6 @@ export const live = defineLiveStream({ id: 'app' });`,
           }),
         ],
       });
-    },
-  );
-
-  it.each(['CACHE', false] as const)(
-    'retains framework storage with a partial KV override of %s',
-    async (kv) => {
-      const root = project(
-        { inference: { bindings: { kv } } },
-        {
-          'src/routes/+page.server.ts': `import { storage } from 'void/storage';
-import { kv } from 'void/kv';
-export const load = () => ({ storage, kv });`,
-        },
-        true,
-      );
-      const resources = await computeDesiredCloudflareResources(
-        root,
-        readConfig(root),
-        join(root, 'wrangler.jsonc'),
-      );
-      const application = resources.analysis;
-      const manifest = buildFrameworkManifest({
-        frameworkName: 'sveltekit',
-        workerMain: 'index.js',
-        bindings: application.bindings,
-        packageOptions: { bindingNames: application.bindingNames },
-      });
-      const emitted = await pluginConfig(root);
-
-      expect(resources.desired.d1).toBeUndefined();
-      expect(resources.desired.r2?.binding).toBe('STORAGE');
-      expect(resources.desired.kvNamespaces.map((entry) => entry.binding)).toEqual(
-        kv ? ['CACHE'] : [],
-      );
-      expect(manifest.bindings.r2).toEqual(['STORAGE']);
-      expect(manifest.bindings.kv).toEqual(kv ? ['CACHE'] : undefined);
-      expect(emitted.r2_buckets).toEqual([{ binding: 'STORAGE', bucket_name: 'default' }]);
-      expect(emitted.kv_namespaces).toEqual(kv ? [{ binding: 'CACHE', id: 'local' }] : undefined);
-      expect(emitted.d1_databases).toBeUndefined();
     },
   );
 

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { isCancel, log as clackLog, text } from '@voidzero-dev/vite-plus-prompts';
 import { join, resolve } from 'pathslash';
 import { findEnvFile } from '../codegen/env-types.ts';
-import { type DatabaseDialect, type VoidConfig, isNodeTarget } from '../config.ts';
+import { type DatabaseDialect, type VoidConfig } from '../config.ts';
 import type { JobDefinition } from '../crons/scan.ts';
 import {
   assertJournalCoherence,
@@ -15,12 +15,7 @@ import { buildEnv } from '../shared/untrusted-env.ts';
 import { PlatformClient, type DeploymentResponse, type ProjectResponse } from './client.ts';
 import { formatCloudflareUserMessage } from './cloudflare-user-output.ts';
 import { promptAndCreateProject, reportProjectCreationWarnings } from './create-project.ts';
-import {
-  type PrerenderSourceInputs,
-  type NonPageBackendInputs,
-  type ResourceSummary,
-  type RunDeployOptions,
-} from './deploy-types.ts';
+import { type ResourceSummary, type RunDeployOptions } from './deploy-types.ts';
 import { fetchRemoteSecretNames, formatEnvReport, validateProdEnv } from './env-validation.ts';
 import { type CliLogger } from './log-file.ts';
 import { formatCount, getErrorMessage, pc } from './output.ts';
@@ -47,8 +42,6 @@ import {
   type LiveBindingConfig,
   type WranglerCompat,
 } from './wrangler.ts';
-import type { WrapperFeatures } from './wrapper.ts';
-import { needsWrapper, generateWrapper } from './wrapper.ts';
 
 export const log: Record<
   'error' | 'info' | 'message' | 'step' | 'warn',
@@ -62,19 +55,6 @@ export const log: Record<
 };
 
 export class DeployEventError extends Error {}
-
-export async function generateDeployWrapperIfNeeded(
-  root: string,
-  workerDir: string,
-  workerMain: string,
-  features: WrapperFeatures,
-): Promise<boolean> {
-  if (!needsWrapper(features)) {
-    return false;
-  }
-  await generateWrapper(workerDir, workerMain, root, features);
-  return true;
-}
 
 const EMPTY_BINDINGS = {
   needsD1: false,
@@ -143,14 +123,13 @@ export async function resolveDeployLiveBindingConfig(
   client: PlatformClient,
   projectId: string,
   opts: {
-    isFrameworkMode: boolean;
     needsLive: boolean | undefined;
     webSockets: Array<{ bindingName: string; className: string }>;
     sandboxClassName?: string;
     cliLog?: CliLogger;
   },
 ): Promise<LiveBindingConfig | undefined> {
-  if (opts.isFrameworkMode || !opts.needsLive) {
+  if (!opts.needsLive) {
     return undefined;
   }
 
@@ -182,10 +161,7 @@ export function resolveDeployWranglerCompat(
     dialect?: DatabaseDialect;
     needsSandbox?: boolean;
   },
-): WranglerCompat | undefined {
-  if (isNodeTarget(config.target)) {
-    return undefined;
-  }
+): WranglerCompat {
   const compat = ensureWranglerCompat(root, config, buildOutputDir);
   const compatibilityFlags = normalizeWranglerCompatibilityFlags(compat.compatibilityFlags, {
     needsNodejsCompat:
@@ -202,9 +178,6 @@ export function resolveDeployWorkerMain(
   config: VoidConfig,
   buildOutputDir: string,
 ): string | undefined {
-  if (isNodeTarget(config.target)) {
-    return undefined;
-  }
   try {
     const wrangler = JSON.parse(readFileSync(join(buildOutputDir, 'wrangler.json'), 'utf-8')) as {
       main?: unknown;
@@ -299,9 +272,9 @@ export function resolveStaticBuildCommand(
 }
 
 /**
- * Resolve the build command for a FULL (Class A / Void app) deploy.
+ * Resolve the build command for a FULL Void app deploy.
  *
- * `inference.build` wins when set, matching `runFrameworkDeploy` and the static
+ * `inference.build` wins when set, matching the static
  * path's `resolveStaticBuildCommand`, so an app that needs more than one build
  * step (an SSG that emits the site, then Void's build packaging it via
  * `publicDir` alongside the worker) can express it.
@@ -325,54 +298,6 @@ export function resolveFullDeployBuildCommand(
     label: formatProjectCommand(root, fallbackBuildCommand),
     command: resolveProjectCommand(root, fallbackBuildCommand),
   };
-}
-
-/**
- * Whether the built worker's `__voidCollectPrerenderPaths` can return anything
- * at all. When it cannot, booting it is pure cost and the deploy skips it.
- *
- * These three are exactly — and only — the sources `compilePrerenderCollector`
- * (`router/compile.ts`) emits a `paths.push(...)` for:
- *   1. `scan.pages.pages` — static patterns + dynamic pages' `getPrerenderPaths()`
- *   2. the custom SSR entry's top-level `getPrerenderPaths()` (`ssr` argument)
- *   3. `options.explicitPrerenderPaths` — void.config.ts `routing.prerender`
- * With none of them present the collector is a generated function whose body
- * returns `[...new Set([])]`, so skipping is result-identical.
- *
- * Skipping matters beyond speed. `collectPrerenderPaths` boots the worker in
- * Miniflare without remote production secrets, and the generated fetch handler
- * validates `env.ts` at boot. An app with nothing to prerender should not fail
- * merely because that unnecessary worker boot cannot access the remote store.
- */
-export function hasPrerenderSources(inputs: PrerenderSourceInputs): boolean {
-  return inputs.hasPages || inputs.hasSsrEntry || (inputs.explicitPrerenderPaths?.length ?? 0) > 0;
-}
-
-/**
- * Whether the project needs a worker for something other than its pages.
- *
- * An `output: "static"` project whose pages all prerender takes the static-site
- * path, which uploads assets and NO worker script. Every worker surface that is
- * not a page has to be listed here, because a missing one is not a failed
- * deploy — it is a successful deploy with that feature silently absent.
- *
- * `email` belongs here for the same reason `hasRoutes` does: an `email/`
- * handler compiles to the worker's `email()` export (`router/compile.ts`), and
- * the platform dispatches inbound mail through that export. With no worker, the
- * mail bounces at the proxy with `project has no email handler`.
- *
- * Schedules and queues are deliberately NOT folded in. They are checked at the
- * call site against their own resolved lists, not against a scan flag.
- */
-export function hasNonPageBackend(inputs: NonPageBackendInputs): boolean {
-  return (
-    inputs.hasRoutes ||
-    inputs.hasMiddleware ||
-    inputs.hasWebSockets ||
-    inputs.hasEmail ||
-    inputs.authEnabled ||
-    inputs.hasLive
-  );
 }
 
 export function resolveStaticDeployPreset(

@@ -16,7 +16,6 @@ import {
   convertRedirectsConfig,
   convertRewritesConfig,
   resolveBindingNames,
-  isNodeTarget,
   databaseConfigValue,
   getDatabaseCasing,
   getDatabaseDialect,
@@ -42,38 +41,6 @@ function cleanup() {
   rmSync(tmpDir, { recursive: true, force: true });
 }
 
-describe('routing.trailingSlash', () => {
-  it.each([true, false, undefined])('preserves %s', (trailingSlash) => {
-    setup(JSON.stringify({ routing: { trailingSlash } }));
-    try {
-      expect(readConfig(tmpDir).routing?.trailingSlash).toBe(trailingSlash);
-    } finally {
-      rmSync(tmpDir, { recursive: true, force: true });
-    }
-  });
-  it.each(['true', 1, null, {}])('rejects non-boolean %s', (trailingSlash) => {
-    setup(JSON.stringify({ routing: { trailingSlash } }));
-    try {
-      expect(() => readConfig(tmpDir)).toThrow('routing.trailingSlash');
-    } finally {
-      rmSync(tmpDir, { recursive: true, force: true });
-    }
-  });
-  it('rejects conflicting Cloudflare HTML handling', () => {
-    setup(
-      JSON.stringify({
-        routing: { trailingSlash: true },
-        cloudflare: { assets: { html_handling: 'drop-trailing-slash' } },
-      }),
-    );
-    try {
-      expect(() => readConfig(tmpDir)).toThrow('conflicts');
-    } finally {
-      rmSync(tmpDir, { recursive: true, force: true });
-    }
-  });
-});
-
 describe('routing.alwaysUseHttps', () => {
   it.each([true, false, undefined])('preserves %s without applying a default', (alwaysUseHttps) => {
     setup(JSON.stringify({ routing: { alwaysUseHttps } }));
@@ -91,27 +58,17 @@ describe('routing.alwaysUseHttps', () => {
       cleanup();
     }
   });
-  it.each(['node', 'bun', 'deno'])('rejects true with target %s', (target) => {
-    setup(JSON.stringify({ target, routing: { alwaysUseHttps: true } }));
-    try {
-      expect(() => readConfig(tmpDir)).toThrow(
-        `"routing.alwaysUseHttps" in void.json requires target: "cloudflare". It is not available with target: "${target}".`,
-      );
-    } finally {
-      cleanup();
-    }
-  });
-  it.each([
-    { target: 'node', routing: { alwaysUseHttps: false } },
-    { target: 'cloudflare', routing: { alwaysUseHttps: true } },
-  ])('accepts %j', (config) => {
-    setup(JSON.stringify(config));
-    try {
-      expect(readConfig(tmpDir).routing?.alwaysUseHttps).toBe(config.routing.alwaysUseHttps);
-    } finally {
-      cleanup();
-    }
-  });
+  it.each([{ routing: { alwaysUseHttps: false } }, { routing: { alwaysUseHttps: true } }])(
+    'accepts %j',
+    (config) => {
+      setup(JSON.stringify(config));
+      try {
+        expect(readConfig(tmpDir).routing?.alwaysUseHttps).toBe(config.routing.alwaysUseHttps);
+      } finally {
+        cleanup();
+      }
+    },
+  );
 });
 
 describe('routing.typedRoutes', () => {
@@ -158,14 +115,22 @@ describe('readConfig', () => {
 
   it('validates typed config values at runtime', () => {
     setup();
-    writeFileSync(join(tmpDir, 'void.config.ts'), 'export default { routing: { isr: 1 } };\n');
-    expect(() => readConfig(tmpDir)).toThrow('"routing.isr" in void.config.ts must be a boolean');
+    writeFileSync(
+      join(tmpDir, 'void.config.ts'),
+      'export default { routing: { typedRoutes: 1 } };\n',
+    );
+    expect(() => readConfig(tmpDir)).toThrow(
+      '"routing.typedRoutes" in void.config.ts must be a boolean',
+    );
     cleanup();
   });
 
   it('prints only void.config.ts when a typed config is invalid', () => {
     setup();
-    writeFileSync(join(tmpDir, 'void.config.ts'), 'export default { routing: { isr: 1 } };\n');
+    writeFileSync(
+      join(tmpDir, 'void.config.ts'),
+      'export default { routing: { typedRoutes: 1 } };\n',
+    );
     let error: unknown;
     try {
       readConfig(tmpDir);
@@ -173,7 +138,7 @@ describe('readConfig', () => {
       error = caught;
     }
     // inspect() is what prints the `[cause]` line under an uncaught error.
-    expect(inspect(error)).toContain('"routing.isr" in void.config.ts must be a boolean');
+    expect(inspect(error)).toContain('"routing.typedRoutes" in void.config.ts must be a boolean');
     expect(inspect(error)).not.toContain('void.json');
     cleanup();
   });
@@ -200,16 +165,6 @@ describe('readConfig', () => {
     cleanup();
   });
 
-  it.each([true, false])('accepts routing.isr: %s', (isr) => {
-    setup(JSON.stringify({ routing: { isr } }));
-    expect(readConfig(tmpDir).routing?.isr).toBe(isr);
-    cleanup();
-  });
-  it.each([0, 'false', null, {}])('rejects invalid routing.isr: %j', (isr) => {
-    setup(JSON.stringify({ routing: { isr } }));
-    expect(() => readConfig(tmpDir)).toThrow('"routing.isr" in void.json must be a boolean');
-    cleanup();
-  });
   it('returns empty config when no file exists', () => {
     setup();
     const config = readConfig(tmpDir);
@@ -519,61 +474,6 @@ describe('readConfig', () => {
     cleanup();
   });
 
-  it('accepts routing.revalidate as a number', () => {
-    setup(JSON.stringify({ routing: { revalidate: 60 } }));
-    const config = readConfig(tmpDir);
-    expect(config.routing?.revalidate).toBe(60);
-    cleanup();
-  });
-
-  it('accepts routing.revalidate as zero', () => {
-    setup(JSON.stringify({ routing: { revalidate: 0 } }));
-    const config = readConfig(tmpDir);
-    expect(config.routing?.revalidate).toBe(0);
-    cleanup();
-  });
-
-  it('accepts routing.revalidate as a path map', () => {
-    setup(
-      JSON.stringify({
-        routing: { revalidate: { '/': 60, '/docs/*': 31536000, '*': 30 } },
-      }),
-    );
-    const config = readConfig(tmpDir);
-    expect(config.routing?.revalidate).toEqual({ '/': 60, '/docs/*': 31536000, '*': 30 });
-    cleanup();
-  });
-
-  it('throws on negative routing.revalidate number', () => {
-    setup(JSON.stringify({ routing: { revalidate: -1 } }));
-    expect(() => readConfig(tmpDir)).toThrow('"routing.revalidate"');
-    cleanup();
-  });
-
-  it('throws on string routing.revalidate', () => {
-    setup(JSON.stringify({ routing: { revalidate: '60' } }));
-    expect(() => readConfig(tmpDir)).toThrow('"routing.revalidate"');
-    cleanup();
-  });
-
-  it('throws on non-numeric routing.revalidate path map value', () => {
-    setup(JSON.stringify({ routing: { revalidate: { '/': '60' } } }));
-    expect(() => readConfig(tmpDir)).toThrow('"routing.revalidate"');
-    cleanup();
-  });
-
-  it('throws on negative routing.revalidate path map value', () => {
-    setup(JSON.stringify({ routing: { revalidate: { '/': -10 } } }));
-    expect(() => readConfig(tmpDir)).toThrow('"routing.revalidate"');
-    cleanup();
-  });
-
-  it('throws on routing.revalidate path map key not starting with / or *', () => {
-    setup(JSON.stringify({ routing: { revalidate: { docs: 60 } } }));
-    expect(() => readConfig(tmpDir)).toThrow('"routing.revalidate"');
-    cleanup();
-  });
-
   // `routing.notFound` is written straight into `assets.not_found_handling`, so a typo
   // must fail here instead of when Cloudflare rejects the deployed config.
   it.each(['404-page', 'single-page-application', 'none'])(
@@ -586,7 +486,7 @@ describe('readConfig', () => {
   );
 
   it('leaves routing.notFound undefined when omitted', () => {
-    setup(JSON.stringify({ routing: { revalidate: 60 } }));
+    setup(JSON.stringify({ routing: { alwaysUseHttps: true } }));
     expect(readConfig(tmpDir).routing?.notFound).toBeUndefined();
     cleanup();
   });
@@ -626,25 +526,6 @@ describe('readConfig', () => {
   it('throws on non-string build', () => {
     setup(JSON.stringify({ inference: { build: true } }));
     expect(() => readConfig(tmpDir)).toThrow('"inference.build" in void.json must be a string');
-    cleanup();
-  });
-
-  it('accepts routing.prerender paths', () => {
-    setup(JSON.stringify({ routing: { prerender: ['/', '/about', '/docs/intro'] } }));
-    const config = readConfig(tmpDir);
-    expect(config.routing?.prerender).toEqual(['/', '/about', '/docs/intro']);
-    cleanup();
-  });
-
-  it('throws on non-array routing.prerender', () => {
-    setup(JSON.stringify({ routing: { prerender: '/about' } }));
-    expect(() => readConfig(tmpDir)).toThrow('"routing.prerender" in void.json must be an array');
-    cleanup();
-  });
-
-  it('throws on routing.prerender path not starting with /', () => {
-    setup(JSON.stringify({ routing: { prerender: ['about'] } }));
-    expect(() => readConfig(tmpDir)).toThrow('must start with "/"');
     cleanup();
   });
 
@@ -748,43 +629,16 @@ describe('readConfig migration errors', () => {
     ['bindings', { db: true }, '"bindings" has moved to "inference.bindings"'],
     ['headers', { '/*': ['X-Frame-Options: DENY'] }, '"headers" has moved to "routing.headers"'],
     ['redirects', { '/old': '/new' }, '"redirects" has moved to "routing.redirects"'],
-    ['cache', { revalidate: 60 }, '"cache" has been replaced by "routing"'],
     ['wrangler', { compatibility_date: '2025-12-01' }, '"wrangler" has been renamed to "worker"'],
     ['mode', 'spa', '"mode" has been renamed to "inference.appType"'],
     ['build', 'nuxt build', '"build" has moved to "inference.build"'],
     ['scanDirs', ['src'], '"scanDirs" has moved to "inference.scanDirs"'],
     ['appType', 'spa', '"appType" has moved to "inference.appType"'],
     ['outputDir', 'dist', '"outputDir" has moved to "inference.outputDir"'],
-    ['revalidate', 60, '"revalidate" has moved to "routing.revalidate"'],
   ])('throws a migration error for the old %s key', (key, value, message) => {
     setup(JSON.stringify({ [key]: value }));
     expect(() => readConfig(tmpDir)).toThrow(message);
     cleanup();
-  });
-});
-
-describe('readConfig target', () => {
-  it('accepts valid target values', () => {
-    for (const target of ['cloudflare', 'node', 'bun', 'deno']) {
-      setup(JSON.stringify({ target }));
-      const config = readConfig(tmpDir);
-      expect(config.target).toBe(target);
-      cleanup();
-    }
-  });
-
-  it('rejects invalid target value', () => {
-    setup(JSON.stringify({ target: 'lambda' }));
-    expect(() => readConfig(tmpDir)).toThrow('"target" in void.json must be one of');
-    cleanup();
-  });
-
-  it('isNodeTarget recognizes node, bun and deno', () => {
-    expect(isNodeTarget('node')).toBe(true);
-    expect(isNodeTarget('bun')).toBe(true);
-    expect(isNodeTarget('deno')).toBe(true);
-    expect(isNodeTarget(undefined)).toBe(false);
-    expect(isNodeTarget('cloudflare')).toBe(false);
   });
 });
 
@@ -865,21 +719,6 @@ describe('readConfig redirects', () => {
       schema.properties.routing.properties.redirects.patternProperties['^(/|https://)'].oneOf[1]
         .properties.status.enum;
     expect(new Set(schemaEnum)).toEqual(VALID_REDIRECT_STATUSES);
-  });
-
-  it('schema.json revalidate key pattern matches runtime validation', () => {
-    const schema = JSON.parse(readFileSync(join(import.meta.dirname, '../../schema.json'), 'utf8'));
-    const objectForm = schema.properties.routing.properties.revalidate.oneOf.find(
-      (s: { type?: string }) => s.type === 'object',
-    );
-    const keyPattern = new RegExp(Object.keys(objectForm.patternProperties)[0]);
-
-    for (const key of ['*', '/x', '/docs/*']) {
-      expect(keyPattern.test(key)).toBe(true);
-    }
-    for (const key of ['*foo', '**', '*/', 'foo']) {
-      expect(keyPattern.test(key)).toBe(false);
-    }
   });
 
   it('schema.json sourceDir pattern matches runtime validation', () => {
@@ -1120,7 +959,6 @@ describe('duplicate "*" wildcards in rule sources', () => {
     ['rewrite source', { rewrites: { '/*/docs/*': '/dest' } }],
     ['fallback source', { fallbacks: { '/*/*': '/index.html' } }],
     ['header pattern', { headers: { '/assets/*/img/*': ['Cache-Control: no-cache'] } }],
-    ['revalidateQueryAllowlist pattern', { revalidateQueryAllowlist: { '/a/*/b/*': ['q'] } }],
   ])('rejects a %s with two "*"', (_kind, routing) => {
     setup(JSON.stringify({ routing }));
     expect(() => readConfig(tmpDir)).toThrow('must contain at most one "*" wildcard');
@@ -1204,49 +1042,6 @@ describe('duplicate "*" wildcards in rule sources', () => {
       }),
     );
     expect(() => readConfig(tmpDir)).toThrow(/duplicate capture group name/);
-    cleanup();
-  });
-});
-
-describe('routing.revalidateQueryAllowlist validation', () => {
-  it('accepts path-pattern arrays', () => {
-    setup(
-      JSON.stringify({
-        routing: {
-          revalidateQueryAllowlist: {
-            '/search': ['q'],
-            '/products/*': ['variant'],
-            '*': [],
-          },
-        },
-      }),
-    );
-    const config = readConfig(tmpDir);
-    expect(config.routing?.revalidateQueryAllowlist).toEqual({
-      '/search': ['q'],
-      '/products/*': ['variant'],
-      '*': [],
-    });
-    cleanup();
-  });
-
-  it('throws when allowlist is not an object', () => {
-    setup(JSON.stringify({ routing: { revalidateQueryAllowlist: ['/search'] } }));
-    expect(() => readConfig(tmpDir)).toThrow(
-      '"routing.revalidateQueryAllowlist" in void.json must be an object',
-    );
-    cleanup();
-  });
-
-  it('throws when pattern does not start with /', () => {
-    setup(JSON.stringify({ routing: { revalidateQueryAllowlist: { search: ['q'] } } }));
-    expect(() => readConfig(tmpDir)).toThrow('must start with "/" or be "*"');
-    cleanup();
-  });
-
-  it('throws when params are not string arrays', () => {
-    setup(JSON.stringify({ routing: { revalidateQueryAllowlist: { '/search': ['q', 1] } } }));
-    expect(() => readConfig(tmpDir)).toThrow('must be an array of strings');
     cleanup();
   });
 });

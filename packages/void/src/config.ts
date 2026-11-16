@@ -7,7 +7,6 @@ import {
 } from './auth/providers.ts';
 import type { DevRedirectRule, HeaderRule } from './cli/types.ts';
 import { loadVoidConfig } from './config-loader.ts';
-import type { HeadConfig } from './pages/head.ts';
 import { validateSourceDir } from './project-paths.ts';
 import { MimeError, parseAddress } from './runtime/email/mime.ts';
 import type { SandboxConfig, SandboxInstanceType } from './sandbox/config.ts';
@@ -43,19 +42,12 @@ export type WranglerConfig = {
  */
 export type NotFoundHandling = 'single-page-application' | '404-page' | 'none';
 
-/** Routing configuration — headers, redirects, rewrites, fallbacks, revalidation, prerendering. */
+/** Routing configuration — headers, redirects, rewrites, fallbacks. */
 export type RoutingConfig = {
-  /** Use trailing-slash Pages URLs and directory indexes for prerendered HTML. */
-  trailingSlash?: boolean;
-  /** Redirect HTTP to HTTPS with a 308. Requires the Cloudflare target. Omitted means off. */
+  /** Redirect HTTP to HTTPS with a 308. Omitted means off. */
   alwaysUseHttps?: boolean;
-  /** Disable ISR and edge prerendering, including per-page policies. Static output is unaffected. */
-  isr?: boolean;
-  /** Type-check URL strings in links, navigation, and rewrites against the app's routes. Omitted means off. */
+  /** Type-check URL strings in fetch calls and rewrites against the app's routes. Omitted means off. */
   typedRoutes?: boolean;
-  revalidate?: number | Record<string, number>;
-  revalidateQueryAllowlist?: Record<string, Array<string>>;
-  prerender?: Array<string>;
   headers?: Record<string, Array<string>>;
   redirects?: Record<string, RedirectDestination>;
   rewrites?: Record<string, RewriteDestination>;
@@ -88,7 +80,7 @@ export type InferenceConfig = {
   scanDirs?: ReadonlyArray<string>;
   build?: string;
   outputDir?: string;
-  appType?: 'spa' | 'static' | 'void' | 'framework';
+  appType?: 'spa' | 'static' | 'void';
 };
 
 /** Auth configuration — high-level provider selection for Better Auth defaults. */
@@ -180,10 +172,7 @@ export type CloudflareConfig = Record<string, unknown> & {
 /** Shape of the Void project config. All fields optional. */
 export type VoidConfig = {
   sourceDir?: string;
-  target?: 'cloudflare' | 'node' | 'bun' | 'deno';
-  output?: 'server' | 'static';
   auth?: AuthConfig;
-  head?: HeadConfig;
   routing?: RoutingConfig;
   inference?: InferenceConfig;
   sandbox?: boolean | SandboxConfig;
@@ -198,9 +187,7 @@ export type VoidConfig = {
 
 const CONFIG_FILE = 'void.json';
 
-const VALID_TARGETS = new Set(['cloudflare', 'node', 'bun', 'deno']);
-const VALID_APP_TYPES = new Set(['spa', 'static', 'void', 'framework']);
-const VALID_OUTPUTS = new Set(['server', 'static']);
+const VALID_APP_TYPES = new Set(['spa', 'static', 'void']);
 /**
  * Accepted `routing.notFound` values. Keep in sync with the schema.json enum
  * and `AssetConfig.not_found_handling` in `@void/deploy-core`.
@@ -410,11 +397,8 @@ const MIGRATION_ERRORS: Record<string, string> = {
   outputDir: '"outputDir" has moved to "inference.outputDir"',
   headers: '"headers" has moved to "routing.headers"',
   redirects: '"redirects" has moved to "routing.redirects"',
-  cache:
-    '"cache" has been replaced by "routing" — use "routing.revalidate" and "routing.prerender"',
   wrangler: '"wrangler" has been renamed to "worker"',
   mode: '"mode" has been renamed to "inference.appType"',
-  revalidate: '"revalidate" has moved to "routing.revalidate"',
 };
 
 /** Read and validate the project's typed config, with legacy JSON compatibility. */
@@ -454,22 +438,6 @@ function validateConfigObject(obj: unknown): VoidConfig {
       throw new Error(`config: "sourceDir" in ${CONFIG_FILE} must be a string.`);
     }
     validateSourceDir(obj.sourceDir, CONFIG_FILE);
-  }
-
-  // Validate target
-  if (obj.target !== undefined) {
-    if (typeof obj.target !== 'string' || !VALID_TARGETS.has(obj.target)) {
-      throw new Error(
-        `config: "target" in ${CONFIG_FILE} must be one of: cloudflare, node, bun, deno.`,
-      );
-    }
-  }
-
-  // Validate output
-  if (obj.output !== undefined) {
-    if (typeof obj.output !== 'string' || !VALID_OUTPUTS.has(obj.output)) {
-      throw new Error(`config: "output" in ${CONFIG_FILE} must be one of: server, static.`);
-    }
   }
 
   // Validate auth
@@ -515,50 +483,6 @@ function validateConfigObject(obj: unknown): VoidConfig {
     }
   }
 
-  // Validate head
-  if (obj.head !== undefined) {
-    if (!isRecord(obj.head)) {
-      throw new Error(`config: "head" in ${CONFIG_FILE} must be an object.`);
-    }
-    const h = obj.head;
-    if (h.title !== undefined && typeof h.title !== 'string') {
-      throw new Error(`config: "head.title" in ${CONFIG_FILE} must be a string.`);
-    }
-    if (h.titleTemplate !== undefined && typeof h.titleTemplate !== 'string') {
-      throw new Error(`config: "head.titleTemplate" in ${CONFIG_FILE} must be a string.`);
-    }
-    if (h.meta !== undefined) {
-      if (!Array.isArray(h.meta)) {
-        throw new Error(`config: "head.meta" in ${CONFIG_FILE} must be an array.`);
-      }
-      for (const entry of h.meta) {
-        if (!isRecord(entry)) {
-          throw new Error(`config: "head.meta" entries in ${CONFIG_FILE} must be objects.`);
-        }
-      }
-    }
-    if (h.link !== undefined) {
-      if (!Array.isArray(h.link)) {
-        throw new Error(`config: "head.link" in ${CONFIG_FILE} must be an array.`);
-      }
-    }
-    if (h.script !== undefined) {
-      if (!Array.isArray(h.script)) {
-        throw new Error(`config: "head.script" in ${CONFIG_FILE} must be an array.`);
-      }
-    }
-    if (h.htmlAttrs !== undefined) {
-      if (!isRecord(h.htmlAttrs)) {
-        throw new Error(`config: "head.htmlAttrs" in ${CONFIG_FILE} must be an object.`);
-      }
-    }
-    if (h.bodyAttrs !== undefined) {
-      if (!isRecord(h.bodyAttrs)) {
-        throw new Error(`config: "head.bodyAttrs" in ${CONFIG_FILE} must be an object.`);
-      }
-    }
-  }
-
   // Validate routing
   if (obj.routing !== undefined) {
     if (!isRecord(obj.routing)) {
@@ -566,27 +490,8 @@ function validateConfigObject(obj: unknown): VoidConfig {
     }
     const routing = obj.routing;
 
-    if (routing.trailingSlash !== undefined && typeof routing.trailingSlash !== 'boolean') {
-      throw new Error(`config: "routing.trailingSlash" in ${CONFIG_FILE} must be a boolean.`);
-    }
-    if (
-      routing.trailingSlash === true &&
-      isRecord(obj.cloudflare) &&
-      isRecord(obj.cloudflare.assets) &&
-      obj.cloudflare.assets.html_handling === 'drop-trailing-slash'
-    ) {
-      throw new Error(
-        `config: "routing.trailingSlash" conflicts with cloudflare.assets.html_handling: "drop-trailing-slash".`,
-      );
-    }
-
     if (routing.alwaysUseHttps !== undefined && typeof routing.alwaysUseHttps !== 'boolean') {
       throw new Error(`config: "routing.alwaysUseHttps" in ${CONFIG_FILE} must be a boolean.`);
-    }
-    if (routing.alwaysUseHttps === true && isNodeTarget(obj.target as VoidConfig['target'])) {
-      throw new Error(
-        `config: "routing.alwaysUseHttps" in ${CONFIG_FILE} requires target: "cloudflare". It is not available with target: "${obj.target}".`,
-      );
     }
     if (routing.typedRoutes !== undefined && typeof routing.typedRoutes !== 'boolean') {
       throw new Error(`config: "routing.typedRoutes" in ${CONFIG_FILE} must be a boolean.`);
@@ -598,57 +503,6 @@ function validateConfigObject(obj: unknown): VoidConfig {
         throw new Error(
           `config: "routing.notFound" in ${CONFIG_FILE} must be one of: ${[...VALID_NOT_FOUND_HANDLING].join(', ')}.`,
         );
-      }
-    }
-
-    if (routing.isr !== undefined && typeof routing.isr !== 'boolean') {
-      throw new Error(`config: "routing.isr" in ${CONFIG_FILE} must be a boolean.`);
-    }
-
-    // Validate routing.revalidate
-    if (routing.revalidate !== undefined) {
-      if (typeof routing.revalidate === 'number') {
-        if (!Number.isFinite(routing.revalidate) || routing.revalidate < 0) {
-          throw new Error(
-            `config: "routing.revalidate" in ${CONFIG_FILE} must be a non-negative finite number.`,
-          );
-        }
-      } else if (isRecord(routing.revalidate)) {
-        for (const [pattern, value] of Object.entries(routing.revalidate)) {
-          if (pattern !== '*' && !pattern.startsWith('/')) {
-            throw new Error(
-              `config: "routing.revalidate" key '${pattern}' in ${CONFIG_FILE} must start with "/" or be "*".`,
-            );
-          }
-          if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-            throw new Error(
-              `config: "routing.revalidate" value for '${pattern}' in ${CONFIG_FILE} must be a non-negative finite number.`,
-            );
-          }
-        }
-      } else {
-        throw new Error(
-          `config: "routing.revalidate" in ${CONFIG_FILE} must be a number or an object of path patterns to numbers.`,
-        );
-      }
-    }
-
-    // Validate routing.prerender
-    if (routing.prerender !== undefined) {
-      if (
-        !Array.isArray(routing.prerender) ||
-        !routing.prerender.every((p) => typeof p === 'string')
-      ) {
-        throw new Error(
-          `config: "routing.prerender" in ${CONFIG_FILE} must be an array of strings.`,
-        );
-      }
-      for (const p of routing.prerender as Array<string>) {
-        if (!p.startsWith('/')) {
-          throw new Error(
-            `config: "routing.prerender" path '${p}' in ${CONFIG_FILE} must start with "/".`,
-          );
-        }
       }
     }
 
@@ -708,28 +562,6 @@ function validateConfigObject(obj: unknown): VoidConfig {
         } else {
           throw new Error(
             `config: Redirect for '${source}' in ${CONFIG_FILE} must be a string or an object with "to" and optional "status".`,
-          );
-        }
-      }
-    }
-
-    // Validate routing.revalidateQueryAllowlist
-    if (routing.revalidateQueryAllowlist !== undefined) {
-      if (!isRecord(routing.revalidateQueryAllowlist)) {
-        throw new Error(`"routing.revalidateQueryAllowlist" in ${CONFIG_FILE} must be an object`);
-      }
-      for (const [pattern, params] of Object.entries(routing.revalidateQueryAllowlist)) {
-        if (pattern !== '*' && !pattern.startsWith('/')) {
-          throw new Error(
-            `config: revalidateQueryAllowlist pattern '${pattern}' in ${CONFIG_FILE} must start with "/" or be "*".`,
-          );
-        }
-        if (pattern !== '*') {
-          assertSingleSplat(pattern, 'revalidateQueryAllowlist');
-        }
-        if (!Array.isArray(params) || !params.every((v) => typeof v === 'string')) {
-          throw new Error(
-            `config: revalidateQueryAllowlist for '${pattern}' in ${CONFIG_FILE} must be an array of strings.`,
           );
         }
       }
@@ -809,7 +641,7 @@ function validateConfigObject(obj: unknown): VoidConfig {
     if (inf.appType !== undefined) {
       if (typeof inf.appType !== 'string' || !VALID_APP_TYPES.has(inf.appType)) {
         throw new Error(
-          `config: "inference.appType" in ${CONFIG_FILE} must be one of: spa, static, void, framework.`,
+          `config: "inference.appType" in ${CONFIG_FILE} must be one of: spa, static, void.`,
         );
       }
     }
@@ -1062,11 +894,6 @@ function parseEmailFrom(value: unknown): void {
       `config: "email.from" in ${CONFIG_FILE} must be a single email address, optionally with a display name (e.g. "Acme <noreply@mail.acme.com>").${detail}`,
     );
   }
-}
-
-/** Returns true if the target is a non-Cloudflare runtime (Node.js, Bun, Deno). */
-export function isNodeTarget(target: VoidConfig['target']): boolean {
-  return target === 'node' || target === 'bun' || target === 'deno';
 }
 
 /**

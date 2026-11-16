@@ -1,7 +1,6 @@
 import type { Context, Env, MiddlewareHandler, Next, TypedResponse } from 'hono';
 import type { RedirectStatusCode } from 'hono/utils/http-status';
 import type { RewriteDestination, RouteDestination, RouteUrl, RouteUrlInput } from 'void/routes';
-import type { HeadConfig, HeadDescriptor } from '../pages/head.ts';
 import type { AuthSession, AuthUser } from './auth.ts';
 import { base64ToBytes } from './base64.ts';
 import { executeComposedHandler, setHandlerComposition } from './handler-composition.ts';
@@ -23,7 +22,7 @@ export class VoidAssetRewriteError extends Error {
   override name = 'VoidAssetRewriteError';
   constructor(destination: string) {
     super(
-      `c.rewrite() cannot re-dispatch to a static asset path (${JSON.stringify(destination)}). Runtime rewrites only reach routes and SSR entries inside the worker — static asset handlers run in front of the worker. To rewrite into an asset, use a static \`routing.rewrites\` rule in void.config.ts or a \`200!\` entry in _redirects. See https://void.cloud/guide/edge/rewrites#runtime-rewrites-cannot-reach-static-assets`,
+      `c.rewrite() cannot re-dispatch to a static asset path (${JSON.stringify(destination)}). Runtime rewrites only reach routes inside the worker — static asset handlers run in front of the worker. To rewrite into an asset, use a static \`routing.rewrites\` rule in void.config.ts or a \`200!\` entry in _redirects. See https://void.cloud/guide/edge/rewrites#runtime-rewrites-cannot-reach-static-assets`,
     );
   }
 }
@@ -36,7 +35,6 @@ type RewritePath = TypedRoutes extends true ? RouteUrl : RewriteDestination;
 export interface CloudContextVariables {
   user: AuthUser | null;
   session: AuthSession | null;
-  headDefaults?: HeadConfig;
   [key: string]: unknown;
 }
 
@@ -183,16 +181,6 @@ export interface BasicAuthOptions {
   message?: BasicAuthOptionValue;
 }
 
-/** Pre-rendered asset tags injected by the SSR build. */
-export type RenderAssetTags = {
-  /** CSS stylesheet links for `<head>`. */
-  css: string;
-  /** JS modulepreload links for `<head>` (only when page needs JS). */
-  preloads: string;
-  /** Script tags for `</body>` (only when page needs JS). */
-  body: string;
-};
-type RenderFn = (c: CloudContext, assetTags: RenderAssetTags) => Response | Promise<Response>;
 type ScheduledFn = (
   controller: ScheduledController,
   env: CloudEnv['Bindings'],
@@ -488,24 +476,6 @@ export function defineScheduled(handler: ScheduledFn): ScheduledFn {
 }
 
 /**
- * Identity function that provides type inference for SSR render entry.
- * The second argument includes asset tags for client scripts/styles.
- */
-export function defineRender(handler: RenderFn): RenderFn {
-  return handler;
-}
-
-/**
- * Identity function that provides type inference for page `head()` exports.
- * At runtime it simply returns the function passed to it.
- */
-export function defineHead<P = Record<string, unknown>>(
-  handler: (c: CloudContext, props: P) => HeadDescriptor | undefined,
-): (c: CloudContext, props: P) => HeadDescriptor | undefined {
-  return handler;
-}
-
-/**
  * Identity function that provides type inference for queue consumers.
  * At runtime it simply returns the function passed to it.
  */
@@ -514,6 +484,3 @@ export function defineQueue<T = unknown>(handler: QueueFn<T>): TypedQueueHandler
 }
 
 export type { ValidatorSlots, HandlerInput } from './validator.ts';
-export { ValidationError } from '../pages/validation-error.ts';
-export { defer } from '../pages/defer.ts';
-export type { Deferred, InferProps } from '../pages/defer.ts';

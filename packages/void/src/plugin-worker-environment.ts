@@ -4,7 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'pathslash';
 import { type Plugin } from 'vite';
 import { ensureWranglerCompat, type WranglerCompat } from './cli/wrangler.ts';
-import { readConfig, isNodeTarget, type DatabaseDialect } from './config.ts';
+import { readConfig, type DatabaseDialect } from './config.ts';
 
 const CLOUDFLARE_BUILTIN_IMPORT = /^cloudflare:/;
 
@@ -54,24 +54,6 @@ export function createCloudflareBuiltinsExternalPlugin(): Plugin {
  * `defineQueue`, ...), as Void apps and the cron/queue deploy bundles do. The package entry is the
  * Vite plugin: loaded in a worker environment, it pulls Wrangler into the dependency optimizer.
  */
-export function createBareVoidRedirectPlugin(): Plugin {
-  let handlerFile: string | undefined;
-  return {
-    name: 'void:bare-void-redirect',
-    resolveId: {
-      order: 'pre',
-      filter: { id: /^void$/ },
-      handler() {
-        if (this.environment?.config.consumer === 'client') {
-          return;
-        }
-        handlerFile ??= fileURLToPath(import.meta.resolve('#self/handler'));
-        return handlerFile;
-      },
-    },
-  };
-}
-
 export function createDefaultWorkerEnvironmentPlugin(): Plugin {
   return {
     name: 'void:default-worker-environment',
@@ -138,7 +120,7 @@ export function createWranglerCompatPersistPlugin(
 ): Plugin {
   let persisted = false;
   const persist = () => {
-    if (persisted || isNodeTarget(config.target)) {
+    if (persisted) {
       return;
     }
     persisted = true;
@@ -205,8 +187,8 @@ export function createServerRuntimeOptimizerPlugin(
       }
       // The Cloudflare plugin gives every environment it runs in workerd these conditions from
       // its config hook, which runs before any configEnvironment hook. That covers Void's own
-      // worker, class A frameworks and adapters such as @astrojs/cloudflare. Node runtimes load
-      // CommonJS themselves, and an include there turns on SSR prebundling nobody asked for.
+      // worker. Node runtimes load CommonJS themselves, and an include there turns on SSR
+      // prebundling nobody asked for.
       if (!environment.resolve?.conditions?.includes('workerd')) {
         return { optimizeDeps: { exclude: ['void'] } };
       }

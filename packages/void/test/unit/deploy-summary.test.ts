@@ -26,17 +26,12 @@ describe('deployment summaries', () => {
         migrations: count,
         cronJobs: count,
         queues: count,
-        prerenderedPages: count,
-        revalidate: Object.fromEntries(Array.from({ length: count }, (_, i) => [`/page-${i}`, 60])),
-        ssr: true,
       }),
     ).toBe(
       `${count} worker module${suffix}, ${count} static asset${suffix}\n` +
         `${count} migration${suffix} applied\n` +
         `${count} cron job${suffix} scheduled\n` +
-        `${count} queue${suffix} configured\n` +
-        `${count} page${suffix} prerendered\n` +
-        `SSR enabled\nISR revalidate: ${count} path rule${suffix}`,
+        `${count} queue${suffix} configured`,
     );
   });
 
@@ -54,11 +49,5 @@ describe('deployment summaries', () => {
       formatDeploySummary({ workerName: 'blog', migrations: 1, d1MigrationsCurrent: true }),
     ).toBe('Worker: blog\n1 migration applied\nD1 migrations up to date');
     expect(formatDeploySummary({ workerName: 'site', typeLabel: 'SPA' })).toBe('Worker: site\nSPA');
-  });
-
-  it('includes the rendering configuration for framework deployments', () => {
-    expect(formatDeploySummary({ workers: 1, assets: 1, revalidate: 60, framework: 'Astro' })).toBe(
-      '1 worker module, 1 static asset\nISR revalidate: 60s\nFramework: Astro',
-    );
   });
 });

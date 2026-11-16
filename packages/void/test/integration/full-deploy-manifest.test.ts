@@ -17,7 +17,6 @@ import {
 } from '../../../../test/integration-helpers.ts';
 import type { ProjectRole } from '../../src/cli/client.ts';
 import { savePlatformConnection } from '../../src/cli/platform-registry.ts';
-import type { DetectedFramework } from '../../src/plugin-inference.ts';
 import { withPlatformDiscovery } from '../helpers/platform-discovery.ts';
 
 const noopSpinner = {
@@ -51,34 +50,10 @@ vi.mock('../../src/cli/output.ts', async () => {
   return { ...actual, createSpinner: () => noopSpinner };
 });
 
-// Prerender discovery starts workerd and feeds only `manifest.prerender`; stub it to stay offline.
-const { mockCollectPrerenderPaths } = vi.hoisted(() => ({
-  mockCollectPrerenderPaths: vi.fn(async () => [] as Array<string>),
-}));
-vi.mock('../../src/prerender.ts', async () => {
-  const actual =
-    await vi.importActual<typeof import('../../src/prerender.ts')>('../../src/prerender.ts');
-  return {
-    ...actual,
-    collectPrerenderPaths: mockCollectPrerenderPaths,
-  };
-});
-
-// Lets one pre-built fixture take both the Void pages and the framework deploy paths.
-const { mockDetectFramework } = vi.hoisted(() => ({
-  mockDetectFramework: vi.fn<(root: string) => DetectedFramework | undefined>(),
-}));
-vi.mock('../../src/plugin-inference.ts', async () => {
-  const actual = await vi.importActual<typeof import('../../src/plugin-inference.ts')>(
-    '../../src/plugin-inference.ts',
-  );
-  return { ...actual, detectFramework: mockDetectFramework };
-});
-
 const { runDeploy } = await import('../../src/cli/deploy.ts');
 
 const ROOT = join(import.meta.dirname, '..', '..', '..', '..');
-const SOURCE_PLAYGROUND = 'playground/named-layouts';
+const SOURCE_PLAYGROUND = 'playground/spa';
 let playground: IsolatedPlayground;
 let fixture = '';
 let projectJson = '';
@@ -91,7 +66,6 @@ let savedProject: string | undefined;
 type Captured = {
   finalizeBody: {
     manifest?: {
-      pages?: unknown;
       alwaysUseHttps?: boolean;
       bindings?: Record<string, unknown>;
       vars?: Record<string, string>;
@@ -133,10 +107,6 @@ function installPlatformMocks(role: ProjectRole = 'owner'): Captured {
       };
       const total = Object.keys(body.assetManifest ?? {}).length;
       return json({ needed: [], total, skipped: total });
-    }
-
-    if (url.endsWith('/projects/proj_named_layouts_test/prerender-token') && method === 'POST') {
-      return json({ token: 'scoped-prerender-token' });
     }
 
     if (url.endsWith('/deploy') && method === 'POST') {
@@ -213,12 +183,9 @@ describe('managed deployment manifests (built Worker)', () => {
   });
 
   beforeEach(() => {
-    mockDetectFramework.mockReset().mockReturnValue(undefined);
-
     originalFetch = globalThis.fetch;
     globalThis.fetch = withPlatformDiscovery(fetchMock);
     fetchMock.mockReset();
-    mockCollectPrerenderPaths.mockClear();
 
     savedToken = process.env.VOID_TOKEN;
     savedProject = process.env.VOID_PROJECT;
@@ -256,51 +223,6 @@ describe('managed deployment manifests (built Worker)', () => {
     }
   });
 
-  it('forwards the page scan into the finalize manifest.pages (incl. the ISR page)', async () => {
-    const captured = installPlatformMocks();
-
-    await runDeploy(fixture, { skipBuild: true });
-
-    expect(mockCollectPrerenderPaths).toHaveBeenCalledWith(
-      expect.objectContaining({
-        projectId: 'proj_named_layouts_test',
-        voidToken: 'scoped-prerender-token',
-      }),
-    );
-
-    expect(captured.finalizeBody).not.toBeNull();
-    const pages = captured.finalizeBody!.manifest?.pages as
-      | Array<{ pattern: string; revalidate?: number }>
-      | undefined;
-
-    expect(pages).toContainEqual({ pattern: '/isr', revalidate: 60 });
-
-    // The fixture's object `routing.revalidate` ships as `pathRevalidate`; pages without their own
-    // export carry no `revalidate`, so dispatch resolves it per request path.
-    const manifest = captured.finalizeBody!.manifest as unknown as {
-      pathRevalidate?: Record<string, number>;
-    };
-    expect(manifest.pathRevalidate).toEqual({ '/docs': 120, '/docs/ref': 0 });
-    expect(pages).toContainEqual({ pattern: '/docs' });
-    expect(pages).toContainEqual({ pattern: '/docs/ref' });
-    const docsEntry = pages!.find((p) => p.pattern === '/docs');
-    const docsRefEntry = pages!.find((p) => p.pattern === '/docs/ref');
-    expect(docsEntry).not.toHaveProperty('revalidate');
-    expect(docsRefEntry).not.toHaveProperty('revalidate');
-  });
-
-  it('suppresses manifest.pages in framework mode (Class-A framework forced via detectFramework)', async () => {
-    // The vinext-pages preset uses the same dist layout as this Void build.
-    mockDetectFramework.mockReturnValue({ name: 'vinext-pages', class: 'a' });
-    const captured = installPlatformMocks();
-
-    await runDeploy(fixture, { skipBuild: true });
-
-    expect(captured.finalizeBody).not.toBeNull();
-    expect(captured.finalizeBody!.manifest).toBeDefined();
-    expect(captured.finalizeBody!.manifest?.pages).toBeUndefined();
-  });
-
   it('sends custom inference.bindings names in the manifest bindings', async () => {
     const configPath = join(fixture, 'void.config.ts');
     const original = readFileSync(configPath, 'utf8');
@@ -325,24 +247,19 @@ describe('managed deployment manifests (built Worker)', () => {
     }
   });
 
-  it.each([
-    ['Void', undefined],
-    ['Class A', { name: 'vinext-pages', class: 'a' }],
-  ] as const)(
-    'includes configured worker.vars and HTTPS policy in the %s deployment request',
-    async (_, detected) => {
-      mockDetectFramework.mockReturnValue(detected);
+  it.each([true, false])(
+    'includes configured worker.vars and HTTPS policy %s in the deployment request',
+    async (alwaysUseHttps) => {
       const configPath = join(fixture, 'void.config.ts');
       const original = readFileSync(configPath, 'utf8');
       const dotenvPath = join(fixture, '.env');
       const originalDotenv = existsSync(dotenvPath) ? readFileSync(dotenvPath) : undefined;
-      const alwaysUseHttps = detected?.class !== 'a';
       const vars = { API_URL: 'https://api.example.test', EMPTY_SETTING: '' };
       writeFileSync(
         configPath,
         original
           .replace('worker: {', `worker: { vars: ${JSON.stringify(vars)},`)
-          .replace('routing: {', `routing: { alwaysUseHttps: ${alwaysUseHttps},`),
+          .replace('worker: {', `routing: { alwaysUseHttps: ${alwaysUseHttps} },\n  worker: {`),
       );
       writeFileSync(dotenvPath, 'API_URL=https://local.example.test\nADMIN_TOKEN=local-secret\n');
       try {
@@ -361,7 +278,7 @@ describe('managed deployment manifests (built Worker)', () => {
     },
   );
 
-  it('uses the alternate project for Worker packaging and prerendering while retaining the saved link', async () => {
+  it('uses the alternate project for Worker packaging while retaining the saved link', async () => {
     const original = readFileSync(projectJson, 'utf8');
     const saved = JSON.stringify({
       projectId: 'project-on-original-platform',
@@ -374,13 +291,7 @@ describe('managed deployment manifests (built Worker)', () => {
       const captured = installPlatformMocks();
       await runDeploy(fixture, { projectSlug: 'named-layouts-test', skipBuild: true });
       expect(readFileSync(projectJson, 'utf8')).toBe(saved);
-      expect(mockCollectPrerenderPaths).toHaveBeenCalledWith(
-        expect.objectContaining({
-          projectId: 'proj_named_layouts_test',
-          voidToken: 'scoped-prerender-token',
-        }),
-      );
-      expect(captured.finalizeBody?.manifest?.pages).toBeDefined();
+      expect(captured.finalizeBody?.manifest).toBeDefined();
       const urls = fetchMock.mock.calls.map(([url]) => String(url));
       expect(urls.every((url) => url.startsWith('https://platform.example.test/'))).toBe(true);
       expect(urls.some((url) => url.includes('project-on-original-platform'))).toBe(false);
@@ -395,16 +306,14 @@ describe('managed deployment manifests (built Worker)', () => {
   it('rejects a saved reader project before building or uploading', async () => {
     const captured = installPlatformMocks('reader');
 
-    // Do not skip the build: access must be checked before framework detection
-    // can select a build path, regardless of the fixture's existing artifacts.
+    // Do not skip the build: access must be checked before a build path is selected,
+    // regardless of the fixture's existing artifacts.
     await expect(runDeploy(fixture)).rejects.toThrow(
       'You have reader access to "named-layouts-test" and cannot deploy.',
     );
 
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock.mock.calls[0]?.[0]).toMatch(/\/projects\/proj_named_layouts_test$/);
-    expect(mockDetectFramework).not.toHaveBeenCalled();
-    expect(mockCollectPrerenderPaths).not.toHaveBeenCalled();
     expect(captured.finalizeBody).toBeNull();
   });
 });

@@ -8,14 +8,14 @@ import { prepareDeployArtifact } from '../../src/deploy.ts';
 let root: string;
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'void-prepared-artifact-'));
-  mkdirSync(join(root, 'dist/server'), { recursive: true });
+  mkdirSync(join(root, 'dist/ssr'), { recursive: true });
   mkdirSync(join(root, 'dist/client'), { recursive: true });
   writeFileSync(
-    join(root, 'dist/server/index.js'),
+    join(root, 'dist/ssr/index.js'),
     "export default { fetch() { return new Response('hello') } }",
   );
   writeFileSync(
-    join(root, 'dist/server/wrangler.json'),
+    join(root, 'dist/ssr/wrangler.json'),
     JSON.stringify({
       main: 'index.js',
       compatibility_date: '2026-10-08',
@@ -70,7 +70,7 @@ it('includes configured Worker vars without copying dotenv or generated vars', a
   );
   writeFileSync(join(root, '.env'), 'API_URL=https://local.example.test\nLOCAL_ONLY=local-value\n');
   writeFileSync(
-    join(root, 'dist/server/wrangler.json'),
+    join(root, 'dist/ssr/wrangler.json'),
     JSON.stringify({
       main: 'index.js',
       compatibility_date: '2026-10-08',
@@ -96,7 +96,7 @@ it('omits empty configured Worker vars', async () => {
   expect(fetch).not.toHaveBeenCalled();
 });
 it('fails when Worker build output is missing', async () => {
-  rmSync(join(root, 'dist/server'), { recursive: true });
+  rmSync(join(root, 'dist/ssr'), { recursive: true });
   await expect(prepareDeployArtifact(root)).rejects.toThrow('Worker output not found');
 });
 it('packages native Durable Objects for managed deployment without namespace authority', async () => {
@@ -117,7 +117,7 @@ it('packages native Durable Objects for managed deployment without namespace aut
 });
 
 it('packages a detected Vite SPA as assets without a Worker or provider calls', async () => {
-  rmSync(join(root, 'dist/server'), { recursive: true });
+  rmSync(join(root, 'dist/ssr'), { recursive: true });
   rmSync(join(root, 'dist/client'), { recursive: true });
   writeFileSync(join(root, 'package.json'), JSON.stringify({ devDependencies: { vite: '*' } }));
   writeFileSync(join(root, 'dist/index.html'), '<div id="root"></div>');

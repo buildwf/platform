@@ -7,7 +7,6 @@ import { readConfig } from '../../src/config.ts';
 import {
   assertNoRootSourceConventionConflicts,
   readProjectPaths,
-  resolvePagesDir,
   resolveProjectPaths,
   validateSourceDir,
 } from '../../src/project-paths.ts';
@@ -36,14 +35,12 @@ describe('project path resolution', () => {
     expect(paths.sourceDir).toBe('');
     expect(paths.sourceRoot).toBe(root);
     expect(paths.routesDir).toBe(toSlash(join(root, 'routes')));
-    expect(paths.pagesDir).toBe(toSlash(join(root, 'pages')));
     expect(paths.middlewareDir).toBe(toSlash(join(root, 'middleware')));
     expect(paths.cronsDir).toBe(toSlash(join(root, 'crons')));
     expect(paths.queuesDir).toBe(toSlash(join(root, 'queues')));
     expect(paths.dbDir).toBe(toSlash(join(root, 'db')));
     expect(paths.migrationsDir).toBe(toSlash(join(root, 'db', 'migrations')));
     expect(paths.schemaFile).toBe(toSlash(join(root, 'db', 'schema.ts')));
-    expect(paths.ssrDir).toBe(toSlash(join(root, 'src')));
     expect(paths.sourceRelative('db/migrations')).toBe('db/migrations');
   });
 
@@ -52,29 +49,25 @@ describe('project path resolution', () => {
     expect(paths.sourceDir).toBe('src');
     expect(paths.sourceRoot).toBe(toSlash(join(root, 'src')));
     expect(paths.routesDir).toBe(toSlash(join(root, 'src', 'routes')));
-    expect(paths.pagesDir).toBe(toSlash(join(root, 'src', 'pages')));
     expect(paths.middlewareDir).toBe(toSlash(join(root, 'src', 'middleware')));
     expect(paths.cronsDir).toBe(toSlash(join(root, 'src', 'crons')));
     expect(paths.queuesDir).toBe(toSlash(join(root, 'src', 'queues')));
     expect(paths.dbDir).toBe(toSlash(join(root, 'src', 'db')));
     expect(paths.migrationsDir).toBe(toSlash(join(root, 'src', 'db', 'migrations')));
     expect(paths.schemaFile).toBe(toSlash(join(root, 'src', 'db', 'schema.ts')));
-    expect(paths.ssrDir).toBe(toSlash(join(root, 'src')));
     expect(paths.sourceRelative('db/migrations')).toBe('src/db/migrations');
   });
 
   it('supports arbitrary nested source directories', () => {
     const paths = resolveProjectPaths(root, { sourceDir: 'app/server' });
     expect(paths.routesDir).toBe(toSlash(join(root, 'app', 'server', 'routes')));
-    expect(paths.pagesDir).toBe(toSlash(join(root, 'app', 'server', 'pages')));
     expect(paths.schemaDir).toBe(toSlash(join(root, 'app', 'server', 'db', 'schema')));
     expect(paths.sourceRelative('routes/api')).toBe('app/server/routes/api');
   });
 
   it('reads sourceDir from root void.json', () => {
     writeConfig({ sourceDir: 'src' });
-    expect(readProjectPaths(root).pagesDir).toBe(toSlash(join(root, 'src', 'pages')));
-    expect(resolvePagesDir(root)).toBe(toSlash(join(root, 'src', 'pages')));
+    expect(readProjectPaths(root).routesDir).toBe(toSlash(join(root, 'src', 'routes')));
   });
 
   it('keeps env.ts back compat candidates when sourceDir is omitted', () => {

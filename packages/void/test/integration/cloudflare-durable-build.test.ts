@@ -46,7 +46,7 @@ describe('real Cloudflare Durable Object configuration merge', () => {
   ])(
     'emits $name identities and ordered migrations exactly once through the actual provider plugin',
     async (options) => {
-      const fixture = createIsolatedPlayground(repository, 'playground/ssr');
+      const fixture = createIsolatedPlayground(repository, 'playground/spa');
       const root = fixture.root;
       const write = (path: string, source: string) => {
         mkdirSync(join(root, path, '..'), { recursive: true });

@@ -5,7 +5,6 @@ import type { VoidConfig } from './config.ts';
 
 const SOURCE_CONVENTION_DIRECTORIES = [
   'routes',
-  'pages',
   'middleware',
   'crons',
   'queues',
@@ -39,12 +38,10 @@ export type ProjectPaths = {
   cronsDir: string;
   queuesDir: string;
   emailDir: string;
-  pagesDir: string;
   dbDir: string;
   migrationsDir: string;
   schemaFile: string;
   schemaDir: string;
-  ssrDir: string;
   sourceRelative: (path: string) => string;
   authConfigCandidates: ReadonlyArray<string>;
   envFileCandidates: ReadonlyArray<string>;
@@ -100,12 +97,10 @@ export function resolveProjectPaths(root: string, config?: VoidConfig): ProjectP
     cronsDir: join(sourceRoot, 'crons'),
     queuesDir: join(sourceRoot, 'queues'),
     emailDir: join(sourceRoot, 'email'),
-    pagesDir: join(sourceRoot, 'pages'),
     dbDir: join(sourceRoot, 'db'),
     migrationsDir: join(sourceRoot, 'db', 'migrations'),
     schemaFile: join(sourceRoot, 'db', 'schema.ts'),
     schemaDir: join(sourceRoot, 'db', 'schema'),
-    ssrDir: sourceDir ? sourceRoot : join(root, 'src'),
     sourceRelative,
     authConfigCandidates: AUTH_CONFIG_FILES.map((file) => join(sourceRoot, file)),
     envFileCandidates,
@@ -124,10 +119,6 @@ function readSourceDirConfig(root: string): Pick<VoidConfig, 'sourceDir'> {
 
   const sourceDir = (config as Record<string, unknown>).sourceDir;
   return typeof sourceDir === 'string' ? { sourceDir } : {};
-}
-
-export function resolvePagesDir(root: string = process.cwd()): string {
-  return readProjectPaths(root).pagesDir;
 }
 
 export function assertNoRootSourceConventionConflicts(paths: ProjectPaths): void {

@@ -45,15 +45,6 @@ describe('custom Cloudflare binding types', () => {
     expect(dts!.indexOf('"AUTH"')).toBeLessThan(dts!.indexOf('"ROOM"'));
   });
 
-  it.each(['node', 'bun', 'deno'] as const)('removes stale types for target %s', (target) => {
-    const root = mkdtempSync(join(tmpdir(), 'void-binding-types-'));
-    roots.push(root);
-    syncBindingTypes(root, { cloudflare: { ai: { binding: 'CUSTOM_AI' } } });
-    expect(existsSync(join(root, '.void/bindings.d.ts'))).toBe(true);
-    syncBindingTypes(root, { target, cloudflare: { ai: { binding: 'CUSTOM_AI' } } });
-    expect(existsSync(join(root, '.void/bindings.d.ts'))).toBe(false);
-  });
-
   it('includes types in the project config and removes stale types when bindings disappear', () => {
     const root = mkdtempSync(join(tmpdir(), 'void-binding-types-'));
     roots.push(root);

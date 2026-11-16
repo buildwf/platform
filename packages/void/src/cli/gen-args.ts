@@ -26,11 +26,6 @@ export const genSubcommands: Array<SubcommandDef> = [
     },
   },
   { name: 'middleware', arg: '<name>', description: 'Generate a numbered middleware file' },
-  {
-    name: 'ssr',
-    description: 'Generate SSR entry + client + App component',
-    flags: [{ name: '--react', description: 'Use React' }],
-  },
   { name: 'cron', arg: '<name>', description: 'Generate a cron job file' },
   { name: 'queue', arg: '<name>', description: 'Generate a queue consumer file' },
 ];
@@ -44,7 +39,6 @@ export type GenArgs =
   | { subcommand: 'migration'; name: string }
   | { subcommand: 'route'; path: string; methods: Array<string> }
   | { subcommand: 'middleware'; name: string }
-  | { subcommand: 'ssr'; framework?: 'react' }
   | { subcommand: 'cron'; name: string }
   | { subcommand: 'queue'; name: string };
 
@@ -157,23 +151,6 @@ function parseHyphenatedNameArgs(
   return { subcommand, name };
 }
 
-function parseSsrArgs(args: Array<string>): GenArgs {
-  const parsed = parseArgs({
-    args,
-    options: {
-      react: { type: 'boolean' },
-    },
-    allowPositionals: true,
-    strict: true,
-  });
-
-  if (parsed.positionals.length > 0) {
-    throw new Error(`gen: Unexpected argument '${parsed.positionals[0]}'.`);
-  }
-
-  return { subcommand: 'ssr', framework: parsed.values.react ? 'react' : undefined };
-}
-
 export function parseGenArgs(args: Array<string>): GenArgs {
   const [subcommand, ...rest] = args;
 
@@ -189,9 +166,6 @@ export function parseGenArgs(args: Array<string>): GenArgs {
   if (subcommand === 'middleware') {
     return parseHyphenatedNameArgs(rest, 'middleware', 'Middleware');
   }
-  if (subcommand === 'ssr') {
-    return parseSsrArgs(rest);
-  }
   if (subcommand === 'cron') {
     return parseHyphenatedNameArgs(rest, 'cron', 'Cron');
   }
@@ -199,5 +173,5 @@ export function parseGenArgs(args: Array<string>): GenArgs {
     return parseHyphenatedNameArgs(rest, 'queue', 'Queue');
   }
 
-  throw new Error('gen: Usage: void gen <model|migration|route|middleware|ssr|cron|queue>.');
+  throw new Error('gen: Usage: void gen <model|migration|route|middleware|cron|queue>.');
 }

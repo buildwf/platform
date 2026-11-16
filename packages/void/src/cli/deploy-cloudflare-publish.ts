@@ -4,7 +4,6 @@ import {
   parseRootWranglerConfig,
   readCloudflareTriggerConfig,
 } from '@void/deploy-cloudflare';
-import { detectFramework } from '../plugin-inference.ts';
 import { readVersionMetadataBinding } from '../shared/version-metadata.ts';
 import { createActiveSecretPinner } from './cf-version-runner.ts';
 import {
@@ -40,14 +39,13 @@ export async function publishCloudflareWorker(input: {
   readonly cliLog: CliLogger;
   readonly reporter: CloudflareChildReporter;
   readonly atomic: boolean;
-  readonly detectedFramework: ReturnType<typeof detectFramework>;
   readonly initialCloudflareCandidate: CloudflareCandidateReceipt | null;
   readonly source: CloudflareDeploySource;
   readonly preflight: CloudflarePreflight;
   readonly build: CloudflareBuild;
   readonly migration: CloudflareMigration;
 }): Promise<void> {
-  const { root, deps, exit, cliLog, reporter, atomic, detectedFramework } = input;
+  const { root, deps, exit, cliLog, reporter, atomic } = input;
   const { initialCloudflareCandidate } = input;
   const { configPath, needsSandbox, desired, analysis } = input.source;
   const {
@@ -62,7 +60,6 @@ export async function publishCloudflareWorker(input: {
     runWrangler,
     assertUploaderStillPinned,
     schemaFacts,
-    approvedHandoffKv,
     workersDevSubdomain,
     readinessAccessOrigin,
   } = input.preflight;
@@ -125,7 +122,6 @@ export async function publishCloudflareWorker(input: {
         pinnedHandoffLink,
         initialCloudflareCandidate,
         assertUploaderStillPinned,
-        approvedKv: approvedHandoffKv,
         queueConsumerCleanup,
       }),
       runWrangler: activationRunner,
@@ -180,7 +176,6 @@ export async function publishCloudflareWorker(input: {
       // Existing Worker handoffs preserve remote triggers rather than publishing source jobs.
       cronJobs: existingWorker ? undefined : analysis.jobs.length,
       queues: existingWorker ? undefined : desired.queues.length,
-      framework: detectedFramework?.name,
     }),
     execution.previewUrl,
   );

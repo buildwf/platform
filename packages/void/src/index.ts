@@ -28,11 +28,10 @@ import {
   stashCloudflareDeployPointer,
 } from './cloudflare-config.ts';
 import { syncBindingTypes } from './codegen/binding-types.ts';
-import { getDatabaseCasing, readConfig, isNodeTarget } from './config.ts';
+import { getDatabaseCasing, readConfig } from './config.ts';
 import { inferBindingsFromSource } from './inference/walk.ts';
 import { resolveLocalD1Target, writeLocalD1PersistState } from './local-d1.ts';
 import { voidLog, voidWarn } from './log.ts';
-import { pagesDevCssAssetsPlugin } from './pages/dev-css-assets.ts';
 import { readVoidDevCredentials, runAiSetupPrompt } from './plugin-ai-setup.ts';
 import { bindingRuntimePlugin } from './plugin-binding-runtime.ts';
 import { createClientStubsPlugin } from './plugin-client-stubs.ts';
@@ -52,22 +51,12 @@ import { emailDevInboxPlugin } from './plugin-email-dev-inbox.ts';
 import { envClientFoldPlugin } from './plugin-env-client-fold.ts';
 import { envClientGuardPlugin } from './plugin-env-client-guard.ts';
 import { envSchemaPlugin, type EnvSchemaFacts } from './plugin-env-schema.ts';
-import {
-  getFrameworkEntry,
-  generateClassATriggerWrapper,
-  hasVinextMiddleware,
-  getOriginalFrameworkEntry,
-} from './plugin-framework-entry.ts';
-import { frameworkTriggersPlugin } from './plugin-framework-triggers.ts';
-import { DEFAULT_SCAN_DIRS, FRAMEWORK_SCAN_DIRS, type Framework } from './plugin-inference.ts';
+import { DEFAULT_SCAN_DIRS } from './plugin-inference.ts';
 import { migrationPlugin } from './plugin-migration.ts';
-import { nodeTargetPlugin } from './plugin-node-target.ts';
-import { prerenderPlugin } from './plugin-prerender.ts';
 import { restartPlugin } from './plugin-restart.ts';
 import { routingPlugin } from './plugin-routing.ts';
 import { mergeWorkerBindings } from './plugin-worker-bindings.ts';
 import {
-  createBareVoidRedirectPlugin,
   createServerRuntimeOptimizerPlugin,
   DEV_ASSET_ROUTING_EXCLUSIONS,
   createCloudflareBuiltinsExternalPlugin,
@@ -78,15 +67,13 @@ import {
   createSandboxSdkResolvePlugin,
 } from './plugin-worker-environment.ts';
 import { assertNoRootSourceConventionConflicts } from './project-paths.ts';
-import { hasEmailHandlers } from './router/email.ts';
 import { isRouteEnabledForEnvironment, type RouteEnvironment } from './router/parse-filename.ts';
 import { resolveSandboxConfig } from './sandbox/config.ts';
 import { CLOUDFLARE_DEPLOY_BUILD_ENV, loadLocalEnv, resolveRemoteMode } from './shared/env.ts';
-import { validateSsrEntry } from './ssr/entry.ts';
 
 const scheduledPreviewPointerCleanups = new Set<string>();
 
-/** Returns the Vite plugins that build and serve a Void app for its configured target. */
+/** Returns the Vite plugins that build and serve a Void app on Cloudflare. */
 export function voidPlugin(options?: {
   persistTo?: string;
   auxiliaryWorkers?: Array<AuxiliaryWorkerConfig>;
@@ -95,8 +82,7 @@ export function voidPlugin(options?: {
   const root = process.cwd();
   const directCloudflareDestination = readDeploymentPlatform(root) === 'cloudflare';
   if (directCloudflareDestination) {
-    // Here, not in a hook: `astro preview` runs no plugin hooks. Every command
-    // needs it, because build prerendering can open a remote session too.
+    // Here, not in a hook, so every command selects the login before any session opens.
     selectVoidCloudflareLogin();
   }
   warnIfPackageJsonIsNotEsm(root);
@@ -109,9 +95,7 @@ export function voidPlugin(options?: {
     : getOrCreateDevTriggerToken(root);
   const config = readConfig(root);
   syncBindingTypes(root, config);
-  const projectCloudflareConfigPath = !isNodeTarget(config.target)
-    ? materializeCloudflareConfig(root)
-    : undefined;
+  const projectCloudflareConfigPath = materializeCloudflareConfig(root);
   const cloudflareConfigPath =
     projectCloudflareConfigPath && existsSync(projectCloudflareConfigPath)
       ? projectCloudflareConfigPath
@@ -166,39 +150,15 @@ export function voidPlugin(options?: {
   };
   let routeEnvironment: RouteEnvironment = 'prod';
   assertNoRootSourceConventionConflicts(paths);
-  const detected = application.framework;
-  const framework = detected?.class === 'a' ? (detected.name as Framework) : undefined;
-
-  const scanDirs = config.inference?.scanDirs ?? (detected ? FRAMEWORK_SCAN_DIRS : undefined);
   const localD1PersistRoot = options?.persistTo ?? join(root, '.void');
   const localD1 = resolveLocalD1Target(root, {
     bindingName: bindingNames?.d1 ?? 'DB',
     persistRoot: localD1PersistRoot,
   });
-  writeLocalD1PersistState(root, !isNodeTarget(config.target) ? options?.persistTo : undefined);
+  writeLocalD1PersistState(root, options?.persistTo);
   let bindings = application.bindings;
   const sandboxConfig = bindings.needsSandbox ? resolveSandboxConfig(config, root) : undefined;
   let authEnabled = application.authEnabled;
-
-  if (detected && authEnabled) {
-    throw new Error(
-      "auth: Void-managed Better Auth is only supported in Void apps. Use Better Auth's official integration for this framework instead.",
-    );
-  }
-  if (detected && bindings.needsSandbox) {
-    throw new Error('sandbox: Cloudflare Sandboxes are currently supported in Void apps only.');
-  }
-  if (detected && bindings.needsLive) {
-    throw new Error('live: void/live is currently supported in Void apps only.');
-  }
-  // Inbound handlers compile into the worker's `email()` export via `routingPlugin`, which
-  // framework mode never installs. Outbound `sendEmail` is a binding and works everywhere.
-  const hasInboundEmail = hasEmailHandlers(application.email);
-  if (detected && hasInboundEmail) {
-    throw new Error(
-      'email: inbound email handlers are only supported in Void apps. Remove the email/ directory — `sendEmail` from void/email keeps working.',
-    );
-  }
 
   // Server-only void/* imports (db, kv, ai, etc.) must not pull in
   // cloudflare:workers or node: builtins when bundled for the browser.
@@ -208,14 +168,11 @@ export function voidPlugin(options?: {
   // Generated server entries import the env module by its resolved file path.
   // Prebundling a bare `void` runtime subpath creates another package module
   // graph and therefore another envContext, so request bindings disappear for
-  // the prebundled copy. Every return path includes this plugin, including
-  // framework and Node targets that do not all use bindingRuntimePlugin.
+  // the prebundled copy.
   const serverRuntimeOptimizerPlugin = createServerRuntimeOptimizerPlugin(dialect, () =>
     readWranglerCompat(root, config),
   );
-  // Scan queues/websocket routes early so both framework-mode and default-mode
-  // branches can safely close over these bindings.
-  const queues = framework ? [] : application.queues;
+  const queues = application.queues;
   // Deliberately scanned with NO environment: this list is the superset used to
   // RESERVE binding and Durable Object class names below, and reservation must
   // not depend on which command is running. A filtered list would let the live
@@ -223,13 +180,8 @@ export function voidPlugin(options?: {
   // `vite build` for the same project. Consumers that emit config rather than
   // reserve names re-filter by `routeEnvironment` (see `mergeBindings` and
   // `resolveConfiguredAssetRoutingPolicy`).
-  const websocketRoutes = framework ? [] : application.allWebsockets;
+  const websocketRoutes = application.allWebsockets;
   const durableObjects = application.durableObjects;
-  if (detected && durableObjects.length > 0) {
-    throw new Error(
-      'durable: durable-objects/ is currently supported in Void apps only, not framework adapter mode.',
-    );
-  }
   for (const module of durableObjects) {
     const websocketCollision = websocketRoutes.find(
       (route) => route.bindingName === module.bindingName || route.className === module.className,
@@ -248,33 +200,26 @@ export function voidPlugin(options?: {
       );
     }
   }
-  let websocketTombstones: Array<string> = [];
-  if (!isNodeTarget(config.target)) {
-    syncWranglerDurableObjects(root, durableObjects);
-    const productionWebSocketRoutes = websocketRoutes.filter((route) =>
-      isRouteEnabledForEnvironment(route, 'prod'),
-    );
-    syncWranglerWebSockets(root, productionWebSocketRoutes);
-    websocketTombstones = readWranglerWebSocketTombstones(root, productionWebSocketRoutes);
-  }
-  const existingLiveConfig = !isNodeTarget(config.target)
-    ? readExistingLiveBindingConfig(root)
-    : undefined;
-  const liveConfig = !isNodeTarget(config.target)
-    ? bindings.needsLive
-      ? resolveLiveBindingConfig(root, {
-          reservedBindings: [
-            ...websocketRoutes.map((route) => route.bindingName),
-            ...durableObjects.map((module) => module.bindingName),
-          ],
-          reservedClasses: [
-            ...websocketRoutes.map((route) => route.className),
-            ...durableObjects.map((module) => module.className),
-            sandboxConfig?.className,
-          ],
-        })
-      : existingLiveConfig
-    : undefined;
+  syncWranglerDurableObjects(root, durableObjects);
+  const productionWebSocketRoutes = websocketRoutes.filter((route) =>
+    isRouteEnabledForEnvironment(route, 'prod'),
+  );
+  syncWranglerWebSockets(root, productionWebSocketRoutes);
+  const websocketTombstones = readWranglerWebSocketTombstones(root, productionWebSocketRoutes);
+  const existingLiveConfig = readExistingLiveBindingConfig(root);
+  const liveConfig = bindings.needsLive
+    ? resolveLiveBindingConfig(root, {
+        reservedBindings: [
+          ...websocketRoutes.map((route) => route.bindingName),
+          ...durableObjects.map((module) => module.bindingName),
+        ],
+        reservedClasses: [
+          ...websocketRoutes.map((route) => route.className),
+          ...durableObjects.map((module) => module.className),
+          sandboxConfig?.className,
+        ],
+      })
+    : existingLiveConfig;
   const shouldEmitLive = () => bindings.needsLive || existingLiveConfig !== undefined;
 
   // Remote mode — use platform proxy for D1/KV/R2 instead of local miniflare.
@@ -301,12 +246,10 @@ export function voidPlugin(options?: {
   let versionMetadataBinding: string | undefined;
 
   // Merge curated wrangler fields from void.config.ts
-  const wranglerCompat = isNodeTarget(config.target) ? undefined : readWranglerCompat(root, config);
-  if (wranglerCompat) {
-    workerConfig.compatibility_date = wranglerCompat.compatibilityDate;
-    if (wranglerCompat.compatibilityFlags) {
-      workerConfig.compatibility_flags = wranglerCompat.compatibilityFlags;
-    }
+  const wranglerCompat = readWranglerCompat(root, config);
+  workerConfig.compatibility_date = wranglerCompat.compatibilityDate;
+  if (wranglerCompat.compatibilityFlags) {
+    workerConfig.compatibility_flags = wranglerCompat.compatibilityFlags;
   }
   if (config.worker?.limits?.cpu_ms) {
     workerConfig.limits = { cpu_ms: config.worker.limits.cpu_ms };
@@ -376,19 +319,16 @@ export function voidPlugin(options?: {
       application = getApplicationAnalysis(routeEnvironment);
       bindings = application.bindings;
       authEnabled = application.authEnabled;
-      // Re-resolve for the real environment. Framework and node-target branches return before
-      // `ssrEntry` is declared (TDZ) and must leave `workerConfig.assets` unset.
-      if (!framework && !isNodeTarget(config.target)) {
-        managedCloudflareBuild = command === 'build' && Boolean(process.env.VOID_DEPLOY_PROJECT_ID);
-        assetRoutingPublicDir =
-          userConfig.publicDir === false
-            ? null
-            : typeof userConfig.publicDir === 'string'
-              ? resolve(root, userConfig.publicDir)
-              : join(root, 'public');
-        assetRouting = resolveConfiguredAssetRoutingPolicy();
-        applyAssetRoutingPolicy(assetRouting);
-      }
+      // Re-resolve for the real environment.
+      managedCloudflareBuild = command === 'build' && Boolean(process.env.VOID_DEPLOY_PROJECT_ID);
+      assetRoutingPublicDir =
+        userConfig.publicDir === false
+          ? null
+          : typeof userConfig.publicDir === 'string'
+            ? resolve(root, userConfig.publicDir)
+            : join(root, 'public');
+      assetRouting = resolveConfiguredAssetRoutingPolicy();
+      applyAssetRoutingPolicy(assetRouting);
       // Exclude the .void cache directory from the file watcher so that
       // miniflare SQLite writes don't trigger infinite HMR refreshes.
       const ignored = ['**/.void/**'];
@@ -435,18 +375,8 @@ export function voidPlugin(options?: {
 
       const watchConfig = { server: { watch: { ignored } } };
 
-      // Minify worker bundles for smaller deploys (skip when output: "static"
-      // because prerendering runs the SSR bundle in Miniflare, which cannot
-      // resolve template-literal dynamic imports produced by the minifier)
-      if (!isNodeTarget(config.target) && config.output !== 'static') {
-        const envNames = framework === 'vinext-app' ? ['rsc', 'ssr'] : ['ssr'];
-        return {
-          ...watchConfig,
-          environments: Object.fromEntries(envNames.map((n) => [n, { build: { minify: true } }])),
-        };
-      }
-
-      return watchConfig;
+      // Minify worker bundles for smaller deploys.
+      return { ...watchConfig, environments: { ssr: { build: { minify: true } } } };
     },
     configureServer(server) {
       // Remote mode status — log which bindings are using the proxy
@@ -521,7 +451,7 @@ export function voidPlugin(options?: {
     name: 'void:binding-watch',
     apply: 'serve',
     configureServer(server) {
-      const effectiveDirs = scanDirs ?? DEFAULT_SCAN_DIRS;
+      const effectiveDirs = config.inference?.scanDirs ?? DEFAULT_SCAN_DIRS;
       const watchDirs = [...new Set([...effectiveDirs, 'src'])].map((d) => join(root, d));
       let hintShown = false;
       const check = (path: string) => {
@@ -589,246 +519,6 @@ export function voidPlugin(options?: {
     },
   };
 
-  if (framework) {
-    if ((framework === 'vinext-app' || framework === 'vinext-pages') && hasVinextMiddleware(root)) {
-      workerConfig.assets = {
-        binding: 'ASSETS',
-        not_found_handling: 'none',
-        run_worker_first: ['/*'],
-      };
-    }
-    workerConfig.main = getFrameworkEntry(
-      framework,
-      root,
-      devTriggerToken,
-      dialect,
-      config.routing?.notFound,
-      config.cloudflare?.main,
-    );
-    // Class A builds write no `assets` config, and `not_found_handling` alone would keep
-    // unmatched requests from the framework worker. Managed `void deploy` supplies the policy.
-    let notFoundIgnoredWarned = false;
-    const frameworkBuildWrapperPlugin: Plugin = {
-      name: 'void:framework-build-wrapper',
-      configResolved(resolved) {
-        if (resolved.command !== 'build') {
-          return;
-        }
-        if (
-          config.routing?.notFound !== undefined &&
-          !process.env.VOID_DEPLOY_BUILD &&
-          !notFoundIgnoredWarned
-        ) {
-          notFoundIgnoredWarned = true;
-          voidWarn(
-            `Void generates no asset routing policy for a ${framework} build, so "routing.notFound" in ` +
-              'void.config.ts is not written to the built worker config. During a self-hosted build and ' +
-              'direct Cloudflare deployment, it takes effect only if your own Cloudflare config declares a complete ' +
-              '`assets` policy (`binding`, `directory`, `not_found_handling`, `run_worker_first`); ' +
-              "otherwise Cloudflare's default applies. Managed `void deploy` supplies the policy for you.",
-          );
-        }
-        generateClassATriggerWrapper(
-          root,
-          framework,
-          getOriginalFrameworkEntry(framework, root, config.cloudflare?.main),
-          true,
-          dialect,
-          resolved.build.assetsDir,
-          config.routing?.notFound,
-        );
-      },
-    };
-    const existingFlags = (workerConfig.compatibility_flags as Array<string> | undefined) ?? [];
-    if (!existingFlags.includes('nodejs_compat')) {
-      workerConfig.compatibility_flags = [...existingFlags, 'nodejs_compat'];
-    }
-
-    // vinext App Router uses RSC with SSR as child environment;
-    // all other Class A frameworks and vinext Pages Router use plain SSR.
-    const viteEnvironment: { name: string; childEnvironments?: Array<string> } =
-      framework === 'vinext-app' ? { name: 'rsc', childEnvironments: ['ssr'] } : { name: 'ssr' };
-    const redirectDbTypePaths = framework !== 'vinext-app' && framework !== 'vinext-pages';
-
-    // vinext injects vite-tsconfig-paths which spams warnings for every
-    // tsconfig that extends a non-existent .void/tsconfig.json. Void
-    // already generates its own tsconfig — the plugin is unnecessary.
-    const vinextCompat: import('vite').Plugin | undefined =
-      framework === 'vinext-app' || framework === 'vinext-pages'
-        ? {
-            name: 'void:vinext-compat',
-            enforce: 'pre',
-            config(userConfig) {
-              // Neuter vite-tsconfig-paths before Vite wires up hooks.
-              // Must happen in `config` — by `configResolved` hooks are
-              // already cached and can't be removed.
-              const plugins = Array.isArray(userConfig.plugins) ? userConfig.plugins : [];
-              for (const p of plugins) {
-                if (
-                  p &&
-                  typeof p === 'object' &&
-                  !Array.isArray(p) &&
-                  'name' in p &&
-                  (p as { name?: unknown }).name === 'vite-tsconfig-paths'
-                ) {
-                  const plugin = p as Record<string, unknown>;
-                  for (const key of Object.keys(plugin)) {
-                    if (key !== 'name' && typeof plugin[key] === 'function') {
-                      plugin[key] = () => {};
-                    }
-                  }
-                }
-              }
-            },
-          }
-        : undefined;
-
-    // vinext's `config` hook sets the worker environment's build input to its
-    // own RSC entry. Vite merges `config` results in plugin order, so with
-    // `[voidPlugin(), vinext()]` that input replaced the Cloudflare plugin's
-    // worker entry, and the build shipped vinext's bare handler instead of
-    // `workerConfig.main` (Void's trigger wrapper). Restore the Cloudflare
-    // entry after every plugin's config is applied so plugin order does not
-    // matter. The entry id is the Cloudflare plugin's own virtual module, which
-    // re-exports `main` and injects its nodejs_compat globals.
-    const vinextWorkerEntry: import('vite').Plugin | undefined =
-      framework === 'vinext-app' || framework === 'vinext-pages'
-        ? {
-            name: 'void:vinext-worker-entry',
-            enforce: 'post',
-            configEnvironment(name, environmentConfig) {
-              if (name !== viteEnvironment.name) {
-                return;
-              }
-              environmentConfig.build ??= {};
-              environmentConfig.build.rolldownOptions = {
-                ...environmentConfig.build.rolldownOptions,
-                input: { index: 'virtual:cloudflare/worker-entry' },
-              };
-            },
-          }
-        : undefined;
-
-    return [
-      createCloudflareBuiltinsExternalPlugin(),
-      createBareVoidRedirectPlugin(),
-      createWorkerEnvironmentSanitizerPlugin([
-        viteEnvironment.name,
-        ...(viteEnvironment.childEnvironments ?? []),
-      ]),
-      createWranglerCompatPersistPlugin(root, config),
-      devTriggerSecretGuardPlugin(),
-      restartPlugin(),
-      bindingWatchPlugin,
-      ...(bindings.needsEmail ? [emailDevInboxPlugin({ devTriggerToken })] : []),
-      envPlugin,
-      envSchemaPlugin(root, { onSchema: applyEnvSchema }),
-      envClientGuardPlugin(root),
-      envClientFoldPlugin(),
-      clientStubsPlugin,
-      serverRuntimeOptimizerPlugin,
-      bindingRuntimePlugin(bindingNames),
-      drizzlePlugin(root, false, dialect, {
-        d1BindingName: bindingNames?.d1,
-        forceVirtualDb: authEnabled || bindingNames?.d1 !== undefined,
-        casing: getDatabaseCasing(config),
-        localD1DatabaseId: localD1.databaseId,
-        localD1PersistRoot: localD1.persistRoot,
-        redirectDbTypePaths,
-      }),
-      migrationPlugin(root, dialect, localD1.databaseId, localD1.persistRoot),
-      ...(vinextCompat ? [vinextCompat] : []),
-      ...(vinextWorkerEntry ? [vinextWorkerEntry] : []),
-      frameworkBuildWrapperPlugin,
-      frameworkTriggersPlugin(root, { devTriggerToken }),
-      devTriggersHintPlugin(root, devTriggerToken),
-      ...cloudflare({
-        configPath: cloudflareConfigPath,
-        ...inspectorPortOption,
-        persistState: { path: localD1.persistRoot },
-        auxiliaryWorkers: options?.auxiliaryWorkers,
-        viteEnvironment,
-        config: mergeBindings,
-      }),
-      implicitDeployGuard,
-    ];
-  }
-
-  // Default mode: full Hono routing + generated entry
-
-  // Non-CF targets: skip binding inference, D1, migrations, wrangler
-  if (isNodeTarget(config.target)) {
-    if (authEnabled) {
-      throw new Error(
-        'auth: Void-managed Better Auth is only supported in Cloudflare Void apps. Use Better Auth directly for this target instead.',
-      );
-    }
-    if (config.inference?.bindings) {
-      voidWarn(
-        '"inference.bindings" in void.config.ts is ignored with target: "' + config.target + '"',
-      );
-    }
-    if (config.worker) {
-      voidWarn('"worker" in void.config.ts is ignored with target: "' + config.target + '"');
-    }
-    if (config.remote) {
-      voidWarn('"remote" in void.config.ts is ignored with target: "' + config.target + '"');
-    }
-    if (bindings.needsSandbox) {
-      throw new Error(
-        `sandbox: Cloudflare Sandboxes require target: "cloudflare". They are not available with target: '${config.target}'.`,
-      );
-    }
-    if (bindings.needsLive) {
-      throw new Error(
-        `live: void/live requires target: "cloudflare". It is not available with target: '${config.target}'.`,
-      );
-    }
-    if (durableObjects.length > 0) {
-      throw new Error(
-        `durable: durable-objects/ requires target: "cloudflare". It is not available with target: '${config.target}'.`,
-      );
-    }
-    // `compileNodeApp` imports only the Hono app from the route table; the
-    // `__emailHandler` the table exports for `email/` is never invoked, so
-    // without this the build succeeds and every inbound handler is dead code.
-    if (hasInboundEmail) {
-      throw new Error(
-        `email: inbound email handlers (email/) require target: "cloudflare". They are not available with target: '${config.target}'.`,
-      );
-    }
-    if (config.routing?.revalidate) {
-      voidWarn(
-        '"routing.revalidate" in void.config.ts is ignored with target: "' +
-          config.target +
-          '" (edge caching is CF-only)',
-      );
-    }
-
-    return [
-      devTriggerSecretGuardPlugin(),
-      restartPlugin(),
-      envPlugin,
-      serverRuntimeOptimizerPlugin,
-      envSchemaPlugin(root),
-      ...pagesDevCssAssetsPlugin(root, devTriggerToken),
-      routingPlugin(root, {
-        getApplicationAnalysis,
-        isAuthEnabled: () => false,
-        devTriggerToken,
-        headConfig: config.head,
-        prerenderPaths: config.routing?.prerender,
-        target: config.target as 'node' | 'bun' | 'deno',
-        routing: config.routing,
-        hasSandbox: false,
-      }),
-      prerenderPlugin(root, config),
-      ...nodeTargetPlugin(config.target as 'node' | 'bun' | 'deno', {
-        trailingSlash: config.routing?.trailingSlash,
-      }),
-    ];
-  }
-
   // Void-managed auth uses native node:crypto password hashing.
   // PostgreSQL needs nodejs_compat for the `pg` driver (events, net, tls, dns, etc.).
   // Cloudflare's Sandbox SDK also imports Node built-ins.
@@ -842,8 +532,6 @@ export function voidPlugin(options?: {
     workerConfig.compatibility_flags = normalizedFlags;
   }
 
-  const ssrEntry = validateSsrEntry(root, paths);
-  const hasPages = existsSync(paths.pagesDir);
   let assetRoutingPublicDir: string | null = join(root, 'public');
   let managedCloudflareBuild = false;
 
@@ -853,8 +541,6 @@ export function voidPlugin(options?: {
       isRouteEnabledForEnvironment(route, routeEnvironment),
     );
     const policy = resolveAssetRoutingPolicy({
-      isSsr: Boolean(ssrEntry),
-      hasPages,
       hasApiRoutes:
         routeScanHasApiRoutes(routePatterns) ||
         routeScanHasApiRoutes(environmentWebsocketRoutes) ||
@@ -929,8 +615,6 @@ export function voidPlugin(options?: {
     isAuthEnabled: () => authEnabled,
     getVersionMetadataBinding: () => versionMetadataBinding,
     devTriggerToken,
-    headConfig: config.head,
-    prerenderPaths: config.routing?.prerender,
     remoteMode,
     // Merged with `public/_redirects` and `_headers`; managed builds omit them (dispatch owns them).
     routing: config.routing,
@@ -968,7 +652,6 @@ export function voidPlugin(options?: {
     serverRuntimeOptimizerPlugin,
     bindingRuntimePlugin(bindingNames),
     ...(bindings.needsSandbox ? [createSandboxSdkResolvePlugin()] : []),
-    ...pagesDevCssAssetsPlugin(root, devTriggerToken),
     routes,
     drizzlePlugin(root, true, dialect, {
       d1BindingName: bindingNames?.d1,
@@ -998,7 +681,6 @@ export function voidPlugin(options?: {
         clientRoutes?.api.finalizeCloudflareAssets(clientDir, environment!.config.build.assetsDir);
       },
     }),
-    prerenderPlugin(root, config),
     implicitDeployGuard,
   ];
 }
@@ -1009,8 +691,6 @@ export {
   defineMiddleware,
   basicAuth,
   defineScheduled,
-  defineRender,
-  defineHead,
   defineQueue,
   VoidAssetRewriteError,
 } from './runtime/handler.ts';
@@ -1021,7 +701,6 @@ export type {
   CloudBindings,
   CloudEnv,
   BasicAuthOptions,
-  RenderAssetTags,
   TypedHandler,
   TypedQueueHandler,
   QueueBatch,
@@ -1034,12 +713,6 @@ export type { ValidatorSlots, HandlerInput } from './runtime/validator.ts';
 export type { AuthUser } from './runtime/auth.ts';
 
 export type { QueueMap } from './runtime/queues.ts';
-
-export { defer } from './pages/defer.ts';
-
-export type { Deferred, DeferredState, InferProps } from './pages/defer.ts';
-
-export type { HeadConfig, HeadDescriptor } from './pages/head.ts';
 
 export { shouldInjectEmailDevInboxVar } from './plugin-binding-utils.ts';
 

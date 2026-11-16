@@ -48,7 +48,6 @@ import {
   cloudflareCandidateActivationOptions,
   formatCloudflareActivationError,
 } from '../../src/cli/deploy-cloudflare-helpers.ts';
-import { prepareCloudflareFrameworkArtifact } from '../../src/cli/deploy-cloudflare-static.ts';
 import { runCloudflareDeploy } from '../../src/cli/deploy-cloudflare.ts';
 import {
   assertMigrationsProduceAuthSchema,
@@ -83,17 +82,20 @@ import {
 } from '../../src/cli/env-validation.ts';
 import { openDeployLog, type CliLogger } from '../../src/cli/log-file.ts';
 import { migrateLegacyVoidConfig } from '../../src/cli/migrate.ts';
-import { FRAMEWORK_PRESETS } from '../../src/cli/preset.ts';
 import { parseProjectArgs } from '../../src/cli/project-args.ts';
 import { provisionCloudflareResources, type ProvisionResult } from '../../src/cli/provision.ts';
 import {
   FRIENDLY_BINDING_NAMES,
   readWranglerPublishedTrafficSnapshot,
   writeWranglerPublishedTrafficSnapshot,
-  readWranglerManagedQueueCleanupCandidates,
   writeProvisionedWranglerConfig,
 } from '../../src/cli/wrangler.ts';
 import { readConfig } from '../../src/config.ts';
+
+/** A static app whose build writes `dist/client`. */
+const staticBuild = {
+  inference: { appType: 'static', outputDir: 'dist/client', build: 'vite build' },
+};
 
 // `runDeploy` calls `runCloudflareDeploy` without deps. A test that starts from `runDeploy` sets
 // these deps. Calls that pass their own deps are unchanged.
@@ -216,15 +218,17 @@ describe('Cloudflare deploy log end record', () => {
 
   it('writes deploy_end with the exit code when an early check exits', async () => {
     const root = makeProject({
-      'package.json': JSON.stringify({ name: 'node-app' }),
-      'void.json': JSON.stringify({ target: 'node' }),
+      'package.json': JSON.stringify({ name: 'atomic-app' }),
+      'void.json': JSON.stringify({ deploy: { cloudflare: { mode: 'atomic' } } }),
       'wrangler.jsonc': JSON.stringify({ account_id: 'acc123' }),
     });
     const { cliLog, readRecords } = openRealLog();
     const { deps, exitCalls } = harness();
     const output = vi.spyOn(log, 'error').mockImplementation(() => {});
     try {
-      await expect(runCloudflareDeploy(root, {}, cliLog, deps)).rejects.toBeInstanceOf(ExitError);
+      await expect(
+        runCloudflareDeploy(root, { reuseExistingWorker: true }, cliLog, deps),
+      ).rejects.toBeInstanceOf(ExitError);
       // Read before close(): each record must already be on disk when exit() runs.
       const ends = readRecords().filter((record) => record.msg === 'deploy_end');
       expect(exitCalls).toEqual([1]);
@@ -578,7 +582,6 @@ describe('Cloudflare activation diagnostics', () => {
       pinnedHandoffLink: null,
       initialCloudflareCandidate: null,
       assertUploaderStillPinned: () => true,
-      approvedKv: [],
       queueConsumerCleanup: [],
     });
   }
@@ -1069,9 +1072,6 @@ function harness(overrides: Partial<CloudflareDeployDeps> = {}): {
     runBuild: () => {
       trace.push('build');
     },
-    prepareFrameworkArtifact: async () => {
-      trace.push('prepare-framework');
-    },
     // One `deploy` call through the runner the deploy passed in, so a test that swaps the runner
     // still sees whether the upload happened. packages/deploy-cloudflare tests the real activation.
     activateVersion: async (options) => {
@@ -1442,15 +1442,10 @@ describe('existing Cloudflare site handoff', () => {
   });
   it('retains the link guard after a failed build and verifies the Worker again on retry', async () => {
     const root = migratedSite();
-    mkdirSync(join(root, 'pages'));
-    writeFileSync(join(root, 'pages/index.tsx'), 'export default () => null;');
-    writeFileSync(join(root, 'pages/index.server.ts'), 'export const prerender = true;');
     const readExistingWorker = vi.fn().mockResolvedValue(existing);
-    const confirmIsrSetup = vi.fn().mockResolvedValue(false);
     const { deps } = harness({
       readExistingWorker,
       isCI: false,
-      confirmIsrSetup,
       runBuild: () => {
         throw new Error('build failed');
       },
@@ -1462,7 +1457,6 @@ describe('existing Cloudflare site handoff', () => {
     deps.runBuild = () => build(root);
     await runCloudflareDeploy(root, {}, silentCliLog, deps);
     expect(readExistingWorker).toHaveBeenCalledTimes(2);
-    expect(confirmIsrSetup).toHaveBeenCalledOnce();
     expect(existsSync(join(root, '.void/cloudflare-link.json'))).toBe(false);
   });
   it('retries only through candidates recorded after uploaded Worker validation', async () => {
@@ -1723,8 +1717,6 @@ describe('existing Cloudflare site handoff', () => {
   });
   it('rejects a newly inferred resource before provisioning and build', async () => {
     const root = site();
-    mkdirSync(join(root, 'pages'));
-    writeFileSync(join(root, 'pages/index.md'), '# Home');
     writeFileSync(
       join(root, 'routes/index.ts'),
       'import { kv } from "void/kv"; export const GET = () => kv.get("key");',
@@ -1735,268 +1727,6 @@ describe('existing Cloudflare site handoff', () => {
     ).rejects.toThrow(/cannot provision[\s\S]*KV \(KV namespace\)[\s\S]*app uses env.KV/);
     expect(trace).not.toContain('build');
     expect(trace).not.toContain('provision');
-  });
-
-  it.each(['prerender', 'markdown', 'revalidate'])(
-    'keeps the declined ISR choice on subsequent deploys for a %s site',
-    async (mode) => {
-      const root = migratedSite();
-      mkdirSync(join(root, 'pages'));
-      if (mode === 'markdown') {
-        writeFileSync(join(root, 'pages/index.md'), '# Home');
-      } else {
-        writeFileSync(join(root, 'pages/index.tsx'), 'export default () => null;');
-        writeFileSync(
-          join(root, 'pages/index.server.ts'),
-          mode === 'prerender'
-            ? 'export const prerender = true; export const loader = () => ({});'
-            : 'export const revalidate = 60; export const loader = () => ({});',
-        );
-      }
-      const confirmIsrSetup = vi.fn().mockResolvedValue(false);
-      const { deps, trace, wranglerArgs } = harness({
-        isCI: false,
-        confirmIsrSetup,
-        readExistingWorker: async () => existing,
-        runBuild: () => build(root),
-        verifyDeployConfig: verifyGeneratedDeployConfig,
-      });
-
-      await runCloudflareDeploy(root, { reuseExistingWorker: true }, silentCliLog, deps);
-
-      expect(trace).toContain('wrangler:deploy');
-      expect(trace).not.toContain('provision');
-      expect(wranglerArgs.some((args) => ['kv', 'containers', 'secret'].includes(args[0]!))).toBe(
-        false,
-      );
-      expect(
-        parseRootWranglerConfig(join(root, '.void-wrangler.jsonc')).kv_namespaces,
-      ).toBeUndefined();
-      expect(
-        parseRootWranglerConfig(join(root, 'dist/ssr/wrangler.json')).kv_namespaces,
-      ).toBeUndefined();
-      expect(readCloudflareLink(root)).toBeNull();
-
-      expect(readConfig(root).routing?.isr).toBe(false);
-      await runCloudflareDeploy(root, {}, silentCliLog, deps);
-      expect(confirmIsrSetup).toHaveBeenCalledOnce();
-      expect(trace).not.toContain('provision');
-      // Completing the handoff must not change the saved cache policy.
-      const { desired } = await computeDesiredCloudflareResources(
-        root,
-        readConfig(root),
-        join(root, '.void-wrangler.jsonc'),
-      );
-      expect(desired.kvNamespaces).toEqual([]);
-    },
-  );
-
-  it('keeps an existing ISR namespace during handoff', async () => {
-    const root = site();
-    mkdirSync(join(root, 'pages'));
-    writeFileSync(join(root, 'pages/index.md'), '# Home');
-    const configPath = join(root, 'wrangler.jsonc');
-    const config = parseRootWranglerConfig(configPath);
-    config.kv_namespaces = [{ binding: 'ISR_CACHE', id: REAL_KV_ID }];
-    writeFileSync(configPath, JSON.stringify(config));
-    const verify = vi.fn(verifyGeneratedDeployConfig);
-    const { deps, trace } = harness({
-      readExistingWorker: async () => ({
-        ...existing,
-        bindings: [{ name: 'ISR_CACHE', type: 'kv_namespace', namespace_id: REAL_KV_ID }],
-      }),
-      runBuild: () => build(root),
-      verifyDeployConfig: verify,
-    });
-
-    await runCloudflareDeploy(root, { reuseExistingWorker: true }, silentCliLog, deps);
-
-    expect(trace).toContain('wrangler:deploy');
-    expect(trace).not.toContain('provision');
-    expect(verify).toHaveBeenCalledWith(
-      root,
-      expect.objectContaining({
-        desired: expect.objectContaining({
-          kvNamespaces: [{ binding: 'ISR_CACHE', title: 'site-isr-cache' }],
-        }),
-      }),
-    );
-    expect(parseRootWranglerConfig(configPath).kv_namespaces).toEqual(config.kv_namespaces);
-  });
-
-  it('requires an application KV binding named ISR_CACHE', async () => {
-    const root = site();
-    writeFileSync(
-      join(root, 'void.json'),
-      JSON.stringify({ inference: { bindings: { kv: 'ISR_CACHE' } } }),
-    );
-    const { deps, trace } = harness({ readExistingWorker: async () => existing });
-
-    await expect(
-      runCloudflareDeploy(root, { reuseExistingWorker: true }, silentCliLog, deps),
-    ).rejects.toThrow(/cannot provision[\s\S]*ISR_CACHE \(KV namespace\)/);
-    expect(trace).not.toContain('build');
-    expect(trace).not.toContain('provision');
-  });
-
-  it('rejects an ISR namespace added by the build during handoff', async () => {
-    const root = migratedSite();
-    mkdirSync(join(root, 'pages'));
-    writeFileSync(join(root, 'pages/index.md'), '# Home');
-    const { deps, trace } = harness({
-      isCI: false,
-      confirmIsrSetup: async () => false,
-      readExistingWorker: async () => existing,
-      runBuild: () => {
-        build(root);
-        const generatedPath = join(root, 'dist/ssr/wrangler.json');
-        const generated = parseRootWranglerConfig(generatedPath);
-        generated.kv_namespaces = [{ binding: 'ISR_CACHE', id: REAL_KV_ID }];
-        writeFileSync(generatedPath, JSON.stringify(generated));
-      },
-    });
-
-    await expect(
-      runCloudflareDeploy(root, { reuseExistingWorker: true }, silentCliLog, deps),
-    ).rejects.toThrow('Linking cannot add or replace kv_namespaces');
-    expect(trace).not.toContain('provision');
-    expect(trace).not.toContain('wrangler:deploy');
-  });
-
-  it.each([false, true])(
-    'enables ISR during the first handoff (configured opt-in: %s)',
-    async (configured) => {
-      const root = site();
-      mkdirSync(join(root, 'pages'));
-      writeFileSync(join(root, 'pages/index.md'), '# Home');
-      if (configured) {
-        writeFileSync(join(root, 'void.json'), JSON.stringify({ routing: { isr: true } }));
-      }
-      migrateLegacyVoidConfig(root);
-      const confirmIsrSetup = vi.fn().mockResolvedValue(true);
-      const provision = vi
-        .fn<NonNullable<CloudflareDeployDeps['provision']>>()
-        .mockImplementation(async (_root, configPath, desired) => {
-          expect(readConfig(root).routing?.isr).toBe(true);
-          expect(desired).toEqual({
-            kvNamespaces: [{ binding: 'ISR_CACHE', title: 'site-isr-cache' }],
-            queues: [],
-          });
-          writeProvisionedWranglerConfig(
-            root,
-            { kv: { binding: 'ISR_CACHE', id: REAL_KV_ID } },
-            { configPath },
-          );
-          return {
-            configPath,
-            accountIdWritten: false,
-            resources: [
-              {
-                kind: 'kv',
-                binding: 'ISR_CACHE',
-                name: 'site-isr-cache',
-                action: 'created',
-                id: REAL_KV_ID,
-              },
-            ],
-          };
-        });
-      const activateVersion = vi
-        .fn<NonNullable<CloudflareDeployDeps['activateVersion']>>()
-        .mockImplementation(async (options) => {
-          expect(parseRootWranglerConfig(options.configPath!).kv_namespaces).toEqual([
-            { binding: 'ISR_CACHE', id: REAL_KV_ID },
-          ]);
-          await options.validateUploadedVersion?.('candidate');
-          return {
-            ok: true,
-            versionId: 'candidate',
-            previousVersionId: 'original',
-            previewUrl: 'https://site.example.com',
-          };
-        });
-      const { deps, wranglerArgs } = harness({
-        isCI: configured,
-        confirmIsrSetup,
-        provision,
-        readExistingWorker: async ({ versionId }) =>
-          versionId
-            ? {
-                ...existing,
-                versionId,
-                bindings: [{ name: 'ISR_CACHE', type: 'kv_namespace', namespace_id: REAL_KV_ID }],
-              }
-            : existing,
-        runBuild: () => build(root),
-        verifyDeployConfig: verifyGeneratedDeployConfig,
-        activateVersion,
-      });
-
-      await runCloudflareDeploy(root, { reuseExistingWorker: true }, silentCliLog, deps);
-      expect(provision).toHaveBeenCalledOnce();
-      expect(confirmIsrSetup).toHaveBeenCalledTimes(configured ? 0 : 1);
-      expect(activateVersion).toHaveBeenCalledOnce();
-      expect(wranglerArgs.some((args) => ['d1', 'secret', 'containers'].includes(args[0]!))).toBe(
-        false,
-      );
-      expect(readCloudflareLink(root)).toBeNull();
-      await runCloudflareDeploy(root, {}, silentCliLog, deps);
-      expect(provision).toHaveBeenCalledOnce();
-      expect(confirmIsrSetup).toHaveBeenCalledTimes(configured ? 0 : 1);
-    },
-  );
-
-  it('reuses the cache recorded before a provisioning failure when retrying the handoff', async () => {
-    const root = migratedSite();
-    mkdirSync(join(root, 'pages'));
-    writeFileSync(join(root, 'pages/index.md'), '# Home');
-    const confirmIsrSetup = vi.fn().mockResolvedValue(true);
-    const provision = vi
-      .fn<NonNullable<CloudflareDeployDeps['provision']>>()
-      .mockImplementation(async (_root, configPath) => {
-        writeProvisionedWranglerConfig(
-          root,
-          { kv: { binding: 'ISR_CACHE', id: REAL_KV_ID } },
-          { configPath },
-        );
-        throw new Error('provisioning interrupted after config update');
-      });
-    const { deps, trace } = harness({
-      isCI: false,
-      confirmIsrSetup,
-      provision,
-      readExistingWorker: async () => existing,
-      runBuild: () => build(root),
-    });
-    await expect(
-      runCloudflareDeploy(root, { reuseExistingWorker: true }, silentCliLog, deps),
-    ).rejects.toThrow('provisioning interrupted');
-    expect(readCloudflareLink(root)).not.toBeNull();
-    expect(readConfig(root).routing?.isr).toBe(true);
-    await runCloudflareDeploy(root, {}, silentCliLog, deps);
-    expect(trace).toContain('wrangler:deploy');
-    expect(provision).toHaveBeenCalledOnce();
-    expect(confirmIsrSetup).toHaveBeenCalledOnce();
-    expect(readCloudflareLink(root)).toBeNull();
-  });
-
-  it('requires a configured ISR choice for non-interactive migration', async () => {
-    const root = site();
-    mkdirSync(join(root, 'pages'));
-    writeFileSync(join(root, 'pages/index.md'), '# Home');
-    const confirmIsrSetup = vi.fn();
-    const { deps, trace } = harness({
-      isCI: true,
-      confirmIsrSetup,
-      readExistingWorker: async () => existing,
-    });
-    await expect(
-      runCloudflareDeploy(root, { reuseExistingWorker: true }, silentCliLog, deps),
-    ).rejects.toThrow('Set routing.isr to true');
-    expect(confirmIsrSetup).not.toHaveBeenCalled();
-    expect(trace).not.toContain('build');
-    expect(trace).not.toContain('provision');
-    expect(readConfig(root).routing?.isr).toBeUndefined();
   });
 
   it.each([undefined, './migrations', 'db/migrations', './db/migrations'])(
@@ -2492,22 +2222,6 @@ describe('computeDesiredCloudflareResources — desired set from source', () => 
     expect(desired.hyperdrive?.name).toBe('pgapp-hyperdrive');
   });
 
-  it('desires ISR_CACHE (KV) when a page uses `revalidate`', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({ name: 'israpp' }),
-      'void.json': JSON.stringify({}),
-      'pages/index.tsx': `export default () => null;`,
-      'pages/index.server.ts': `export const revalidate = 60;\nexport const loader = () => ({});`,
-    });
-    const { desired, reasons } = await computeDesiredCloudflareResources(
-      root,
-      readConfig(root),
-      join(root, 'wrangler.jsonc'),
-    );
-    expect(desired.kvNamespaces.map((k) => k.binding)).toContain('ISR_CACHE');
-    expect(reasons.get('ISR_CACHE')).toMatch(/revalidate/);
-  });
-
   it('reuses the stored database_name from wrangler.jsonc', async () => {
     const root = d1Project({
       d1_databases: [{ binding: 'DB', database_name: 'legacy-db', database_id: REAL_D1_ID }],
@@ -2749,9 +2463,8 @@ describe('runCloudflareDeploy — PostgreSQL checked-in migrations', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Suffixed resource names: the `-kv` / `-isr-cache` suffix carries the whole
-// distinction between the two KV namespaces, so the 63-char cap must eat the
-// worker name, never the suffix.
+// Suffixed resource names: the 63-char cap must eat the worker name, never the
+// suffix.
 // ---------------------------------------------------------------------------
 
 /** A deterministic worker name of `length` chars from the repeating [a-z0-9] alphabet. */
@@ -2763,8 +2476,8 @@ function workerNameOfLength(length: number): string {
 /** Cloudflare's rule for these names: lowercase [a-z0-9-], no leading/trailing dash, ≤63. */
 const CF_NAME_RULE = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
-/** A KV + ISR app (both namespaces desired) whose root config pins `workerName`. */
-function kvAndIsrProject(workerName: string, wrangler: Record<string, unknown> = {}): string {
+/** A KV app whose root config pins `workerName`. */
+function kvProject(workerName: string, wrangler: Record<string, unknown> = {}): string {
   return makeProject({
     'package.json': JSON.stringify({ name: 'longapp' }),
     'void.json': JSON.stringify({}),
@@ -2774,37 +2487,10 @@ function kvAndIsrProject(workerName: string, wrangler: Record<string, unknown> =
       2,
     ),
     'routes/index.ts': `export const GET = (c) => c.env.KV.get('k');`,
-    'pages/index.tsx': `export default () => null;`,
-    'pages/index.server.ts': `export const revalidate = 60;\nexport const loader = () => ({});`,
   });
 }
 
 describe('computeDesiredCloudflareResources — suffixed names survive the 63-char cap', () => {
-  // From 61 chars the cap must trim the worker name, not the suffix, or `KV` and `ISR_CACHE`
-  // would ask for one title and land on one namespace.
-  for (const length of [61, 62, 63, 70, 100]) {
-    it(`keeps KV and ISR_CACHE on distinct titles for a ${length}-char worker name`, async () => {
-      const workerName = workerNameOfLength(length);
-      const root = kvAndIsrProject(workerName);
-      const { desired } = await computeDesiredCloudflareResources(
-        root,
-        readConfig(root),
-        join(root, 'wrangler.jsonc'),
-      );
-      const titles = new Map(desired.kvNamespaces.map((kv) => [kv.binding, kv.title]));
-      // The base is trimmed to whatever the suffix (plus its dash) leaves of the 63.
-      expect(titles.get('KV')).toBe(`${workerName.slice(0, 63 - 'kv'.length - 1)}-kv`);
-      expect(titles.get('ISR_CACHE')).toBe(
-        `${workerName.slice(0, 63 - 'isr-cache'.length - 1)}-isr-cache`,
-      );
-      expect(titles.get('KV')).not.toBe(titles.get('ISR_CACHE'));
-      for (const title of titles.values()) {
-        expect(title).toMatch(CF_NAME_RULE);
-        expect(title.length).toBe(63);
-      }
-    });
-  }
-
   it('caps the D1 / R2 / Hyperdrive names too, keeping each suffix intact', async () => {
     const workerName = workerNameOfLength(80);
     const root = makeProject({
@@ -2856,75 +2542,15 @@ describe('computeDesiredCloudflareResources — suffixed names survive the 63-ch
         await c.env.STORAGE.put('a', 'b');
         return c.env.DB.prepare('SELECT 1').first();
       };`,
-      'pages/index.tsx': `export default () => null;`,
-      'pages/index.server.ts': `export const revalidate = 60;\nexport const loader = () => ({});`,
     });
     const { desired } = await computeDesiredCloudflareResources(
       root,
       readConfig(root),
       join(root, 'wrangler.jsonc'),
     );
-    expect(desired.kvNamespaces).toEqual([
-      { binding: 'KV', title: 'myapp-kv' },
-      { binding: 'ISR_CACHE', title: 'myapp-isr-cache' },
-    ]);
+    expect(desired.kvNamespaces).toEqual([{ binding: 'KV', title: 'myapp-kv' }]);
     expect(desired.d1?.name).toBe('myapp-db');
     expect(desired.r2?.bucketName).toBe('myapp-storage');
-  });
-});
-
-describe('computeDesiredCloudflareResources — KV bindings may not share a namespace', () => {
-  it('fails closed when two KV bindings already point at one namespace id', async () => {
-    const root = kvAndIsrProject(workerNameOfLength(70), {
-      kv_namespaces: [
-        { binding: 'KV', id: REAL_KV_ID },
-        { binding: 'ISR_CACHE', id: REAL_KV_ID },
-      ],
-    });
-    const error = await computeDesiredCloudflareResources(
-      root,
-      readConfig(root),
-      join(root, 'wrangler.jsonc'),
-    ).then(
-      () => undefined,
-      (err: unknown) => err as Error,
-    );
-    expect(error).toBeInstanceOf(Error);
-    expect(error?.message).toContain('"KV"');
-    expect(error?.message).toContain('"ISR_CACHE"');
-    expect(error?.message).toContain(REAL_KV_ID);
-    expect(error?.message).toMatch(/share one namespace/);
-    expect(error?.message).toMatch(/fresh namespace/);
-  });
-
-  it('accepts two KV bindings on distinct namespace ids', async () => {
-    const root = kvAndIsrProject(workerNameOfLength(70), {
-      kv_namespaces: [
-        { binding: 'KV', id: REAL_KV_ID },
-        { binding: 'ISR_CACHE', id: OTHER_KV_ID },
-      ],
-    });
-    const { desired } = await computeDesiredCloudflareResources(
-      root,
-      readConfig(root),
-      join(root, 'wrangler.jsonc'),
-    );
-    expect(desired.kvNamespaces.map((kv) => kv.binding)).toEqual(['KV', 'ISR_CACHE']);
-  });
-
-  it('ignores unprovisioned placeholder ids (a synced local-dev config is not a collision)', async () => {
-    const root = kvAndIsrProject(workerNameOfLength(70), {
-      kv_namespaces: [
-        { binding: 'KV', id: 'local' },
-        { binding: 'ISR_CACHE', id: 'local' },
-      ],
-    });
-    const { desired } = await computeDesiredCloudflareResources(
-      root,
-      readConfig(root),
-      join(root, 'wrangler.jsonc'),
-    );
-    expect(desired.kvNamespaces).toHaveLength(2);
   });
 });
 
@@ -2933,7 +2559,7 @@ describe('computeDesiredCloudflareResources — provisioned resources are never 
     // The derivation changed for long worker names, so prove the renamed desired set
     // still resolves to the SAME resources through the provisioner's read-first.
     const workerName = workerNameOfLength(70);
-    const root = kvAndIsrProject(workerName, {
+    const root = kvProject(workerName, {
       d1_databases: [
         {
           binding: 'DB',
@@ -2942,10 +2568,7 @@ describe('computeDesiredCloudflareResources — provisioned resources are never 
           migrations_dir: './db/migrations',
         },
       ],
-      kv_namespaces: [
-        { binding: 'KV', id: REAL_KV_ID },
-        { binding: 'ISR_CACHE', id: OTHER_KV_ID },
-      ],
+      kv_namespaces: [{ binding: 'KV', id: REAL_KV_ID }],
       r2_buckets: [{ binding: 'STORAGE', bucket_name: 'legacy-bucket' }],
     });
     writeFileSync(
@@ -2981,13 +2604,6 @@ describe('computeDesiredCloudflareResources — provisioned resources are never 
         name: `${workerName.slice(0, 60)}-kv`,
         action: 'reused',
         id: REAL_KV_ID,
-      },
-      {
-        kind: 'kv',
-        binding: 'ISR_CACHE',
-        name: `${workerName.slice(0, 53)}-isr-cache`,
-        action: 'reused',
-        id: OTHER_KV_ID,
       },
       { kind: 'r2', binding: 'STORAGE', name: 'legacy-bucket', action: 'reused' },
     ]);
@@ -3074,23 +2690,6 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
     expect(readExistingWorker).toHaveBeenCalledTimes(4);
     expect(trace).not.toContain('provision');
     expect(trace).not.toContain('auth-secret');
-  });
-
-  it('rejects a static-looking non-Cloudflare runtime before any account operation', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({ name: 'node-static', dependencies: { vite: '6.0.0' } }),
-      'void.json': JSON.stringify({ target: 'node' }),
-      'wrangler.jsonc': JSON.stringify({ account_id: 'acc123' }),
-      'index.html': '<!doctype html><div id="app"></div>',
-    });
-    const { deps, trace, exitCalls } = harness();
-
-    await expect(
-      runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
-    ).rejects.toBeInstanceOf(ExitError);
-
-    expect(exitCalls).toEqual([1]);
-    expect(trace).toEqual([]);
   });
 
   it('serves a configured SPA from assets, with the thin edge Worker only for /__void', async () => {
@@ -3616,19 +3215,17 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
   it('preserves authored assets.html_handling in the generated static Wrangler config', async () => {
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'ssgapp' }),
-      'void.json': JSON.stringify({ output: 'static' }),
+      'void.json': JSON.stringify(staticBuild),
       'wrangler.jsonc': JSON.stringify({
         account_id: 'acc123',
         assets: { html_handling: 'drop-trailing-slash' },
       }),
-      'pages/index.vue': `<template><div>hi</div></template>`,
-      'pages/index.server.ts': `export const loader = () => ({});`,
     });
     const { deps, trace, exitCalls } = harness({
       runStaticBuild: () => {
         trace.push('static-build');
         mkdirSync(join(root, 'dist/client'), { recursive: true });
-        writeFileSync(join(root, 'dist/client/index.html'), '<h1>Prerendered</h1>');
+        writeFileSync(join(root, 'dist/client/index.html'), '<h1>Static</h1>');
       },
     });
 
@@ -3645,56 +3242,19 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
     });
   });
 
-  it('deploys a fully prerenderable output:"static" Pages app through the thin edge Worker', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({ name: 'ssgapp' }),
-      'void.json': JSON.stringify({
-        output: 'static',
-        worker: { compatibility_date: '2026-02-12' },
-      }),
-      'wrangler.jsonc': JSON.stringify({ account_id: 'acc123' }),
-      'pages/index.vue': `<template><div>hi</div></template>`,
-      'pages/index.server.ts': `export const loader = () => ({});`,
-    });
-    const { deps, trace, exitCalls } = harness({
-      runStaticBuild: () => {
-        trace.push('static-build');
-        mkdirSync(join(root, 'dist/client'), { recursive: true });
-        writeFileSync(join(root, 'dist/client/index.html'), '<h1>Prerendered</h1>');
-      },
-    });
-
-    await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-
-    expect(exitCalls).toEqual([]);
-    expect(trace).toEqual(['wrangler:whoami', 'static-build', 'wrangler:deploy']);
-    expect(parseRootWranglerConfig(join(root, 'wrangler.jsonc'))).toEqual({
-      account_id: 'acc123',
-    });
-    expect(parseRootWranglerConfig(generatedStaticConfig(root))).toMatchObject({
-      main: 'static-edge.mjs',
-      assets: {
-        directory: '../../../dist/client',
-        not_found_handling: '404-page',
-        run_worker_first: ['/__void', '/__void/*'],
-      },
-    });
-  });
-
   describe('static edge Worker routing', () => {
     const generatedHeaders = `${GENERATED_ASSET_HEADERS_MARKER}\n/assets/app-abcdefgh.js\n  Cache-Control: public, max-age=31536000, immutable\n`;
 
-    function prerenderedSite(voidConfig: Record<string, unknown>) {
+    function staticSite(voidConfig: Record<string, unknown>) {
       const root = makeProject({
         'package.json': JSON.stringify({ name: 'ssgapp' }),
-        'void.json': JSON.stringify({ output: 'static', ...voidConfig }),
+        'void.json': JSON.stringify({ ...staticBuild, ...voidConfig }),
         'wrangler.jsonc': JSON.stringify({ account_id: 'acc123' }),
-        'pages/index.vue': `<template><div>hi</div></template>`,
       });
       const { deps, exitCalls } = harness({
         runStaticBuild: () => {
           mkdirSync(join(root, 'dist/client/assets'), { recursive: true });
-          writeFileSync(join(root, 'dist/client/index.html'), '<h1>Prerendered</h1>');
+          writeFileSync(join(root, 'dist/client/index.html'), '<h1>Static</h1>');
           writeFileSync(join(root, 'dist/client/assets/app-abcdefgh.js'), 'export {};');
           writeFileSync(join(root, 'dist/client/_headers'), generatedHeaders);
         },
@@ -3703,7 +3263,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
     }
 
     it('lets Cloudflare apply the generated _headers when no rule needs the Worker', async () => {
-      const { root, deps, exitCalls } = prerenderedSite({});
+      const { root, deps, exitCalls } = staticSite({});
       await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
 
       expect(exitCalls).toEqual([]);
@@ -3719,7 +3279,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
       { name: 'routing.redirects', routing: { redirects: { '/old': '/' } } },
       { name: 'routing.headers', routing: { headers: { '/*': ['X-Frame-Options: DENY'] } } },
     ])('keeps the Worker in front of every request with $name', async ({ routing }) => {
-      const { root, deps, exitCalls } = prerenderedSite({ routing });
+      const { root, deps, exitCalls } = staticSite({ routing });
       await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
 
       expect(exitCalls).toEqual([]);
@@ -3755,14 +3315,13 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
     async (scenario) => {
       const root = makeProject({
         'package.json': JSON.stringify({ name: 'static-app' }),
-        'void.json': JSON.stringify({ output: 'static' }),
+        'void.json': JSON.stringify(staticBuild),
         'wrangler.jsonc': JSON.stringify({
           account_id: 'acc123',
           workers_dev: true,
           preview_urls: true,
           routes: [],
         }),
-        'pages/index.vue': '<template><div>Static</div></template>',
       });
       const current = '11111111-1111-4111-8111-111111111111';
       const next = '22222222-2222-4222-8222-222222222222';
@@ -3853,48 +3412,6 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
       expect(existsSync(join(root, '.void/cloudflare-candidate.json'))).toBe(false);
     },
   );
-
-  it('keeps an output:"static" app with a dynamic page on the full Worker path', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({ name: 'hybrid-ssg' }),
-      'void.json': JSON.stringify({ output: 'static' }),
-      'wrangler.jsonc': JSON.stringify({ account_id: 'acc123' }),
-      'pages/[id].vue': `<template><div>dynamic</div></template>`,
-      'pages/[id].server.ts': `export const loader = ({ params }) => ({ id: params.id });`,
-    });
-    const { deps, trace, exitCalls } = harness();
-
-    await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-
-    expect(exitCalls).toEqual([]);
-    expect(trace).toEqual(['wrangler:whoami', 'build', 'gate', 'wrangler:deploy']);
-  });
-
-  // An `email/` handler compiles to the worker's `email()` export. The thin static edge
-  // Worker exports none, so routing an email-bearing `output: "static"` app there would
-  // drop every inbound handler with no deploy-time error — the same class of miss
-  // `hasNonPageBackend` closes on the managed path.
-  it('keeps an output:"static" app with an email/ handler on the full Worker path', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({ name: 'email-ssg' }),
-      'void.json': JSON.stringify({ output: 'static' }),
-      // A prerendered page carries the max `revalidate`, so the worker path desires
-      // ISR_CACHE; pre-provision it so the stubbed provisioner has nothing to create.
-      'wrangler.jsonc': JSON.stringify({
-        account_id: 'acc123',
-        kv_namespaces: [{ binding: 'ISR_CACHE', id: REAL_KV_ID }],
-      }),
-      'pages/index.vue': `<template><div>hi</div></template>`,
-      'pages/index.server.ts': `export const loader = () => ({});`,
-      'email/support.ts': `export default async () => {};`,
-    });
-    const { deps, trace, exitCalls } = harness();
-
-    await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-
-    expect(exitCalls).toEqual([]);
-    expect(trace).toEqual(['wrangler:whoami', 'build', 'gate', 'wrangler:deploy']);
-  });
 
   it('accepts a valid custom migrations_pattern', async () => {
     const root = d1Project({
@@ -4775,54 +4292,6 @@ describe('runCloudflareDeploy — D1 migrations_dir gate', () => {
 });
 
 describe('runCloudflareDeploy — full Void app queues', () => {
-  it('rejects configured Void routing rules for a Class-A framework before account mutation', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({
-        name: 'fwapp',
-        dependencies: { '@tanstack/react-start': '1.0.0' },
-      }),
-      'void.json': JSON.stringify({ routing: { rewrites: { '/old': '/new' } } }),
-      'queues/jobs.ts': `export default {};`,
-      'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'fwapp' }, null, 2),
-    });
-    const messages: Array<string> = [];
-    const restore = log.error;
-    log.error = (message: string) => messages.push(message);
-    try {
-      const { deps, trace, wranglerArgs } = harness();
-      await expect(
-        runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
-      ).rejects.toBeInstanceOf(ExitError);
-      expect(trace).toEqual([]);
-      expect(wranglerArgs).toEqual([]);
-    } finally {
-      log.error = restore;
-    }
-    expect(messages.join('\n')).toMatch(/cannot apply Void routing[\s\S]*framework owns/);
-  });
-
-  it('deploys a Class-A framework queue through the verified artifact', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({
-        name: 'fwapp',
-        dependencies: { '@tanstack/react-start': '1.0.0' },
-      }),
-      'void.json': JSON.stringify({}),
-      'queues/jobs.ts': `export default {};`,
-      'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'fwapp' }, null, 2),
-    });
-    const { deps, trace, exitCalls } = harness();
-    await runCloudflareDeploy(
-      root,
-      { platform: 'cloudflare', provision: true },
-      silentCliLog,
-      deps,
-    );
-    expect(exitCalls).toEqual([]);
-    expect(trace).toContain('provision');
-    expect(trace).toContain('wrangler:deploy');
-  });
-
   it('lets a full Void app with a queue proceed (queues wire through the build)', async () => {
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'qapp' }),
@@ -4836,33 +4305,6 @@ describe('runCloudflareDeploy — full Void app queues', () => {
     expect(trace).toContain('build');
     expect(trace).toContain('wrangler:deploy');
   });
-
-  it.each([['@tanstack/react-start', 'tanstack-start']])(
-    'rejects routing.alwaysUseHttps for a %s app before account mutation',
-    async (dependency, framework) => {
-      const root = makeProject({
-        'package.json': JSON.stringify({ name: 'fwapp', dependencies: { [dependency]: '1.0.0' } }),
-        'void.json': JSON.stringify({ routing: { alwaysUseHttps: true } }),
-        'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'fwapp' }, null, 2),
-      });
-      const messages: Array<string> = [];
-      const restore = log.error;
-      log.error = (message: string) => messages.push(message);
-      try {
-        const { deps, trace, wranglerArgs } = harness();
-        await expect(
-          runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
-        ).rejects.toBeInstanceOf(ExitError);
-        expect(trace).toEqual([]);
-        expect(wranglerArgs).toEqual([]);
-      } finally {
-        log.error = restore;
-      }
-      const message = messages.join('\n');
-      expect(message).toContain(`cannot apply Void routing.alwaysUseHttps to ${framework}.`);
-      expect(message).toContain("Cloudflare's Always Use HTTPS setting");
-    },
-  );
 });
 
 describe('runCloudflareDeploy — Cloudflare queue names', () => {
@@ -5296,26 +4738,6 @@ describe('runCloudflareDeploy — skipped desired resource is fatal', () => {
     expect(trace).not.toContain('build');
     expect(trace).not.toContain('wrangler:deploy');
   });
-});
-
-describe('runCloudflareDeploy — non-Cloudflare target guard', () => {
-  for (const target of ['node', 'bun', 'deno'] as const) {
-    it(`rejects the "${target}" target before any account/provision op`, async () => {
-      const root = makeProject({
-        'package.json': JSON.stringify({ name: 'nodeapp' }),
-        'void.json': JSON.stringify({ target }),
-        'routes/index.ts': `export const GET = () => new Response('ok');`,
-        'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'nodeapp' }, null, 2),
-      });
-      const { deps, trace, exitCalls } = harness();
-      await expect(
-        runCloudflareDeploy(root, { platform: 'cloudflare', provision: true }, silentCliLog, deps),
-      ).rejects.toBeInstanceOf(ExitError);
-      expect(exitCalls).toEqual([1]);
-      // Rejected before the desired set + any wrangler/provision call.
-      expect(trace).toEqual([]);
-    });
-  }
 });
 
 describe('runCloudflareDeploy — worker-name override (WRANGLER_CI_OVERRIDE_NAME)', () => {
@@ -7660,337 +7082,6 @@ describe('runCloudflareDeploy — env-schema probe loads lazily', () => {
 // this backend (full Void plugin stack + CF Vite plugin). Class B/C get a
 // lighter Void composition that emits no worker artifact here — reject early.
 // ---------------------------------------------------------------------------
-
-describe('runCloudflareDeploy — framework artifact guard', () => {
-  it('deploys a Class-A framework through its Cloudflare Vite artifact', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({
-        name: 'tsapp',
-        dependencies: { '@tanstack/react-start': '1.0.0' },
-      }),
-      'void.json': JSON.stringify({}),
-      'routes/index.ts': `export const GET = () => new Response('ok');`,
-      'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'tsapp' }, null, 2),
-    });
-    const { deps, trace, exitCalls } = harness();
-    await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-    expect(exitCalls).toEqual([]);
-    expect(trace).toContain('build');
-    expect(trace).toContain('wrangler:deploy');
-  });
-
-  it('prepares Class A wrapper handlers without replacing its generated config pointer', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({
-        name: 'tanstack-app',
-        dependencies: { '@tanstack/react-start': '1.0.0' },
-      }),
-      'void.json': JSON.stringify({}),
-      'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'tanstack-app' }),
-      'dist/server/index.js': 'export default { fetch() { return new Response("ok") } };\n',
-      'dist/client/app.js': 'console.log("client");\n',
-      '.wrangler/deploy/config.json': '{"configPath":"../../../dist/server/wrangler.json"}\n',
-      'crons/hourly.ts': [
-        'import { defineScheduled } from "void";',
-        'export const cron = "0 * * * *";',
-        'export default defineScheduled(async function hourly() {});',
-      ].join('\n'),
-      'queues/email.ts': [
-        'import { defineQueue } from "void";',
-        'export default defineQueue(async function email() {});',
-      ].join('\n'),
-    });
-    const pointerBefore = readFileSync(join(root, '.wrangler/deploy/config.json'), 'utf-8');
-
-    await prepareCloudflareFrameworkArtifact({
-      root,
-      configPath: join(root, 'wrangler.jsonc'),
-      accountId: 'acc123',
-      workerName: 'tanstack-app',
-      voidConfig: readConfig(root),
-      framework: { name: 'tanstack-start', class: 'a' },
-      preset: FRAMEWORK_PRESETS['tanstack-start'],
-    });
-
-    expect(readFileSync(join(root, '.wrangler/deploy/config.json'), 'utf-8')).toBe(pointerBefore);
-    expect(readFileSync(join(root, 'dist/server/index.js'), 'utf-8')).toContain(
-      'scheduled: handleScheduled',
-    );
-    expect(readFileSync(join(root, 'dist/server/index.js'), 'utf-8')).toContain(
-      'queue: handleQueue',
-    );
-    const handlers = readFileSync(join(root, 'dist/server/__void_handlers.mjs'), 'utf-8');
-    expect(handlers).not.toContain('@napi-rs/keyring');
-    expect(handlers).not.toContain('@cloudflare/vite-plugin');
-    expect(parseRootWranglerConfig(join(root, 'wrangler.jsonc'))).not.toHaveProperty('main');
-  });
-
-  it.each(['tanstack-start', 'react-router', 'vinext-app', 'vinext-pages'])(
-    'adds ISR to the direct Cloudflare %s worker when revalidation is configured',
-    async (name) => {
-      const preset = FRAMEWORK_PRESETS[name]!;
-      const root = makeProject({
-        'void.json': JSON.stringify({ routing: { revalidate: { '/news/*': 60 } } }),
-        'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'framework-app' }),
-        [`${preset.workerDir}/${preset.workerMain}`]:
-          'export default { fetch() { return new Response("<html>page</html>", { headers: { "content-type": "text/html" } }); } };',
-        [`${preset.assetsDir}/client.js`]: 'console.log("client");',
-      });
-
-      await prepareCloudflareFrameworkArtifact({
-        root,
-        configPath: join(root, 'wrangler.jsonc'),
-        accountId: 'acc123',
-        workerName: 'framework-app',
-        voidConfig: readConfig(root),
-        framework: { name, class: 'a' },
-        preset,
-      });
-
-      const entry = readFileSync(join(root, preset.workerDir, preset.workerMain), 'utf8');
-      expect(entry).toContain('handleFrameworkIsr');
-      expect(entry).toContain('from "./__void_isr.mjs"');
-      const isrModule = join(root, preset.workerDir, '__void_isr.mjs');
-      expect(existsSync(isrModule)).toBe(true);
-      expect(readFileSync(isrModule, 'utf8')).not.toMatch(/from ["']@void\//);
-      expect(entry).toContain('"/news/*":60');
-      expect(entry).toContain('__VOID_ISR_DEPLOYMENT_ID');
-      expect(entry).toContain('return original.fetch(request, env, ctx)');
-      if (preset.workerDir === preset.assetsDir) {
-        expect(readFileSync(join(root, preset.workerDir, '.assetsignore'), 'utf8')).toContain(
-          '__void_isr*.mjs',
-        );
-      }
-    },
-  );
-
-  it('does not add ISR to a framework worker when routing.isr is false', async () => {
-    const preset = FRAMEWORK_PRESETS['tanstack-start']!;
-    const root = makeProject({
-      'void.json': JSON.stringify({ routing: { revalidate: 60, isr: false } }),
-      'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'framework-app' }),
-      [`${preset.workerDir}/${preset.workerMain}`]:
-        'export default { fetch() { return new Response("page"); } };',
-      [`${preset.assetsDir}/client.js`]: 'console.log("client");',
-    });
-    await prepareCloudflareFrameworkArtifact({
-      root,
-      configPath: join(root, 'wrangler.jsonc'),
-      accountId: 'acc123',
-      workerName: 'framework-app',
-      voidConfig: readConfig(root),
-      framework: { name: 'tanstack-start', class: 'a' },
-      preset,
-    });
-    const entry = readFileSync(join(root, preset.workerDir, preset.workerMain), 'utf8');
-    expect(entry).not.toContain('handleFrameworkIsr');
-  });
-
-  it('persists framework queue bindings before building', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({
-        name: 'tsapp',
-        dependencies: { '@tanstack/react-start': '1.0.0' },
-      }),
-      'void.json': JSON.stringify({}),
-      'queues/email.ts': [
-        'export const maxBatchSize = 25;',
-        'export const maxBatchTimeout = 10;',
-        'export const maxRetries = 4;',
-        'export const retryDelay = 30;',
-        'export default async function email() {}',
-      ].join('\n'),
-      'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'tsapp' }, null, 2),
-    });
-    const { deps } = harness();
-    await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-
-    expect(parseRootWranglerConfig(join(root, 'wrangler.jsonc'))).toMatchObject({
-      queues: {
-        producers: [{ binding: 'QUEUE_EMAIL', queue: 'tsapp-email' }],
-        consumers: [
-          {
-            queue: 'tsapp-email',
-            max_batch_size: 25,
-            max_batch_timeout: 10,
-            max_retries: 4,
-            retry_delay: 30,
-          },
-        ],
-      },
-    });
-  });
-
-  it('gives the framework wrapper the queue names it binds', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({
-        name: 'tsapp',
-        dependencies: { '@tanstack/react-start': '1.0.0' },
-      }),
-      'void.json': JSON.stringify({}),
-      'queues/email.ts': 'export default async function email() {}',
-      'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'tsapp' }, null, 2),
-    });
-    const wrapperQueueNames: Array<unknown> = [];
-    const { deps } = harness({
-      prepareFrameworkArtifact: async (options) => {
-        wrapperQueueNames.push(options.cloudflareQueueNames);
-      },
-    });
-    await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-    expect(wrapperQueueNames).toEqual([{ email: 'tsapp-email' }]);
-  });
-
-  it('carries removed framework consumers through activation and acknowledges cleanup', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({
-        name: 'tsapp',
-        dependencies: { '@tanstack/react-start': '1.0.0' },
-      }),
-      'void.json': JSON.stringify({}),
-      'queues/email.ts': 'export default async function email() {}',
-      'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'tsapp' }, null, 2),
-    });
-    const cleanupSnapshots: Array<ReadonlyArray<string> | undefined> = [];
-    const { deps } = harness({
-      activateVersion: async (options) => {
-        cleanupSnapshots.push(options.queueConsumerCleanup);
-        if (cleanupSnapshots.length === 2) {
-          return {
-            ok: false,
-            reason: 'triggers-failed',
-            status: 1,
-            rollback: 'succeeded',
-          };
-        }
-        return {
-          ok: true,
-          versionId: '22222222-2222-4222-8222-222222222222',
-          previewUrl: 'https://preview.example.workers.dev',
-          previousVersionId: null,
-        };
-      },
-    });
-
-    await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-    rmSync(join(root, 'queues/email.ts'));
-    await expect(
-      runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
-    ).rejects.toBeInstanceOf(ExitError);
-    expect(readWranglerManagedQueueCleanupCandidates(join(root, 'wrangler.jsonc'))).toEqual([
-      'tsapp-email',
-    ]);
-    await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-
-    expect(cleanupSnapshots).toEqual([['tsapp-email'], ['tsapp-email'], ['tsapp-email']]);
-    expect(readWranglerManagedQueueCleanupCandidates(join(root, 'wrangler.jsonc'))).toEqual([]);
-  });
-
-  it('wraps a framework Worker with cron and queue handlers', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({
-        name: 'tsapp',
-        dependencies: { '@tanstack/react-start': '1.0.0' },
-      }),
-      'void.json': JSON.stringify({}),
-      'wrangler.jsonc': `{
-  // keep this comment
-  "name": "skapp",
-  "account_id": "acc123",
-  "compatibility_flags": ["custom_flag"],
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }]
-}\n`,
-      'dist/server/index.js': 'export default { fetch() { return new Response("ok") } };\n',
-      'dist/client/assets/app.js': 'console.log("client");\n',
-      'crons/hourly.ts': [
-        'import { defineScheduled } from "void";',
-        'export const cron = "0 * * * *";',
-        'export default defineScheduled(async function hourly() {});',
-      ].join('\n'),
-      'queues/email.ts': [
-        'import { defineQueue } from "void";',
-        'export default defineQueue(async function email() {});',
-      ].join('\n'),
-    });
-
-    await prepareCloudflareFrameworkArtifact({
-      root,
-      configPath: join(root, 'wrangler.jsonc'),
-      accountId: 'acc123',
-      workerName: 'tsapp',
-      voidConfig: readConfig(root),
-      framework: { name: 'tanstack-start', class: 'a' },
-      preset: FRAMEWORK_PRESETS['tanstack-start'],
-      requiredSecretNames: ['API_TOKEN'],
-      ai: { binding: 'AI' },
-    });
-
-    const wrapper = readFileSync(join(root, 'dist/server/index.js'), 'utf-8');
-    expect(wrapper).toContain('import original from "./__original.js";');
-    expect(wrapper).toContain('scheduled: handleScheduled');
-    expect(wrapper).toContain('queue: handleQueue');
-    expect(existsSync(join(root, 'dist/server/__void_handlers.mjs'))).toBe(true);
-    // The framework's Vite plugin owns its Wrangler config, so Void leaves it unchanged.
-    expect(readFileSync(join(root, 'wrangler.jsonc'), 'utf-8')).toContain('// keep this comment');
-  });
-
-  it('fails closed when a framework build omits its Worker or assets', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({
-        name: 'tsapp',
-        dependencies: { '@tanstack/react-start': '1.0.0' },
-      }),
-      'void.json': JSON.stringify({}),
-      'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'tsapp' }),
-    });
-    const prepare = () =>
-      prepareCloudflareFrameworkArtifact({
-        root,
-        configPath: join(root, 'wrangler.jsonc'),
-        accountId: 'acc123',
-        workerName: 'tsapp',
-        voidConfig: readConfig(root),
-        framework: { name: 'tanstack-start', class: 'a' },
-        preset: FRAMEWORK_PRESETS['tanstack-start'],
-      });
-    await expect(prepare()).rejects.toThrow('did not emit its Worker entry');
-
-    mkdirSync(join(root, 'dist/server'), { recursive: true });
-    writeFileSync(join(root, 'dist/server/index.js'), 'export default {};\n');
-    await expect(prepare()).rejects.toThrow('did not emit its asset directory');
-  });
-
-  it('deploys a framework through its prepared Worker output', async () => {
-    const root = makeProject({
-      'package.json': JSON.stringify({
-        name: 'tsapp',
-        dependencies: { '@tanstack/react-start': '1.0.0' },
-      }),
-      'void.json': JSON.stringify({}),
-      'routes/index.ts': `export const GET = () => new Response('ok');`,
-      'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'tsapp' }, null, 2),
-    });
-    let requiredSecretNames: ReadonlyArray<string> | undefined;
-    const { deps, trace, exitCalls } = harness({
-      resolveSchemaFacts: (() =>
-        okSchemaFacts({
-          hasSchema: true,
-          serverKeys: ['API_TOKEN'],
-          requiredKeys: ['API_TOKEN'],
-        })) as CloudflareDeployDeps['resolveSchemaFacts'],
-      prepareFrameworkArtifact: (async (options) => {
-        trace.push('prepare-framework');
-        requiredSecretNames = options.requiredSecretNames;
-      }) as CloudflareDeployDeps['prepareFrameworkArtifact'],
-    });
-    await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-    expect(exitCalls).toEqual([]);
-    expect(trace).toContain('build');
-    expect(trace).toContain('prepare-framework');
-    expect(requiredSecretNames).toEqual(['API_TOKEN']);
-    expect(trace).toContain('wrangler:deploy');
-  });
-});
 
 // ---------------------------------------------------------------------------
 // Stale deploy pointer: the pointer is deleted before building, so a

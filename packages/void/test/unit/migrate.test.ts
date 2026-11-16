@@ -97,13 +97,13 @@ describe('void migrate build output ignores', () => {
 describe('migrateLegacyVoidConfig', () => {
   it('preserves config values and keeps the original bytes in a backup', () => {
     const original =
-      '{\n  "$schema": "./node_modules/void/schema.json",\n  "routing": { "isr": true },\n  "worker": { "compatibility_date": "2026-02-24" }\n}\n';
+      '{\n  "$schema": "./node_modules/void/schema.json",\n  "routing": { "typedRoutes": true },\n  "worker": { "compatibility_date": "2026-02-24" }\n}\n';
     setup(original);
 
     expect(migrateLegacyVoidConfig(root)).toBe(true);
     expect(existsSync(join(root, 'void.json'))).toBe(false);
     expect(readConfig(root)).toEqual({
-      routing: { isr: true },
+      routing: { typedRoutes: true },
       worker: { compatibility_date: '2026-02-24' },
     });
     expect(readFileSync(join(root, '.void/config-migration/void.json'), 'utf8')).toBe(original);
@@ -112,21 +112,21 @@ describe('migrateLegacyVoidConfig', () => {
   });
 
   it('recovers the fallback void.json emitted by an older installed plugin after migration', () => {
-    setup('{"head":{"title":"Blog"},"worker":{"compatibility_date":"2025-12-17"}}');
+    setup('{"sourceDir":"blog","worker":{"compatibility_date":"2025-12-17"}}');
     migrateLegacyVoidConfig(root);
     writeFileSync(join(root, 'void.json'), '{"worker":{"compatibility_date":"2026-02-24"}}\n');
 
     expect(migrateLegacyVoidConfig(root)).toBe(true);
     expect(existsSync(join(root, 'void.json'))).toBe(false);
-    expect(readConfig(root).head?.title).toBe('Blog');
+    expect(readConfig(root).sourceDir).toBe('blog');
   });
 
   it('preserves a conflicting legacy config rather than treating it as generated', () => {
-    setup('{"head":{"title":"Blog"}}');
+    setup('{"sourceDir":"blog"}');
     migrateLegacyVoidConfig(root);
     writeFileSync(
       join(root, 'void.json'),
-      '{"head":{"title":"Changed"},"worker":{"compatibility_date":"2026-02-24"}}\n',
+      '{"sourceDir":"changed","worker":{"compatibility_date":"2026-02-24"}}\n',
     );
 
     expect(() => migrateLegacyVoidConfig(root)).toThrow('differ');
@@ -138,24 +138,24 @@ describe('migrateLegacyVoidConfig', () => {
     expect(() => migrateLegacyVoidConfig(root)).toThrow('Invalid JSON');
     expect(readFileSync(join(root, 'void.json'), 'utf8')).toBe('{broken');
 
-    setup('{"target":"node"}');
-    writeFileSync(join(root, 'void.config.ts'), 'export default { target: "bun" };\n');
+    setup('{"sourceDir":"app"}');
+    writeFileSync(join(root, 'void.config.ts'), 'export default { sourceDir: "other" };\n');
     expect(() => migrateLegacyVoidConfig(root)).toThrow('void.config.ts already exists');
     expect(existsSync(join(root, 'void.json'))).toBe(true);
   });
 
   it('finishes an interrupted migration if the typed config matches', () => {
-    setup('{"target":"node"}');
+    setup('{"sourceDir":"app"}');
     migrateLegacyVoidConfig(root);
-    writeFileSync(join(root, 'void.json'), '{"target":"node"}');
+    writeFileSync(join(root, 'void.json'), '{"sourceDir":"app"}');
 
     expect(migrateLegacyVoidConfig(root)).toBe(true);
     expect(existsSync(join(root, 'void.json'))).toBe(false);
-    expect(readConfig(root).target).toBe('node');
+    expect(readConfig(root).sourceDir).toBe('app');
   });
 
   it('moves complete Wrangler JSONC settings into typed config and a checked-in lock', () => {
-    setup('{"routing":{"isr":false}}');
+    setup('{"routing":{"typedRoutes":false}}');
     const original =
       '// keep this provenance\n{ "name": "existing", "account_id": "123", "vars": { "CUSTOM": "yes" }, "d1_databases": [{ "binding": "DB", "database_name": "app", "database_id": "abc" }], "routes": [{ "pattern": "example.com/*", "zone_name": "example.com" }], "future_field": { "custom": true }, }\n';
     writeFileSync(join(root, 'wrangler.jsonc'), original);

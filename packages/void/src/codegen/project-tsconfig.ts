@@ -37,7 +37,6 @@ export function createProjectTsconfig(
   const outDir = join(root, '.void');
   const includeRoutes = hasRouteTypes ?? existsSync(pathsConfig.routesDir);
   const includeQueues = existsSync(pathsConfig.queuesDir);
-  const includeMd = existsSync(join(outDir, 'md.d.ts'));
   const includeEnv = existsSync(join(outDir, 'env.d.ts'));
   const includeAuth = existsSync(join(outDir, 'auth.d.ts'));
   const includeBindings = existsSync(join(outDir, 'bindings.d.ts'));
@@ -45,7 +44,6 @@ export function createProjectTsconfig(
     ...(includeRoutes ? ['routes.d.ts'] : []),
     ...(hasDb ? ['db.d.ts'] : []),
     ...(includeQueues ? ['queues.d.ts'] : []),
-    ...(includeMd ? ['md.d.ts'] : []),
     ...(includeEnv ? ['env.d.ts'] : []),
     ...(includeAuth ? ['auth.d.ts'] : []),
     ...(includeBindings ? ['bindings.d.ts'] : []),
@@ -58,7 +56,7 @@ export function createProjectTsconfig(
 
     if (options.redirectDbModule !== false) {
       // moduleResolution "bundler" ignores ambient declarations when a specifier resolves to a
-      // package file, so void/db, void/routes, void/queues and @void/md/pages map to .void/*.d.ts.
+      // package file, so void/db, void/routes and void/queues map to .void/*.d.ts.
       paths['void/db'] = ['./db.d.ts'];
     }
 
@@ -85,12 +83,6 @@ export function createProjectTsconfig(
     const compilerOptions = (tsconfig.compilerOptions ??= {});
     const paths = (compilerOptions.paths ??= {});
     paths['void/queues'] = ['./queues.d.ts'];
-  }
-
-  if (includeMd) {
-    const compilerOptions = (tsconfig.compilerOptions ??= {});
-    const paths = (compilerOptions.paths ??= {});
-    paths['@void/md/pages'] = ['./md.d.ts'];
   }
 
   return tsconfig;

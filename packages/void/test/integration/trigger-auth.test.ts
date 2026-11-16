@@ -42,17 +42,15 @@ async function buildWorker(name: string, dev: boolean): Promise<Worker> {
     middleware: [],
     jobs: [{ filePath: 'sync.ts', name: 'sync', crons: ['0 * * * *'] }],
     queues: [{ filePath: 'emails.ts', name: 'emails', bindingName: 'QUEUE_EMAILS' }],
-    pages: { pages: [], layouts: [], namedLayouts: [] },
   };
   writeFileSync(
     routeTablePath,
-    compileRouteTable(scan, dir, dir, cronsDir, queuesDir, null, {
+    compileRouteTable(scan, dir, dir, cronsDir, queuesDir, {
       honoPath: import.meta.resolve('hono'),
       honoRoutePath: import.meta.resolve('hono/route'),
       runtimeEnvPath,
       projectRoot: dir,
       homeDir: dir,
-      reactRefresh: false,
       auth: null,
       dev,
       devTriggerToken: DEV_TOKEN,

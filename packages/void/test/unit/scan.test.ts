@@ -91,42 +91,6 @@ describe('scanRoutes', () => {
     },
   );
 
-  it.each([undefined, 'dev', 'prod'] as const)(
-    'keeps pages for environment=%s and writes one action key for a .dev + .prod pair',
-    async (environment) => {
-      createFile('pages/debug.dev.tsx', 'export default () => null;');
-      createFile('pages/home.dev.tsx', 'export default () => null;');
-      createFile('pages/home.dev.server.ts', 'export const action = () => ({});');
-      createFile('pages/home.prod.tsx', 'export default () => null;');
-      createFile('pages/home.prod.server.ts', 'export const actions = { save: () => ({}) };');
-
-      const result = await scanRoutes(TMP, { environment });
-      const expected = [
-        ...(environment !== 'prod' ? ['debug.dev.tsx', 'home.dev.tsx'] : []),
-        ...(environment !== 'dev' ? ['home.prod.tsx'] : []),
-      ];
-      expect(result.pages.pages.map((page) => page.componentPath).sort()).toEqual(expected);
-
-      const { dts } = generateRouteTypes(
-        result,
-        join(TMP, 'routes'),
-        join(TMP, '.void'),
-        join(TMP, 'pages'),
-      );
-      const actionMap = dts.split('  interface PageActionMap {')[1]!;
-      expect(actionMap.split('"/home": {')).toHaveLength(2);
-      for (const env of ['dev', 'prod'] as const) {
-        const companion = `typeof import("../pages/home.${env}.server.ts")`;
-        if (environment === undefined || environment === env) {
-          expect(actionMap).toContain(companion);
-        } else {
-          expect(dts).not.toContain(`home.${env}`);
-        }
-      }
-      expect(actionMap.includes('} | {')).toBe(environment === undefined);
-    },
-  );
-
   it.each(['tsx', 'jsx'])('keeps .%s out of cron and queue discovery', async (ext) => {
     createFile(`routes/hello.${ext}`, 'export const GET = () => <p>Hello</p>;');
     createFile(`crons/sync.${ext}`, 'export const cron = "0 * * * *"; export default () => {};');
@@ -145,7 +109,6 @@ describe('scanRoutes', () => {
     createFile('src/middleware/01.logger.ts');
     createFile('src/crons/sync.ts', 'export const cron = "0 * * * *"\nexport default () => {}');
     createFile('src/queues/emails.ts', 'export default async () => {}');
-    createFile('src/pages/index.tsx', 'export default function Index() { return null; }');
 
     const result = await scanRoutes(TMP);
 
@@ -153,7 +116,6 @@ describe('scanRoutes', () => {
     expect(result.middleware).toEqual([{ order: 1, filePath: '01.logger.ts' }]);
     expect(result.jobs.map((job) => job.name)).toEqual(['sync']);
     expect(result.queues.map((queue) => queue.name)).toEqual(['emails']);
-    expect(result.pages.pages.map((page) => page.pattern)).toEqual(['/']);
   });
 
   it('ignores files starting with _', async () => {
@@ -371,33 +333,6 @@ export default () => {};`,
       'chat-tsx.ws.tsx',
     ]);
     expect(result.routes.map((route) => route.pattern)).toEqual(['/jsx', '/tsx']);
-  });
-
-  it.each([['a Void Pages app', {}, true]])(
-    'checks page routes in %s',
-    async (_, dependencies, throws) => {
-      createFile('package.json', JSON.stringify({ dependencies }));
-      createFile('pages/users.tsx', 'export default function Users() { return null; }');
-      createFile('pages/users/index.tsx', 'export default function Page() { return null; }');
-
-      const scan = scanRoutes(TMP);
-      if (throws) {
-        await expect(scan).rejects.toThrow('pages: Multiple page files resolve to the same route:');
-      } else {
-        expect((await scan).pages.pages.map((page) => page.componentPath).sort()).toEqual([
-          'users.tsx',
-          'users/index.tsx',
-        ]);
-      }
-    },
-  );
-
-  it('does not filter the pages of a framework app', async () => {
-    createFile('package.json', JSON.stringify({ dependencies: { '@react-router/dev': '1.0.0' } }));
-    createFile('pages/debug.dev.tsx', 'export default function Page() { return null; }');
-
-    const result = await scanRoutes(TMP, { environment: 'prod' });
-    expect(result.pages.pages.map((page) => page.componentPath)).toEqual(['debug.dev.tsx']);
   });
 });
 

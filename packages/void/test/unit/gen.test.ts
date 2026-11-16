@@ -6,7 +6,7 @@ import { toSlash } from 'pathslash';
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vite-plus/test';
 import type { GenArgs } from '../../src/cli/gen-args.ts';
 import { runGenCommand, formatTimestamp, detectValidator } from '../../src/cli/gen.ts';
-import { createPagesStarterTemplate } from '../../src/cli/template.ts';
+import { createSpaStarterTemplate } from '../../src/cli/template.ts';
 import { collectMigrations } from '../../src/migrations/collect.ts';
 import { assertJournalCoherence } from '../../src/migrations/validate.ts';
 
@@ -188,14 +188,13 @@ describe('gen model', () => {
   it.each(['sqlite', 'postgresql', 'mysql'] as const)(
     'detects the %s starter validator and generates matching routes without prompting',
     async (starterMode) => {
-      const template = createPagesStarterTemplate({
+      const template = createSpaStarterTemplate({
         framework: 'react',
         starterMode,
         voidPackageSpec: '*',
-        adapterPackageSpec: '*',
       });
       writePkg(template.dependencies);
-      expect(template.files['pages/index.server.ts']).toContain('void/drizzle-zod');
+      expect(template.files['routes/api/messages.ts']).toContain('void/drizzle-zod');
       expect(detectValidator(TMP)).toBe('zod');
 
       await runGenCommand(TMP, {
@@ -209,12 +208,11 @@ describe('gen model', () => {
     },
   );
 
-  it('keeps the static starter free of an unused validator dependency', () => {
-    const template = createPagesStarterTemplate({
+  it('keeps the SPA-only starter free of an unused validator dependency', () => {
+    const template = createSpaStarterTemplate({
       framework: 'react',
-      starterMode: 'static',
+      starterMode: 'spa',
       voidPackageSpec: '*',
-      adapterPackageSpec: '*',
     });
     expect(template.dependencies).not.toHaveProperty('zod');
   });
@@ -1122,48 +1120,6 @@ describe('gen middleware', () => {
     expect(content).toContain('defineMiddleware');
     expect(content).toContain('await next()');
     expect(content).toContain('implement auth middleware');
-  });
-});
-
-describe('gen ssr', () => {
-  it('generates React SSR files', async () => {
-    await runGenCommand(TMP, { subcommand: 'ssr', framework: 'react' });
-
-    const ssr = read('src/main.ssr.tsx');
-    expect(ssr).toContain('import { renderToString } from "react-dom/server"');
-    expect(ssr).toContain('import { defineRender } from "void"');
-    expect(ssr).toContain('export default defineRender');
-
-    const client = read('src/main.client.tsx');
-    expect(client).toContain('import { hydrateRoot } from "react-dom/client"');
-
-    const app = read('src/App.tsx');
-    expect(app).toContain('import { useState } from "react"');
-    expect(app).toContain('export default function App');
-  });
-
-  it('auto-detects React from package.json', async () => {
-    mkdirSync(TMP, { recursive: true });
-    writeFileSync(
-      join(TMP, 'package.json'),
-      JSON.stringify({ dependencies: { react: '^19.0.0' } }),
-    );
-
-    await runGenCommand(TMP, { subcommand: 'ssr', framework: undefined });
-
-    expect(existsSync(join(TMP, 'src/main.ssr.tsx'))).toBe(true);
-    expect(read('src/main.ssr.tsx')).toContain('react-dom/server');
-  });
-
-  it('does not overwrite existing SSR files', async () => {
-    mkdirSync(join(TMP, 'src'), { recursive: true });
-    writeFileSync(join(TMP, 'src/App.tsx'), '// my custom App');
-
-    await runGenCommand(TMP, { subcommand: 'ssr', framework: 'react' });
-
-    expect(readFileSync(join(TMP, 'src/App.tsx'), 'utf-8')).toBe('// my custom App');
-    expect(existsSync(join(TMP, 'src/main.ssr.tsx'))).toBe(true);
-    expect(existsSync(join(TMP, 'src/main.client.tsx'))).toBe(true);
   });
 });
 

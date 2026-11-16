@@ -8,7 +8,6 @@ export {
   assertCloudflareBindingsPreserved,
   type CloudflareWorkerMigrationTagOptions,
   type ExistingCloudflareWorker,
-  type ApprovedCloudflareKvBinding,
 } from './existing.ts';
 export {
   parseRootWranglerConfig,
@@ -24,10 +23,6 @@ export {
   type CloudflareCommandRunner,
   type CloudflareDeployExecution,
 } from './execute.ts';
-export {
-  writeCloudflareFrameworkDeployConfig,
-  type CloudflareFrameworkDeployConfig,
-} from './framework.ts';
 export {
   renderCloudflareStaticEntry,
   stageCloudflareStaticAssets,

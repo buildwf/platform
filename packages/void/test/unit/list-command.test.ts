@@ -81,7 +81,7 @@ describe('runListCommand', () => {
     expect(out).toContain('No linked project found');
   });
 
-  it('summarizes per-path revalidation rules in the isr column', async () => {
+  it('lists each deployment with its app type', async () => {
     setIsolatedHome();
     mockGetToken.mockReturnValue('test-token');
     const root = mkdtempSync(join(tmpdir(), 'void-list-'));
@@ -111,16 +111,10 @@ describe('runListCommand', () => {
       vi.fn(async () =>
         Response.json({
           deployments: [
-            deployment('dep-one-rule', { type: 'ssr', pathRevalidate: { '/a': 60 } }),
-            deployment('dep-two-rules', { type: 'ssr', pathRevalidate: { '/a': 60, '/b': 30 } }),
-            deployment('dep-global', {
-              type: 'ssr',
-              revalidate: 120,
-              pathRevalidate: { '/a': 60 },
-            }),
-            deployment('dep-none', { type: 'ssr' }),
+            deployment('dep-void', { type: 'void' }),
+            deployment('dep-spa', { type: 'spa' }),
           ],
-          activeDeploymentId: 'dep-one-rule',
+          activeDeploymentId: 'dep-void',
         }),
       ),
     );
@@ -132,10 +126,9 @@ describe('runListCommand', () => {
     capture.restore();
 
     const rowFor = (id: string) => out.split('\n').find((line) => line.includes(id)) ?? '';
-    expect(rowFor('dep-one-rule')).toMatch(/\b1 rule\b/);
-    expect(rowFor('dep-two-rules')).toMatch(/\b2 rules\b/);
-    expect(rowFor('dep-global')).toMatch(/\b120s\b/);
-    expect(rowFor('dep-none')).not.toMatch(/rule|\d+s\b/);
+    expect(rowFor('dep-void')).toMatch(/\bvoid\b/);
+    expect(rowFor('dep-spa')).toMatch(/\bspa\b/);
+    expect(out).not.toMatch(/\bisr\b/);
   });
 
   it('prints platform warnings before the deployment table', async () => {

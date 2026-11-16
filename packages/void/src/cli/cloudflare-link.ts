@@ -5,7 +5,6 @@ import {
   readExistingCloudflareWorker,
   type ExistingCloudflareWorker,
   type CloudflareCommandRunner,
-  type ApprovedCloudflareKvBinding,
 } from '@void/deploy-cloudflare';
 import { confirm, isCancel, log } from '@voidzero-dev/vite-plus-prompts';
 import { applyEdits, modify, parse, type ParseError } from 'jsonc-parser';
@@ -122,7 +121,6 @@ export async function prepareExistingCloudflareDeploy(options: {
   pinnedLink?: CloudflareLink | null;
   runWrangler: CloudflareCommandRunner;
   readExistingWorker?: typeof readExistingCloudflareWorker;
-  approvedKv?: ReadonlyArray<ApprovedCloudflareKvBinding>;
 }): Promise<ExistingCloudflareWorker | null> {
   if (options.pinnedLink !== undefined) {
     assertCloudflareLinkUnchanged(options.root, options.pinnedLink);
@@ -162,7 +160,7 @@ export async function prepareExistingCloudflareDeploy(options: {
     config.version_metadata = { binding: metadataBindings[0]!.name };
     patch.version_metadata = config.version_metadata;
   }
-  assertExistingCloudflareConfig(existing, config, false, options.approvedKv);
+  assertExistingCloudflareConfig(existing, config, false);
   let updated = text;
   for (const key of ['compatibility_date', 'compatibility_flags', 'limits']) {
     if (config[key] === undefined && existing.runtime[key] !== undefined) {

@@ -163,19 +163,17 @@ export default { __kind: "socket", messages: { client: schema, server: schema } 
       middleware: [{ order: 1, filePath: '01.auth.ts' }],
       jobs: [],
       queues: [],
-      pages: { pages: [], layouts: [], namedLayouts: [] },
     };
 
     writeFileSync(
       routeTablePath,
-      compileRouteTable(scan, routesDir, middlewareDir, temporary, temporary, null, {
+      compileRouteTable(scan, routesDir, middlewareDir, temporary, temporary, {
         honoPath: import.meta.resolve('hono'),
         honoRoutePath: import.meta.resolve('hono/route'),
         runtimeEnvPath,
         webSocketRuntimePath: join(root, 'packages/void/src/runtime/ws-server.ts'),
         projectRoot: temporary,
         homeDir: temporary,
-        reactRefresh: false,
         auth: null,
       }),
     );

@@ -36,20 +36,6 @@ const workers = [
 const sourceAliases = {
   '@void/deploy-core': join(repositoryRoot, 'packages', 'deploy-core', 'src', 'index.ts'),
   '@void/edge': join(repositoryRoot, 'packages', 'edge', 'src', 'index.ts'),
-  '@void/isr': join(repositoryRoot, 'packages', 'isr', 'src', 'index.ts'),
-  '@void/isr/core': join(repositoryRoot, 'packages', 'isr', 'src', 'core.ts'),
-  '@void/react/pages-server': join(
-    repositoryRoot,
-    'packages',
-    'react',
-    'src',
-    'runtime',
-    'pages-server.ts',
-  ),
-  '@void/react': join(repositoryRoot, 'packages', 'react', 'src', 'runtime', 'index.ts'),
-  'void/pages-client': join(repositoryRoot, 'packages', 'void', 'src', 'pages', 'client.ts'),
-  'void/pages-head': join(repositoryRoot, 'packages', 'void', 'src', 'pages', 'head.ts'),
-  'void/pages-server': join(repositoryRoot, 'packages', 'void', 'src', 'pages', 'serialize.ts'),
 };
 
 try {

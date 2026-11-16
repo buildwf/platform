@@ -21,7 +21,6 @@ import {
 } from '../config.ts';
 import { PLACEHOLDER_DB_URL, writeDrizzleConfig } from '../drizzle/config.ts';
 import { snapshotDrizzleOutputs } from '../drizzle/generate.ts';
-import { detectFramework, type DetectedFramework } from '../plugin-inference.ts';
 import { readProjectPaths } from '../project-paths.ts';
 import { ensureGitignoreLines } from '../shared/gitignore.ts';
 import {
@@ -46,7 +45,7 @@ import {
   type DeploymentPlatform,
 } from './project.ts';
 import {
-  createPagesStarterTemplate,
+  createSpaStarterTemplate,
   detectScaffoldFrameworkFromDependencies,
   getScaffoldTsconfigCompilerOptions,
   SCAFFOLD_BASE_DEV_DEPENDENCIES,
@@ -82,7 +81,7 @@ const SCAFFOLD_STARTER_MODES: ReadonlyArray<ScaffoldStarterMode> = [
   'sqlite',
   'postgresql',
   'mysql',
-  'static',
+  'spa',
 ];
 const DEPLOYMENT_PLATFORMS: ReadonlyArray<DeploymentPlatform> = ['cloudflare', 'void', 'none'];
 
@@ -194,7 +193,7 @@ const PNPM_BUILD_DEFAULTS = [
 // pnpm writes this value for each blocked build it wants a decision on.
 const PNPM_BUILD_PLACEHOLDER = 'set this to true or false';
 
-// Packages a previous Void Pages starter can leave behind, so re-running init
+// Packages a previous Void starter can leave behind, so re-running init
 // after deleting the app files still takes the starter path.
 const EMPTY_PROJECT_ALLOWED_PACKAGES = new Set([
   'void',
@@ -210,15 +209,9 @@ const EMPTY_PROJECT_ALLOWED_PACKAGES = new Set([
   '@types/react-dom',
   'react',
   'react-dom',
-  '@void/react',
 ]);
 
-// Only `void` and adapters may be a preinstall (`pnpm add -D void @void/react`);
-// other starter packages such as `react` also require an adapter.
-const EMPTY_PROJECT_ALLOWED_ADAPTER_PACKAGES = new Set(['@void/react']);
-const EMPTY_PROJECT_BASE_PACKAGES = new Set(['void', '@void/react']);
-
-// scaffoldPagesApp() replaces these starter scripts; custom scripts make the
+// scaffoldSpaApp() replaces these starter scripts; custom scripts make the
 // package an existing project.
 const EMPTY_PROJECT_ALLOWED_SCRIPTS: Record<string, Set<string> | undefined> = {
   test: undefined,
@@ -237,13 +230,19 @@ function isStarterScriptCommand(value: unknown): boolean {
   return typeof value === 'string' && EMPTY_PROJECT_STARTER_SCRIPT_COMMANDS.has(value);
 }
 
+// Only `void` and the React plugin may be a preinstall (`pnpm add -D void @vitejs/plugin-react`);
+// other starter packages such as `vite` or `react` also require the plugin, which only the
+// starter adds, so an existing Vite app is not mistaken for a deleted starter.
+const EMPTY_PROJECT_STARTER_MARKER = '@vitejs/plugin-react';
+
 function hasOnlyVoidStarterDependencies(depNames: Array<string>): boolean {
   if (depNames.some((dep) => !EMPTY_PROJECT_ALLOWED_PACKAGES.has(dep))) {
     return false;
   }
-  const hasStarterDependency = depNames.some((dep) => !EMPTY_PROJECT_BASE_PACKAGES.has(dep));
-  const hasPagesAdapter = depNames.some((dep) => EMPTY_PROJECT_ALLOWED_ADAPTER_PACKAGES.has(dep));
-  return !hasStarterDependency || hasPagesAdapter;
+  const hasStarterDependency = depNames.some(
+    (dep) => dep !== 'void' && dep !== EMPTY_PROJECT_STARTER_MARKER,
+  );
+  return !hasStarterDependency || depNames.includes(EMPTY_PROJECT_STARTER_MARKER);
 }
 
 const VITE_CONFIG_FILES = [
@@ -500,16 +499,7 @@ function isEmptyProjectAllowedPnpmWorkspaceFile(root: string): boolean {
 }
 
 export function isScaffoldableEmptyProject(root: string): boolean {
-  for (const dir of [
-    'src',
-    'routes',
-    'db',
-    'migrations',
-    'middleware',
-    'crons',
-    'queues',
-    'pages',
-  ]) {
+  for (const dir of ['src', 'routes', 'db', 'migrations', 'middleware', 'crons', 'queues']) {
     if (existsSync(join(root, dir))) {
       return false;
     }
@@ -659,7 +649,6 @@ type ProjectState = {
   hasTsconfig: boolean;
   hasRoutes: boolean;
   hasMigrations: boolean;
-  hasPages: boolean;
   packageManager: 'pnpm' | 'yarn' | 'bun' | 'npm';
   typescriptWanted: boolean;
 };
@@ -1121,7 +1110,6 @@ export function detectProjectState(root: string): ProjectState {
     hasTsconfig: existsSync(join(root, 'tsconfig.json')),
     hasRoutes: existsSync(paths.routesDir),
     hasMigrations: existsSync(paths.migrationsDir) || existsSync(join(root, 'migrations')),
-    hasPages: existsSync(paths.pagesDir),
     packageManager,
     typescriptWanted: hasTypescript,
   };
@@ -1136,7 +1124,7 @@ function hasDrizzleSchema(root: string): boolean {
   return existsSync(paths.schemaFile) || existsSync(paths.schemaDir);
 }
 
-function detectPagesFramework(root: string): ScaffoldFramework | undefined {
+function detectScaffoldFramework(root: string): ScaffoldFramework | undefined {
   const pkg = readPackageJson(root);
   if (!pkg) {
     return undefined;
@@ -1178,11 +1166,7 @@ function defaultPackageName(root: string): string {
   );
 }
 
-function setupTsconfig(
-  root: string,
-  state: ProjectState,
-  pagesFramework?: ScaffoldFramework,
-): void {
+function setupTsconfig(root: string, state: ProjectState, framework?: ScaffoldFramework): void {
   const tsconfigPath = join(root, 'tsconfig.json');
 
   if (state.hasTsconfig) {
@@ -1313,9 +1297,9 @@ function setupTsconfig(
         esModuleInterop: true,
         skipLibCheck: true,
         types: ['void/env'],
-        ...getScaffoldTsconfigCompilerOptions(pagesFramework),
+        ...getScaffoldTsconfigCompilerOptions(framework),
       },
-      include: ['src', 'pages', 'routes', 'middleware', 'crons', 'queues', 'db'],
+      include: ['src', 'routes', 'middleware', 'crons', 'queues', 'db'],
     };
     writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2) + '\n');
     log.step('Created tsconfig.json');
@@ -1343,38 +1327,8 @@ function readProjectWranglerCompatDate(root: string): string | undefined {
   return undefined;
 }
 
-/**
- * Ensure wrangler.jsonc exists with `compatibility_date` and `nodejs_als` flag
- * for class B/C meta-frameworks that need it for local dev.
- */
-function setupWranglerConfig(root: string, framework: DetectedFramework): void {
-  if (framework.class === 'a') {
-    return;
-  }
-
-  const hadConfig = existsSync(materializeCloudflareConfig(root));
-  const result = writeProvisionedWranglerConfig(root, {
-    compatibilityDate: LATEST_KNOWN_COMPAT_DATE,
-    compatibilityFlags: ['nodejs_als'],
-  });
-
-  if (result.modified) {
-    log.step(
-      hadConfig
-        ? 'Updated Cloudflare config with compatibility_date and nodejs_als'
-        : 'Created Cloudflare config with compatibility_date and nodejs_als',
-    );
-  } else {
-    log.step(`${basename(result.configPath)} looks good`);
-  }
-}
-
 export function ensureVoidWorkerCompatibilityDate(root: string): void {
   const config = readConfig(root) as Record<string, unknown>;
-
-  if (typeof config.target === 'string' && config.target !== 'cloudflare') {
-    return;
-  }
 
   const worker = asRecord(config.worker) ?? {};
   if (typeof worker.compatibility_date === 'string' && worker.compatibility_date.length > 0) {
@@ -1508,12 +1462,12 @@ async function promptStarterMode(starter?: ScaffoldStarterMode): Promise<Scaffol
   }
   assertInteractive('starter', SCAFFOLD_STARTER_MODES);
   const choice = await select({
-    message: 'Choose a Pages starter:',
+    message: 'Choose a starter:',
     options: [
       {
         value: 'sqlite',
         label: 'D1 (SQLite)',
-        hint: 'Recommended starter. Scaffolds a DB-backed page, schema, generated migration, seed file, and API route.',
+        hint: 'Recommended starter. Scaffolds a React app with a DB-backed API route, schema, generated migration, and seed file.',
       },
       {
         value: 'postgresql',
@@ -1526,9 +1480,9 @@ async function promptStarterMode(starter?: ScaffoldStarterMode): Promise<Scaffol
         hint: 'Scaffolds the same starter with MySQL, a generated migration, a seed file, and writes database: "mysql" to void.config.ts.',
       },
       {
-        value: 'static',
-        label: 'Static Pages',
-        hint: 'No database or server starter files yet. Good for content sites; add Void features later.',
+        value: 'spa',
+        label: 'React SPA only',
+        hint: 'No database or backend starter files yet; add routes/ and Void features later.',
       },
     ],
   });
@@ -1550,7 +1504,7 @@ async function promptScaffoldToolchain(toolchain?: ScaffoldToolchain): Promise<S
     SCAFFOLD_TOOLCHAIN_OPTIONS.map((option) => option.value),
   );
   const choice = await select({
-    message: 'Choose a Pages scaffold toolchain:',
+    message: 'Choose a scaffold toolchain:',
     initialValue: 'vite-plus',
     options: [...SCAFFOLD_TOOLCHAIN_OPTIONS],
   });
@@ -1561,27 +1515,6 @@ async function promptScaffoldToolchain(toolchain?: ScaffoldToolchain): Promise<S
   }
 
   return choice as ScaffoldToolchain;
-}
-
-async function promptScaffoldFramework(framework?: ScaffoldFramework): Promise<ScaffoldFramework> {
-  if (framework) {
-    return framework;
-  }
-  assertInteractive(
-    'framework',
-    SCAFFOLD_FRAMEWORK_OPTIONS.map((option) => option.value),
-  );
-  const choice = await select({
-    message: 'Choose a Pages framework to scaffold:',
-    options: [...SCAFFOLD_FRAMEWORK_OPTIONS],
-  });
-
-  if (isCancel(choice)) {
-    cancel('Setup cancelled.');
-    process.exit(0);
-  }
-
-  return choice as ScaffoldFramework;
 }
 
 async function promptDatabaseSetup(root: string): Promise<DatabaseSetupChoice> {
@@ -1712,11 +1645,8 @@ async function setupCloudflareDeployment(root: string): Promise<void> {
   }
 }
 
-/** Get the dev command for a detected framework. */
-function getDevCommand(root: string, framework?: DetectedFramework): string {
-  if (!framework) {
-    return formatProjectCommand(root, 'vite dev');
-  }
+/** Get the dev command for the project. */
+function getDevCommand(root: string): string {
   return formatProjectCommand(root, 'vite dev');
 }
 
@@ -2166,7 +2096,7 @@ export function installProjectDependencies(
 
 export function generateStarterMigration(
   root: string,
-  starterMode: Exclude<ScaffoldStarterMode, 'static'>,
+  starterMode: Exclude<ScaffoldStarterMode, 'spa'>,
 ): void {
   const dialect = starterMode;
   const configPath = writeDrizzleConfig(root, PLACEHOLDER_DB_URL[dialect], dialect);
@@ -2202,7 +2132,7 @@ export function generateStarterMigration(
   log.step('Generated initial Drizzle migration');
 }
 
-function scaffoldPagesApp(
+function scaffoldSpaApp(
   root: string,
   packageManager: ProjectState['packageManager'],
   framework: ScaffoldFramework,
@@ -2210,16 +2140,11 @@ function scaffoldPagesApp(
   toolchain: ScaffoldToolchain,
 ): boolean {
   const packageJsonPath = join(root, 'package.json');
-  const template = createPagesStarterTemplate({
+  const template = createSpaStarterTemplate({
     framework,
     starterMode,
     toolchain,
     voidPackageSpec: resolveScaffoldDependencySpec(root, 'void', getOwnVersion()),
-    adapterPackageSpec: resolveScaffoldDependencySpec(
-      root,
-      SCAFFOLD_FRAMEWORKS[framework].adapterPackage,
-      getOwnVersion(),
-    ),
   });
   let pkg: JsonObject = {};
 
@@ -2307,7 +2232,7 @@ function scaffoldPagesApp(
   }
 
   ensureGitignore(root);
-  if (starterMode !== 'static') {
+  if (starterMode !== 'spa') {
     applyDatabaseDialect(root, starterMode);
   }
 
@@ -2429,7 +2354,7 @@ function getGeneratedViteConfigPath(root: string): 'vite.config.ts' | 'vite.conf
 }
 
 function noteManualViteConfigSetup(configPath?: string): void {
-  const target = configPath ?? 'your framework Vite config';
+  const target = configPath ?? 'your Vite config';
   note(
     `Could not safely update ${target} automatically.\n\n` +
       `Add \`voidPlugin()\` to the top-level Vite plugins array:\n\n` +
@@ -2441,7 +2366,7 @@ function noteManualViteConfigSetup(configPath?: string): void {
   );
 }
 
-function ensureExistingProjectViteConfig(root: string, framework?: DetectedFramework): void {
+function ensureExistingProjectViteConfig(root: string): void {
   const configPath = findViteConfig(root);
   if (!configPath) {
     writeFileIfMissing(root, getGeneratedViteConfigPath(root), getBasicVoidViteConfig());
@@ -2465,12 +2390,12 @@ function ensureExistingProjectViteConfig(root: string, framework?: DetectedFrame
 }
 
 /** Returns whether a dependency was added. */
-function setupExistingProject(root: string, framework?: DetectedFramework): boolean {
+function setupExistingProject(root: string): boolean {
   log.info('Existing project detected. Configuring Void...');
   const dependencyAdded = ensureExistingProjectPackage(root, {
     plainViteSetup: true,
   });
-  ensureExistingProjectViteConfig(root, framework);
+  ensureExistingProjectViteConfig(root);
   return dependencyAdded;
 }
 
@@ -2517,7 +2442,7 @@ function demoFiles(root: string): { schema: string; route: string; client: strin
   return {
     schema: paths.schemaFile,
     route: join(paths.routesDir, 'api', 'posts.ts'),
-    client: join(paths.ssrDir, 'demo.ts'),
+    client: join(paths.sourceDir ? paths.sourceRoot : join(root, 'src'), 'demo.ts'),
   };
 }
 
@@ -2553,7 +2478,7 @@ export const GET = defineHandler(async () => {
   ensureProjectTsconfig(root, undefined, true, true, { paths });
 
   // Frontend demo
-  mkdirSync(paths.ssrDir, { recursive: true });
+  mkdirSync(dirname(files.client), { recursive: true });
   writeFileSync(
     files.client,
     `import { fetch } from "void/client";
@@ -2665,30 +2590,21 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
     !workspaceSubpackage && (!targeted || initArgs?.git !== undefined)
       ? await setupGit(root, initArgs?.git)
       : false;
-  const framework = detectFramework(root);
   const preScaffoldState = detectProjectState(root);
-  const detectedPagesFramework = detectPagesFramework(root);
-  let scaffoldedPagesFramework: ScaffoldFramework | undefined;
-  let scaffoldedStarterMode: Exclude<ScaffoldStarterMode, 'static'> | undefined;
+  const detectedFramework = detectScaffoldFramework(root);
+  let scaffoldedFramework: ScaffoldFramework | undefined;
+  let scaffoldedStarterMode: Exclude<ScaffoldStarterMode, 'spa'> | undefined;
   let didScaffoldStarter = false;
   let scaffoldAddedDependencies = false;
   let workspaceSubpackageSkip = false;
 
-  if (framework) {
-    log.info(`Detected ${framework.name} framework`);
-  }
-
-  if (!targeted && !framework && isScaffoldableEmptyProject(root)) {
-    log.info('Empty project detected. Scaffolding a Pages starter...');
+  if (!targeted && isScaffoldableEmptyProject(root)) {
+    log.info('Empty project detected. Scaffolding a React starter...');
     const scaffoldToolchain = await promptScaffoldToolchain(initArgs?.toolchain);
-    if (detectedPagesFramework) {
-      scaffoldedPagesFramework = detectedPagesFramework;
-      log.info(
-        `Detected ${SCAFFOLD_FRAMEWORKS[detectedPagesFramework].label} adapter in package.json`,
-      );
-    } else {
-      scaffoldedPagesFramework = await promptScaffoldFramework(initArgs?.framework);
+    if (detectedFramework) {
+      log.info(`Detected ${SCAFFOLD_FRAMEWORKS[detectedFramework].label} in package.json`);
     }
+    scaffoldedFramework = detectedFramework ?? initArgs?.framework ?? 'react';
     const starterMode = await promptStarterMode(initArgs?.starter);
     // A partial starter takes the existing-project path on retry, so check
     // the last required flag before creating its files.
@@ -2705,10 +2621,10 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
       scaffoldToolchain === 'vite-plus' && !hasPackageManager
         ? 'pnpm'
         : preScaffoldState.packageManager;
-    const scaffoldWroteDeps = scaffoldPagesApp(
+    const scaffoldWroteDeps = scaffoldSpaApp(
       root,
       scaffoldPackageManager,
-      scaffoldedPagesFramework,
+      scaffoldedFramework,
       starterMode,
       scaffoldToolchain,
     );
@@ -2721,30 +2637,30 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
     if (deferral && (!voidResolvable || scaffoldWroteDeps)) {
       workspaceSubpackageSkip = true;
       const relRoot = relative(deferral.workspaceRoot, root) || '.';
-      // The static starter has no database schema to generate from.
+      // The SPA-only starter has no database schema to generate from.
       const dbFollowUp =
-        starterMode === 'static'
+        starterMode === 'spa'
           ? ''
           : `\nthen run \`void db generate\` from ./${relRoot} to create the initial migration.`;
       note(
-        `Scaffolded the Pages starter in ./${relRoot}.\n\n` +
+        `Scaffolded the starter in ./${relRoot}.\n\n` +
           `Run your workspace install from ${deferral.workspaceRoot} to pick up the new dependencies.${dbFollowUp}`,
         'Workspace subpackage',
       );
     } else if (scaffoldWroteDeps || !voidResolvable) {
       scaffoldAddedDependencies = true;
     }
-    if (starterMode !== 'static') {
+    if (starterMode !== 'spa') {
       scaffoldedStarterMode = starterMode;
     }
     didScaffoldStarter = true;
   }
 
   const state = detectProjectState(root);
-  const pagesFramework = scaffoldedPagesFramework ?? detectPagesFramework(root);
+  const scaffoldFramework = scaffoldedFramework ?? detectScaffoldFramework(root);
 
   if (!targeted && !didScaffoldStarter) {
-    const dependencyAdded = setupExistingProject(root, framework);
+    const dependencyAdded = setupExistingProject(root);
     const voidResolvable = isVoidResolvableFrom(root);
     if (dependencyAdded || !voidResolvable) {
       const deferral = resolveWorkspaceDeferral(root, readPackageJson(root));
@@ -2765,7 +2681,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
 
   if (!targeted || initArgs?.tsconfig) {
     state.typescriptWanted = true;
-    setupTsconfig(root, state, pagesFramework);
+    setupTsconfig(root, state, scaffoldFramework);
   }
 
   // Generate .void/tsconfig.json so the root tsconfig can extend it
@@ -2778,10 +2694,6 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
 
   if (!targeted) {
     ensureVoidWorkerCompatibilityDate(root);
-  }
-
-  if (framework) {
-    setupWranglerConfig(root, framework);
   }
 
   if (!targeted && !didScaffoldStarter) {
@@ -2799,11 +2711,11 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
     log.info('Bundled Void docs: node_modules/void/docs/');
   }
 
-  // Demo code only in the full flow, and not for meta-frameworks.
-  if (!targeted && !framework) {
+  // Demo code only in the full flow.
+  if (!targeted) {
     const existingDemoFiles = Object.values(demoFiles(root)).filter((file) => existsSync(file));
-    if (didScaffoldStarter || state.hasRoutes || state.hasMigrations || state.hasPages) {
-      log.info('Project already has pages, routes, or migrations, skipping demo');
+    if (didScaffoldStarter || state.hasRoutes || state.hasMigrations) {
+      log.info('Project already has routes or migrations, skipping demo');
     } else if (hasDrizzleSchema(root)) {
       log.info('Project already has a database schema, skipping demo');
     } else if (existingDemoFiles.length > 0) {
@@ -2946,8 +2858,6 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
       printSuccess('Project initialized. Run your workspace install to finish setup.');
     }
   } else {
-    printSuccess(
-      `Project initialized. Run \`${getDevCommand(root, framework)}\` to start developing.`,
-    );
+    printSuccess(`Project initialized. Run \`${getDevCommand(root)}\` to start developing.`);
   }
 }

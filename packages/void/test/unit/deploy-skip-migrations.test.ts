@@ -59,18 +59,7 @@ describe('explicit deployment migration opt-out', () => {
         } as unknown as PlatformClient;
         const project = { projectId: 'proj_test', slug: 'skip-sql' };
         upload.mockClear();
-        await runFullDeploy(
-          root,
-          project,
-          client,
-          {},
-          undefined,
-          true,
-          undefined,
-          undefined,
-          undefined,
-          true,
-        );
+        await runFullDeploy(root, project, client, {}, true, undefined, undefined, true);
         expect(upload).toHaveBeenCalledOnce();
         expect(upload.mock.calls[0][0].manifest).toMatchObject({
           migrationMode: 'skip',

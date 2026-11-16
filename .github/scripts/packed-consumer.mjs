@@ -146,37 +146,14 @@ environment.PNPM_CONFIG_REGISTRY = registry.origin;
 const version = packages.find((pkg) => pkg.manifest.name === 'void').manifest.version;
 const managers = process.env.VOID_PACKED_PM ? [process.env.VOID_PACKED_PM] : ['npm', 'pnpm'];
 assert(managers.every((manager) => ['npm', 'pnpm'].includes(manager)));
-const frameworks = process.env.VOID_PACKED_FRAMEWORK
-  ? [process.env.VOID_PACKED_FRAMEWORK]
-  : full
-    ? ['react', 'vue', 'svelte', 'solid']
-    : ['react'];
-assert(frameworks.every((framework) => ['react', 'vue', 'svelte', 'solid'].includes(framework)));
-const pages = {
-  react: `import { useState } from 'react';
-import { Link } from '@void/react';
-export default function Page({ message }: { message: string }) {
+const frameworks = ['react'];
+const app = (label) => `import { useEffect, useState } from 'react';
+export default function App() {
   const [count, setCount] = useState(0);
-  return <><h1>{message}</h1><button onClick={() => setCount(count + 1)}>Count {count}</button><Link href="/next">Next page</Link></>;
-}`,
-  vue: `<script setup lang="ts">
-import { ref } from 'vue';
-import { Link } from '@void/vue';
-defineProps<{ message: string }>();
-const count = ref(0);
-</script><template><h1>{{ message }}</h1><button @click="count++">Count {{ count }}</button><Link href="/next">Next page</Link></template>`,
-  svelte: `<script lang="ts">
-import { Link } from '@void/svelte';
-let { message }: { message: string } = $props();
-let count = $state(0);
-</script><h1>{message}</h1><button onclick={() => count++}>Count {count}</button><Link href="/next">Next page</Link>`,
-  solid: `import { createSignal } from 'solid-js';
-import { Link } from '@void/solid';
-export default function Page(props: { message: string }) {
-  const [count, setCount] = createSignal(0);
-  return <><h1>{props.message}</h1><button onClick={() => setCount(count() + 1)}>Count {count()}</button><Link href="/next">Next page</Link></>;
-}`,
-};
+  useEffect(() => document.getElementById('root')?.setAttribute('data-hydrated', 'true'), []);
+  return <><h1>Packed ${label}</h1><button onClick={() => setCount(count + 1)}>Count {count}</button></>;
+}
+`;
 
 let browser;
 const failures = [];
@@ -248,28 +225,6 @@ try {
         );
         const cli = join(fixture, 'node_modules/void/dist/cli/cli.mjs');
         await run(process.execPath, [cli, '--help'], fixture);
-        if (full && framework === 'react') {
-          await run(
-            manager,
-            manager === 'npm'
-              ? ['install', '--save-dev', `@void/md@${version}`]
-              : ['add', '-D', `@void/md@${version}`],
-            fixture,
-          );
-          writeFileSync(
-            join(fixture, 'pages/markdown.md'),
-            '# Packed Markdown\n\nThe installed Markdown package renders this page.\n',
-          );
-          const viteConfig = join(fixture, 'vite.config.ts');
-          writeFileSync(
-            viteConfig,
-            `import { voidMarkdown } from '@void/md/plugin';\n` +
-              readFileSync(viteConfig, 'utf8').replace(
-                /plugins:\s*\[/,
-                'plugins: [voidMarkdown(),',
-              ),
-          );
-        }
         const manifest = JSON.parse(readFileSync(join(fixture, 'package.json'), 'utf8'));
         if (useVitePlus) {
           assert.equal(
@@ -308,17 +263,7 @@ try {
         );
         await run(process.execPath, [cli, 'prepare'], fixture);
         await run(manager, manager === 'npm' ? ['ci'] : ['install', '--frozen-lockfile'], fixture);
-        const extension = framework === 'vue' ? 'vue' : framework === 'svelte' ? 'svelte' : 'tsx';
-        writeFileSync(join(fixture, `pages/index.${extension}`), pages[framework]);
-        writeFileSync(join(fixture, `pages/next.${extension}`), pages[framework]);
-        writeFileSync(
-          join(fixture, 'pages/index.server.ts'),
-          `import { defineHandler } from 'void';\nexport const loader = defineHandler(() => ({ message: 'Packed ${label}' }));\n`,
-        );
-        writeFileSync(
-          join(fixture, 'pages/next.server.ts'),
-          `import { defineHandler } from 'void';\nexport const loader = defineHandler(() => ({ message: 'Next ${label}' }));\n`,
-        );
+        writeFileSync(join(fixture, 'src/App.tsx'), app(label));
         mkdirSync(join(fixture, 'routes/api'), { recursive: true });
         writeFileSync(
           join(fixture, 'routes/api/packed.ts'),
@@ -351,7 +296,7 @@ try {
           );
           writeFileSync(
             join(fixture, 'src/visits.test.ts'),
-            `import { expect, it, vi } from 'vite-plus/test';\nimport { loader } from '../pages/index.server';\nimport { countVisit } from './visits';\nvi.mock('void/kv', () => {\n  const values = new Map<string, unknown>();\n  return { kv: { get: async (key: string) => values.get(key) ?? null, put: async (key: string, value: unknown) => { values.set(key, value); } } };\n});\nit('counts visits', async () => {\n  await countVisit();\n  expect(await countVisit()).toBe(2);\n});\nit('imports a page loader', () => {\n  expect(loader).toBeTypeOf('function');\n});\n`,
+            `import { expect, it, vi } from 'vite-plus/test';\nimport { countVisit } from './visits';\nvi.mock('void/kv', () => {\n  const values = new Map<string, unknown>();\n  return { kv: { get: async (key: string) => values.get(key) ?? null, put: async (key: string, value: unknown) => { values.set(key, value); } } };\n});\nit('counts visits', async () => {\n  await countVisit();\n  expect(await countVisit()).toBe(2);\n});\n`,
           );
           await run(process.execPath, [vite, 'test', 'run'], fixture);
           rmSync(join(fixture, 'src/visits.ts'));
@@ -405,7 +350,7 @@ if (runtime.manifest.platformVersion !== ${JSON.stringify(version)}) throw new E
               await new Promise((resolve) => setTimeout(resolve, 200));
             }
             assert(response?.ok, task.failure());
-            assert((await response.text()).includes(`Packed ${label}`));
+            assert((await response.text()).includes('<div id="root">'));
             assert.equal(await (await fetch(`${base}/packed.txt`)).text(), label);
             const apiResponse = await fetch(`${base}/api/packed`);
             const apiBody = await apiResponse.text();
@@ -421,11 +366,6 @@ if (runtime.manifest.platformVersion !== ${JSON.stringify(version)}) throw new E
             } else {
               assert.equal(email.error?.code, 'BINDING_MISSING', emailBody);
             }
-            if (full && framework === 'react') {
-              const markdown = await fetch(`${base}/markdown`);
-              assert.equal(markdown.status, 200, task.failure());
-              assert((await markdown.text()).includes('Packed Markdown'));
-            }
             if (!browser) {
               continue;
             }
@@ -433,21 +373,10 @@ if (runtime.manifest.platformVersion !== ${JSON.stringify(version)}) throw new E
             const diagnostics = collectBrowserDiagnostics(page);
             try {
               await page.goto(base);
-              // SSR makes the button visible before the client has attached
-              // its event handlers. Verify hydration before testing clicks.
-              await page.locator('#app[data-hydrated="true"]').waitFor();
+              await page.locator('#root[data-hydrated="true"]').waitFor();
+              await page.getByRole('heading', { name: `Packed ${label}`, exact: true }).waitFor();
               await page.getByRole('button', { name: 'Count 0', exact: true }).click();
               await page.getByRole('button', { name: 'Count 1', exact: true }).waitFor();
-              await page.evaluate(() => {
-                window.__packedNavigation = 'preserved';
-              });
-              await page.getByRole('link', { name: 'Next page', exact: true }).click();
-              await page.getByRole('heading', { name: `Next ${label}`, exact: true }).waitFor();
-              assert.equal(
-                await page.evaluate(() => window.__packedNavigation),
-                'preserved',
-                'Link navigation must preserve the document',
-              );
             } catch (error) {
               throw new Error(
                 `Packed ${label} ${mode} browser verification failed:\n${String(error.stack ?? error)}\n${diagnostics()}`,
@@ -460,59 +389,8 @@ if (runtime.manifest.platformVersion !== ${JSON.stringify(version)}) throw new E
             await task.stop();
           }
         }
-        if (framework === 'react') {
-          // The Node target bundles the installed void into its build, so a ValidationError from
-          // void/handler is the class that page actions check, as in dev.
-          await run(
-            manager,
-            manager === 'npm' ? ['install', '@hono/node-server'] : ['add', '@hono/node-server'],
-            fixture,
-          );
-          writeFileSync(
-            join(fixture, 'void.config.ts'),
-            "import { defineConfig } from 'void/config';\nexport default defineConfig({ target: 'node' });\n",
-          );
-          // KV and email are Cloudflare bindings.
-          rmSync(join(fixture, 'routes'), { recursive: true });
-          writeFileSync(
-            join(fixture, 'pages/form.tsx'),
-            'export default function Form() {\n  return <h1>Form</h1>;\n}\n',
-          );
-          writeFileSync(
-            join(fixture, 'pages/form.server.ts'),
-            "import { defineHandler, ValidationError } from 'void/handler';\nexport const action = defineHandler(() => {\n  throw new ValidationError({ email: 'Email already taken' });\n});\n",
-          );
-          await run(process.execPath, [vite, 'build'], fixture);
-          const task = launch(
-            process.execPath,
-            [vite, 'preview', '--host', '127.0.0.1', '--port', '0', '--strictPort'],
-            fixture,
-          );
-          try {
-            const deadline = Date.now() + 60_000;
-            let base;
-            while (!base && Date.now() < deadline) {
-              if (task.child.exitCode !== null) {
-                throw new Error(task.failure());
-              }
-              base = packedServerUrl(task.output());
-              await new Promise((resolve) => setTimeout(resolve, 200));
-            }
-            assert(base, task.failure());
-            const response = await fetch(`${base}/form`, {
-              method: 'POST',
-              headers: { accept: 'text/html' },
-              body: new URLSearchParams({ email: 'taken@example.com' }),
-            });
-            const body = await response.text();
-            assert.equal(response.status, 200, `${body}\n${task.failure()}`);
-            assert(body.includes('Email already taken'), body);
-          } finally {
-            await task.stop();
-          }
-        }
         console.log(
-          `Passed packed ${label} (${suite}): init, frozen install, ${useVitePlus ? 'Vite+ build/typecheck/test' : 'public Vite build/typecheck'}, assets, KV, email, runtime integrity${full ? ', dev/preview, hydration/navigation' : ', dev HTTP'}${framework === 'react' ? ', Node target' : ''}`,
+          `Passed packed ${label} (${suite}): init, frozen install, ${useVitePlus ? 'Vite+ build/typecheck/test' : 'public Vite build/typecheck'}, assets, KV, email, runtime integrity${full ? ', dev/preview, browser render' : ', dev HTTP'}`,
         );
       } catch (error) {
         failures.push({ fixture: label, error: String(error.stack ?? error) });

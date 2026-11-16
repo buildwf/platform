@@ -99,7 +99,7 @@ describe('detectPreset', () => {
     });
   });
 
-  it.each(['routes', 'crons', 'middleware', 'pages', 'queues'])(
+  it.each(['routes', 'crons', 'middleware', 'queues'])(
     'returns null when %s/ dir exists (backend files)',
     (dir) => {
       const root = setupProject({
@@ -185,7 +185,7 @@ describe('detectPreset', () => {
 
 // SSG detection (step 2) runs BEFORE the `hasBackendFiles` check (step 3), so an
 // SSG repo that also has `routes/` / `middleware/` / `crons/` / `queues/` /
-// `pages/` / an SSR entry returns a pure static preset and the backend is
+// `email/` returns a pure static preset and the backend is
 // dropped with no diagnostic at all. `strictBackend` makes the ambiguous case
 // loud — but only on the UNCONFIGURED auto-detect path, because `--dir` and a
 // configured `inference.appType` are the user stating their intent.
@@ -215,15 +215,6 @@ describe('detectPreset — strictBackend', () => {
     expect(message).toContain('"appType": "static"');
     expect(message).toContain('"appType": "void"');
     expect(message).toContain('"build"');
-  });
-
-  it('detects an SSR entry as a backend source too', () => {
-    const root = setupProject({
-      pkg: vitepressPkg,
-      dirs: ['.vitepress'],
-      files: { 'src/main.ssr.ts': 'export default {};' },
-    });
-    expect(() => detectPreset(root, { strictBackend: true })).toThrow('main.ssr.ts');
   });
 
   it('does NOT throw for an SSG project with no backend', () => {
@@ -268,17 +259,14 @@ describe('detectPreset — strictBackend', () => {
 describe('findBackendSources', () => {
   it('lists every backend source relative to the root', () => {
     const root = setupProject({
-      dirs: ['routes', 'pages', 'middleware', 'crons', 'queues', 'email'],
-      files: { 'src/main.ssr.tsx': 'export default {};' },
+      dirs: ['routes', 'middleware', 'crons', 'queues', 'email'],
     });
     expect(findBackendSources(root)).toEqual([
       'routes/',
-      'pages/',
       'middleware/',
       'crons/',
       'queues/',
       'email/',
-      'src/main.ssr.tsx',
     ]);
   });
 

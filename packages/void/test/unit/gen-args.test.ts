@@ -4,13 +4,13 @@ import { parseGenArgs } from '../../src/cli/gen-args.ts';
 describe('parseGenArgs', () => {
   it('errors on no subcommand', () => {
     expect(() => parseGenArgs([])).toThrow(
-      'gen: Usage: void gen <model|migration|route|middleware|ssr|cron|queue>.',
+      'gen: Usage: void gen <model|migration|route|middleware|cron|queue>.',
     );
   });
 
   it('errors on unknown subcommand', () => {
     expect(() => parseGenArgs(['unknown'])).toThrow(
-      'gen: Usage: void gen <model|migration|route|middleware|ssr|cron|queue>.',
+      'gen: Usage: void gen <model|migration|route|middleware|cron|queue>.',
     );
   });
 
@@ -154,23 +154,6 @@ describe('parseGenArgs', () => {
       expect(() => parseGenArgs(['route', 'api/foo', '--methods', 'get,head'])).toThrow(
         "gen: Unknown HTTP method 'head'. Use one of: get, post, put, patch, delete.",
       );
-    });
-  });
-
-  describe('ssr', () => {
-    it('parses ssr with no framework (auto-detect)', () => {
-      expect(parseGenArgs(['ssr'])).toEqual({
-        subcommand: 'ssr',
-        framework: undefined,
-      });
-    });
-
-    it.each(['react'])('parses ssr with --%s', (framework) => {
-      expect(parseGenArgs(['ssr', `--${framework}`])).toEqual({ subcommand: 'ssr', framework });
-    });
-
-    it('errors on unexpected positional', () => {
-      expect(() => parseGenArgs(['ssr', 'extra'])).toThrow("gen: Unexpected argument 'extra'.");
     });
   });
 

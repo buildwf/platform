@@ -1,5 +1,5 @@
 /**
- * Path-pattern matchers shared by routing, header, and revalidate rules.
+ * Path-pattern matchers shared by routing and header rules.
  *
  * Each pattern is parsed once into tokens, and matching walks those tokens
  * over the pathname. No RegExp is built from pattern text, so a pattern cannot
@@ -30,8 +30,7 @@ export type CompiledPattern = Readonly<{
 // `text` matches itself. The others match a run of UTF-16 code units:
 //   seg  — 1 or more, none is '/'                          (regex `[^/]+`)
 //   any  — 0 or more, none is \n \r U+2028 U+2029          (regex `.*`)
-//   plus — 1 or more, same units as `any`                  (regex `.+`)
-type Token = { kind: 'text'; text: string } | { kind: 'seg' | 'any' | 'plus'; name?: string };
+type Token = { kind: 'text'; text: string } | { kind: 'seg' | 'any'; name?: string };
 
 type Prepared = Readonly<{ steps: ReadonlyArray<Token>; starts: Int32Array; minLength: number }>;
 
@@ -148,33 +147,6 @@ function parseStars(tokens: Array<Token>, text: string): void {
   }
 }
 
-/** `routing.revalidate` / page syntax: params are whole segments. */
-function parseSegments(source: string): Array<Token> {
-  const tokens: Array<Token> = [];
-  const segments = source.split('/');
-  for (let k = 0; k < segments.length; k++) {
-    const segment = segments[k]!;
-    if (k > 0) {
-      pushText(tokens, '/');
-    }
-    const name = segment.slice(1, -4);
-    if (segment[0] !== ':' || segment.length < 2) {
-      parseStars(tokens, segment);
-    } else if (
-      segment.length > 5 &&
-      segment.endsWith('{.+}') &&
-      !name.includes('{') &&
-      !name.includes('}')
-    ) {
-      tokens.push({ kind: 'plus' });
-    } else {
-      // Whatever follows the ':' only names the param.
-      tokens.push({ kind: 'seg' });
-    }
-  }
-  return tokens;
-}
-
 /**
  * Drop an `any` that directly follows another `any`: the first takes every
  * unit the pair could take, so the second always matches ''. Every other step
@@ -209,7 +181,7 @@ function prepare(tokens: ReadonlyArray<Token>): Prepared {
  * the next one:
  *
  *   text      row[d] = next[d] && path has the text at p
- *   seg/plus  row[d] = path[p] allowed && (next[d] || row[d + 1])
+ *   seg  row[d] = path[p] allowed && (next[d] || row[d + 1])
  *   any       row[d] = next[d] || (path[p] allowed && row[d + 1])
  *
  * (row[slack + 1] counts as 0.) Returns whether any entry is 1.
@@ -233,7 +205,7 @@ function stepBack(
   const kind = step.kind;
   let after = 0; // row[d + 1]; 0 past the window
   for (let d = row.length - 1; d >= 0; d--) {
-    // Path reads stay inside the path: seg/plus need a unit at every p in the
+    // Path reads stay inside the path: seg need a unit at every p in the
     // window, and `any` reads only when after === 1, i.e. p is not the last slot.
     const value =
       kind === 'any'
@@ -474,8 +446,7 @@ const literalCache = new Map<string, Prepared>();
  * captures. Only `*` is special (matches any characters including `/`); every
  * other character (including `:`) is treated as a literal.
  *
- * Used for header rules and `routing.revalidateQueryAllowlist` keys, which
- * never had `:name` capture syntax; existing tenant configs may include literal
+ * Used for header rules, which never had `:name` capture syntax; existing tenant configs may include literal
  * `:` (e.g. `/api/v1:health`, `:batchGet`-style URLs). Routing rules
  * (`redirects`/`rewrites`/`fallbacks`) use the capture-aware `compilePattern`.
  */
@@ -486,26 +457,6 @@ export function matchLiteralPattern(pattern: string, pathname: string): boolean 
     parseStars(tokens, pattern);
     prepared = prepare(tokens);
     lruSet(literalCache, pattern, prepared);
-  }
-  return matches(prepared, pathname);
-}
-
-const segmentCache = new Map<string, Prepared>();
-
-/**
- * Match a `routing.revalidate` key or page pattern against a pathname. Like
- * `matchLiteralPattern`, except for whole-segment params:
- *   `:name`      — exactly one non-empty path segment (any non-`/` name)
- *   `:name{.+}`  — one or more characters that may cross `/`
- * A mid-segment `:` (`/api/v1:health`) stays literal, and any other `{...}`
- * constraint keeps the single-segment meaning. Has its own cache because the
- * same source parses differently here.
- */
-export function matchSegmentPattern(pattern: string, pathname: string): boolean {
-  let prepared = lruGet(segmentCache, pattern);
-  if (!prepared) {
-    prepared = prepare(parseSegments(pattern));
-    lruSet(segmentCache, pattern, prepared);
   }
   return matches(prepared, pathname);
 }

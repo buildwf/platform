@@ -1670,15 +1670,6 @@ export class PlatformClient {
     });
   }
 
-  async createPrerenderToken(projectId: string): Promise<string> {
-    const body = await this.json<{ token: string }>(
-      `${this.baseUrl}/projects/${projectId}/prerender-token`,
-      'Failed to create prerender token',
-      { method: 'POST', permission: 'deploy' },
-    );
-    return body.token;
-  }
-
   async provisionDatabase(projectId: string, connectionString: string): Promise<{ ok: boolean }> {
     return this.json(
       `${this.baseUrl}/projects/${projectId}/database`,
@@ -1701,14 +1692,6 @@ export class PlatformClient {
       'Failed to fetch database URL',
       { permission: 'owner' },
     );
-  }
-
-  async purgeCache(projectId: string): Promise<{ purged: number }> {
-    return this.json(`${this.baseUrl}/projects/${projectId}/revalidate`, 'Cache purge failed', {
-      method: 'POST',
-      body: { all: true },
-      permission: 'deploy',
-    });
   }
 
   async getLogs(

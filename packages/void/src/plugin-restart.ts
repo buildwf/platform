@@ -2,7 +2,6 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import type { TLSSocket } from 'node:tls';
 import type { Plugin } from 'vite';
-import { safeJsonStringify } from './pages/protocol.ts';
 
 const BINDING_HINT_VIRTUAL = 'virtual:void/binding-hint';
 const BINDING_HINT_RESOLVED = '\0' + BINDING_HINT_VIRTUAL;
@@ -81,9 +80,9 @@ export function renderRestartingPage(
 ): string {
   return (
     RESTARTING_HTML_HEAD +
-    safeJsonStringify(sanitizeReturnPath(returnPath)) +
+    scriptJson(sanitizeReturnPath(returnPath)) +
     RESTARTING_HTML_MIDDLE +
-    safeJsonStringify(token ?? '') +
+    scriptJson(token ?? '') +
     RESTARTING_HTML_TAIL
   );
 }
@@ -248,4 +247,11 @@ export function restartPlugin(): Plugin {
       });
     },
   };
+}
+
+function scriptJson(value: unknown): string {
+  return JSON.stringify(value).replace(
+    /[<>&\u2028\u2029]/g,
+    (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`,
+  );
 }

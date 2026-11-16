@@ -119,14 +119,13 @@ async function showDeployments(
   const statusWidth = Math.max('status'.length, ...rows.map((r) => r.statusRaw.length));
   const sourceWidth = Math.max('source'.length, ...rows.map((r) => r.source.length));
   const commitWidth = Math.max('commit'.length, ...rows.map((r) => r.commit.length));
-  const isrWidth = Math.max('isr'.length, ...rows.map((r) => r.isr.length));
 
   const prefix = tablePrefix();
-  const header = `${prefix}${dim(`${'id'.padEnd(idWidth)}  ${'type'.padEnd(typeWidth)}  ${'status'.padEnd(statusWidth)}  ${'source'.padEnd(sourceWidth)}  ${'commit'.padEnd(commitWidth)}  ${'isr'.padEnd(isrWidth)}  deployed`)}`;
+  const header = `${prefix}${dim(`${'id'.padEnd(idWidth)}  ${'type'.padEnd(typeWidth)}  ${'status'.padEnd(statusWidth)}  ${'source'.padEnd(sourceWidth)}  ${'commit'.padEnd(commitWidth)}  deployed`)}`;
 
   const lines = rows.map(
     (row) =>
-      `${prefix}${row.id.padEnd(idWidth)}  ${row.appType.padEnd(typeWidth)}  ${row.statusColored}${''.padEnd(statusWidth - row.statusRaw.length)}  ${row.source.padEnd(sourceWidth)}  ${row.commit.padEnd(commitWidth)}  ${row.isr.padEnd(isrWidth)}  ${row.deployed}`,
+      `${prefix}${row.id.padEnd(idWidth)}  ${row.appType.padEnd(typeWidth)}  ${row.statusColored}${''.padEnd(statusWidth - row.statusRaw.length)}  ${row.source.padEnd(sourceWidth)}  ${row.commit.padEnd(commitWidth)}  ${row.deployed}`,
   );
 
   console.log(prefix);
@@ -144,7 +143,6 @@ type DeploymentRow = {
   statusColored: string;
   source: string;
   commit: string;
-  isr: string;
   deployed: string;
 };
 
@@ -189,9 +187,8 @@ function formatDeploymentRow(
   let manifest: {
     type?: string;
     static?: string;
+    // Deployments made before framework mode was removed.
     framework?: string;
-    revalidate?: number;
-    pathRevalidate?: Record<string, number>;
   } | null = null;
   if (d.manifest) {
     try {
@@ -202,13 +199,6 @@ function formatDeploymentRow(
   }
 
   const appType = manifest?.type ?? (manifest?.framework ? 'framework' : 'void');
-  const pathRuleCount = Object.keys(manifest?.pathRevalidate ?? {}).length;
-  const isr =
-    manifest?.revalidate && manifest.revalidate > 0
-      ? `${manifest.revalidate}s`
-      : pathRuleCount > 0
-        ? formatCount(pathRuleCount, 'rule')
-        : '-';
   const source = d.source ?? '-';
   const commit = d.commit ? d.commit.slice(0, 7) : '-';
 
@@ -217,5 +207,5 @@ function formatDeploymentRow(
 
   const deployed = d.deployed_at ? formatRelativeTime(d.deployed_at) : '-';
 
-  return { id: d.id, appType, statusRaw, statusColored, source, commit, isr, deployed };
+  return { id: d.id, appType, statusRaw, statusColored, source, commit, deployed };
 }

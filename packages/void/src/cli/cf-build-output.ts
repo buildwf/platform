@@ -26,12 +26,10 @@ import {
   writeWorkerConfig,
 } from '@cloudflare/build-output-utils';
 import { type ModuleType, OutputContainerSchema } from '@cloudflare/config';
-import ignore from 'ignore';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'pathslash';
 import type { Plugin } from 'vite';
 import { migrateBuiltWranglerConfig, record } from './cf-config-migrate.ts';
 import { buildContainerImage } from './container-image.ts';
-import { readGeneratedWranglerConfigFile } from './generated-wrangler-config.ts';
 import { WORKER_CONDITIONS } from './worker-conditions.ts';
 
 export interface CfBuildOutput {
@@ -608,65 +606,3 @@ export async function prepareCfStaticBuildOutput(options: {
 }
 
 /** Bundle an adapter-produced Worker and copy only its public framework assets. */
-export async function prepareCfFrameworkBuildOutput(options: {
-  projectRoot: string;
-  configPath: string;
-  accountId: string;
-}): Promise<CfBuildOutput | null> {
-  // The root config is JSONC: it may be hand-written, or restored from void.lock.json with Void's
-  // published-traffic comment.
-  const raw = readGeneratedWranglerConfigFile(options.configPath);
-  const assets = record(raw.assets);
-  if (typeof raw.main !== 'string' || typeof assets?.directory !== 'string') {
-    return null;
-  }
-  const configDirectory = dirname(options.configPath);
-  const entry = resolve(configDirectory, raw.main);
-  const sourceAssets = resolve(configDirectory, assets.directory);
-  if (!existsSync(entry) || !existsSync(sourceAssets)) {
-    return null;
-  }
-
-  const publicAssets = mkdtempSync(join(tmpdir(), 'void-cf-framework-assets-'));
-  try {
-    const ignored = ignore();
-    const ignorePath = join(sourceAssets, '.assetsignore');
-    if (existsSync(ignorePath)) {
-      ignored.add(readFileSync(ignorePath, 'utf8'));
-    }
-    const realAssets = realpathSync(sourceAssets);
-    for (const file of readdirSync(sourceAssets, { recursive: true, withFileTypes: true })) {
-      if (file.isDirectory()) {
-        continue;
-      }
-      const absolute = join(file.parentPath, file.name);
-      const name = relative(sourceAssets, absolute).replaceAll('\\', '/');
-      if (name === '.assetsignore' || ignored.ignores(name)) {
-        continue;
-      }
-      const destination = join(publicAssets, name);
-      mkdirSync(dirname(destination), { recursive: true });
-      if (file.isSymbolicLink()) {
-        const target = realpathSync(absolute);
-        if (!isInside(realAssets, target)) {
-          throw new Error('The framework assets contain a symlink outside the asset directory.');
-        }
-        copyFileSync(target, destination);
-      } else if (file.isFile()) {
-        copyFileSync(absolute, destination);
-      }
-    }
-    const prepared = await prepareBundledBuildOutput({
-      projectRoot: options.projectRoot,
-      entry,
-      scratchPrefix: 'void-cf-framework-',
-      config: raw,
-      assets: { ...assets, directory: publicAssets },
-      accountId: options.accountId,
-      external: [/^cloudflare:/, /^node:/],
-    });
-    return prepared ? { ...prepared, assetsDirectory: sourceAssets } : null;
-  } finally {
-    rmSync(publicAssets, { recursive: true, force: true });
-  }
-}

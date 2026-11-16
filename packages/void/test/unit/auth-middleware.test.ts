@@ -174,7 +174,7 @@ describe('runVoidAuthMiddleware response headers', () => {
       headers: new Headers({ 'cache-control': 'no-store', pragma: 'no-cache' }),
     });
     app.use(
-      createRoutingRuntime(app, { nodeTarget: true }).headerMiddleware([
+      createRoutingRuntime(app).headerMiddleware([
         {
           pattern: '/*',
           headers: [
@@ -544,7 +544,7 @@ describe('runVoidAuthMiddleware static asset cache policy', () => {
         headers.append('set-cookie', 'session=rotated; Path=/; HttpOnly');
       }
       const app = createApp({ response: null, headers });
-      const routing = createRoutingRuntime(app, { nodeTarget: true });
+      const routing = createRoutingRuntime(app);
       app.use(
         routing.headerMiddleware([
           {
@@ -658,7 +658,7 @@ describe('runVoidAuthMiddleware static asset cache policy', () => {
   it('keeps the file policy when later middleware only adds a header', async () => {
     const app = createApp({ response: null, headers: sessionLookup() });
     app.use(
-      createRoutingRuntime(app, { nodeTarget: true }).headerMiddleware([
+      createRoutingRuntime(app).headerMiddleware([
         { pattern: '/assets/*', headers: [['X-Frame-Options', 'DENY']] },
       ]),
     );

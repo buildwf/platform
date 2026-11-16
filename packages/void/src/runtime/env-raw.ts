@@ -12,17 +12,6 @@ export type RuntimeEnv = Record<string, unknown>;
 export const INTERNAL_BINDING_PREFIXES = ['__VOID_', '__PROJECT_'] as const;
 
 /**
- * Framework bindings hidden from user code only while ISR is active, so a non-ISR
- * app keeps its own `ISR_CACHE`. Shared with the generated `c.env` filter.
- */
-export const INTERNAL_BINDING_EXACT_NAMES = ['ISR_CACHE'] as const;
-
-/** Only ISR builds stamp the `__VOID_ISR_DEPLOYMENT_ID` binding onto the raw env. */
-export function isIsrActive(rawEnv: RuntimeEnv): boolean {
-  return rawEnv.__VOID_ISR_DEPLOYMENT_ID != null;
-}
-
-/**
  * One process or isolate can evaluate this module more than once: Vite's SSR module
  * runner keeps its own copy beside a package it leaves external, and a dependency
  * optimizer reload re-evaluates it while a request is in flight. Every copy must read

@@ -32,7 +32,6 @@ describe('shared application analysis', () => {
     expect(analysis).toMatchObject({
       root: applicationRoot,
       environment: 'prod',
-      framework: undefined,
       dialect: 'sqlite',
       authEnabled: false,
       authConfigPath: null,
@@ -207,24 +206,5 @@ describe('shared application analysis', () => {
       kv: ['inference.bindings.kv enables KV'],
       r2: ['inference.bindings.storage enables R2'],
     });
-  });
-
-  it('uses framework directories by default and honors custom directories without losing src helpers', () => {
-    const applicationRoot = root();
-    source(
-      applicationRoot,
-      'package.json',
-      JSON.stringify({ dependencies: { '@react-router/dev': '*' } }),
-    );
-    source(applicationRoot, 'server/storage.ts', 'import { storage } from "void/storage";');
-    source(applicationRoot, 'features/cache.ts', 'import { kv } from "void/kv";');
-    source(applicationRoot, 'src/ai.ts', 'import { ai } from "void/ai";');
-    const detected = analyzeApplicationSync(applicationRoot, { config: {} });
-    expect(detected.framework).toEqual({ name: 'react-router', class: 'a' });
-    expect(detected.bindings).toMatchObject({ needsR2: true, needsKV: false, needsAI: true });
-    const custom = analyzeApplicationSync(applicationRoot, {
-      config: { inference: { scanDirs: ['features'] } },
-    });
-    expect(custom.bindings).toMatchObject({ needsR2: false, needsKV: true, needsAI: true });
   });
 });

@@ -10,25 +10,13 @@ import type { Context, Hono, MiddlewareHandler, NotFoundHandler } from 'hono';
 import type { TypedResponse } from 'hono';
 import type { RedirectStatusCode } from 'hono/utils/http-status';
 import type { RouteDestination, RouteUrlInput } from 'void/routes';
-import {
-  PRESERVED_QUERY_HEADER,
-  actionKeySegment,
-  hasActionKey,
-  markActionKey,
-  queryKey,
-  searchWithoutActionKey,
-  searchWithoutPreservedQuery,
-} from '../pages/action-key.ts';
-import { pagesRedirectResponse } from '../pages/redirect.ts';
 import { SHARED_CACHE_HEADERS, authDependentRequests } from './auth-response.ts';
 import { VoidAssetRewriteError, type CloudContext } from './handler.ts';
 import { convertReturnValue } from './response.ts';
 import { toUrlString } from './route-url.ts';
 import { ASSET_EXTENSIONS } from './routing-assets.ts';
-import { markRouteHandler } from './routing-pages.ts';
-import { intentionalNotFoundRequests } from './routing-worker.ts';
+import { createAssetCachePolicy, intentionalNotFoundRequests } from './routing-worker.ts';
 import { isUnchangedStaticAsset, markStaticAsset } from './static-asset-marker.ts';
-export { createErrorRenderer } from './routing-errors.ts';
 
 export type RoutingRule = {
   source: string;
@@ -66,7 +54,6 @@ export function createRoutingRuntime(
   app: Hono,
   options: {
     dev?: boolean;
-    nodeTarget?: boolean;
     managedDispatch?: boolean;
     blockedAssetExtensions?: Array<string>;
   } = {},
@@ -194,12 +181,7 @@ export function createRoutingRuntime(
     });
   };
   const dispatch = async (request: Request, c: Context, trace: string): Promise<Response> => {
-    const response = annotate(
-      await (options.nodeTarget
-        ? app.fetch(request, c.env)
-        : app.fetch(request, c.env, c.executionCtx)),
-      trace,
-    );
+    const response = annotate(await app.fetch(request, c.env, c.executionCtx), trace);
     if (authDependentRequests.has(request)) {
       // The enclosing response may depend on auth even if middleware clones or replaces it.
       authDependentRequests.add(c.req.raw);
@@ -259,7 +241,6 @@ export function createRoutingRuntime(
         }
         const request = new Request(rewriteUrl.toString(), c.req.raw);
         rememberOriginal(request, c);
-        keepActionQuery(c.req.raw, request, search);
         if (fallback) {
           fallbackHandled.add(request);
           fallbackServed.add(c.req.raw);
@@ -325,24 +306,13 @@ export function createRoutingRuntime(
       }
       const request = new Request(url.toString(), c.req.raw);
       rememberOriginal(request, c);
-      keepActionQuery(c.req.raw, request, search);
       return dispatch(request, c, `c.rewrite -> ${path} (middleware)`);
     };
     const redirect = context.redirect.bind(context);
-    c.redirect = (destination, status) => {
-      const location = toUrlString(destination);
-      // A named action still places its key and keeps the page query. Every
-      // other code redirect sends the location it was given. routing.redirects
-      // merge the request query before they call this.
-      if (location.startsWith('/') && !location.startsWith('//') && hasActionKey(c.req.raw)) {
-        return redirect(redirectLocation(c.req.raw, location, status), status);
-      }
-      return redirect(location, status);
-    };
+    c.redirect = (destination, status) => redirect(toUrlString(destination), status);
     c.originalUrl = () => originalUrls.get(c.req.raw) ?? null;
     c.isRewritten = () => originalUrls.has(c.req.raw);
     await next();
-    c.res = pagesRedirectResponse(c.req.raw, c.res);
     if (!trackAssetMisses) {
       return;
     }
@@ -376,12 +346,7 @@ export function createRoutingRuntime(
       return response;
     },
     requestMiddleware: async (c, next) => {
-      await requestContext.run(
-        options.nodeTarget
-          ? { request: c.req.raw }
-          : { request: c.req.raw, executionCtx: c.executionCtx },
-        next,
-      );
+      await requestContext.run({ request: c.req.raw, executionCtx: c.executionCtx }, next);
     },
     routingMiddleware: (rules) => async (c, next) => {
       if (originalUrls.has(c.req.raw)) {
@@ -471,77 +436,6 @@ export function createRoutingRuntime(
   };
 }
 
-function redirectLocation(
-  request: Request,
-  location: string,
-  status: RedirectStatusCode | undefined,
-): string {
-  const url = new URL(request.url);
-  // The page query that action() added only re-renders the page in place.
-  const search = searchWithoutPreservedQuery(
-    url.search,
-    request.headers.get(PRESERVED_QUERY_HEADER),
-  );
-  if (!hasActionKey(request)) {
-    return mergeQueryIntoLocation(location, search);
-  }
-  // The key goes only when the browser follows with a GET: after a 303, or after
-  // a 301/302 (the default) to a POST. Other redirects send the same method and
-  // body again, and the destination needs the key to pick the action.
-  const followsWithGet =
-    status === 303 ||
-    ((status === undefined || status === 301 || status === 302) && request.method === 'POST');
-  if (followsWithGet) {
-    return mergeQueryIntoLocation(location, searchWithoutActionKey(search));
-  }
-  const hash = location.indexOf('#');
-  const destinationQuery = location.indexOf('?');
-  if (destinationQuery === -1 || (hash !== -1 && hash < destinationQuery)) {
-    return mergeQueryIntoLocation(location, search);
-  }
-  const merged = mergeQueryIntoLocation(location, searchWithoutActionKey(search));
-  // On the same page, a key the destination starts with picks the action itself.
-  const destinationKey = actionKeySegment(
-    location.slice(destinationQuery, hash === -1 ? location.length : hash),
-  );
-  if (destinationKey && new URL(location, url).pathname === url.pathname) {
-    return merged;
-  }
-  // Elsewhere the key goes first again, ahead of the destination parameters; a
-  // value the destination gives the same key wins. A bare "?" still drops the
-  // rest of the request query.
-  const mergedHash = merged.indexOf('#');
-  const base = mergedHash === -1 ? merged : merged.slice(0, mergedHash);
-  const fragment = mergedHash === -1 ? '' : merged.slice(mergedHash);
-  const q = base.indexOf('?');
-  const segments = q === -1 ? [] : base.slice(q + 1).split('&');
-  const key = actionKeySegment(search);
-  const name = queryKey(key);
-  const hasName = (segment: string) => segment !== '' && queryKey(segment) === name;
-  // Only the destination's own value replaces the key. The merge then left out
-  // the request's values for that name and put the destination's first.
-  const own = location
-    .slice(destinationQuery + 1, hash === -1 ? location.length : hash)
-    .split('&')
-    .some(hasName)
-    ? segments.findIndex(hasName)
-    : -1;
-  const first = own === -1 ? key : segments.splice(own, 1)[0];
-  const rest = segments.join('&');
-  return (
-    base.slice(0, q === -1 ? base.length : q) + '?' + first + (rest ? '&' + rest : '') + fragment
-  );
-}
-
-/** Action metadata follows a rewrite only when it keeps the request query. */
-function keepActionQuery(from: Request, to: Request, destinationSearch: string): void {
-  if (destinationSearch) {
-    to.headers.delete(PRESERVED_QUERY_HEADER);
-  } else if (hasActionKey(from)) {
-    markActionKey(to);
-  }
-}
-
 export function markNoMatch(request: Request, response: Response): Response {
   const url = new URL(request.url);
   if (
@@ -566,19 +460,9 @@ export function createHttpRouteHandler(
   load: () => Promise<Record<string, (c: CloudContext) => unknown>>,
   method: string,
 ): (c: Context) => Promise<Response> {
-  return markRouteHandler(async (c: Context) =>
-    convertReturnValue(await (await load())[method](c as unknown as CloudContext)),
-  );
+  return async (c: Context) =>
+    convertReturnValue(await (await load())[method](c as unknown as CloudContext));
 }
-
-export {
-  createPageGetHandler,
-  createStaticNotFound,
-  createPageMutationHandler,
-  createPagesFallback,
-  createNamedActionMarker,
-  markRouteHandler,
-} from './routing-pages.ts';
 
 export function createModuleLoader<T>(load: () => Promise<T>, cache = true): () => Promise<T> {
   let module: T | undefined;
@@ -592,12 +476,31 @@ export function createModuleLoader<T>(load: () => Promise<T>, cache = true): () 
     return module;
   };
 }
+export function createAssetNotFound(options: {
+  routing: RoutingRuntime;
+  fallbackRules?: Array<RoutingRule>;
+  assetsDir?: string;
+}): (c: Context) => Promise<Response> {
+  const cachePolicy = createAssetCachePolicy(options.assetsDir);
+  return async (c) => {
+    const assets = c.env?.ASSETS;
+    if (assets && typeof assets.fetch === 'function') {
+      const response: Response = await assets.fetch(c.req.raw);
+      if (response.status !== 404) {
+        return markStaticAsset(c, await cachePolicy(c.req.raw, c.env, response));
+      }
+    }
+    const fallback = options.fallbackRules
+      ? await options.routing.applyFallback(c, options.fallbackRules)
+      : undefined;
+    return (
+      fallback ?? options.routing.markNoMatch(c.req.raw, new Response('Not Found', { status: 404 }))
+    );
+  };
+}
+
 export {
   createAssetFallback,
   createWorkerFetch,
   filterInternalBindings,
-  prerenderPathsResponse,
 } from './routing-worker.ts';
-export { createClientAssetTags, createManifestLoader } from './routing-assets.ts';
-export { createSsrFallback, createAssetNotFound } from './routing-pages.ts';
-export { buildPrerenderPath } from './prerender-path.ts';

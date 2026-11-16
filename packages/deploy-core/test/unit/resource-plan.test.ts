@@ -7,7 +7,7 @@ describe('createDeployResourcePlan', () => {
       version: 3,
       bindings: {
         d1: ['DB'],
-        kv: ['KV', 'ISR_CACHE'],
+        kv: ['KV', 'CACHE'],
         r2: ['STORAGE'],
         ai: true,
         hyperdrive: ['HYPERDRIVE'],
@@ -26,7 +26,7 @@ describe('createDeployResourcePlan', () => {
       resources: [
         { type: 'd1', bindingName: 'DB' },
         { type: 'kv', bindingName: 'KV' },
-        { type: 'kv', bindingName: 'ISR_CACHE' },
+        { type: 'kv', bindingName: 'CACHE' },
         { type: 'r2', bindingName: 'STORAGE' },
         {
           type: 'queue',

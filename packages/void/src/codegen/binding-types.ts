@@ -52,9 +52,6 @@ const managedBindings = new Set(['DB', 'KV', 'STORAGE', 'AI', 'SANDBOX', 'ASSETS
 
 /** Generate types for explicitly configured bindings without changing managed types. */
 export function generateBindingTypes(config: VoidConfig): string | null {
-  if (config.target && config.target !== 'cloudflare') {
-    return null;
-  }
   const bindings = new Map<string, string>();
   for (const [path, nameField, type] of bindingTypes) {
     let value: unknown = config.cloudflare;

@@ -41,24 +41,23 @@ describe('vp test in a Void app', () => {
   let playground: IsolatedPlayground;
 
   beforeAll(() => {
-    playground = createIsolatedPlayground(repository, 'playground/react-pages');
+    playground = createIsolatedPlayground(repository, 'playground/spa');
+    writeFileSync(
+      join(playground.root, 'routes/api/health.ts'),
+      "import { defineHandler } from 'void';\nexport const GET = defineHandler((c) => c.json({ status: 'ok' }));\n",
+    );
     writeTest(
       playground.root,
       `import { Hono } from 'hono';
 import { describe, expect, it } from 'vite-plus/test';
 import * as schema from '@schema';
 import { db } from 'void/db';
-import { loader } from '../pages/index.server.ts';
 import { GET } from '../routes/api/health.ts';
 
 describe('app', () => {
   it('runs a route handler', async () => {
     const response = await new Hono().get('/api/health', GET).request('/api/health');
     expect(await response.json()).toEqual({ status: 'ok' });
-  });
-
-  it('imports a page loader', () => {
-    expect(loader).toBeTypeOf('function');
   });
 
   it('imports the schema and void/db', () => {
@@ -78,7 +77,7 @@ describe('app', () => {
     const { code, output } = await runAppTests(playground.root);
 
     expect(code, output).toBe(0);
-    expect(output).toContain('3 passed');
+    expect(output).toContain('2 passed');
     expect(output).not.toMatch(/Applied \d+ migration/);
     expect(existsSync(join(playground.root, '.void/v3'))).toBe(false);
   });
@@ -99,36 +98,6 @@ describe('app', () => {
     const { code, output } = await runAppTests(playground.root, ['--mode', 'staging']);
 
     expect(code, output).toBe(0);
-    expect(output).toContain('3 passed');
-  });
-});
-
-describe('vp test in a framework app', () => {
-  let playground: IsolatedPlayground;
-
-  beforeAll(() => {
-    // Void turns on nodejs_compat for TanStack Start, React Router and vinext apps.
-    playground = createIsolatedPlayground(repository, 'playground/tanstack-start');
-    writeTest(
-      playground.root,
-      `import { expect, it } from 'vite-plus/test';
-import * as schema from '@schema';
-
-it('imports the schema', () => {
-  expect(Object.keys(schema)).toContain('users');
-});
-`,
-    );
-  });
-
-  afterAll(() => {
-    playground?.cleanup();
-  });
-
-  it('runs the tests', async () => {
-    const { code, output } = await runAppTests(playground.root);
-
-    expect(code, output).toBe(0);
-    expect(output).toContain('1 passed');
+    expect(output).toContain('2 passed');
   });
 });

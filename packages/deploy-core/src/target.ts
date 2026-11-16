@@ -1,7 +1,7 @@
 /** A concrete destination that can execute a Void deployment. */
 export type DeployTarget = 'cloudflare' | 'void';
 
-export type DeployAppType = 'void' | 'spa' | 'static' | 'framework';
+export type DeployAppType = 'void' | 'spa' | 'static';
 
 /**
  * @deprecated Void does not read deploy target capabilities. Removed in the
@@ -25,7 +25,6 @@ export type DeployTargetCapabilities = {
     webSockets: DeployCapabilitySupport;
     live: DeployCapabilitySupport;
     sandbox: DeployCapabilitySupport;
-    isr: DeployCapabilitySupport;
     remoteDevelopment: DeployCapabilitySupport;
     deploymentHistory: DeployCapabilitySupport;
     rollback: DeployCapabilitySupport;

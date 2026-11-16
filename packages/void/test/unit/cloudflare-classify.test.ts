@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
@@ -38,17 +38,5 @@ describe('classifyCloudflareDeployApp', () => {
         'or add a supported build tool so Void can locate the generated static assets.',
       ].join('\n'),
     });
-  });
-
-  it('accepts a TanStack Start project whose routes live under src/routes', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-cloudflare-classify-'));
-    roots.push(root);
-    writeFileSync(
-      join(root, 'package.json'),
-      JSON.stringify({ devDependencies: { '@tanstack/react-start': '1.0.0', vite: '8.0.0' } }),
-    );
-    mkdirSync(join(root, 'src/routes'), { recursive: true });
-
-    expect(classify(root, {} as VoidConfig)).toEqual({ supported: true });
   });
 });

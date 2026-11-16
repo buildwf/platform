@@ -1,24 +1,5 @@
 import type { Page } from 'playwright';
 
-/** Each island loads independently; one hydrated island says nothing about its siblings. */
-export async function waitForIslandsHydrated(
-  page: Page,
-  minimumCount = 1,
-  timeout?: number,
-): Promise<void> {
-  await page.waitForFunction(
-    (minimum) => {
-      const islands = Array.from(document.querySelectorAll('[data-island]'));
-      return (
-        islands.length >= minimum &&
-        islands.every((island) => island.getAttribute('data-hydrated') === 'true')
-      );
-    },
-    minimumCount,
-    { timeout },
-  );
-}
-
 /** Retain the events that distinguish hydration errors, native navigation, and Vite reloads. */
 export function collectBrowserDiagnostics(page: Page): () => string {
   const events: Array<string> = [];

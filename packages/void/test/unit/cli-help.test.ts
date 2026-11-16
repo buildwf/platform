@@ -153,12 +153,11 @@ describe('rendered help advertises the flags the parser honours', () => {
     expect(page).toContain('--project <name>');
   });
 
-  it('states plain limits for remote studio and purge-cache', () => {
+  it('states plain limits for remote studio', () => {
     const studio = render(['db', 'studio']);
     expect(studio).not.toContain('not yet');
     expect(studio).toContain('MySQL');
     expect(render(['db'])).toContain('PostgreSQL/MySQL');
-    expect(render(['project', 'purge-cache'])).toContain('Void platform');
   });
 
   it('describes gen model without a migration or CRUD claim', () => {

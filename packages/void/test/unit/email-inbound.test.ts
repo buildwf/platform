@@ -287,7 +287,6 @@ const COMPILE_OPTIONS = {
   runtimeEnvPath: 'void/_env',
   projectRoot: '/project',
   homeDir: '/home/test',
-  reactRefresh: false,
   auth: null,
   nodeTarget: false,
   emailDir: '/e',
@@ -302,14 +301,12 @@ function compile(email: any): string {
       middleware: [],
       jobs: [],
       queues: [],
-      pages: { pages: [], layouts: [], namedLayouts: [] },
       email,
     },
     '/r',
     '/m',
     '/j',
     '/q',
-    null,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     COMPILE_OPTIONS as any,
   );

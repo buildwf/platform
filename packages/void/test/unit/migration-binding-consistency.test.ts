@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vite-plus/test';
-import { buildVoidManifest, buildFrameworkManifest } from '../../src/cli/package.ts';
+import { buildVoidManifest } from '../../src/cli/package.ts';
 import type { InferredBindings } from '../../src/inference/walk.ts';
 import { buildMigrationPlanBundle } from '../../src/migrations/plan.ts';
 import type { MigrationFile } from '../../src/migrations/validate.ts';
@@ -123,34 +123,6 @@ describe('buildVoidManifest postgresql migration-binding consistency', () => {
     });
 
     // Migrations with postgresql dialect imply hyperdrive is needed
-    expect(manifest.bindings.hyperdrive).toEqual(['HYPERDRIVE']);
-    expect(manifest.bindings.d1).toBeUndefined();
-    expect(manifest.migrations).toEqual({ dialect: 'postgresql', pending: 1 });
-  });
-});
-
-describe('buildFrameworkManifest migration-binding consistency', () => {
-  it('forces d1 binding when migrations exist even if needsD1 is false', () => {
-    const manifest = buildFrameworkManifest({
-      frameworkName: 'nuxt',
-      workerMain: 'index.js',
-      bindings: noBindings,
-      migrations: sampleMigrations,
-    });
-
-    expect(manifest.bindings.d1).toEqual(['DB']);
-    expect(manifest.migrations).toEqual(expect.objectContaining({ dialect: 'sqlite', pending: 1 }));
-  });
-
-  it('forces hyperdrive binding when postgresql migrations exist with needsD1 false', () => {
-    const manifest = buildFrameworkManifest({
-      frameworkName: 'nuxt',
-      workerMain: 'index.js',
-      bindings: noBindings,
-      migrations: sampleMigrations,
-      dialect: 'postgresql',
-    });
-
     expect(manifest.bindings.hyperdrive).toEqual(['HYPERDRIVE']);
     expect(manifest.bindings.d1).toBeUndefined();
     expect(manifest.migrations).toEqual({ dialect: 'postgresql', pending: 1 });

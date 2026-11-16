@@ -2,8 +2,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vp run --filter './packages/**' --filter '!./packages/md' build && vp run --filter ./packages/md build",
-    "build:core": "vp run --filter ./packages/deploy-core --filter ./packages/deploy-cloudflare --filter ./packages/edge --filter ./packages/isr --filter ./packages/platform --filter ./packages/void build",
+    "build": "vp run --filter './packages/**' build",
+    "build:core": "vp run --filter ./packages/deploy-core --filter ./packages/deploy-cloudflare --filter ./packages/edge --filter ./packages/platform --filter ./packages/void build",
     "build:docs": "vp run --filter ./docs build",
     "build:platform": "vp run --filter './platform/packages/**' build",
     "check": "vp run --filter './**' --filter '!./playground-local/**' --parallel --concurrency-limit=4 typecheck",
@@ -19,12 +19,10 @@
     "test": "node test/affected.mjs",
     "test:full": "vp test run",
     "test:integration": "vp test run --project parallel-integration",
-    "test:metaframeworks": "vp test run --project parallel-integration nitro-worker.test.ts react-router.test.ts tanstack-start.test.ts vinext-app.test.ts vinext-pages.test.ts",
     "test:platform": "vp test run --project 'platform-*'",
     "test:profile": "vp test run --reporter=default --experimental.importDurations.print --experimental.importDurations.limit=20",
     "test:unit": "vp test run --project unit --project unit-pglite --project cli-unit",
-    "uninstall:void-dev": "node scripts/void-dev-link.mjs uninstall",
-    "test:pages:react": "vp test run --project parallel-integration packages/react"
+    "uninstall:void-dev": "node scripts/void-dev-link.mjs uninstall"
   },
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",

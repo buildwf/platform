@@ -187,70 +187,25 @@ export type WorkerFetchOptions = {
     env: RuntimeEnvironment,
     ctx: ExecutionContext,
   ) => Promise<Response | null>;
-  collectPrerenderPaths: (
-    request: Request,
-    env: RuntimeEnvironment,
-    ctx: ExecutionContext,
-  ) => Promise<Array<string>>;
-  staticNotFound?: (request: Request, env: RuntimeEnvironment) => Promise<Response>;
   emailReceipt?: (
     request: Request,
     env: RuntimeEnvironment,
     ctx: ExecutionContext,
   ) => Promise<Response>;
-  isr?: {
-    deploymentId: string;
-    handle: (
-      request: Request,
-      env: RuntimeEnvironment,
-      ctx: ExecutionContext,
-      render: (request: Request) => Promise<Response>,
-    ) => Promise<Response | null>;
-  };
 };
-/**
- * Answer the prerender runner. A getPrerenderPaths() error is returned in the
- * body so the build can show which page and entry to fix, not only HTTP 500.
- */
-export async function prerenderPathsResponse(
-  collect: () => Promise<Array<string>>,
-): Promise<Response> {
-  try {
-    return Response.json({ paths: await collect() });
-  } catch (error) {
-    return Response.json(
-      { error: error instanceof Error ? error.message : String(error) },
-      { status: 500 },
-    );
-  }
-}
 
 export function createWorkerFetch(
   options: WorkerFetchOptions,
 ): (request: Request, env: RuntimeEnvironment, ctx: ExecutionContext) => Promise<Response> {
   return async (request, originalEnv, ctx) => {
     const url = new URL(request.url);
-    // Only the build-time prerender runner sets this binding. Without it the
-    // request is an ordinary app request, so env validation runs as usual.
-    const discovery =
-      request.method === 'POST' &&
-      url.pathname === '/__void/prerender-paths' &&
-      originalEnv.__VOID_PRERENDER === '1';
-    const staticNotFound =
-      request.method === 'GET' &&
-      url.pathname === '/__void/static-not-found' &&
-      originalEnv.__VOID_PRERENDER === '1';
-    if (options.validateEnv && !discovery && !staticNotFound) {
+    if (options.validateEnv) {
       await options.validateEnv(originalEnv);
     }
     const env =
       options.remoteEnv && originalEnv.__VOID_REMOTE === '1'
         ? options.remoteEnv(originalEnv)
         : originalEnv;
-    if (options.isr) {
-      env.__VOID_ISR_DEPLOYMENT_ID ??= options.isr.deploymentId;
-      env.__VOID_ISR_HOST = url.hostname;
-    }
     return options.withRawEnv(env, () =>
       options.withRuntimeEnv(env, async () => {
         if (options.emailReceipt && url.pathname === '/__void/email/receipt/v1') {
@@ -267,21 +222,10 @@ export function createWorkerFetch(
               : undefined,
           );
         }
-        if (staticNotFound) {
-          return options.staticNotFound
-            ? options.staticNotFound(request, env)
-            : new Response(null, { status: 204 });
-        }
         const internal = await options.internalRoute(request, env, ctx);
         if (internal) {
           return internal;
         }
-        if (discovery) {
-          return prerenderPathsResponse(() => options.collectPrerenderPaths(request, env, ctx));
-        }
-        // After the Void endpoints that tools and the platform call above, and
-        // before ISR, so a cached page is never served over HTTP. The
-        // build-time prerender runner fetches localhost, which is never redirected.
         if (options.alwaysUseHttps) {
           const redirect = redirectToHttps(request);
           if (redirect) {
@@ -289,19 +233,7 @@ export function createWorkerFetch(
           }
         }
         const userEnv = options.filterBindings(env);
-        const render = async (req: Request): Promise<Response> =>
-          options.assets(req, env, await options.app.fetch(req, userEnv, ctx));
-        if (
-          options.isr &&
-          env.ISR_CACHE &&
-          request.headers.get('upgrade')?.toLowerCase() !== 'websocket'
-        ) {
-          const cached = await options.isr.handle(request, env, ctx, render);
-          if (cached) {
-            return cached;
-          }
-        }
-        return render(request);
+        return options.assets(request, env, await options.app.fetch(request, userEnv, ctx));
       }),
     );
   };

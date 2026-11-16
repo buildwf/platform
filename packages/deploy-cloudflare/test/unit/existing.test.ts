@@ -96,7 +96,7 @@ describe('assets-only Worker handoff', () => {
     const existing = { ...assetsOnly, script: { handlers } };
     expect(() => assertExistingCloudflareConfig(existing, staticConfig)).not.toThrow();
     expect(() => assertExistingCloudflareConfig(existing, staticConfig, true)).not.toThrow();
-    expect(() => assertCloudflareBindingsPreserved(existing, uploaded, [], options)).not.toThrow();
+    expect(() => assertCloudflareBindingsPreserved(existing, uploaded, options)).not.toThrow();
     expect(() => assertCloudflareBindingsPreserved(existing, uploaded)).toThrow('bindings');
   });
 
@@ -112,7 +112,7 @@ describe('assets-only Worker handoff', () => {
   it.each([undefined, null, false, []])('does not infer assets-only from assets %j', (assets) => {
     const existing = { ...assetsOnly, runtime: { ...assetsOnly.runtime, assets } };
     expect(() => assertExistingCloudflareConfig(existing, staticConfig)).toThrow('handlers');
-    expect(() => assertCloudflareBindingsPreserved(existing, uploaded, [], options)).toThrow();
+    expect(() => assertCloudflareBindingsPreserved(existing, uploaded, options)).toThrow();
   });
 
   it('requires exactly the static assets binding and fetch handler', () => {
@@ -123,7 +123,7 @@ describe('assets-only Worker handoff', () => {
       [assets, { type: 'kv_namespace', name: 'KV', namespace_id: 'new-id' }],
     ]) {
       expect(() =>
-        assertCloudflareBindingsPreserved(assetsOnly, { ...uploaded, bindings }, [], options),
+        assertCloudflareBindingsPreserved(assetsOnly, { ...uploaded, bindings }, options),
       ).toThrow('bindings');
     }
     for (const handlers of [null, [], ['fetch', 'scheduled'], ['fetch', 'queue']]) {
@@ -131,7 +131,6 @@ describe('assets-only Worker handoff', () => {
         assertCloudflareBindingsPreserved(
           assetsOnly,
           { ...uploaded, script: { handlers } },
-          [],
           options,
         ),
       ).toThrow('event handlers');
@@ -141,14 +140,14 @@ describe('assets-only Worker handoff', () => {
   it('preserves variables, secrets, and existing resources and rejects name collisions', () => {
     const existing = { ...assetsOnly, bindings: worker.bindings };
     const candidate = { ...uploaded, bindings: [...worker.bindings, assets] };
-    expect(() => assertCloudflareBindingsPreserved(existing, candidate, [], options)).not.toThrow();
-    expect(() => assertCloudflareBindingsPreserved(existing, uploaded, [], options)).toThrow(
+    expect(() => assertCloudflareBindingsPreserved(existing, candidate, options)).not.toThrow();
+    expect(() => assertCloudflareBindingsPreserved(existing, uploaded, options)).toThrow(
       'bindings',
     );
     const collision = { ...assetsOnly, bindings: [{ name: 'ASSETS', type: 'secret_text' }] };
     for (const bindings of [[assets], collision.bindings, [...collision.bindings, assets]]) {
       expect(() =>
-        assertCloudflareBindingsPreserved(collision, { ...uploaded, bindings }, [], options),
+        assertCloudflareBindingsPreserved(collision, { ...uploaded, bindings }, options),
       ).toThrow('bindings');
     }
     expect(() =>
@@ -164,116 +163,15 @@ describe('assets-only Worker handoff', () => {
       assertCloudflareBindingsPreserved(
         { ...assetsOnly, script: { handlers: ['scheduled'] } },
         uploaded,
-        [],
         options,
       ),
     ).toThrow();
     expect(() => assertExistingCloudflareConfig(uploaded, staticConfig, true)).not.toThrow();
-    expect(() => assertCloudflareBindingsPreserved(uploaded, uploaded, [], options)).not.toThrow();
+    expect(() => assertCloudflareBindingsPreserved(uploaded, uploaded, options)).not.toThrow();
   });
 });
 
 describe('existing Worker preservation', () => {
-  const approved = [{ binding: 'ISR_CACHE', id: '0123456789abcdef0123456789abcdef' }];
-  const cache = { name: 'ISR_CACHE', type: 'kv_namespace', namespace_id: approved[0]!.id };
-  it('allows only the approved new KV identity and preserves the original bindings', () => {
-    const withCache = { ...config, kv_namespaces: [...config.kv_namespaces, approved[0]!] };
-    expect(() => assertExistingCloudflareConfig(worker, config, false, approved)).not.toThrow();
-    expect(() => assertExistingCloudflareConfig(worker, config, true, approved)).toThrow(
-      'approved KV namespace',
-    );
-    expect(() => assertExistingCloudflareConfig(worker, withCache, true, approved)).not.toThrow();
-    expect(() =>
-      assertCloudflareBindingsPreserved(
-        worker,
-        { ...worker, bindings: [...worker.bindings, cache] },
-        approved,
-      ),
-    ).not.toThrow();
-    expect(() => assertCloudflareBindingsPreserved(worker, worker, approved)).toThrow(
-      'approved KV namespace',
-    );
-    expect(() =>
-      assertCloudflareBindingsPreserved(worker, { ...worker, bindings: [cache] }, approved),
-    ).toThrow('preserve the existing Worker bindings');
-    expect(() =>
-      assertCloudflareBindingsPreserved(
-        worker,
-        { ...worker, bindings: [...worker.bindings, { ...cache, namespace_id: 'wrong-id' }] },
-        approved,
-      ),
-    ).toThrow('approved KV namespace');
-    expect(() =>
-      assertExistingCloudflareConfig(
-        worker,
-        { ...withCache, kv_namespaces: [approved[0]!] },
-        true,
-        approved,
-      ),
-    ).toThrow('existing Cloudflare resource');
-    expect(() =>
-      assertExistingCloudflareConfig(
-        worker,
-        {
-          ...withCache,
-          kv_namespaces: [...withCache.kv_namespaces, { binding: 'OTHER', id: approved[0]!.id }],
-        },
-        true,
-        approved,
-      ),
-    ).toThrow('cannot add');
-  });
-  it('cannot use approval to replace or weaken a production binding', () => {
-    const retarget = [{ binding: 'KV', id: approved[0]!.id }];
-    expect(() => assertExistingCloudflareConfig(worker, config, false, retarget)).toThrow(
-      'cannot replace',
-    );
-    expect(() => assertCloudflareBindingsPreserved(worker, worker, retarget)).toThrow(
-      'cannot replace',
-    );
-    const tampered = {
-      ...worker,
-      bindings: [
-        ...worker.bindings.map((binding) =>
-          binding.name === 'TOKEN' ? { ...binding, type: 'plain_text', text: 'private' } : binding,
-        ),
-        cache,
-      ],
-    };
-    expect(() => assertCloudflareBindingsPreserved(worker, tampered, approved)).toThrow(
-      'preserve the existing Worker bindings',
-    );
-    expect(() =>
-      assertCloudflareBindingsPreserved(
-        worker,
-        { ...worker, bindings: [...worker.bindings, cache], script: { handlers: ['fetch'] } },
-        approved,
-      ),
-    ).toThrow('event handlers');
-    const sharedNamespace = {
-      ...worker,
-      bindings: [{ name: 'KV', type: 'kv_namespace', namespace_id: approved[0]!.id }],
-    };
-    expect(() =>
-      assertCloudflareBindingsPreserved(
-        sharedNamespace,
-        { ...sharedNamespace, bindings: [...sharedNamespace.bindings, cache] },
-        approved,
-      ),
-    ).toThrow('separate namespace');
-  });
-  it('handles a completed activation retried before its local handoff was cleared', () => {
-    const active = { ...worker, bindings: [...worker.bindings, cache] };
-    expect(() => assertCloudflareBindingsPreserved(active, active, approved)).not.toThrow();
-    expect(() =>
-      assertExistingCloudflareConfig(
-        active,
-        { ...config, kv_namespaces: [...config.kv_namespaces, approved[0]!] },
-        true,
-        approved,
-      ),
-    ).not.toThrow();
-  });
   it('keeps remote-only vars/secrets while requiring exact resource identities', () => {
     expect(() => assertExistingCloudflareConfig(worker, config, true)).not.toThrow();
     expect(() =>

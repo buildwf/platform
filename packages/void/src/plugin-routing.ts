@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } 
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
-import { dirname, join, relative, resolve } from 'pathslash';
+import { dirname, join, resolve } from 'pathslash';
 import {
   createRunnableDevEnvironment,
   isRunnableDevEnvironment,
@@ -38,8 +38,7 @@ import { syncAuthTypesInProjectTsconfig } from './codegen/project-tsconfig.ts';
 import { generateQueueTypes } from './codegen/queue-types.ts';
 import { generateRouteTypes } from './codegen/route-types.ts';
 import { writeFileIfChanged } from './codegen/write-if-changed.ts';
-import { readConfig, getDatabaseDialect, type VoidConfig } from './config.ts';
-import { collectPages, collectRevalidate, hasRevalidate } from './isr-config.ts';
+import { readConfig, getDatabaseDialect } from './config.ts';
 import { readProjectPaths } from './project-paths.ts';
 import { readDeployBuildQueueNames } from './queues/cloudflare-names.ts';
 import {
@@ -47,23 +46,13 @@ import {
   compileBrowserClient,
   compileWorkerEntry,
   compileWorkerClient,
-  compileNodeApp,
-  compileNodeServer,
   type CompileOptions,
-  type SsrCompileOptions,
-  type PagesCompileOptions,
-  type WorkerEntryOptions,
 } from './router/compile.ts';
 import type { RouteEnvironment } from './router/parse-filename.ts';
 import type { ScanResult } from './router/scan.ts';
 import type { VoidAuthRuntimeOptions } from './runtime/better-auth-shared.ts';
 import { loadLocalEnv } from './shared/env.ts';
 import { invalidateSourceAnalysis } from './shared/source-analysis-cache.ts';
-import {
-  validateSsrEntries,
-  SSR_SERVER_ENTRY_RELATIVE_PATHS,
-  SSR_CLIENT_ENTRY_RELATIVE_PATHS,
-} from './ssr/entry.ts';
 
 const VIRTUAL_ROUTES_ID = 'virtual:void-routes';
 const VIRTUAL_CLIENT_WORKER_ID = 'virtual:void-client-worker';
@@ -72,12 +61,6 @@ const AUTH_CLIENT_FRAMEWORKS = ['react'] as const;
 type AuthClientFramework = (typeof AUTH_CLIENT_FRAMEWORKS)[number];
 const CLIENT_IMPORT_RE = /^void\/client(?:\/(react))?$/;
 const VIRTUAL_CLIENT_RE = /^virtual:void-client-(browser|worker)(?::(react))?$/;
-const PAGE_VIRTUAL_MODULE_IDS = [
-  '\0virtual:void-pages-renderer',
-  '\0virtual:void-pages-client',
-  '\0virtual:void-islands-renderer',
-  '\0virtual:void-islands-client',
-];
 // Rolldown resolveId hook filters currently require RegExp for `id`.
 const RESOLVE_ID_FILTER =
   /^(virtual:void-(routes|client-worker(?::(react))?|client-browser(?::(react))?)|void(\/client(\/(react))?|\/queues)?)$/;
@@ -89,11 +72,8 @@ type RoutingPluginOptions = {
   isAuthEnabled: () => boolean;
   getVersionMetadataBinding?: () => string | undefined;
   devTriggerToken?: string;
-  headConfig?: import('./pages/head.ts').HeadConfig;
-  prerenderPaths?: Array<string>;
   remoteMode?: boolean;
   bindingNames?: { d1?: string; kv?: string; r2?: string };
-  target?: 'node' | 'bun' | 'deno';
   /** Merged with `_redirects` / `_headers` under Vite's `publicDir`; config rules take precedence. */
   routing?: import('./config.ts').RoutingConfig;
   hasSandbox?: boolean;
@@ -133,13 +113,11 @@ export function routingPlugin(
   let scan: ScanResult | null = null;
   let routeEnvironment: RouteEnvironment = 'prod';
   let previewing = false;
-  let ssr: SsrCompileOptions | null = null;
   let authConfigPath: string | null = null;
-  let output: VoidConfig['output'];
 
   // Inputs to the last successful route table and generated entries, including
   // authored auth settings that can change without changing the source scan.
-  const routeInputsKey = () => JSON.stringify([scan, authConfigPath, ssr, compileOptions.auth]);
+  const routeInputsKey = () => JSON.stringify([scan, authConfigPath, compileOptions.auth]);
   let generatedRouteInputs: string | undefined;
   // Size and mtime of the generated files that checkpoint wrote.
   let generatedFiles: string | undefined;
@@ -162,8 +140,6 @@ export function routingPlugin(
   const jobsDir = paths.cronsDir;
   const queuesDir = paths.queuesDir;
   const emailDir = paths.emailDir;
-  const pagesDir = paths.pagesDir;
-  const ssrDir = paths.ssrDir;
   const authConfigPaths = new Set(paths.authConfigCandidates.map((path) => normalizePath(path)));
   let authConfigEnvironment: RunnableDevEnvironment | undefined;
   // Set when a file the auth config loaded changes, or a load fails, so the
@@ -175,12 +151,6 @@ export function routingPlugin(
   const normalizedJobsDir = normalizePath(jobsDir);
   const normalizedQueuesDir = normalizePath(queuesDir);
   const normalizedEmailDir = normalizePath(emailDir);
-  const normalizedPagesDir = normalizePath(pagesDir);
-  const ssrEntryAbsPaths = new Set(
-    [...SSR_SERVER_ENTRY_RELATIVE_PATHS, ...SSR_CLIENT_ENTRY_RELATIVE_PATHS].map((path) =>
-      normalizePath(join(ssrDir, path.split('/').pop()!)),
-    ),
-  );
 
   function hasEmailHandlers(): boolean {
     const email = scan?.email;
@@ -195,7 +165,7 @@ export function routingPlugin(
     if (!scan) {
       return;
     }
-    const { dts } = generateRouteTypes(scan, routesDir, outDir, pagesDir, {
+    const { dts } = generateRouteTypes(scan, routesDir, outDir, {
       typedRoutes: options.routing?.typedRoutes,
     });
     writeFileIfChanged(join(outDir, 'routes.d.ts'), dts);
@@ -211,17 +181,8 @@ export function routingPlugin(
 
   async function rescan(refresh = false) {
     const analysis = options.getApplicationAnalysis(routeEnvironment, refresh);
-    const nextScan = (await completeApplicationAnalysis(analysis)).scan;
-    const entries = validateSsrEntries(root, paths);
-    scan = nextScan;
+    scan = (await completeApplicationAnalysis(analysis)).scan;
     authConfigPath = analysis.authConfigPath;
-    output = analysis.config.output;
-    ssr = entries
-      ? {
-          serverEntryPath: entries.server.absolutePath,
-          clientEntryRelativePath: entries.client.relativePath,
-        }
-      : null;
   }
 
   // Pre-resolve all runtime module paths so generated code uses absolute paths.
@@ -237,7 +198,7 @@ export function routingPlugin(
   const fetchStreamPath = resolveFile('#self/runtime/fetch-stream');
   const sandboxRuntimePath = resolveFile('#self/sandbox');
   const drizzleAdapterPath = resolveFile('better-auth/adapters/drizzle');
-  let authClientPath = join(runtimeDir, 'auth-client.mjs');
+  const authClientPath = join(runtimeDir, 'auth-client.mjs');
   const explicitAuthClientPaths: Record<AuthClientFramework, string> = {
     react: join(runtimeDir, 'auth-client-react.mjs'),
   };
@@ -262,7 +223,6 @@ export function routingPlugin(
   }
   const runtimeEmailPath = resolveFile('#self/email');
   const compileOptions: CompileOptions = {
-    trailingSlash: options.routing?.trailingSlash,
     honoPath: resolveFile('hono'),
     honoRoutePath: resolveFile('hono/route'),
     runtimeEnvPath: resolveFile('#self/_env'),
@@ -273,14 +233,11 @@ export function routingPlugin(
     liveRuntimePath: resolveFile('#self/runtime/live-server'),
     hasLive: options.live !== undefined,
     webSocketTombstones: options.websocketTombstones,
-    reactRefresh: false,
     dev: false,
     devTriggerToken: options.devTriggerToken,
     auth: null,
-    nodeTarget: !!options.target,
     managedDispatch: false,
-    explicitPrerenderPaths: options.prerenderPaths,
-    bindingHandlerPath: options.target ? undefined : resolveFile('#self/remote/binding-handler'),
+    bindingHandlerPath: resolveFile('#self/remote/binding-handler'),
     bindingNames: options.bindingNames,
   };
 
@@ -329,7 +286,7 @@ export function routingPlugin(
     const files = [
       'routes.d.ts',
       'queues.d.ts',
-      ...(options.target ? ['app.ts', 'index.ts'] : ['entry.ts']),
+      'entry.ts',
       ...(compileOptions.auth
         ? [
             'better-auth-db.ts',
@@ -408,20 +365,6 @@ export function routingPlugin(
 
   let resolvedConfig: import('vite').ResolvedConfig | null = null;
 
-  // ISR policy for the CURRENT build, gated by `emitIsr` (see buildStart). The
-  // ordered page table is the same 3-state policy shipped to managed dispatch:
-  // positive TTL, explicit 0 opt-out, or absent to inherit path config.
-  let isrRevalidate: number | Record<string, number> | undefined;
-  let isrPages: Array<{ pattern: string; revalidate?: number }> | undefined;
-  let isrPathRevalidate: Record<string, number> | undefined;
-
-  function resolveAuthClientPath(config: import('vite').ResolvedConfig): string {
-    if (config.plugins.some((plugin) => plugin.name === 'void-react:pages')) {
-      return explicitAuthClientPaths.react;
-    }
-    return join(runtimeDir, 'auth-client.mjs');
-  }
-
   function getClientAuthPath(id: string): string {
     const framework = VIRTUAL_CLIENT_RE.exec(id)?.[2] as AuthClientFramework | undefined;
     return framework ? explicitAuthClientPaths[framework] : authClientPath;
@@ -449,42 +392,9 @@ export function routingPlugin(
     return envFilePaths.has(normalizePath(path));
   }
 
-  function getPagesCompileOptions(): PagesCompileOptions | null {
-    if (
-      !scan ||
-      (scan.pages.pages.length === 0 &&
-        !scan.pages.boundaries?.some(
-          (boundary) => boundary.kind === 'not-found' && !boundary.directory,
-        ))
-    ) {
-      return null;
-    }
-    const hasIslandPages = scan.pages.pages.some((p) => p.island);
-    // Detect md plugin and read its client entry ID for island pages
-    const mdPlugin = resolvedConfig?.plugins?.find((p) => p.name === 'void-md');
-    const mdClientEntryId =
-      hasIslandPages && mdPlugin?.api?.clientEntryId
-        ? (mdPlugin.api.clientEntryId as string)
-        : undefined;
-    return {
-      pagesDir,
-      pagesDirRelative: relative(root, pagesDir).replaceAll('\\', '/'),
-      clientEntryId: 'virtual:void-pages-client',
-      islandClientEntryId: hasIslandPages ? 'virtual:void-islands-client' : undefined,
-      mdClientEntryId,
-      headConfig: options.headConfig,
-    };
-  }
-
   function resolveCurrentAssetRoutingPolicy(): AssetRoutingPolicy {
-    const { pages, routes, websockets = [], middleware } = scan!;
+    const { routes, websockets = [], middleware } = scan!;
     return resolveAssetRoutingPolicy({
-      isSsr: Boolean(ssr),
-      hasPages:
-        pages.pages.length > 0 ||
-        !!pages.boundaries?.some(
-          (boundary) => boundary.kind === 'not-found' && !boundary.directory,
-        ),
       hasApiRoutes:
         hasApiRoutes(routes) || hasApiRoutes(websockets) || compileOptions.auth !== null,
       hasDocumentRoutes: hasDocumentRoutes(routes),
@@ -531,47 +441,29 @@ export function routingPlugin(
     ) {
       return null;
     }
-    const { pages } = scan.pages;
     // A client-only watch rebuild finds what an earlier bypass wrote instead of
-    // the Worker build's rule, which is always `['/**']` for a Pages app.
-    const workerBuildRule =
-      pages.length > 0 || isAssetBypassRule(assets.run_worker_first, assetsDir)
-        ? ['/**']
-        : assets.run_worker_first;
+    // the Worker build's rule.
+    const workerBuildRule = isAssetBypassRule(assets.run_worker_first, assetsDir)
+      ? ['/**']
+      : assets.run_worker_first;
     const routePatterns = [...scan.routes, ...(scan.websockets ?? [])].map(
       (route) => route.pattern,
     );
-    // A page without a server module prerenders the HTML the Worker would
-    // render, so its file can answer.
-    const needsWorker = (page: (typeof pages)[number]) =>
-      page.serverPath !== null || !page.shouldPrerender || page.params.length > 0 || page.catchAll;
-    const revalidate = options.routing?.revalidate;
     const facts = {
       runWorkerFirst: workerBuildRule,
       notFoundHandling: assets.not_found_handling,
       base: resolvedConfig.base,
       hasMiddleware: scan.middleware.length > 0,
       authEnabled: compileOptions.auth !== null,
-      liveEnabled: options.live !== undefined,
-      alwaysUseHttps: options.routing?.alwaysUseHttps === true,
       headerRuleCount: compileOptions.headerRules?.length ?? 0,
       redirectRuleCount: compileOptions.redirectRules?.length ?? 0,
       fallbackRuleCount: compileOptions.fallbackRules?.length ?? 0,
       publicEdgeFiles:
         publicDir !== null &&
         (existsSync(join(publicDir, '_headers')) || existsSync(join(publicDir, '_redirects'))),
-      patterns: [
-        ...routePatterns,
-        ...pages.map((page) => page.pattern),
-        ...(options.prerenderPaths ?? []).filter((path) => typeof path === 'string'),
-        ...(revalidate && typeof revalidate === 'object' ? Object.keys(revalidate) : []),
-      ],
+      patterns: routePatterns,
       assetsDir,
       immutableFiles: clientImmutableFiles,
-      serverPatterns:
-        output === 'static' && pages.length > 0 && !ssr
-          ? [...routePatterns, ...pages.filter(needsWorker).map((page) => page.pattern)]
-          : undefined,
     };
     const bypass = userHeaders ? null : resolveAssetWorkerBypass(facts);
     const runWorkerFirst = bypass?.runWorkerFirst ?? workerBuildRule;
@@ -586,7 +478,7 @@ export function routingPlugin(
 
   // The Cloudflare bridge calls this after both compatible outputs exist.
   function finalizeCloudflareAssets(clientDir: string, assetsDir: string): void {
-    if (!options.assetWorkerBypass || options.target || resolvedConfig?.command !== 'build') {
+    if (!options.assetWorkerBypass || resolvedConfig?.command !== 'build') {
       return;
     }
     const headersPath = join(clientDir, '_headers');
@@ -624,16 +516,8 @@ export function routingPlugin(
       }
     : false;
 
-  function writeNodeEntries(target: NonNullable<RoutingPluginOptions['target']>): void {
-    writeFileIfChanged(
-      join(outDir, 'app.ts'),
-      compileNodeApp(target, compileOptions.honoPath, getEnvSchemaModule()),
-    );
-    writeFileIfChanged(join(outDir, 'index.ts'), compileNodeServer(target));
-  }
-
   /** Write the Cloudflare worker entry from the completed scan. */
-  function writeWorkerEntry(isr: WorkerEntryOptions['isr']): void {
+  function writeWorkerEntry(): void {
     const policy = resolveCurrentAssetRoutingPolicy();
     writeFileIfChanged(
       join(outDir, 'entry.ts'),
@@ -659,7 +543,6 @@ export function routingPlugin(
         serveSpaFallback: policy.workerSpaFallback,
         live: options.live,
         dev: compileOptions.dev,
-        isr,
         notFound: policy.assetConfig.not_found_handling ?? 'none',
         durableObjects: options.durableObjects,
       }),
@@ -674,24 +557,20 @@ export function routingPlugin(
   const outDir = join(root, '.void');
   mkdirSync(outDir, { recursive: true });
   // Write initial entry — will be re-written with hasQueues once scan completes
-  if (options.target) {
-    writeNodeEntries(options.target);
-  } else {
-    writeFileIfChanged(
-      join(outDir, 'entry.ts'),
-      compileWorkerEntry({
-        versionMetadataBinding: options.getVersionMetadataBinding?.(),
-        remote,
-        webSocketClasses: options.websocketTombstones,
-        runtimeEnvPath: compileOptions.runtimeEnvPath,
-        runtimeEmailPath,
-        envSchemaModule: getEnvSchemaModule(),
-        sandbox: sandboxEntry,
-        live: options.live,
-        durableObjects: options.durableObjects,
-      }),
-    );
-  }
+  writeFileIfChanged(
+    join(outDir, 'entry.ts'),
+    compileWorkerEntry({
+      versionMetadataBinding: options.getVersionMetadataBinding?.(),
+      remote,
+      webSocketClasses: options.websocketTombstones,
+      runtimeEnvPath: compileOptions.runtimeEnvPath,
+      runtimeEmailPath,
+      envSchemaModule: getEnvSchemaModule(),
+      sandbox: sandboxEntry,
+      live: options.live,
+      durableObjects: options.durableObjects,
+    }),
+  );
 
   return {
     name: 'void:routing',
@@ -699,19 +578,12 @@ export function routingPlugin(
     enforce: 'pre',
     configResolved(config) {
       resolvedConfig = config;
-      authClientPath = resolveAuthClientPath(config);
       // `vite preview` reports `command: 'serve'` but runs the built bundle,
       // so it never compiles the route table as dev.
       compileOptions.dev = config.command === 'serve' && !previewing;
       compileOptions.assetsDir = config.build.assetsDir;
       compileOptions.cloudflareQueueNames =
         config.command === 'build' ? readDeployBuildQueueNames() : undefined;
-      compileOptions.reactRefresh = config.plugins.some(
-        (plugin) =>
-          plugin.name === 'vite:react-babel' ||
-          plugin.name === 'vite:react-refresh' ||
-          plugin.name === 'vite:react-swc',
-      );
       // Vite resolves `publicDir: false` to ''.
       const resolvedPublicDir =
         config.publicDir && config.publicDir.length > 0 ? config.publicDir : null;
@@ -744,7 +616,7 @@ export function routingPlugin(
           : {};
       compileOptions.hasLive = options.live !== undefined;
       compileOptions.managedDispatch =
-        !options.target && env.command === 'build' && Boolean(process.env.VOID_DEPLOY_PROJECT_ID);
+        env.command === 'build' && Boolean(process.env.VOID_DEPLOY_PROJECT_ID);
 
       if (env.command === 'serve' && options.isAuthEnabled()) {
         // Alias better-auth client subpaths to absolute file paths so
@@ -769,23 +641,11 @@ export function routingPlugin(
         return { ...authConfigEnvironmentConfig, resolve: { alias: resolvedAliases } };
       }
 
-      const entries = validateSsrEntries(root, paths);
       if (env.command !== 'build') {
         return authConfigEnvironmentConfig;
       }
 
-      return {
-        build: {
-          manifest: entries ? true : (_.build?.manifest ?? true),
-          ...(entries
-            ? {
-                rollupOptions: {
-                  input: entries.client.absolutePath,
-                },
-              }
-            : {}),
-        },
-      };
+      return { build: { manifest: _.build?.manifest ?? true } };
     },
 
     generateBundle: {
@@ -808,65 +668,32 @@ export function routingPlugin(
       return regenerateInOrder(async () => {
         generatedRouteInputs = undefined;
         await rescan();
-        if (options.target && (scan?.websockets?.length ?? 0) > 0) {
-          throw new Error('routing: WebSocket routes require the default Cloudflare target.');
-        }
         resolveAuthCompileOptions();
         const nextRouteInputs = routeInputsKey();
         await writeAuthDatabaseFiles();
         writeRouteTypes();
         writeQueueTypes();
 
-        // Bundle migrations into the worker for CF targets (in-worker migration runner)
-        if (!options.target) {
-          const migrationsDir = paths.migrationsDir;
-          if (existsSync(migrationsDir) || compileOptions.auth) {
-            const { collectMigrations } = await import('./migrations/collect.ts');
-            const { buildMigrationPlanBundle } = await import('./migrations/plan.ts');
-            const migrations = existsSync(migrationsDir) ? collectMigrations(migrationsDir) : [];
-            const dialect = getDatabaseDialect(readConfig(root));
-            compileOptions.migrationHandlerPath = resolveFile(
-              dialect === 'postgresql'
-                ? '#self/runtime/migration-handler-pg'
-                : dialect === 'mysql'
-                  ? '#self/runtime/migration-handler-mysql'
-                  : '#self/runtime/migration-handler',
-            );
-            compileOptions.migrations = migrations;
-            compileOptions.migrationPlanBundle =
-              dialect === 'sqlite' ? buildMigrationPlanBundle(migrations) : undefined;
-          }
+        // Bundle migrations into the worker (in-worker migration runner)
+        const migrationsDir = paths.migrationsDir;
+        if (existsSync(migrationsDir) || compileOptions.auth) {
+          const { collectMigrations } = await import('./migrations/collect.ts');
+          const { buildMigrationPlanBundle } = await import('./migrations/plan.ts');
+          const migrations = existsSync(migrationsDir) ? collectMigrations(migrationsDir) : [];
+          const dialect = getDatabaseDialect(readConfig(root));
+          compileOptions.migrationHandlerPath = resolveFile(
+            dialect === 'postgresql'
+              ? '#self/runtime/migration-handler-pg'
+              : dialect === 'mysql'
+                ? '#self/runtime/migration-handler-mysql'
+                : '#self/runtime/migration-handler',
+          );
+          compileOptions.migrations = migrations;
+          compileOptions.migrationPlanBundle =
+            dialect === 'sqlite' ? buildMigrationPlanBundle(migrations) : undefined;
         }
-        // Re-write entries from the completed scan.
-        if (options.target) {
-          writeNodeEntries(options.target);
-        } else {
-          // Only a non-managed production build bakes ISR in; managed deploys leave it to the platform.
-          const buildConfig = readConfig(root);
-          const merged = collectRevalidate(buildConfig, scan!.pages);
-          const configuredRevalidate = buildConfig.routing?.revalidate;
-          const emitIsr =
-            resolvedConfig?.command === 'build' &&
-            !process.env.VOID_DEPLOY_PROJECT_ID &&
-            hasRevalidate(merged);
-          // Route table + worker entry must agree within one build. All constants
-          // derive from `emitIsr` so they are present or absent together.
-          isrRevalidate = emitIsr ? merged : undefined;
-          isrPages = emitIsr ? collectPages(scan!.pages, configuredRevalidate) : undefined;
-          isrPathRevalidate =
-            emitIsr && configuredRevalidate && typeof configuredRevalidate === 'object'
-              ? configuredRevalidate
-              : undefined;
-          // Resolve the ISR runtime path LAZILY — only when ISR is actually emitted
-          // — so non-ISR/managed/dev builds never depend on it.
-          const isr = emitIsr
-            ? {
-                runtimePath: resolveFile('@void/isr/runtime'),
-                queryAllowlist: buildConfig.routing?.revalidateQueryAllowlist,
-              }
-            : undefined;
-          writeWorkerEntry(isr);
-        }
+        // Re-write the entry from the completed scan.
+        writeWorkerEntry();
 
         generatedRouteInputs = nextRouteInputs;
         generatedFiles = generatedFilesSignature();
@@ -914,7 +741,7 @@ export function routingPlugin(
           return compileBrowserClient(getClientAuthPath(id), fetchPath, fetchStreamPath);
         }
         if (virtualClient?.[1] === 'worker') {
-          return compileWorkerClient(getClientAuthPath(id), Boolean(options.target));
+          return compileWorkerClient(getClientAuthPath(id));
         }
         if (id !== VIRTUAL_ROUTES_ID) {
           return;
@@ -936,12 +763,7 @@ export function routingPlugin(
           middlewareDir,
           jobsDir,
           queuesDir,
-          ssr,
           compileOptions,
-          getPagesCompileOptions(),
-          isrRevalidate,
-          isrPages,
-          isrPathRevalidate,
         );
       },
     },
@@ -979,11 +801,10 @@ export function routingPlugin(
           isInDirectory(normalizedPath, normalizedJobsDir) ||
           isInDirectory(normalizedPath, normalizedQueuesDir) ||
           isInDirectory(normalizedPath, normalizedEmailDir) ||
-          isInDirectory(normalizedPath, normalizedPagesDir) ||
           authConfigChanged ||
           authImportCreated ||
           isPotentialEnvFilePath(normalizedPath);
-        if (!sourceConventionChanged && !ssrEntryAbsPaths.has(normalizedPath)) {
+        if (!sourceConventionChanged) {
           return;
         }
 
@@ -993,10 +814,7 @@ export function routingPlugin(
           // The route table virtual module lives in the workerd environment,
           // not the client — so we must iterate all environments.
           const forceRegeneration =
-            event !== 'change' ||
-            authConfigChanged ||
-            isPotentialEnvFilePath(normalizedPath) ||
-            ssrEntryAbsPaths.has(normalizedPath);
+            event !== 'change' || authConfigChanged || isPotentialEnvFilePath(normalizedPath);
 
           if (forceRegeneration) {
             generatedRouteInputs = undefined;
@@ -1007,28 +825,18 @@ export function routingPlugin(
           } catch (error) {
             // Keep the last good route table; the next change rescans.
             const message = error instanceof Error ? error.message : String(error);
-            // An adapter's pages plugin rescans page adds, removals and .md saves
-            // and logs the same page error, so log it once.
-            const adapterLogs =
-              message.startsWith('pages:') &&
-              isInDirectory(normalizedPath, normalizedPagesDir) &&
-              (event !== 'change' || normalizedPath.endsWith('.md')) &&
-              resolvedConfig?.plugins?.some((plugin) => plugin.name.endsWith(':pages')) === true;
-            if (!adapterLogs) {
-              devServer.config.logger.error(message, {
-                error: error instanceof Error ? error : undefined,
-                timestamp: true,
-              });
-            }
+            devServer.config.logger.error(message, {
+              error: error instanceof Error ? error : undefined,
+              timestamp: true,
+            });
             return;
           }
           resolveAuthCompileOptions();
           const nextRouteInputs = routeInputsKey();
 
-          // Saving a page body or handler usually changes nothing the scan reports.
+          // Saving a handler usually changes nothing the scan reports.
           // Vite already invalidates the saved module, so the route table only needs
-          // regenerating when the scan moved: it re-transforms and re-runs a module
-          // that grows with the number of pages.
+          // regenerating when the scan moved.
           const currentFiles = generatedFilesSignature();
           const routeInputsChanged =
             nextRouteInputs !== generatedRouteInputs ||
@@ -1052,11 +860,7 @@ export function routingPlugin(
             writeRouteTypes();
             writeQueueTypes();
 
-            if (options.target) {
-              writeNodeEntries(options.target);
-            } else {
-              writeWorkerEntry(undefined);
-            }
+            writeWorkerEntry();
           }
 
           // For structural changes (file add/remove), send full-reload to trigger
@@ -1064,21 +868,10 @@ export function routingPlugin(
           // For content-only changes, module invalidation alone is sufficient —
           // the workerd re-evaluates stale modules on the next request. Sending
           // full-reload for content changes triggers an unnecessary program reload
-          // that can break React SSR (dual module instances).
+          // that is not needed.
           const structural = event !== 'change';
 
-          const pageManifestChanged =
-            isInDirectory(normalizedPath, normalizedPagesDir) &&
-            (structural || normalizedPath.endsWith('.md'));
           for (const env of Object.values(devServer.environments)) {
-            if (pageManifestChanged) {
-              for (const id of PAGE_VIRTUAL_MODULE_IDS) {
-                const pageMod = env.moduleGraph.getModuleById(id);
-                if (pageMod) {
-                  env.moduleGraph.invalidateModule(pageMod);
-                }
-              }
-            }
             const mod = env.moduleGraph.getModuleById(VIRTUAL_ROUTES_ID);
             if (mod && routeInputsChanged) {
               env.moduleGraph.invalidateModule(mod);
@@ -1086,13 +879,6 @@ export function routingPlugin(
                 env.hot.send({ type: 'full-reload' });
               }
             }
-          }
-
-          // Reload the browser for island page changes — islands are
-          // server-rendered only, so there's no client HMR to handle updates.
-          // .md pages are implicit islands (no client JS), so reload those too.
-          if (/\.island\./.test(normalizedPath) || normalizedPath.endsWith('.md')) {
-            devServer.environments.client?.hot.send({ type: 'full-reload' });
           }
 
           if (routeInputsChanged) {
@@ -1120,8 +906,7 @@ export function routingPlugin(
 
       // File-based routing rule HMR: `public/_redirects` / `public/_headers`
       // changes re-merge + invalidate the route module so rules take effect
-      // without restarting the dev server. Runs on every target because
-      // `vite dev` bakes rules into the compiled Hono app on all of them.
+      // without restarting the dev server. `vite dev` bakes rules into the compiled Hono app.
       if (publicDir) {
         const redirectsPath = join(publicDir, '_redirects');
         const headersPath = join(publicDir, '_headers');

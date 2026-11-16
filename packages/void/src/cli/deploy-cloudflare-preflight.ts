@@ -4,21 +4,16 @@ import {
   parseRootWranglerConfig,
   readStoredResourceName,
   readWranglerTopLevelString,
-  assertExistingCloudflareConfig,
   type ExistingCloudflareWorker,
-  type ApprovedCloudflareKvBinding,
 } from '@void/deploy-cloudflare';
 import { confirm, isCancel } from '@voidzero-dev/vite-plus-prompts';
 import { basename, dirname, relative } from 'pathslash';
 import { analyzeApplicationSync, type ApplicationAnalysis } from '../application-analysis.ts';
 import { MATERIALIZED_CLOUDFLARE_FILE } from '../cloudflare-config.ts';
-import { resolveBindingNames, type VoidConfig } from '../config.ts';
-import { detectFramework } from '../plugin-inference.ts';
-import { cloudflareQueueName } from '../queues/cloudflare-names.ts';
+import { type VoidConfig } from '../config.ts';
 import { assertSandboxNamespaceConfig, resolveSandboxConfig } from '../sandbox/config.ts';
 import type { CloudflareChildReporter } from './cloudflare-child-report.ts';
 import { classifyCloudflareDeployApp } from './cloudflare-deploy/classify.ts';
-import { approvedCloudflareIsrBinding, chooseCloudflareIsr } from './cloudflare-isr.ts';
 import { readCloudflareLink, type CloudflareLink } from './cloudflare-link.ts';
 import { isCleanCloudflareExit } from './cloudflare-process.ts';
 import { resolveEnvSchemaFactsDefault } from './deploy-artifact-validation.ts';
@@ -200,7 +195,6 @@ export async function preflightCloudflareWorker(input: {
   readonly cliLog: CliLogger;
   readonly reporter: CloudflareChildReporter;
   readonly initialCloudflareLink: CloudflareLink | null;
-  readonly detectedFramework: ReturnType<typeof detectFramework>;
   readonly source: CloudflareDeploySource;
 }): Promise<{
   apiBaseUrl: string;
@@ -217,25 +211,14 @@ export async function preflightCloudflareWorker(input: {
   schemaFacts: SelfHostSchemaFacts;
   existingWorker: ExistingCloudflareWorker | null;
   pinnedHandoffLink: CloudflareLink | null;
-  approvedHandoffKv: Array<ApprovedCloudflareKvBinding>;
   bindingIdentitySnapshot: ReturnType<typeof snapshotBindingIdentities>;
   passthroughIdentitySnapshot: ReturnType<typeof snapshotPassthroughIdentities>;
   passthroughRawFields: ReturnType<typeof snapshotPassthroughRawFields>;
   expectedContainers: ReturnType<typeof reconstructExpectedContainers>;
   expectedDurableObjectState: ReturnType<typeof reconstructExpectedDurableObjectState>;
 }> {
-  const {
-    root,
-    voidConfig,
-    options,
-    deps,
-    exit,
-    cliLog,
-    reporter,
-    initialCloudflareLink,
-    detectedFramework,
-    source,
-  } = input;
+  const { root, voidConfig, options, deps, exit, cliLog, reporter, initialCloudflareLink, source } =
+    input;
   const {
     configPath,
     needsSandbox,
@@ -392,7 +375,6 @@ export async function preflightCloudflareWorker(input: {
 
   let existingWorker: ExistingCloudflareWorker | null = null;
   let pinnedHandoffLink: CloudflareLink | null = null;
-  let approvedHandoffKv: Array<ApprovedCloudflareKvBinding> = [];
   if (options.reuseExistingWorker || initialCloudflareLink) {
     if (
       authEnabled ||
@@ -406,7 +388,6 @@ export async function preflightCloudflareWorker(input: {
         'Link the existing site without adding runtime features, auth setup, or database migrations. Make those changes in a later deployment.',
       );
     }
-    approvedHandoffKv = approvedCloudflareIsrBinding(voidConfig, rootConfig);
     existingWorker = await prepareExistingCloudflareDeployWithAuth(
       {
         root,
@@ -416,7 +397,6 @@ export async function preflightCloudflareWorker(input: {
         pinnedLink: initialCloudflareLink,
         runWrangler,
         readExistingWorker: deps.readExistingWorker,
-        approvedKv: approvedHandoffKv,
       },
       assertUploaderStillPinned,
     );
@@ -425,67 +405,6 @@ export async function preflightCloudflareWorker(input: {
       throw new Error('The pending Cloudflare handoff was not saved before deployment.');
     }
     rootConfig = parseRootWranglerConfig(configPath);
-
-    // Resolve the cache choice now. The saved setting applies to retries and later deploys.
-    const isrNamespace = desired.kvNamespaces.find(
-      (namespace) => namespace.binding === 'ISR_CACHE',
-    );
-    if (
-      existingWorker &&
-      !existingWorker.bindings.some((binding) => binding.name === 'ISR_CACHE') &&
-      resolveBindingNames(voidConfig.inference?.bindings)?.kv !== 'ISR_CACHE' &&
-      isrNamespace
-    ) {
-      const missing = checkCloudflareProvisionDrift(configPath, desired).missing.filter(
-        (entry) => entry.binding !== 'ISR_CACHE',
-      );
-      if (missing.length) {
-        throw new Error(
-          formatCloudflareDriftMessage(
-            missing,
-            reasons,
-            'Linking cannot provision these inferred resources:',
-            'Keep new application resources separate from this migration.',
-          ),
-        );
-      }
-      const enabled = await chooseCloudflareIsr(root, voidConfig, {
-        interactive: !(deps.isCI ?? isWranglerNonInteractiveOrCI()),
-        confirm: deps.confirmIsrSetup,
-      });
-      if (!enabled) {
-        desired.kvNamespaces = desired.kvNamespaces.filter(
-          (namespace) => namespace.binding !== 'ISR_CACHE',
-        );
-      } else {
-        if (approvedHandoffKv.length === 0) {
-          if (!assertUploaderStillPinned()) {
-            return exit(1);
-          }
-          await (deps.provision ?? provisionCloudflareResources)(
-            root,
-            configPath,
-            {
-              kvNamespaces: [isrNamespace],
-              queues: [],
-            },
-            {
-              accountId,
-              log: { info: (message) => log.info(message), warn: (message) => log.warn(message) },
-            },
-          );
-          rootConfig = parseRootWranglerConfig(configPath);
-          approvedHandoffKv = approvedCloudflareIsrBinding(voidConfig, rootConfig);
-          if (approvedHandoffKv.length !== 1) {
-            throw new Error(
-              'ISR setup did not record a valid cache namespace. Rerun `void deploy` to retry.',
-            );
-          }
-        }
-        assertExistingCloudflareConfig(existingWorker, rootConfig, false, approvedHandoffKv);
-      }
-      cliLog.info('cloudflare_handoff_isr_choice', { enabled });
-    }
   }
 
   // Sandbox needs Workers Paid. A read-only Containers probe checks the plan and token before
@@ -632,35 +551,7 @@ export async function preflightCloudflareWorker(input: {
   // Persist the Worker name and account before the build. The CF Vite plugin copies
   // `account_id` only from the config file, so an env-only account would otherwise leave the
   // artifact without one, and the secret gate resolves the Worker from the root `name`.
-  const frameworkQueues = detectedFramework ? source.analysis.queues : [];
-  writeProvisionedWranglerConfig(
-    root,
-    {
-      name: workerName,
-      accountId,
-      ...(detectedFramework
-        ? {
-            queues: {
-              producers: frameworkQueues.map((queue) => ({
-                queue: cloudflareQueueName(queue.name, desired.queueNames),
-                binding: queue.bindingName,
-              })),
-              consumers: frameworkQueues.map((queue) => ({
-                queue: cloudflareQueueName(queue.name, desired.queueNames),
-                ...(queue.maxBatchSize != null && { max_batch_size: queue.maxBatchSize }),
-                ...(queue.maxBatchTimeout != null && {
-                  max_batch_timeout: queue.maxBatchTimeout,
-                }),
-                ...(queue.maxRetries != null && { max_retries: queue.maxRetries }),
-                ...(queue.retryDelay != null && { retry_delay: queue.retryDelay }),
-              })),
-              reconcileVoidOwned: true,
-            },
-          }
-        : {}),
-    },
-    { configPath },
-  );
+  writeProvisionedWranglerConfig(root, { name: workerName, accountId }, { configPath });
 
   // Snapshot the config before the build runs project code. A build can only edit files, so
   // the remote migration and the emitted-config check compare against these pins to catch a
@@ -697,7 +588,6 @@ export async function preflightCloudflareWorker(input: {
     schemaFacts,
     existingWorker,
     pinnedHandoffLink,
-    approvedHandoffKv,
     bindingIdentitySnapshot,
     passthroughIdentitySnapshot,
     passthroughRawFields,

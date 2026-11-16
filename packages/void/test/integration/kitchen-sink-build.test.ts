@@ -7,8 +7,6 @@ import {
   createIsolatedPlayground,
   type IsolatedPlayground,
 } from '../../../../test/integration-helpers.ts';
-import { collectPrerenderPaths } from '../../src/prerender.ts';
-
 const ROOT = join(import.meta.dirname, '..', '..', '..', '..');
 const SOURCE_PLAYGROUND = 'playground/kitchen-sink';
 let playground: IsolatedPlayground;
@@ -55,18 +53,6 @@ describe('playground/kitchen-sink build', () => {
   });
   it('emits the SSR worker entry', () => {
     expect(existsSync(join(dist, 'ssr/index.js'))).toBe(true);
-  });
-
-  it('discovers prerender paths without remote production secrets', async () => {
-    await expect(
-      collectPrerenderPaths({
-        root: playground.root,
-        workerDir: join(dist, 'ssr'),
-        persistDir: join(playground.root, '.void'),
-        projectId: 'test-leak-project-id',
-        voidToken: '',
-      }),
-    ).resolves.toEqual([]);
   });
 
   it('does not warn about unexpected Node.js imports', () => {

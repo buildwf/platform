@@ -11,7 +11,6 @@ import { runPgMigrations } from '../migrations/runner-pg.ts';
 import { type EmailHandlersScan } from '../router/email.ts';
 import { verifyGeneratedDeployConfig } from './deploy-artifact-validation.ts';
 import { ensureCloudflareAuthSecret } from './deploy-cloudflare-auth.ts';
-import { prepareCloudflareFrameworkArtifact } from './deploy-cloudflare-static.ts';
 import {
   assertRemoteMigrationsDeployable,
   checkWranglerMigrationApplySet,
@@ -89,8 +88,6 @@ export type DeployWranglerRun = (
  * units (`cli/env-validation.ts`) use.
  */
 export interface CloudflareDeployDeps {
-  /** Interactive migration choice; persisted in void.config.ts before provisioning. */
-  confirmIsrSetup?: (message: string) => Promise<boolean>;
   readExistingWorker?: typeof readExistingCloudflareWorker;
   /** Fail closed on a pending existing-Worker Durable Object class migration. */
   assertDurableObjectLifecycle?: typeof assertCloudflareDurableObjectLifecycleSupported;
@@ -100,8 +97,6 @@ export interface CloudflareDeployDeps {
   runBuild?: (env: NodeJS.ProcessEnv) => void;
   /** Run a static/SPA/SSG preset build command. */
   runStaticBuild?: (command: string, env: NodeJS.ProcessEnv) => void;
-  /** Prepare a standalone framework Worker/config after its native build. */
-  prepareFrameworkArtifact?: typeof prepareCloudflareFrameworkArtifact;
   /** Upload, readiness-probe, and activate the verified Worker Version. */
   activateVersion?: typeof activateCloudflareVersion;
   /**
@@ -272,24 +267,6 @@ export type RunDeployTargetAdapter = Pick<
   DeployTargetAdapter<RunDeployOptions, CliLogger>,
   'target' | 'deploy'
 >;
-
-export type PrerenderSourceInputs = {
-  /** `pages/` exists — file-based pages contribute static + `getPrerenderPaths()` paths. */
-  hasPages: boolean;
-  /** A custom SSR entry exists — it may export a top-level `getPrerenderPaths()`. */
-  hasSsrEntry: boolean;
-  /** `routing.prerender` from void.config.ts — compiled in as explicit paths. */
-  explicitPrerenderPaths: ReadonlyArray<string> | undefined;
-};
-
-export type NonPageBackendInputs = {
-  hasRoutes: boolean;
-  hasMiddleware: boolean;
-  hasWebSockets: boolean;
-  hasEmail: boolean;
-  authEnabled: boolean;
-  hasLive: boolean;
-};
 
 export type ApplyDeployEventResult =
   | { kind: 'continue' }

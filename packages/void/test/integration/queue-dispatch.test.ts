@@ -83,18 +83,16 @@ describe('generated queue dispatch', () => {
           bindingName: 'CUSTOM_NESTED_QUEUE',
         },
       ],
-      pages: { pages: [], layouts: [], namedLayouts: [] },
     };
 
     writeFileSync(
       routeTablePath,
-      compileRouteTable(scan, temporary, temporary, temporary, queuesDir, null, {
+      compileRouteTable(scan, temporary, temporary, temporary, queuesDir, {
         honoPath: import.meta.resolve('hono'),
         honoRoutePath: import.meta.resolve('hono/route'),
         runtimeEnvPath,
         projectRoot: temporary,
         homeDir: temporary,
-        reactRefresh: false,
         auth: null,
       }),
     );

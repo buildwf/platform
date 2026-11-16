@@ -6,8 +6,6 @@ export const MANIFEST_REDIRECT_RULE_STATUSES: ReadonlySet<number> = new Set([
 
 // Each rule compiles a regex per request in dispatch, so cap every list at deploy ingest.
 export const MAX_ROUTING_RULES = 2000;
-export const MAX_REVALIDATE_QUERY_ALLOWLIST_ENTRIES: number = MAX_ROUTING_RULES;
-const MAX_PAGES = 5000;
 // Each distinct cron expression becomes one queue message and one Worker call per matching minute.
 const MAX_CRON_EXPRESSIONS = 100;
 // The scheduler parses every entry, shared expression or not, on each alarm.
@@ -203,15 +201,6 @@ export function validateManifestShape(manifest: unknown): string | null {
     }
   }
 
-  if (manifest.prerender !== undefined) {
-    if (
-      !Array.isArray(manifest.prerender) ||
-      !manifest.prerender.every((x) => typeof x === 'string')
-    ) {
-      return 'invalid manifest shape: prerender must be an array of strings';
-    }
-  }
-
   if (manifest.vars !== undefined) {
     if (!isRecord(manifest.vars)) {
       return 'invalid manifest shape: vars must be an object';
@@ -267,12 +256,7 @@ export function validateManifestShape(manifest: unknown): string | null {
     return 'invalid manifest shape: ssr must be a boolean';
   }
 
-  for (const key of [
-    'workerMain',
-    'compatibilityDate',
-    'hashedAssetsPrefix',
-    'framework',
-  ] as const) {
+  for (const key of ['workerMain', 'compatibilityDate', 'hashedAssetsPrefix'] as const) {
     if (manifest[key] !== undefined && typeof manifest[key] !== 'string') {
       return `invalid manifest shape: ${key} must be a string`;
     }
@@ -316,7 +300,7 @@ export function validateManifestShape(manifest: unknown): string | null {
   }
 
   if (manifest.type !== undefined) {
-    const allowed = ['void', 'spa', 'static', 'framework'];
+    const allowed = ['void', 'spa', 'static'];
     if (typeof manifest.type !== 'string' || !allowed.includes(manifest.type)) {
       return `invalid manifest shape: type must be one of ${allowed.join(', ')}`;
     }
@@ -342,17 +326,6 @@ export function validateManifestShape(manifest: unknown): string | null {
       )
     ) {
       return 'invalid manifest shape: assetConfig.html_handling must be one of auto-trailing-slash, force-trailing-slash, drop-trailing-slash, none';
-    }
-  }
-
-  if (manifest.revalidate !== undefined && typeof manifest.revalidate !== 'number') {
-    if (!isRecord(manifest.revalidate)) {
-      return 'invalid manifest shape: revalidate must be a number or object';
-    }
-    for (const [pathname, value] of Object.entries(manifest.revalidate)) {
-      if (typeof value !== 'number') {
-        return `invalid manifest shape: revalidate.${pathname} must be a number`;
-      }
     }
   }
 
@@ -390,60 +363,6 @@ export function validateManifestShape(manifest: unknown): string | null {
   const redirectRulesError = validateRoutingRules(manifest.redirectRules, 'redirectRules');
   if (redirectRulesError) {
     return redirectRulesError;
-  }
-
-  if (manifest.revalidateQueryAllowlist !== undefined) {
-    if (!isRecord(manifest.revalidateQueryAllowlist)) {
-      return 'invalid manifest shape: revalidateQueryAllowlist must be an object';
-    }
-    const entries = Object.entries(manifest.revalidateQueryAllowlist);
-    if (entries.length > MAX_REVALIDATE_QUERY_ALLOWLIST_ENTRIES) {
-      return `invalid manifest shape: revalidateQueryAllowlist has ${entries.length} entries, exceeds the ${MAX_REVALIDATE_QUERY_ALLOWLIST_ENTRIES} entry limit`;
-    }
-    for (const [pattern, value] of entries) {
-      if (pattern === '') {
-        return 'invalid manifest shape: revalidateQueryAllowlist must not include an empty pattern';
-      }
-      if (!Array.isArray(value)) {
-        return `invalid manifest shape: revalidateQueryAllowlist entry ${JSON.stringify(pattern)} must be an array of strings`;
-      }
-      for (const param of value) {
-        if (typeof param !== 'string') {
-          return `invalid manifest shape: revalidateQueryAllowlist entry ${JSON.stringify(pattern)} must contain only strings`;
-        }
-      }
-    }
-  }
-
-  if (manifest.pages !== undefined) {
-    if (!Array.isArray(manifest.pages)) {
-      return 'invalid manifest shape: pages must be an array';
-    }
-    if (manifest.pages.length > MAX_PAGES) {
-      return `invalid manifest shape: pages has ${manifest.pages.length} entries, exceeds the ${MAX_PAGES} entry limit`;
-    }
-    for (const entry of manifest.pages as Array<unknown>) {
-      if (!isRecord(entry)) {
-        return 'invalid manifest shape: each pages entry must be an object';
-      }
-      if (typeof entry.pattern !== 'string' || entry.pattern === '') {
-        return 'invalid manifest shape: pages entry pattern must be a string';
-      }
-      if (entry.revalidate !== undefined && typeof entry.revalidate !== 'number') {
-        return 'invalid manifest shape: pages entry revalidate must be a number';
-      }
-    }
-  }
-
-  if (manifest.pathRevalidate !== undefined) {
-    if (!isRecord(manifest.pathRevalidate)) {
-      return 'invalid manifest shape: pathRevalidate must be an object';
-    }
-    for (const [pathname, value] of Object.entries(manifest.pathRevalidate)) {
-      if (typeof value !== 'number') {
-        return `invalid manifest shape: pathRevalidate.${pathname} must be a number`;
-      }
-    }
   }
 
   const fallbackRulesError = validateRoutingRules(manifest.fallbackRules, 'fallbackRules');

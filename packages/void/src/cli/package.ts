@@ -292,9 +292,9 @@ export type PackageOptions = {
   bindingNames?: { d1?: string; kv?: string; r2?: string; sandbox?: string };
   /** Worker entry module filename (e.g. "index.mjs"). */
   workerMain?: string;
-  /** Cloudflare compatibility_date from framework's wrangler config. */
+  /** Cloudflare compatibility_date from the wrangler config. */
   compatibilityDate?: string;
-  /** Cloudflare compatibility_flags from framework's wrangler config. */
+  /** Cloudflare compatibility_flags from the wrangler config. */
   compatibilityFlags?: Array<string>;
   /** Workers CPU-time limit (ms) from void.config.ts `worker.limits.cpu_ms`. */
   cpuMs?: number;
@@ -302,8 +302,6 @@ export type PackageOptions = {
   sandbox?: ResolvedSandboxConfig;
   /** Resolved void/live Durable Object binding and class names. */
   live?: LiveBindingConfig;
-  /** Query params kept in the ISR cache key for every request to a matching path; all others are left out. */
-  revalidateQueryAllowlist?: Record<string, Array<string>>;
 };
 
 function toWebSocketManifest(
@@ -376,7 +374,7 @@ export function detectNonSpaFallbackWarning(
   );
 }
 
-/** Add the database, KV, R2, and AI bindings shared by Void and framework manifests. */
+/** Add the database, KV, R2, and AI bindings to a Void manifest. */
 function applyResourceBindings(
   manifest: DeployManifest,
   bindings: InferredBindings,
@@ -438,13 +436,8 @@ export function buildVoidManifest(opts: {
   migrations?: Array<MigrationFile>;
   schedules?: Array<ScheduleMeta>;
   ssr?: boolean;
-  framework?: string;
-  revalidate?: number | Record<string, number>;
-  pages?: Array<{ pattern: string; revalidate?: number }>;
-  pathRevalidate?: Record<string, number>;
   vars?: Record<string, string>;
   queues?: Array<QueueMeta>;
-  prerender?: Array<string>;
   assetConfig?: AssetConfig;
   options?: PackageOptions;
   hashedAssetsPrefix?: string;
@@ -461,13 +454,8 @@ export function buildVoidManifest(opts: {
     migrations,
     schedules,
     ssr,
-    framework,
-    revalidate,
-    pages,
-    pathRevalidate,
     vars,
     queues,
-    prerender,
     assetConfig,
     options,
     hashedAssetsPrefix,
@@ -535,33 +523,7 @@ export function buildVoidManifest(opts: {
     manifest.ssr = true;
   }
 
-  if (framework) {
-    manifest.framework = framework;
-  }
-
-  manifest.type = framework ? 'framework' : 'void';
-
-  if (revalidate != null && revalidate !== 0) {
-    manifest.revalidate = revalidate;
-  }
-  if (
-    options?.revalidateQueryAllowlist &&
-    Object.keys(options.revalidateQueryAllowlist).length > 0
-  ) {
-    manifest.revalidateQueryAllowlist = options.revalidateQueryAllowlist;
-  }
-
-  if (pages && pages.length > 0) {
-    manifest.pages = pages;
-  }
-
-  if (pathRevalidate && Object.keys(pathRevalidate).length > 0) {
-    manifest.pathRevalidate = pathRevalidate;
-  }
-
-  if (prerender && prerender.length > 0) {
-    manifest.prerender = prerender;
-  }
+  manifest.type = 'void';
 
   let resolvedAssetConfig = assetConfig;
   let resolvedFallbackRules = fallbackRules;
@@ -721,103 +683,6 @@ export function buildStaticManifest(opts: {
 
   if (resolvedFallbackRules && resolvedFallbackRules.length > 0) {
     manifest.fallbackRules = stripDevOnlyRuleFields(resolvedFallbackRules);
-  }
-
-  return manifest;
-}
-
-/**
- * Build a framework-deploy manifest. Pure shape transformation — no I/O.
- */
-export function buildFrameworkManifest(opts: {
-  frameworkName: string;
-  workerMain: string;
-  bindings: InferredBindings;
-  migrations?: Array<MigrationFile>;
-  schedules?: Array<ScheduleMeta>;
-  queues?: Array<QueueMeta>;
-  revalidate?: number | Record<string, number>;
-  revalidateQueryAllowlist?: Record<string, Array<string>>;
-  prerender?: Array<string>;
-  vars?: Record<string, string>;
-  assetConfig?: AssetConfig;
-  packageOptions?: Omit<PackageOptions, 'workerMain'>;
-  hashedAssetsPrefix?: string;
-  headerRules?: Array<HeaderRule>;
-  alwaysUseHttps?: boolean;
-  redirectRules?: Array<DevRedirectRule>;
-  fallbackRules?: Array<DevRedirectRule>;
-  dialect?: 'sqlite' | 'postgresql' | 'mysql';
-}): DeployManifest {
-  const po = opts.packageOptions;
-  const dialect = opts.dialect ?? 'sqlite';
-
-  const manifest: DeployManifest = { version: 3, assetManifestVersion: 2, bindings: {} };
-  if (opts.alwaysUseHttps !== undefined) {
-    manifest.alwaysUseHttps = opts.alwaysUseHttps;
-  }
-  applyResourceBindings(
-    manifest,
-    opts.bindings,
-    opts.migrations?.length ?? 0,
-    dialect,
-    po?.bindingNames,
-  );
-
-  if (opts.migrations && opts.migrations.length > 0) {
-    manifest.migrations = toMigrationsManifest(opts.migrations, dialect);
-  }
-
-  if (opts.schedules && opts.schedules.length > 0) {
-    manifest.schedules = opts.schedules;
-  }
-  if (opts.queues && opts.queues.length > 0) {
-    manifest.queues = opts.queues;
-  }
-  if (opts.revalidate != null && opts.revalidate !== 0) {
-    manifest.revalidate = opts.revalidate;
-  }
-  if (opts.revalidateQueryAllowlist && Object.keys(opts.revalidateQueryAllowlist).length > 0) {
-    manifest.revalidateQueryAllowlist = opts.revalidateQueryAllowlist;
-  }
-  if (opts.prerender && opts.prerender.length > 0) {
-    manifest.prerender = opts.prerender;
-  }
-  if (opts.assetConfig) {
-    manifest.assetConfig = opts.assetConfig;
-  }
-  if (opts.vars && Object.keys(opts.vars).length > 0) {
-    manifest.vars = opts.vars;
-  }
-
-  manifest.ssr = true;
-  manifest.framework = opts.frameworkName;
-  manifest.type = 'framework';
-  manifest.workerMain = opts.workerMain;
-  if (po?.compatibilityDate) {
-    manifest.compatibilityDate = po.compatibilityDate;
-  }
-  if (po?.compatibilityFlags && po.compatibilityFlags.length > 0) {
-    manifest.compatibilityFlags = po.compatibilityFlags;
-  }
-  if (po?.cpuMs) {
-    manifest.limits = { cpuMs: po.cpuMs };
-  }
-
-  if (opts.hashedAssetsPrefix) {
-    manifest.hashedAssetsPrefix = opts.hashedAssetsPrefix;
-  }
-
-  if (opts.headerRules && opts.headerRules.length > 0) {
-    manifest.headerRules = opts.headerRules;
-  }
-
-  if (opts.redirectRules && opts.redirectRules.length > 0) {
-    manifest.redirectRules = stripDevOnlyRuleFields(opts.redirectRules);
-  }
-
-  if (opts.fallbackRules && opts.fallbackRules.length > 0) {
-    manifest.fallbackRules = stripDevOnlyRuleFields(opts.fallbackRules);
   }
 
   return manifest;

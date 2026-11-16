@@ -11,17 +11,7 @@
     "sourceDir": {
       "type": "string",
       "pattern": "^(?!/)(?!\\.\\.?$)(?!\\./$)(?!\\.\\./)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\s$)(?!\\s).+$",
-      "description": "Directory containing Void source conventions such as pages, routes, middleware, crons, queues, db, auth.ts, and env.ts. Omit to use the project root."
-    },
-    "target": {
-      "type": "string",
-      "enum": ["cloudflare", "node", "bun", "deno"],
-      "description": "Deploy target runtime. Defaults to \"cloudflare\". Non-CF targets disable bindings (D1, KV, R2, AI) and produce a plain Hono app."
-    },
-    "output": {
-      "type": "string",
-      "enum": ["server", "static"],
-      "description": "Output mode. \"server\" (default) serves all pages dynamically. \"static\" prerenders all pages at build time, writing HTML files to dist/client/."
+      "description": "Directory containing Void source conventions such as routes, middleware, crons, queues, db, auth.ts, and env.ts. Omit to use the project root."
     },
     "auth": {
       "type": "object",
@@ -76,85 +66,13 @@
       },
       "additionalProperties": false
     },
-    "head": {
-      "type": "object",
-      "description": "Default <head> tags for all pages. Page-level head() exports override these defaults.",
-      "properties": {
-        "title": {
-          "type": "string",
-          "description": "Default page title"
-        },
-        "titleTemplate": {
-          "type": "string",
-          "description": "Title template — %s is replaced with the page title. Example: \"%s | My Site\""
-        },
-        "meta": {
-          "type": "array",
-          "description": "Default meta tags",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": { "type": "string" },
-              "property": { "type": "string" },
-              "content": { "type": "string" },
-              "charset": { "type": "string" }
-            },
-            "additionalProperties": false
-          }
-        },
-        "link": {
-          "type": "array",
-          "description": "Default link tags",
-          "items": {
-            "type": "object",
-            "properties": {
-              "rel": { "type": "string" },
-              "href": { "type": "string" }
-            },
-            "required": ["rel", "href"],
-            "additionalProperties": { "type": "string" }
-          }
-        },
-        "script": {
-          "type": "array",
-          "description": "Default script tags",
-          "items": {
-            "type": "object",
-            "properties": {
-              "src": { "type": "string" },
-              "innerHTML": { "type": "string" }
-            },
-            "additionalProperties": { "type": "string" }
-          }
-        },
-        "htmlAttrs": {
-          "type": "object",
-          "description": "Attributes to add to the <html> element. Example: { \"lang\": \"en\" }",
-          "additionalProperties": { "type": "string" }
-        },
-        "bodyAttrs": {
-          "type": "object",
-          "description": "Attributes to add to the <body> element",
-          "additionalProperties": { "type": "string" }
-        }
-      },
-      "additionalProperties": false
-    },
     "routing": {
       "type": "object",
-      "description": "Routing configuration — headers, redirects, rewrites, fallbacks, revalidation, prerendering.",
+      "description": "Routing configuration — headers, redirects, rewrites, fallbacks.",
       "properties": {
         "alwaysUseHttps": {
           "type": "boolean",
           "description": "Redirect HTTP requests to HTTPS with a permanent 308 redirect. Omitted or false means off. Requires the Cloudflare target; localhost stays on HTTP."
-        },
-        "trailingSlash": {
-          "type": "boolean",
-          "description": "Use trailing-slash Pages URLs and directory indexes for prerendered HTML. Omitted or false preserves URLs without trailing slashes."
-        },
-        "isr": {
-          "type": "boolean",
-          "description": "Enable inferred ISR caching. Set false to disable ISR and edge prerendering, including per-page prerender and revalidate policies. Does not disable output: static build-time prerendering."
         },
         "typedRoutes": {
           "type": "boolean",
@@ -163,31 +81,7 @@
         "notFound": {
           "type": "string",
           "enum": ["single-page-application", "404-page", "none"],
-          "description": "Override how the asset layer answers a request that matched no asset and no worker route. Void infers \"single-page-application\" when the worker does not own HTML routing; set \"404-page\" for a static-site-generator build so unknown URLs serve 404.html with a real HTTP 404 instead of index.html with a 200. Does not change run_worker_first. Ignored for SvelteKit, Nuxt, Analog, and Astro deploys, which pin not_found_handling to \"none\" because the framework's own worker owns unmatched HTML."
-        },
-        "revalidate": {
-          "description": "Edge caching TTL in seconds. A number sets a global TTL for all SSR pages. An object maps URL patterns to TTLs (first match wins). Set to 0 to disable caching for a path.",
-          "oneOf": [
-            {
-              "type": "number",
-              "minimum": 0
-            },
-            {
-              "type": "object",
-              "patternProperties": {
-                "^(\\/|\\*$)": {
-                  "type": "number",
-                  "minimum": 0
-                }
-              },
-              "additionalProperties": false
-            }
-          ]
-        },
-        "prerender": {
-          "type": "array",
-          "items": { "type": "string", "pattern": "^/" },
-          "description": "Explicit paths to prerender at deploy time. Each path must start with \"/\"."
+          "description": "Override how the asset layer answers a request that matched no asset and no worker route. Void infers \"single-page-application\" when the worker does not own HTML routing; set \"404-page\" for a static-site-generator build so unknown URLs serve 404.html with a real HTTP 404 instead of index.html with a 200. Does not change run_worker_first."
         },
         "headers": {
           "type": "object",
@@ -218,17 +112,6 @@
                   "additionalProperties": false
                 }
               ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "revalidateQueryAllowlist": {
-          "type": "object",
-          "description": "Query parameters that are part of the ISR cache key for every request to a matching path. Keys are source URL patterns; values are arrays of query parameter names. All other query parameters are left out of the key. When omitted, ISR drops every query parameter from the cache key.",
-          "patternProperties": {
-            "^(\\/|\\*$)": {
-              "type": "array",
-              "items": { "type": "string" }
             }
           },
           "additionalProperties": false
@@ -290,7 +173,7 @@
         },
         "build": {
           "type": "string",
-          "description": "Custom build command. Overrides the framework preset's default build command."
+          "description": "Custom build command. Overrides the default build command."
         },
         "outputDir": {
           "type": "string",
@@ -298,7 +181,7 @@
         },
         "appType": {
           "type": "string",
-          "enum": ["spa", "static", "void", "framework"],
+          "enum": ["spa", "static", "void"],
           "description": "App type. If omitted, auto-detected on first deploy."
         }
       },

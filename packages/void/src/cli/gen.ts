@@ -25,10 +25,8 @@ export async function runGenCommand(root: string, args: GenArgs): Promise<void> 
     runMiddleware(root, args.name);
   } else if (args.subcommand === 'cron') {
     runCron(root, args.name);
-  } else if (args.subcommand === 'queue') {
-    runQueue(root, args.name);
   } else {
-    runSsr(root);
+    runQueue(root, args.name);
   }
 }
 
@@ -688,73 +686,4 @@ export default defineQueue<Message>(async (batch, env) => {
   if (writeIfNotExists(filePath, content)) {
     printSuccess('Queue consumer created.');
   }
-}
-
-function runSsr(root: string): void {
-  writeReactSsr(root);
-  printSuccess('SSR scaffolding complete.');
-}
-
-// ---------------------------------------------------------------------------
-// SSR templates
-// ---------------------------------------------------------------------------
-
-function writeReactSsr(root: string): void {
-  const ssrDir = readProjectPaths(root).ssrDir;
-  writeIfNotExists(
-    join(ssrDir, 'main.ssr.tsx'),
-    `import { renderToString } from "react-dom/server";
-import { defineRender } from "void";
-import App from "./App";
-
-export default defineRender(async (c, assetTags) => {
-  const appHtml = renderToString(<App />);
-  const html = \`<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>App</title>
-    \${assetTags.css}\${assetTags.preloads}
-  </head>
-  <body>
-    <div id="root">\${appHtml}</div>
-    \${assetTags.body}
-  </body>
-</html>\`;
-
-  return new Response(html, {
-    headers: { "content-type": "text/html; charset=utf-8" },
-  });
-});
-`,
-  );
-
-  writeIfNotExists(
-    join(ssrDir, 'main.client.tsx'),
-    `import { hydrateRoot } from "react-dom/client";
-import App from "./App";
-
-hydrateRoot(document.getElementById("root")!, <App />);
-`,
-  );
-
-  writeIfNotExists(
-    join(ssrDir, 'App.tsx'),
-    `import { useState } from "react";
-
-export default function App() {
-  const [count, setCount] = useState(0);
-
-  return (
-    <main>
-      <h1>Hello Void</h1>
-      <button type="button" onClick={() => setCount((c) => c + 1)}>
-        Count: {count}
-      </button>
-    </main>
-  );
-}
-`,
-  );
 }

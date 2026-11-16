@@ -12,16 +12,9 @@ import {
   assertExistingCloudflareConfig,
 } from '@void/deploy-cloudflare';
 import { dirname, join, relative } from 'pathslash';
-import { analyzeApplicationSync } from '../application-analysis.ts';
-import { analyzeApplication } from '../application-routing.ts';
 import { edgeRulesNeedWorker, VOID_INTERNAL_WORKER_FIRST } from '../asset-routing.ts';
 import { convertHeadersConfig, type RoutingConfig, type VoidConfig } from '../config.ts';
-import { collectRevalidate, hasRevalidate } from '../isr-config.ts';
-import { detectFramework, type DetectedFramework } from '../plugin-inference.ts';
-import { type CloudflareQueueNames } from '../queues/cloudflare-names.ts';
-import { hasEmailHandlers } from '../router/email.ts';
 import { selectNativeVersionMetadataBinding } from '../shared/version-metadata.ts';
-import { validateSsrEntry } from '../ssr/entry.ts';
 import { prepareCfStaticBuildOutput } from './cf-build-output.ts';
 import { type CloudflareCandidateReceipt } from './cloudflare-candidate.ts';
 import type { CloudflareChildReporter } from './cloudflare-child-report.ts';
@@ -41,11 +34,8 @@ import {
   formatCloudflareActivationError,
 } from './deploy-cloudflare-helpers.ts';
 import {
-  generateDeployWrapperIfNeeded,
   resolveStaticDeployPreset,
   resolveStaticBuildCommand,
-  hasNonPageBackend,
-  resolveFullDeployBuildCommand,
   log,
   getExitCode,
 } from './deploy-helpers.ts';
@@ -62,69 +52,13 @@ import { readGeneratedAssetHeadersFile } from './headers.ts';
 import { type CliLogger } from './log-file.ts';
 import { getErrorMessage, note } from './output.ts';
 import { buildStaticManifest, readWranglerHtmlHandling } from './package.ts';
-import { detectPreset, type StaticPreset, type FrameworkPreset } from './preset.ts';
+import { detectPreset, type StaticPreset } from './preset.ts';
 import { deleteEnvVarCaseAware } from './provision.ts';
 import type { AssetConfig, DeployManifest } from './types.ts';
 import { readWranglerManagedQueueCleanupCandidates } from './wrangler.ts';
 
-/** Default runtime date for static and framework Workers that set none. */
+/** Default runtime date for static Workers that set none. */
 const DEFAULT_COMPATIBILITY_DATE = '2026-09-11';
-
-/** Build the trusted Wrangler pointer for a framework that emits Worker files directly. */
-export async function prepareCloudflareFrameworkArtifact(options: {
-  root: string;
-  configPath: string;
-  accountId: string;
-  workerName: string;
-  voidConfig: VoidConfig;
-  framework: DetectedFramework;
-  preset: FrameworkPreset;
-  requiredSecretNames?: ReadonlyArray<string>;
-  ai?: { binding: string };
-  preserveBindings?: boolean;
-  cloudflareQueueNames?: CloudflareQueueNames;
-}): Promise<void> {
-  const { root, configPath, voidConfig, framework, preset } = options;
-  const { preserveBindings = false } = options;
-  const workerMain = join(root, preset.workerDir, preset.workerMain);
-  const assetsDirectory = join(root, preset.assetsDir);
-  if (!existsSync(workerMain)) {
-    throw new Error(
-      `framework ${framework.name} did not emit its Worker entry at ${preset.workerDir}/${preset.workerMain}`,
-    );
-  }
-  if (!existsSync(assetsDirectory)) {
-    throw new Error(
-      `framework ${framework.name} did not emit its asset directory at ${preset.assetsDir}`,
-    );
-  }
-  const analysis = analyzeApplicationSync(root, { config: voidConfig, environment: 'prod' });
-  const crons = analysis.jobs;
-  const queues = analysis.queues;
-  const revalidate = collectRevalidate(voidConfig, null);
-  const rootConfig = parseRootWranglerConfig(configPath);
-  const versionMetadataBinding = selectNativeVersionMetadataBinding(rootConfig, {
-    nativeBuild: true,
-    preserveBindings,
-  });
-  await generateDeployWrapperIfNeeded(root, join(root, preset.workerDir), preset.workerMain, {
-    crons,
-    queues,
-    cloudflareQueueNames: options.cloudflareQueueNames,
-    // Direct deployment applies migrations before upload; it does not need the
-    // hosted platform's internal migration endpoint in its framework wrapper.
-    hasMigrations: false,
-    migrationDialect: analysis.dialect,
-    readiness: true,
-    versionMetadataBinding,
-    ...(hasRevalidate(revalidate) && {
-      isr: {
-        revalidate: revalidate!,
-        queryAllowlist: voidConfig.routing?.revalidateQueryAllowlist,
-      },
-    }),
-  });
-}
 
 export function resolveCloudflareStaticPreset(
   root: string,
@@ -142,9 +76,6 @@ export function resolveCloudflareStaticPreset(
       ),
     };
   }
-  if (detectFramework(root)) {
-    return null;
-  }
   const detected = detectPreset(root, { spa: options.spa, strictBackend: true });
   return detected
     ? {
@@ -152,64 +83,6 @@ export function resolveCloudflareStaticPreset(
         buildCommand: resolveStaticBuildCommand(detected, voidConfig.inference?.build, false),
       }
     : null;
-}
-
-/**
- * Resolve a Void Pages `output: "static"` app to the thin static edge worker
- * only when the same source-level conditions used by the managed deploy prove
- * that no request can require the application worker at runtime. Hybrid SSG
- * apps deliberately fall through to the normal Worker deploy path.
- */
-export async function resolveCloudflareVoidStaticPreset(
-  root: string,
-  voidConfig: VoidConfig,
-): Promise<StaticPreset | null> {
-  if (voidConfig.output !== 'static') {
-    return null;
-  }
-
-  const analysis = await analyzeApplication(root, { config: voidConfig, environment: 'prod' });
-  const { paths, authEnabled, bindings, scan: routeScan } = analysis;
-  if (!existsSync(paths.pagesDir) || validateSsrEntry(root, paths) !== null) {
-    return null;
-  }
-
-  const pageScan = routeScan.pages;
-  if (
-    pageScan.pages.length === 0 ||
-    !pageScan.pages.every(
-      (page) =>
-        page.shouldPrerender &&
-        ((page.params.length === 0 && !page.catchAll) || page.hasGetPrerenderPaths),
-    )
-  ) {
-    return null;
-  }
-
-  // The SAME predicate the managed path's fully-static optimization uses
-  // (`hasNonPageBackend`), so the two static branches can never disagree on
-  // whether an `email/` handler needs a worker: the thin static edge Worker
-  // exports no `email()`, so inbound mail to a project routed there bounces.
-  const hasRuntimeBackend =
-    hasNonPageBackend({
-      hasRoutes: routeScan.routes.length > 0,
-      hasMiddleware: routeScan.middleware.length > 0,
-      hasWebSockets: (routeScan.websockets?.length ?? 0) > 0,
-      hasEmail: routeScan.email !== undefined && hasEmailHandlers(routeScan.email),
-      authEnabled,
-      hasLive: bindings.needsLive === true,
-    }) ||
-    analysis.jobs.length > 0 ||
-    analysis.queues.length > 0;
-  if (hasRuntimeBackend) {
-    return null;
-  }
-
-  return {
-    buildCommand: resolveFullDeployBuildCommand(root, voidConfig.inference?.build).command,
-    outputDir: join(root, 'dist', 'client'),
-    appType: 'static',
-  };
 }
 
 export type StaticEdgeRouting = {
@@ -477,7 +350,6 @@ export async function runCloudflareStaticDeploy(
         pinnedHandoffLink,
         initialCloudflareCandidate,
         assertUploaderStillPinned,
-        approvedKv: [],
         staticAssetsBinding: 'ASSETS',
         queueConsumerCleanup,
       }),

@@ -67,20 +67,8 @@ describe('runtime env resolution', () => {
   });
 });
 
-describe('internal binding filtering — ISR_CACHE (exact-name)', () => {
-  it('hides ISR_CACHE from getRuntimeEnv while ISR is active', () => {
-    withRuntimeEnv(
-      { DB: { tag: 'db' }, ISR_CACHE: { tag: 'isr-kv' }, __VOID_ISR_DEPLOYMENT_ID: 'dep_1' },
-      () => {
-        const filtered = getRuntimeEnv() as Record<string, unknown>;
-        expect(filtered.ISR_CACHE).toBeUndefined();
-        expect('ISR_CACHE' in filtered).toBe(false);
-        expect(Object.keys(filtered)).not.toContain('ISR_CACHE');
-      },
-    );
-  });
-
-  it('keeps ISR_CACHE in getRuntimeEnv as a user binding while ISR is inactive', () => {
+describe('ISR_CACHE is an ordinary user binding', () => {
+  it('keeps ISR_CACHE in getRuntimeEnv', () => {
     withRuntimeEnv({ DB: { tag: 'db' }, ISR_CACHE: { tag: 'isr-kv' } }, () => {
       const filtered = getRuntimeEnv() as Record<string, unknown>;
       expect(filtered.ISR_CACHE).toEqual({ tag: 'isr-kv' });

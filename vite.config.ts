@@ -30,7 +30,6 @@ const sdkPgliteUnitTests = [
   'packages/void/test/unit/platform-database-lock.test.ts',
   'packages/void/test/unit/platform-database-migrations.test.ts',
   'packages/void/test/unit/runner-pg.test.ts',
-  'packages/void/test/unit/wrapper.test.ts',
 ];
 
 // Vitest forwards a FILTERED env to test workers — in CI only VOID_E2E_CF_TOKEN survives, while
@@ -111,17 +110,10 @@ export default defineConfig({
       'packages/void/docs/**',
       'packages/void/skills/void/docs/**',
       'platform/packages/api/src/admin/fate/client.generated.ts',
-      'playground/**/.astro/**',
-      'playground/**/.nuxt/**',
       'playground/**/.output/**',
-      'playground/**/.react-router/**',
-      'playground/**/.svelte-kit/**',
       'playground/**/build/**',
-      'playground/**/src/routeTree.gen.ts',
       'playground/**/wrangler.json',
       'playground/**/wrangler.jsonc',
-      'playground/vinext-app/.next/**',
-      'playground/vinext-app/next-env.d.ts',
     ],
   },
   lint: {
@@ -184,21 +176,7 @@ export default defineConfig({
         },
       },
       {
-        files: [
-          'packages/react/**/*',
-          'playground/named-layouts/**/*',
-          'playground/node-app/**/*',
-          'playground/node-static/**/*',
-          'playground/pg-test/**/*',
-          'playground/react-pages/**/*',
-          'playground/react-router/**/*',
-          'playground/spa/**/*',
-          'playground/ssr/**/*',
-          'playground/tanstack-start/**/*',
-          'playground/vinext-app/**/*',
-          'playground/vinext-pages/**/*',
-          'playground/websockets/**/*',
-        ],
+        files: ['playground/pg-test/**/*', 'playground/spa/**/*', 'playground/websockets/**/*'],
         rules: {
           'react-hooks-js/component-hook-factories': 'error',
           'react-hooks-js/config': 'error',
@@ -264,12 +242,6 @@ export default defineConfig({
               ],
             },
           ],
-        },
-      },
-      {
-        files: ['playground/vinext-app/.next/**/*.ts'],
-        rules: {
-          '@typescript-eslint/array-type': 'off',
         },
       },
     ],
@@ -566,8 +538,6 @@ export default defineConfig({
             // Gated live-account e2e (test/e2e/**). Collected here so it is skipped cleanly in CI
             // (no token) rather than silently undiscovered; runs only when its env vars are set.
             'packages/void/test/e2e/**/*.test.ts',
-            'packages/md/test/integration/**/*.test.ts',
-            'packages/react/test/integration/**/*.test.ts',
           ],
           maxWorkers,
         },

@@ -1,6 +1,7 @@
 import {
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -18,7 +19,6 @@ import { buildVoidManifest } from '../../src/cli/package.ts';
 import { syncWranglerDurableObjects, syncWranglerWebSockets } from '../../src/cli/wrangler.ts';
 import { readConfig } from '../../src/config.ts';
 import { scanDurableObjectModules } from '../../src/durable/scan.ts';
-import { collectPrerenderWorkerModules } from '../../src/prerender.ts';
 import { compileRouteTable, compileWorkerEntry } from '../../src/router/compile.ts';
 
 const repository = join(import.meta.dirname, '..', '..', '..', '..');
@@ -158,7 +158,6 @@ export default defineRoom({
           join(directory, 'middleware'),
           join(directory, 'crons'),
           join(directory, 'queues'),
-          null,
           {
             honoPath: import.meta.resolve('hono'),
             honoRoutePath: import.meta.resolve('hono/route'),
@@ -166,7 +165,6 @@ export default defineRoom({
             webSocketRuntimePath: runtimePath('ws-server.ts'),
             projectRoot: directory,
             homeDir: directory,
-            reactRefresh: false,
             auth: null,
           },
         ),
@@ -382,8 +380,17 @@ export default defineRoom({
         { tag: 'void-ws-v1', new_sqlite_classes: ['ChatRoomWs'] },
       ]);
       // Source maps belong in uploads, but are not executable Worker modules.
-      const modules = collectPrerenderWorkerModules(output, config.main);
-      expect(modules.every((module) => module.type === 'ESModule')).toBe(true);
+      const main = String(config.main).replace(/^\.\//, '');
+      const modules = readdirSync(output, { recursive: true })
+        .map(String)
+        .filter((file) => /\.m?js$/.test(file))
+        .sort((a, b) => (a === main ? -1 : b === main ? 1 : a.localeCompare(b)))
+        .map((file) => ({
+          type: 'ESModule' as const,
+          path: join(output, file),
+          contents: readFileSync(join(output, file), 'utf8'),
+        }));
+      expect(modules[0]?.path).toBe(join(output, main));
       runtime = new Miniflare(
         convertV4MiniflareOptions({
           compatibilityDate: config.compatibility_date,

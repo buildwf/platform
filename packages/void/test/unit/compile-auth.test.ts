@@ -7,7 +7,6 @@ const emptyScan: ScanResult = {
   middleware: [],
   jobs: [],
   queues: [],
-  pages: { pages: [], layouts: [], namedLayouts: [] },
 };
 
 const baseOptions = {
@@ -17,7 +16,6 @@ const baseOptions = {
   runtimeEnvPath: '/resolved/void/runtime/env.mjs',
   projectRoot: '/project',
   homeDir: '/Users/test',
-  reactRefresh: false,
 };
 
 const sqliteAuth: AuthCompileOptions = {
@@ -40,7 +38,7 @@ const pgAuth: AuthCompileOptions = {
 
 describe('compileRouteTable auth integration', () => {
   it('generates no auth code when auth is disabled', () => {
-    const code = compileRouteTable(emptyScan, '/routes', '/middleware', '/crons', '/queues', null, {
+    const code = compileRouteTable(emptyScan, '/routes', '/middleware', '/crons', '/queues', {
       ...baseOptions,
       auth: null,
     });
@@ -57,7 +55,6 @@ describe('compileRouteTable auth integration', () => {
       '/middleware',
       '/crons',
       '/queues',
-      null,
       {
         ...baseOptions,
         auth: sqliteAuth,
@@ -77,7 +74,7 @@ describe('compileRouteTable auth integration', () => {
   });
 
   it('mounts Better Auth middleware and routes when auth is enabled', () => {
-    const code = compileRouteTable(emptyScan, '/routes', '/middleware', '/crons', '/queues', null, {
+    const code = compileRouteTable(emptyScan, '/routes', '/middleware', '/crons', '/queues', {
       ...baseOptions,
       auth: sqliteAuth,
     });
@@ -91,8 +88,8 @@ describe('compileRouteTable auth integration', () => {
     expect(code).toContain('handleVoidAuthRequest');
     expect(code).toContain('runVoidAuthMiddleware(c, next, __voidAuthOptions, __voidAuthDatabase)');
     expect(code).toContain('handleVoidAuthRequest(c, __voidAuthOptions, __voidAuthDatabase)');
-    expect(code).toContain('app.all("/api/auth", __markRouteHandler(');
-    expect(code).toContain('app.all("/api/auth/*", __markRouteHandler(');
+    expect(code).toContain('app.all("/api/auth", async (c) =>');
+    expect(code).toContain('app.all("/api/auth/*", async (c) =>');
     expect(code).not.toContain('app.post("/auth/register"');
     expect(code).not.toContain('app.post("/auth/login"');
     expect(code).not.toContain('app.get("/auth/me"');
@@ -101,7 +98,7 @@ describe('compileRouteTable auth integration', () => {
 
   it('bakes the build mode into auth options independently of requests', () => {
     const compile = (dev: boolean) =>
-      compileRouteTable(emptyScan, '/routes', '/middleware', '/crons', '/queues', null, {
+      compileRouteTable(emptyScan, '/routes', '/middleware', '/crons', '/queues', {
         ...baseOptions,
         auth: sqliteAuth,
         dev,
@@ -112,7 +109,7 @@ describe('compileRouteTable auth integration', () => {
   });
 
   it('passes the detected dialect into the auth helpers', () => {
-    const code = compileRouteTable(emptyScan, '/routes', '/middleware', '/crons', '/queues', null, {
+    const code = compileRouteTable(emptyScan, '/routes', '/middleware', '/crons', '/queues', {
       ...baseOptions,
       auth: pgAuth,
     });
@@ -122,7 +119,7 @@ describe('compileRouteTable auth integration', () => {
   });
 
   it('imports and threads the user auth config when present', () => {
-    const code = compileRouteTable(emptyScan, '/routes', '/middleware', '/crons', '/queues', null, {
+    const code = compileRouteTable(emptyScan, '/routes', '/middleware', '/crons', '/queues', {
       ...baseOptions,
       auth: pgAuth,
     });
@@ -146,10 +143,9 @@ describe('compileRouteTable auth integration', () => {
       middleware: [{ order: 1, filePath: '01.logger.ts' }],
       jobs: [],
       queues: [],
-      pages: { pages: [], layouts: [], namedLayouts: [] },
     };
 
-    const code = compileRouteTable(scan, '/routes', '/middleware', '/crons', '/queues', null, {
+    const code = compileRouteTable(scan, '/routes', '/middleware', '/crons', '/queues', {
       ...baseOptions,
       auth: sqliteAuth,
     });
@@ -165,7 +161,7 @@ describe('compileRouteTable auth integration', () => {
   });
 
   it('wires auth migrations into the in-worker migration route', () => {
-    const code = compileRouteTable(emptyScan, '/routes', '/middleware', '/crons', '/queues', null, {
+    const code = compileRouteTable(emptyScan, '/routes', '/middleware', '/crons', '/queues', {
       ...baseOptions,
       auth: sqliteAuth,
       migrationHandlerPath: '/resolved/migration-handler.mjs',
@@ -182,7 +178,7 @@ describe('compileRouteTable auth integration', () => {
   });
 
   it('aliases custom D1 binding names for internal sqlite migrations', () => {
-    const code = compileRouteTable(emptyScan, '/routes', '/middleware', '/crons', '/queues', null, {
+    const code = compileRouteTable(emptyScan, '/routes', '/middleware', '/crons', '/queues', {
       ...baseOptions,
       auth: sqliteAuth,
       bindingNames: { d1: 'myapp_db' },
