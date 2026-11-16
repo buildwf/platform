@@ -1568,10 +1568,11 @@ export class PlatformClient {
   }
 
   async setSecret(projectId: string, name: string, value: string): Promise<SecretResponse> {
-    return this.json(
-      `${this.baseUrl}/projects/${projectId}/secrets/${encodeURIComponent(name)}`,
+    return this.rpc(
+      'secrets.set',
       'Failed to set secret',
-      { method: 'PUT', body: { value }, permission: 'configure' },
+      { projectId, name, value },
+      { permission: 'configure' },
     );
   }
 
@@ -1651,10 +1652,11 @@ export class PlatformClient {
   }
 
   async deleteSecret(projectId: string, name: string): Promise<SecretResponse> {
-    return this.json(
-      `${this.baseUrl}/projects/${projectId}/secrets/${encodeURIComponent(name)}`,
+    return this.rpc(
+      'secrets.delete',
       'Failed to delete secret',
-      { method: 'DELETE', permission: 'configure' },
+      { projectId, name },
+      { permission: 'configure' },
     );
   }
 

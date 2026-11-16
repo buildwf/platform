@@ -16,6 +16,7 @@ import {
   createTestUser,
   createTestProject,
   mockCfApi,
+  rpcRequest,
   type TestEnv,
 } from './helpers.ts';
 
@@ -44,19 +45,14 @@ describe('secret limits', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/secrets/BIG_SECRET`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ value: 'x'.repeat(128 * 1024 + 1) }),
-      }),
+      rpcRequest('secrets.set', user.jwt, { projectId: project.id, name: 'BIG_SECRET', value: 'x'.repeat(128 * 1024 + 1) }),
       env,
     );
 
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: 'secret value too large' });
+    expect(await res.json()).toEqual({
+      error: { code: 'VALUE_TOO_LARGE', message: 'secret value too large' },
+    });
   });
 
   it('rejects secret name that is too long', async () => {
@@ -66,18 +62,13 @@ describe('secret limits', () => {
 
     const longName = 'A' + 'B'.repeat(256);
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/secrets/${longName}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ value: 'x' }),
-      }),
+      rpcRequest('secrets.set', user.jwt, { projectId: project.id, name: longName, value: 'x' }),
       env,
     );
 
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: 'secret name too long' });
+    expect(await res.json()).toEqual({
+      error: { code: 'NAME_TOO_LONG', message: 'secret name too long' },
+    });
   });
 });

@@ -21,6 +21,8 @@ export const registry = defineRegistry([
   deployments.list,
   deployments.events,
   secrets.list,
+  secrets.set,
+  secrets.remove,
   usage.account,
   usage.project,
 ]);

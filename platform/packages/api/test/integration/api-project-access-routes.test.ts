@@ -67,6 +67,8 @@ function rpc(name: string, jwt: string, body: unknown): Request {
 const RPC_ROUTES: Record<string, string> = {
   '/deploy/preflight': 'deploy.preflight',
   '/deploy/upload-urls': 'deploy.uploadUrls',
+  'PUT /secrets/TEST_SECRET': 'secrets.set',
+  'DELETE /secrets/TEST_SECRET': 'secrets.delete',
 };
 
 async function projectState() {
@@ -187,13 +189,15 @@ describe('project route membership capabilities', () => {
     });
     vi.stubGlobal('fetch', provider);
     const routingWrite = vi.spyOn(env.ROUTING, 'put');
-    const procedure = RPC_ROUTES[suffix];
+    const procedure = RPC_ROUTES[`${method} ${suffix}`] ?? RPC_ROUTES[suffix];
     const response = await app.fetch(
       procedure
         ? authed(`/rpc/${procedure}`, reader.jwt, 'POST', {
             projectId: project.id,
             assets: [],
             assetManifest: {},
+            name: 'TEST_SECRET',
+            value: 'must-not-be-written',
           })
         : authed(
             `/projects/${project.id}${suffix}`,
