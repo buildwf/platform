@@ -1947,3 +1947,20 @@ export async function readAllEvents(res: Response): Promise<Array<unknown>> {
 export function rpcData<T = unknown>(body: unknown): T {
   return (body as { data: T }).data;
 }
+
+/** A `/rpc/<procedure>` request, signed in with `token` when there is one. */
+export function rpcRequest(procedure: string, token: string | undefined, input?: unknown): Request {
+  return new Request(`http://localhost/rpc/${procedure}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: input === undefined ? '' : JSON.stringify(input),
+  });
+}
+
+/** The message of a failed `/rpc` response. */
+export function rpcError(body: unknown): string {
+  return (body as { error: { message: string } }).error.message;
+}

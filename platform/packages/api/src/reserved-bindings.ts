@@ -13,7 +13,7 @@
  * Retired Sandbox identity and queue names remain reserved so older runtime
  * conventions cannot turn into ambiguous user bindings after an upgrade.
  *
- * `PUT /projects/:id/secrets/:name` also checks this set so a reserved name
+ * `secrets.set` also checks this set so a reserved name
  * is rejected before it is encrypted and persisted — otherwise the stored
  * row only fails at the next deploy, far from the action that caused it.
  *

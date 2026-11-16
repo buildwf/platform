@@ -37,6 +37,9 @@ import {
   cfError,
   captureQueries,
   type TestEnv,
+  rpcRequest,
+  rpcData,
+  rpcError,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -118,19 +121,12 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'app.example.com' }),
-      }),
+      rpcRequest('domains.add', user.jwt, { projectId: project.id, hostname: 'app.example.com' }),
       env,
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = rpcData(await res.json()) as {
       id: string;
       hostname: string;
       status: string;
@@ -194,21 +190,16 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${admin.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'access-race.example.com' }),
+      rpcRequest('domains.add', admin.jwt, {
+        projectId: project.id,
+        hostname: 'access-race.example.com',
       }),
       env,
     );
 
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({
-      error: 'forbidden',
-      message: expect.stringMatching(/Ask (a project admin or owner|the owner)/),
+      error: { code: 'ACCESS_DENIED', message: 'project access denied' },
     });
     expect(
       await env.db.select().from(domains).where(eq(domains.hostname, 'access-race.example.com')),
@@ -259,21 +250,17 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const response = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'limit-loser.example.com' }),
+      rpcRequest('domains.add', user.jwt, {
+        projectId: project.id,
+        hostname: 'limit-loser.example.com',
       }),
       env,
     );
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({
-      error: 'Protected projects support at most 100 custom domains',
-    });
+    expect(rpcError(await response.json())).toBe(
+      'Protected projects support at most 100 custom domains',
+    );
     expect(
       await env.db.select().from(domains).where(eq(domains.project_id, project.id)),
     ).toHaveLength(100);
@@ -291,18 +278,14 @@ describe('POST /projects/:id/domains', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request('http://localhost/projects/proj_nonexistent/domains', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'app.example.com' }),
+      rpcRequest('domains.add', user.jwt, {
+        projectId: 'proj_nonexistent',
+        hostname: 'app.example.com',
       }),
       env,
     );
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(403);
   });
 
   it('returns 403 when user does not own project', async () => {
@@ -312,14 +295,7 @@ describe('POST /projects/:id/domains', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${bob.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'app.example.com' }),
-      }),
+      rpcRequest('domains.add', bob.jwt, { projectId: project.id, hostname: 'app.example.com' }),
       env,
     );
 
@@ -348,19 +324,12 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'taken.example.com' }),
-      }),
+      rpcRequest('domains.add', user.jwt, { projectId: project.id, hostname: 'taken.example.com' }),
       env,
     );
 
     expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ error: 'hostname already in use' });
+    expect(rpcError(await res.json())).toBe('hostname already in use');
   });
 
   it('adopts an orphaned CF custom hostname when create reports a duplicate', async () => {
@@ -390,19 +359,15 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'orphan.example.com' }),
+      rpcRequest('domains.add', user.jwt, {
+        projectId: project.id,
+        hostname: 'orphan.example.com',
       }),
       env,
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = rpcData(await res.json()) as {
       hostname: string;
       ownership_verification?: { name: string; value: string };
     };
@@ -435,19 +400,15 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'orphan-rate-limited.example.com' }),
+      rpcRequest('domains.add', user.jwt, {
+        projectId: project.id,
+        hostname: 'orphan-rate-limited.example.com',
       }),
       env,
     );
 
     expect(res.status).toBe(429);
-    const body = (await res.json()) as { error: string };
+    const body = { error: rpcError(await res.json()) };
     expect(body.error).toContain('rate limit exceeded');
 
     const [row] = await env.db
@@ -466,19 +427,15 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'orphan-lookup-fails.example.com' }),
+      rpcRequest('domains.add', user.jwt, {
+        projectId: project.id,
+        hostname: 'orphan-lookup-fails.example.com',
       }),
       env,
     );
 
     expect(res.status).toBe(409);
-    const body = (await res.json()) as { error: string };
+    const body = { error: rpcError(await res.json()) };
     expect(body.error).toContain('Duplicate custom hostname found.');
 
     const [row] = await env.db
@@ -510,19 +467,15 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'inflight.example.com' }),
+      rpcRequest('domains.add', user.jwt, {
+        projectId: project.id,
+        hostname: 'inflight.example.com',
       }),
       env,
     );
 
     expect(res.status).toBe(409);
-    const body = (await res.json()) as { error: string };
+    const body = { error: rpcError(await res.json()) };
     expect(body.error).toContain('Duplicate custom hostname found.');
 
     const [row] = await env.db
@@ -550,19 +503,15 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'active-orphan.example.com' }),
+      rpcRequest('domains.add', user.jwt, {
+        projectId: project.id,
+        hostname: 'active-orphan.example.com',
       }),
       env,
     );
 
     expect(res.status).toBe(409);
-    const body = (await res.json()) as { error: string };
+    const body = { error: rpcError(await res.json()) };
     expect(body.error).toContain('Duplicate custom hostname found.');
 
     const [row] = await env.db
@@ -597,19 +546,12 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'race.example.com' }),
-      }),
+      rpcRequest('domains.add', user.jwt, { projectId: project.id, hostname: 'race.example.com' }),
       env,
     );
 
     expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ error: 'hostname already in use' });
+    expect(rpcError(await res.json())).toBe('hostname already in use');
 
     const deletes = fetchMock.mock.calls.filter((call: Array<unknown>) => {
       const url = typeof call[0] === 'string' ? call[0] : String(call[0]);
@@ -632,19 +574,12 @@ describe('POST /projects/:id/domains', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'bad.void.app' }),
-      }),
+      rpcRequest('domains.add', user.jwt, { projectId: project.id, hostname: 'bad.void.app' }),
       env,
     );
 
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: 'cannot use void.app subdomains' });
+    expect(rpcError(await res.json())).toBe('cannot use void.app subdomains');
   });
 
   it('uses the installation domain for the CNAME target and reserved suffix', async () => {
@@ -667,24 +602,17 @@ describe('POST /projects/:id/domains', () => {
     const selfHostedEnv = { ...env, SITE_DOMAIN: 'apps.example.com' };
     const addDomain = (hostname: string) =>
       app.fetch(
-        new Request(`http://localhost/projects/${project.id}/domains`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${user.jwt}`,
-          },
-          body: JSON.stringify({ hostname }),
-        }),
+        rpcRequest('domains.add', user.jwt, { projectId: project.id, hostname }),
         selfHostedEnv,
       );
 
     const rejected = await addDomain('bad.apps.example.com');
     expect(rejected.status).toBe(400);
-    expect(await rejected.json()).toEqual({ error: 'cannot use apps.example.com subdomains' });
+    expect(rpcError(await rejected.json())).toBe('cannot use apps.example.com subdomains');
 
     const added = await addDomain('www.example.com');
     expect(added.status).toBe(200);
-    const body = (await added.json()) as { cname_target: string };
+    const body = rpcData<{ cname_target: string }>(await added.json());
     expect(body.cname_target).toBe('cname.apps.example.com');
   });
 
@@ -694,19 +622,12 @@ describe('POST /projects/:id/domains', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'not a hostname' }),
-      }),
+      rpcRequest('domains.add', user.jwt, { projectId: project.id, hostname: 'not a hostname' }),
       env,
     );
 
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: 'invalid hostname format' });
+    expect(rpcError(await res.json())).toBe('invalid hostname format');
   });
 
   // CF rejects certain hostnames (e.g. reserved `.test` TLD per RFC 2606) with
@@ -721,20 +642,13 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'foo.test' }),
-      }),
+      rpcRequest('domains.add', user.jwt, { projectId: project.id, hostname: 'foo.test' }),
       env,
     );
 
     expect(res.status).toBe(400);
     expect(res.headers.get('content-type')).toContain('application/json');
-    const body = (await res.json()) as { error: string };
+    const body = { error: rpcError(await res.json()) };
     expect(body.error).toContain('hostname is not a valid domain');
 
     // No orphan DB row when CF rejects.
@@ -759,21 +673,17 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'unexpected.example.com' }),
+      rpcRequest('domains.add', user.jwt, {
+        projectId: project.id,
+        hostname: 'unexpected.example.com',
       }),
       env,
     );
 
     expect(res.status).toBe(500);
     expect(res.headers.get('content-type')).toContain('application/json');
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe('Internal Server Error');
+    const body = { error: rpcError(await res.json()) };
+    expect(body.error).toBe('Internal error');
     // The raw exception message must NOT appear in the wire response.
     expect(JSON.stringify(body)).not.toContain('hunter2');
     expect(JSON.stringify(body)).not.toContain('postgres://');
@@ -798,20 +708,16 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'cf-auth-fail.example.com' }),
+      rpcRequest('domains.add', user.jwt, {
+        projectId: project.id,
+        hostname: 'cf-auth-fail.example.com',
       }),
       env,
     );
 
     expect(res.status).toBe(500);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe('Internal Server Error');
+    const body = { error: rpcError(await res.json()) };
+    expect(body.error).toBe('Internal error');
 
     // Still no orphan DB row.
     const [row] = await env.db
@@ -844,20 +750,16 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'cf-403-case.example.com' }),
+      rpcRequest('domains.add', user.jwt, {
+        projectId: project.id,
+        hostname: 'cf-403-case.example.com',
       }),
       env,
     );
 
     expect(res.status).toBe(500);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe('Internal Server Error');
+    const body = { error: rpcError(await res.json()) };
+    expect(body.error).toBe('Internal error');
     // CF auth text MUST NOT leak in the wire body.
     expect(JSON.stringify(body)).not.toContain('Authentication');
     expect(JSON.stringify(body)).not.toContain('under-scoped');
@@ -887,19 +789,15 @@ describe('POST /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.jwt}`,
-        },
-        body: JSON.stringify({ hostname: 'rate-limited.example.com' }),
+      rpcRequest('domains.add', user.jwt, {
+        projectId: project.id,
+        hostname: 'rate-limited.example.com',
       }),
       env,
     );
 
     expect(res.status).toBe(429);
-    const body = (await res.json()) as { error: string };
+    const body = { error: rpcError(await res.json()) };
     expect(body.error).toContain('rate limit exceeded');
   });
 });
@@ -925,14 +823,12 @@ describe('GET /projects/:id/domains', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('domains.list', user.jwt, { projectId: project.id }),
       env,
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as Array<{ hostname: string; status: string }>;
+    const body = rpcData(await res.json()) as Array<{ hostname: string; status: string }>;
     expect(body).toHaveLength(2);
     expect(body[0].hostname).toBe('a.example.com');
     expect(body[1].hostname).toBe('b.example.com');
@@ -978,14 +874,12 @@ describe('GET /projects/:id/domains/:domainId', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_status`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('domains.status', user.jwt, { projectId: project.id, domainId: 'dom_status' }),
       env,
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = rpcData(await res.json()) as {
       hostname: string;
       status: string;
       cname_target: string;
@@ -1032,14 +926,12 @@ describe('GET /projects/:id/domains/:domainId', () => {
     );
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_activate`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('domains.status', user.jwt, { projectId: project.id, domainId: 'dom_activate' }),
       env,
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { status: string };
+    const body = rpcData<{ status: string }>(await res.json());
     expect(body.status).toBe('active');
 
     // Verify DB was updated
@@ -1101,14 +993,15 @@ describe('GET /projects/:id/domains/:domainId', () => {
     );
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_pending_ssl`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      rpcRequest('domains.status', user.jwt, {
+        projectId: project.id,
+        domainId: 'dom_pending_ssl',
       }),
       env,
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = rpcData(await res.json()) as {
       status: string;
       ssl_status: string;
       ssl_validation_records?: Array<{ txt_name?: string; txt_value?: string }>;
@@ -1162,14 +1055,12 @@ describe('GET /projects/:id/domains/:domainId', () => {
     );
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_http_dcv`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('domains.status', user.jwt, { projectId: project.id, domainId: 'dom_http_dcv' }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(((await res.json()) as { status: string }).status).toBe('active');
+    expect(rpcData<{ status: string }>(await res.json()).status).toBe('active');
 
     const [row] = await env.db
       .select({ status: domains.status })
@@ -1220,14 +1111,15 @@ describe('GET /projects/:id/domains/:domainId', () => {
     );
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_ownership_outstanding`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      rpcRequest('domains.status', user.jwt, {
+        projectId: project.id,
+        domainId: 'dom_ownership_outstanding',
       }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(((await res.json()) as { status: string }).status).toBe('pending');
+    expect(rpcData<{ status: string }>(await res.json()).status).toBe('pending');
 
     const [row] = await env.db
       .select({ status: domains.status })
@@ -1270,14 +1162,12 @@ describe('GET /projects/:id/domains/:domainId', () => {
     );
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_legacy_txt`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('domains.status', user.jwt, { projectId: project.id, domainId: 'dom_legacy_txt' }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(((await res.json()) as { status: string }).status).toBe('active');
+    expect(rpcData<{ status: string }>(await res.json()).status).toBe('active');
 
     const [row] = await env.db
       .select({ status: domains.status })
@@ -1311,14 +1201,12 @@ describe('GET /projects/:id/domains/:domainId', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_cf_status`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('domains.status', user.jwt, { projectId: project.id, domainId: 'dom_cf_status' }),
       env,
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { cf_status: string };
+    const body = rpcData<{ cf_status: string }>(await res.json());
     expect(body.cf_status).toBe('pending_validation');
   });
 
@@ -1344,14 +1232,12 @@ describe('GET /projects/:id/domains/:domainId', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_awaiting`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('domains.status', user.jwt, { projectId: project.id, domainId: 'dom_awaiting' }),
       env,
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { status: string; awaiting_deployment: boolean };
+    const body = rpcData(await res.json()) as { status: string; awaiting_deployment: boolean };
     expect(body.awaiting_deployment).toBe(true);
     expect(body.status).toBe('pending');
 
@@ -1391,14 +1277,12 @@ describe('GET /projects/:id/domains/:domainId', () => {
     );
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_routed`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('domains.status', user.jwt, { projectId: project.id, domainId: 'dom_routed' }),
       env,
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { status: string; awaiting_deployment: boolean };
+    const body = rpcData(await res.json()) as { status: string; awaiting_deployment: boolean };
     expect(body.awaiting_deployment).toBe(false);
     expect(body.status).toBe('active');
 
@@ -1433,14 +1317,12 @@ describe('GET /projects/:id/domains/:domainId', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_cf_pending`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('domains.status', user.jwt, { projectId: project.id, domainId: 'dom_cf_pending' }),
       env,
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { awaiting_deployment: boolean };
+    const body = rpcData<{ awaiting_deployment: boolean }>(await res.json());
     expect(body.awaiting_deployment).toBe(false);
   });
 
@@ -1473,14 +1355,12 @@ describe('GET /projects/:id/domains/:domainId', () => {
     // Intentionally do NOT seed `project.slug` in ROUTING.
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_no_slug`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('domains.status', user.jwt, { projectId: project.id, domainId: 'dom_no_slug' }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(((await res.json()) as { status: string }).status).toBe('pending');
+    expect(rpcData<{ status: string }>(await res.json()).status).toBe('pending');
 
     const [row] = await env.db
       .select({ status: domains.status })
@@ -1518,14 +1398,15 @@ describe('GET /projects/:id/domains/:domainId', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_patch_pending`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      rpcRequest('domains.status', user.jwt, {
+        projectId: project.id,
+        domainId: 'dom_patch_pending',
       }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(((await res.json()) as { status: string }).status).toBe('pending');
+    expect(rpcData<{ status: string }>(await res.json()).status).toBe('pending');
 
     // CF was still polled (GET), but no PATCH was issued from the status route.
     const getCalls = fetchMock.mock.calls.filter((call: Array<unknown>) => {
@@ -1571,14 +1452,15 @@ describe('GET /projects/:id/domains/:domainId', () => {
     );
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_patch_active`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      rpcRequest('domains.status', user.jwt, {
+        projectId: project.id,
+        domainId: 'dom_patch_active',
       }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(((await res.json()) as { status: string }).status).toBe('active');
+    expect(rpcData<{ status: string }>(await res.json()).status).toBe('active');
 
     // No PATCH — the gate is already satisfied.
     const patchCalls = fetchMock.mock.calls.filter((call: Array<unknown>) => {
@@ -1612,8 +1494,9 @@ describe('GET /projects/:id/domains/:domainId', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_patch_already`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      rpcRequest('domains.status', user.jwt, {
+        projectId: project.id,
+        domainId: 'dom_patch_already',
       }),
       env,
     );
@@ -1647,15 +1530,12 @@ describe('DELETE /projects/:id/domains/:domainId', () => {
     await env.ROUTING.put('domain:remove.example.com', JSON.stringify({ projectId: project.id }));
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_remove`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('domains.remove', user.jwt, { projectId: project.id, domainId: 'dom_remove' }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ ok: true });
+    expect(rpcData(await res.json())).toMatchObject({ ok: true });
 
     // Verify DB record deleted
     const [row] = await env.db.select().from(domains).where(eq(domains.id, 'dom_remove'));
@@ -1695,15 +1575,12 @@ describe('DELETE /projects/:id/domains/:domainId', () => {
     await env.ROUTING.put('domain:cf-fail.example.com', JSON.stringify({ projectId: project.id }));
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_cf_fail`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('domains.remove', user.jwt, { projectId: project.id, domainId: 'dom_cf_fail' }),
       env,
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean; warnings: Array<string> };
+    const body = rpcData(await res.json()) as { ok: boolean; warnings: Array<string> };
     expect(body.ok).toBe(true);
     expect(body.warnings).toHaveLength(1);
     expect(body.warnings[0]).toContain('CF API down');
@@ -1723,9 +1600,9 @@ describe('DELETE /projects/:id/domains/:domainId', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_nonexistent`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      rpcRequest('domains.remove', user.jwt, {
+        projectId: project.id,
+        domainId: 'dom_nonexistent',
       }),
       env,
     );

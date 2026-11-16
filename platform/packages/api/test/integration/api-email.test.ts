@@ -78,6 +78,7 @@ import {
   teardownEnv,
   type TestEnv,
   rpcData,
+  rpcRequest,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -2819,21 +2820,18 @@ describe('email platform capability', () => {
       status: 'verified',
     });
 
-    for (const [method, path] of [
-      ['GET', `/projects/${project.id}/domains`],
-      ['POST', `/projects/${project.id}/domains`],
-      ['GET', `/projects/${project.id}/domains/missing`],
-      ['DELETE', `/projects/${project.id}/domains/missing`],
-    ]) {
+    for (const [procedure, input] of [
+      ['domains.list', {}],
+      ['domains.add', { hostname: 'app.example.com' }],
+      ['domains.status', { domainId: 'missing' }],
+      ['domains.remove', { domainId: 'missing' }],
+    ] as const) {
       const response = await app.fetch(
-        new Request(`http://localhost${path}`, {
-          method,
-          headers: { Authorization: `Bearer ${user.jwt}` },
-        }),
+        rpcRequest(procedure, user.jwt, { projectId: project.id, ...input }),
         bindings,
       );
       expect(response.status).toBe(501);
-      expect(await response.json()).toMatchObject({ capability: 'customDomains' });
+      expect(await response.json()).toMatchObject({ error: { code: 'CAPABILITY_UNAVAILABLE' } });
     }
   });
 

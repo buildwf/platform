@@ -25,6 +25,9 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
+  rpcRequest,
+  rpcData,
+  rpcError,
 } from './helpers.ts';
 
 vi.mock('../../src/zero-trust/project.ts', async (importOriginal) => {
@@ -167,10 +170,7 @@ describe('Zero Trust custom domain removal', () => {
     // reconciliation that would rewrite the custom domain application.
     vi.mocked(reconcileProjectZeroTrustDomains).mockRejectedValueOnce(new Error('Worker stopped'));
     const removed = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/domains/dom_removal_1`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${owner.jwt}` },
-      }),
+      rpcRequest('domains.remove', owner.jwt, { projectId: project.id, domainId: 'dom_removal_1' }),
       bindings(),
     );
     expect(removed.status).toBe(200);
@@ -301,18 +301,16 @@ describe('Zero Trust custom domain removal', () => {
       const { owner, project } = await seedDomain('active');
 
       const removed = await app.fetch(
-        new Request(`http://localhost/projects/${project.id}/domains/dom_uninstall`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${owner.jwt}` },
+        rpcRequest('domains.remove', owner.jwt, {
+          projectId: project.id,
+          domainId: 'dom_uninstall',
         }),
         bindings(),
       );
 
       await expectDomainUntouched(cloudflare.fetcher);
       expect(removed.status).toBe(409);
-      expect(await removed.json()).toEqual({
-        error: expect.stringContaining('The platform is being uninstalled'),
-      });
+      expect(rpcError(await removed.json())).toContain('The platform is being uninstalled');
     });
 
     it('leaves an expired pending domain in place', async () => {
