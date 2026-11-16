@@ -45,11 +45,6 @@ describe('storage.locationHint', () => {
   ])('rejects invalid storage configuration %j', (storage) => {
     expect(() => validateConfig({ storage })).toThrow('storage.locationHint');
   });
-  it.each(['node', 'bun', 'deno'])('rejects hints for %s targets', (target) => {
-    expect(() => validateConfig({ target, storage: { locationHint: 'apac' } })).toThrow(
-      'cloudflare',
-    );
-  });
 });
 
 const tmpDir = join(import.meta.dirname, '.tmp-config-test');

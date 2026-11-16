@@ -24,7 +24,6 @@ it('preserves tuples and JSON omissions in generated typed fetch responses', () 
       middleware: [],
       jobs: [],
       queues: [],
-      pages: { pages: [], layouts: [], namedLayouts: [] },
     },
     join(root, 'routes'),
     join(root, '.void'),

@@ -4,13 +4,11 @@ import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { getCookieCache } from 'better-auth/cookies';
 import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vite-plus/test';
-import { PAGES_PROTOCOL_VERSION } from '../../../edge/src/pages-protocol.ts';
 import { getAuth, getSession, getUser, type VoidAuthConfig } from '../../src/runtime/auth.ts';
 import {
   createVoidAuthRuntime,
   type VoidAuthRuntimeOptions,
 } from '../../src/runtime/better-auth-shared.ts';
-import { createPageMutationHandler } from '../../src/runtime/routing-pages.ts';
 import { createRoutingRuntime, type RoutingContext } from '../../src/runtime/routing.ts';
 
 const env = { BETTER_AUTH_SECRET: 'local-test-secret-with-at-least-32-characters' };
@@ -103,7 +101,14 @@ function fixture(userConfig: VoidAuthConfig = cookieCache, beforeRoutes?: (app: 
   const runtime = createVoidAuthRuntime('sqlite', async () => {});
   const options: VoidAuthRuntimeOptions = { dialect: 'sqlite', providers: null, userConfig };
   const app = new Hono();
-  const routing = createRoutingRuntime(app, { nodeTarget: true });
+  const request = app.request.bind(app);
+  const executionCtx = {
+    waitUntil() {},
+    passThroughOnException() {},
+  } as unknown as ExecutionContext;
+  app.request = ((input, init, env, ctx) =>
+    request(input, init, env, ctx ?? executionCtx)) as typeof app.request;
+  const routing = createRoutingRuntime(app);
   app.use(routing.contextMiddleware);
   app.use(async (c, next) => runtime.runVoidAuthMiddleware(c, next, options, database));
   beforeRoutes?.(app);
@@ -1062,76 +1067,5 @@ describe('cookie keys and positions', () => {
     jar.apply(response);
     expect([...jar.cookies.keys()].filter((name) => name.includes('better-auth.'))).toEqual([]);
     await expect(me(app, jar)).resolves.toEqual({ user: null, session: null });
-  });
-});
-
-describe('cookies from auth.api calls in Pages actions', () => {
-  function pagesFixture() {
-    const { app } = fixture();
-    app.post(
-      '/settings',
-      createPageMutationHandler({
-        componentId: 'settings',
-        render: async () => '<html></html>',
-        assets: async () => ({ css: '', body: '', preloads: '' }),
-        headConfig: null,
-        renderOptions: { renderMode: 'server' },
-        load: async () => ({
-          action: async (c) => {
-            const form = await c.req.formData();
-            await getAuth(c).api.updateUser({
-              body: { name: String(form.get('name')) },
-              headers: c.req.raw.headers,
-            });
-            return c.redirect('/settings', 303);
-          },
-        }),
-      }),
-    );
-    return app;
-  }
-
-  function submit(app: Hono, jar: CookieJar, name: string, headers: Record<string, string>) {
-    const body = new FormData();
-    body.set('name', name);
-    return app.request(
-      origin + '/settings',
-      { method: 'POST', body, headers: { cookie: jar.header(), origin, ...headers } },
-      env,
-    );
-  }
-
-  it('keeps the refreshed cookie on a manual Pages redirect', async () => {
-    const app = pagesFixture();
-    const jar = await signIn(app);
-
-    const response = await submit(app, jar, 'Pages action', {
-      'X-VoidPages': 'true',
-      'X-VoidPages-Version': PAGES_PROTOCOL_VERSION,
-      'X-VoidPages-Redirect': 'manual',
-    });
-
-    expect(response.status).toBe(200);
-    expect(response.headers.get('X-VoidPages-Redirect')).toBe('303');
-    expect(response.headers.get('location')).toBe('/settings');
-    expect(response.headers.get('cache-control')).toBe('no-store');
-    expect(authCookies(response, 'session_data')).toHaveLength(1);
-    expectNoDuplicateCookies(response);
-    await expect(me(app, jar.apply(response))).resolves.toEqual({
-      user: 'Pages action',
-      session: 'Pages action',
-    });
-  });
-
-  it('keeps the refreshed cookie on a document form redirect', async () => {
-    const app = pagesFixture();
-    const jar = await signIn(app);
-
-    const response = await submit(app, jar, 'Form action', {});
-
-    expect(response.status).toBe(303);
-    expect(response.headers.get('location')).toBe('/settings');
-    expect(authCookies(response, 'session_data')).toHaveLength(1);
-    await expect(me(app, jar.apply(response))).resolves.toMatchObject({ user: 'Form action' });
   });
 });
