@@ -68,6 +68,7 @@ const RPC_ROUTES: Record<string, string> = {
   '/deploy/preflight': 'deploy.preflight',
   '/deploy/upload-urls': 'deploy.uploadUrls',
   'POST /domains': 'domains.add',
+  'PUT /database-url': 'database.setUrl',
   'POST /invitations': 'team.invite',
   'PATCH /members/missing': 'team.setRole',
   'DELETE /members/missing': 'team.remove',
@@ -204,6 +205,7 @@ describe('project route membership capabilities', () => {
             email: 'nobody@example.com',
             role: 'admin',
             userId: 'missing',
+            connectionString: 'postgresql://u:p@db.example.com/app',
             name: 'TEST_SECRET',
             value: 'must-not-be-written',
           })

@@ -1676,25 +1676,28 @@ export class PlatformClient {
   }
 
   async provisionDatabase(projectId: string, connectionString: string): Promise<{ ok: boolean }> {
-    return this.json(
-      `${this.baseUrl}/projects/${projectId}/database`,
+    return this.rpc(
+      'database.provision',
       'Failed to provision database',
-      { method: 'POST', body: { connectionString }, permission: 'configure' },
+      { projectId, connectionString },
+      { permission: 'configure' },
     );
   }
 
   async setDatabaseUrl(projectId: string, connectionString: string): Promise<{ ok: boolean }> {
-    return this.json(
-      `${this.baseUrl}/projects/${projectId}/database-url`,
+    return this.rpc(
+      'database.setUrl',
       'Failed to update database URL',
-      { method: 'PUT', body: { connectionString }, permission: 'configure' },
+      { projectId, connectionString },
+      { permission: 'configure' },
     );
   }
 
   async getDatabaseUrl(projectId: string): Promise<{ url: string }> {
-    return this.json(
-      `${this.baseUrl}/projects/${projectId}/database-url`,
+    return this.rpc(
+      'database.getUrl',
       'Failed to fetch database URL',
+      { projectId },
       { permission: 'owner' },
     );
   }

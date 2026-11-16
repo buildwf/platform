@@ -32,19 +32,19 @@ function jsonResponse(body: unknown): Response {
 }
 
 describe('PlatformClient.getDatabaseUrl', () => {
-  it('GETs the database URL with auth headers and no body, and returns it', async () => {
+  it('calls database.getUrl with auth headers and returns the URL', async () => {
     const expected = 'postgres://user:pass@host:5432/mydb';
-    fetchMock.mockResolvedValueOnce(jsonResponse({ url: expected }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: { url: expected } }));
 
     const result = await makeClient().getDatabaseUrl(projectId);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${apiUrl}/projects/${projectId}/database-url`);
-    expect((init.method ?? 'GET').toUpperCase()).toBe('GET');
+    expect(url).toBe(`${apiUrl}/rpc/database.getUrl`);
+    expect(init.method).toBe('POST');
     const headers = init.headers as Record<string, string>;
     expect(headers.Authorization).toBe(`Bearer ${token}`);
-    expect(init.body).toBeUndefined();
+    expect(init.body).toBe(JSON.stringify({ projectId }));
     expect(result).toEqual({ url: expected });
   });
 });

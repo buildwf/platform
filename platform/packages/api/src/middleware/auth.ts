@@ -20,7 +20,6 @@ import { isAdminSuspended } from '../suspension.ts';
  *
  * Procedures under `/rpc` have their own allowlist below. The REST calls still open to a
  * deploy token, traced from `packages/void/src/cli/{deploy,client}.ts`:
- *   - `POST /projects/:id/database`            provisionDatabase (PostgreSQL gate)
  *   - `POST /projects/:id/deploy`              manifest finalize
  *
  * `:id` is matched against `payload.project` by the caller — the entries
@@ -28,7 +27,6 @@ import { isAdminSuspended } from '../suspension.ts';
  */
 type DeployAllowEntry = Readonly<{ method: string; segments: ReadonlyArray<string | null> }>;
 const DEPLOY_TOKEN_ALLOWLIST: ReadonlyArray<DeployAllowEntry> = [
-  { method: 'POST', segments: ['projects', null, 'database'] },
   { method: 'POST', segments: ['projects', null, 'deploy'] },
 ];
 
@@ -44,6 +42,7 @@ const DEPLOY_TOKEN_PROCEDURES: ReadonlySet<string> = new Set([
   'deployments.list',
   'deployments.events',
   'secrets.list',
+  'database.provision',
   'deploy.preflight',
   'deploy.uploadUrls',
   'deploy.workerUploadUrls',
