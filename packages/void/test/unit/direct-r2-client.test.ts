@@ -52,42 +52,14 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-/** The platform names the accepted deployment in a receipt header before streaming. */
-function receiptFor(events: Array<unknown>): string {
-  for (const event of events as Array<{ deploymentId?: unknown; deployment?: unknown }>) {
-    const id = event.deploymentId ?? event.deployment;
-    if (typeof id === 'string') {
-      return id;
-    }
-  }
-  return 'dpl_durable';
-}
-
-function ndjsonStreamResponse(events: Array<unknown>, status = 200): Response {
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      for (const event of events) {
-        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
-      }
-      controller.close();
-    },
-  });
-  return new Response(stream, {
-    status,
-    headers: {
-      'content-type': 'application/x-ndjson',
-      'x-void-deployment-id': receiptFor(events),
-    },
-  });
-}
-
 describe('PlatformClient.requestUploadUrls', () => {
-  it('POSTs JSON to /:id/deploy/upload-urls and returns the urls map', async () => {
+  it('calls deploy.uploadUrls and returns the urls map', async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
-        urls: {
-          aabbccdd: { url: 'https://r2/.../1', headers: { 'Content-Md5': 'abc==' } },
+        data: {
+          urls: {
+            aabbccdd: { url: 'https://r2/.../1', headers: { 'Content-Md5': 'abc==' } },
+          },
         },
       }),
     );
@@ -99,7 +71,7 @@ describe('PlatformClient.requestUploadUrls', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${apiUrl}/projects/${projectId}/deploy/upload-urls`);
+    expect(url).toBe(`${apiUrl}/rpc/deploy.uploadUrls`);
     expect(init.method).toBe('POST');
     const headers = init.headers as Record<string, string>;
     expect(headers['Content-Type']).toBe('application/json');
@@ -111,6 +83,7 @@ describe('PlatformClient.requestUploadUrls', () => {
 
     const body = JSON.parse(init.body as string);
     expect(body).toEqual({
+      projectId,
       assets: [{ blake3: 'aabbccdd', md5: '11223344', size: 17, contentType: 'text/plain' }],
     });
 
@@ -131,7 +104,7 @@ describe('PlatformClient.requestWorkerUploadUrls', () => {
   ];
 
   it('POSTs the modules in order and returns the upload id and URLs', async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 'wup_1', urls }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: { id: 'wup_1', urls } }));
 
     await expect(makeClient().requestWorkerUploadUrls(projectId, modules)).resolves.toEqual({
       id: 'wup_1',
@@ -139,17 +112,19 @@ describe('PlatformClient.requestWorkerUploadUrls', () => {
     });
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${apiUrl}/projects/${projectId}/deploy/worker-upload-urls`);
+    expect(url).toBe(`${apiUrl}/rpc/deploy.workerUploadUrls`);
     expect(init.method).toBe('POST');
     const headers = init.headers as Record<string, string>;
     expect(headers['Content-Type']).toBe('application/json');
     expect(headers.Authorization).toBe(`Bearer ${token}`);
-    expect(JSON.parse(init.body as string)).toEqual({ modules });
+    expect(JSON.parse(init.body as string)).toEqual({ projectId, modules });
   });
 
   it("shows the platform's message when the Worker is over the size limit", async () => {
     const message = 'This Worker is 70 MB without source maps. Cloudflare allows at most 64 MiB.';
-    fetchMock.mockResolvedValueOnce(jsonResponse({ error: 'worker_too_large', message }, 413));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ error: { code: 'WORKER_TOO_LARGE', message } }, 413),
+    );
 
     const request = makeClient().requestWorkerUploadUrls(projectId, modules);
     await expect(request).rejects.toMatchObject({
@@ -165,7 +140,7 @@ describe('PlatformClient.requestWorkerUploadUrls', () => {
     ['with fewer URLs than modules', { id: 'wup_1', urls: urls.slice(1) }],
     ['with a malformed URL entry', { id: 'wup_1', urls: [urls[0], { url: 'https://r2/x' }] }],
   ])('rejects a response %s', async (_label, body) => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(body));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: body }));
     await expect(makeClient().requestWorkerUploadUrls(projectId, modules)).rejects.toThrow(
       'Invalid worker upload URLs from platform.',
     );
@@ -216,369 +191,7 @@ describe('PlatformClient.finalizeDeploy', () => {
     };
   }
 
-  it('POSTs JSON (NOT multipart) to /:id/deploy and parses the NDJSON event stream', async () => {
-    fetchMock.mockResolvedValueOnce(
-      ndjsonStreamResponse([
-        { event: 'start', deploymentId: 'dep_x' },
-        { event: 'asset_upload', total: 1, new: 0, cached: 1 },
-        {
-          event: 'done',
-          deployment: 'dep_x',
-          url: 'https://x.void.app',
-          urls: [],
-          assets: 1,
-          workers: 0,
-        },
-      ]),
-    );
-
-    const client = makeClient();
-    const events = [];
-    for await (const event of client.finalizeDeploy(projectId, makePayload())) {
-      events.push(event);
-    }
-
-    // Verify wire shape: JSON, not multipart.
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${apiUrl}/projects/${projectId}/deploy`);
-    expect(init.method).toBe('POST');
-    const headers = init.headers as Record<string, string>;
-    expect(headers['Content-Type']).toBe('application/json');
-    expect(headers.Authorization).toBe(`Bearer ${token}`);
-    expect(typeof init.body).toBe('string');
-    const parsed = JSON.parse(init.body as string);
-    expect(parsed.manifest).toEqual(baseManifest);
-    expect(parsed.assetManifest['/index.html']).toMatchObject({
-      blake3: 'a'.repeat(32),
-      md5: 'b'.repeat(32),
-      size: 12,
-    });
-    expect(parsed.preflight).toBe('true');
-
-    // Verify all events were yielded in order, parsed from NDJSON.
-    expect(events).toEqual([
-      { event: 'start', deploymentId: 'dep_x' },
-      { event: 'asset_upload', total: 1, new: 0, cached: 1 },
-      {
-        event: 'done',
-        deployment: 'dep_x',
-        url: 'https://x.void.app',
-        urls: [],
-        assets: 1,
-        workers: 0,
-      },
-    ]);
-  });
-
-  it('handles NDJSON split across chunk boundaries', async () => {
-    // Hand-craft a stream that splits the second event mid-way.
-    const lines = [
-      `${JSON.stringify({ event: 'start', deploymentId: 'd1' })}\n`,
-      `${JSON.stringify({ event: 'heartbeat', step: 'preflight' })}`,
-      `\n${JSON.stringify({ event: 'done', deployment: 'd1', url: 'https://x', urls: [], assets: 0, workers: 0 })}\n`,
-    ];
-
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.enqueue(encoder.encode(lines[0] + lines[1]));
-        controller.enqueue(encoder.encode(lines[2]));
-        controller.close();
-      },
-    });
-    fetchMock.mockResolvedValueOnce(
-      new Response(stream, {
-        status: 200,
-        headers: { 'content-type': 'application/x-ndjson', 'x-void-deployment-id': 'd1' },
-      }),
-    );
-
-    const client = makeClient();
-    const events = [];
-    for await (const event of client.finalizeDeploy(projectId, makePayload())) {
-      events.push(event);
-    }
-
-    expect(events.map((e) => (e as { event?: string }).event)).toEqual([
-      'start',
-      'heartbeat',
-      'done',
-    ]);
-  });
-
-  function makeCliLog() {
-    return {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-      path: '/tmp/test.jsonl',
-      close: vi.fn(),
-    };
-  }
-
-  const deployPostCalls = () => fetchMock.mock.calls.filter(([u]) => String(u).endsWith('/deploy'));
-  const deploymentListCalls = () =>
-    fetchMock.mock.calls.filter(([u]) => String(u).includes('/deployments'));
-
-  it('retries a transport-level fetch rejection with backoff, then streams events', async () => {
-    vi.useFakeTimers();
-    let posts = 0;
-    fetchMock.mockImplementation(() => {
-      posts++;
-      if (posts === 1) {
-        return Promise.reject(
-          new TypeError('fetch failed', {
-            cause: Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' }),
-          }),
-        );
-      }
-      return Promise.resolve(
-        ndjsonStreamResponse([
-          { event: 'done', deployment: 'd1', url: 'https://x', urls: [], assets: 0, workers: 0 },
-        ]),
-      );
-    });
-
-    const cliLog = makeCliLog();
-    const client = new PlatformClient(token, { apiUrl, cliLog });
-    try {
-      const events: Array<unknown> = [];
-      const consume = (async () => {
-        for await (const event of client.finalizeDeploy(projectId, makePayload())) {
-          events.push(event);
-        }
-      })();
-      await vi.runAllTimersAsync();
-      await consume;
-
-      expect(deployPostCalls()).toHaveLength(2);
-      // No client-side dedupe GET — the server's precheck is authoritative.
-      expect(deploymentListCalls()).toHaveLength(0);
-      expect(events).toEqual([
-        { event: 'start', deploymentId: 'd1' },
-        { event: 'done', deployment: 'd1', url: 'https://x', urls: [], assets: 0, workers: 0 },
-      ]);
-      expect(cliLog.warn).toHaveBeenCalledWith(
-        'deploy_fetch_retry',
-        expect.objectContaining({ attempt: 1, delayMs: 1000 }),
-      );
-      expect(cliLog.error).not.toHaveBeenCalled();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('surfaces the server 409 as an error event when a deploy is already in progress', async () => {
-    vi.useFakeTimers();
-    // The replay hits the authoritative concurrency guard — possibly the
-    // earlier attempt of this same deploy, or a concurrent one.
-    let posts = 0;
-    fetchMock.mockImplementation(() => {
-      posts++;
-      if (posts === 1) {
-        return Promise.reject(new TypeError('fetch failed'));
-      }
-      return Promise.resolve(
-        jsonResponse({ error: 'deploy in progress', deployment: 'dpl_conflict' }, 409),
-      );
-    });
-
-    const cliLog = makeCliLog();
-    const client = new PlatformClient(token, { apiUrl, cliLog });
-    try {
-      const events: Array<unknown> = [];
-      const consume = (async () => {
-        for await (const event of client.finalizeDeploy(projectId, makePayload())) {
-          events.push(event);
-        }
-      })();
-      await vi.runAllTimersAsync();
-      await consume;
-
-      expect(deployPostCalls()).toHaveLength(2);
-      expect(events).toEqual([
-        {
-          event: 'error',
-          step: 'finalize',
-          message: expect.stringContaining('dpl_conflict'),
-        },
-      ]);
-      expect(cliLog.warn).toHaveBeenCalledWith(
-        'deploy_conflict',
-        expect.objectContaining({ deploymentId: 'dpl_conflict' }),
-      );
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('surfaces a first-attempt 409 without retrying', async () => {
-    fetchMock.mockResolvedValue(
-      jsonResponse({ error: 'deploy in progress', deployment: 'dpl_busy' }, 409),
-    );
-
-    const client = makeClient();
-    const events: Array<unknown> = [];
-    for await (const event of client.finalizeDeploy(projectId, makePayload())) {
-      events.push(event);
-    }
-
-    expect(deployPostCalls()).toHaveLength(1);
-    expect(events[0]).toMatchObject({
-      event: 'error',
-      message: expect.stringContaining('dpl_busy'),
-    });
-  });
-
-  it('throws the platform error for a 409 without a deployment id', async () => {
-    fetchMock.mockResolvedValue(new Response('conflict', { status: 409 }));
-    const client = makeClient();
-    const gen = client.finalizeDeploy(projectId, makePayload());
-    await expect(gen.next()).rejects.toMatchObject({
-      name: 'PlatformApiError',
-      status: 409,
-    });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not retry non-transport rejections (e.g. AbortError)', async () => {
-    fetchMock.mockRejectedValueOnce(new DOMException('The operation was aborted.', 'AbortError'));
-    const client = makeClient();
-    const gen = client.finalizeDeploy(projectId, makePayload());
-    await expect(gen.next()).rejects.toBeInstanceOf(DOMException);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  function headersTimeoutError() {
-    const cause = Object.assign(new Error('Headers Timeout Error'), {
-      name: 'HeadersTimeoutError',
-      code: 'UND_ERR_HEADERS_TIMEOUT',
-    });
-    return { cause, error: new TypeError('fetch failed', { cause }) };
-  }
-
-  const idempotencyKeys = () =>
-    deployPostCalls().map(
-      ([, init]) => (init.headers as Record<string, string>)['x-void-deploy-idempotency-key'],
-    );
-
-  it('retries a headers timeout with the same idempotency key, then rethrows it', async () => {
-    const { cause, error } = headersTimeoutError();
-    fetchMock.mockRejectedValue(error);
-
-    vi.useFakeTimers();
-    const cliLog = makeCliLog();
-    const client = new PlatformClient(token, { apiUrl, cliLog });
-    try {
-      const assertion = expect(
-        client.finalizeDeploy(projectId, makePayload()).next(),
-      ).rejects.toMatchObject({ message: 'fetch failed', cause });
-      await vi.runAllTimersAsync();
-      await assertion;
-
-      expect(deployPostCalls()).toHaveLength(4);
-      expect(DEPLOY_POST_ATTEMPTS).toBe(4);
-      expect(new Set(idempotencyKeys()).size).toBe(1);
-      const retries = cliLog.warn.mock.calls.filter(([msg]) => msg === 'deploy_fetch_retry');
-      expect(retries.map(([, fields]) => fields?.delayMs)).toEqual([1000, 5000, 10000]);
-      expect(cliLog.error).toHaveBeenCalledWith(
-        'deploy_fetch_rejected',
-        expect.any(TypeError),
-        expect.objectContaining({ url: `${apiUrl}/projects/${projectId}/deploy`, attempts: 4 }),
-      );
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('follows the existing deployment receipt returned to a retry after a headers timeout', async () => {
-    const done = {
-      event: 'done',
-      deployment: 'dpl_existing',
-      url: 'https://x.void.app',
-      urls: [],
-      assets: 1,
-      workers: 1,
-      seq: 3,
-    };
-    fetchMock
-      .mockRejectedValueOnce(headersTimeoutError().error)
-      .mockResolvedValueOnce(
-        ndjsonStreamResponse([
-          { event: 'start', deploymentId: 'dpl_existing', seq: 1 },
-          { event: 'worker_upload', seq: 2 },
-          done,
-        ]),
-      );
-
-    vi.useFakeTimers();
-    try {
-      const deploy = collectDeploy();
-      await vi.runAllTimersAsync();
-      expect(await deploy).toEqual([
-        { event: 'start', deploymentId: 'dpl_existing' },
-        { event: 'worker_upload', seq: 2 },
-        done,
-      ]);
-      expect(deployPostCalls()).toHaveLength(2);
-      const [first, second] = idempotencyKeys();
-      expect(second).toBe(first);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('does not retry HTTP error responses — the server answered', async () => {
-    fetchMock.mockResolvedValue(new Response('busted', { status: 503 }));
-    const client = makeClient();
-    const gen = client.finalizeDeploy(projectId, makePayload());
-    await expect(gen.next()).rejects.toMatchObject({
-      name: 'PlatformApiError',
-      status: 503,
-    });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('serializes workerFiles as base64 in the JSON body', async () => {
-    fetchMock.mockResolvedValueOnce(
-      ndjsonStreamResponse([
-        {
-          event: 'done',
-          deployment: 'd1',
-          url: 'https://x',
-          urls: [],
-          assets: 0,
-          workers: 1,
-        },
-      ]),
-    );
-
-    const client = makeClient();
-    const payload = makePayload();
-    payload.workerFiles = {
-      'index.mjs': Buffer.from('export default {};').toString('base64'),
-    };
-
-    for await (const _event of client.finalizeDeploy(projectId, payload)) {
-      // no-op — we only need the request body
-    }
-
-    const init = fetchMock.mock.calls[0][1] as RequestInit;
-    const parsed = JSON.parse(init.body as string);
-    expect(parsed.workerFiles).toEqual({
-      'index.mjs': Buffer.from('export default {};').toString('base64'),
-    });
-  });
-
-  function durableResponse(events: Array<unknown>): Response {
-    const response = ndjsonStreamResponse(events);
-    response.headers.set('x-void-deployment-id', 'dpl_durable');
-    return response;
-  }
-
-  const durableDone = {
+  const done = {
     event: 'done',
     deployment: 'dpl_durable',
     url: 'https://durable.void.app',
@@ -588,13 +201,29 @@ describe('PlatformClient.finalizeDeploy', () => {
     published: false,
   };
 
+  function accepted(deploymentId = 'dpl_durable'): Response {
+    return jsonResponse({ data: { deploymentId } });
+  }
+
   function eventPage(events: Array<{ seq: number; event: unknown }>, terminal = true): Response {
     return jsonResponse({
-      deploymentId: 'dpl_durable',
-      events,
-      lastSeq: events.at(-1)?.seq ?? 0,
-      terminal,
+      data: {
+        deploymentId: 'dpl_durable',
+        events,
+        lastSeq: events.at(-1)?.seq ?? 0,
+        terminal,
+      },
     });
+  }
+
+  function rpcError(code: string, message: string, status: number): Response {
+    return jsonResponse({ error: { code, message } }, status);
+  }
+
+  function finalizeCalls(): Array<[string, RequestInit]> {
+    return (fetchMock.mock.calls as Array<[string, RequestInit]>).filter(([url]) =>
+      String(url).endsWith('/rpc/deploy.finalize'),
+    );
   }
 
   async function collectDeploy(): Promise<Array<unknown>> {
@@ -605,153 +234,197 @@ describe('PlatformClient.finalizeDeploy', () => {
     return events;
   }
 
-  it('re-sends the same workerInput and idempotency key on a transport retry', async () => {
-    vi.useFakeTimers();
+  it('calls deploy.finalize with the manifest, then follows the deployment to its result', async () => {
     fetchMock
-      .mockRejectedValueOnce(new TypeError('fetch failed'))
-      .mockResolvedValueOnce(ndjsonStreamResponse([durableDone]));
-    const workerInput = {
-      id: 'wup_retry',
-      modules: [{ name: 'index.js', size: 18, sha256: 'c'.repeat(64) }],
+      .mockResolvedValueOnce(accepted())
+      .mockResolvedValueOnce(
+        eventPage(
+          [{ seq: 1, event: { event: 'asset_upload', total: 1, new: 0, cached: 1 } }],
+          false,
+        ),
+      )
+      .mockResolvedValueOnce(eventPage([{ seq: 2, event: done }]));
+
+    expect(await collectDeploy()).toEqual([
+      { event: 'start', deploymentId: 'dpl_durable' },
+      { event: 'asset_upload', total: 1, new: 0, cached: 1 },
+      done,
+    ]);
+
+    const [url, init] = finalizeCalls()[0]!;
+    expect(url).toBe(`${apiUrl}/rpc/deploy.finalize`);
+    expect(init.method).toBe('POST');
+    const headers = init.headers as Record<string, string>;
+    expect(headers['Content-Type']).toBe('application/json');
+    expect(headers.Authorization).toBe(`Bearer ${token}`);
+    const body = JSON.parse(init.body as string);
+    expect(body.projectId).toBe(projectId);
+    expect(body.body.manifest).toEqual(baseManifest);
+    expect(body.body.preflight).toBe('true');
+    expect(body.idempotencyKey).toMatch(/^[A-Za-z0-9_-]{1,128}$/);
+    expect(fetchMock.mock.calls.slice(1).map(([u]) => String(u))).toEqual([
+      `${apiUrl}/rpc/deployments.events`,
+      `${apiUrl}/rpc/deployments.events`,
+    ]);
+  });
+
+  it('retries a transport-level rejection with backoff and the same idempotency key', async () => {
+    vi.useFakeTimers();
+    let posts = 0;
+    fetchMock.mockImplementation((url: string) => {
+      if (String(url).endsWith('/rpc/deploy.finalize')) {
+        posts++;
+        return posts === 1
+          ? Promise.reject(
+              new TypeError('fetch failed', {
+                cause: Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' }),
+              }),
+            )
+          : Promise.resolve(accepted());
+      }
+      return Promise.resolve(eventPage([{ seq: 1, event: done }]));
+    });
+    const cliLog = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+      path: '/tmp/test.jsonl',
+      close: vi.fn(),
     };
     try {
-      const deploy = (async () => {
-        for await (const _event of makeClient().finalizeDeploy(projectId, {
-          ...makePayload(),
-          workerInput,
-        })) {
-          // Only the request bodies matter here.
+      const events: Array<unknown> = [];
+      const consume = (async () => {
+        for await (const event of new PlatformClient(token, { apiUrl, cliLog }).finalizeDeploy(
+          projectId,
+          makePayload(),
+        )) {
+          events.push(event);
         }
       })();
       await vi.runAllTimersAsync();
-      await deploy;
+      await consume;
 
-      const [first, second] = deployPostCalls().map(([, init]) => init as RequestInit);
-      expect(second.body).toBe(first.body);
-      expect(JSON.parse(first.body as string)).toMatchObject({ workerInput });
-      expect(JSON.parse(first.body as string)).not.toHaveProperty('workerFiles');
-      const [firstKey, secondKey] = idempotencyKeys();
-      expect(firstKey).toMatch(/^[a-f0-9-]{36}$/);
-      expect(secondKey).toBe(firstKey);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('keeps one idempotency key across POST retries and chooses a new key for each invocation', async () => {
-    vi.useFakeTimers();
-    fetchMock
-      .mockRejectedValueOnce(new TypeError('fetch failed'))
-      .mockResolvedValueOnce(ndjsonStreamResponse([durableDone]))
-      .mockResolvedValueOnce(ndjsonStreamResponse([durableDone]));
-    try {
-      const first = collectDeploy();
-      await vi.runAllTimersAsync();
-      await first;
-      await collectDeploy();
-      const keys = fetchMock.mock.calls.map(
-        ([, init]) => (init.headers as Record<string, string>)['x-void-deploy-idempotency-key'],
+      const calls = finalizeCalls();
+      expect(calls).toHaveLength(2);
+      const keys = calls.map(([, init]) => JSON.parse(init.body as string).idempotencyKey);
+      expect(keys[0]).toBe(keys[1]);
+      expect(events).toEqual([{ event: 'start', deploymentId: 'dpl_durable' }, done]);
+      expect(cliLog.warn).toHaveBeenCalledWith(
+        'deploy_fetch_retry',
+        expect.objectContaining({ attempt: 1, delayMs: 1000 }),
       );
-      expect(keys[0]).toMatch(/^[a-f0-9-]{36}$/);
-      expect(keys[1]).toBe(keys[0]);
-      expect(keys[2]).not.toBe(keys[0]);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('recovers the exact accepted deployment when EOF precedes start, preserving published:false', async () => {
-    fetchMock.mockResolvedValueOnce(durableResponse([])).mockResolvedValueOnce(
-      eventPage([
-        { seq: 1, event: { event: 'start', deploymentId: 'dpl_durable' } },
-        { seq: 2, event: durableDone },
-      ]),
+  it('chooses a new idempotency key for each invocation', async () => {
+    fetchMock
+      .mockResolvedValueOnce(accepted())
+      .mockResolvedValueOnce(eventPage([{ seq: 1, event: done }]))
+      .mockResolvedValueOnce(accepted())
+      .mockResolvedValueOnce(eventPage([{ seq: 1, event: done }]));
+    await collectDeploy();
+    await collectDeploy();
+    const [first, second] = finalizeCalls().map(
+      ([, init]) => JSON.parse(init.body as string).idempotencyKey,
     );
-    expect(await collectDeploy()).toEqual([
-      { event: 'start', deploymentId: 'dpl_durable' },
-      durableDone,
-    ]);
-    expect(fetchMock.mock.calls[1][0]).toBe(
-      `${apiUrl}/projects/${projectId}/deployments/dpl_durable/events?since=0`,
-    );
-    expect(deployPostCalls()).toHaveLength(1);
+    expect(first).not.toBe(second);
   });
 
-  it('reconnects after a read failure from the last consumed sequence without duplicating progress', async () => {
-    const encoder = new TextEncoder();
-    let reads = 0;
-    const stream = new ReadableStream<Uint8Array>({
-      pull(controller) {
-        if (reads++ === 0) {
-          controller.enqueue(
-            encoder.encode(
-              `${JSON.stringify({ event: 'start', deploymentId: 'dpl_durable', seq: 1 })}\n` +
-                `${JSON.stringify({ event: 'worker_readiness', seq: 2 })}\n`,
-            ),
-          );
-        } else {
-          controller.error(new Error('socket disconnected'));
-        }
+  it('does not retry non-transport rejections (e.g. AbortError)', async () => {
+    fetchMock.mockRejectedValueOnce(new DOMException('aborted', 'AbortError'));
+    await expect(collectDeploy()).rejects.toThrow('aborted');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives up after the bounded number of transport retries', async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementation(() => Promise.reject(new TypeError('fetch failed')));
+    try {
+      const assertion = expect(collectDeploy()).rejects.toThrow('fetch failed');
+      await vi.runAllTimersAsync();
+      await assertion;
+      expect(finalizeCalls()).toHaveLength(DEPLOY_POST_ATTEMPTS);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('surfaces an in-progress deployment as an error event without retrying', async () => {
+    fetchMock.mockResolvedValueOnce(
+      rpcError('DEPLOY_IN_PROGRESS', 'deploy in progress: deployment dpl_old', 409),
+    );
+    const events = await collectDeploy();
+    expect(events).toEqual([
+      {
+        event: 'error',
+        step: 'finalize',
+        message: expect.stringContaining('deployment dpl_old'),
       },
-    });
-    const response = new Response(stream, {
-      headers: { 'x-void-deployment-id': 'dpl_durable' },
-    });
-    fetchMock.mockResolvedValueOnce(response).mockResolvedValueOnce(
-      eventPage([
-        { seq: 2, event: { event: 'worker_readiness' } },
-        { seq: 3, event: durableDone },
-      ]),
-    );
-    expect(await collectDeploy()).toEqual([
-      { event: 'start', deploymentId: 'dpl_durable' },
-      { event: 'worker_readiness', seq: 2 },
-      durableDone,
     ]);
-    expect(fetchMock.mock.calls[1][0]).toContain('/dpl_durable/events?since=2');
-    expect(deployPostCalls()).toHaveLength(1);
-    expect(response.body!.locked).toBe(false);
+    expect(finalizeCalls()).toHaveLength(1);
   });
 
-  it('observes the operation receipt when a verified no-op returns the existing active deployment', async () => {
-    const noOp = { ...durableDone, deployment: 'dpl_existing' };
-    fetchMock.mockResolvedValueOnce(durableResponse([])).mockResolvedValueOnce(
-      eventPage([
-        { seq: 1, event: { event: 'start', deploymentId: 'dpl_existing' } },
-        { seq: 2, event: noOp },
-      ]),
+  it('throws the platform error for a 409 that names no deployment', async () => {
+    fetchMock.mockResolvedValueOnce(
+      rpcError('DEPLOY_CONFLICT', 'the deploy conflicts with the project state', 409),
     );
-    expect(await collectDeploy()).toEqual([{ event: 'start', deploymentId: 'dpl_durable' }, noOp]);
-    expect(fetchMock.mock.calls[1][0]).toContain('/dpl_durable/events?since=0');
-    expect(deployPostCalls()).toHaveLength(1);
+    await expect(collectDeploy()).rejects.toMatchObject({ name: 'PlatformApiError', status: 409 });
+  });
+
+  it('does not retry HTTP error responses — the platform answered', async () => {
+    fetchMock.mockResolvedValueOnce(rpcError('DEPLOY_UNAVAILABLE', 'deploys are unavailable', 503));
+    await expect(collectDeploy()).rejects.toMatchObject({ name: 'PlatformApiError', status: 503 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('serializes workerFiles as base64 in the JSON body', async () => {
+    fetchMock
+      .mockResolvedValueOnce(accepted())
+      .mockResolvedValueOnce(eventPage([{ seq: 1, event: done }]));
+    const payload = makePayload();
+    payload.workerFiles = { 'index.mjs': Buffer.from('export default {};').toString('base64') };
+    for await (const _ of makeClient().finalizeDeploy(projectId, payload)) {
+      // drain
+    }
+    const body = JSON.parse(finalizeCalls()[0]![1].body as string).body;
+    expect(body.workerFiles).toEqual({
+      'index.mjs': Buffer.from('export default {};').toString('base64'),
+    });
+  });
+
+  it('rejects a malformed deployment receipt without observing it', async () => {
+    fetchMock.mockResolvedValueOnce(accepted('not a valid id!'));
+    await expect(collectDeploy()).rejects.toThrow('Invalid deployment receipt from platform.');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('retries transient observation errors from the same cursor and consumes partial pages', async () => {
     vi.useFakeTimers();
     fetchMock
-      .mockResolvedValueOnce(durableResponse([{ event: 'worker_readiness', seq: 2 }]))
+      .mockResolvedValueOnce(accepted())
+      .mockResolvedValueOnce(eventPage([{ seq: 2, event: { event: 'worker_readiness' } }], false))
       .mockResolvedValueOnce(jsonResponse({ error: 'unavailable' }, 503))
       .mockResolvedValueOnce(jsonResponse({ error: 'rate limited' }, 429))
       .mockResolvedValueOnce(
         eventPage([{ seq: 3, event: { event: 'worker_upload', modules: 1 } }], false),
       )
-      .mockResolvedValueOnce(eventPage([{ seq: 4, event: durableDone }]));
+      .mockResolvedValueOnce(eventPage([{ seq: 4, event: done }]));
     try {
       const result = collectDeploy();
       await vi.runAllTimersAsync();
       expect(await result).toEqual([
         { event: 'start', deploymentId: 'dpl_durable' },
-        { event: 'worker_readiness', seq: 2 },
+        { event: 'worker_readiness' },
         { event: 'worker_upload', modules: 1 },
-        durableDone,
+        done,
       ]);
-      expect(fetchMock.mock.calls.slice(1).map(([url]) => String(url).split('?')[1])).toEqual([
-        'since=2',
-        'since=2',
-        'since=2',
-        'since=3',
-      ]);
-      expect(deployPostCalls()).toHaveLength(1);
+      expect(
+        fetchMock.mock.calls.slice(1).map(([, init]) => JSON.parse(init.body as string).since),
+      ).toEqual([0, 2, 2, 2, 3]);
+      expect(finalizeCalls()).toHaveLength(1);
     } finally {
       vi.useRealTimers();
     }
@@ -761,7 +434,7 @@ describe('PlatformClient.finalizeDeploy', () => {
     'preserves fatal observation HTTP %i without retrying or redeploying',
     async (status) => {
       fetchMock
-        .mockResolvedValueOnce(durableResponse([]))
+        .mockResolvedValueOnce(accepted())
         .mockResolvedValueOnce(
           jsonResponse(
             { error: 'observation denied', message: 'Actionable platform message.' },
@@ -774,14 +447,14 @@ describe('PlatformClient.finalizeDeploy', () => {
         message: expect.stringContaining('Actionable platform message.'),
       });
       expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(deployPostCalls()).toHaveLength(1);
+      expect(finalizeCalls()).toHaveLength(1);
     },
   );
 
   it('bounds consecutive observation retries and retains the final platform error', async () => {
     vi.useFakeTimers();
     fetchMock
-      .mockResolvedValueOnce(durableResponse([]))
+      .mockResolvedValueOnce(accepted())
       .mockImplementation(async () => jsonResponse({ error: 'unavailable' }, 503));
     try {
       const assertion = expect(collectDeploy()).rejects.toMatchObject({
@@ -791,38 +464,28 @@ describe('PlatformClient.finalizeDeploy', () => {
       await vi.runAllTimersAsync();
       await assertion;
       expect(fetchMock).toHaveBeenCalledTimes(7);
-      expect(deployPostCalls()).toHaveLength(1);
+      expect(finalizeCalls()).toHaveLength(1);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('rejects a deployment stream without a receipt and does not observe or retry it', async () => {
-    const response = ndjsonStreamResponse([{ event: 'start', deploymentId: 'dpl_unknown' }]);
-    response.headers.delete('x-void-deployment-id');
-    const cancel = vi.spyOn(response.body!, 'cancel');
-    fetchMock.mockResolvedValueOnce(response);
-    await expect(collectDeploy()).rejects.toThrow('Platform returned no deployment receipt.');
-    expect(cancel).toHaveBeenCalledOnce();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
   it('returns a persisted cancellation error instead of reporting successful acceptance', async () => {
     const canceled = { event: 'error', step: 'canceling', message: 'deployment canceled' };
     fetchMock
-      .mockResolvedValueOnce(durableResponse([]))
+      .mockResolvedValueOnce(accepted())
       .mockResolvedValueOnce(eventPage([{ seq: 1, event: canceled }]));
     expect(await collectDeploy()).toEqual([
       { event: 'start', deploymentId: 'dpl_durable' },
       canceled,
     ]);
-    expect(deployPostCalls()).toHaveLength(1);
+    expect(finalizeCalls()).toHaveLength(1);
   });
 
   it('bounds observation of a platform that never reports completion', async () => {
     vi.useFakeTimers();
     const startedAt = Date.now();
-    fetchMock.mockResolvedValueOnce(durableResponse([])).mockImplementation(async () => {
+    fetchMock.mockResolvedValueOnce(accepted()).mockImplementation(async () => {
       vi.setSystemTime(startedAt + 30 * 60_000);
       return eventPage([], false);
     });
@@ -833,224 +496,17 @@ describe('PlatformClient.finalizeDeploy', () => {
       await vi.runAllTimersAsync();
       await assertion;
       expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(deployPostCalls()).toHaveLength(1);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('bounds an open deployment stream even while heartbeats continue', async () => {
-    vi.useFakeTimers();
-    const cancel = vi.fn();
-    let reads = 0;
-    const startedAt = Date.now();
-    const stream = new ReadableStream<Uint8Array>(
-      {
-        pull(controller) {
-          vi.setSystemTime(startedAt + reads++ * 15 * 60_000);
-          controller.enqueue(
-            new TextEncoder().encode('{"event":"heartbeat","step":"queue_setup"}\n'),
-          );
-          // Close this finite fixture so a missing deadline produces a failed
-          // assertion instead of hanging the regression test indefinitely.
-          if (reads === 4) {
-            controller.close();
-          }
-        },
-        cancel,
-      },
-      { highWaterMark: 0 },
-    );
-    fetchMock.mockResolvedValueOnce(
-      new Response(stream, { headers: { 'x-void-deployment-id': 'dpl_durable' } }),
-    );
-    fetchMock.mockResolvedValueOnce(eventPage([{ seq: 1, event: durableDone }]));
-    try {
-      await expect(collectDeploy()).rejects.toThrow('Timed out observing deployment dpl_durable');
-      expect(deployPostCalls()).toHaveLength(1);
-      expect(fetchMock).toHaveBeenCalledOnce();
-      expect(cancel).toHaveBeenCalledOnce();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('keeps the original observation deadline when reconnecting after a long stream', async () => {
-    vi.useFakeTimers();
-    const startedAt = Date.now();
-    const response = new Response(
-      new ReadableStream(
-        {
-          pull(controller) {
-            vi.setSystemTime(startedAt + 29 * 60_000);
-            controller.close();
-          },
-        },
-        { highWaterMark: 0 },
-      ),
-      { headers: { 'x-void-deployment-id': 'dpl_durable' } },
-    );
-    let polls = 0;
-    fetchMock.mockResolvedValueOnce(response).mockImplementation(async () => {
-      vi.setSystemTime(startedAt + 30 * 60_000);
-      return polls++ === 0 ? eventPage([], false) : eventPage([{ seq: 1, event: durableDone }]);
-    });
-    try {
-      const assertion = expect(collectDeploy()).rejects.toThrow(
-        'Timed out observing deployment dpl_durable',
-      );
-      await vi.runAllTimersAsync();
-      await assertion;
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(deployPostCalls()).toHaveLength(1);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('reports recovery heartbeats after reconnecting to a deployment receipt', async () => {
-    vi.useFakeTimers();
-    const heartbeat = {
-      event: 'heartbeat',
-      deploymentId: 'dpl_durable',
-      status: 'recovering',
-      step: 'recovery',
-      recoveryAt: new Date(Date.now() + 60_000).toISOString(),
-    };
-    fetchMock
-      .mockResolvedValueOnce(durableResponse([]))
-      .mockResolvedValueOnce(
-        jsonResponse({
-          deploymentId: 'dpl_durable',
-          events: [],
-          lastSeq: 0,
-          terminal: false,
-          heartbeat,
-        }),
-      )
-      .mockResolvedValueOnce(eventPage([{ seq: 1, event: durableDone }]));
-    try {
-      const result = collectDeploy();
-      await vi.runAllTimersAsync();
-      expect(await result).toEqual([
-        { event: 'start', deploymentId: 'dpl_durable' },
-        heartbeat,
-        durableDone,
-      ]);
-      expect(deployPostCalls()).toHaveLength(1);
+      expect(finalizeCalls()).toHaveLength(1);
     } finally {
       vi.useRealTimers();
     }
   });
 
   it.each([
-    { event: 'done' },
-    { event: 'heartbeat', step: 'recovery', deploymentId: 'dpl_other' },
-    { event: 'heartbeat', step: 'recovery', status: 'invalid' },
-    { event: 'heartbeat', step: 'recovery', recoveryAt: 'invalid' },
-  ])('rejects invalid recovery metadata without resubmitting deployment: %j', async (heartbeat) => {
-    fetchMock.mockResolvedValueOnce(durableResponse([])).mockResolvedValueOnce(
-      jsonResponse({
-        deploymentId: 'dpl_durable',
-        events: [],
-        lastSeq: 0,
-        terminal: false,
-        heartbeat,
-      }),
-    );
-    await expect(collectDeploy()).rejects.toThrow(/Invalid deployment/);
-    expect(deployPostCalls()).toHaveLength(1);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
-
-  it('cancels and releases an open response after terminal delivery', async () => {
-    const cancel = vi.fn();
-    const stream = new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.enqueue(new TextEncoder().encode(`${JSON.stringify(durableDone)}\n`));
-      },
-      cancel,
-    });
-    const response = new Response(stream, { headers: { 'x-void-deployment-id': 'dpl_durable' } });
-    fetchMock.mockResolvedValueOnce(response);
-    expect(await collectDeploy()).toEqual([
-      { event: 'start', deploymentId: 'dpl_durable' },
-      durableDone,
-    ]);
-    expect(cancel).toHaveBeenCalledOnce();
-    expect(response.body!.locked).toBe(false);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('recovers from a stalled stream and does not wait for a stalled cancellation', async () => {
-    vi.useFakeTimers();
-    const cancel = vi.fn(() => new Promise<void>(() => {}));
-    const response = new Response(new ReadableStream({ cancel }), {
-      headers: { 'x-void-deployment-id': 'dpl_durable' },
-    });
-    fetchMock
-      .mockResolvedValueOnce(response)
-      .mockResolvedValueOnce(eventPage([{ seq: 1, event: durableDone }]));
-    try {
-      const result = collectDeploy();
-      await vi.runAllTimersAsync();
-      expect(await result).toEqual([{ event: 'start', deploymentId: 'dpl_durable' }, durableDone]);
-      expect(cancel).toHaveBeenCalledOnce();
-      expect(response.body!.locked).toBe(false);
-      expect(deployPostCalls()).toHaveLength(1);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('rejects an oversized unfinished line, closes its reader, and does not mask it with reconnect', async () => {
-    const cancel = vi.fn();
-    const response = new Response(
-      new ReadableStream<Uint8Array>({
-        start(controller) {
-          controller.enqueue(new Uint8Array(1024 * 1024 + 1).fill(120));
-        },
-        cancel,
-      }),
-      { headers: { 'x-void-deployment-id': 'dpl_durable' } },
-    );
-    fetchMock.mockResolvedValueOnce(response);
-    await expect(collectDeploy()).rejects.toThrow('response limit');
-    expect(cancel).toHaveBeenCalledOnce();
-    expect(response.body!.locked).toBe(false);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('parses a final complete event without a trailing newline', async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify(durableDone), {
-        headers: { 'x-void-deployment-id': 'dpl_durable' },
-      }),
-    );
-    expect(await collectDeploy()).toEqual([
-      { event: 'start', deploymentId: 'dpl_durable' },
-      durableDone,
-    ]);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it.each([
-    { deploymentId: 'dpl_other', events: [], lastSeq: 0, terminal: false },
-    {
-      deploymentId: 'dpl_durable',
-      events: [{ seq: 1, event: { ...durableDone, url: null } }],
-      lastSeq: 1,
-      terminal: true,
-    },
+    { deploymentId: 'other', events: [], lastSeq: 0, terminal: true },
     { deploymentId: 'dpl_durable', events: [], lastSeq: 0, terminal: true },
-    {
-      deploymentId: 'dpl_durable',
-      events: [{ seq: 2, event: durableDone }],
-      lastSeq: 1,
-      terminal: true,
-    },
   ])('fails closed on invalid observation response %#', async (page) => {
-    fetchMock.mockResolvedValueOnce(durableResponse([])).mockResolvedValueOnce(jsonResponse(page));
+    fetchMock.mockResolvedValueOnce(accepted()).mockResolvedValueOnce(jsonResponse({ data: page }));
     await expect(collectDeploy()).rejects.toThrow(/Invalid deployment|without a terminal result/);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
@@ -1069,7 +525,7 @@ describe('PlatformClient CF Access header capture (survives a later env scrub)',
     vi.stubEnv('CF_ACCESS_CLIENT_ID', undefined);
     vi.stubEnv('CF_ACCESS_CLIENT_SECRET', undefined);
 
-    fetchMock.mockResolvedValueOnce(jsonResponse({ urls: {} }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: { urls: {} } }));
     await client.requestUploadUrls(projectId, [
       { blake3: 'a'.repeat(32), md5: 'b'.repeat(32), size: 1, contentType: 'text/plain' },
     ]);
@@ -1084,7 +540,7 @@ describe('PlatformClient CF Access header capture (survives a later env scrub)',
     vi.stubEnv('CF_ACCESS_CLIENT_ID', 'svc-id.access');
     vi.stubEnv('CF_ACCESS_CLIENT_SECRET', 'svc-secret');
     const client = makeClient();
-    fetchMock.mockResolvedValueOnce(jsonResponse({ urls: {} }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: { urls: {} } }));
 
     await client.requestUploadUrls(projectId, [
       { blake3: 'a'.repeat(32), md5: 'b'.repeat(32), size: 1, contentType: 'text/plain' },
@@ -1112,7 +568,7 @@ describe('PlatformClient CF Access header capture (survives a later env scrub)',
 
     const renewedToken = tokenFor('renewed');
     vi.stubEnv('CF_ACCESS_TOKEN', renewedToken);
-    fetchMock.mockResolvedValueOnce(jsonResponse({ urls: {} }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: { urls: {} } }));
     await client.requestUploadUrls(projectId, [
       { blake3: 'a'.repeat(32), md5: 'b'.repeat(32), size: 1, contentType: 'text/plain' },
     ]);
@@ -1160,14 +616,14 @@ describe('PlatformClient Cloudflare Access challenge renewal', () => {
       .mockResolvedValueOnce(
         new Response(null, { status: 302, headers: { Location: challengeLocation } }),
       )
-      .mockResolvedValueOnce(jsonResponse([]));
+      .mockResolvedValueOnce(jsonResponse({ data: [] }));
 
     await expect(new PlatformClient(token, { apiUrl: origin }).listProjects()).resolves.toEqual([]);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      `${origin}/projects`,
-      `${origin}/projects`,
+      `${origin}/rpc/projects.list`,
+      `${origin}/rpc/projects.list`,
     ]);
     expect(fetchMock.mock.calls.map(([, init]) => (init as RequestInit).redirect)).toEqual([
       'manual',

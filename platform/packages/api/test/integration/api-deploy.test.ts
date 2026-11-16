@@ -22,7 +22,7 @@ import {
   updateUserPlan,
   type Db,
 } from '../../src/db.ts';
-import app from '../../src/index.ts';
+import rawApp from '../../src/index.ts';
 import { writePlanCatalog } from '../../src/plans.ts';
 import * as projectAccess from '../../src/project-access.ts';
 import * as projectIngress from '../../src/project-ingress.ts';
@@ -60,7 +60,11 @@ import {
   type MockCfApiHandle,
   type TestEnv,
   rpcData,
+  rpcRequest,
+  withLegacyDeploy,
 } from './helpers.ts';
+
+const app = withLegacyDeploy(rawApp);
 import { setTestDb } from './setup.ts';
 
 const nativeSetTimeout = globalThis.setTimeout.bind(globalThis);
@@ -602,13 +606,13 @@ describe('POST /projects/:id/deploy', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns 404 for nonexistent project', async () => {
+  it('returns 403 for nonexistent project', async () => {
     const user = await createTestUser(env.db);
     mockCfApi();
 
     const res = await app.fetch(await buildDeployRequest(env, 'proj_nonexistent', user.jwt), env);
-    expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ error: 'project not found', message: expect.any(String) });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toMatchObject({ error: 'forbidden' });
   });
 
   it('returns 403 when user does not own project', async () => {
@@ -4374,6 +4378,28 @@ describe('Deploy serialization (concurrent deploy guard)', () => {
     const body = (await res.json()) as { error: string; deployment: string };
     expect(body.error).toBe('deploy in progress');
     expect(body.deployment).toBe('dpl_active');
+  });
+
+  it('answers deploy.finalize with a coded refusal that names the deployment in flight', async () => {
+    const user = await createTestUser(env.db);
+    const project = await createTestProject(env.db, user.id, 'finalize-busy');
+    mockCfApi();
+    await env.db.insert(deployments).values({
+      id: 'dpl_busy',
+      project_id: project.id,
+      status: 'uploading',
+      created_at: sql`now()`,
+    });
+
+    const legacy = await buildDeployRequest(env, project.id, user.jwt);
+    const res = await rawApp.fetch(
+      rpcRequest('deploy.finalize', user.jwt, { projectId: project.id, body: await legacy.json() }),
+      env,
+    );
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: { code: 'DEPLOY_IN_PROGRESS', message: 'deploy in progress: deployment dpl_busy' },
+    });
   });
 
   it('fences a stale deployment before allowing a replacement deploy', async () => {

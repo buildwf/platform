@@ -77,7 +77,7 @@ For publishing, package the built app with [`prepareDeployArtifact`](/reference/
 
 Redirect the browser to the returned `authorization_url`. Exchange its code with the publish verifier and the same registered callback. The response includes `project_id`, `approval_id`, and a `deploy:approve` access token. This publish flow is a Void extension; requesting that scope in an ordinary sign-in does not authorize deployment.
 
-Use the token to request URLs from `POST /projects/:id/deploy/upload-urls`, upload the declared assets, and send the artifact to `POST /projects/:id/deploy`. Set `x-void-deploy-idempotency-key` to `approval_id`. Deployment uses Void's managed deployment protocol and requires the platform deployment Queue. The credential cannot read secrets, mint project tokens, delete projects, or deploy different bytes.
+Use the token to request URLs from the `deploy.uploadUrls` procedure (`POST /rpc/deploy.uploadUrls`), upload the declared assets, and send the artifact to `deploy.finalize` (`POST /rpc/deploy.finalize`) as `{ projectId, body, idempotencyKey }`. Set `idempotencyKey` to `approval_id`. Deployment uses Void's managed deployment protocol and requires the platform deployment Queue. The credential cannot read secrets, mint project tokens, delete projects, or deploy different bytes.
 
 Revoke a connection with `POST /oauth/revoke`, authenticated as the client, using either its access token or its refresh token. Void does not issue an OpenID Connect ID token.
 

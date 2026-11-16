@@ -20,7 +20,7 @@ import {
   vi,
 } from 'vite-plus/test';
 import { cancelDeployment } from '../../src/db.ts';
-import app from '../../src/index.ts';
+import rawApp from '../../src/index.ts';
 import * as projectIngress from '../../src/project-ingress.ts';
 import { deployments, projects } from '../../src/schema.ts';
 import { STATIC_RETENTION_LIMIT } from '../../src/tiers.ts';
@@ -35,7 +35,10 @@ import {
   readAllEvents,
   type TestEnv,
   rpcData,
+  withLegacyDeploy,
 } from './helpers.ts';
+
+const app = withLegacyDeploy(rawApp);
 
 let env: TestEnv;
 
@@ -1921,7 +1924,7 @@ describe('direct Worker module upload', () => {
       new Request(`http://localhost/rpc/deploy.workerUploadUrls`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId: projectId, ...body }),
+        body: JSON.stringify({ projectId: projectId, ...(body as object) }),
       }),
       env,
     );
@@ -2276,31 +2279,18 @@ describe('direct Worker module upload', () => {
 
   it('points an oversized inline Worker body at a CLI upgrade', async () => {
     const project = await createTestProject(env.db, user.id, 'wu-inline-cap');
-    const chunk = new Uint8Array(MiB).fill(0x61);
-    let sent = 0;
-    const body = new ReadableStream<Uint8Array>({
-      pull(controller) {
-        if (sent > 64) {
-          controller.close();
-          return;
-        }
-        sent++;
-        controller.enqueue(chunk);
-      },
-    });
     const res = await app.fetch(
       new Request(`http://localhost/projects/${project.id}/deploy`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
-        body,
-        duplex: 'half',
-      } as RequestInit),
+        body: JSON.stringify({ workerFiles: { 'index.js': 'a'.repeat(65 * MiB) } }),
+      }),
       env,
     );
     expect(res.status).toBe(413);
-    const { error } = (await res.json()) as { error: string };
-    expect(error).toContain('source maps');
-    expect(error).toContain('Upgrade the void CLI');
-    expect(error).not.toContain('asset bytes');
+    const { message } = (await res.json()) as { message: string };
+    expect(message).toContain('source maps');
+    expect(message).toContain('Upgrade the void CLI');
+    expect(message).not.toContain('asset bytes');
   });
 });

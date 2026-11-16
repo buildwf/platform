@@ -25,7 +25,7 @@ import { createCodeChallenge } from '../../src/auth/pkce.ts';
 import { createHumanSession, revokeConnectionSessions } from '../../src/auth/sessions.ts';
 import { processDeploymentBatch } from '../../src/deployment-execution.ts';
 import type { ApiEnv } from '../../src/env.ts';
-import app from '../../src/index.ts';
+import rawApp from '../../src/index.ts';
 import { setPlatformSetting } from '../../src/platform-settings.ts';
 import {
   oauthClients,
@@ -49,7 +49,10 @@ import {
   readAllEvents,
   type TestEnv,
   rpcData,
+  withLegacyDeploy,
 } from './helpers.ts';
+
+const app = withLegacyDeploy(rawApp);
 
 let env: TestEnv & { DEPLOYMENTS_QUEUE?: Queue };
 let user: Awaited<ReturnType<typeof createTestUser>>;

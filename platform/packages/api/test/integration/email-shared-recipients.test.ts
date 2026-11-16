@@ -24,7 +24,7 @@ import {
   removeSharedEmailRecipients,
 } from '../../src/email/shared-recipient-service.ts';
 import type { ApiEnv } from '../../src/env.ts';
-import app from '../../src/index.ts';
+import rawApp from '../../src/index.ts';
 import { deployments, operatorEvents, projects, resources } from '../../src/schema.ts';
 import { callsByTag, stubCustomerCf } from './email-domain-cf-stub.ts';
 import {
@@ -37,7 +37,10 @@ import {
   skipOrphanSweepDelay,
   teardownEnv,
   type TestEnv,
+  withLegacyDeploy,
 } from './helpers.ts';
+
+const app = withLegacyDeploy(rawApp);
 
 let env: TestEnv;
 beforeAll(async () => {

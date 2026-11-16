@@ -12,7 +12,7 @@ import {
 import { computeAssetHash } from '../../src/assets.ts';
 import { getDeployment } from '../../src/db.ts';
 import type { ApiEnv } from '../../src/env.ts';
-import app from '../../src/index.ts';
+import rawApp from '../../src/index.ts';
 import { settleDeploymentForSandboxDrain } from '../../src/routes/deploy.ts';
 import { deployments, platformSettings, projects, projectZeroTrust } from '../../src/schema.ts';
 import {
@@ -23,7 +23,10 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
+  withLegacyDeploy,
 } from './helpers.ts';
+
+const app = withLegacyDeploy(rawApp);
 
 let env: TestEnv;
 

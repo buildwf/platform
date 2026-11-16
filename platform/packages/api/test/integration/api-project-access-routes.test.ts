@@ -65,6 +65,7 @@ function rpc(name: string, jwt: string, body: unknown): Request {
 
 /** Deploy routes that are procedures now, by their old path suffix. */
 const RPC_ROUTES: Record<string, string> = {
+  'POST /deploy': 'deploy.finalize',
   '/deploy/preflight': 'deploy.preflight',
   '/deploy/upload-urls': 'deploy.uploadUrls',
   'POST /domains': 'domains.add',
@@ -201,6 +202,7 @@ describe('project route membership capabilities', () => {
             projectId: project.id,
             assets: [],
             assetManifest: {},
+            body: {},
             hostname: 'nope.example.com',
             email: 'nobody@example.com',
             role: 'admin',

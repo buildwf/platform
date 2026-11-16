@@ -18,17 +18,14 @@ import { isAdminSuspended } from '../suspension.ts';
  * 15-minute CI token could take over the project. Default-deny: anything not
  * listed here is rejected with 403.
  *
- * Procedures under `/rpc` have their own allowlist below. The REST calls still open to a
- * deploy token, traced from `packages/void/src/cli/{deploy,client}.ts`:
- *   - `POST /projects/:id/deploy`              manifest finalize
+ * Procedures under `/rpc` have their own allowlist below. No REST call is open to a deploy
+ * token any more.
  *
  * `:id` is matched against `payload.project` by the caller — the entries
  * below carry a `null` segment placeholder for the project id.
  */
 type DeployAllowEntry = Readonly<{ method: string; segments: ReadonlyArray<string | null> }>;
-const DEPLOY_TOKEN_ALLOWLIST: ReadonlyArray<DeployAllowEntry> = [
-  { method: 'POST', segments: ['projects', null, 'deploy'] },
-];
+const DEPLOY_TOKEN_ALLOWLIST: ReadonlyArray<DeployAllowEntry> = [];
 
 /**
  * Procedures a scoped deploy token may call: the ones `void deploy` makes. Each checks the token's
@@ -44,6 +41,7 @@ const DEPLOY_TOKEN_PROCEDURES: ReadonlySet<string> = new Set([
   'secrets.list',
   'database.provision',
   'deploy.preflight',
+  'deploy.finalize',
   'deploy.uploadUrls',
   'deploy.workerUploadUrls',
 ]);
@@ -53,6 +51,7 @@ const OAUTH_DEPLOY_PROCEDURES: ReadonlySet<string> = new Set([
   'projects.get',
   'deployments.events',
   'deploy.uploadUrls',
+  'deploy.finalize',
 ]);
 
 /** The procedure an `/rpc/<name>` request calls, or null for any other path. */
@@ -202,11 +201,8 @@ export const authMiddleware: MiddlewareHandler<ApiEnv> = async (context, next) =
         throw new OAuthError('invalid_token', 'Invalid publish approval.', 401);
       }
       const path = context.req.path;
-      const base = '/projects/' + payload.project;
       const procedure = rpcProcedure(context.req.method, path);
-      const allowed =
-        (procedure !== null && OAUTH_DEPLOY_PROCEDURES.has(procedure)) ||
-        (context.req.method === 'POST' && path === base + '/deploy');
+      const allowed = procedure !== null && OAUTH_DEPLOY_PROCEDURES.has(procedure);
       if (!allowed) {
         throw new OAuthError(
           'access_denied',

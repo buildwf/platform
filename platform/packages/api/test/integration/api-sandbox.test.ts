@@ -9,7 +9,7 @@ import {
   it,
   vi,
 } from 'vite-plus/test';
-import app from '../../src/index.ts';
+import rawApp from '../../src/index.ts';
 import {
   retrySandboxControllerCleanup,
   sandboxControllerWorkerName,
@@ -25,7 +25,10 @@ import {
   skipOrphanSweepDelay,
   readAllEvents,
   type TestEnv,
+  withLegacyDeploy,
 } from './helpers.ts';
+
+const app = withLegacyDeploy(rawApp);
 
 // ---------------------------------------------------------------------------
 // Managed Sandbox deploys isolate the trusted controller in an account Worker.

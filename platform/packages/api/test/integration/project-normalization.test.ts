@@ -15,6 +15,7 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
+  rpcRequest,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -343,22 +344,38 @@ test('rejects changed preview and never guesses during protected recovery', asyn
   expect(older.id).not.toBe(newer.id);
 });
 
-test.each(['deploy', 'deploy/preflight', 'deploy/upload-urls', 'rollback'])(
+test.each(['deploy.finalize', 'deploy.preflight', 'deploy.uploadUrls', 'rollback'])(
   'blocks ordinary %s mutation when a serving pointer needs normalization',
-  async (path) => {
+  async (name) => {
     const { project, older, route } = await legacyProject();
     await env.db.update(deployments).set({ retained: true }).where(eq(deployments.id, older.id));
     const provider = vi.spyOn(globalThis, 'fetch');
     const response = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/${path}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${owner.jwt}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deploymentId: older.id }),
-      }),
+      name === 'rollback'
+        ? new Request(`http://localhost/projects/${project.id}/rollback`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${owner.jwt}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ deploymentId: older.id }),
+          })
+        : rpcRequest(name, owner.jwt, {
+            projectId: project.id,
+            body: {},
+            assetManifest: {},
+            assets: [],
+          }),
       env,
     );
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: 'project_requires_normalization' });
+    const body = (await response.json()) as { error: string | { code: string } };
+    if (name === 'rollback') {
+      expect(body).toMatchObject({ error: 'project_requires_normalization' });
+    } else {
+      expect(body).toMatchObject({
+        error: {
+          code: 'PROJECT_NEEDS_NORMALIZATION',
+        },
+      });
+    }
     expect(provider).not.toHaveBeenCalled();
     expect((await getProject(env.db, project.id))?.active_deployment_id).toBeNull();
     expect(await env.ROUTING.get(project.slug)).toBe(route);

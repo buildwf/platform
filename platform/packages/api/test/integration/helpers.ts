@@ -1964,3 +1964,135 @@ export function rpcRequest(procedure: string, token: string | undefined, input?:
 export function rpcError(body: unknown): string {
   return (body as { error: { message: string } }).error.message;
 }
+
+const DEPLOY_PATH = /^\/projects\/([^/]+)\/deploy$/;
+
+/**
+ * The app, with a deploy request written as the old `POST /projects/:id/deploy` answered by
+ * `deploy.finalize`. An accepted deploy answers the NDJSON events the inline pipeline produced, under the receipt
+ * header. Every other request goes to the app untouched. A refusal is told as the old handler told
+ * it: the in-flight deployment under `deployment`, an invalid request as an `error` event.
+ */
+export function withLegacyDeploy<
+  A extends { fetch: (request: Request, env?: never, ctx?: never) => unknown },
+>(
+  app: A,
+): A & { request: (input: Request | string, init?: RequestInit, env?: unknown) => unknown } {
+  const fetchApp = app.fetch.bind(app) as (...args: Array<unknown>) => Promise<Response>;
+  const fetch = async (request: Request, ...rest: Array<unknown>): Promise<Response> => {
+    const match = DEPLOY_PATH.exec(new URL(request.url).pathname);
+    if (!match || request.method !== 'POST') return fetchApp(request, ...rest);
+    const headers = new Headers({ 'Content-Type': 'application/json' });
+    for (const name of ['authorization', 'x-void-cli-version', 'user-agent']) {
+      const value = request.headers.get(name);
+      if (value) headers.set(name, value);
+    }
+    const key = request.headers.get('x-void-deploy-idempotency-key');
+    const text = await request.text();
+    const res = await fetchApp(
+      new Request('http://localhost/rpc/deploy.finalize', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          projectId: match[1],
+          body: text ? JSON.parse(text) : {},
+          ...(key ? { idempotencyKey: key } : {}),
+        }),
+      }),
+      ...rest,
+    );
+    const raw = (await res.json()) as unknown;
+    // The auth middleware answers a refused credential before the procedure runs, in its own shape.
+    if (typeof (raw as { error?: unknown }).error === 'string') {
+      return Response.json(raw, { status: res.status });
+    }
+    const body = raw as {
+      data?: { deploymentId?: string; events?: Array<unknown> };
+      error?: { code: string; message: string };
+    };
+    if (!res.ok || !body.data) {
+      const code = body.error?.code;
+      const message = body.error?.message ?? '';
+      const inFlight = /^(.*): deployment (\S+)$/.exec(message);
+      if (code === 'DEPLOY_IN_PROGRESS' && inFlight) {
+        return Response.json(
+          { error: inFlight[1], deployment: inFlight[2] },
+          { status: res.status },
+        );
+      }
+      if (code === 'PROJECT_NEEDS_NORMALIZATION') {
+        return Response.json(
+          { error: 'project_requires_normalization', message },
+          { status: res.status },
+        );
+      }
+      if (code === 'ZERO_TRUST_NOT_READY') {
+        return Response.json(
+          { event: 'error', error: 'zero trust not ready', message },
+          { status: res.status },
+        );
+      }
+      if (
+        code === 'INVALID_DEPLOY' ||
+        code === 'DEPLOY_CONFLICT' ||
+        code === 'CAPABILITY_UNAVAILABLE'
+      ) {
+        return Response.json({ event: 'error', message }, { status: res.status });
+      }
+      return Response.json({ error: code?.toLowerCase(), message }, { status: res.status });
+    }
+    let events = body.data.events;
+    if (!events && body.data.deploymentId) {
+      // The Queue owns the deployment: read its events the way the CLI does.
+      events = [];
+      for (let since = 0; ;) {
+        const page = await fetchApp(
+          new Request('http://localhost/rpc/deployments.events', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              projectId: match[1],
+              deploymentId: body.data.deploymentId,
+              since,
+            }),
+          }),
+          ...rest,
+        );
+        if (!page.ok) {
+          const failure = (await page.json()) as { error?: { message?: string } | string };
+          events.push({
+            event: 'error',
+            message: typeof failure.error === 'string' ? failure.error : failure.error?.message,
+          });
+          break;
+        }
+        const { data } = (await page.json()) as {
+          data: {
+            events: Array<{ seq: number; event: object }>;
+            lastSeq: number;
+            terminal: boolean;
+          };
+        };
+        events.push(...data.events.map((item) => ({ ...item.event, seq: item.seq })));
+        if (data.terminal) break;
+        since = data.lastSeq;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    }
+    return new Response((events ?? []).map((e) => `${JSON.stringify(e)}\n`).join(''), {
+      status: 200,
+      headers: {
+        'content-type': 'application/x-ndjson',
+        ...(body.data.deploymentId ? { 'x-void-deployment-id': body.data.deploymentId } : {}),
+      },
+    });
+  };
+  return Object.assign(Object.create(app), {
+    fetch,
+    request: (input: Request | string, init?: RequestInit, env?: unknown) =>
+      fetch(
+        input instanceof Request ? input : new Request(new URL(input, 'http://localhost'), init),
+        env,
+      ),
+  });
+}
