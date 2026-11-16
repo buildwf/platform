@@ -3,10 +3,10 @@ import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vite-plus/test';
 
 // eeao is a separate project (the `eeaao` submodule). Void talks to it only through the
-// procedures adapter: runtime/procedure.ts and runtime/procedures.ts. Nothing else in the
+// procedures adapter: runtime/procedure.ts, runtime/procedures.ts and the client runtime/rpc.ts. Nothing else in the
 // framework imports an @eeao package, so the framework stays usable and testable without it.
 const src = join(import.meta.dirname, '..', '..', 'src');
-const adapter = new Set(['runtime/procedure.ts', 'runtime/procedures.ts']);
+const adapter = new Set(['runtime/procedure.ts', 'runtime/procedures.ts', 'runtime/rpc.ts']);
 
 function files(dir: string): Array<string> {
   return readdirSync(dir).flatMap((name) => {
