@@ -9,7 +9,11 @@ import {
 } from '../asset-routing.ts';
 import { type VoidConfig } from '../config.ts';
 import { hasEmailHandlers } from '../router/email.ts';
-import { requiresSandboxPlatformImage, resolveSandboxConfig } from '../sandbox/config.ts';
+import {
+  isSandboxAttached,
+  requiresSandboxPlatformImage,
+  resolveSandboxConfig,
+} from '../sandbox/config.ts';
 import { buildEnv } from '../shared/untrusted-env.ts';
 import { resolveDistDir, resolveWorkerDirName } from './build-output-dir.ts';
 import { PlatformClient } from './client.ts';
@@ -117,6 +121,11 @@ export async function runFullDeploy(
   const { paths, dialect, bindings, authEnabled, scan: routeScan } = analysis;
 
   const sandboxConfig = bindings.needsSandbox ? resolveSandboxConfig(voidConfig, root) : undefined;
+  if (sandboxConfig && isSandboxAttached(sandboxConfig)) {
+    throw new Error(
+      'deploy: `sandbox.durableObject` attaches the container to your own Durable Object, which needs a native Cloudflare deploy (`void deploy --platform cloudflare`). Managed platforms run containers in their own controller; use `getSandbox` from `void/sandbox` there.',
+    );
+  }
   if (bindings.needsSandbox && requiresSandboxPlatformImage(voidConfig)) {
     log.error(
       'deploy: `sandbox.image` points at a local Dockerfile. Add `sandbox.platformImage` with a pushed registry image for `void deploy`, or deploy this sandbox directly with Wrangler.',

@@ -24,7 +24,11 @@ import {
   countSplats,
 } from '../../src/config.ts';
 import { voidWarn } from '../../src/log.ts';
-import { resolveSandboxConfig } from '../../src/sandbox/config.ts';
+import {
+  isSandboxAttached,
+  resolveSandboxConfig,
+  sandboxContainerConfig,
+} from '../../src/sandbox/config.ts';
 
 const warnMock = vi.mocked(voidWarn);
 
@@ -409,6 +413,32 @@ describe('readConfig', () => {
 
     expect(config.image).toMatch(/sandbox\.Dockerfile$/);
     expect(config.platformImage).toBe('cloudflare/debian-trixie');
+  });
+
+  it('attaches the container to a durable-objects module', () => {
+    const config = resolveSandboxConfig({ sandbox: { durableObject: 'bot' } }, tmpDir);
+
+    expect(config).toMatchObject({
+      durableObject: 'bot',
+      binding: 'BOT',
+      className: 'BotDurableObject',
+    });
+    expect(isSandboxAttached(config)).toBe(true);
+    expect(sandboxContainerConfig(config)).toMatchObject({ class_name: 'BotDurableObject' });
+    expect(isSandboxAttached(resolveSandboxConfig({ sandbox: true }, tmpDir))).toBe(false);
+    expect(() =>
+      resolveSandboxConfig({ sandbox: { durableObject: 'bot', binding: 'CODE' } }, tmpDir),
+    ).toThrow('Remove sandbox.binding and sandbox.className');
+  });
+
+  it('validates sandbox.durableObject', () => {
+    setup(JSON.stringify({ sandbox: { durableObject: 'bot' } }));
+    expect(readConfig(tmpDir).sandbox).toEqual({ durableObject: 'bot' });
+    cleanup();
+
+    setup(JSON.stringify({ sandbox: { durableObject: '1' } }));
+    expect(() => readConfig(tmpDir)).toThrow('"sandbox.durableObject"');
+    cleanup();
   });
 
   it('throws on invalid sandbox config', () => {

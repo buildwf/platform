@@ -3,6 +3,7 @@ import { isSandboxRegistryImage } from '@void/deploy-core';
 import type { DurableObjectMigrationStep } from '@void/deploy-core';
 import { isAbsolute, join } from 'pathslash';
 import type { VoidConfig } from '../config.ts';
+import { deriveDurableResourceIdentity } from '../durable/scan.ts';
 
 export const DEFAULT_SANDBOX_BINDING = 'SANDBOX';
 export const DEFAULT_SANDBOX_CLASS_NAME = 'SandboxV1';
@@ -17,6 +18,12 @@ export type SandboxInstanceType =
   | 'standard-4';
 
 export type SandboxConfig = {
+  /**
+   * Name of a `durable-objects/` module whose class owns the container, e.g. `bot` for
+   * `durable-objects/bot.ts`. Void attaches the image to that class instead of generating
+   * `SandboxV1`. Native Cloudflare deploys only.
+   */
+  durableObject?: string;
   binding?: string;
   className?: string;
   containerName?: string;
@@ -27,6 +34,8 @@ export type SandboxConfig = {
 };
 
 export type ResolvedSandboxConfig = {
+  /** Set when the container belongs to a user's Durable Object class. */
+  durableObject?: string;
   binding: string;
   className: string;
   containerName: string;
@@ -35,6 +44,13 @@ export type ResolvedSandboxConfig = {
   platformImage: string;
   instanceType?: SandboxInstanceType;
 };
+
+/** True when the container is attached to the app's own Durable Object, not Void's `SandboxV1`. */
+export function isSandboxAttached(
+  sandbox: Pick<ResolvedSandboxConfig, 'durableObject'> | undefined,
+): boolean {
+  return sandbox?.durableObject !== undefined;
+}
 
 export function isSandboxEnabled(config: VoidConfig): boolean {
   return config.sandbox !== undefined && config.sandbox !== false;
@@ -93,9 +109,21 @@ export function resolveSandboxConfig(
     );
   }
 
+  if (
+    raw.durableObject !== undefined &&
+    (raw.binding !== undefined || raw.className !== undefined)
+  ) {
+    throw new Error(
+      'sandbox.durableObject sets the binding and class from the durable-objects/ module. Remove sandbox.binding and sandbox.className.',
+    );
+  }
+  const attached =
+    raw.durableObject === undefined ? undefined : deriveDurableResourceIdentity(raw.durableObject);
+
   return {
-    binding: raw.binding ?? DEFAULT_SANDBOX_BINDING,
-    className: raw.className ?? DEFAULT_SANDBOX_CLASS_NAME,
+    ...(raw.durableObject !== undefined && { durableObject: raw.durableObject }),
+    binding: attached?.bindingName ?? raw.binding ?? DEFAULT_SANDBOX_BINDING,
+    className: attached?.className ?? raw.className ?? DEFAULT_SANDBOX_CLASS_NAME,
     containerName: raw.containerName ?? DEFAULT_SANDBOX_CONTAINER_NAME,
     image: resolveSandboxImage(image, root),
     platformImage,
