@@ -130,6 +130,7 @@ import projectZeroTrustRoutes from './routes/project-zero-trust.ts';
 import projects from './routes/projects.ts';
 import { webhookRoutes } from './routes/webhooks.ts';
 import { setProjectsRoutingSuspension } from './routing.ts';
+import { appRpcRoutes } from './rpc/app-route.ts';
 import { rpcRoutes } from './rpc/route.ts';
 import { SandboxConcurrencyCounter } from './sandbox-concurrency-counter.ts';
 import { SandboxControl } from './sandbox-control.ts';
@@ -556,6 +557,7 @@ const app = new Hono<ApiEnv>()
   .route('/auth', auth)
   .get('/.well-known/oauth-authorization-server', oauthMetadata)
   .route('/oauth', oauth)
+  .route('/app-rpc', appRpcRoutes)
   .route('/auth', oidcRoutes)
   .use('/internal/email/*', capabilityMiddleware('email'))
   .route('/internal/email/domain-credential', internalEmailDomainCredential)

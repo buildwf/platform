@@ -284,6 +284,39 @@ describe('registered OAuth applications', () => {
     expect(record.data.artifact?.workerFiles).toBeUndefined();
     expect(record.data.workerModules).toEqual(['index.js']);
   });
+  it('serves previews and publish requests as procedures on /app-rpc', async () => {
+    const { token: old } = await connect();
+    await setOAuthPreviewPermission(env.db, registration.client.id, true);
+    const call = (name: string, bearer: string | null, body: unknown) =>
+      request('/app-rpc/' + name, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(bearer ? { Authorization: 'Bearer ' + bearer } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+    expect((await call('previews.create', null, { workspace: 'w1' })).status).toBe(401);
+    expect((await call('previews.create', old.access_token, { workspace: 'w1' })).status).toBe(403);
+    const { token } = await connect({ scope: 'profile preview:deploy' });
+    const created = await call('previews.create', token.access_token, { workspace: 'w1' });
+    expect(created.status).toBe(200);
+    const preview = rpcData(await created.json()) as { project_id: string };
+    const again = await call('previews.create', token.access_token, { workspace: 'w1' });
+    expect((rpcData(await again.json()) as { project_id: string }).project_id).toBe(
+      preview.project_id,
+    );
+    const [row] = await env.db.select().from(projects).where(eq(projects.id, preview.project_id));
+    expect(row.preview_workspace_id).toBe('w1');
+    expect(
+      (await call('previews.launch', token.access_token, { project_id: preview.project_id }))
+        .status,
+    ).toBe(409);
+    expect(
+      (await call('previews.launch', token.access_token, { project_id: 'proj_unknown' })).status,
+    ).toBe(404);
+  });
+
   it('requires user consent to private previews without elevating old grants', async () => {
     const { token: old } = await connect();
     await setOAuthPreviewPermission(env.db, registration.client.id, true);

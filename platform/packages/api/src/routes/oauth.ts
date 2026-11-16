@@ -57,10 +57,13 @@ export function oauthMetadata(context: Context<ApiEnv>) {
   });
 }
 function origin(context: Context<ApiEnv>) {
-  if (!context.env.AUTH_REDIRECT_URI) {
+  return authOrigin(context.env);
+}
+function authOrigin(env: ApiEnv['Bindings']) {
+  if (!env.AUTH_REDIRECT_URI) {
     throw new OAuthError('server_error', 'The platform authentication URL is not configured.');
   }
-  return new URL(context.env.AUTH_REDIRECT_URI).origin;
+  return new URL(env.AUTH_REDIRECT_URI).origin;
 }
 function cookieOptions(context: Context<ApiEnv>, maxAge: number) {
   return {
@@ -793,32 +796,28 @@ app.post('/revoke', async (context) => {
   return context.body(null, 200);
 });
 
-app.post('/deployment-requests', async (context) => {
-  const { grant } = await oauthBearer(
-    context.get('db'),
-    context.req.header('Authorization'),
-    context.get('companyIdentity'),
-  );
-  const client = await activeOAuthClient(context.get('db'), grant.client_id);
+export type PublishRequestBody = {
+  redirect_uri: string;
+  state: string;
+  code_challenge: string;
+  code_challenge_method: string;
+  slug: string;
+  checkpoint: string;
+  artifact: DeployArtifact;
+};
+
+/** Starts a publish: the returned URL is where the signed-in user approves or refuses it. */
+export async function requestPublishApproval(
+  db: Db,
+  env: ApiEnv['Bindings'],
+  grant: Awaited<ReturnType<typeof oauthBearer>>['grant'],
+  body: PublishRequestBody,
+) {
+  const client = await activeOAuthClient(db, grant.client_id);
   if (!client.scopes.includes('deploy:approve')) {
     throw new OAuthError('invalid_scope', 'Publishing is not enabled for this application.', 403);
   }
-  const body = await context.req.json<{
-    redirect_uri: string;
-    state: string;
-    code_challenge: string;
-    code_challenge_method: string;
-    slug: string;
-    checkpoint: string;
-    artifact: DeployArtifact;
-  }>();
-  validateAuthorization(
-    client,
-    body.redirect_uri,
-    body.state,
-    body.code_challenge,
-    isDevBypass(context.env),
-  );
+  validateAuthorization(client, body.redirect_uri, body.state, body.code_challenge, isDevBypass(env));
   if (
     body.code_challenge_method !== 'S256' ||
     typeof body.slug !== 'string' ||
@@ -855,13 +854,36 @@ app.post('/deployment-requests', async (context) => {
     }),
     workerModules: Object.keys(artifact.workerFiles ?? {}),
   };
-  const request = await newRequest(context, client.id, data, false);
+  const [request] = await db
+    .insert(oauthRequests)
+    .values({
+      id: crypto.randomUUID(),
+      client_id: client.id,
+      browser_hash: '',
+      data,
+      expires_at: until(FLOW_SECONDS),
+    })
+    .returning();
+  return {
+    authorization_url: authOrigin(env) + '/oauth/authorize?request=' + request!.id,
+    request_id: request!.id,
+    expires_in: FLOW_SECONDS,
+  };
+}
+
+app.post('/deployment-requests', async (context) => {
+  const { grant } = await oauthBearer(
+    context.get('db'),
+    context.req.header('Authorization'),
+    context.get('companyIdentity'),
+  );
   return context.json(
-    {
-      authorization_url: origin(context) + '/oauth/authorize?request=' + request.id,
-      request_id: request.id,
-      expires_in: FLOW_SECONDS,
-    },
+    await requestPublishApproval(
+      context.get('db'),
+      context.env,
+      grant,
+      await context.req.json<PublishRequestBody>(),
+    ),
     201,
   );
 });

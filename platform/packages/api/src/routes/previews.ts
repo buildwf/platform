@@ -15,7 +15,7 @@ import {
 import { signJwt, verifyJwt } from '../auth/jwt.ts';
 import { activeOAuthClient, activeOAuthGrant, oauthBearer, OAuthError } from '../auth/oauth.ts';
 import { hashLoginProof, randomLoginProof } from '../auth/proofs.ts';
-import { createProject, getProject } from '../db.ts';
+import { createProject, getProject, type Db } from '../db.ts';
 import type { ApiEnv } from '../env.ts';
 import { initialPlanDefaultFor } from '../plans.ts';
 import { projectUrl } from '../project-url.ts';
@@ -36,7 +36,7 @@ async function permittedGrant(context: Context<ApiEnv>) {
   requirePreviewPermission(result.grant, result.client);
   return result;
 }
-function requirePreviewPermission(
+export function requirePreviewPermission(
   grant: Awaited<ReturnType<typeof activeOAuthGrant>>['grant'],
   client: Awaited<ReturnType<typeof activeOAuthClient>>,
 ) {
@@ -45,12 +45,12 @@ function requirePreviewPermission(
   }
 }
 async function ownedPreview(
-  context: Context<ApiEnv>,
+  db: Db,
   id: string,
   grant: Awaited<ReturnType<typeof activeOAuthGrant>>['grant'],
   current?: Awaited<ReturnType<typeof getProject>>,
 ) {
-  const project = current ?? (await getProject(context.get('db'), id));
+  const project = current ?? (await getProject(db, id));
   if (
     !project ||
     project.status !== 'active' ||
@@ -65,13 +65,21 @@ async function ownedPreview(
 
 // A stable, isolated destination. Serializing on the owner bounds creation even
 // across different clients and overlapping requests; it also fences uninstall.
-app.post('/previews', async (context) => {
-  const { grant, user } = await permittedGrant(context);
-  const body = await context.req.json<{ workspace: string }>();
+export type PreviewScope = {
+  db: Db;
+  env: ApiEnv['Bindings'];
+  grant: Awaited<ReturnType<typeof activeOAuthGrant>>['grant'];
+  user: { id: string };
+};
+
+export async function createPreview(
+  { db, env, grant, user }: PreviewScope,
+  body: { workspace: string },
+) {
   if (typeof body.workspace !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(body.workspace)) {
     throw new OAuthError('invalid_request', 'Provide a workspace ID.');
   }
-  const project = await context.get('db').transaction(async (tx) => {
+  const project = await db.transaction(async (tx) => {
     await lockZeroTrustConfiguration(tx, 'shared');
     await lockNewProjectAiLoggingInputs(tx);
     await tx.select().from(users).where(eq(users.id, user.id)).for('update');
@@ -124,9 +132,9 @@ app.post('/previews', async (context) => {
       .returning();
     // A plan AI logging default applies from the first request; a KV failure
     // rolls the preview back.
-    await publishProjectAiLogging(tx, context.env.ROUTING, created.id, {
+    await publishProjectAiLogging(tx, env.ROUTING, created.id, {
       trigger: 'preview_create',
-      initialPlanDefault: initialPlanDefaultFor(context.env),
+      initialPlanDefault: initialPlanDefaultFor(env),
       creating: true,
     }).catch((error: unknown) => {
       if (error instanceof AiLoggingPublishError) {
@@ -140,27 +148,23 @@ app.post('/previews', async (context) => {
     });
     return preview!;
   });
-  await initializeNewProjectZeroTrust(context.env, context.get('db'), project.id);
-  return context.json(
-    {
-      project_id: project.id,
-      url: projectUrl(project, context.env),
-      deployment_id: project.active_deployment_id,
-    },
-    201,
-  );
-});
+  await initializeNewProjectZeroTrust(env, db, project.id);
+  return {
+    project_id: project.id,
+    url: projectUrl(project, env),
+    deployment_id: project.active_deployment_id,
+  };
+}
 
-// Same artifact contract as publishing, but this permission can target only
-// the caller's isolated preview. No browser publish approval is fabricated.
-app.post('/preview-deployment-requests', async (context) => {
-  const { grant, user } = await permittedGrant(context);
-  const body = await context.req.json<{
+export async function requestPreviewDeployment(
+  { db, env, grant, user }: PreviewScope,
+  body: {
     project_id: string;
     checkpoint: string;
     artifact: DeployArtifact;
-  }>();
-  const project = await ownedPreview(context, body.project_id, grant);
+  },
+) {
+  const project = await ownedPreview(db, body.project_id, grant);
   if (
     typeof body.checkpoint !== 'string' ||
     !body.checkpoint ||
@@ -192,7 +196,7 @@ app.post('/preview-deployment-requests', async (context) => {
     );
   }
   const id = crypto.randomUUID();
-  await context.get('db').transaction(async (tx) => {
+  await db.transaction(async (tx) => {
     // At most 60 builds per workspace per hour, enforced before upload or provisioning.
     await tx.select().from(projects).where(eq(projects.id, project.id)).for('update');
     const [recent] = await tx
@@ -241,7 +245,7 @@ app.post('/preview-deployment-requests', async (context) => {
   });
   const token = await signJwt(
     { sub: user.id, login: '', aud: 'oauth-preview', project: project.id, oauthApproval: id },
-    context.env.JWT_SECRET,
+    env.JWT_SECRET,
     {
       ttlSeconds: Math.max(
         1,
@@ -249,29 +253,40 @@ app.post('/preview-deployment-requests', async (context) => {
       ),
     },
   );
-  return context.json({ access_token: token, project_id: project.id, approval_id: id }, 201);
-});
+  return { access_token: token, project_id: project.id, approval_id: id };
+}
 
-app.post('/previews/:id/launch', async (context) => {
-  const { grant } = await permittedGrant(context);
-  const project = await ownedPreview(context, context.req.param('id'), grant);
+export async function launchPreview({ db, env, grant }: PreviewScope, id: string) {
+  const project = await ownedPreview(db, id, grant);
   if (!project.active_deployment_id) {
     throw new OAuthError('access_denied', 'The first preview build is not ready yet.', 409);
   }
   const ticket = randomLoginProof();
-  await context
-    .get('db')
-    .insert(previewTickets)
-    .values({
-      token_hash: await hashLoginProof(ticket),
-      project_id: project.id,
-      grant_id: grant.id,
-      expires_at: expiry(60),
-    });
-  const url = new URL(projectUrl(project, context.env));
+  await db.insert(previewTickets).values({
+    token_hash: await hashLoginProof(ticket),
+    project_id: project.id,
+    grant_id: grant.id,
+    expires_at: expiry(60),
+  });
+  const url = new URL(projectUrl(project, env));
   url.searchParams.set('__void_preview', ticket);
-  return context.json({ url: url.href });
-});
+  return { url: url.href };
+}
+
+async function scope(context: Context<ApiEnv>): Promise<PreviewScope> {
+  const { grant, user } = await permittedGrant(context);
+  return { db: context.get('db'), env: context.env, grant, user };
+}
+
+app.post('/previews', async (context) =>
+  context.json(await createPreview(await scope(context), await context.req.json()), 201),
+);
+app.post('/preview-deployment-requests', async (context) =>
+  context.json(await requestPreviewDeployment(await scope(context), await context.req.json()), 201),
+);
+app.post('/previews/:id/launch', async (context) =>
+  context.json(await launchPreview(await scope(context), context.req.param('id'))),
+);
 
 app.all('/preview-serve/:id', async (context) => {
   const original = context.req.header('X-Void-Preview-URL');
@@ -305,7 +320,7 @@ app.all('/preview-serve/:id', async (context) => {
     }
     const { grant, user, client } = await activeOAuthGrant(context.get('db'), receipt.grant_id);
     requirePreviewPermission(grant, client);
-    await ownedPreview(context, project.id, grant, project);
+    await ownedPreview(context.get('db'), project.id, grant, project);
     const seconds = Math.min(3600, Math.floor((Date.parse(grant.expires_at) - Date.now()) / 1000));
     const token = await signJwt(
       {
@@ -336,7 +351,7 @@ app.all('/preview-serve/:id', async (context) => {
   }
   const { grant, user, client } = await activeOAuthGrant(context.get('db'), proof.oauthGrant);
   requirePreviewPermission(grant, client);
-  await ownedPreview(context, project.id, grant, project);
+  await ownedPreview(context.get('db'), project.id, grant, project);
   if (proof.sub !== user.id) {
     throw new OAuthError('invalid_token', 'Preview unavailable.', 401);
   }
