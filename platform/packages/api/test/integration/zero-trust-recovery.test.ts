@@ -39,6 +39,7 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
+  rpcData,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -215,7 +216,7 @@ describe('Zero Trust recovery', () => {
       let response: Response;
       try {
         response = await app.fetch(
-          new Request('http://localhost/projects', {
+          new Request('http://localhost/rpc/projects.create', {
             method: 'POST',
             headers: { Authorization: `Bearer ${owner.jwt}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ slug }),
@@ -225,9 +226,9 @@ describe('Zero Trust recovery', () => {
       } finally {
         transactionSpy.mockRestore();
       }
-      expect(response.status).toBe(201);
+      expect(response.status).toBe(200);
       expect(interleaved).toBe(true);
-      const body = (await response.json()) as { id: string; warnings?: Array<string> };
+      const body = rpcData<{ id: string; warnings?: Array<string> }>(await response.json());
       expect(body.warnings).toBeUndefined();
       expect(await getProjectZeroTrustState(env.db, body.id)).toEqual(seeded);
       expect(cloudflare.fetcher).not.toHaveBeenCalled();

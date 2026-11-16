@@ -118,7 +118,6 @@ import internalGitHubWebhook from './routes/internal-github-webhook.ts';
 import internalResolveResource from './routes/internal-resolve-resource.ts';
 import internalResolveWorker from './routes/internal-resolve-worker.ts';
 import internalVerifyOwner from './routes/internal-verify-owner.ts';
-import me from './routes/me.ts';
 import oauth, { oauthMetadata } from './routes/oauth.ts';
 import platformBootstrapRoutes from './routes/platform-bootstrap.ts';
 import {
@@ -130,9 +129,9 @@ import projectTokens from './routes/project-tokens.ts';
 import projectZeroTrustRoutes from './routes/project-zero-trust.ts';
 import projects from './routes/projects.ts';
 import secrets from './routes/secrets.ts';
-import { projectUsage, accountUsage } from './routes/usage.ts';
 import { webhookRoutes } from './routes/webhooks.ts';
 import { setProjectsRoutingSuspension } from './routing.ts';
+import { rpcRoutes } from './rpc/route.ts';
 import { SandboxConcurrencyCounter } from './sandbox-concurrency-counter.ts';
 import { SandboxControl } from './sandbox-control.ts';
 import {
@@ -579,9 +578,9 @@ const app = new Hono<ApiEnv>()
   // capability response.
   .use('/email/*', capabilityMiddleware('email'))
   .route('/email', emailConfirm)
-  .use('/me', authMiddleware)
+  .use('/rpc/*', authMiddleware)
+  .route('/rpc', rpcRoutes)
   .use('/me/*', authMiddleware)
-  .route('/me', me)
   .route('/me', myProjectInvitationRoutes)
   .use('/project-invitations/*', authMiddleware)
   .route('/project-invitations', projectInvitationResponseRoutes)
@@ -595,10 +594,7 @@ const app = new Hono<ApiEnv>()
   .route('/projects', secrets)
   .route('/projects', domains)
   .route('/projects', emailRoutes)
-  .route('/projects', githubProjectRoutes)
-  .route('/projects', projectUsage)
-  .use('/usage', authMiddleware)
-  .route('/usage', accountUsage);
+  .route('/projects', githubProjectRoutes);
 
 // Versioned bearer-authenticated operator API. It has no browser cookie bypass.
 app.route('/operator/v1', operatorApi);

@@ -1,8 +1,8 @@
 import { deleteCookie, getCookie } from 'hono/cookie';
 import { defineMiddleware } from 'void';
-import { getCurrentUser, type API } from '../lib/api.ts';
+import { getCurrentUser, type CurrentUser } from '../lib/api.ts';
 
-export type DashboardUser = API<'me'>;
+export type DashboardUser = CurrentUser;
 
 declare module 'void' {
   interface CloudContextVariables {

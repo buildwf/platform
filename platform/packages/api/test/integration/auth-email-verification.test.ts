@@ -864,14 +864,14 @@ describe('email verification gating on account linking', () => {
       // No execution context: `scheduleAfterResponse` awaits the add inline,
       // so the 201 below means the add has finished.
       const created = await app.fetch(
-        new Request('http://localhost/projects', {
+        new Request('http://localhost/rpc/projects.create', {
           method: 'POST',
           headers: { Authorization: `Bearer ${existing.jwt}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ slug: 'owner-email-racing' }),
         }),
         emailEnv(),
       );
-      expect(created.status).toBe(201);
+      expect(created.status).toBe(200);
       const project = (await created.json()) as { id: string };
       expect(loginDuringAdd?.status).toBe(302);
       const [user] = await env.db.select().from(users).where(eq(users.id, existing.id));

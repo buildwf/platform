@@ -315,13 +315,16 @@ describe('Access-protected platform requests', () => {
     expect((await request('/auth/login')).status).toBe(403);
   });
   it('requires both the company identity and the matching Void session', async () => {
-    expect((await request('/me', undefined, humanToken)).status).toBe(403);
-    expect((await request('/me', await assertion())).status).toBe(401);
-    expect((await request('/me', await assertion(), humanToken)).status).toBe(200);
+    expect((await request('/rpc/me.get', undefined, humanToken, {})).status).toBe(403);
+    expect((await request('/rpc/me.get', await assertion(), undefined, {})).status).toBe(401);
+    expect((await request('/rpc/me.get', await assertion(), humanToken, {})).status).toBe(200);
     expect(
-      (await request('/me', await assertion({ subject: 'employee-2' }), humanToken)).status,
+      (await request('/rpc/me.get', await assertion({ subject: 'employee-2' }), humanToken, {}))
+        .status,
     ).toBe(401);
-    expect((await request('/me', await assertion({ service: true }), humanToken)).status).toBe(403);
+    expect(
+      (await request('/rpc/me.get', await assertion({ service: true }), humanToken, {})).status,
+    ).toBe(403);
   });
 
   it('does not let installer probes or alternate origins bypass company protection', async () => {
@@ -335,7 +338,8 @@ describe('Access-protected platform requests', () => {
     expect(
       (
         await app.fetch(
-          new Request('https://alternate.workers.dev/me', {
+          new Request('https://alternate.workers.dev/rpc/me.get', {
+            method: 'POST',
             headers: {
               Authorization: `Bearer ${humanToken}`,
               'Cf-Access-Jwt-Assertion': await assertion(),
@@ -450,7 +454,7 @@ describe('Access-protected platform requests', () => {
     expect(
       (await request('/operator/v1/session', serviceAccess, activeCredential.token, {})).status,
     ).toBe(403);
-    expect((await request('/me', serviceAccess, humanToken)).status).toBe(403);
+    expect((await request('/rpc/me.get', serviceAccess, humanToken, {})).status).toBe(403);
 
     const revoked = await app.fetch(
       new Request(`${origin}/projects/${project.id}/tokens/${activeCredential.id}`, {
@@ -506,7 +510,7 @@ describe('Access-protected platform requests', () => {
     });
     expect(exchange.status).toBe(200);
     const token = (await exchange.json<{ token: string }>()).token;
-    const me = await request('/me', access, token);
+    const me = await request('/rpc/me.get', access, token, {});
     expect(me.status).toBe(200);
     const identity = await me.json<Record<string, unknown>>();
     expect(JSON.stringify(identity)).toContain('new-employee');

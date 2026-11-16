@@ -45,6 +45,7 @@ import {
   cfSuccess,
   cfError,
   type TestEnv,
+  rpcData,
 } from './helpers.ts';
 import { setTestDb } from './setup.ts';
 
@@ -1463,7 +1464,7 @@ describe('POST /projects', () => {
     const user = await createTestUser(env.db);
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
@@ -1473,11 +1474,11 @@ describe('POST /projects', () => {
       }),
       env,
     );
-    expect(res.status).toBe(201);
-    const body = (await res.json()) as {
+    expect(res.status).toBe(200);
+    const body = rpcData<{
       slug: string;
       user_id: string;
-    };
+    }>(await res.json());
     expect(body.slug).toBe('my-app');
     expect(body.user_id).toBe(user.id);
   });
@@ -1490,7 +1491,7 @@ describe('POST /projects', () => {
     });
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
@@ -1501,8 +1502,8 @@ describe('POST /projects', () => {
       env,
     );
 
-    expect(res.status).toBe(201);
-    const body = await res.json();
+    expect(res.status).toBe(200);
+    const body = rpcData(await res.json());
     expect(body).toMatchObject({
       slug: 'warning-app',
       warnings: [
@@ -1516,7 +1517,7 @@ describe('POST /projects', () => {
     const user = await createTestUser(env.db);
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
@@ -1533,7 +1534,7 @@ describe('POST /projects', () => {
     const user = await createTestUser(env.db);
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
@@ -1544,8 +1545,8 @@ describe('POST /projects', () => {
       env,
     );
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({
-      error: 'slug must be lowercase alphanumeric with dashes',
+    expect(await res.json()).toMatchObject({
+      error: { message: 'slug must be lowercase alphanumeric with dashes' },
     });
   });
 
@@ -1556,7 +1557,7 @@ describe('POST /projects', () => {
 
     for (const slug of ['administrator', 'hostmaster', 'webmaster']) {
       const res = await app.fetch(
-        new Request('http://localhost/projects', {
+        new Request('http://localhost/rpc/projects.create', {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${user.jwt}`,
@@ -1567,7 +1568,7 @@ describe('POST /projects', () => {
         env,
       );
       expect(res.status, slug).toBe(400);
-      expect(await res.json()).toEqual({ error: 'this name is reserved' });
+      expect(await res.json()).toMatchObject({ error: { message: 'this name is reserved' } });
     }
   });
 
@@ -1581,7 +1582,7 @@ describe('POST /projects', () => {
     expect(slug).toHaveLength(56);
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
@@ -1591,8 +1592,8 @@ describe('POST /projects', () => {
       }),
       env,
     );
-    expect(res.status).toBe(201);
-    const body = (await res.json()) as { slug: string };
+    expect(res.status).toBe(200);
+    const body = rpcData<{ slug: string }>(await res.json());
     expect(body.slug).toBe(slug);
   });
 
@@ -1602,7 +1603,7 @@ describe('POST /projects', () => {
     expect(slug).toHaveLength(57);
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
@@ -1613,7 +1614,9 @@ describe('POST /projects', () => {
       env,
     );
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: 'slug must be at most 56 characters' });
+    expect(await res.json()).toMatchObject({
+      error: { message: 'slug must be at most 56 characters' },
+    });
     // Refused before allocation: nothing was inserted.
     expect(await env.db.select().from(projects).where(eq(projects.slug, slug))).toEqual([]);
   });
@@ -1622,7 +1625,7 @@ describe('POST /projects', () => {
     const user = await createTestUser(env.db);
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
@@ -1633,8 +1636,8 @@ describe('POST /projects', () => {
       env,
     );
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({
-      error: 'the selected plan does not permit short slugs (5 characters or fewer)',
+    expect(await res.json()).toMatchObject({
+      error: { message: 'the selected plan does not permit short slugs (5 characters or fewer)' },
     });
   });
 
@@ -1642,7 +1645,7 @@ describe('POST /projects', () => {
     const user = await createTestUser(env.db, 'paiduser', 'github', undefined, 'solo');
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
@@ -1652,8 +1655,8 @@ describe('POST /projects', () => {
       }),
       env,
     );
-    expect(res.status).toBe(201);
-    const body = (await res.json()) as { slug: string };
+    expect(res.status).toBe(200);
+    const body = rpcData<{ slug: string }>(await res.json());
     expect(body.slug).toBe('abc');
   });
 
@@ -1662,7 +1665,7 @@ describe('POST /projects', () => {
     await createTestProject(env.db, user.id, 'taken-slug');
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
@@ -1673,7 +1676,7 @@ describe('POST /projects', () => {
       env,
     );
     expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ error: 'slug already taken' });
+    expect(await res.json()).toMatchObject({ error: { message: 'slug already taken' } });
   });
 
   // A slug is also a mailbox on the shared mail domain, so it may not take
@@ -1687,7 +1690,7 @@ describe('POST /projects', () => {
       .where(eq(projects.id, other.id));
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
@@ -1698,7 +1701,7 @@ describe('POST /projects', () => {
       env,
     );
     expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ error: 'slug already taken' });
+    expect(await res.json()).toMatchObject({ error: { message: 'slug already taken' } });
     expect(await env.db.select().from(projects).where(eq(projects.slug, 'taken-alias'))).toEqual(
       [],
     );
@@ -3542,7 +3545,7 @@ describe('POST /projects — owner email destination auto-add', () => {
 
   async function createProjectAs(user: { jwt: string }, slug: string, bindings: TestEnv) {
     return app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug }),
@@ -3567,11 +3570,11 @@ describe('POST /projects — owner email destination auto-add', () => {
     );
 
     const res = await createProjectAs(user, 'auto-add-app', emailEnv());
-    expect(res.status).toBe(201);
-    const project = (await res.json()) as {
+    expect(res.status).toBe(200);
+    const project = rpcData<{
       id: string;
       owner_email_destination?: { address: string; verified?: unknown };
-    };
+    }>(await res.json());
     // The response names the address being registered so the CLI can explain
     // the verification email that may follow. It carries no outcome: the add
     // runs after the response, so `verified` cannot be known here.
@@ -3619,11 +3622,11 @@ describe('POST /projects — owner email destination auto-add', () => {
     });
 
     const res = await createProjectAs(user, 'auto-add-second', emailEnv());
-    expect(res.status).toBe(201);
-    const project = (await res.json()) as {
+    expect(res.status).toBe(200);
+    const project = rpcData<{
       id: string;
       owner_email_destination?: { address: string };
-    };
+    }>(await res.json());
     // Same notice as the fresh-address case: the response is built before
     // the add runs, so it cannot (and must not claim to) know CF adopted a
     // verified address.
@@ -3655,8 +3658,8 @@ describe('POST /projects — owner email destination auto-add', () => {
     );
 
     const res = await createProjectAs(user, 'auto-add-cf-down', emailEnv());
-    expect(res.status).toBe(201);
-    const project = (await res.json()) as { id: string };
+    expect(res.status).toBe(200);
+    const project = rpcData<{ id: string }>(await res.json());
     const rows = await env.db
       .select()
       .from(emailDestinations)
@@ -3688,8 +3691,8 @@ describe('POST /projects — owner email destination auto-add', () => {
 
     // Best-effort and post-response: the create still succeeds.
     const res = await createProjectAs(user, 'auto-add-cascaded', emailEnv());
-    expect(res.status).toBe(201);
-    const project = (await res.json()) as { id: string };
+    expect(res.status).toBe(200);
+    const project = rpcData<{ id: string }>(await res.json());
 
     const rows = await env.db
       .select()
@@ -3743,7 +3746,7 @@ describe('POST /projects — owner email destination auto-add', () => {
     });
 
     const res = await createProjectAs(user, 'auto-add-shared', emailEnv());
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(200);
 
     expect(calls.filter((call) => call.method === 'DELETE')).toEqual([]);
     const [survivor] = await env.db
@@ -3884,8 +3887,8 @@ describe('POST /projects — owner email destination auto-add', () => {
     deleteRowBeforeReadBack('edst_manual_raced');
 
     const res = await createProjectAs(user, 'auto-add-raced', emailEnv());
-    expect(res.status).toBe(201);
-    const project = (await res.json()) as { id: string };
+    expect(res.status).toBe(200);
+    const project = rpcData<{ id: string }>(await res.json());
 
     // The interleaving was the documented one, not a foreign-key failure.
     expect(helper).toHaveBeenCalledTimes(1);
@@ -3958,8 +3961,8 @@ describe('POST /projects — owner email destination auto-add', () => {
     deleteRowBeforeReadBack('edst_manual_raced_shared');
 
     const res = await createProjectAs(user, 'auto-add-raced-shared', emailEnv());
-    expect(res.status).toBe(201);
-    const project = (await res.json()) as { id: string };
+    expect(res.status).toBe(200);
+    const project = rpcData<{ id: string }>(await res.json());
 
     expect(helper).toHaveBeenCalledTimes(1);
     await expect(helper.mock.results[0]!.value).resolves.toEqual({ row: null, inserted: false });
@@ -4013,8 +4016,8 @@ describe('POST /projects — owner email destination auto-add', () => {
     });
 
     const res = await createProjectAs(user, 'auto-add-won', emailEnv());
-    expect(res.status).toBe(201);
-    const project = (await res.json()) as { id: string };
+    expect(res.status).toBe(200);
+    const project = rpcData<{ id: string }>(await res.json());
 
     expect(helper).toHaveBeenCalledTimes(1);
     await expect(helper.mock.results[0]!.value).resolves.toMatchObject({
@@ -4038,7 +4041,7 @@ describe('POST /projects — owner email destination auto-add', () => {
 
     // `env` as-is — EMAIL_SENDER_DOMAIN unset.
     const res = await createProjectAs(user, 'auto-add-no-domain', env);
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(200);
     expect(calls).toEqual([]);
     // No add scheduled, so the response must not announce one.
     expect(await res.json()).not.toHaveProperty('owner_email_destination');
@@ -4051,7 +4054,7 @@ describe('POST /projects — owner email destination auto-add', () => {
     const calls = stubEmailRouting(() => Response.json({ success: true, errors: [], result: {} }));
 
     const res = await createProjectAs(user, 'auto-add-synthetic', emailEnv());
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(200);
     expect(calls).toEqual([]);
     expect(await res.json()).not.toHaveProperty('owner_email_destination');
   });

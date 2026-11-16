@@ -25,13 +25,13 @@ import { hashLoginProof, randomLoginProof } from '../auth/proofs.ts';
 import { validateHumanSession } from '../auth/sessions.ts';
 import { platformBrowserPage, platformBrowserError } from '../browser-page.ts';
 import { getPlatformCapabilities } from '../capabilities.ts';
-import { consumeCliAuthCode, getProjectBySlug, getUser, type DbOrTx } from '../db.ts';
+import { consumeCliAuthCode, getProjectBySlug, getUser, type Db, type DbOrTx } from '../db.ts';
 import { isDevBypass, type ApiEnv } from '../env.ts';
 import { MAX_SLUG_LENGTH } from '../project-names.ts';
 import { oauthClients, oauthGrants, oauthRefreshTokens, oauthRequests } from '../schema.ts';
 import { isAdminSuspended } from '../suspension.ts';
 import previews from './previews.ts';
-import { createUserProject } from './projects.ts';
+import { createProjectForUser, ProjectCreateError, scheduleAfterResponse } from './projects.ts';
 
 const app = new Hono<ApiEnv>();
 const FLOW_SECONDS = 300;
@@ -474,17 +474,21 @@ app.post('/approve', async (context) => {
         throw new OAuthError('access_denied', 'You must own the selected project.', 403);
       }
       if (!project) {
-        const original = context.get('db');
-        context.set('db', tx as typeof original);
         try {
-          const result = await createUserProject(context, { slug: data.slug! });
-          if (!result.ok) {
-            const payload = (await result.json()) as { error: string };
-            throw new OAuthError('invalid_request', payload.error);
+          project = (await createProjectForUser(
+            {
+              env: context.env,
+              db: tx as Db,
+              user: context.get('user'),
+              schedule: (work) => scheduleAfterResponse(context, work),
+            },
+            data.slug!,
+          )) as NonNullable<typeof project>;
+        } catch (error) {
+          if (error instanceof ProjectCreateError) {
+            throw new OAuthError('invalid_request', error.message);
           }
-          project = (await result.json()) as NonNullable<typeof project>;
-        } finally {
-          context.set('db', original);
+          throw error;
         }
       }
       data = { ...data, projectId: project.id };

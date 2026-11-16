@@ -77,6 +77,7 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
+  rpcData,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -1620,7 +1621,7 @@ describe('per-project verification (Option C + Option B)', () => {
 describe('POST /projects — owner destination auto-add', () => {
   async function createProject(jwt: string, slug: string, bindings: TestEnv): Promise<Response> {
     return app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug }),
@@ -1638,8 +1639,8 @@ describe('POST /projects — owner destination auto-add', () => {
     mockCfApi(cfAlreadyVerified('cf-tag-owner', 'owner@example.com'));
 
     const res = await createProject(user.jwt, 'email-autoadd-inherited', emailEnv());
-    expect(res.status).toBe(201);
-    const project = (await res.json()) as { id: string };
+    expect(res.status).toBe(200);
+    const project = rpcData<{ id: string }>(await res.json());
 
     const rows = await rowsFor(project.id);
     expect(rows).toHaveLength(1);
@@ -1660,8 +1661,8 @@ describe('POST /projects — owner destination auto-add', () => {
     mockCfApi();
 
     const res = await createProject(user.jwt, 'email-autoadd-fresh', emailEnv());
-    expect(res.status).toBe(201);
-    const project = (await res.json()) as { id: string };
+    expect(res.status).toBe(200);
+    const project = rpcData<{ id: string }>(await res.json());
 
     const rows = await rowsFor(project.id);
     expect(rows).toHaveLength(1);
@@ -1683,8 +1684,8 @@ describe('POST /projects — owner destination auto-add', () => {
     // `env` as-is — EMAIL_SENDER_DOMAIN unset. There is no sender to
     // allow-list a recipient for, so the auto-add stays inert.
     const res = await createProject(user.jwt, 'email-autoadd-nodomain', env);
-    expect(res.status).toBe(201);
-    const project = (await res.json()) as { id: string };
+    expect(res.status).toBe(200);
+    const project = rpcData<{ id: string }>(await res.json());
 
     expect(cfCalls(fetchMock, 'POST', '/email/routing/addresses')).toHaveLength(0);
     expect(await rowsFor(project.id)).toHaveLength(0);
@@ -2835,15 +2836,15 @@ describe('email platform capability', () => {
     const fetchMock = mockCfApi();
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug: 'email-capability-off' }),
       }),
       capabilityEnv(false, emailEnv()),
     );
-    expect(res.status).toBe(201);
-    const project = (await res.json()) as { id: string; owner_email_destination?: unknown };
+    expect(res.status).toBe(200);
+    const project = rpcData<{ id: string; owner_email_destination?: unknown }>(await res.json());
     // The CLI prints this field to explain a verification email that may
     // follow; a platform that cannot send one must not announce it.
     expect(project.owner_email_destination).toBeUndefined();

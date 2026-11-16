@@ -167,11 +167,12 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
     expect(body.message).toMatch(/unrecognized/i);
   });
 
-  it('does not gate /me — old CLIs can still introspect their session', async () => {
+  it('does not gate me.get — old CLIs can still introspect their session', async () => {
     const user = await createTestUser(env.db);
 
     const res = await app.fetch(
-      new Request('http://localhost/me', {
+      new Request('http://localhost/rpc/me.get', {
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'X-Void-CLI-Version': '0.0.1',

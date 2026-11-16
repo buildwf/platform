@@ -699,6 +699,12 @@ importers:
       '@cloudflare/sandbox':
         specifier: 'catalog:'
         version: 1.0.3
+      '@eeao/core':
+        specifier: link:../../../eeaao/typescript/packages/core
+        version: link:../../../eeaao/typescript/packages/core
+      '@eeao/http':
+        specifier: link:../../../eeaao/typescript/packages/http
+        version: link:../../../eeaao/typescript/packages/http
       '@nkzw/fate':
         specifier: 'catalog:'
         version: 2.0.1(@trpc/client@11.28.2(@trpc/server@11.28.2(@types/ws@8.18.2)(typescript@7.0.2))(typescript@7.0.2))(@trpc/server@11.28.2(@types/ws@8.18.2)(typescript@7.0.2))(@voidzero-dev/vite-plus-core@1.6.0(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)(typescript@7.0.2)(yaml@2.9.1))(drizzle-orm@0.45.4(@cloudflare/workers-types@5.20261110.1)(@electric-sql/pglite@0.5.16)(@opentelemetry/api@1.10.0)(@types/better-sqlite3@9.6.0)(@types/pg@8.23.1)(better-sqlite3@13.0.3)(kysely@0.29.8)(mysql2@3.24.6(@types/node@26.6.6))(pg@8.23.1))
@@ -717,6 +723,9 @@ importers:
       '@xterm/headless':
         specifier: ^6.0.0
         version: 6.0.0
+      arktype:
+        specifier: 'catalog:'
+        version: 2.2.9
       aws4fetch:
         specifier: ^1.0.20
         version: 1.0.20
@@ -808,6 +817,9 @@ importers:
       '@astryxdesign/theme-neutral':
         specifier: 'catalog:'
         version: 0.7.13(@astryxdesign/core@0.7.13(@stylexjs/stylex@0.19.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react@19.3.0)(react@19.3.1)
+      '@eeao/core':
+        specifier: link:../../../eeaao/typescript/packages/core
+        version: link:../../../eeaao/typescript/packages/core
       '@stylexjs/stylex':
         specifier: 'catalog:'
         version: 0.19.1

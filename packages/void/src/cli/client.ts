@@ -834,6 +834,46 @@ export class PlatformClient {
     return res;
   }
 
+  /**
+   * Calls a platform procedure (`POST /rpc/<name>`). A failure throws `PlatformApiError`
+   * with the procedure's error code in `error`, so callers handle it like any platform error.
+   */
+  private async rpc<T>(
+    name: string,
+    action: string,
+    input?: unknown,
+    permission?: ProjectPermission,
+  ): Promise<T> {
+    const res = await this.request(`${this.baseUrl}/rpc/${name}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-eeao-surface': 'cli',
+        ...this.authHeaders,
+      },
+      body: input === undefined ? '' : JSON.stringify(input),
+    });
+    const text = await res.text();
+    if (res.ok) {
+      return (JSON.parse(text) as { data: T }).data;
+    }
+    let body = text;
+    try {
+      const { error } = JSON.parse(text) as { error?: { code?: string; message?: string } };
+      if (error?.code) {
+        body = JSON.stringify({ error: error.code.toLowerCase(), message: error.message });
+      }
+    } catch {
+      // Not an RPC error body (an Access login page, for example): report it as received.
+    }
+    throw new PlatformApiError(
+      action,
+      res.status,
+      body,
+      isCloudflareAccessChallenge(res) ? undefined : permission,
+    );
+  }
+
   private async json<T>(
     url: string | URL,
     action: string,
@@ -863,7 +903,7 @@ export class PlatformClient {
   }
 
   async whoami(): Promise<{ id: string; login: string; plan: string }> {
-    return this.json(`${this.baseUrl}/me`, 'Failed to fetch user info');
+    return this.rpc('me.get', 'Failed to fetch user info');
   }
 
   async listProjects(): Promise<Array<ProjectResponse>> {
@@ -1102,10 +1142,7 @@ export class PlatformClient {
   }
 
   async createProject(slug: string): Promise<CreateProjectResponse> {
-    return this.json(`${this.baseUrl}/projects`, 'Failed to create project', {
-      method: 'POST',
-      body: { slug },
-    });
+    return this.rpc('projects.create', 'Failed to create project', { slug });
   }
 
   async preflight(

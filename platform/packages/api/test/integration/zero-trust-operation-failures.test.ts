@@ -43,6 +43,7 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
+  rpcData,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -591,7 +592,7 @@ describe('Zero Trust operation failures', () => {
     heartbeatAfterFirstRead();
 
     const response = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: { Authorization: `Bearer ${owner.jwt}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug: 'running-create' }),
@@ -599,8 +600,8 @@ describe('Zero Trust operation failures', () => {
       platform,
     );
 
-    expect(response.status).toBe(201);
-    const body = (await response.json()) as { id: string; warnings?: Array<string> };
+    expect(response.status).toBe(200);
+    const body = rpcData<{ id: string; warnings?: Array<string> }>(await response.json());
     expect(body.warnings).toBeUndefined();
     const row = await getProjectZeroTrustState(env.db, body.id);
     expect(row).toMatchObject({

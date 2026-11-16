@@ -48,6 +48,7 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
+  rpcData,
 } from './helpers.ts';
 
 // Hosted Void Cloud does not set PLATFORM_AUTH_DATABASE_UNCACHED. Nothing here may
@@ -499,7 +500,7 @@ describe('readback', () => {
 describe('project create', () => {
   async function create(owner: { jwt: string }, slug: string) {
     return app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: { Authorization: `Bearer ${owner.jwt}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug }),
@@ -513,7 +514,7 @@ describe('project create', () => {
     const owner = await createTestUser(env.db, 'creator');
     const writes = recordAiLoggingWrites(env.ROUTING);
     const { result, queries } = await captureQueries(env.db, () => create(owner, 'locked-app'));
-    expect(result.status).toBe(201);
+    expect(result.status).toBe(200);
     const lower = queries.map((query) => query.toLowerCase());
     const lock = lower.findIndex((query) => query.includes('pg_advisory_xact_lock_shared'));
     const insert = lower.findIndex((query) => query.startsWith('insert into "projects"'));
@@ -583,8 +584,8 @@ describe('project create', () => {
     expect(await env.db.select().from(projects).where(eq(projects.slug, 'retry-app'))).toEqual([]);
     failing.mockRestore();
     const retried = await create(owner, 'retry-app');
-    expect(retried.status).toBe(201);
-    const { id } = (await retried.json()) as { id: string };
+    expect(retried.status).toBe(200);
+    const { id } = rpcData<{ id: string }>(await retried.json());
     expect(await published(id)).toMatchObject({ value: 'off', metadata: { mode: 'off' } });
   });
 });

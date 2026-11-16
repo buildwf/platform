@@ -589,11 +589,11 @@ describe('managed build platform capability', () => {
     );
 
     const response = await app.fetch(
-      authed(`/projects/${project.id}/usage`, owner.jwt),
+      authed('/rpc/projects.usage', owner.jwt, 'POST', { projectId: project.id }),
       withoutManagedBuilds(),
     );
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
+    expect(((await response.json()) as { data: unknown }).data).toMatchObject({
       projectId: project.id,
       requests: 12,
       bandwidthBytes: 34,
@@ -642,9 +642,9 @@ describe('ownership-period account usage', () => {
       vi.fn(async () => Response.json({ error: 'unavailable' }, { status: 503 })),
     );
 
-    const response = await app.fetch(authed('/usage', owner.jwt), env);
+    const response = await app.fetch(authed('/rpc/usage.account', owner.jwt, 'POST'), env);
     expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ error: 'usage unavailable' });
+    expect(await response.json()).toMatchObject({ error: { code: 'USAGE_UNAVAILABLE' } });
   });
 
   it('queries only the former owner interval that overlaps the billing window', async () => {
@@ -706,9 +706,9 @@ describe('ownership-period account usage', () => {
       }),
     );
 
-    const response = await app.fetch(authed('/usage', formerOwner.jwt), env);
+    const response = await app.fetch(authed('/rpc/usage.account', formerOwner.jwt, 'POST'), env);
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
+    expect(((await response.json()) as { data: unknown }).data).toMatchObject({
       requests: 12,
       bandwidthBytes: 34,
       aiNeurons: 2,

@@ -93,7 +93,7 @@ describe('dashboard API helpers', () => {
     );
   });
 
-  it('treats non-JSON /me responses as unauthenticated', async () => {
+  it('treats non-JSON me.get responses as unauthenticated', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const fetchMock = vi.fn(() =>
       Promise.resolve(
@@ -108,7 +108,7 @@ describe('dashboard API helpers', () => {
     await expect(getCurrentUser(createContext() as never)).resolves.toBeNull();
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://api.test/me',
+      'https://api.test/rpc/me.get',
       expect.objectContaining({
         headers: expect.any(Headers),
       }),

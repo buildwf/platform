@@ -1,20 +1,16 @@
-import type { ApiRoutes } from '@voidcloud/api/api';
+import type { OutputOf } from '@eeao/core';
+import type { PlatformRegistry } from '@voidcloud/api/rpc';
 import type { Context } from 'hono';
-import { hc, type InferResponseType } from 'hono/client';
 import { getCookie } from 'hono/cookie';
 import { dashboardRequestOrigin, isLocalDashboardHost } from './origin.ts';
 
-type Client = ReturnType<typeof hc<ApiRoutes>>;
 export type ApiResponse = Pick<
   Response,
   'headers' | 'json' | 'ok' | 'status' | 'statusText' | 'text'
 >;
 
-/** Extract the 200 JSON response type from an hc client route key. */
-export type API<K extends keyof Client> = InferResponseType<
-  Client[K] extends { $get: infer G } ? G : Client[K],
-  200
->;
+/** The signed in user, as `me.get` returns it. */
+export type CurrentUser = OutputOf<NonNullable<PlatformRegistry['~procedures']>['me.get']>;
 
 const API_URL = 'https://api.void.cloud';
 const DEFAULT_API_TIMEOUT_MS = 10_000;
@@ -215,20 +211,20 @@ export async function readApiJson<T>(res: ApiResponse): Promise<T | null> {
   }
 }
 
-export async function getCurrentUser(context: Context): Promise<API<'me'> | null> {
+export async function getCurrentUser(context: Context): Promise<CurrentUser | null> {
   let res: Response;
   try {
-    res = await fetchApi(context, '/me');
+    res = await fetchApi(context, '/rpc/me.get', { method: 'POST' });
   } catch (error) {
     console.warn(
-      `[dashboard] /me request failed: ${error instanceof Error ? error.message : String(error)}`,
+      `[dashboard] me.get request failed: ${error instanceof Error ? error.message : String(error)}`,
     );
     return null;
   }
 
   if (!res.ok) {
-    console.warn(`[dashboard] /me returned ${res.status}: ${await getApiErrorMessage(res)}`);
+    console.warn(`[dashboard] me.get returned ${res.status}: ${await getApiErrorMessage(res)}`);
     return null;
   }
-  return readApiJson<API<'me'>>(res);
+  return (await readApiJson<{ data: CurrentUser }>(res))?.data ?? null;
 }

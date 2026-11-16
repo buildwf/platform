@@ -64,10 +64,10 @@ function request(path: string, token: string, body?: unknown) {
 
 describe('platform human session revocation', () => {
   it('keeps legacy login working until the coordinated migration requires session records', async () => {
-    expect((await request('/me', admin.jwt)).status).toBe(200);
+    expect((await request('/rpc/me.get', admin.jwt, {})).status).toBe(200);
     await env.db.update(platformAuthSettings).set({ sessions_required: true });
-    expect((await request('/me', admin.jwt)).status).toBe(401);
-    expect((await request('/me', (await mint()).token)).status).toBe(200);
+    expect((await request('/rpc/me.get', admin.jwt, {})).status).toBe(401);
+    expect((await request('/rpc/me.get', (await mint()).token, {})).status).toBe(200);
   });
 
   it('revokes API, browser-admin, and derived operator sessions together', async () => {
@@ -84,7 +84,7 @@ describe('platform human session revocation', () => {
         .where(eq(platformLoginConnections.id, 'github'));
       await revokeConnectionSessions(tx, 'github');
     });
-    expect((await request('/me', api.token)).status).toBe(401);
+    expect((await request('/rpc/me.get', api.token, {})).status).toBe(401);
     expect((await request('/operator/v1/session', operator.token)).status).toBe(401);
     expect((await request('/operator/v1/session', api.token, {})).status).toBe(401);
     const browserResponse = await app.fetch(
@@ -99,7 +99,7 @@ describe('platform human session revocation', () => {
       .update(platformLoginConnections)
       .set({ enabled: true })
       .where(eq(platformLoginConnections.id, 'github'));
-    expect((await request('/me', api.token)).status).toBe(401);
+    expect((await request('/rpc/me.get', api.token, {})).status).toBe(401);
     await expect(mint()).rejects.toMatchObject({ code: 'login_changed' });
   });
 
@@ -118,7 +118,7 @@ describe('platform human session revocation', () => {
     );
     await revokeConnectionSessions(env.db, 'github');
     expect((await request('/projects', deploy)).status).toBe(200);
-    expect((await request('/me', deploy)).status).toBe(403);
+    expect((await request('/rpc/me.get', deploy, {})).status).toBe(403);
     expect((await request('/operator/v1/session', deploy, {})).status).toBe(401);
   });
 

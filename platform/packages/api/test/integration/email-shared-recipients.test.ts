@@ -116,14 +116,14 @@ describe('shared inbound allocation', () => {
   it('creates a project without allocating an inbound provider rule', async () => {
     const { user, provider } = await setup();
     const response = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug: 'created-project' }),
       }),
       bindings(),
     );
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(200);
     expect(await env.db.select().from(emailSharedRecipients)).toHaveLength(0);
     expect(callsByTag(provider.calls, 'literalRuleCreate')).toHaveLength(0);
   });
@@ -635,7 +635,7 @@ describe('managed shared subdomain recipients', () => {
       (await env.db.select().from(projects).where(eq(projects.id, project.id)))[0],
     ).toMatchObject({ slug: project.slug, status: 'deleting' });
     const reused = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug: project.slug }),

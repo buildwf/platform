@@ -861,7 +861,10 @@ describe('configured platform login routes', () => {
     expect(tokenResponse.status).toBe(200);
     const { token } = await tokenResponse.json<{ token: string }>();
     const whoami = await app.fetch(
-      new Request(`${origin}/me`, { headers: { Authorization: `Bearer ${token}` } }),
+      new Request(`${origin}/rpc/me.get`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      }),
       env,
     );
     expect(whoami.status).toBe(200);

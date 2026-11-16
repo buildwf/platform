@@ -309,13 +309,15 @@ describe('environment token destinations', () => {
     const fetcher = vi
       .spyOn(globalThis, 'fetch')
       .mockImplementation(
-        withPlatformDiscovery(async () => Response.json({ login: 'operator', plan: 'free' })),
+        withPlatformDiscovery(async () =>
+          Response.json({ data: { login: 'operator', plan: 'free' } }),
+        ),
       );
     try {
       await new PlatformClient(getToken(root)!, { root }).whoami();
       expect(getApiUrl(root)).toBe(origin);
       expect(fetcher).toHaveBeenCalledWith(
-        origin + '/me',
+        origin + '/rpc/me.get',
         expect.objectContaining({
           headers: expect.objectContaining({ Authorization: 'Bearer custom-platform-ci-token' }),
         }),
