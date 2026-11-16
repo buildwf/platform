@@ -1,2 +1,8 @@
 Copied from buildwf/fif branch react-platform at 972db66c29549fc1f6bc043205bb16b08f6dec7b
 (itself a fork of voidzero-dev/void, MIT).
+
+Upstream sync (2026-11-16): fork already contained voidzero-dev/void v1.9.1. Ported from upstream main
+(v1.9.1..6c276f13b): #830 getAuth cookies, #840 tuple types, #836 lint, #837 Workers VPC Hyperdrive,
+#838 public app setup, #842 R2 location hints, stdin provider fix, Worker version retry.
+Skipped (out of scope: Pages/SSR/ISR/non-React/Node targets or churn): #820, #788, #832, #848, #847, #841
+(runtime module reorg, 235 files; revisit on its own), docs-only wording commits, test-only runner tweaks.

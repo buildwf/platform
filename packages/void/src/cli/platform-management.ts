@@ -89,6 +89,7 @@ import {
   shouldUpdateProjectWorkerRuntimeLogs,
   updateProjectWorkerRuntimeLogs,
 } from './platform-runtime-logs.ts';
+import { assertPlatformStorageSupported } from './platform-storage.ts';
 import {
   assertNoPlatformProjects,
   checkPurgeResourcesCredentials,
@@ -262,6 +263,9 @@ export function platformLifecycleResumeCommand(
   }
   if ('runtimeLogs' in args && args.runtimeLogs) {
     command.push('--runtime-logs', args.runtimeLogs);
+  }
+  if ('storageLocation' in args && args.storageLocation) {
+    command.push('--storage-location', args.storageLocation);
   }
   if (args.yes) {
     command.push('--yes');
@@ -443,6 +447,9 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
         ? { dashboardUrl: args.dashboardUrl }
         : {}),
       ...(args.subcommand !== 'rollback' && args.customDomains ? { customDomains: true } : {}),
+      ...(args.subcommand === 'upgrade' && args.storageLocation !== undefined
+        ? { storageLocation: args.storageLocation }
+        : {}),
       ...(args.subcommand === 'upgrade' && args.runtimeLogs !== undefined
         ? { runtimeLogs: args.runtimeLogs }
         : {}),
@@ -460,9 +467,11 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
         enableSandbox: runtime!.manifest.safetyProtocols.sandboxDrain >= 3,
         deploymentExecution: runtime!.manifest.deploymentExecution === 1,
         allowRuntimeLogsChange: args.subcommand === 'upgrade',
+        allowStorageLocationChange: args.subcommand === 'upgrade',
       }),
     );
     assertPlatformRuntimeLogsSupported(plan.deployment, runtime!.manifest);
+    assertPlatformStorageSupported(plan.deployment, runtime!.manifest);
     markPhase('plan');
     note(
       formatPlatformInstallPlan(plan, manifest.deployment),
@@ -924,6 +933,7 @@ export function assertPlatformRollbackCompatibility(
       'platform: The rollback target predates the email gateway and cannot safely replace this installation. Use a runtime with email protocol version 1.',
     );
   }
+  assertPlatformStorageSupported(installation.deployment, target.manifest);
   if (installation.deployment.runtimeLogs && target.manifest.runtimeLogs !== 1) {
     throw new Error(
       'platform: The rollback target cannot keep runtime logs minimal. Run `void platform upgrade --runtime-logs full` first, then roll back.',
@@ -1957,6 +1967,9 @@ async function verifyPlatformMutationOwnership(
         if (exists) {
           const legacyHash = legacyResourceConfigHash(resource.kind, resource.name);
           const malformedLegacyHash = !/^[a-f0-9]{64}$/.test(resource.configHash);
+          if (live.origin.serviceId !== undefined && resource.ownership !== 'adopted') {
+            throw ownershipError(`hyperdrive ${resource.name} changed to a Workers VPC origin`);
+          }
           if (options.databaseUrl && resource.ownership !== 'adopted') {
             const expected = hyperdriveOriginFromConnectionString(options.databaseUrl);
             if (!hyperdriveOriginMatches(live.origin, expected)) {

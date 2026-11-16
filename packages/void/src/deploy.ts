@@ -150,6 +150,7 @@ export async function prepareDeployArtifact(
   const manifest = buildVoidManifest({
     bindings,
     alwaysUseHttps: config.routing?.alwaysUseHttps,
+    storage: config.storage,
     vars: config.worker?.vars,
     hasEmailHandlers: scan.email !== undefined && hasEmailHandlers(scan.email),
     migrations,
