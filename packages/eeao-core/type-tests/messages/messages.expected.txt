@@ -1,8 +1,0 @@
-type-tests/messages/messages.ts(15,12): error TS2345: Argument of type '() => Promise<{ ids: never[]; }>' is not assignable to parameter of type '"Undecided: authz, errors, analytics, cli, aiTool. Decide each one (or opt out with a reason) before .handler()"'.
-type-tests/messages/messages.ts(18,25): error TS2322: Type '"n/a"' is not assignable to type '"Opt-out reason must say why in at least three words, e.g. \"Public marketing data with no user context\""'.
-type-tests/messages/messages.ts(21,22): error TS2345: Argument of type '{ policy: string; check: () => boolean; }' is not assignable to parameter of type '"Decide authentication first: call .auth(provider) or .noAuth({ reason }) before .authz()"'.
-type-tests/messages/messages.ts(24,73): error TS2551: Property 'auth' does not exist on type 'Builder<Next<Init<unknown, "c">, "authn", { ctx: null; }>>'. Did you mean 'authz'?
-type-tests/messages/messages.ts(31,31): error TS2345: Argument of type '"NOPE"' is not assignable to parameter of type '"BUSY"'.
-type-tests/messages/messages.ts(34,20): error TS2741: Property 'effect' is missing in type '{ description: string; }' but required in type 'McpSpec'.
-type-tests/messages/messages.ts(37,17): error TS2322: Type 'Builder<Next<Init<unknown, "f">, "input", { in: undefined; inRaw: void; }>>' is not assignable to type 'AnyProcedure'.
-  Type 'Builder<Next<Init<unknown, "f">, "input", { in: undefined; inRaw: void; }>>' is missing the following properties from type 'Procedure<any>': '~eeao', name, decisions, profiles

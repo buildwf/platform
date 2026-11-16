@@ -107,7 +107,7 @@ export default defineConfig({
     },
     ignorePatterns: [
       '.svelte-kit/**',
-      'packages/eeao-core/type-tests/**',
+      'eeaao/**',
       'packages/void/docs/**',
       'packages/void/skills/void/docs/**',
       'platform/packages/api/src/admin/fate/client.generated.ts',
@@ -139,6 +139,7 @@ export default defineConfig({
     ],
     plugins: ['typescript', 'import', 'react', 'unicorn', 'vitest', 'node', 'jsdoc', 'oxc'],
     ignorePatterns: [
+      'eeaao/**',
       '**/node_modules/**',
       '**/dist/**',
       '**/.void/**',
@@ -151,7 +152,6 @@ export default defineConfig({
       'playground-local/**',
       '.worktrees/**',
       // Compiler-error fixtures: line positions are the test, so neither fmt nor lint touches them.
-      'packages/eeao-core/type-tests/**',
     ],
     overrides: [
       {
@@ -209,14 +209,6 @@ export default defineConfig({
         files: ['**/*.vue'],
         rules: {
           'no-undef': 'off',
-        },
-      },
-      {
-        // eeao's builder computes types from `any`-typed constraints (procedure maps,
-        // schema inference, variance), so the rule would only push it to `unknown` casts.
-        files: ['packages/eeao-*/**/*'],
-        rules: {
-          '@typescript-eslint/no-explicit-any': 'off',
         },
       },
       {
