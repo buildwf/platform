@@ -35,6 +35,7 @@ const INTERNAL: Record<ProxyInternalRoute, string> = {
   'resolve-worker': 'Phjba6joMrR31HPBsOamhNdtbT3__9Fg6zkd34dJiS0',
   'resolve-resource': 'qqnenNPCqY-C4RMAfPn0AUdXlvKS0tvkDcC8lyjTYck',
   'ai-logging': 'wrzsGDsBbCmnE9y7-oiaKILziYTHDffhfKqUGvpBQpM',
+  credential: 'LpGoJ85p3n4iSyy1JV5xiiUubZVpIKqTQr8xzpCRikU',
 };
 const ROUTES = Object.keys(INTERNAL) as Array<ProxyInternalRoute>;
 

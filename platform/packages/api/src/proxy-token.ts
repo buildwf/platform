@@ -340,7 +340,8 @@ export const PROXY_INTERNAL_AUTH_HEADER = 'x-void-proxy-internal';
 export type ProxyInternalRoute =
   | 'resolve-worker'
   | 'resolve-resource'
-  | 'ai-logging';
+  | 'ai-logging'
+  | 'credential';
 
 function proxyInternalMessage(route: ProxyInternalRoute, projectId: string): string {
   return `void-proxy-internal\n${route}\n${projectId}`;

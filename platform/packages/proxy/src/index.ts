@@ -9,6 +9,7 @@ import { asString } from './body.ts';
 import { proxyCapabilityEnabled } from './capabilities.ts';
 import { d1 } from './d1.ts';
 import { email } from './email.ts';
+import { github } from './github.ts';
 import { guardHumanStream } from './human-stream.ts';
 import { kv } from './kv.ts';
 import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from './platform-lifecycle.ts';
@@ -287,6 +288,7 @@ app.route('/d1', d1);
 app.route('/kv', kv);
 app.route('/r2', r2);
 app.route('/email', email);
+app.route('/github', github);
 
 export default { fetch: app.fetch };
 

@@ -11,7 +11,9 @@ import {
 } from 'vite-plus/test';
 import { hmacSignState } from '../../src/auth/hmac.ts';
 import { signJwt } from '../../src/auth/jwt.ts';
-import { createResource } from '../../src/db.ts';
+import { createResource, upsertProjectCredential } from '../../src/db.ts';
+import { encryptProjectSecret } from '../../src/project-secrets.ts';
+import { credentialSecretName } from '../../src/routes/internal-credential.ts';
 import app from '../../src/index.ts';
 import {
   deriveProxyInternalAuth,
@@ -233,6 +235,7 @@ describe('proxy credential on the metadata routes', () => {
     'resolve-worker',
     'resolve-resource',
     'ai-logging',
+    'credential',
   ];
 
   async function liveProject() {
@@ -240,10 +243,25 @@ describe('proxy credential on the metadata routes', () => {
     const project = await createTestProject(env.db, user.id);
     const deployment = await createTestDeployment(env.db, project.id, 'live');
     await createResource(env.db, project.id, 'kv', 'cf-kv-id', 'CACHE');
+    const encrypted = await encryptProjectSecret(
+      env,
+      project.id,
+      credentialSecretName('github'),
+      'ghp_stored',
+    );
+    await upsertProjectCredential(env.db, {
+      project_id: project.id,
+      provider: 'github',
+      ciphertext: encrypted.ciphertext,
+      iv: encrypted.iv,
+      key_version: encrypted.keyVersion,
+      repositories: ['buildwf/dedworc'],
+    });
     const bodies: Record<ProxyInternalRoute, unknown> = {
       'resolve-worker': {},
       'resolve-resource': { type: 'kv', binding: 'CACHE' },
       'ai-logging': {},
+      credential: { provider: 'github' },
     };
     const expected: Record<ProxyInternalRoute, unknown> = {
       'resolve-worker': {
@@ -253,6 +271,7 @@ describe('proxy credential on the metadata routes', () => {
       },
       'resolve-resource': { cf_id: 'cf-kv-id' },
       'ai-logging': { mode: 'inherit' },
+      credential: { token: 'ghp_stored', repositories: ['buildwf/dedworc'] },
     };
     return { project, deployment, bodies, expected };
   }
