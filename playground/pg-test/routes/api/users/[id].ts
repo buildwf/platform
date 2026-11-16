@@ -1,4 +1,4 @@
-import { users } from '@schema';
+import { posts, users } from '@schema';
 import { defineHandler } from 'void';
 import { db, eq } from 'void/db';
 
@@ -23,6 +23,7 @@ export const PUT = defineHandler(async (c) => {
 
 export const DELETE = defineHandler(async (c) => {
   const id = Number(c.req.param('id'));
+  await db.delete(posts).where(eq(posts.authorId, id));
   const [deleted] = await db.delete(users).where(eq(users.id, id)).returning();
   if (!deleted) {
     return c.json({ error: 'Not found' }, 404);

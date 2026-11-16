@@ -12,5 +12,5 @@
     "types": ["void/env"],
     "allowImportingTsExtensions": true
   },
-  "include": ["pages", "routes", "middleware", "crons", "queues", "lib"]
+  "include": ["src", "routes", "middleware", "crons", "queues", "lib", "email", "db"]
 }

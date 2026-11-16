@@ -12,5 +12,5 @@
     "types": ["void/env"],
     "allowImportingTsExtensions": true
   },
-  "include": ["pages", "routes", "db"]
+  "include": ["src", "routes", "db"]
 }
