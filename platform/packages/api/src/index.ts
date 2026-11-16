@@ -124,7 +124,7 @@ import projects from './routes/projects.ts';
 import { webhookRoutes } from './routes/webhooks.ts';
 import { setProjectsRoutingSuspension } from './routing.ts';
 import { appRpcRoutes } from './rpc/app-route.ts';
-import { rpcRoutes } from './rpc/route.ts';
+import { mcpRoutes, rpcRoutes } from './rpc/route.ts';
 import { SandboxConcurrencyCounter } from './sandbox-concurrency-counter.ts';
 import { SandboxControl } from './sandbox-control.ts';
 import {
@@ -575,6 +575,8 @@ const app = new Hono<ApiEnv>()
   .route('/email', emailConfirm)
   .use('/rpc/*', authMiddleware)
   .route('/rpc', rpcRoutes)
+  .use('/mcp/*', authMiddleware)
+  .route('/mcp', mcpRoutes)
   .use('/projects/*', authMiddleware)
   .route('/projects', projects)
   .route('/projects', projectZeroTrustRoutes)
