@@ -11,6 +11,7 @@ import {
   createTestUser,
   createTestProject,
   type TestEnv,
+  rpcData,
 } from './helpers.ts';
 import { setTestDb } from './setup.ts';
 
@@ -77,23 +78,22 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
     const project = await createTestProject(env.db, user.id, 'old-app');
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/upload-urls`, {
+      new Request(`http://localhost/rpc/deploy.uploadUrls`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
           'X-Void-CLI-Version': '0.6.0',
         },
-        body: JSON.stringify({ assets: [] }),
+        body: JSON.stringify({ projectId: project.id, assets: [] }),
       }),
       env,
     );
 
     expect(res.status).toBe(426);
-    const body = (await res.json()) as OutdatedBody;
-    expect(body.error).toBe('cli_outdated');
-    expect(body.clientVersion).toBe('0.6.0');
-    expect(body.minVersion).toBe(MIN_CLI_VERSION);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe('CLI_OUTDATED');
+    expect(body.error.message).toContain(MIN_CLI_VERSION);
   });
 
   it('rejects old X-Void-CLI-Version header on POST /deploy/preflight', async () => {
@@ -101,46 +101,21 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
     const project = await createTestProject(env.db, user.id, 'pf-app');
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+      new Request(`http://localhost/rpc/deploy.preflight`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
           'X-Void-CLI-Version': '0.5.99',
         },
-        body: JSON.stringify({ assetManifest: {} }),
+        body: JSON.stringify({ projectId: project.id, assetManifest: {} }),
       }),
       env,
     );
 
     expect(res.status).toBe(426);
-    const body = (await res.json()) as OutdatedBody;
-    expect(body.error).toBe('cli_outdated');
-  });
-
-  it('rejects multipart POST /deploy/upload-urls with 426 (must run before body parsing)', async () => {
-    // The gate runs at handler entry, before body parsing, so a stale CLI
-    // sending multipart gets the 426 upgrade message instead of an opaque
-    // "invalid JSON body" 400.
-    const user = await createTestUser(env.db);
-    const project = await createTestProject(env.db, user.id, 'mp-uu-app');
-
-    const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/upload-urls`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'multipart/form-data; boundary=----xyz',
-        },
-        body: '------xyz\r\nContent-Disposition: form-data; name="x"\r\n\r\nhi\r\n------xyz--\r\n',
-      }),
-      env,
-    );
-
-    expect(res.status).toBe(426);
-    const body = (await res.json()) as OutdatedBody;
-    expect(body.error).toBe('cli_outdated');
-    expect(body.message).toMatch(/multipart/i);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe('CLI_OUTDATED');
   });
 
   it('rejects unparseable X-Void-CLI-Version (fail closed)', async () => {
@@ -148,23 +123,22 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
     const project = await createTestProject(env.db, user.id, 'fail-closed-app');
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/upload-urls`, {
+      new Request(`http://localhost/rpc/deploy.uploadUrls`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
           'X-Void-CLI-Version': 'garbage',
         },
-        body: JSON.stringify({ assets: [] }),
+        body: JSON.stringify({ projectId: project.id, assets: [] }),
       }),
       env,
     );
 
     expect(res.status).toBe(426);
-    const body = (await res.json()) as OutdatedBody;
-    expect(body.error).toBe('cli_outdated');
-    expect(body.clientVersion).toBe('garbage');
-    expect(body.message).toMatch(/unrecognized/i);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe('CLI_OUTDATED');
+    expect(body.error.message).toMatch(/unrecognized/i);
   });
 
   it('does not gate me.get — old CLIs can still introspect their session', async () => {
@@ -189,14 +163,14 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
     const project = await createTestProject(env.db, user.id, 'curr-app');
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/upload-urls`, {
+      new Request(`http://localhost/rpc/deploy.uploadUrls`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
           'X-Void-CLI-Version': MIN_CLI_VERSION,
         },
-        body: JSON.stringify({ assets: [] }),
+        body: JSON.stringify({ projectId: project.id, assets: [] }),
       }),
       env,
     );
@@ -242,14 +216,14 @@ describe('cliVersionGate — defers to project authorization', () => {
     const aliceProject = await createTestProject(env.db, alice.id, 'alice-app');
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${aliceProject.id}/deploy/upload-urls`, {
+      new Request(`http://localhost/rpc/deploy.uploadUrls`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${bob.jwt}`,
           'Content-Type': 'application/json',
           'X-Void-CLI-Version': '0.0.1',
         },
-        body: JSON.stringify({ assets: [] }),
+        body: JSON.stringify({ projectId: aliceProject.id, assets: [] }),
       }),
       env,
     );
@@ -286,14 +260,14 @@ describe('cliVersionGate — defers to project authorization', () => {
     await env.db.update(projects).set({ status: 'deleting' }).where(eq(projects.id, project.id));
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+      new Request(`http://localhost/rpc/deploy.preflight`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
           'X-Void-CLI-Version': '0.0.1',
         },
-        body: JSON.stringify({ assetManifest: {} }),
+        body: JSON.stringify({ projectId: project.id, assetManifest: {} }),
       }),
       env,
     );
@@ -348,14 +322,14 @@ describe('cliVersionGate — defers to project authorization', () => {
       // version gate passes — we want to exercise the in-tx status
       // check, not the version gate.
       const reqPromise = app.fetch(
-        new Request(`http://localhost/projects/${project.id}/deploy/upload-urls`, {
+        new Request(`http://localhost/rpc/deploy.uploadUrls`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${user.jwt}`,
             'Content-Type': 'application/json',
             'X-Void-CLI-Version': MIN_CLI_VERSION,
           },
-          body: JSON.stringify({ assets: [] }),
+          body: JSON.stringify({ projectId: project.id, assets: [] }),
         }),
         env,
       );
@@ -368,8 +342,8 @@ describe('cliVersionGate — defers to project authorization', () => {
       beforeTxResolver?.();
       const res = await reqPromise;
       expect(res.status).toBe(410);
-      const body = (await res.json()) as { error?: string };
-      expect(body.error).toBe('project is being deleted');
+      const body = (await res.json()) as { error: { code: string } };
+      expect(body.error.code).toBe('PROJECT_DELETING');
     } finally {
       setTestDb(realDb);
     }

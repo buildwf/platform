@@ -35,6 +35,7 @@ import {
   cfSuccess,
   readAllEvents,
   type TestEnv,
+  rpcData,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -99,30 +100,30 @@ function isEvent(v: unknown, name: string): v is DeployEventBase {
 describe('POST /projects/:id/deploy/upload-urls', () => {
   it('returns 401 without auth', async () => {
     const res = await app.fetch(
-      new Request('http://localhost/projects/proj_x/deploy/upload-urls', {
+      new Request('http://localhost/rpc/deploy.uploadUrls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assets: [] }),
+        body: JSON.stringify({ projectId: 'proj_x', assets: [] }),
       }),
       env,
     );
     expect(res.status).toBe(401);
   });
 
-  it('returns 404 for nonexistent project', async () => {
+  it('returns 403 for nonexistent project', async () => {
     const user = await createTestUser(env.db);
     const res = await app.fetch(
-      new Request('http://localhost/projects/proj_missing/deploy/upload-urls', {
+      new Request('http://localhost/rpc/deploy.uploadUrls', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ assets: [] }),
+        body: JSON.stringify({ projectId: 'proj_missing', assets: [] }),
       }),
       env,
     );
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(403);
   });
 
   it('returns 403 for foreign project', async () => {
@@ -130,13 +131,13 @@ describe('POST /projects/:id/deploy/upload-urls', () => {
     const bob = await createTestUser(env.db, 'bob');
     const project = await createTestProject(env.db, alice.id, 'alice-app-uu');
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/upload-urls`, {
+      new Request(`http://localhost/rpc/deploy.uploadUrls`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${bob.jwt}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ assets: [] }),
+        body: JSON.stringify({ projectId: project.id, assets: [] }),
       }),
       env,
     );
@@ -147,7 +148,7 @@ describe('POST /projects/:id/deploy/upload-urls', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'uu-happy');
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/upload-urls`, {
+      new Request(`http://localhost/rpc/deploy.uploadUrls`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
@@ -155,6 +156,7 @@ describe('POST /projects/:id/deploy/upload-urls', () => {
           'X-Void-CLI-Version': '0.8.3',
         },
         body: JSON.stringify({
+          projectId: project.id,
           assets: [
             { blake3: HASH(1), md5: MD5(2), size: 10, contentType: 'text/html' },
             { blake3: HASH(3), md5: MD5(4), size: 20, contentType: 'application/javascript' },
@@ -164,7 +166,7 @@ describe('POST /projects/:id/deploy/upload-urls', () => {
       env,
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = rpcData(await res.json()) as {
       urls: Record<string, { url: string; headers: Record<string, string> }>;
     };
     expect(Object.keys(body.urls)).toEqual(expect.arrayContaining([HASH(1), HASH(3)]));
@@ -187,55 +189,58 @@ describe('POST /projects/:id/deploy/upload-urls', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'uu-bad-b3');
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/upload-urls`, {
+      new Request(`http://localhost/rpc/deploy.uploadUrls`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          projectId: project.id,
           assets: [{ blake3: 'not-hex', md5: MD5(1), size: 1, contentType: 'text/plain' }],
         }),
       }),
       env,
     );
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toMatch(/blake3.*32 lowercase hex/);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe('INVALID_INPUT');
   });
 
   it('rejects malformed md5', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'uu-bad-md5');
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/upload-urls`, {
+      new Request(`http://localhost/rpc/deploy.uploadUrls`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          projectId: project.id,
           assets: [{ blake3: HASH(1), md5: 'short', size: 1, contentType: 'text/plain' }],
         }),
       }),
       env,
     );
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toMatch(/md5.*32 lowercase hex/);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe('INVALID_INPUT');
   });
 
   it('rejects negative size', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'uu-bad-size');
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/upload-urls`, {
+      new Request(`http://localhost/rpc/deploy.uploadUrls`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          projectId: project.id,
           assets: [{ blake3: HASH(1), md5: MD5(2), size: -1, contentType: 'text/plain' }],
         }),
       }),
@@ -266,21 +271,22 @@ describe('POST /projects/:id/deploy/upload-urls', () => {
 
     try {
       const res = await app.fetch(
-        new Request(`http://localhost/projects/${project.id}/deploy/upload-urls`, {
+        new Request(`http://localhost/rpc/deploy.uploadUrls`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${user.jwt}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
+            projectId: project.id,
             assets: [{ blake3: HASH(1), md5: MD5(2), size: 10, contentType: 'text/html' }],
           }),
         }),
         env,
       );
       expect(res.status).toBe(410);
-      const body = (await res.json()) as { error: string; urls?: unknown };
-      expect(body.error).toMatch(/being deleted/);
+      const body = (await res.json()) as { error: { message: string }; urls?: unknown };
+      expect(body.error.message).toMatch(/being deleted/);
       expect(body.urls).toBeUndefined();
       expect(calls).toBe(1);
     } finally {
@@ -298,21 +304,22 @@ describe('POST /projects/:id/deploy/upload-urls', () => {
     await env.db.update(projects).set({ status: 'deleting' }).where(eq(projects.id, project.id));
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/upload-urls`, {
+      new Request(`http://localhost/rpc/deploy.uploadUrls`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          projectId: project.id,
           assets: [{ blake3: HASH(1), md5: MD5(2), size: 10, contentType: 'text/html' }],
         }),
       }),
       env,
     );
     expect(res.status).toBe(410);
-    const body = (await res.json()) as { error: string; urls?: unknown };
-    expect(body.error).toMatch(/being deleted/);
+    const body = (await res.json()) as { error: { message: string }; urls?: unknown };
+    expect(body.error.message).toMatch(/being deleted/);
     // Bytes must NOT be presigned — the response must not carry any `urls`.
     expect(body.urls).toBeUndefined();
   });
@@ -336,10 +343,11 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     await stageAssetInR2(env.STATIC_ASSETS_R2, 'other-project', HASH(3), new Uint8Array(12));
     await env.STATIC_ASSETS.put(`assets/${project.id}/${HASH(4)}`, new Uint8Array(12).buffer);
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+      new Request(`http://localhost/rpc/deploy.preflight`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          projectId: project.id,
           hasWorker: true,
           assetManifest: {
             '/renamed.js': { hash: HASH(1), size: 12 },
@@ -353,7 +361,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
       env,
     );
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
+    expect(rpcData(await res.json())).toEqual({
       needed: ['/wrong-size.js', '/foreign.js', '/legacy-kv.js'],
       total: 5,
       skipped: 2,
@@ -388,10 +396,11 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
       const list = vi.spyOn(env.STATIC_ASSETS_R2, 'list');
 
       const res = await app.fetch(
-        new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+        new Request(`http://localhost/rpc/deploy.preflight`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            projectId: project.id,
             hasWorker,
             assetManifest: {
               '/app.js': { hash: reusedHash, size: 12 },
@@ -404,7 +413,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
         env,
       );
       expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({
+      expect(rpcData(await res.json())).toEqual({
         needed: ['/wrong-size.js', '/missing.js'],
         total: 4,
         skipped: 2,
@@ -551,14 +560,18 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     const hash = HASH(9);
     await stageAssetInR2(env.STATIC_ASSETS_R2, project.id, hash, new Uint8Array(12));
     const preflight = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+      new Request(`http://localhost/rpc/deploy.preflight`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hasWorker: true, assetManifest: { '/app.js': { hash, size: 12 } } }),
+        body: JSON.stringify({
+          projectId: project.id,
+          hasWorker: true,
+          assetManifest: { '/app.js': { hash, size: 12 } },
+        }),
       }),
       env,
     );
-    expect(await preflight.json()).toMatchObject({ needed: [], skipped: 1 });
+    expect(rpcData(await preflight.json())).toMatchObject({ needed: [], skipped: 1 });
     await env.STATIC_ASSETS_R2.delete(`assets/${project.id}/${hash}`);
     const cf = mockCfApi();
     const res = await app.fetch(
@@ -1061,17 +1074,22 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
         .set({ active_deployment_id: liveId })
         .where(eq(projects.id, project.id));
       const preflight = await app.fetch(
-        new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+        new Request(`http://localhost/rpc/deploy.preflight`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            projectId: project.id,
             hasWorker,
             assetManifest: { '/app.js': { hash, size: bytes.length } },
           }),
         }),
         env,
       );
-      expect(await preflight.json()).toEqual({ needed: ['/app.js'], total: 1, skipped: 0 });
+      expect(rpcData(await preflight.json())).toEqual({
+        needed: ['/app.js'],
+        total: 1,
+        skipped: 0,
+      });
       const ingress = vi.spyOn(projectIngress, 'ensureProjectIngress');
       const cf = mockCfApi();
       const response = await app.fetch(
@@ -1561,14 +1579,18 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     expect(headBefore).toBeNull();
 
     const preflight = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+      new Request(`http://localhost/rpc/deploy.preflight`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assetManifest: liveAssetManifest }),
+        body: JSON.stringify({ projectId: project.id, assetManifest: liveAssetManifest }),
       }),
       env,
     );
-    expect(await preflight.json()).toEqual({ needed: ['/index.html'], total: 2, skipped: 1 });
+    expect(rpcData(await preflight.json())).toEqual({
+      needed: ['/index.html'],
+      total: 2,
+      skipped: 1,
+    });
 
     const request = () =>
       new Request(`http://localhost/projects/${project.id}/deploy`, {
@@ -1897,10 +1919,10 @@ describe('direct Worker module upload', () => {
 
   function requestUrls(projectId: string, body: unknown) {
     return app.fetch(
-      new Request(`http://localhost/projects/${projectId}/deploy/worker-upload-urls`, {
+      new Request(`http://localhost/rpc/deploy.workerUploadUrls`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ projectId: projectId, ...body }),
       }),
       env,
     );
@@ -1917,7 +1939,7 @@ describe('direct Worker module upload', () => {
     );
     const res = await requestUrls(projectId, { modules });
     expect(res.status).toBe(200);
-    const { id, urls } = (await res.json()) as {
+    const { id, urls } = rpcData(await res.json()) as {
       id: string;
       urls: Array<{ url: string; headers: Record<string, string> }>;
     };
@@ -1965,7 +1987,7 @@ describe('direct Worker module upload', () => {
     ];
     const res = await requestUrls(project.id, { modules });
     expect(res.status).toBe(200);
-    const { id, urls } = (await res.json()) as {
+    const { id, urls } = rpcData(await res.json()) as {
       id: string;
       urls: Array<{ url: string; headers: Record<string, string> }>;
     };
@@ -2021,7 +2043,7 @@ describe('direct Worker module upload', () => {
     const project = await createTestProject(env.db, user.id, 'wu-invalid');
     const res = await requestUrls(project.id, body);
     expect(res.status).toBe(400);
-    expect(await res.json()).toMatchObject({ error: expect.any(String) });
+    expect(await res.json()).toMatchObject({ error: { code: expect.any(String) } });
   });
 
   it('applies the 64 MiB Worker limit to code but not to source maps', async () => {
@@ -2035,8 +2057,10 @@ describe('direct Worker module upload', () => {
     });
     expect(tooLarge.status).toBe(413);
     expect(await tooLarge.json()).toEqual({
-      error: 'worker_too_large',
-      message: 'The Worker is 64.1 MiB without source maps, and Cloudflare allows 64 MiB.',
+      error: {
+        code: 'WORKER_TOO_LARGE',
+        message: 'The Worker is 64.1 MiB without source maps, and Cloudflare allows 64 MiB.',
+      },
     });
     const withMaps = await requestUrls(project.id, {
       modules: [

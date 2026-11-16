@@ -95,24 +95,23 @@ export type CliOutdatedBody = Readonly<{
  * 410 first. The multipart sniff is body-content-free (header only) so
  * delaying it past project lookup is safe.
  */
-export function checkCliVersionOrRespond(context: Context): Response | null {
-  const contentType = context.req.header('content-type') ?? '';
-  if (contentType.toLowerCase().startsWith('multipart/')) {
-    const body: CliOutdatedBody = {
+export function cliVersionProblem(
+  contentType: string | null,
+  cliVersion: string | null,
+): CliOutdatedBody | null {
+  if ((contentType ?? '').toLowerCase().startsWith('multipart/')) {
+    return {
       error: 'cli_outdated',
       message:
         'Your void CLI is too old: it sent a multipart deploy body, which is no longer supported. ' +
         `Upgrade with: npm i -g void@latest (minimum version ${MIN_CLI_VERSION}).`,
       minVersion: MIN_CLI_VERSION,
     };
-    return context.json(body, 426);
   }
-
-  const cliVersion = context.req.header('x-void-cli-version');
-  if (cliVersion !== undefined) {
+  if (cliVersion !== null) {
     const cmp = compareVersions(cliVersion, MIN_CLI_VERSION);
     if (cmp === null || cmp < 0) {
-      const body: CliOutdatedBody = {
+      return {
         error: 'cli_outdated',
         message:
           cmp === null
@@ -123,9 +122,15 @@ export function checkCliVersionOrRespond(context: Context): Response | null {
         minVersion: MIN_CLI_VERSION,
         clientVersion: cliVersion,
       };
-      return context.json(body, 426);
     }
   }
-
   return null;
+}
+
+export function checkCliVersionOrRespond(context: Context): Response | null {
+  const problem = cliVersionProblem(
+    context.req.header('content-type') ?? null,
+    context.req.header('x-void-cli-version') ?? null,
+  );
+  return problem ? context.json(problem, 426) : null;
 }

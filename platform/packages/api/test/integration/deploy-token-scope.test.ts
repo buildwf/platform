@@ -26,6 +26,7 @@ import {
   cfSuccess,
   readAllEvents,
   type TestEnv,
+  rpcData,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -106,17 +107,21 @@ describe('deploy token scope enforcement', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/worker-upload-urls`, {
+      new Request(`http://localhost/rpc/deploy.workerUploadUrls`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          projectId: project.id,
           modules: [{ name: 'index.js', size: 18, sha256: 'a'.repeat(64) }],
         }),
       }),
       env,
     );
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ id: expect.any(String), urls: [expect.any(Object)] });
+    expect(rpcData(await res.json())).toMatchObject({
+      id: expect.any(String),
+      urls: [expect.any(Object)],
+    });
   });
 
   it('lets the deploy sibling endpoints through (preflight, upload-urls)', async () => {
@@ -126,20 +131,20 @@ describe('deploy token scope enforcement', () => {
     mockCfApi();
 
     const preflight = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+      new Request(`http://localhost/rpc/deploy.preflight`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: '{}',
+        body: JSON.stringify({ projectId: project.id, ...JSON.parse('{}') }),
       }),
       env,
     );
     expect(preflight.status).not.toBe(403);
 
     const uploadUrls = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/upload-urls`, {
+      new Request(`http://localhost/rpc/deploy.uploadUrls`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: '{}',
+        body: JSON.stringify({ projectId: project.id, ...JSON.parse('{}') }),
       }),
       env,
     );
@@ -152,10 +157,12 @@ describe('deploy token scope enforcement', () => {
     const token = await deployToken(project.id, user.id);
     mockCfApi();
 
-    for (const path of ['resources', 'deployments', 'secrets']) {
+    for (const name of ['projects.resources', 'deployments.list', 'secrets.list']) {
       const res = await app.fetch(
-        new Request(`http://localhost/projects/${project.id}/${path}`, {
-          headers: { Authorization: `Bearer ${token}` },
+        new Request(`http://localhost/rpc/${name}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId: project.id }),
         }),
         env,
       );
@@ -189,13 +196,15 @@ describe('deploy token scope enforcement', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deployments`, {
-        headers: { Authorization: `Bearer ${token}` },
+      new Request(`http://localhost/rpc/deployments.list`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id }),
       }),
       env,
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = rpcData(await res.json()) as {
       deployments: ReadonlyArray<{ manifest: string | null }>;
     };
     expect(body.deployments).toHaveLength(1);
@@ -233,13 +242,15 @@ describe('deploy token scope enforcement', () => {
 
     // A normal aud:'api' token (deployScope unset) keeps the full manifest.
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deployments`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      new Request(`http://localhost/rpc/deployments.list`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id }),
       }),
       env,
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = rpcData(await res.json()) as {
       deployments: ReadonlyArray<{ manifest: string | null }>;
     };
     expect(body.deployments).toHaveLength(1);
@@ -258,13 +269,15 @@ describe('deploy token scope enforcement', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deployments`, {
-        headers: { Authorization: `Bearer ${token}` },
+      new Request(`http://localhost/rpc/deployments.list`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id }),
       }),
       env,
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = rpcData(await res.json()) as {
       deployments: ReadonlyArray<{ manifest: string | null }>;
     };
     expect(body.deployments).toHaveLength(2);
@@ -280,8 +293,10 @@ describe('deploy token scope enforcement', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
-        headers: { Authorization: `Bearer ${token}` },
+      new Request('http://localhost/rpc/projects.list', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       }),
       env,
     );
@@ -297,13 +312,15 @@ describe('deploy token scope enforcement', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
-        headers: { Authorization: `Bearer ${token}` },
+      new Request('http://localhost/rpc/projects.list', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       }),
       env,
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as ReadonlyArray<{ id: string; slug: string }>;
+    const body = rpcData(await res.json()) as ReadonlyArray<{ id: string; slug: string }>;
     const ids = body.map((p) => p.id);
     // The scoped project must be present so the CLI can resolve slug→id...
     expect(ids).toContain(projectP.id);
@@ -319,13 +336,15 @@ describe('deploy token scope enforcement', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      new Request('http://localhost/rpc/projects.list', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       }),
       env,
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as ReadonlyArray<{ id: string; slug: string }>;
+    const body = rpcData(await res.json()) as ReadonlyArray<{ id: string; slug: string }>;
     const ids = body.map((p) => p.id);
     // A full `api` token (deployScope unset) keeps the complete listing.
     expect(ids).toContain(projectP.id);
@@ -487,8 +506,10 @@ describe('deploy token scope enforcement', () => {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: '{}',
       }),
-      new Request(`http://localhost/projects/${project.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      new Request(`http://localhost/rpc/projects.get`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id }),
       }),
     ];
     for (const request of requests) {
@@ -511,11 +532,23 @@ describe('deploy token scope enforcement', () => {
   // endpoints (database provisioning, asset preflight, presigned upload URLs)
   // must reject a token whose bound build is no longer active, otherwise a
   // superseded/cancelled runner could still mutate real project state.
-  const ALLOWLISTED_MUTATING_ROUTES: ReadonlyArray<{ name: string; path: string }> = [
+  const ALLOWLISTED_MUTATING_ROUTES: ReadonlyArray<{ name: string; path: string; rpc?: string }> = [
     { name: 'POST /projects/:id/database', path: 'database' },
-    { name: 'POST /projects/:id/deploy/preflight', path: 'deploy/preflight' },
-    { name: 'POST /projects/:id/deploy/upload-urls', path: 'deploy/upload-urls' },
-    { name: 'POST /projects/:id/deploy/worker-upload-urls', path: 'deploy/worker-upload-urls' },
+    {
+      name: 'POST /projects/:id/deploy/preflight',
+      path: 'deploy/preflight',
+      rpc: 'deploy.preflight',
+    },
+    {
+      name: 'POST /projects/:id/deploy/upload-urls',
+      path: 'deploy/upload-urls',
+      rpc: 'deploy.uploadUrls',
+    },
+    {
+      name: 'POST /projects/:id/deploy/worker-upload-urls',
+      path: 'deploy/worker-upload-urls',
+      rpc: 'deploy.workerUploadUrls',
+    },
   ];
 
   for (const status of ['cancelled', 'failed'] as const) {
@@ -533,11 +566,16 @@ describe('deploy token scope enforcement', () => {
         mockCfApi();
 
         const res = await app.fetch(
-          new Request(`http://localhost/projects/${project.id}/${route.path}`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: '{}',
-          }),
+          new Request(
+            route.rpc
+              ? `http://localhost/rpc/${route.rpc}`
+              : `http://localhost/projects/${project.id}/${route.path}`,
+            {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: route.rpc ? JSON.stringify({ projectId: project.id }) : '{}',
+            },
+          ),
           env,
         );
         expect(res.status).toBe(403);
@@ -565,11 +603,16 @@ describe('deploy token scope enforcement', () => {
       // Empty body — the handler will return some non-403 (400/etc.), but the
       // point is that the central build-state guard did NOT reject it with 403.
       const res = await app.fetch(
-        new Request(`http://localhost/projects/${project.id}/${route.path}`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: '{}',
-        }),
+        new Request(
+          route.rpc
+            ? `http://localhost/rpc/${route.rpc}`
+            : `http://localhost/projects/${project.id}/${route.path}`,
+          {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: route.rpc ? JSON.stringify({ projectId: project.id }) : '{}',
+          },
+        ),
         env,
       );
       expect(res.status).not.toBe(403);

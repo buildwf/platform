@@ -48,6 +48,7 @@ import {
   mockCfApi,
   readAllEvents,
   type TestEnv,
+  rpcData,
 } from './helpers.ts';
 
 let env: TestEnv & { DEPLOYMENTS_QUEUE?: Queue };
@@ -264,10 +265,10 @@ describe('registered OAuth applications', () => {
     });
     const receipt = (await issued.json()) as { access_token: string; approval_id: string };
     const upload = (...assets: Array<typeof asset>) =>
-      request('/projects/' + project.project_id + '/deploy/upload-urls', {
+      request('/rpc/deploy.uploadUrls', {
         method: 'POST',
         headers: { ...headers, Authorization: 'Bearer ' + receipt.access_token },
-        body: JSON.stringify({ assets }),
+        body: JSON.stringify({ projectId: project.project_id, assets }),
       });
     expect((await upload(asset)).status).toBe(200);
     expect((await upload(otherAsset, asset, asset)).status).toBe(200);
@@ -587,17 +588,18 @@ describe('registered OAuth applications', () => {
       await exchange(new URL(consent.headers.get('Location')!).searchParams.get('code')!)
     ).json()) as { access_token: string };
     const headers = { Authorization: 'Bearer ' + access, 'Content-Type': 'application/json' };
-    const upload = await request('/projects/' + project.id + '/deploy/upload-urls', {
+    const upload = await request('/rpc/deploy.uploadUrls', {
       method: 'POST',
       headers,
       body: JSON.stringify({
+        projectId: project.id,
         assets: [
           { blake3: hash, md5: 'a'.repeat(32), size: bytes.length, contentType: 'text/javascript' },
         ],
       }),
     });
     expect(upload.status).toBe(200);
-    const { urls } = (await upload.json()) as {
+    const { urls } = rpcData(await upload.json()) as {
       urls: Record<string, { url: string; headers: Record<string, string> }>;
     };
     expect(urls[hash]!.headers).toMatchObject({

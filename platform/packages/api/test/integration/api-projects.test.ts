@@ -67,7 +67,14 @@ beforeEach(async () => {
 
 describe('GET /projects', () => {
   it('returns 401 without auth', async () => {
-    const res = await app.fetch(new Request('http://localhost/projects'), env);
+    const res = await app.fetch(
+      new Request('http://localhost/rpc/projects.list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      }),
+      env,
+    );
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({
       error: 'unauthorized',
@@ -80,8 +87,10 @@ describe('GET /projects', () => {
     await env.db.delete(users).where(eq(users.id, user.id));
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      new Request('http://localhost/rpc/projects.list', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       }),
       env,
     );
@@ -100,8 +109,10 @@ describe('GET /projects', () => {
       .where(eq(users.id, user.id));
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      new Request('http://localhost/rpc/projects.list', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       }),
       env,
     );
@@ -120,8 +131,10 @@ describe('GET /projects', () => {
       .where(eq(users.id, user.id));
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      new Request('http://localhost/rpc/projects.list', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       }),
       env,
     );
@@ -132,13 +145,15 @@ describe('GET /projects', () => {
     const user = await createTestUser(env.db);
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      new Request('http://localhost/rpc/projects.list', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       }),
       env,
     );
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual([]);
+    expect(rpcData(await res.json())).toEqual([]);
   });
 
   it("returns only the authenticated user's projects", async () => {
@@ -149,13 +164,15 @@ describe('GET /projects', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
-        headers: { Authorization: `Bearer ${alice.jwt}` },
+      new Request('http://localhost/rpc/projects.list', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${alice.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       }),
       env,
     );
     expect(res.status).toBe(200);
-    const projects = (await res.json()) as Array<{ slug: string }>;
+    const projects = rpcData(await res.json()) as Array<{ slug: string }>;
     expect(projects).toHaveLength(1);
     expect(projects[0].slug).toBe('alice-app');
   });
@@ -177,14 +194,19 @@ describe('GET /projects', () => {
 
     const list = () =>
       app.fetch(
-        new Request('http://localhost/projects', {
-          headers: { Authorization: `Bearer ${collaborator.jwt}` },
+        new Request('http://localhost/rpc/projects.list', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${collaborator.jwt}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
         }),
         env,
       );
     const suspended = await list();
     expect(suspended.status).toBe(200);
-    expect(await suspended.json()).toEqual([]);
+    expect(rpcData(await suspended.json())).toEqual([]);
 
     await env.db
       .update(users)
@@ -193,7 +215,7 @@ describe('GET /projects', () => {
     mockCfApi();
     const usageSuspended = await list();
     expect(usageSuspended.status).toBe(200);
-    expect((await usageSuspended.json()) as Array<{ id: string }>).toMatchObject([
+    expect(rpcData(await usageSuspended.json()) as Array<{ id: string }>).toMatchObject([
       { id: project.id },
     ]);
   });
@@ -242,14 +264,16 @@ describe('GET /projects', () => {
     });
 
     const res = await app.fetch(
-      new Request('http://localhost/projects', {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      new Request('http://localhost/rpc/projects.list', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       }),
       env,
     );
 
     expect(res.status).toBe(200);
-    const projects = (await res.json()) as Array<{
+    const projects = rpcData(await res.json()) as Array<{
       slug: string;
       custom_domain: string | null;
       latest_deployment: { id: string; status: string; source: string | null } | null;
@@ -277,8 +301,13 @@ describe('GET /projects', () => {
 describe('GET /projects/resolve', () => {
   const resolve = (slug: string, token?: string) =>
     app.fetch(
-      new Request(`http://localhost/projects/resolve?slug=${encodeURIComponent(slug)}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      new Request(`http://localhost/rpc/projects.resolve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ slug }),
       }),
       env,
     );
@@ -286,10 +315,12 @@ describe('GET /projects/resolve', () => {
   it('requires authentication and a valid slug', async () => {
     expect((await resolve('my-app')).status).toBe(401);
     const user = await createTestUser(env.db, 'resolve-validation');
-    for (const path of ['/projects/resolve', '/projects/resolve?slug=Bad%20Slug']) {
+    for (const slug of [undefined, 'Bad Slug']) {
       const response = await app.fetch(
-        new Request(`http://localhost${path}`, {
-          headers: { Authorization: `Bearer ${user.jwt}` },
+        new Request('http://localhost/rpc/projects.resolve', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug }),
         }),
         env,
       );
@@ -315,13 +346,15 @@ describe('GET /projects/resolve', () => {
     for (const user of [owner, collaborator]) {
       const resolved = await resolve(project.slug, user.jwt);
       const byId = await app.fetch(
-        new Request(`http://localhost/projects/${project.id}`, {
-          headers: { Authorization: `Bearer ${user.jwt}` },
+        new Request(`http://localhost/rpc/projects.get`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId: project.id }),
         }),
         env,
       );
       expect(resolved.status).toBe(200);
-      expect(await resolved.json()).toEqual({ project: await byId.json() });
+      expect(rpcData(await resolved.json())).toEqual({ project: rpcData(await byId.json()) });
     }
     expect(externalFetch).not.toHaveBeenCalled();
   });
@@ -330,8 +363,12 @@ describe('GET /projects/resolve', () => {
     const owner = await createTestUser(env.db, 'resolve-private-owner');
     const other = await createTestUser(env.db, 'resolve-private-other');
     const project = await createTestProject(env.db, owner.id, 'resolve-private');
-    expect(await (await resolve('resolve-missing', other.jwt)).json()).toEqual({ project: null });
-    expect(await (await resolve(project.slug, other.jwt)).json()).toEqual({ project: null });
+    expect(rpcData(await (await resolve('resolve-missing', other.jwt)).json())).toEqual({
+      project: null,
+    });
+    expect(rpcData(await (await resolve(project.slug, other.jwt)).json())).toEqual({
+      project: null,
+    });
 
     await env.db.insert(projectMembers).values({
       project_id: project.id,
@@ -343,7 +380,9 @@ describe('GET /projects/resolve', () => {
       .update(users)
       .set({ suspended_reason: 'platform policy violation' })
       .where(eq(users.id, owner.id));
-    expect(await (await resolve(project.slug, other.jwt)).json()).toEqual({ project: null });
+    expect(rpcData(await (await resolve(project.slug, other.jwt)).json())).toEqual({
+      project: null,
+    });
   });
 
   it('limits deploy credentials to their assigned project', async () => {
@@ -362,11 +401,13 @@ describe('GET /projects/resolve', () => {
 
     const allowed = await resolve(assigned.slug, token);
     expect(allowed.status).toBe(200);
-    expect(await allowed.json()).toMatchObject({ project: { id: assigned.id } });
+    expect(rpcData(await allowed.json())).toMatchObject({ project: { id: assigned.id } });
     const denied = await resolve(sibling.slug, token);
     expect(denied.status).toBe(200);
-    expect(await denied.json()).toEqual({ project: null });
-    expect(await (await resolve('resolve-absent', token)).json()).toEqual({ project: null });
+    expect(rpcData(await denied.json())).toEqual({ project: null });
+    expect(rpcData(await (await resolve('resolve-absent', token)).json())).toEqual({
+      project: null,
+    });
   });
 });
 
@@ -390,13 +431,15 @@ describe('GET /projects/choices', () => {
     vi.stubGlobal('fetch', externalFetch);
 
     const response = await app.fetch(
-      new Request('http://localhost/projects/choices', {
-        headers: { Authorization: `Bearer ${owner.jwt}` },
+      new Request('http://localhost/rpc/projects.choices', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${owner.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       }),
       env,
     );
     expect(response.status).toBe(200);
-    const choices = (await response.json()) as Array<{ id: string; role: string }>;
+    const choices = rpcData(await response.json()) as Array<{ id: string; role: string }>;
     expect(choices).toHaveLength(2);
     expect(choices).toEqual(
       expect.arrayContaining([
@@ -419,12 +462,23 @@ describe('GET /projects/choices', () => {
       { projectId: project.id, userId: owner.id, login: owner.login, buildId: build.id },
       env.JWT_SECRET,
     );
-    expect((await app.fetch(new Request('http://localhost/projects/choices'), env)).status).toBe(
-      401,
-    );
+    expect(
+      (
+        await app.fetch(
+          new Request('http://localhost/rpc/projects.choices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+          }),
+          env,
+        )
+      ).status,
+    ).toBe(401);
     const scoped = await app.fetch(
-      new Request('http://localhost/projects/choices', {
-        headers: { Authorization: `Bearer ${token}` },
+      new Request('http://localhost/rpc/projects.choices', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       }),
       env,
     );
@@ -482,18 +536,20 @@ describe('GET /projects/:id', () => {
     );
     const read = (id: string) =>
       app.fetch(
-        new Request(`http://localhost/projects/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
+        new Request(`http://localhost/rpc/projects.get`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId: id }),
         }),
         env,
       );
 
     const allowed = await read(assigned.id);
     expect(allowed.status).toBe(200);
-    expect(await allowed.json()).toMatchObject({ id: assigned.id });
+    expect(rpcData(await allowed.json())).toMatchObject({ id: assigned.id });
     const denied = await read(sibling.id);
     expect(denied.status).toBe(403);
-    expect(await denied.json()).toMatchObject({ error: 'forbidden' });
+    expect(await denied.json()).toMatchObject({ error: { code: 'FORBIDDEN' } });
   });
 
   it('returns project for the owner', async () => {
@@ -501,13 +557,15 @@ describe('GET /projects/:id', () => {
     const project = await createTestProject(env.db, user.id, 'my-app');
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      new Request(`http://localhost/rpc/projects.get`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id }),
       }),
       env,
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string; slug: string };
+    const body = rpcData(await res.json()) as { id: string; slug: string };
     expect(body.id).toBe(project.id);
     expect(body.slug).toBe('my-app');
   });
@@ -528,15 +586,19 @@ describe('GET /projects/:id', () => {
       .where(eq(users.id, owner.id));
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}`, {
-        headers: { Authorization: `Bearer ${collaborator.jwt}` },
+      new Request(`http://localhost/rpc/projects.get`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${collaborator.jwt}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ projectId: project.id }),
       }),
       env,
     );
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({
-      error: 'project owner suspended',
-      message: expect.any(String),
+      error: { code: expect.any(String), message: expect.any(String) },
     });
   });
 
@@ -546,25 +608,29 @@ describe('GET /projects/:id', () => {
     const project = await createTestProject(env.db, alice.id, 'alice-app');
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}`, {
-        headers: { Authorization: `Bearer ${bob.jwt}` },
+      new Request(`http://localhost/rpc/projects.get`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${bob.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id }),
       }),
       env,
     );
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: 'forbidden', message: expect.any(String) });
+    expect(await res.json()).toEqual({ error: { code: 'FORBIDDEN', message: expect.any(String) } });
   });
 
   it('returns 404 for nonexistent project', async () => {
     const user = await createTestUser(env.db);
 
     const res = await app.fetch(
-      new Request('http://localhost/projects/proj_nonexistent', {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      new Request('http://localhost/rpc/projects.get', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: 'proj_nonexistent' }),
       }),
       env,
     );
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -1568,7 +1634,9 @@ describe('POST /projects', () => {
         env,
       );
       expect(res.status, slug).toBe(400);
-      expect(await res.json()).toMatchObject({ error: { message: 'this name is reserved' } });
+      expect(await res.json()).toMatchObject({
+        error: { message: 'this name is reserved' },
+      });
     }
   });
 
@@ -1711,7 +1779,11 @@ describe('POST /projects', () => {
 describe('GET /projects/:id/deployments', () => {
   it('returns 401 without auth', async () => {
     const res = await app.fetch(
-      new Request('http://localhost/projects/proj_test1/deployments'),
+      new Request('http://localhost/rpc/deployments.list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: 'proj_test1' }),
+      }),
       env,
     );
     expect(res.status).toBe(401);
@@ -1721,12 +1793,14 @@ describe('GET /projects/:id/deployments', () => {
     const user = await createTestUser(env.db);
 
     const res = await app.fetch(
-      new Request('http://localhost/projects/proj_nonexistent/deployments', {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      new Request('http://localhost/rpc/deployments.list', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: 'proj_nonexistent' }),
       }),
       env,
     );
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(403);
   });
 
   it('returns 403 when not the project owner', async () => {
@@ -1735,8 +1809,10 @@ describe('GET /projects/:id/deployments', () => {
     const project = await createTestProject(env.db, alice.id, 'alice-project');
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deployments`, {
-        headers: { Authorization: `Bearer ${bob.jwt}` },
+      new Request(`http://localhost/rpc/deployments.list`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${bob.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id }),
       }),
       env,
     );
@@ -1748,13 +1824,15 @@ describe('GET /projects/:id/deployments', () => {
     const project = await createTestProject(env.db, user.id);
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deployments`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      new Request(`http://localhost/rpc/deployments.list`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id }),
       }),
       env,
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = rpcData(await res.json()) as {
       deployments: Array<unknown>;
       activeDeploymentId: string | null;
     };
@@ -1776,13 +1854,15 @@ describe('GET /projects/:id/deployments', () => {
     const d2 = await createDeployment(env.db, project.id, null, 'ci');
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deployments`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
+      new Request(`http://localhost/rpc/deployments.list`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id }),
       }),
       env,
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = rpcData(await res.json()) as {
       deployments: Array<{
         cli_version: string | null;
         commit: string | null;
@@ -1838,13 +1918,15 @@ describe('GET /projects/:id/deployments', () => {
 
     const listAs = async (jwt: string) => {
       const response = await app.fetch(
-        new Request(`http://localhost/projects/${project.id}/deployments`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+        new Request(`http://localhost/rpc/deployments.list`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId: project.id }),
         }),
         env,
       );
       expect(response.status).toBe(200);
-      const body = (await response.json()) as { deployments: Array<{ manifest: string }> };
+      const body = rpcData(await response.json()) as { deployments: Array<{ manifest: string }> };
       return JSON.parse(body.deployments[0]!.manifest) as Record<string, unknown>;
     };
 
@@ -1887,8 +1969,10 @@ describe('GET /projects/:id/deployments', () => {
 
     const listAs = async (jwt: string) => {
       const response = await app.fetch(
-        new Request(`http://localhost/projects/${project.id}/deployments`, {
-          headers: { Authorization: `Bearer ${jwt}` },
+        new Request(`http://localhost/rpc/deployments.list`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId: project.id }),
         }),
         env,
       );
@@ -1897,7 +1981,7 @@ describe('GET /projects/:id/deployments', () => {
       expect(text).not.toContain('cf boom');
       expect(text).not.toContain('user-x-dep');
       expect(text).not.toContain('mock-proxy-token');
-      return JSON.parse(text) as { deployments: Array<unknown>; warnings?: Array<string> };
+      return rpcData(JSON.parse(text)) as { deployments: Array<unknown>; warnings?: Array<string> };
     };
 
     expect(await listAs(owner.jwt)).not.toHaveProperty('warnings');

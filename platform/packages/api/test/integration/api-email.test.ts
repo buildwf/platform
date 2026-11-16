@@ -2781,7 +2781,14 @@ describe('email platform capability', () => {
     expect(github.status).toBe(404);
     expect(await github.json()).toEqual({ error: 'connection not found' });
 
-    const detail = await get(`/projects/${project.id}`, user.jwt, capabilityEnv(false));
+    const detail = await app.fetch(
+      new Request('http://localhost/rpc/projects.get', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id }),
+      }),
+      capabilityEnv(false),
+    );
     expect(detail.status).toBe(200);
   });
 

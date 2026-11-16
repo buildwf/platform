@@ -12,7 +12,19 @@ const rpc = rpcHandler(registry, {
 /** Mount behind `authMiddleware`: the procedures read the caller it resolved. */
 export const rpcRoutes = new Hono<ApiEnv>().all('/*', async (context) => {
   const request = context.req.raw;
-  rememberCaller(request, { user: context.get('user'), db: context.get('db') });
+  rememberCaller(request, {
+    user: context.get('user'),
+    db: context.get('db'),
+    companyIdentity: context.get('companyIdentity'),
+    credential: {
+      audience: context.get('tokenAudience') ?? 'api',
+      project: context.get('deployScope'),
+      build: context.get('deployBuild'),
+      credentialId: context.get('deployCredential'),
+      approval: context.get('oauthApproval'),
+      expiresAt: context.get('deployTokenExpiresAt'),
+    },
+  });
   // Without an execution context (tests, local scripts) background work finishes before the reply.
   const inline: Array<Promise<unknown>> = [];
   const response = await rpc(request, context.env, {

@@ -230,6 +230,8 @@ export type ApiEnv = Env & {
      */
     deployCredential?: string;
     oauthApproval?: string;
+    /** The audience of the bearer token `authMiddleware` accepted. */
+    tokenAudience?: 'api' | 'deploy' | 'oauth-deploy' | 'oauth-preview';
     /** Only set by the Queue executor, never by request authentication. */
     deploymentExecution?: {
       operation: import('./deployment-operation-types.ts').DeploymentOperation;
