@@ -67,6 +67,7 @@ function rpc(name: string, jwt: string, body: unknown): Request {
 const RPC_ROUTES: Record<string, string> = {
   '/deploy/preflight': 'deploy.preflight',
   '/deploy/upload-urls': 'deploy.uploadUrls',
+  'POST /domains': 'domains.add',
   'PUT /secrets/TEST_SECRET': 'secrets.set',
   'DELETE /secrets/TEST_SECRET': 'secrets.delete',
 };
@@ -196,6 +197,7 @@ describe('project route membership capabilities', () => {
             projectId: project.id,
             assets: [],
             assetManifest: {},
+            hostname: 'nope.example.com',
             name: 'TEST_SECRET',
             value: 'must-not-be-written',
           })
