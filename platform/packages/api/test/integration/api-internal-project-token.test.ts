@@ -12,14 +12,14 @@ import {
 import { hmacSignState } from '../../src/auth/hmac.ts';
 import { signJwt } from '../../src/auth/jwt.ts';
 import { createResource, upsertProjectCredential } from '../../src/db.ts';
-import { encryptProjectSecret } from '../../src/project-secrets.ts';
-import { credentialSecretName } from '../../src/routes/internal-credential.ts';
 import app from '../../src/index.ts';
+import { encryptProjectSecret } from '../../src/project-secrets.ts';
 import {
   deriveProxyInternalAuth,
   deriveProxyToken,
   type ProxyInternalRoute,
 } from '../../src/proxy-token.ts';
+import { credentialSecretName } from '../../src/routes/internal-credential.ts';
 import { deployments, projects } from '../../src/schema.ts';
 import {
   clearTables,

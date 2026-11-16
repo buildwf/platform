@@ -817,7 +817,13 @@ export async function requestPublishApproval(
   if (!client.scopes.includes('deploy:approve')) {
     throw new OAuthError('invalid_scope', 'Publishing is not enabled for this application.', 403);
   }
-  validateAuthorization(client, body.redirect_uri, body.state, body.code_challenge, isDevBypass(env));
+  validateAuthorization(
+    client,
+    body.redirect_uri,
+    body.state,
+    body.code_challenge,
+    isDevBypass(env),
+  );
   if (
     body.code_challenge_method !== 'S256' ||
     typeof body.slug !== 'string' ||

@@ -18,7 +18,6 @@ import type {
   DeployEvent,
   DeployUploadPayload,
   DeployWorkerModule,
-  DeployWorkerUploadRequest,
   DeployWorkerUploadResponse,
 } from './types.ts';
 
@@ -940,12 +939,11 @@ export class PlatformClient {
   }
 
   async listProjectTokens(projectId: string): Promise<Array<ProjectDeployCredentialResponse>> {
-    return this.json(
-      `${this.baseUrl}/projects/${projectId}/tokens`,
+    return this.rpc(
+      'tokens.list',
       'Failed to list project tokens',
-      {
-        permission: 'owner',
-      },
+      { projectId },
+      { permission: 'owner' },
     );
   }
 
@@ -980,30 +978,29 @@ export class PlatformClient {
     projectId: string,
     input: { name?: string; expiresInDays?: number },
   ): Promise<IssuedProjectDeployCredentialResponse> {
-    return this.json(
-      `${this.baseUrl}/projects/${projectId}/tokens`,
+    return this.rpc(
+      'tokens.create',
       'Failed to create project token',
-      {
-        method: 'POST',
-        body: input,
-        permission: 'owner',
-      },
+      { projectId, ...input },
+      { permission: 'owner' },
     );
   }
 
   async listProjectMembers(projectId: string): Promise<ProjectMemberListResponse> {
-    const body = await this.json<ProjectMemberListResponse>(
-      `${this.baseUrl}/projects/${projectId}/members`,
+    const body = await this.rpc<ProjectMemberListResponse>(
+      'team.members',
       'Failed to list project members',
+      { projectId },
       { permission: 'read' },
     );
     return { members: body.members, ...(body.warnings ? { warnings: body.warnings } : {}) };
   }
 
   async listProjectInvitations(projectId: string): Promise<Array<ProjectInvitationResponse>> {
-    const body = await this.json<{ invitations: Array<ProjectInvitationResponse> }>(
-      `${this.baseUrl}/projects/${projectId}/invitations`,
+    const body = await this.rpc<{ invitations: Array<ProjectInvitationResponse> }>(
+      'team.invitations',
       'Failed to list project invitations',
+      { projectId },
       { permission: 'members' },
     );
     return body.invitations;
@@ -1018,10 +1015,11 @@ export class PlatformClient {
     refreshed: boolean;
     delivery: ProjectInvitationDelivery;
   }> {
-    return this.json(
-      `${this.baseUrl}/projects/${projectId}/invitations`,
+    return this.rpc(
+      'team.invite',
       'Failed to invite project member',
-      { method: 'POST', body: { email, role }, permission: 'members' },
+      { projectId, email, role },
+      { permission: 'members' },
     );
   }
 
@@ -1030,10 +1028,11 @@ export class PlatformClient {
     credentialId: string,
     expiresInDays?: number,
   ): Promise<IssuedProjectDeployCredentialResponse> {
-    return this.json(
-      `${this.baseUrl}/projects/${projectId}/tokens/${encodeURIComponent(credentialId)}/renew`,
+    return this.rpc(
+      'tokens.renew',
       'Failed to renew project token',
-      { method: 'POST', body: expiresInDays ? { expiresInDays } : {}, permission: 'owner' },
+      { projectId, credentialId, ...(expiresInDays ? { expiresInDays } : {}) },
+      { permission: 'owner' },
     );
   }
 
@@ -1042,46 +1041,48 @@ export class PlatformClient {
     userId: string,
     role: Exclude<ProjectRole, 'owner'>,
   ): Promise<{ member: ProjectMemberResponse }> {
-    return this.json(
-      `${this.baseUrl}/projects/${projectId}/members/${encodeURIComponent(userId)}`,
+    return this.rpc(
+      'team.setRole',
       'Failed to change project member role',
-      { method: 'PATCH', body: { role }, permission: 'members' },
+      { projectId, userId, role },
+      { permission: 'members' },
     );
   }
 
   async revokeProjectToken(projectId: string, credentialId: string): Promise<{ ok: boolean }> {
-    return this.json(
-      `${this.baseUrl}/projects/${projectId}/tokens/${encodeURIComponent(credentialId)}`,
+    return this.rpc(
+      'tokens.revoke',
       'Failed to revoke project token',
-      { method: 'DELETE', permission: 'owner' },
+      { projectId, credentialId },
+      { permission: 'owner' },
     );
   }
 
   async removeProjectMember(projectId: string, userId: string): Promise<void> {
-    await this.call(
-      `${this.baseUrl}/projects/${projectId}/members/${encodeURIComponent(userId)}`,
+    await this.rpc(
+      'team.remove',
       'Failed to remove project member',
-      { method: 'DELETE', permission: 'members' },
+      { projectId, userId },
+      { permission: 'members' },
     );
   }
 
   async revokeProjectInvitation(projectId: string, invitationId: string): Promise<void> {
-    await this.call(
-      `${this.baseUrl}/projects/${projectId}/invitations/${encodeURIComponent(invitationId)}`,
+    await this.rpc(
+      'team.revokeInvitation',
       'Failed to revoke project invitation',
-      { method: 'DELETE', permission: 'members' },
+      { projectId, invitationId },
+      { permission: 'members' },
     );
   }
 
   async leaveProject(projectId: string): Promise<void> {
-    await this.call(`${this.baseUrl}/projects/${projectId}/leave`, 'Failed to leave project', {
-      method: 'POST',
-    });
+    await this.rpc('team.leave', 'Failed to leave project', { projectId });
   }
 
   async listPendingProjectInvitations(): Promise<Array<ProjectInvitationResponse>> {
-    const body = await this.json<{ invitations: Array<ProjectInvitationResponse> }>(
-      `${this.baseUrl}/me/project-invitations`,
+    const body = await this.rpc<{ invitations: Array<ProjectInvitationResponse> }>(
+      'team.myInvitations',
       'Failed to list pending project invitations',
     );
     return body.invitations;
@@ -1091,11 +1092,10 @@ export class PlatformClient {
     invitationId: string,
     action: 'accept' | 'decline',
   ): Promise<void> {
-    await this.call(
-      `${this.baseUrl}/project-invitations/${encodeURIComponent(invitationId)}/${action}`,
-      `Failed to ${action} project invitation`,
-      { method: 'POST' },
-    );
+    await this.rpc('team.respond', `Failed to ${action} project invitation`, {
+      invitationId,
+      response: action,
+    });
   }
 
   async listDeployments(projectId: string): Promise<DeploymentListResponse> {

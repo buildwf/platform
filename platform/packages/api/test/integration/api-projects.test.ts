@@ -46,6 +46,7 @@ import {
   cfError,
   type TestEnv,
   rpcData,
+  rpcRequest,
 } from './helpers.ts';
 import { setTestDb } from './setup.ts';
 
@@ -642,20 +643,23 @@ describe('project CI credential ownership', () => {
     suffix = '',
     body?: Record<string, unknown>,
   ): Request {
-    const init: RequestInit = {
-      method,
-      headers: {
-        Authorization: `Bearer ${jwt}`,
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
-      },
-    };
-    if (body) {
-      init.body = JSON.stringify(body);
-    }
-    return new Request(`http://localhost/projects/${projectId}/tokens${suffix}`, init);
+    const credentialId = suffix.split('/')[1];
+    const procedure =
+      method === 'GET'
+        ? 'tokens.list'
+        : method === 'DELETE'
+          ? 'tokens.revoke'
+          : credentialId
+            ? 'tokens.renew'
+            : 'tokens.create';
+    return rpcRequest(procedure, jwt, {
+      projectId,
+      ...(credentialId ? { credentialId } : {}),
+      ...body,
+    });
   }
 
-  it('returns 403 to project members and 404 only for missing projects', async () => {
+  it('returns 403 to project members and to missing projects alike', async () => {
     const owner = await createTestUser(env.db, 'credential-owner');
     const admin = await createTestUser(env.db, 'credential-admin');
     const project = await createTestProject(env.db, owner.id, 'credential-owner-only');
@@ -695,10 +699,8 @@ describe('project CI credential ownership', () => {
         env,
       );
       expect(memberResponse.status).toBe(403);
-      expect(await memberResponse.json()).toEqual({
-        error: 'forbidden',
-        message: expect.any(String),
-      });
+      const forbidden = await memberResponse.json();
+      expect(forbidden).toEqual({ error: { code: 'FORBIDDEN', message: expect.any(String) } });
 
       const missingResponse = await app.fetch(
         credentialRequest(
@@ -710,11 +712,9 @@ describe('project CI credential ownership', () => {
         ),
         env,
       );
-      expect(missingResponse.status).toBe(404);
-      expect(await missingResponse.json()).toEqual({
-        error: 'project not found',
-        message: expect.any(String),
-      });
+      // A procedure never tells a caller whether a project exists.
+      expect(missingResponse.status).toBe(403);
+      expect(await missingResponse.json()).toEqual(forbidden);
     }
   });
 
@@ -760,8 +760,10 @@ describe('project CI credential ownership', () => {
       credentialRequest(project.id, owner.jwt, 'POST', '', { name: 'ISO CI', expiresInDays: 30 }),
       env,
     );
-    expect(created.status).toBe(201);
-    const credential = await created.json<{ id: string; createdAt: string; expiresAt: string }>();
+    expect(created.status).toBe(200);
+    const credential = rpcData<{ id: string; createdAt: string; expiresAt: string }>(
+      await created.json(),
+    );
     expect(credential.createdAt).toMatch(isoTimestamp);
     expect(credential.expiresAt).toMatch(isoTimestamp);
 
@@ -772,16 +774,15 @@ describe('project CI credential ownership', () => {
       env,
     );
     expect(renewed.status).toBe(200);
-    const replacement = await renewed.json<{ createdAt: string; expiresAt: string }>();
+    const replacement = rpcData<{ createdAt: string; expiresAt: string }>(await renewed.json());
     expect(replacement.createdAt).toMatch(isoTimestamp);
     expect(replacement.expiresAt).toMatch(isoTimestamp);
 
     const listed = await app.fetch(credentialRequest(project.id, owner.jwt, 'GET'), env);
     expect(listed.status).toBe(200);
-    const rows =
-      await listed.json<
-        Array<{ id: string; createdAt: string; expiresAt: string; revokedAt: string | null }>
-      >();
+    const rows = rpcData<
+      Array<{ id: string; createdAt: string; expiresAt: string; revokedAt: string | null }>
+    >(await listed.json());
     expect(rows).toHaveLength(2);
     for (const row of rows) {
       expect(row.createdAt).toMatch(isoTimestamp);

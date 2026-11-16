@@ -73,6 +73,7 @@ import {
   type MockCfApiHandle,
   type TestEnv,
   rpcRequest,
+  rpcData,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -1619,13 +1620,13 @@ describe('rotation after code from a user who lost deploy access is replaced', (
 
   async function removeCollaborator(team: Team): Promise<void> {
     const response = await app.fetch(
-      new Request(`http://localhost/projects/${team.projectId}/members/${team.collaborator.id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${team.owner.jwt}` },
+      rpcRequest('team.remove', team.owner.jwt, {
+        projectId: team.projectId,
+        userId: team.collaborator.id,
       }),
       testEnv,
     );
-    expect(response.status).toBe(204);
+    expect(response.status).toBe(200);
   }
 
   /** Runs the job past every wait until it is gone. */
@@ -1804,10 +1805,10 @@ describe('rotation after code from a user who lost deploy access is replaced', (
     const team = await setupTeam();
     await deploy(team.projectId, team.collaborator.jwt);
     const changed = await app.fetch(
-      new Request(`http://localhost/projects/${team.projectId}/members/${team.collaborator.id}`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${team.owner.jwt}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'reader' }),
+      rpcRequest('team.setRole', team.owner.jwt, {
+        projectId: team.projectId,
+        userId: team.collaborator.id,
+        role: 'reader',
       }),
       testEnv,
     );

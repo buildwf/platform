@@ -31,6 +31,7 @@ import {
   createTestProject,
   createTestUser,
   recordingBuildManager,
+  rpcRequest,
   setupEnv,
   teardownEnv,
   type TestEnv,
@@ -55,20 +56,114 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+/**
+ * The roster is now procedures under `/rpc`. These tests were written against its old REST paths;
+ * `request` maps each path onto its procedure and `api.fetch` hands back the old response shapes,
+ * so the assertions keep checking the database behavior rather than the transport.
+ */
+type Translated = { procedure: string };
+const translated = new WeakMap<Request, Translated>();
+
+const ROUTES: Array<[RegExp, string, string, (m: RegExpMatchArray) => Record<string, string>]> = [
+  [/^\/projects\/([^/]+)\/members$/, 'GET', 'team.members', (m) => ({ projectId: m[1]! })],
+  [/^\/projects\/([^/]+)\/invitations$/, 'GET', 'team.invitations', (m) => ({ projectId: m[1]! })],
+  [/^\/projects\/([^/]+)\/invitations$/, 'POST', 'team.invite', (m) => ({ projectId: m[1]! })],
+  [
+    /^\/projects\/([^/]+)\/invitations\/([^/]+)\/resend$/,
+    'POST',
+    'team.resendInvitation',
+    (m) => ({ projectId: m[1]!, invitationId: m[2]! }),
+  ],
+  [
+    /^\/projects\/([^/]+)\/invitations\/([^/]+)$/,
+    'DELETE',
+    'team.revokeInvitation',
+    (m) => ({ projectId: m[1]!, invitationId: m[2]! }),
+  ],
+  [
+    /^\/projects\/([^/]+)\/members\/([^/]+)$/,
+    'PATCH',
+    'team.setRole',
+    (m) => ({ projectId: m[1]!, userId: m[2]! }),
+  ],
+  [
+    /^\/projects\/([^/]+)\/members\/([^/]+)$/,
+    'DELETE',
+    'team.remove',
+    (m) => ({ projectId: m[1]!, userId: m[2]! }),
+  ],
+  [/^\/projects\/([^/]+)\/leave$/, 'POST', 'team.leave', (m) => ({ projectId: m[1]! })],
+  [/^\/me\/project-invitations$/, 'GET', 'team.myInvitations', () => ({})],
+  [
+    /^\/project-invitations\/([^/]+)\/(accept|decline)$/,
+    'POST',
+    'team.respond',
+    (m) => ({ invitationId: m[1]!, response: m[2]! }),
+  ],
+];
+
+const LEGACY_ERRORS: Record<string, string> = {
+  PROJECT_NOT_FOUND: 'project not found',
+  PROJECT_DELETING: 'project is being deleted',
+  TARGET_USER_NOT_FOUND: 'registered user not found',
+  OWNER_CONFLICT: 'the project owner cannot be invited or changed as a member',
+  MEMBER_CONFLICT: 'user is already a project member',
+  MEMBER_NOT_FOUND: 'project member not found',
+  INVITATION_NOT_FOUND: 'project invitation not found',
+  INVITATION_NOT_PENDING: 'project invitation is no longer pending',
+  INVITATION_NOT_TARGET: 'forbidden',
+  INVITATION_EXPIRED: 'project invitation has expired',
+  PENDING_INVITATION_LIMIT: 'project has too many pending invitations',
+  OWNER_SUSPENDED: 'project owner suspended',
+  MEMBERSHIP_FORBIDDEN: 'forbidden',
+  INVALID_EMAIL: 'a valid registered email is required',
+  OWNER_CANNOT_LEAVE: 'the project owner cannot leave the project',
+  FORBIDDEN: 'forbidden',
+};
+
 function request(
   path: string,
   jwt: string,
   init: { method?: string; body?: Record<string, unknown> } = {},
 ): Request {
-  return new Request(`http://localhost${path}`, {
-    method: init.method ?? 'GET',
-    headers: {
-      Authorization: `Bearer ${jwt}`,
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: init.body ? JSON.stringify(init.body) : undefined,
-  });
+  const method = init.method ?? 'GET';
+  for (const [pattern, routeMethod, procedure, input] of ROUTES) {
+    const match = path.match(pattern);
+    if (match && routeMethod === method) {
+      const rpc = rpcRequest(procedure, jwt, { ...input(match), ...init.body });
+      translated.set(rpc, { procedure });
+      return rpc;
+    }
+  }
+  throw new Error(`no procedure for ${method} ${path}`);
 }
+
+/** Answers like the old routes: bare bodies, 201 for a new invitation, 204 for bare acknowledgements. */
+const api = {
+  async fetch(req: Request, bindings: unknown): Promise<Response> {
+    const response = await app.fetch(req, bindings as TestEnv);
+    const op = translated.get(req);
+    if (!op) return response;
+    const body = (await response.json()) as {
+      data?: Record<string, unknown>;
+      error?: { code: string; message: string };
+    };
+    if (body.error) {
+      return Response.json(
+        { error: LEGACY_ERRORS[body.error.code] ?? body.error.code, message: body.error.message },
+        { status: response.status },
+      );
+    }
+    const data = body.data ?? {};
+    if (['team.revokeInvitation', 'team.remove', 'team.leave'].includes(op.procedure)) {
+      return new Response(null, { status: 204 });
+    }
+    if (op.procedure === 'team.respond' && !data.member) return new Response(null, { status: 204 });
+    return Response.json(data, {
+      status: op.procedure === 'team.invite' && !data.refreshed ? 201 : 200,
+    });
+  },
+};
 
 async function setEmail(userId: string, email: string): Promise<void> {
   await env.db.update(users).set({ email }).where(eq(users.id, userId));
@@ -80,7 +175,7 @@ async function invite(
   email: string,
   role: 'reader' | 'collaborator' | 'admin',
 ): Promise<{ id: string; refreshed: boolean; delivery: { status: string } }> {
-  const response = await app.fetch(
+  const response = await api.fetch(
     request(`/projects/${projectId}/invitations`, ownerJwt, {
       method: 'POST',
       body: { email, role },
@@ -110,7 +205,7 @@ describe('project team API', () => {
       added_by_user_id: owner.id,
     });
 
-    const response = await app.fetch(request(`/projects/${project.id}/members`, reader.jwt), env);
+    const response = await api.fetch(request(`/projects/${project.id}/members`, reader.jwt), env);
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
       members: [
@@ -119,17 +214,13 @@ describe('project team API', () => {
       ],
     });
 
-    const forbidden = await app.fetch(
+    const forbidden = await api.fetch(
       request(`/projects/${project.id}/invitations`, reader.jwt),
       env,
     );
     expect(forbidden.status).toBe(403);
-    expect(await forbidden.json()).toEqual({
-      error: 'forbidden',
-      message: expect.stringMatching(
-        /requires the admin or owner role.*Ask a project admin or owner/,
-      ),
-    });
+    // Procedures answer a caller without the capability with one generic FORBIDDEN.
+    expect(await forbidden.json()).toEqual({ error: 'forbidden', message: expect.any(String) });
   });
 
   it('stops container builds when an authorizing admin is downgraded', async () => {
@@ -165,7 +256,7 @@ describe('project team API', () => {
     });
     const { namespace, cancelledIds } = recordingBuildManager();
 
-    const response = await app.fetch(
+    const response = await api.fetch(
       request(`/projects/${project.id}/members/${admin.id}`, owner.jwt, {
         method: 'PATCH',
         body: { role: 'collaborator' },
@@ -185,7 +276,7 @@ describe('project team API', () => {
     await setEmail(target.id, 'Target@Example.com');
     const project = await createTestProject(env.db, owner.id, 'shared-app');
 
-    const unknown = await app.fetch(
+    const unknown = await api.fetch(
       request(`/projects/${project.id}/invitations`, owner.jwt, {
         method: 'POST',
         body: { email: 'missing@example.com', role: 'reader' },
@@ -201,7 +292,7 @@ describe('project team API', () => {
     const created = await invite(project.id, owner.jwt, 'target@example.com', 'collaborator');
     expect(created.delivery).toEqual({ status: 'not_configured' });
 
-    const pending = await app.fetch(request('/me/project-invitations', target.jwt), env);
+    const pending = await api.fetch(request('/me/project-invitations', target.jwt), env);
     expect(pending.status).toBe(200);
     expect(await pending.json()).toMatchObject({
       invitations: [
@@ -214,7 +305,7 @@ describe('project team API', () => {
       ],
     });
 
-    const accepted = await app.fetch(
+    const accepted = await api.fetch(
       request(`/project-invitations/${created.id}/accept`, target.jwt, { method: 'POST' }),
       env,
     );
@@ -240,7 +331,7 @@ describe('project team API', () => {
       .set({ suspended_reason: 'platform policy violation' })
       .where(eq(users.id, owner.id));
 
-    const response = await app.fetch(
+    const response = await api.fetch(
       request(`/project-invitations/${invitation.id}/accept`, target.jwt, { method: 'POST' }),
       env,
     );
@@ -255,7 +346,7 @@ describe('project team API', () => {
       .update(users)
       .set({ suspended_reason: 'requests_exceeded' })
       .where(eq(users.id, owner.id));
-    const accepted = await app.fetch(
+    const accepted = await api.fetch(
       request(`/project-invitations/${invitation.id}/accept`, target.jwt, { method: 'POST' }),
       env,
     );
@@ -278,7 +369,7 @@ describe('project team API', () => {
     );
     await env.db.update(projects).set({ status: 'deleting' }).where(eq(projects.id, project.id));
 
-    const createResponse = await app.fetch(
+    const createResponse = await api.fetch(
       request(`/projects/${project.id}/invitations`, owner.jwt, {
         method: 'POST',
         body: { email: 'deleting-team-other@example.com', role: 'admin' },
@@ -291,7 +382,7 @@ describe('project team API', () => {
       message: expect.stringMatching(/Wait for deletion to finish/),
     });
 
-    const acceptResponse = await app.fetch(
+    const acceptResponse = await api.fetch(
       request(`/project-invitations/${invitation.id}/accept`, invited.jwt, { method: 'POST' }),
       env,
     );
@@ -335,7 +426,7 @@ describe('project team API', () => {
       return access;
     });
 
-    const response = await app.fetch(
+    const response = await api.fetch(
       request(`/projects/${project.id}/invitations`, admin.jwt, {
         method: 'POST',
         body: { email: 'team-race-target@example.com', role: 'reader' },
@@ -376,7 +467,7 @@ describe('project team API', () => {
       return access;
     });
 
-    const response = await app.fetch(
+    const response = await api.fetch(
       request(`/projects/${project.id}/leave`, member.jwt, { method: 'POST' }),
       env,
     );
@@ -406,7 +497,7 @@ describe('project team API', () => {
       added_by_user_id: owner.id,
     });
 
-    const inviteOwner = await app.fetch(
+    const inviteOwner = await api.fetch(
       request(`/projects/${project.id}/invitations`, owner.jwt, {
         method: 'POST',
         body: { email: 'OWNER@example.com', role: 'admin' },
@@ -419,7 +510,7 @@ describe('project team API', () => {
       message: expect.stringMatching(/owner already has full access.*Manage other members/),
     });
 
-    const inviteMember = await app.fetch(
+    const inviteMember = await api.fetch(
       request(`/projects/${project.id}/invitations`, owner.jwt, {
         method: 'POST',
         body: { email: 'member@example.com', role: 'admin' },
@@ -432,7 +523,7 @@ describe('project team API', () => {
       message: expect.stringMatching(/already a project member.*Refresh the member list/),
     });
 
-    const ambiguous = await app.fetch(
+    const ambiguous = await api.fetch(
       request(`/projects/${project.id}/invitations`, owner.jwt, {
         method: 'POST',
         body: { email: 'duplicate@example.com', role: 'reader' },
@@ -455,11 +546,11 @@ describe('project team API', () => {
     const invitation = await invite(project.id, owner.jwt, 'target@example.com', 'collaborator');
 
     const responses = await Promise.all([
-      app.fetch(
+      api.fetch(
         request(`/project-invitations/${invitation.id}/accept`, target.jwt, { method: 'POST' }),
         env,
       ),
-      app.fetch(
+      api.fetch(
         request(`/project-invitations/${invitation.id}/accept`, target.jwt, { method: 'POST' }),
         env,
       ),
@@ -490,7 +581,7 @@ describe('project team API', () => {
 
     expect(
       (
-        await app.fetch(
+        await api.fetch(
           request(`/project-invitations/${invitation.id}/accept`, target.jwt, { method: 'POST' }),
           env,
         )
@@ -498,7 +589,7 @@ describe('project team API', () => {
     ).toBe(200);
     expect(
       (
-        await app.fetch(
+        await api.fetch(
           request(`/projects/${project.id}/members/${target.id}`, owner.jwt, {
             method: 'DELETE',
           }),
@@ -507,7 +598,7 @@ describe('project team API', () => {
       ).status,
     ).toBe(204);
 
-    const replay = await app.fetch(
+    const replay = await api.fetch(
       request(`/project-invitations/${invitation.id}/accept`, target.jwt, { method: 'POST' }),
       env,
     );
@@ -527,7 +618,7 @@ describe('project team API', () => {
 
     const fresh = await invite(project.id, owner.jwt, 'target@example.com', 'admin');
     expect(fresh.id).not.toBe(invitation.id);
-    const acceptedFresh = await app.fetch(
+    const acceptedFresh = await api.fetch(
       request(`/project-invitations/${fresh.id}/accept`, target.jwt, { method: 'POST' }),
       env,
     );
@@ -547,7 +638,7 @@ describe('project team API', () => {
     const beforeEvents = await env.db.select().from(projectAccessEvents);
 
     for (const action of ['accept', 'decline']) {
-      const response = await app.fetch(
+      const response = await api.fetch(
         request(`/project-invitations/${invitation.id}/${action}`, bystander.jwt, {
           method: 'POST',
         }),
@@ -563,7 +654,7 @@ describe('project team API', () => {
       expect(await env.db.select().from(projectAccessEvents)).toEqual(beforeEvents);
       expect(await env.db.select().from(projectMembers)).toEqual([]);
     }
-    const crossProjectResend = await app.fetch(
+    const crossProjectResend = await api.fetch(
       request(`/projects/${other.id}/invitations/${invitation.id}/resend`, owner.jwt, {
         method: 'POST',
       }),
@@ -574,7 +665,7 @@ describe('project team API', () => {
       error: 'project invitation not found',
       message: expect.stringMatching(/Check your pending invitations.*send a new one/),
     });
-    const crossProjectRevoke = await app.fetch(
+    const crossProjectRevoke = await api.fetch(
       request(`/projects/${other.id}/invitations/${invitation.id}`, owner.jwt, {
         method: 'DELETE',
       }),
@@ -588,7 +679,7 @@ describe('project team API', () => {
     expect(await env.db.select().from(projectInvitations)).toEqual(beforeInvitations);
     expect(await env.db.select().from(projectAccessEvents)).toEqual(beforeEvents);
 
-    const targetAccept = await app.fetch(
+    const targetAccept = await api.fetch(
       request(`/project-invitations/${invitation.id}/accept`, target.jwt, { method: 'POST' }),
       env,
     );
@@ -607,7 +698,7 @@ describe('project team API', () => {
     expect(refreshed).toMatchObject({ id: first.id, refreshed: true });
 
     await setEmail(target.id, 'new@example.com');
-    const resentResponse = await app.fetch(
+    const resentResponse = await api.fetch(
       request(`/projects/${project.id}/invitations/${first.id}/resend`, owner.jwt, {
         method: 'POST',
       }),
@@ -624,7 +715,7 @@ describe('project team API', () => {
       delivery: { status: 'not_configured' },
     });
 
-    const revoked = await app.fetch(
+    const revoked = await api.fetch(
       request(`/projects/${project.id}/invitations/${first.id}`, owner.jwt, {
         method: 'DELETE',
       }),
@@ -634,7 +725,7 @@ describe('project team API', () => {
     const beforeInvitations = await env.db.select().from(projectInvitations);
     const beforeEvents = await env.db.select().from(projectAccessEvents);
 
-    const acceptRevoked = await app.fetch(
+    const acceptRevoked = await api.fetch(
       request(`/project-invitations/${first.id}/accept`, target.jwt, { method: 'POST' }),
       env,
     );
@@ -664,7 +755,7 @@ describe('project team API', () => {
       PLATFORM_INSTALLATION_ID: 'test-installation',
     };
     const createOrRefresh = (role: 'reader' | 'collaborator' | 'admin') =>
-      app.fetch(
+      api.fetch(
         request(`/projects/${project.id}/invitations`, owner.jwt, {
           method: 'POST',
           body: { email: 'target@example.com', role },
@@ -685,7 +776,7 @@ describe('project team API', () => {
     });
 
     const resend = () =>
-      app.fetch(
+      api.fetch(
         request(`/projects/${project.id}/invitations/${invitationId}/resend`, owner.jwt, {
           method: 'POST',
         }),
@@ -741,7 +832,7 @@ describe('project team API', () => {
     await env.ROUTING.put(`project-invitation-email-rate:${project.id}:${day}`, '50');
     const send = vi.fn(async () => {});
 
-    const response = await app.fetch(
+    const response = await api.fetch(
       request(`/projects/${project.id}/invitations`, owner.jwt, {
         method: 'POST',
         body: { email: 'target@example.com', role: 'reader' },
@@ -793,7 +884,7 @@ describe('project team API', () => {
       },
     ]);
 
-    const changed = await app.fetch(
+    const changed = await api.fetch(
       request(`/projects/${project.id}/members/${collaborator.id}`, admin.jwt, {
         method: 'PATCH',
         body: { role: 'admin' },
@@ -804,14 +895,14 @@ describe('project team API', () => {
     expect(await changed.json()).toMatchObject({ member: { role: 'admin' } });
 
     const adminInvitation = await invite(project.id, admin.jwt, 'invitee@example.com', 'reader');
-    const accepted = await app.fetch(
+    const accepted = await api.fetch(
       request(`/project-invitations/${adminInvitation.id}/accept`, invitee.jwt, { method: 'POST' }),
       env,
     );
     expect(accepted.status).toBe(200);
     expect(await accepted.json()).toMatchObject({ member: { role: 'reader' } });
 
-    const removedPeerAdmin = await app.fetch(
+    const removedPeerAdmin = await api.fetch(
       request(`/projects/${project.id}/members/${peerAdmin.id}`, admin.jwt, {
         method: 'DELETE',
       }),
@@ -819,7 +910,7 @@ describe('project team API', () => {
     );
     expect(removedPeerAdmin.status).toBe(204);
 
-    const ownerConflict = await app.fetch(
+    const ownerConflict = await api.fetch(
       request(`/projects/${project.id}/members/${owner.id}`, admin.jwt, {
         method: 'PATCH',
         body: { role: 'reader' },
@@ -828,7 +919,7 @@ describe('project team API', () => {
     );
     expect(ownerConflict.status).toBe(409);
 
-    const ownerRemovalConflict = await app.fetch(
+    const ownerRemovalConflict = await api.fetch(
       request(`/projects/${project.id}/members/${owner.id}`, admin.jwt, {
         method: 'DELETE',
       }),
@@ -836,7 +927,7 @@ describe('project team API', () => {
     );
     expect(ownerRemovalConflict.status).toBe(409);
 
-    const leave = await app.fetch(
+    const leave = await api.fetch(
       request(`/projects/${project.id}/leave`, collaborator.jwt, { method: 'POST' }),
       env,
     );
@@ -849,7 +940,7 @@ describe('project team API', () => {
       );
     expect(remaining).toBeUndefined();
 
-    const ownerLeave = await app.fetch(
+    const ownerLeave = await api.fetch(
       request(`/projects/${project.id}/leave`, owner.jwt, { method: 'POST' }),
       env,
     );
@@ -876,7 +967,7 @@ describe('project team API', () => {
     await invite(project.id, owner.jwt, 'deleting-target@example.com', 'reader');
     await env.db.update(projects).set({ status: 'deleting' }).where(eq(projects.id, project.id));
 
-    const response = await app.fetch(request('/me/project-invitations', target.jwt), env);
+    const response = await api.fetch(request('/me/project-invitations', target.jwt), env);
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ invitations: [] });
@@ -893,10 +984,10 @@ describe('project team API', () => {
       .set({ expires_at: new Date(Date.now() - 1_000).toISOString() })
       .where(eq(projectInvitations.id, expired.id));
 
-    const pending = await app.fetch(request('/me/project-invitations', target.jwt), env);
+    const pending = await api.fetch(request('/me/project-invitations', target.jwt), env);
     expect(await pending.json()).toEqual({ invitations: [] });
 
-    const acceptExpired = await app.fetch(
+    const acceptExpired = await api.fetch(
       request(`/project-invitations/${expired.id}/accept`, target.jwt, { method: 'POST' }),
       env,
     );
@@ -913,12 +1004,12 @@ describe('project team API', () => {
 
     const live = await invite(project.id, owner.jwt, 'target@example.com', 'reader');
     expect(live.id).not.toBe(expired.id);
-    const declined = await app.fetch(
+    const declined = await api.fetch(
       request(`/project-invitations/${live.id}/decline`, target.jwt, { method: 'POST' }),
       env,
     );
     expect(declined.status).toBe(204);
-    const declinedAgain = await app.fetch(
+    const declinedAgain = await api.fetch(
       request(`/project-invitations/${live.id}/decline`, target.jwt, { method: 'POST' }),
       env,
     );
@@ -1000,7 +1091,7 @@ describe('project team API', () => {
         const before = await env.db.select().from(projectInvitations);
         const send = vi.fn().mockResolvedValue(undefined);
 
-        const response = await app.fetch(
+        const response = await api.fetch(
           action === 'resend'
             ? request(
                 `/projects/${project.id}/invitations/${project.id}-invitation-100/resend`,
@@ -1052,7 +1143,7 @@ describe('project team API', () => {
           })),
         );
 
-        const response = await app.fetch(
+        const response = await api.fetch(
           action === 'resend'
             ? request(
                 `/projects/${project.id}/invitations/${project.id}-invitation-99/resend`,
@@ -1098,7 +1189,7 @@ describe('project team API', () => {
           .from(projectInvitations)
           .where(eq(projectInvitations.id, invitationId));
 
-        const response = await app.fetch(
+        const response = await api.fetch(
           action === 'resend'
             ? request(`/projects/${project.id}/invitations/${invitationId}/resend`, owner.jwt, {
                 method: 'POST',
@@ -1141,14 +1232,14 @@ describe('project team API', () => {
       });
 
       const responses = await Promise.all([
-        app.fetch(
+        api.fetch(
           request(`/projects/${project.id}/invitations`, owner.jwt, {
             method: 'POST',
             body: { email: 'target-99@example.com', role: 'admin' },
           }),
           env,
         ),
-        app.fetch(
+        api.fetch(
           request(`/projects/${project.id}/invitations/${resendId}/resend`, owner.jwt, {
             method: 'POST',
           }),
@@ -1170,7 +1261,7 @@ describe('project team API', () => {
     const invitation = await invite(project.id, owner.jwt, 'target@example.com', 'reader');
     await env.db.update(projects).set({ user_id: target.id }).where(eq(projects.id, project.id));
 
-    const response = await app.fetch(
+    const response = await api.fetch(
       request(`/project-invitations/${invitation.id}/accept`, target.jwt, { method: 'POST' }),
       env,
     );
@@ -1212,7 +1303,7 @@ describe('proxy token rotation on member changes', () => {
     next: 'reader' | 'collaborator' | 'admin' | null,
   ): Promise<Response> {
     return Promise.resolve(
-      app.fetch(
+      api.fetch(
         request(
           `/projects/${projectId}/members/${userId}`,
           jwt,
@@ -1255,7 +1346,7 @@ describe('proxy token rotation on member changes', () => {
     { role: 'reader', rotates: false },
   ] as const)('requests a rotation when a $role leaves: $rotates', async ({ role, rotates }) => {
     const { member, project } = await projectWithMember(role);
-    const response = await app.fetch(
+    const response = await api.fetch(
       request(`/projects/${project.id}/leave`, member.jwt, { method: 'POST' }),
       env,
     );
@@ -1311,7 +1402,7 @@ describe('stuck rotation warning on the member list', () => {
     }
 
     const listAs = async (jwt: string) => {
-      const response = await app.fetch(request(`/projects/${project.id}/members`, jwt), env);
+      const response = await api.fetch(request(`/projects/${project.id}/members`, jwt), env);
       expect(response.status).toBe(200);
       const text = await response.text();
       expect(text).not.toContain('cf boom');

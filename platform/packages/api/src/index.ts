@@ -120,12 +120,6 @@ import internalResolveWorker from './routes/internal-resolve-worker.ts';
 import internalVerifyOwner from './routes/internal-verify-owner.ts';
 import oauth, { oauthMetadata } from './routes/oauth.ts';
 import platformBootstrapRoutes from './routes/platform-bootstrap.ts';
-import {
-  myProjectInvitationRoutes,
-  projectInvitationResponseRoutes,
-  projectTeamRoutes,
-} from './routes/project-team.ts';
-import projectTokens from './routes/project-tokens.ts';
 import projectZeroTrustRoutes from './routes/project-zero-trust.ts';
 import projects from './routes/projects.ts';
 import { webhookRoutes } from './routes/webhooks.ts';
@@ -582,14 +576,8 @@ const app = new Hono<ApiEnv>()
   .route('/email', emailConfirm)
   .use('/rpc/*', authMiddleware)
   .route('/rpc', rpcRoutes)
-  .use('/me/*', authMiddleware)
-  .route('/me', myProjectInvitationRoutes)
-  .use('/project-invitations/*', authMiddleware)
-  .route('/project-invitations', projectInvitationResponseRoutes)
   .use('/projects/*', authMiddleware)
   .route('/projects', projects)
-  .route('/projects', projectTokens)
-  .route('/projects', projectTeamRoutes)
   .route('/projects', projectZeroTrustRoutes)
   .route('/projects', deploy)
   .route('/projects', deleteRoute)

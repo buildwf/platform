@@ -90,9 +90,9 @@ describe('project team target selection', () => {
     vi.stubEnv('VOID_API_URL', 'https://api.example.test');
     const fetchMock = vi.fn(async (input: string | URL | Request, _init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      return url.endsWith('/me/project-invitations')
-        ? Response.json({ invitations: [] })
-        : Response.json({});
+      return url.endsWith('/rpc/team.myInvitations')
+        ? Response.json({ data: { invitations: [] } })
+        : Response.json({ data: {} });
     });
     vi.stubGlobal('fetch', withPlatformDiscovery(fetchMock));
 
@@ -109,9 +109,9 @@ describe('project team target selection', () => {
     });
 
     expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
-      'https://api.example.test/me/project-invitations',
-      'https://api.example.test/project-invitations/pinv_1/accept',
-      'https://api.example.test/project-invitations/pinv_1/decline',
+      'https://api.example.test/rpc/team.myInvitations',
+      'https://api.example.test/rpc/team.respond',
+      'https://api.example.test/rpc/team.respond',
     ]);
   });
 
@@ -137,9 +137,9 @@ describe('project team target selection', () => {
       const fetchMock = vi.fn(async (input: string | URL | Request, _init?: RequestInit) => {
         const url =
           typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-        return url.endsWith('/me/project-invitations')
-          ? Response.json({ invitations: [] })
-          : Response.json({});
+        return url.endsWith('/rpc/team.myInvitations')
+          ? Response.json({ data: { invitations: [] } })
+          : Response.json({ data: {} });
       });
       vi.stubGlobal('fetch', withPlatformDiscovery(fetchMock));
 
@@ -164,9 +164,9 @@ describe('project team target selection', () => {
       }
 
       expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
-        `${platformB}/me/project-invitations`,
-        `${platformB}/project-invitations/pinv_1/accept`,
-        `${platformB}/project-invitations/pinv_1/decline`,
+        `${platformB}/rpc/team.myInvitations`,
+        `${platformB}/rpc/team.respond`,
+        `${platformB}/rpc/team.respond`,
       ]);
       for (const [, init] of fetchMock.mock.calls) {
         expect(init).toMatchObject({
@@ -191,7 +191,7 @@ describe('project team target selection', () => {
           ? 'platform-b-token'
           : null,
       );
-      const fetchMock = vi.fn(async () => Response.json({ invitations: [] }));
+      const fetchMock = vi.fn(async () => Response.json({ data: { invitations: [] } }));
       vi.stubGlobal('fetch', withPlatformDiscovery(fetchMock));
 
       await expect(
@@ -207,7 +207,7 @@ describe('project team target selection', () => {
     connect('https://platform-c.example.test', 'Platform C');
     vi.stubEnv('VOID_API_URL', 'https://platform-c.example.test/');
     vi.stubEnv('VOID_TOKEN', 'platform-c-token');
-    const fetchMock = vi.fn(async () => Response.json({ invitations: [] }));
+    const fetchMock = vi.fn(async () => Response.json({ data: { invitations: [] } }));
     vi.stubGlobal('fetch', withPlatformDiscovery(fetchMock));
     const output: Array<string> = [];
     vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
@@ -218,7 +218,7 @@ describe('project team target selection', () => {
     await runProjectCommand(root, { subcommand: 'team', action: 'pending' });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://platform-c.example.test/me/project-invitations',
+      'https://platform-c.example.test/rpc/team.myInvitations',
       expect.objectContaining({
         headers: expect.objectContaining({ Authorization: 'Bearer platform-c-token' }),
       }),
@@ -266,7 +266,9 @@ describe('project team target selection', () => {
     });
     const fetchMock = vi.fn(async () =>
       Response.json({
-        members: [{ user: { id: 'user_1', login: 'alex' }, role: 'owner' }],
+        data: {
+          members: [{ user: { id: 'user_1', login: 'alex' }, role: 'owner' }],
+        },
       }),
     );
     vi.stubGlobal('fetch', withPlatformDiscovery(fetchMock));
@@ -278,7 +280,7 @@ describe('project team target selection', () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `${platformA}/projects/project_1/members`,
+      `${platformA}/rpc/team.members`,
       expect.objectContaining({
         headers: expect.objectContaining({ Authorization: 'Bearer platform-a-token' }),
       }),
@@ -295,8 +297,10 @@ describe('project team target selection', () => {
       withPlatformDiscovery(
         vi.fn(async () =>
           Response.json({
-            members: [{ user: { id: 'user_1', login: 'alex' }, role: 'owner' }],
-            ...(warnings ? { warnings } : {}),
+            data: {
+              members: [{ user: { id: 'user_1', login: 'alex' }, role: 'owner' }],
+              ...(warnings ? { warnings } : {}),
+            },
           }),
         ),
       ),
@@ -331,19 +335,23 @@ describe('project team target selection', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        Response.json([
-          {
-            id: 'project_2',
-            user_id: 'owner_1',
-            slug: 'other-app',
-            type: 'worker',
-            created_at: '2026-09-17T00:00:00Z',
-          },
-        ]),
+        Response.json({
+          data: [
+            {
+              id: 'project_2',
+              user_id: 'owner_1',
+              slug: 'other-app',
+              type: 'worker',
+              created_at: '2026-09-17T00:00:00Z',
+            },
+          ],
+        }),
       )
       .mockResolvedValueOnce(
         Response.json({
-          members: [{ user: { id: 'owner_1', login: 'owner' }, role: 'owner' }],
+          data: {
+            members: [{ user: { id: 'owner_1', login: 'owner' }, role: 'owner' }],
+          },
         }),
       );
     vi.stubGlobal('fetch', withPlatformDiscovery(fetchMock));
@@ -355,8 +363,8 @@ describe('project team target selection', () => {
     });
 
     expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
-      'https://api.example.test/projects',
-      'https://api.example.test/projects/project_2/members',
+      'https://api.example.test/rpc/projects.list',
+      'https://api.example.test/rpc/team.members',
     ]);
   });
 
@@ -368,15 +376,17 @@ describe('project team target selection', () => {
       'fetch',
       vi.fn(async () =>
         Response.json({
-          invitation: {
-            id: 'pinv_1',
-            target: { id: 'user_1', login: 'target', email: 'target\u0007@example.com' },
-            role: 'reader',
-            created_at: '2026-09-22T00:00:00Z',
-            expires_at: '2026-09-29T00:00:00Z',
+          data: {
+            invitation: {
+              id: 'pinv_1',
+              target: { id: 'user_1', login: 'target', email: 'target\u0007@example.com' },
+              role: 'reader',
+              created_at: '2026-09-22T00:00:00Z',
+              expires_at: '2026-09-29T00:00:00Z',
+            },
+            refreshed: false,
+            delivery: { status: 'sent' },
           },
-          refreshed: false,
-          delivery: { status: 'sent' },
         }),
       ),
     );
@@ -408,9 +418,11 @@ describe('project team target selection', () => {
         'fetch',
         vi.fn(async () =>
           Response.json({
-            invitation: { id: 'pinv_a1b2c3d4e5f6', target_email: 'target@example.com' },
-            refreshed: false,
-            delivery: { status },
+            data: {
+              invitation: { id: 'pinv_a1b2c3d4e5f6', target_email: 'target@example.com' },
+              refreshed: false,
+              delivery: { status },
+            },
           }),
         ),
       );
