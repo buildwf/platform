@@ -11,6 +11,7 @@ vi.mock('../../src/log', () => ({
 
 import {
   readConfig,
+  validateConfig,
   convertHeadersConfig,
   convertFallbacksConfig,
   convertRedirectsConfig,
@@ -26,6 +27,25 @@ import { voidWarn } from '../../src/log.ts';
 import { resolveSandboxConfig } from '../../src/sandbox/config.ts';
 
 const warnMock = vi.mocked(voidWarn);
+
+describe('storage.locationHint', () => {
+  it.each(['apac', 'eeur', 'enam', 'weur', 'wnam', 'oc'])('accepts %s', (locationHint) => {
+    expect(validateConfig({ storage: { locationHint } })).toMatchObject({
+      storage: { locationHint },
+    });
+  });
+  it.each([
+    null,
+    true,
+    'apac',
+    { locationHint: 'APAC' },
+    { locationHint: '' },
+    { locationHint: null },
+    { location: 'apac' },
+  ])('rejects invalid storage configuration %j', (storage) => {
+    expect(() => validateConfig({ storage })).toThrow('storage.locationHint');
+  });
+});
 
 const tmpDir = join(import.meta.dirname, '.tmp-config-test');
 
