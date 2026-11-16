@@ -4,7 +4,7 @@ import { PlatformClient, type DeploymentResponse } from './client.ts';
 import { printSuccess } from './output.ts';
 import { readProjectConfig } from './project.ts';
 
-const ACTIVE_STATUSES = new Set(['pending', 'uploading', 'migrating', 'prerendering']);
+const ACTIVE_STATUSES = new Set(['pending', 'uploading', 'migrating']);
 
 export async function runCancelDeployCommand(root: string, deployId?: string): Promise<void> {
   console.log();

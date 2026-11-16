@@ -12,7 +12,7 @@ import app from '../../src/index.ts';
 import { writePlanCatalog } from '../../src/plans.ts';
 import { builds } from '../../src/schema.ts';
 import { adminHtml } from '../helpers/admin-html.tsx';
-import { verifyDeployToken, verifyPrerenderToken } from '../helpers/project-token.ts';
+import { verifyDeployToken } from '../helpers/project-token.ts';
 import {
   createTestBuild,
   clearTables,
@@ -152,44 +152,6 @@ describe('dynamic plan enforcement', () => {
     });
     await expect(updateUserPlan(env.db, user.id, 'studio')).rejects.toThrow('archived');
     await expect(updateUserPlan(env.db, user.id, 'missing')).rejects.toThrow('Unknown plan');
-  });
-
-  it('keeps a running build prerender credential within its admitted deadline after a timeout reduction', async () => {
-    await writePlanCatalog(env.db, studioCatalog());
-    const user = await createTestUser(env.db, 'running-builder', 'github', undefined, 'studio');
-    const project = await createTestProject(env.db, user.id);
-    const build = await createTestBuild(env.db, {
-      projectId: project.id,
-      userId: user.id,
-      status: 'building',
-    });
-    const token = await signDeployToken(
-      { projectId: project.id, userId: user.id, login: user.login, buildId: build.id },
-      env.JWT_SECRET,
-      { ttlSeconds: 50 * 60 },
-    );
-    const catalog = studioCatalog();
-    await writePlanCatalog(env.db, {
-      ...catalog,
-      plans: catalog.plans.map((plan) =>
-        plan.id === 'studio'
-          ? { ...plan, limits: { ...plan.limits, buildTimeoutMinutes: 1 } }
-          : plan,
-      ),
-    });
-    const response = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/prerender-token`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-      env,
-    );
-    expect(response.status, await response.clone().text()).toBe(200);
-    const body = (await response.json()) as { token: string };
-    const parent = await verifyDeployToken(token, env.JWT_SECRET);
-    const derived = await verifyPrerenderToken(body.token, env.JWT_SECRET);
-    expect(derived!.exp).toBeLessThanOrEqual(parent!.exp);
-    expect(derived!.exp).toBeGreaterThanOrEqual(parent!.exp - 1);
   });
 
   it('uses dynamic concurrency and captures admitted timeout while preserving running builds', async () => {

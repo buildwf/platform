@@ -772,7 +772,6 @@ export async function createTestDeployment(
     | 'pending'
     | 'uploading'
     | 'migrating'
-    | 'prerendering'
     | 'canceling'
     | 'live'
     | 'failed'

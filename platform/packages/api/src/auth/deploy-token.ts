@@ -11,14 +11,6 @@ import { signJwt } from './jwt.ts';
  */
 const DEPLOY_TOKEN_TTL_SECONDS = 15 * 60;
 
-/**
- * A prerender token is handed to the built application while it runs under
- * Miniflare. Keep its lifetime short: it can access only the binding proxy for
- * one project and exists solely to let getPrerenderPaths/loaders read remote
- * D1, KV, R2, and AI during a managed deploy.
- */
-const PRERENDER_TOKEN_TTL_SECONDS = 5 * 60;
-
 export const PROJECT_CREDENTIAL_MAX_DAYS = 90;
 
 /** Hard ceiling on a deploy token's lifetime — even an "unlimited" (0) build
@@ -100,37 +92,5 @@ export async function signProjectCredentialToken(
     },
     secret,
     { ttlSeconds },
-  );
-}
-
-/** Mint a short-lived token accepted only by the remote-binding proxy. */
-export async function signPrerenderToken(
-  {
-    projectId,
-    userId,
-    login,
-    buildId,
-    credentialId,
-  }: {
-    projectId: string;
-    userId: string;
-    login: string;
-    buildId?: string;
-    credentialId?: string;
-  },
-  secret: string,
-  opts?: { ttlSeconds?: number },
-): Promise<string> {
-  return signJwt(
-    {
-      sub: userId,
-      login,
-      aud: 'prerender',
-      project: projectId,
-      ...(buildId !== undefined ? { build: buildId } : {}),
-      ...(credentialId !== undefined ? { credential: credentialId } : {}),
-    },
-    secret,
-    { ttlSeconds: opts?.ttlSeconds ?? PRERENDER_TOKEN_TTL_SECONDS },
   );
 }

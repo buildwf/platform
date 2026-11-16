@@ -16,7 +16,7 @@ void platform deployment cancel <id>
 void platform deployment migrate-assets <id> [--cursor <cursor>] [--plan|--yes]
 ```
 
-Cancellation applies while a deployment is pending, uploading, migrating, or prerendering, and can be requested again while it is canceling. A deployment that has begun switching traffic, is compensating for a failure, or has finished cannot be canceled through this command.
+Cancellation applies while a deployment is pending, uploading, or migrating, and can be requested again while it is canceling. A deployment that has begun switching traffic, is compensating for a failure, or has finished cannot be canceled through this command.
 
 `migrate-assets` copies a deployment's legacy assets to scoped R2 storage without changing application traffic. Use `--plan` to preview and `--cursor` to resume from a successful batch. Original assets remain in place.
 

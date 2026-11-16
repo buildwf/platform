@@ -9,7 +9,6 @@ export const CANCELABLE_DEPLOYMENT_STATUSES = new Set([
   'pending',
   'uploading',
   'migrating',
-  'prerendering',
   'canceling',
 ]);
 const DEPLOYMENT_STATUSES = new Set([

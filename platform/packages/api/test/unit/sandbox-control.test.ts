@@ -156,7 +156,7 @@ describe('private SandboxControl authority', () => {
     },
   );
 
-  it.each(['prerendering', 'cutover'])(
+  it.each(['cutover'])(
     'permits a fresh %s candidate and revokes it when its fence becomes stale',
     async (status) => {
       const row = authority();

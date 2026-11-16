@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vite-plus/test';
-import { signDeployToken, signPrerenderToken } from '../../src/auth/deploy-token.ts';
+import { signDeployToken } from '../../src/auth/deploy-token.ts';
 import { signJwt, verifyJwt } from '../../src/auth/jwt.ts';
-import { verifyDeployToken, verifyPrerenderToken } from '../helpers/project-token.ts';
+import { verifyDeployToken } from '../helpers/project-token.ts';
 
 const SECRET = 'test-secret-key-for-deploy-token';
 
@@ -51,26 +51,6 @@ describe('deploy token', () => {
       SECRET,
     );
     expect(await verifyDeployToken(token, 'wrong-secret')).toBeNull();
-  });
-});
-
-describe('prerender token', () => {
-  it('is short-lived and pinned to one project', async () => {
-    const token = await signPrerenderToken(
-      { projectId: 'proj_abc', userId: 'user_xyz', login: 'octocat' },
-      SECRET,
-    );
-
-    const payload = await verifyPrerenderToken(token, SECRET);
-    expect(payload).not.toBeNull();
-    expect(payload).toMatchObject({
-      aud: 'prerender',
-      sub: 'user_xyz',
-      project: 'proj_abc',
-    });
-    expect(payload!.exp - payload!.iat).toBe(5 * 60);
-    expect(await verifyDeployToken(token, SECRET)).toBeNull();
-    expect(await verifyJwt(token, SECRET, 'api')).toBeNull();
   });
 });
 

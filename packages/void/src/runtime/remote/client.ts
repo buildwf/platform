@@ -70,7 +70,7 @@ async function proxyError(response: Response): Promise<Error> {
   if (!message) {
     if (response.status === 401) {
       message =
-        'Remote access could not be authenticated. Sign in to the connected platform again, or restart the build to obtain a fresh prerender token.';
+        'Remote access could not be authenticated. Sign in to the connected platform again.';
     } else if (response.status === 403) {
       message =
         'Remote access could not be authorized. Check the selected platform and project, then ask a project admin or owner to confirm your access. If your access is correct, retry shortly.';
