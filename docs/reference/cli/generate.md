@@ -99,3 +99,15 @@ Create a queue consumer file in `queues/` with `defineQueue`, a `Message` type, 
 ```sh
 void gen queue emails
 ```
+
+## `void gen procedure` {#void-gen-procedure}
+
+```
+void gen procedure <file.name>
+```
+
+Create a procedure in `procedures/`. The last word is the export and the rest is the file, so `contacts.get` adds a `get` export to `procedures/contacts.ts`, and `billing.invoices.list` adds `list` to `procedures/billing/invoices.ts`. The file lists the decisions each procedure must make before it can deploy.
+
+```sh
+void gen procedure contacts.get
+```

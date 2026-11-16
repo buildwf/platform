@@ -521,6 +521,12 @@ importers:
       '@eeao/http':
         specifier: link:../../eeaao/typescript/packages/http
         version: link:../../eeaao/typescript/packages/http
+      '@eeao/mcp':
+        specifier: link:../../eeaao/typescript/packages/mcp
+        version: link:../../eeaao/typescript/packages/mcp
+      '@modelcontextprotocol/server':
+        specifier: ^2.4.0
+        version: 2.4.0
       '@napi-rs/keyring':
         specifier: 'catalog:'
         version: 2.1.2
@@ -536,6 +542,9 @@ importers:
       '@void/platform':
         specifier: workspace:*
         version: link:../platform
+      agents:
+        specifier: ^0.33.0
+        version: 0.33.0(@babel/core@8.1.2)(@babel/runtime@7.29.13)(@modelcontextprotocol/client@2.4.0)(@modelcontextprotocol/server@2.4.0)(@voidzero-dev/vite-plus-core@1.6.0(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)(typescript@7.0.2)(yaml@2.9.1))(react@19.3.1)(rolldown@1.3.1)(zod@4.6.7)
       better-auth:
         specifier: 'catalog:'
         version: 1.7.20(@opentelemetry/api@1.10.0)(drizzle-kit@0.31.11)(drizzle-orm@0.45.4(@cloudflare/workers-types@5.20261110.1)(@electric-sql/pglite@0.5.16)(@opentelemetry/api@1.10.0)(@types/better-sqlite3@9.6.0)(@types/pg@8.23.1)(better-sqlite3@13.0.3)(kysely@0.29.8)(mysql2@3.24.6(@types/node@26.6.6))(pg@8.23.1))(mysql2@3.24.6(@types/node@26.6.6))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.19)(svelte@5.57.2)(vitest@5.1.0)(vue@3.5.45(typescript@7.0.2))
@@ -624,6 +633,9 @@ importers:
       '@types/proper-lockfile':
         specifier: ^4.1.4
         version: 4.1.4
+      '@types/react':
+        specifier: ^19.2.0
+        version: 19.3.0
       '@voidzero-dev/vite-plus-prompts':
         specifier: 'catalog:'
         version: 1.6.0
@@ -654,6 +666,9 @@ importers:
       picocolors:
         specifier: ^1.1.1
         version: 1.1.1
+      react:
+        specifier: 'catalog:'
+        version: 19.3.1
       tinyglobby:
         specifier: ^0.2.17
         version: 0.2.17

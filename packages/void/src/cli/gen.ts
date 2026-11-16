@@ -25,8 +25,10 @@ export async function runGenCommand(root: string, args: GenArgs): Promise<void> 
     runMiddleware(root, args.name);
   } else if (args.subcommand === 'cron') {
     runCron(root, args.name);
-  } else {
+  } else if (args.subcommand === 'queue') {
     runQueue(root, args.name);
+  } else {
+    runProcedure(root, args.name);
   }
 }
 
@@ -686,4 +688,41 @@ export default defineQueue<Message>(async (batch, env) => {
   if (writeIfNotExists(filePath, content)) {
     printSuccess('Queue consumer created.');
   }
+}
+
+function runProcedure(root: string, name: string): void {
+  const segments = name.split('.');
+  const exportName = segments.pop()!;
+  const filePath = join(readProjectPaths(root).proceduresDir, ...segments) + '.ts';
+  const existing = existsSync(filePath) ? readFileSync(filePath, 'utf8') : null;
+  if (existing && new RegExp(`export const ${exportName}\\b`).test(existing)) {
+    log.warn(`Skipped (already exists): ${name} in ${filePath}`);
+    return;
+  }
+  const body = `// Decide each step below before deploying: an unfinished procedure stops the Worker
+// from starting. Each step takes a choice (.auth, .input, ...) or an opt-out with a
+// reason (.noAuth({ reason }), .noInput({ reason }), ...).
+export const ${exportName} = procedure()
+  .auth(signedIn)
+  // .input(schema) | .noInput({ reason })
+  // .output(schema)
+  // .authz({ policy, check }) | .noAuthz({ reason })
+  // .errors({ NOT_FOUND: { status: 404, message: "..." } }) | .noErrors({ reason })
+  // .analytics(...) | .noAnalytics({ reason })
+  // .mcp(...) | .noMcp({ reason })
+  // .cli(...) | .noCli({ reason })
+  // .aiTool(...) | .noAiTool({ reason })
+  .handler(({ input, ctx, env }) => {
+    // TODO: implement ${name}
+  });
+`;
+  mkdirSync(dirname(filePath), { recursive: true });
+  if (existing) {
+    writeFileSync(filePath, existing.replace(/\n*$/, '\n\n') + body);
+    log.step(`Added ${name} to ${filePath}`);
+  } else {
+    writeFileSync(filePath, `import { procedure, signedIn } from "void/procedure";\n\n${body}`);
+    log.step(`Created ${filePath}`);
+  }
+  printSuccess('Procedure created.');
 }

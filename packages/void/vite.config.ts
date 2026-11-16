@@ -71,6 +71,8 @@ export default defineConfig({
       'src/runtime/validator.ts',
       'src/runtime/procedure.ts',
       'src/runtime/procedures.ts',
+      'src/runtime/rpc.ts',
+      'src/runtime/rpc-react.ts',
       'src/routes-stub.ts',
       'src/runtime/client.ts',
       'src/runtime/client-react.ts',

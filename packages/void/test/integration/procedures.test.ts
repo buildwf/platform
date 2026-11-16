@@ -52,6 +52,11 @@ export const list = procedure().noAuth(r).noInput().output(z.array(z.string()))$
 export const renamed = procedure('invoices.legacy').noAuth(r).noInput().output(z.string())${decided}
   .handler(() => 'old');
 `,
+  'tools.ts': `${header}
+export const ping = procedure().noAuth(r).noInput().output(z.string())
+  .noAuthz(r).noErrors(r).noAnalytics(r).mcp({ description: 'Ping', effect: 'read', idempotent: true }).noCli(r).noAiTool(r)
+  .handler(() => 'pong');
+`,
   '_shared.ts': `export const helper = 1;\n`,
 };
 
@@ -104,10 +109,10 @@ async function buildWorker(name: string, sources: Record<string, string>): Promi
     configFile: false,
     logLevel: 'silent',
     resolve: {
-      alias: {
-        'void/procedure': procedureModule,
-        zod: fileURLToPath(import.meta.resolve('zod')),
-      },
+      alias: [
+        { find: 'void/procedure', replacement: procedureModule },
+        { find: /^zod$/, replacement: fileURLToPath(import.meta.resolve('zod')) },
+      ],
     },
     plugins: [
       {
@@ -176,6 +181,27 @@ describe('procedures/', () => {
     // An explicit name wins over the path.
     expect((await call(worker, 'invoices.legacy')).body).toEqual({ data: 'old' });
     expect((await call(worker, 'billing.invoices.renamed')).status).toBe(404);
+  });
+
+  it('serves procedures that chose MCP as tools at /mcp', async () => {
+    const worker = await buildWorker('mcp', files);
+    const res = await worker.fetch(
+      new Request('https://app.test/mcp', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json, text/event-stream',
+          host: 'app.test',
+        },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} }),
+      }),
+      {},
+      ctx,
+    );
+    const text = await res.text();
+    expect(res.status).toBe(200);
+    expect(text).toContain('tools_ping');
+    expect(text).not.toContain('contacts_get');
   });
 
   it('runs app middleware around procedure calls', async () => {

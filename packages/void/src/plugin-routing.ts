@@ -34,6 +34,7 @@ import { lintRoutingPhases, mergeRoutingRules } from './cli/headers.ts';
 import { stampClientAssetCachePolicy } from './client-asset-manifest.ts';
 import { removeAuthTypesIfPresent, syncAuthTypesFile } from './codegen/auth-types.ts';
 import { findEnvFileForPaths } from './codegen/env-types.ts';
+import { generateProcedureTypes } from './codegen/procedure-types.ts';
 import { syncAuthTypesInProjectTsconfig } from './codegen/project-tsconfig.ts';
 import { generateQueueTypes } from './codegen/queue-types.ts';
 import { generateRouteTypes } from './codegen/route-types.ts';
@@ -182,6 +183,14 @@ export function routingPlugin(
     writeFileIfChanged(join(outDir, 'queues.d.ts'), dts);
   }
 
+  function writeProcedureTypes() {
+    if (!scan || !existsSync(proceduresDir)) {
+      return;
+    }
+    const dts = generateProcedureTypes(scan.procedures ?? [], proceduresDir, outDir);
+    writeFileIfChanged(join(outDir, 'procedures.d.ts'), dts);
+  }
+
   async function rescan(refresh = false) {
     const analysis = options.getApplicationAnalysis(routeEnvironment, refresh);
     scan = (await completeApplicationAnalysis(analysis)).scan;
@@ -294,6 +303,7 @@ export function routingPlugin(
     const files = [
       'routes.d.ts',
       'queues.d.ts',
+      ...(existsSync(proceduresDir) ? ['procedures.d.ts'] : []),
       'entry.ts',
       ...(compileOptions.auth
         ? [
@@ -681,6 +691,7 @@ export function routingPlugin(
         await writeAuthDatabaseFiles();
         writeRouteTypes();
         writeQueueTypes();
+        writeProcedureTypes();
 
         // Bundle migrations into the worker (in-worker migration runner)
         const migrationsDir = paths.migrationsDir;
@@ -868,6 +879,8 @@ export function routingPlugin(
             await writeAuthDatabaseFiles();
             writeRouteTypes();
             writeQueueTypes();
+            writeProcedureTypes();
+            writeProcedureTypes();
 
             writeWorkerEntry();
           }
