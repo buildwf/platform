@@ -33,9 +33,12 @@ beforeEach(async () => {
   await clearTables(env.db);
 });
 
-describe('GET /me', () => {
+describe('POST /rpc/me.get', () => {
   it('returns 401 without auth header', async () => {
-    const res = await app.fetch(new Request('http://localhost/me'), env);
+    const res = await app.fetch(
+      new Request('http://localhost/rpc/me.get', { method: 'POST' }),
+      env,
+    );
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({
       error: 'unauthorized',
@@ -45,7 +48,8 @@ describe('GET /me', () => {
 
   it('returns 401 with invalid JWT', async () => {
     const res = await app.fetch(
-      new Request('http://localhost/me', {
+      new Request('http://localhost/rpc/me.get', {
+        method: 'POST',
         headers: { Authorization: 'Bearer not-a-real-jwt' },
       }),
       env,
@@ -75,7 +79,8 @@ describe('GET /me', () => {
     vi.useRealTimers();
 
     const res = await app.fetch(
-      new Request('http://localhost/me', {
+      new Request('http://localhost/rpc/me.get', {
+        method: 'POST',
         headers: { Authorization: `Bearer ${jwt}` },
       }),
       env,
@@ -88,7 +93,8 @@ describe('GET /me', () => {
     await env.db.delete(users).where(eq(users.id, user.id));
 
     const res = await app.fetch(
-      new Request('http://localhost/me', {
+      new Request('http://localhost/rpc/me.get', {
+        method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}` },
       }),
       env,
@@ -108,7 +114,8 @@ describe('GET /me', () => {
       .where(eq(users.id, user.id));
 
     const res = await app.fetch(
-      new Request('http://localhost/me', {
+      new Request('http://localhost/rpc/me.get', {
+        method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}` },
       }),
       env,
@@ -128,13 +135,14 @@ describe('GET /me', () => {
       .where(eq(users.id, user.id));
 
     const res = await app.fetch(
-      new Request('http://localhost/me', {
+      new Request('http://localhost/rpc/me.get', {
+        method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}` },
       }),
       env,
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as MeResponse;
+    const body = ((await res.json()) as { data: MeResponse }).data;
     expect(body.login).toBe('usage-limited');
   });
 
@@ -142,13 +150,14 @@ describe('GET /me', () => {
     const user = await createTestUser(env.db, 'alice');
 
     const res = await app.fetch(
-      new Request('http://localhost/me', {
+      new Request('http://localhost/rpc/me.get', {
+        method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}` },
       }),
       env,
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as MeResponse;
+    const body = ((await res.json()) as { data: MeResponse }).data;
     expect(body.login).toBe('alice');
     expect(body.plan).toBe('free');
     expect(body.provider).toBe('github');

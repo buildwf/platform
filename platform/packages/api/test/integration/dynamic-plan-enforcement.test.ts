@@ -21,6 +21,7 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
+  rpcData,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -75,13 +76,14 @@ describe('dynamic plan enforcement', () => {
     const user = await createTestUser(env.db, 'studio-user', 'github', undefined, 'studio');
     await writePlanCatalog(env.db, studioCatalog());
     const response = await app.fetch(
-      new Request('http://localhost/me', {
+      new Request('http://localhost/rpc/me.get', {
+        method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}` },
       }),
       env,
     );
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
+    expect(rpcData(await response.json())).toMatchObject({
       plan: 'studio',
       limits: { requestsPerMonth: 42 },
     });
@@ -112,7 +114,7 @@ describe('dynamic plan enforcement', () => {
 
   it.each([
     ['free', 403],
-    ['pro', 201],
+    ['pro', 200],
   ] as const)(
     'preserves short-slug eligibility when copying %s to a new plan ID',
     async (sourceId, status) => {
@@ -124,7 +126,7 @@ describe('dynamic plan enforcement', () => {
       });
       const user = await createTestUser(env.db, 'copied-user', 'github', undefined, 'copied');
       const response = await app.fetch(
-        new Request('http://localhost/projects', {
+        new Request('http://localhost/rpc/projects.create', {
           method: 'POST',
           headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ slug: 'tiny1' }),
@@ -134,7 +136,7 @@ describe('dynamic plan enforcement', () => {
       expect(response.status, await response.clone().text()).toBe(status);
       if (status === 403) {
         expect(await response.json()).toMatchObject({
-          error: expect.stringContaining('selected plan'),
+          error: { message: expect.stringContaining('selected plan') },
         });
       }
     },

@@ -1,150 +1,143 @@
 import { and, eq, gt, isNull, lt, or } from 'drizzle-orm';
-import { Hono } from 'hono';
 import { uploadPool } from '../concurrency.ts';
 import type { Db } from '../db.ts';
 import { type ApiEnv, isDevBypass } from '../env.ts';
 import { deriveAiUsageTag } from '../proxy-token.ts';
 import { projectOwnershipPeriods, projects as projectsTable } from '../schema.ts';
 import { getCurrentBillingPeriodStart } from '../tiers.ts';
-import type { Project } from '../types.ts';
-import { requireProjectRouteCapability } from './project-access.ts';
+import type { Project, User } from '../types.ts';
 
-const projectUsage = new Hono<ApiEnv>()
+type Bindings = ApiEnv['Bindings'];
 
-  // Project usage for current billing period
-  .get('/:id/usage', async (context) => {
-    const projectId = context.req.param('id');
-    const access = await requireProjectRouteCapability(context, projectId, 'read');
-    if (access instanceof Response) {
-      return access;
-    }
+/** Request, bandwidth and AI totals for the current billing period. */
+export type UsageTotals = { requests: number; bandwidthBytes: number; aiNeurons: number };
 
-    // Dev bypass — skip slow CF Analytics Engine API calls
-    if (isDevBypass(context.env)) {
-      return context.json({
+/** The analytics backend failed or timed out. */
+export class UsageUnavailableError extends Error {}
+
+/** Usage of one project for its owner's current billing period. */
+export async function getProjectUsage(
+  env: Bindings,
+  projectId: string,
+  ownerBillingCycleStart: User['billing_cycle_start'],
+): Promise<UsageTotals & { projectId: string; billingPeriodStart: string }> {
+  // Dev bypass — skip slow CF Analytics Engine API calls
+  if (isDevBypass(env)) {
+    return {
+      projectId,
+      billingPeriodStart: new Date().toISOString(),
+      requests: 0,
+      bandwidthBytes: 0,
+      aiNeurons: 0,
+    };
+  }
+
+  const since = getCurrentBillingPeriodStart(ownerBillingCycleStart);
+  try {
+    const [usage, aiUsage] = await Promise.all([
+      queryProjectUsage(
+        env.CF_ACCOUNT_ID,
+        env.CF_API_TOKEN,
+        getRequestsDataset(env),
         projectId,
-        billingPeriodStart: new Date().toISOString(),
-        requests: 0,
-        bandwidthBytes: 0,
-        aiNeurons: 0,
-      });
-    }
-
-    const since = getCurrentBillingPeriodStart(access.owner.billing_cycle_start);
-    const requestsDataset = getRequestsDataset(context.env);
-    let usage: { requests: number; bandwidthBytes: number };
-    let aiUsage: { neurons: number };
-    try {
-      [usage, aiUsage] = await Promise.all([
-        queryProjectUsage(
-          context.env.CF_ACCOUNT_ID,
-          context.env.CF_API_TOKEN,
-          requestsDataset,
-          projectId,
-          since,
-        ),
-        queryProjectAiUsage(
-          context.env.CF_ACCOUNT_ID,
-          context.env.CF_API_TOKEN,
-          context.env.AI_GATEWAY_ID ?? 'void',
-          context.env.JWT_SECRET,
-          projectId,
-          since,
-          undefined,
-          true,
-        ),
-      ]);
-    } catch {
-      return context.json({ error: 'usage unavailable' }, 503);
-    }
-
-    return context.json({
+        since,
+      ),
+      queryProjectAiUsage(
+        env.CF_ACCOUNT_ID,
+        env.CF_API_TOKEN,
+        env.AI_GATEWAY_ID ?? 'void',
+        env.JWT_SECRET,
+        projectId,
+        since,
+        undefined,
+        true,
+      ),
+    ]);
+    return {
       projectId,
       billingPeriodStart: since.toISOString(),
       ...usage,
       aiNeurons: aiUsage.neurons,
-    });
-  });
+    };
+  } catch {
+    throw new UsageUnavailableError();
+  }
+}
 
-const accountUsage = new Hono<ApiEnv>()
+/** Usage across every project the user owned during their current billing period. */
+export async function getAccountUsage(
+  env: Bindings,
+  db: Db,
+  user: User,
+): Promise<
+  UsageTotals & {
+    billingPeriodStart?: string;
+    projects: Array<UsageTotals & { projectId: string; slug: string }>;
+  }
+> {
+  const since = getCurrentBillingPeriodStart(user.billing_cycle_start);
+  const projectWindows = await getAccountUsageProjectWindows(db, user.id, since, new Date());
+  if (projectWindows.length === 0) {
+    return { requests: 0, bandwidthBytes: 0, aiNeurons: 0, projects: [] };
+  }
 
-  // Aggregate usage across all user's projects
-  .get('/', async (context) => {
-    const since = getCurrentBillingPeriodStart(context.get('user').billing_cycle_start);
-    const until = new Date();
-    const projectWindows = await getAccountUsageProjectWindows(
-      context.get('db'),
-      context.get('user').id,
-      since,
-      until,
-    );
-    if (projectWindows.length === 0) {
-      return context.json({ requests: 0, bandwidthBytes: 0, aiNeurons: 0, projects: [] });
-    }
-
-    // Dev bypass — skip slow CF Analytics Engine API calls
-    if (isDevBypass(context.env)) {
-      return context.json({
-        billingPeriodStart: since.toISOString(),
+  // Dev bypass — skip slow CF Analytics Engine API calls
+  if (isDevBypass(env)) {
+    return {
+      billingPeriodStart: since.toISOString(),
+      requests: 0,
+      bandwidthBytes: 0,
+      aiNeurons: 0,
+      projects: projectWindows.map(({ project }) => ({
+        projectId: project.id,
+        slug: project.slug,
         requests: 0,
         bandwidthBytes: 0,
         aiNeurons: 0,
-        projects: projectWindows.map(({ project }) => ({
-          projectId: project.id,
-          slug: project.slug,
-          requests: 0,
-          bandwidthBytes: 0,
-          aiNeurons: 0,
-        })),
-      });
-    }
+      })),
+    };
+  }
 
-    const requestsDataset = getRequestsDataset(context.env);
+  let usageMap: Map<string, UsageEntry>;
+  let aiUsages: Array<number>;
+  try {
+    [usageMap, aiUsages] = await Promise.all([
+      queryBatchProjectUsageWindows(
+        env.CF_ACCOUNT_ID,
+        env.CF_API_TOKEN,
+        getRequestsDataset(env),
+        projectWindows,
+        true,
+      ),
+      sumAiUsageForWindows(
+        env.CF_ACCOUNT_ID,
+        env.CF_API_TOKEN,
+        env.AI_GATEWAY_ID ?? 'void',
+        env.JWT_SECRET,
+        projectWindows.map(({ project, intervals }) => ({ projectId: project.id, intervals })),
+      ),
+    ]);
+  } catch {
+    throw new UsageUnavailableError();
+  }
+  const projectUsages = projectWindows.map(({ project }, i) => ({
+    projectId: project.id,
+    slug: project.slug,
+    ...(usageMap.get(project.id) ?? ZERO_USAGE),
+    aiNeurons: aiUsages[i]!,
+  }));
 
-    let usageMap: Map<string, UsageEntry>;
-    let aiUsages: Array<number>;
-    try {
-      [usageMap, aiUsages] = await Promise.all([
-        queryBatchProjectUsageWindows(
-          context.env.CF_ACCOUNT_ID,
-          context.env.CF_API_TOKEN,
-          requestsDataset,
-          projectWindows,
-          true,
-        ),
-        sumAiUsageForWindows(
-          context.env.CF_ACCOUNT_ID,
-          context.env.CF_API_TOKEN,
-          context.env.AI_GATEWAY_ID ?? 'void',
-          context.env.JWT_SECRET,
-          projectWindows.map(({ project, intervals }) => ({ projectId: project.id, intervals })),
-        ),
-      ]);
-    } catch {
-      return context.json({ error: 'usage unavailable' }, 503);
-    }
-    const projectUsages = projectWindows.map(({ project }, i) => ({
-      projectId: project.id,
-      slug: project.slug,
-      ...(usageMap.get(project.id) ?? ZERO_USAGE),
-      aiNeurons: aiUsages[i],
-    }));
+  const totals = projectUsages.reduce(
+    (acc, u) => ({
+      requests: acc.requests + u.requests,
+      bandwidthBytes: acc.bandwidthBytes + u.bandwidthBytes,
+      aiNeurons: acc.aiNeurons + u.aiNeurons,
+    }),
+    { requests: 0, bandwidthBytes: 0, aiNeurons: 0 },
+  );
 
-    const totals = projectUsages.reduce(
-      (acc, u) => ({
-        requests: acc.requests + u.requests,
-        bandwidthBytes: acc.bandwidthBytes + u.bandwidthBytes,
-        aiNeurons: acc.aiNeurons + u.aiNeurons,
-      }),
-      { requests: 0, bandwidthBytes: 0, aiNeurons: 0 },
-    );
-
-    return context.json({
-      billingPeriodStart: since.toISOString(),
-      ...totals,
-      projects: projectUsages,
-    });
-  });
+  return { billingPeriodStart: since.toISOString(), ...totals, projects: projectUsages };
+}
 
 type AnalyticsRow = Readonly<{
   requests: number;
@@ -685,7 +678,5 @@ export {
   queryProjectRequestOverview,
   queryProjectAiUsage,
   getAccountUsageProjectWindows,
-  projectUsage,
-  accountUsage,
   ZERO_USAGE,
 };

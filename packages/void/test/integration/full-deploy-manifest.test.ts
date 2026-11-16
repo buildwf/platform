@@ -87,9 +87,9 @@ function installPlatformMocks(role: ProjectRole = 'owner'): Captured {
     }
     if (
       (url.endsWith('/projects/proj_named_layouts_test') && method === 'GET') ||
-      (url.endsWith('/projects') && method === 'POST')
+      (url.endsWith('/rpc/projects.create') && method === 'POST')
     ) {
-      return json({
+      const project = {
         id: 'proj_named_layouts_test',
         user_id: 'user_owner',
         slug: 'named-layouts-test',
@@ -98,7 +98,8 @@ function installPlatformMocks(role: ProjectRole = 'owner'): Captured {
         custom_domain: null,
         role,
         owner: { id: 'user_owner', login: 'owner' },
-      });
+      };
+      return json(method === 'POST' ? { data: project } : project);
     }
 
     if (url.endsWith('/deploy/preflight') && method === 'POST') {

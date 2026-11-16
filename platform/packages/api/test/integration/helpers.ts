@@ -1942,3 +1942,8 @@ export async function readAllEvents(res: Response): Promise<Array<unknown>> {
     .filter((line) => line.trim())
     .map((line) => JSON.parse(line));
 }
+
+/** The `data` of a successful `/rpc` response. */
+export function rpcData<T = unknown>(body: unknown): T {
+  return (body as { data: T }).data;
+}

@@ -33,7 +33,7 @@ describe('DEV_AUTH_BYPASS production guard', () => {
   it('ignores DEV_AUTH_BYPASS when PLATFORM_ENV is production', async () => {
     await createTestUser(env.db, 'bypass-user');
 
-    const res = await app.fetch(new Request('http://localhost/me'), {
+    const res = await app.fetch(new Request('http://localhost/rpc/me.get', { method: 'POST' }), {
       ...env,
       DEV_AUTH_BYPASS: 'true',
       PLATFORM_ENV: 'production',
@@ -44,7 +44,7 @@ describe('DEV_AUTH_BYPASS production guard', () => {
   it('allows DEV_AUTH_BYPASS when PLATFORM_ENV is not production', async () => {
     await createTestUser(env.db, 'bypass-user');
 
-    const res = await app.fetch(new Request('http://localhost/me'), {
+    const res = await app.fetch(new Request('http://localhost/rpc/me.get', { method: 'POST' }), {
       ...env,
       DEV_AUTH_BYPASS: 'true',
     });
@@ -55,7 +55,7 @@ describe('DEV_AUTH_BYPASS production guard', () => {
     await createTestUser(env.db, 'bypass-user');
 
     for (const value of ['false', '0', 'TRUE', '1']) {
-      const res = await app.fetch(new Request('http://localhost/me'), {
+      const res = await app.fetch(new Request('http://localhost/rpc/me.get', { method: 'POST' }), {
         ...env,
         DEV_AUTH_BYPASS: value,
       });

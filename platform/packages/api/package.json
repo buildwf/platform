@@ -5,11 +5,11 @@
   "exports": {
     "./tiers": "./src/tiers.ts",
     "./id": "./src/id.ts",
-    "./api": "./src/api.ts",
     "./reserved-slugs": "./src/reserved-slugs.ts",
     "./routing": "./src/routing.ts",
     "./usage-auth": "./src/usage-auth.ts",
-    "./proxy-token": "./src/proxy-token.ts"
+    "./proxy-token": "./src/proxy-token.ts",
+    "./rpc": "./src/rpc/registry.ts"
   },
   "scripts": {
     "check:ai-logging": "node scripts/check-ai-logging.ts",
@@ -28,12 +28,15 @@
     "@astryxdesign/theme-neutral": "catalog:",
     "@cloudflare/containers": "0.3.7",
     "@cloudflare/sandbox": "catalog:",
+    "@eeao/core": "link:../../../eeaao/typescript/packages/core",
+    "@eeao/http": "link:../../../eeaao/typescript/packages/http",
     "@nkzw/fate": "catalog:",
     "@stylexjs/stylex": "catalog:",
     "@void/deploy-core": "workspace:*",
     "@void/edge": "workspace:*",
     "@void/platform": "workspace:*",
     "@xterm/headless": "^6.0.0",
+    "arktype": "catalog:",
     "aws4fetch": "^1.0.20",
     "blake3-jit": "^1.1.0",
     "cron-parser": "catalog:",

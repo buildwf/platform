@@ -383,7 +383,8 @@ describe('provider-independent first administrator setup', () => {
     expect(
       (
         await app.fetch(
-          new Request(`${origin}/me`, {
+          new Request(`${origin}/rpc/me.get`, {
+            method: 'POST',
             headers: { Authorization: `Bearer ${legacyApiToken}` },
           }),
           bindings(),
@@ -440,7 +441,8 @@ describe('provider-independent first administrator setup', () => {
     expect(
       (
         await app.fetch(
-          new Request(`${origin}/me`, {
+          new Request(`${origin}/rpc/me.get`, {
+            method: 'POST',
             headers: { Authorization: `Bearer ${legacyApiToken}` },
           }),
           bindings(),

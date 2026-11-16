@@ -876,7 +876,7 @@ describe('registered OAuth applications', () => {
       preferred_username: 'alice',
       scope: 'profile',
     });
-    for (const path of ['/me', '/projects', '/admin/projects']) {
+    for (const path of ['/rpc/me.get', '/projects', '/admin/projects']) {
       const response = await request(path, {
         headers: { Authorization: 'Bearer ' + token.access_token },
       });

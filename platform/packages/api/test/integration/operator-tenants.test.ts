@@ -1367,7 +1367,8 @@ describe('operator tenant mutations', () => {
       ),
     ).toBe(true);
     const staleUserSession = await app.fetch(
-      new Request('http://localhost/me', {
+      new Request('http://localhost/rpc/me.get', {
+        method: 'POST',
         headers: { Authorization: `Bearer ${invited.jwt}` },
       }),
       env,

@@ -86,9 +86,9 @@ drizzle/
 - `GET /health`
 - `GET /auth/login`
 - `GET /auth/callback`
-- `GET /me`
+- `POST /rpc/<procedure>` — eeaao procedures, the platform's API as it moves off REST. Today: `me.get`, `projects.create`, `projects.usage` and `usage.account`. `GET /rpc/manifest.json` and `GET /rpc/openapi.json` describe them. Procedures live in [`src/rpc/`](./src/rpc); the dashboard and CLI import only the registry type.
 - `/projects/*`
-  - CRUD
+  - CRUD (create is `projects.create`)
   - `GET /projects/choices` — list accessible projects for interactive selection without deployment or traffic summaries.
   - `GET /projects/resolve?slug=...` — look up one accessible project for deploy setup. Returns `{ "project": null }` when the slug does not exist or is not accessible.
   - deploys and rollbacks
@@ -97,7 +97,6 @@ drizzle/
   - secrets
     - Secret changes hold the project row lock through active-Worker propagation. A nonterminal deployment or rollback lease returns HTTP 409 before storage changes; retry after that operation completes. Propagation requests time out after 30 seconds so an unavailable upstream cannot hold the project fence indefinitely.
   - domains
-  - usage
   - project-scoped CI deploy credentials (`GET|POST /projects/:id/tokens`,
     `POST /projects/:id/tokens/:credentialId/renew`, and
     `DELETE /projects/:id/tokens/:credentialId`)
@@ -106,9 +105,8 @@ drizzle/
   - PostgreSQL and MySQL project database provisioning/update
   - `/projects/:id/github` — connect/inspect/update/disconnect the GitHub repo (POST/GET/PATCH/DELETE; readers may inspect, owners and project administrators may mutate)
   - `/projects/:id/email/*` — monthly usage, and the verified-recipient list the project may send to (`GET|POST|DELETE`). Adding a recipient triggers a verification email; the address only becomes sendable once the recipient consents. See [Email](#email).
-- `GET /usage`
 
-Project and account usage endpoints return HTTP 503 when upstream analytics are unavailable, so clients can distinguish missing data from zero usage.
+The `projects.usage` and `usage.account` procedures return HTTP 503 (`USAGE_UNAVAILABLE`) when upstream analytics are unavailable, so clients can distinguish missing data from zero usage.
 
 Project authorization resolves the implicit owner from `projects.user_id` and
 shared access from `project_members`. Readers can inspect, collaborators can

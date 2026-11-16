@@ -111,9 +111,9 @@ beforeEach(() => {
           expect(url.searchParams.get('slug')).toBe('my-app');
           return Response.json({ project: missing ? null : project });
         }
-        if (method === 'POST' && url.pathname === '/projects') {
+        if (method === 'POST' && url.pathname === '/rpc/projects.create') {
           missing = false;
-          return Response.json(project);
+          return Response.json({ data: project });
         }
         if (method === 'GET' && url.pathname === `/projects/${id}`) {
           return Response.json(project);
@@ -215,7 +215,7 @@ it.each([false, true])(
     await deploy();
     expect(readFileSync(projectFile, 'utf8')).toBe(saved);
     expect(requests).toContainEqual(
-      expect.objectContaining({ origin: alternateOrigin, method: 'POST', path: '/projects' }),
+      expect.objectContaining({ origin: alternateOrigin, method: 'POST', path: '/rpc/projects.create' }),
     );
     expect(requests.at(-1)?.path).toBe('/projects/project-alternate/deploy');
   },
@@ -270,7 +270,7 @@ it('reuses a newly established first link when authentication expires during dep
   ).toEqual(['my-app → Orange Cloud']);
   expect(select).toHaveBeenCalledOnce();
   expect(
-    requests.filter(({ path, method }) => path === '/projects' && method === 'POST'),
+    requests.filter(({ path, method }) => path === '/rpc/projects.create' && method === 'POST'),
   ).toHaveLength(1);
   expect(JSON.parse(readFileSync(projectFile, 'utf8'))).toMatchObject({
     platformUrl: alternateOrigin,

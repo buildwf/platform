@@ -268,7 +268,7 @@ describe('platform uninstall check against the API database', () => {
     // The request was admitted before traffic was disabled.
     await fencePlatformProjectZeroTrustConnection(connection);
     const response = await app.fetch(
-      new Request('http://localhost/projects', {
+      new Request('http://localhost/rpc/projects.create', {
         method: 'POST',
         headers: { Authorization: `Bearer ${owner.jwt}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug: 'after-final-check' }),
@@ -276,7 +276,7 @@ describe('platform uninstall check against the API database', () => {
       platform,
     );
     expect(response.status).toBe(409);
-    expect(((await response.json()) as { error: string }).error).toBe(
+    expect(((await response.json()) as { error: { message: string } }).error.message).toBe(
       'The platform is being uninstalled, so new projects cannot be created.',
     );
     expect(await readPlatformProjectSlugsConnection(connection)).toEqual([]);
@@ -298,7 +298,7 @@ describe('platform uninstall check against the API database', () => {
         // the final check passed.
         const created = Promise.resolve(
           app.fetch(
-            new Request('http://localhost/projects', {
+            new Request('http://localhost/rpc/projects.create', {
               method: 'POST',
               headers: {
                 Authorization: `Bearer ${owner.jwt}`,

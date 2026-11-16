@@ -657,11 +657,6 @@ const app = new Hono<ApiEnv>()
     });
   })
 
-  // Create a new project
-  .post('/', async (context) =>
-    createUserProject(context, await context.req.json<{ slug: string }>()),
-  )
-
   // Get project by ID
   .get('/:id', async (context) => {
     const access = await requireProjectRouteCapability(context, context.req.param('id'), 'read');
@@ -3114,7 +3109,7 @@ function tryParse(json: string): ReadonlyArray<unknown> {
  * real bug inside `waitUntil` is not swallowed. `work` must handle its own
  * failures: on the fallback path a rejection would surface as a 5xx.
  */
-async function scheduleAfterResponse(
+export async function scheduleAfterResponse(
   context: Context<ApiEnv>,
   work: Promise<unknown>,
 ): Promise<void> {
@@ -3249,28 +3244,45 @@ function isSyntheticProviderEmail(email: string): boolean {
 
 export default app;
 
-export async function createUserProject(
-  context: Context<ApiEnv>,
-  body: { slug: string },
-): Promise<Response> {
-  if (!body.slug) {
-    return context.json({ error: 'slug is required' }, 400);
+/** A project could not be created. `code` names the cause; `status` is the HTTP status it maps to. */
+export class ProjectCreateError extends Error {
+  constructor(
+    readonly code:
+      | 'SLUG_INVALID'
+      | 'SLUG_SHORT_NOT_ALLOWED'
+      | 'SLUG_TAKEN'
+      | 'AI_LOGGING_UNAVAILABLE'
+      | 'PLATFORM_UNINSTALLING',
+    message: string,
+  ) {
+    super(message);
   }
+}
 
+type CreateProjectContext = {
+  env: ApiEnv['Bindings'];
+  db: Db;
+  user: User;
+  /** Runs `work` after the response; awaits it inline where there is no execution context. */
+  schedule(work: Promise<unknown>): Promise<void>;
+};
+
+/** Creates a project for `user`; throws `ProjectCreateError` for every refusal. */
+export async function createProjectForUser(context: CreateProjectContext, slug: string) {
   // Lowercase alphanumeric with dashes, short enough to fit in front of `+noreply@`
   // in a 64-octet SMTP local-part, and not reserved. The CLI treats this 400 as
   // re-promptable.
-  const nameError = projectNameError(body.slug, 'slug');
+  const nameError = projectNameError(slug, 'slug');
   if (nameError) {
-    return context.json({ error: nameError }, 400);
+    throw new ProjectCreateError('SLUG_INVALID', nameError);
   }
 
   // Preserve short-slug eligibility when an administrator copies or renames a plan.
-  if (body.slug.length <= 5) {
-    if (!(await resolvePlan(context.get('db'), context.get('user').plan)).allowShortSlugs) {
-      return context.json(
-        { error: 'the selected plan does not permit short slugs (5 characters or fewer)' },
-        403,
+  if (slug.length <= 5) {
+    if (!(await resolvePlan(context.db, context.user.plan)).allowShortSlugs) {
+      throw new ProjectCreateError(
+        'SLUG_SHORT_NOT_ALLOWED',
+        'the selected plan does not permit short slugs (5 characters or fewer)',
       );
     }
   }
@@ -3278,21 +3290,20 @@ export async function createUserProject(
   // A slug is also a mailbox on the shared mail domain, so it may not equal
   // another project's email alias either.
   const existing =
-    (await getProjectBySlug(context.get('db'), body.slug)) ??
-    (await getProjectByEmailAlias(context.get('db'), body.slug));
+    (await getProjectBySlug(context.db, slug)) ?? (await getProjectByEmailAlias(context.db, slug));
   if (existing) {
-    return context.json({ error: 'slug already taken' }, 409);
+    throw new ProjectCreateError('SLUG_TAKEN', 'slug already taken');
   }
 
-  const userId = context.get('user').id;
+  const userId = context.user.id;
   try {
     // `void platform uninstall --purge-resources` holds this lock across its last
     // check for projects and records the uninstall before releasing it, so a
     // project either commits before that check or is refused here.
-    const project = await context.get('db').transaction(async (tx) => {
+    const project = await context.db.transaction(async (tx) => {
       await lockZeroTrustConfiguration(tx, 'shared');
       await lockNewProjectAiLoggingInputs(tx);
-      const created = await createProject(tx, userId, body.slug);
+      const created = await createProject(tx, userId, slug);
       // A plan AI logging default applies from the first request. A KV failure
       // rolls the create back, so a retry starts clean.
       await publishProjectAiLogging(tx, context.env.ROUTING, created.id, {
@@ -3305,7 +3316,7 @@ export async function createUserProject(
     let zeroTrust: Awaited<ReturnType<typeof initializeNewProjectZeroTrust>> = null;
     let zeroTrustWarning: string | undefined;
     try {
-      zeroTrust = await initializeNewProjectZeroTrust(context.env, context.get('db'), project.id);
+      zeroTrust = await initializeNewProjectZeroTrust(context.env, context.db, project.id);
     } catch (error) {
       zeroTrustWarning =
         'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Void retries within an hour. To retry now, a project owner or admin can run `void project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.';
@@ -3324,7 +3335,7 @@ export async function createUserProject(
     // (its `/email/*` routes answer 501) or in an environment with no
     // platform mail domain there is nothing it could ever authorize — and
     // registering it would still cost CF a verification email to the owner.
-    const ownerEmail = context.get('user').email;
+    const ownerEmail = context.user.email;
     if (
       getPlatformCapabilities(context.env).email &&
       context.env.EMAIL_SENDER_DOMAIN &&
@@ -3336,12 +3347,11 @@ export async function createUserProject(
       // `cfFetch`, and project creation must not wait on it. Nothing
       // downstream depends on the row existing yet — a pending row emits
       // no allowlist entry either way.
-      await scheduleAfterResponse(
-        context,
+      await context.schedule(
         autoAddOwnerDestination(
           context.env.CF_ACCOUNT_ID,
           context.env.CF_API_TOKEN,
-          context.get('db'),
+          context.db,
           project.id,
           address,
           userId,
@@ -3353,43 +3363,37 @@ export async function createUserProject(
       // which has not run yet. The CLI prints this so the verification
       // email that may follow is explained; `void email destinations`
       // shows the outcome.
-      return context.json(
-        {
-          ...project,
-          owner_email_destination: { address },
-          ...(zeroTrust ? { zero_trust: publicProjectZeroTrustState(zeroTrust) } : {}),
-          ...(zeroTrustWarning ? { warnings: [zeroTrustWarning] } : {}),
-        },
-        201,
-      );
-    }
-    return context.json(
-      {
-        ...projectWithUrl(project, context.env),
+      return {
+        ...project,
+        owner_email_destination: { address },
         ...(zeroTrust ? { zero_trust: publicProjectZeroTrustState(zeroTrust) } : {}),
         ...(zeroTrustWarning ? { warnings: [zeroTrustWarning] } : {}),
-      },
-      201,
-    );
+      };
+    }
+    return {
+      ...projectWithUrl(project, context.env),
+      ...(zeroTrust ? { zero_trust: publicProjectZeroTrustState(zeroTrust) } : {}),
+      ...(zeroTrustWarning ? { warnings: [zeroTrustWarning] } : {}),
+    };
   } catch (err) {
     // Only the configuration lock above throws this here: the uninstall
     // record exists.
     if (err instanceof AiLoggingPublishError) {
-      return context.json(
-        { error: 'The AI logging setting for the new project could not be applied. Retry.' },
-        503,
+      throw new ProjectCreateError(
+        'AI_LOGGING_UNAVAILABLE',
+        'The AI logging setting for the new project could not be applied. Retry.',
       );
     }
     if (err instanceof ZeroTrustUnavailableError) {
-      return context.json(
-        { error: 'The platform is being uninstalled, so new projects cannot be created.' },
-        err.status,
+      throw new ProjectCreateError(
+        'PLATFORM_UNINSTALLING',
+        'The platform is being uninstalled, so new projects cannot be created.',
       );
     }
     // Unique constraint violation: the slug, or an alias with that name, was
     // taken between check and insert.
     if (hasSqlState(err, '23505')) {
-      return context.json({ error: 'slug already taken' }, 409);
+      throw new ProjectCreateError('SLUG_TAKEN', 'slug already taken');
     }
     throw err;
   }

@@ -1,9 +1,9 @@
 import { defineHandler } from 'void';
-import { fetchApi, type API } from '../lib/api.ts';
+import { fetchApi, type CurrentUser } from '../lib/api.ts';
 import { discoveryDisplayName } from '../lib/platform-title.ts';
 
 export type Props = Readonly<{
-  user: API<'me'>;
+  user: CurrentUser;
   platformName: string;
 }>;
 
