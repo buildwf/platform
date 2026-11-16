@@ -68,7 +68,7 @@ import {
 } from './plugin-worker-environment.ts';
 import { assertNoRootSourceConventionConflicts } from './project-paths.ts';
 import { isRouteEnabledForEnvironment, type RouteEnvironment } from './router/parse-filename.ts';
-import { resolveSandboxConfig } from './sandbox/config.ts';
+import { isSandboxAttached, resolveSandboxConfig } from './sandbox/config.ts';
 import { CLOUDFLARE_DEPLOY_BUILD_ENV, loadLocalEnv, resolveRemoteMode } from './shared/env.ts';
 
 const scheduledPreviewPointerCleanups = new Set<string>();
@@ -193,6 +193,7 @@ export function voidPlugin(options?: {
     }
     if (
       sandboxConfig &&
+      !isSandboxAttached(sandboxConfig) &&
       (sandboxConfig.binding === module.bindingName || sandboxConfig.className === module.className)
     ) {
       throw new Error(
@@ -620,7 +621,7 @@ export function voidPlugin(options?: {
     routing: config.routing,
     bindingNames,
     get hasSandbox() {
-      return bindings.needsSandbox;
+      return bindings.needsSandbox && !isSandboxAttached(sandboxConfig);
     },
     sandboxBindingName: sandboxConfig?.binding,
     sandboxClassName: sandboxConfig?.className,
@@ -651,7 +652,9 @@ export function voidPlugin(options?: {
     clientStubsPlugin,
     serverRuntimeOptimizerPlugin,
     bindingRuntimePlugin(bindingNames),
-    ...(bindings.needsSandbox ? [createSandboxSdkResolvePlugin()] : []),
+    ...(bindings.needsSandbox && !isSandboxAttached(sandboxConfig)
+      ? [createSandboxSdkResolvePlugin()]
+      : []),
     routes,
     drizzlePlugin(root, true, dialect, {
       d1BindingName: bindingNames?.d1,

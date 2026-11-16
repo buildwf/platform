@@ -18,6 +18,7 @@ import {
   sandboxContainerConfig,
   SANDBOX_MIGRATION_TAG,
   hasSandboxSqliteMigration,
+  isSandboxAttached,
 } from '../sandbox/config.ts';
 import { type BindingIdentitySnapshot } from './deploy-types.ts';
 import { resolveCloudflareOperationArgv } from './preset.ts';
@@ -300,7 +301,7 @@ export function reconstructExpectedDurableObjectState(
     ? [...(rootConfig.migrations as Array<Record<string, unknown>>)]
     : [];
   const sandbox = options.needsSandbox ? resolveSandboxConfig(config, root) : undefined;
-  if (sandbox) {
+  if (sandbox && !isSandboxAttached(sandbox)) {
     if (!bindings.some((binding) => binding.name === sandbox.binding)) {
       bindings.push({ name: sandbox.binding, class_name: sandbox.className });
     }

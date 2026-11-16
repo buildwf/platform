@@ -11,7 +11,11 @@ import { basename, dirname, relative } from 'pathslash';
 import { analyzeApplicationSync, type ApplicationAnalysis } from '../application-analysis.ts';
 import { MATERIALIZED_CLOUDFLARE_FILE } from '../cloudflare-config.ts';
 import { type VoidConfig } from '../config.ts';
-import { assertSandboxNamespaceConfig, resolveSandboxConfig } from '../sandbox/config.ts';
+import {
+  assertSandboxNamespaceConfig,
+  isSandboxAttached,
+  resolveSandboxConfig,
+} from '../sandbox/config.ts';
 import type { CloudflareChildReporter } from './cloudflare-child-report.ts';
 import { classifyCloudflareDeployApp } from './cloudflare-deploy/classify.ts';
 import { readCloudflareLink, type CloudflareLink } from './cloudflare-link.ts';
@@ -236,7 +240,10 @@ export async function preflightCloudflareWorker(input: {
   let rootConfig = parseRootWranglerConfig(configPath);
   if (needsSandbox) {
     try {
-      assertSandboxNamespaceConfig(rootConfig, resolveSandboxConfig(voidConfig, root));
+      const sandbox = resolveSandboxConfig(voidConfig, root);
+      if (!isSandboxAttached(sandbox)) {
+        assertSandboxNamespaceConfig(rootConfig, sandbox);
+      }
     } catch (error) {
       log.error(`deploy: ${getErrorMessage(error)}`);
       return exit(1);

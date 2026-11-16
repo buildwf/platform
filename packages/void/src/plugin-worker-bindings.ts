@@ -25,6 +25,7 @@ import { DEV_INBOX_ENV_VAR, DEV_INBOX_TOKEN_ENV_VAR } from './runtime/email/dev-
 import {
   SANDBOX_MIGRATION_TAG,
   hasSandboxSqliteMigration,
+  isSandboxAttached,
   resolveSandboxConfig,
   sandboxContainerConfig,
   assertSandboxNamespaceConfig,
@@ -403,7 +404,12 @@ export function mergeWorkerBindings(
   if (bindings.needsSandbox && sandboxConfig) {
     assertSandboxNamespaceConfig({ ...resolved, ...result }, sandboxConfig);
     const existingDurableObjectBindings = currentDurableObjectBindings(result, resolved);
-    if (!existingDurableObjectBindings.some((binding) => binding.name === sandboxConfig.binding)) {
+    // An attached container belongs to the app's own Durable Object, which already has its
+    // binding and SQLite migration.
+    if (
+      !isSandboxAttached(sandboxConfig) &&
+      !existingDurableObjectBindings.some((binding) => binding.name === sandboxConfig.binding)
+    ) {
       result.durable_objects = {
         bindings: [
           ...existingDurableObjectBindings,
@@ -430,7 +436,10 @@ export function mergeWorkerBindings(
     (resolved as Record<string, unknown>).containers = [];
 
     const existingMigrations = currentMigrations(result, resolved);
-    if (!hasSandboxSqliteMigration(existingMigrations, sandboxConfig.className)) {
+    if (
+      !isSandboxAttached(sandboxConfig) &&
+      !hasSandboxSqliteMigration(existingMigrations, sandboxConfig.className)
+    ) {
       result.migrations = [
         ...existingMigrations,
         {
@@ -533,7 +542,7 @@ export function mergeWorkerBindings(
       name: module.bindingName,
       class_name: module.className,
     })),
-    ...(bindings.needsSandbox && sandboxConfig
+    ...(bindings.needsSandbox && sandboxConfig && !isSandboxAttached(sandboxConfig)
       ? [{ name: sandboxConfig.binding, class_name: sandboxConfig.className }]
       : []),
     ...(shouldEmitLive() && liveConfig

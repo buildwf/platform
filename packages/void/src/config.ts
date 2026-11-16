@@ -16,6 +16,7 @@ import { loadVoidConfig } from './config-loader.ts';
 import { validateSourceDir } from './project-paths.ts';
 import { MimeError, parseAddress } from './runtime/email/mime.ts';
 import type { SandboxConfig, SandboxInstanceType } from './sandbox/config.ts';
+import { isResourceName } from './shared/resource-name.ts';
 
 /** Redirect destination — string (302) or object with explicit status. */
 export type RedirectDestination = string | { to: string; status?: 301 | 302 | 303 | 307 | 308 };
@@ -224,6 +225,7 @@ const VALID_SANDBOX_INSTANCE_TYPES = new Set<SandboxInstanceType>([
   'standard-4',
 ]);
 const SANDBOX_STRING_KEYS = [
+  'durableObject',
   'binding',
   'className',
   'containerName',
@@ -692,6 +694,11 @@ function validateConfigObject(obj: unknown): VoidConfig {
       if (sandbox[key] !== undefined && typeof sandbox[key] !== 'string') {
         throw new Error(`config: "sandbox.${key}" in ${CONFIG_FILE} must be a string.`);
       }
+    }
+    if (sandbox.durableObject !== undefined && !isResourceName(sandbox.durableObject)) {
+      throw new Error(
+        `config: "sandbox.durableObject" in ${CONFIG_FILE} must name a file in durable-objects/, such as "bot".`,
+      );
     }
     if (
       sandbox.instanceType !== undefined &&

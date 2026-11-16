@@ -218,6 +218,7 @@ Enable and configure Cloudflare Sandboxes. Importing from `void/sandbox` enables
 
 | Field               | Type     | Default                     |
 | ------------------- | -------- | --------------------------- |
+| `durableObject`     | `string` | None                        |
 | `binding`           | `string` | `SANDBOX`                   |
 | `className`         | `string` | `SandboxV1`                 |
 | `containerName`     | `string` | `void-sandbox-v1`           |
@@ -227,6 +228,8 @@ Enable and configure Cloudflare Sandboxes. Importing from `void/sandbox` enables
 | `instanceType`      | `string` | `lite`                      |
 
 Supported sizes are `lite` and `standard-1` through `standard-4`. Native deploys build Dockerfiles with Docker; registry images must be digest-pinned references from the Cloudflare managed registry. Custom images must include the matching Sandbox SDK helper. For a local Dockerfile, supply `platformImage` when deploying to a managed platform. See [Sandboxes](../guide/sandboxes.md) for image setup and runtime examples.
+
+Set `durableObject` to a file name in `durable-objects/` (for example `"bot"`) to attach the container image to that class instead of Void's `SandboxV1`. The class must use `this.ctx.container`; its binding and class come from the file, so `binding` and `className` must be omitted. It needs a native Cloudflare deploy: managed platforms run containers in their own controller, so use `getSandbox` from `void/sandbox` there.
 
 Sandbox requires [Workers Paid](https://dash.cloudflare.com/?to=/:account/workers/plans) and Containers access. Managed runtime tokens need Account / Containers: Edit and Account / Cloudchamber: Edit. See [Sandbox deployment](../guide/sandboxes.md#deployment).
 

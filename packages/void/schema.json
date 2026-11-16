@@ -211,6 +211,10 @@
         {
           "type": "object",
           "properties": {
+            "durableObject": {
+              "type": "string",
+              "description": "Name of a durable-objects/ module whose class owns the container (for example bot). Native Cloudflare deploys only; sets the binding and class."
+            },
             "binding": {
               "type": "string",
               "description": "Worker binding name for the sandbox Durable Object namespace. Defaults to SANDBOX."
