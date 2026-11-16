@@ -68,6 +68,9 @@ const RPC_ROUTES: Record<string, string> = {
   '/deploy/preflight': 'deploy.preflight',
   '/deploy/upload-urls': 'deploy.uploadUrls',
   'POST /domains': 'domains.add',
+  'POST /invitations': 'team.invite',
+  'PATCH /members/missing': 'team.setRole',
+  'DELETE /members/missing': 'team.remove',
   'PUT /secrets/TEST_SECRET': 'secrets.set',
   'DELETE /secrets/TEST_SECRET': 'secrets.delete',
 };
@@ -198,6 +201,9 @@ describe('project route membership capabilities', () => {
             assets: [],
             assetManifest: {},
             hostname: 'nope.example.com',
+            email: 'nobody@example.com',
+            role: 'admin',
+            userId: 'missing',
             name: 'TEST_SECRET',
             value: 'must-not-be-written',
           })
@@ -255,21 +261,14 @@ describe('project route membership capabilities', () => {
         expires_at: new Date(Date.now() + 86_400_000).toISOString(),
       });
       const before = await projectState();
-      for (const [method, suffix] of [
-        ['GET', '/tokens'],
-        ['POST', '/tokens'],
-        ['POST', '/tokens/existing-credential/renew'],
-        ['DELETE', '/tokens/existing-credential'],
-      ]) {
+      for (const procedure of ['tokens.list', 'tokens.create', 'tokens.renew', 'tokens.revoke']) {
         const response = await app.fetch(
-          authed(`/projects/${project.id}${suffix}`, actor.jwt, method),
+          rpc(procedure, actor.jwt, { projectId: project.id, credentialId: 'existing-credential' }),
           env,
         );
         expect(response.status).toBe(403);
         expect(await response.json()).toEqual({
-          error: 'forbidden',
-          message:
-            'Only the project owner can manage deploy tokens. Ask the owner to create or manage a token.',
+          error: { code: 'FORBIDDEN', message: expect.any(String) },
         });
         expect(await projectState()).toEqual(before);
       }

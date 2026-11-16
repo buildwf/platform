@@ -57,8 +57,8 @@ describe('project token command', () => {
     process.env.CF_ACCESS_CLIENT_ID = 'access-id';
     process.env.CF_ACCESS_CLIENT_SECRET = 'access-secret';
     const request = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
-      Response.json(
-        {
+      Response.json({
+        data: {
           id: 'credential-1',
           name: 'ci',
           createdAt: '2026-09-18T00:00:00.000Z',
@@ -66,8 +66,7 @@ describe('project token command', () => {
           revokedAt: null,
           token: 'deploy-token',
         },
-        { status: 201 },
-      ),
+      }),
     );
     vi.stubGlobal('fetch', withPlatformDiscovery(request));
     const output = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -81,7 +80,7 @@ describe('project token command', () => {
       json: true,
     });
     const [url, init] = request.mock.calls[0]!;
-    expect(url).toBe('https://api.example.test/projects/project-1/tokens');
+    expect(url).toBe('https://api.example.test/rpc/tokens.create');
     expect(init).toBeDefined();
     expect(init!).toMatchObject({ method: 'POST', redirect: 'manual' });
     const headers = init!.headers as Record<string, string>;

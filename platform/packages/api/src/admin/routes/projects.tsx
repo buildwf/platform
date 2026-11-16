@@ -19,7 +19,7 @@ import {
 } from '../../operator/tenant-service.ts';
 import { zeroTrustOperatorError } from '../../operator/zero-trust-routes.ts';
 import { getPlatformDisplayName } from '../../platform-identity.ts';
-import { deliverInvitation } from '../../routes/project-team.ts';
+import { deliverInvitation } from '../../rpc/procedures/team.ts';
 import type { ProjectMemberRole } from '../../types.ts';
 import {
   reconcileProjectZeroTrust,
@@ -127,7 +127,13 @@ app.post('/:id/team/invite', async (context) => {
         });
         const project = await getProject(context.get('db'), projectId);
         if (project) {
-          await deliverInvitation(context, invitation, target, project.slug);
+          await deliverInvitation(
+            context.env,
+            context.get('user'),
+            invitation,
+            target,
+            project.slug,
+          );
         }
         return { response: context.redirect(`/admin/projects/${projectId}#team`), succeeded: true };
       } catch (error) {
