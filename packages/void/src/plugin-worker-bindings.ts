@@ -18,6 +18,7 @@ import {
 import { hasBinding, shouldInjectEmailDevInboxVar } from './plugin-binding-utils.ts';
 import { type WorkerConfig } from './plugin-cloudflare-config.ts';
 import { type EnvSchemaFacts } from './plugin-env-schema.ts';
+import { readAppIdentity } from './procedures/scan.ts';
 import { cloudflareQueueName, readDeployBuildQueueNames } from './queues/cloudflare-names.ts';
 import { isRouteEnabledForEnvironment, type RouteEnvironment } from './router/parse-filename.ts';
 import { DEV_INBOX_ENV_VAR, DEV_INBOX_TOKEN_ENV_VAR } from './runtime/email/dev-inbox.ts';
@@ -191,6 +192,18 @@ export function mergeWorkerBindings(
   const r2Name = bindingNames?.r2 ?? 'STORAGE';
   if (bindings.needsR2 && !hasBinding(resolved.r2_buckets, r2Name)) {
     result.r2_buckets = [{ binding: r2Name, bucket_name: 'default' }];
+  }
+
+  // Workers Analytics Engine: procedures record one event per call. A dataset is
+  // created on its first write, so nothing is provisioned for it.
+  const analyticsDatasets = (resolved as { analytics_engine_datasets?: Array<{ binding: string }> })
+    .analytics_engine_datasets;
+  if (application.procedures.length > 0 && !hasBinding(analyticsDatasets, 'ANALYTICS')) {
+    const configured = (workerConfig.name as string | undefined) || resolved.name;
+    const workerName = configured || readAppIdentity(root).name;
+    result.analytics_engine_datasets = [
+      { binding: 'ANALYTICS', dataset: `${workerName.replace(/[^A-Za-z0-9_]/g, '_')}_events` },
+    ];
   }
 
   // Workers AI has no local simulator, so direct Cloudflare dev uses the remote

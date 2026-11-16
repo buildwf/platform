@@ -107,6 +107,7 @@ export default defineConfig({
     },
     ignorePatterns: [
       '.svelte-kit/**',
+      'eeaao/**',
       'packages/void/docs/**',
       'packages/void/skills/void/docs/**',
       'platform/packages/api/src/admin/fate/client.generated.ts',
@@ -138,6 +139,7 @@ export default defineConfig({
     ],
     plugins: ['typescript', 'import', 'react', 'unicorn', 'vitest', 'node', 'jsdoc', 'oxc'],
     ignorePatterns: [
+      'eeaao/**',
       '**/node_modules/**',
       '**/dist/**',
       '**/.void/**',
@@ -149,6 +151,7 @@ export default defineConfig({
       '.pnpm-store/**',
       'playground-local/**',
       '.worktrees/**',
+      // Compiler-error fixtures: line positions are the test, so neither fmt nor lint touches them.
     ],
     overrides: [
       {

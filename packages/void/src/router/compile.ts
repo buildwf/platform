@@ -24,6 +24,16 @@ export type AuthCompileOptions = {
 };
 
 export type CompileOptions = {
+  /**
+   * Serves `procedures/` at /rpc. The registry is built when the Worker module loads,
+   * so an unfinished procedure stops the Worker from starting and the deploy fails.
+   */
+  procedures?: {
+    dir: string;
+    runtimePath: string;
+    name: string;
+    version: string;
+  };
   /** Absolute path to the hono module entry */
   honoPath: string;
   /** Absolute path to `hono/route` from the same Hono copy as `honoPath` */
@@ -185,6 +195,18 @@ export function compileRouteTable(
     const route = webSockets[i];
     lines.push(`import websocket${i} from ${JSON.stringify(`${routesDir}/${route.filePath}`)};`);
   }
+  // Procedures load eagerly, unlike routes: the registry check is the deploy gate.
+  const procedureFiles = options.procedures ? (scan.procedures ?? []) : [];
+  if (procedureFiles.length > 0) {
+    lines.push(
+      `import { mountProcedures as __mountProcedures } from ${JSON.stringify(options.procedures!.runtimePath)};`,
+    );
+  }
+  for (let i = 0; i < procedureFiles.length; i++) {
+    lines.push(
+      `import * as procedures${i} from ${JSON.stringify(`${options.procedures!.dir}/${procedureFiles[i].filePath}`)};`,
+    );
+  }
   lines.push('');
 
   if (auth) {
@@ -289,6 +311,17 @@ export function compileRouteTable(
     lines.push('app.all("/api/auth/*", async (c) => {');
     lines.push('  return handleVoidAuthRequest(c, __voidAuthOptions, __voidAuthDatabase);');
     lines.push('});');
+    lines.push('');
+  }
+
+  if (procedureFiles.length > 0) {
+    const modules = procedureFiles.map(
+      (file, i) => `[${JSON.stringify(file.prefix)}, procedures${i}]`,
+    );
+    const { name, version } = options.procedures!;
+    lines.push(
+      `__mountProcedures(app, [${modules.join(', ')}], ${JSON.stringify({ dev: options.dev === true, name, version })});`,
+    );
     lines.push('');
   }
 

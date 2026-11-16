@@ -1,6 +1,7 @@
 import { join } from 'pathslash';
 import { globSync } from 'tinyglobby';
 import type { JobDefinition } from '../crons/scan.ts';
+import type { ProcedureFile } from '../procedures/scan.ts';
 import { readProjectPaths, type ProjectPaths } from '../project-paths.ts';
 import type { QueueDefinition } from '../queues/scan.ts';
 import { listRouteFiles } from '../shared/convention-files.ts';
@@ -21,6 +22,7 @@ export type ScanResult = {
   middleware: Array<MiddlewareDefinition>;
   jobs: Array<JobDefinition>;
   queues: Array<QueueDefinition>;
+  procedures?: Array<ProcedureFile>;
   email?: EmailHandlersScan;
 };
 

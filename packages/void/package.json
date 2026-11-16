@@ -45,7 +45,8 @@
     "#self/runtime/migration-handler-pg": "./dist/runtime/migration-handler-pg.mjs",
     "#self/runtime/migration-handler-mysql": "./dist/runtime/migration-handler-mysql.mjs",
     "#self/runtime/ws-server": "./dist/runtime/ws-server.mjs",
-    "#self/runtime/routing": "./dist/runtime/routing.mjs"
+    "#self/runtime/routing": "./dist/runtime/routing.mjs",
+    "#self/runtime/procedures": "./dist/runtime/procedures.mjs"
   },
   "exports": {
     ".": {
@@ -88,6 +89,10 @@
       "types": "./dist/runtime/validator.d.mts",
       "import": "./dist/runtime/validator.mjs",
       "require": "./dist/runtime/validator.mjs"
+    },
+    "./procedure": {
+      "types": "./dist/runtime/procedure.d.mts",
+      "import": "./dist/runtime/procedure.mjs"
     },
     "./routes": {
       "types": "./dist/routes-stub.d.mts",
@@ -291,6 +296,9 @@
     "@cloudflare/workers-auth": "catalog:",
     "@cloudflare/workers-types": "catalog:",
     "@cloudflare/workers-utils": "catalog:",
+    "@eeao/analytics": "link:../../eeaao/typescript/packages/analytics",
+    "@eeao/core": "link:../../eeaao/typescript/packages/core",
+    "@eeao/http": "link:../../eeaao/typescript/packages/http",
     "@napi-rs/keyring": "catalog:",
     "@void/deploy-cloudflare": "workspace:*",
     "@void/deploy-core": "workspace:*",

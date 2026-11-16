@@ -6,6 +6,7 @@ import { scanDurableObjectModules } from './durable/scan.ts';
 import type { InferredBindings } from './inference/walk.ts';
 import { collectMigrations } from './migrations/collect.ts';
 import { inferProjectBindings } from './plugin-inference.ts';
+import { scanProceduresSync } from './procedures/scan.ts';
 import { resolveProjectPaths } from './project-paths.ts';
 import { scanQueuesSync } from './queues/scan.ts';
 import { scanEmailHandlersSync } from './router/email.ts';
@@ -34,6 +35,7 @@ export type ApplicationAnalysis = {
   migrations: ReturnType<typeof collectMigrations>;
   jobs: ReturnType<typeof scanJobsSync>;
   queues: ReturnType<typeof scanQueuesSync>;
+  procedures: ReturnType<typeof scanProceduresSync>;
   websockets: ReturnType<typeof scanWebSocketRoutesSync>;
   allWebsockets: ReturnType<typeof scanWebSocketRoutesSync>;
   durableObjects: ReturnType<typeof scanDurableObjectModules>;
@@ -70,6 +72,7 @@ export function analyzeApplicationSync(
   const migrations = collectMigrations(paths.migrationsDir);
   const jobs = scanJobsSync(paths.cronsDir);
   const queues = scanQueuesSync(paths.queuesDir);
+  const procedures = scanProceduresSync(paths.proceduresDir);
   const allWebsockets = scanWebSocketRoutesSync(root, paths);
   const websockets = allWebsockets.filter((route) =>
     isRouteEnabledForEnvironment(route, environment),
@@ -118,6 +121,7 @@ export function analyzeApplicationSync(
     migrations,
     jobs,
     queues,
+    procedures,
     websockets,
     allWebsockets,
     durableObjects,
