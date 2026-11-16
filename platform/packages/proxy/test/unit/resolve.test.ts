@@ -4,7 +4,6 @@ import { hmacSign } from '../../src/hmac.ts';
 import {
   resolveResource,
   clearResolveCache,
-  verifyPrerenderAuthority,
   verifyProjectDeployAccess,
 } from '../../src/resolve.ts';
 
@@ -73,25 +72,6 @@ describe('resolveResource', () => {
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers['x-void-proxy-internal']).toBe(
       await deriveProxyInternalAuth(JWT_SECRET, 'resolve-resource', 'proj_000000000001'),
-    );
-    expect(headers['x-void-internal']).toBeUndefined();
-  });
-});
-
-describe('verifyPrerenderAuthority', () => {
-  it('authenticates with the proxy credential only', async () => {
-    const api = { fetch: vi.fn(async () => Response.json({ ok: true })) } as unknown as Fetcher;
-    await expect(
-      verifyPrerenderAuthority(api, JWT_SECRET, 'proj_000000000001', 'user_1', {
-        buildId: 'bld_1',
-      }),
-    ).resolves.toBe(true);
-
-    const [url, init] = (api.fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
-    expect(url).toBe('https://api/internal/verify-prerender-build/proj_000000000001');
-    const headers = (init as RequestInit).headers as Record<string, string>;
-    expect(headers['x-void-proxy-internal']).toBe(
-      await deriveProxyInternalAuth(JWT_SECRET, 'verify-prerender-build', 'proj_000000000001'),
     );
     expect(headers['x-void-internal']).toBeUndefined();
   });

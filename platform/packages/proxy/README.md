@@ -28,13 +28,10 @@ Project requests use these authentication paths:
 | --------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Service binding | Deployed Void apps | Project token (`aiToken`), checked against the project's accept floor; see [Project tokens](#project-tokens); requests use bare hosts (`https://ai-proxy`, `https://proxy`, `https://email-proxy`) |
 | HTTPS           | Local development  | `Authorization: Bearer <api-jwt>`                                                                                                                                                                  |
-| HTTPS           | Managed prerender  | Five-minute, project-scoped prerender JWT                                                                                                                                                          |
 
 Project-scoped POST routes require `projectId` in the JSON body. The public
 `GET /health` route has no project body, and `/email/verify-receipt` checks a
-separate internal proof. Prerender JWTs are accepted only when their signed
-project claim exactly matches `projectId`; they are not valid at deployment or
-project-management APIs.
+separate internal proof.
 
 HTTPS callers must send `Authorization: Bearer`; the proxy verifies it before
 reading the body, and a request to a public hostname without it gets 401 unread.
@@ -86,8 +83,8 @@ commits, and while Cloudflare can still serve the Worker's previous version,
 calls to it get a clean 403: proxy calls fail, cron fires are dropped with
 `AUTH_DRIFT`, and queue batches are retried after 120 seconds.
 
-The proxy authenticates its own `resolve-worker`, `resolve-resource`, and
-`verify-prerender-build` calls with `x-void-proxy-internal`, an HMAC under a
+The proxy authenticates its own `resolve-worker` and `resolve-resource`
+calls with `x-void-proxy-internal`, an HMAC under a
 separate HKDF key (salt `void-proxy-internal`, info `proxy-internal`) bound to
 the route and project. That value never leaves the platform.
 

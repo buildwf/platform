@@ -156,7 +156,7 @@ export async function beginDeploymentCutover(db: Db, id: string): Promise<boolea
     .where(
       and(
         eq(deployments.id, id),
-        inArray(deployments.status, ['pending', 'uploading', 'migrating', 'prerendering']),
+        inArray(deployments.status, ['pending', 'uploading', 'migrating']),
       ),
     )
     .returning({ id: deployments.id });

@@ -663,7 +663,6 @@ export const deployments = pgTable(
         | 'pending'
         | 'uploading'
         | 'migrating'
-        | 'prerendering'
         | 'cutover'
         | 'compensating'
         | 'canceling'

@@ -71,7 +71,7 @@ export class SandboxControl extends WorkerEntrypoint<
       return { ok: false, reason: 'unavailable' };
     }
     // One database snapshot resolves authority; routing KV is not an ownership
-    // or plan cache. Fresh prerender/cutover candidates may run under their
+    // or plan cache. Fresh cutover candidates may run under their
     // deployment fence, but failed, abandoned and retained deployments cannot.
     const [authority] = await db
       .select({
@@ -79,8 +79,6 @@ export class SandboxControl extends WorkerEntrypoint<
         deployment: deployments,
         owner: users,
         candidateFresh: sql<boolean>`CASE
-          WHEN ${deployments.status} = 'prerendering'
-            THEN ${deployments.updated_at} > now() - interval '10 minutes'
           WHEN ${deployments.status} = 'cutover'
             THEN ${deployments.updated_at} > now() - interval '90 minutes'
           ELSE false END`,
@@ -102,8 +100,7 @@ export class SandboxControl extends WorkerEntrypoint<
       deployment.admission_protocol < 3 ||
       !(
         (deployment.status === 'live' && project.active_deployment_id === deployment.id) ||
-        (candidateFresh &&
-          (deployment.status === 'prerendering' || deployment.status === 'cutover'))
+        (candidateFresh && deployment.status === 'cutover')
       )
     ) {
       return { ok: false, reason: 'unavailable' };

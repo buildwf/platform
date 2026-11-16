@@ -578,7 +578,6 @@ describe('proxy token rotation', () => {
     const routes: Array<[ProxyInternalRoute, unknown]> = [
       ['resolve-worker', {}],
       ['resolve-resource', { type: 'd1', binding: 'DB' }],
-      ['verify-prerender-build', { userId: fx.ownerId }],
     ];
     const statuses = async (
       headers: (route: ProxyInternalRoute) => Promise<Record<string, string>>,

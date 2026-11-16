@@ -137,7 +137,7 @@ describe('per-project token checks', () => {
     expect(run).toHaveBeenCalledOnce();
   });
 
-  it.each(['resolve-resource', 'resolve-worker', 'verify-prerender-build'])(
+  it.each(['resolve-resource', 'resolve-worker'])(
     'rejects a login JWT presented as a project id and credential at /internal/%s',
     async (route) => {
       const forged = await loginJwtAsProjectToken();
@@ -185,15 +185,6 @@ describe('per-project token checks', () => {
       deploymentId: deployment.id,
       proxyTokenGen: 0,
     });
-
-    const prerender = await internalRequest(
-      'verify-prerender-build',
-      project.id,
-      await proxyAuth('verify-prerender-build'),
-      { userId: user.id },
-    );
-    expect(prerender.status).toBe(200);
-    expect(await prerender.json()).toEqual({ ok: true });
   });
 });
 
@@ -241,7 +232,6 @@ describe('proxy credential on the metadata routes', () => {
   const routes: ReadonlyArray<ProxyInternalRoute> = [
     'resolve-worker',
     'resolve-resource',
-    'verify-prerender-build',
     'ai-logging',
   ];
 
@@ -253,7 +243,6 @@ describe('proxy credential on the metadata routes', () => {
     const bodies: Record<ProxyInternalRoute, unknown> = {
       'resolve-worker': {},
       'resolve-resource': { type: 'kv', binding: 'CACHE' },
-      'verify-prerender-build': { userId: user.id },
       'ai-logging': {},
     };
     const expected: Record<ProxyInternalRoute, unknown> = {
@@ -263,7 +252,6 @@ describe('proxy credential on the metadata routes', () => {
         proxyTokenGen: 0,
       },
       'resolve-resource': { cf_id: 'cf-kv-id' },
-      'verify-prerender-build': { ok: true },
       'ai-logging': { mode: 'inherit' },
     };
     return { project, deployment, bodies, expected };

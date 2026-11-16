@@ -256,7 +256,7 @@ export async function loadDeploymentDetailPage(context: AdminContext, path: stri
     deployment,
     project,
     manifest,
-    canCancel: ['pending', 'uploading', 'migrating', 'prerendering'].includes(deployment.status),
+    canCancel: ['pending', 'uploading', 'migrating'].includes(deployment.status),
     tz: requestTimezone(context),
   };
 }

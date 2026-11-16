@@ -118,7 +118,6 @@ import internalGitHubWebhook from './routes/internal-github-webhook.ts';
 import internalResolveResource from './routes/internal-resolve-resource.ts';
 import internalResolveWorker from './routes/internal-resolve-worker.ts';
 import internalVerifyOwner from './routes/internal-verify-owner.ts';
-import internalVerifyPrerenderBuild from './routes/internal-verify-prerender-build.ts';
 import me from './routes/me.ts';
 import oauth, { oauthMetadata } from './routes/oauth.ts';
 import platformBootstrapRoutes from './routes/platform-bootstrap.ts';
@@ -570,7 +569,6 @@ const app = new Hono<ApiEnv>()
   .route('/internal/ai-logging', internalAiLogging)
   .route('/internal/resolve-worker', internalResolveWorker)
   .route('/internal/verify-owner', internalVerifyOwner)
-  .route('/internal/verify-prerender-build', internalVerifyPrerenderBuild)
   .use('/webhooks/*', capabilityMiddleware('managedBuilds'))
   .route('/webhooks', webhookRoutes)
   .use('/github/*', capabilityMiddleware('managedBuilds'))

@@ -13,7 +13,7 @@ function internallyAuthenticated(method: string, path: string): boolean {
     (method === 'GET' && /^\/internal\/ai-logging\/[^/]+$/.test(path)) ||
     ((method === 'GET' || method === 'POST') && path === '/email/destinations/confirm') ||
     (method === 'POST' &&
-      (/^\/internal\/(?:resolve-resource|resolve-worker|verify-owner|verify-prerender-build)\/[^/]+$/.test(
+      (/^\/internal\/(?:resolve-resource|resolve-worker|verify-owner)\/[^/]+$/.test(
         path,
       ) ||
         path === '/internal/email/domain-credential' ||

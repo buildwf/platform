@@ -15,7 +15,7 @@ import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from './platform-lifec
 import { verifyTenantProxyToken } from './proxy-token.ts';
 import { r2 } from './r2.ts';
 import { readRequestJson, requestBodyMaxBytes, RequestBodyError } from './request-body.ts';
-import { verifyPrerenderAuthority, verifyProjectDeployAccess } from './resolve.ts';
+import { verifyProjectDeployAccess } from './resolve.ts';
 import type { Env, JwtPayload, ProxyBody, ProxyEnv } from './types.ts';
 
 const app = new Hono<ProxyEnv>();
@@ -141,7 +141,7 @@ app.post('/*', async (context, next) => {
       {
         error: 'invalid or expired token',
         message:
-          'This proxy credential is invalid or expired. Sign in to the connected platform again for remote development, or restart the build to obtain a fresh prerender token.',
+          'This proxy credential is invalid or expired. Sign in to the connected platform again for remote development.',
       },
       401,
     );
@@ -181,70 +181,27 @@ app.post('/*', async (context, next) => {
     if (!projectId) {
       return context.json({ error: 'projectId required' }, 400);
     }
-    if (payload.aud === 'prerender') {
-      // Prerender credentials are short-lived and already pinned to one
-      // project by the API that minted them. Never turn one into a general
-      // owner token by accepting a caller-selected projectId.
-      if (!payload.project || payload.project !== projectId) {
-        return context.json(
-          {
-            error: 'forbidden',
-            message:
-              'This prerender token does not match the requested project. Restart the build with a prerender token issued for the selected project.',
-          },
-          403,
-        );
-      }
-      const active = await verifyPrerenderAuthority(
+    // Local-development ownership lookup.
+    const checkOwner = () =>
+      verifyProjectDeployAccess(
         context.env.API,
         context.env.JWT_SECRET,
         projectId,
         payload.sub,
-        {
-          ...(payload.build ? { buildId: payload.build } : {}),
-          ...(payload.credential ? { credentialId: payload.credential } : {}),
-        },
+        token,
+        context.req.header('Cf-Access-Jwt-Assertion'),
+        new URL(context.req.url).origin,
       );
-      if (!active) {
-        return context.json(
-          {
-            error: payload.credential
-              ? 'prerender token credential is no longer active'
-              : payload.build
-                ? 'prerender token build is no longer active'
-                : 'prerender token authority is no longer active',
-            message: payload.credential
-              ? 'The deploy credential used for prerendering is no longer authorized. Ask the project owner for an active deploy credential, then restart the build.'
-              : payload.build
-                ? 'This build is no longer authorized to prerender. Start a new build to obtain a fresh prerender token.'
-                : 'This prerender token is no longer authorized. Confirm your project access with a project admin or owner, then restart the build to obtain a fresh token.',
-          },
-          403,
-        );
-      }
-    } else {
-      // Full API tokens retain the local-development ownership lookup.
-      const checkOwner = () =>
-        verifyProjectDeployAccess(
-          context.env.API,
-          context.env.JWT_SECRET,
-          projectId,
-          payload.sub,
-          token,
-          context.req.header('Cf-Access-Jwt-Assertion'),
-          new URL(context.req.url).origin,
-        );
-      revalidateHuman = async () => payload.exp > Date.now() / 1000 && (await checkOwner());
-      if (!(await revalidateHuman())) {
-        return context.json(
-          {
-            error: 'forbidden',
-            message:
-              'Remote access could not be authorized. Check the selected platform and project, then ask a project admin or owner to confirm your access. If your access is correct, retry shortly.',
-          },
-          403,
-        );
-      }
+    revalidateHuman = async () => payload.exp > Date.now() / 1000 && (await checkOwner());
+    if (!(await revalidateHuman())) {
+      return context.json(
+        {
+          error: 'forbidden',
+          message:
+            'Remote access could not be authorized. Check the selected platform and project, then ask a project admin or owner to confirm your access. If your access is correct, retry shortly.',
+        },
+        403,
+      );
     }
     context.set('projectId', projectId);
   } else {
@@ -390,7 +347,7 @@ async function verifyJwt(token: string, secret: string): Promise<JwtPayload | nu
       return null;
     }
 
-    if (payload.aud !== 'api' && payload.aud !== 'prerender') {
+    if (payload.aud !== 'api') {
       return null;
     }
 

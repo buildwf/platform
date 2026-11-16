@@ -7,7 +7,6 @@ import {
   lockNewProjectAiLoggingInputs,
   publishProjectAiLogging,
 } from '../ai-logging.ts';
-import { deployTokenTtlSecondsForBuildMinutes, signPrerenderToken } from '../auth/deploy-token.ts';
 import { hmacSignState } from '../auth/hmac.ts';
 import { buildManagerNamespace } from '../build-namespace.ts';
 import { isTerminalBuildStatus } from '../build-status.ts';
@@ -251,7 +250,6 @@ function deployAttentionScore(status: string | null | undefined): number {
     status === 'pending' ||
     status === 'uploading' ||
     status === 'migrating' ||
-    status === 'prerendering' ||
     status === 'cutover' ||
     status === 'compensating' ||
     status === 'canceling'
@@ -678,103 +676,6 @@ const app = new Hono<ApiEnv>()
         login: access.owner.login,
       },
     });
-  })
-
-  // Mint a narrowly scoped credential for deploy-time remote-binding access.
-  // The built application receives this token while it runs under Miniflare,
-  // so it must never inherit the caller's full API/deploy credential.
-  .post('/:id/prerender-token', async (context) => {
-    const projectId = context.req.param('id');
-    const access = await requireProjectRouteCapability(context, projectId, 'deploy');
-    if (access instanceof Response) {
-      return access;
-    }
-    const project = access.project;
-    const user = context.get('user');
-    const deployBuild = context.get('deployBuild');
-    const deployCredential = context.get('deployCredential');
-    const signToken = (buildId?: string) => {
-      const maximumTtl = deployTokenTtlSecondsForBuildMinutes(0);
-      const expiry = context.get('deployTokenExpiresAt');
-      const ttlSeconds =
-        buildId && expiry !== undefined
-          ? Math.min(maximumTtl, Math.floor(expiry - Date.now() / 1000))
-          : maximumTtl;
-      if (ttlSeconds <= 0) {
-        return context.json(
-          {
-            error: 'deploy token expired before prerendering',
-            message: 'Start a new build to obtain a valid deployment credential.',
-          },
-          401,
-        );
-      }
-      return signPrerenderToken(
-        {
-          projectId: project.id,
-          userId: user.id,
-          login: user.login,
-          buildId,
-          credentialId: deployCredential,
-        },
-        context.env.JWT_SECRET,
-        {
-          // Managed builds retain the deadline admitted by their scoped token,
-          // even if their account's plan changes while they are running. Manual
-          // prerenders use the existing bounded 65-minute ceiling.
-          ttlSeconds,
-        },
-      );
-    };
-
-    let token: string;
-    if (deployBuild) {
-      // The auth middleware checked this build before entering the route, but a
-      // supersede can race that check and token signing. Lock project first
-      // (the platform-wide lock order), then the build row, and revalidate while
-      // minting. Once this transaction releases, the proxy checks the same row
-      // on every request, so a later terminal transition revokes the derived
-      // credential immediately rather than merely waiting for JWT expiry.
-      const minted = await context.get('db').transaction(async (tx) => {
-        await tx.execute(drizzleSql`SELECT id FROM projects WHERE id = ${project.id} FOR SHARE`);
-        await tx.execute(drizzleSql`SELECT id FROM builds WHERE id = ${deployBuild} FOR UPDATE`);
-        const lockedAccess = await requireProjectRouteCapability(context, project.id, 'deploy', tx);
-        if (lockedAccess instanceof Response) {
-          return lockedAccess;
-        }
-        const boundBuild = await getBuild(tx, deployBuild);
-        if (
-          lockedAccess.project.status === 'deleting' ||
-          !boundBuild ||
-          boundBuild.project_id !== project.id ||
-          !ACTIVE_BUILD_STATUSES.includes(boundBuild.status)
-        ) {
-          return null;
-        }
-        return signToken(deployBuild);
-      });
-      if (minted instanceof Response) {
-        return minted;
-      }
-      if (!minted) {
-        return context.json(
-          {
-            error: 'deploy token build is no longer active',
-            message:
-              'This build is no longer active. Start a new build to obtain a valid deployment credential.',
-          },
-          403,
-        );
-      }
-      token = minted;
-    } else {
-      const minted = await signToken();
-      if (minted instanceof Response) {
-        return minted;
-      }
-      token = minted;
-    }
-    return context.json({ token });
   })
 
   // List deployments for a project

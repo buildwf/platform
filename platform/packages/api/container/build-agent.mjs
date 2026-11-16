@@ -19,7 +19,7 @@
  *                       Scrubbed from the install + any untrusted child env and
  *                       re-injected ONLY for the trusted `void deploy` spawn.
  *   VOID_API_URL        https://api.void.cloud (or staging)
- *   VOID_PROXY_URL      Explicit platform resource proxy used for prerendering
+ *   VOID_PROXY_URL      Explicit platform resource proxy
  *   VOID_PROJECT        project slug passed to `void deploy --project`
  *   CF_ACCESS_CLIENT_ID     staging CF Access service-token id (staging builds
  *   CF_ACCESS_CLIENT_SECRET only). Like VOID_TOKEN: scrubbed from untrusted

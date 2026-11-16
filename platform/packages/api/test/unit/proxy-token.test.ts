@@ -34,7 +34,6 @@ const TOK_2 = '2.Ko4ZEz_VQ8IZH70koONArHkURyEHZUwLJsqFsGJgwyE';
 const INTERNAL: Record<ProxyInternalRoute, string> = {
   'resolve-worker': 'Phjba6joMrR31HPBsOamhNdtbT3__9Fg6zkd34dJiS0',
   'resolve-resource': 'qqnenNPCqY-C4RMAfPn0AUdXlvKS0tvkDcC8lyjTYck',
-  'verify-prerender-build': 'L-_KXs8KdULytY5ibjHuH095R-1L3OM91NokMoj6828',
   'ai-logging': 'wrzsGDsBbCmnE9y7-oiaKILziYTHDffhfKqUGvpBQpM',
 };
 const ROUTES = Object.keys(INTERNAL) as Array<ProxyInternalRoute>;

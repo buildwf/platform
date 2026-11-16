@@ -91,38 +91,3 @@ export async function verifyProjectDeployAccess(
 function ownerVerificationMessage(projectId: string, proxyOrigin: string): string {
   return `void-proxy-owner-v2\n${projectId}\n${proxyOrigin}`;
 }
-
-/** Revalidate the authority from which a scoped prerender credential was derived. */
-export async function verifyPrerenderAuthority(
-  api: Fetcher,
-  jwtSecret: string,
-  projectId: string,
-  userId: string,
-  provenance: { buildId?: string; credentialId?: string },
-): Promise<boolean> {
-  try {
-    const res = await api.fetch(`https://api/internal/verify-prerender-build/${projectId}`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        [PROXY_INTERNAL_AUTH_HEADER]: await deriveProxyInternalAuth(
-          jwtSecret,
-          'verify-prerender-build',
-          projectId,
-        ),
-      },
-      body: JSON.stringify({ userId, ...provenance }),
-    });
-    if (res.status === 400 && !provenance.buildId && !provenance.credentialId) {
-      // The previous API revision required provenance here. Preserve manual
-      // prerenders while the proxy and API revisions overlap during rollout.
-      const body = await res.json<{ error?: unknown }>().catch(() => null);
-      return body?.error === 'userId and credential provenance required';
-    }
-    return res.ok;
-  } catch {
-    // Project-data access fails closed if the revocation authority is
-    // unavailable. A build can retry without widening its credential.
-    return false;
-  }
-}

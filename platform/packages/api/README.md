@@ -104,7 +104,6 @@ drizzle/
   - project members and invitations
   - project Zero Trust status and owner/admin overrides
   - PostgreSQL and MySQL project database provisioning/update
-  - `POST /projects/:id/prerender-token` — mint a five-minute, project-scoped token accepted only by the remote-binding proxy
   - `/projects/:id/github` — connect/inspect/update/disconnect the GitHub repo (POST/GET/PATCH/DELETE; readers may inspect, owners and project administrators may mutate)
   - `/projects/:id/email/*` — monthly usage, and the verified-recipient list the project may send to (`GET|POST|DELETE`). Adding a recipient triggers a verification email; the address only becomes sendable once the recipient consents. See [Email](#email).
 - `GET /usage`
@@ -141,10 +140,9 @@ HMAC. See [Platform Development](../../../docs/guide/platform/development/runtim
 - `POST /internal/revalidate/:projectId`
 - `POST /internal/resolve-resource/:projectId`
 - `POST /internal/resolve-worker/:projectId` — resolve the active deployment's versioned worker; static active deployments report that no worker exists
-- `POST /internal/verify-prerender-build/:projectId` — live-check that a prerender JWT's user, build, and deploy credential are still active
 - `POST /internal/verify-owner/:projectId` — legacy URL that live-checks the caller's project deploy capability
 
-`resolve-resource`, `resolve-worker` and `verify-prerender-build` authenticate
+`resolve-resource` and `resolve-worker` authenticate
 the proxy with its own key (`x-void-proxy-internal`) and do not accept project
 tokens. `revalidate` checks the project token forwarded by the proxy against
 the project's accept floor (see the proxy README).

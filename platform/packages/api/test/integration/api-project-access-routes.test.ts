@@ -19,7 +19,6 @@ import {
   resources,
   users,
 } from '../../src/schema.ts';
-import { verifyPrerenderToken } from '../helpers/project-token.ts';
 import {
   JWT_SECRET,
   clearTables,
@@ -117,7 +116,6 @@ describe('project route membership capabilities', () => {
     ['POST', '/deploy', 'Deploying requires the collaborator, admin, or owner role'],
     ['POST', '/deploy/preflight', 'Deploying requires the collaborator, admin, or owner role'],
     ['POST', '/deploy/upload-urls', 'Deploying requires the collaborator, admin, or owner role'],
-    ['POST', '/prerender-token', 'Deploying requires the collaborator, admin, or owner role'],
     ['POST', '/rollback', 'Deploying requires the collaborator, admin, or owner role'],
     [
       'POST',
@@ -552,20 +550,6 @@ describe('project route membership capabilities', () => {
       env,
     );
     expect(secrets.status).toBe(200);
-
-    const tokenResponse = await app.fetch(
-      authed(`/projects/${project.id}/prerender-token`, collaborator.jwt, 'POST'),
-      env,
-    );
-    expect(tokenResponse.status).toBe(200);
-    const { token } = (await tokenResponse.json()) as { token: string };
-    const payload = await verifyPrerenderToken(token, JWT_SECRET);
-    expect(payload).toMatchObject({
-      sub: collaborator.id,
-      login: collaborator.login,
-      project: project.id,
-      aud: 'prerender',
-    });
   });
 });
 
