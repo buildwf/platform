@@ -155,12 +155,9 @@ export function resolvePersistedDeploymentType(
   manifest: DeployManifest,
   deployment: Deployment,
   committedProjectType?: Project['type'],
-): 'void' | 'spa' | 'static' | 'framework' {
+): 'void' | 'spa' | 'static' {
   if (manifest.type) {
     return manifest.type;
-  }
-  if (manifest.framework) {
-    return 'framework';
   }
   if (deployment.bundle_stored || manifest.workerMain) {
     return 'void';

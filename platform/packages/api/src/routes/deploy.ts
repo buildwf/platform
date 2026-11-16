@@ -32,11 +32,7 @@ import { presignAssetPut } from '../r2-presign.ts';
 import { listR2Objects, type WorkerModule } from '../worker-upload.ts';
 import { requireProjectRouteCapability } from './project-access.ts';
 
-export {
-  MAX_REVALIDATE_QUERY_ALLOWLIST_ENTRIES,
-  MAX_ROUTING_RULES,
-  validateManifestShape,
-} from '@void/deploy-core';
+export { MAX_ROUTING_RULES, validateManifestShape } from '@void/deploy-core';
 
 const app = new Hono<ApiEnv>();
 
@@ -714,5 +710,3 @@ export {
   enrichWebSocketManifest,
   enrichLiveManifest,
 } from '../deploy/durable-bindings.ts';
-
-export { clearIsrCache } from '../deploy/cache.ts';

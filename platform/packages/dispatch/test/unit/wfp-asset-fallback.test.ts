@@ -1,12 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { Env } from '../../src/env.ts';
 import app from '../../src/index.ts';
-import {
-  SHARED_CACHE_POLICY_VERSION,
-  isrEdgeCacheKey,
-  markSharedCachePolicy,
-  packIsrValue,
-} from '../../src/isr.ts';
+import { SHARED_CACHE_POLICY_VERSION, markSharedCachePolicy } from '../../src/shared-cache.ts';
 
 const edgeCacheStore = new Map<string, Response>();
 
@@ -648,68 +643,6 @@ describe('WfP asset fallback on CF stub', () => {
     expect(edgeCacheStore.size).toBe(0);
   });
 
-  it('bounds an ISR cold-miss worker fetch within the dispatch deadline', async () => {
-    vi.useFakeTimers();
-    const { env, workerFetch } = createEnv({
-      routing: {
-        workerName: 'user-app',
-        projectId: 'proj_1',
-        version: 'v1',
-        ssr: true,
-        revalidate: { '/page': 60 },
-        pages: [{ pattern: '/page', revalidate: 60 }],
-      },
-      dispatchTimeoutMs: '100',
-      workerResponse: () => new Promise<Response>(() => {}),
-    });
-
-    const responsePromise = app.fetch(
-      new Request('https://my-app.void.app/page'),
-      env,
-      createCtx(),
-    );
-    await vi.advanceTimersByTimeAsync(100);
-    const res = await responsePromise;
-
-    expect(workerFetch).toHaveBeenCalledOnce();
-    expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-timeout')).toBe('dispatch');
-    expect(edgeCacheStore.size).toBe(0);
-  });
-
-  it('checks the initial ISR cold-miss response before writing shared caches', async () => {
-    const html = '<html>mirror</html>';
-    const { env, workerFetch } = createEnv({
-      routing: {
-        workerName: 'user-app',
-        projectId: 'proj_1',
-        version: 'v1',
-        ssr: true,
-        revalidate: { '/page': 60 },
-        pages: [{ pattern: '/page', revalidate: 60 }],
-        assetManifestId: 'dep_abc',
-      },
-      servingManifest: { '/page': 'hashhtml' },
-      staticAssets: {
-        'assets/proj_1/hashhtml': {
-          content: new TextEncoder().encode(html).buffer as ArrayBuffer,
-          ct: 'text/html',
-        },
-      },
-      workerResponse: stubResponse(),
-    });
-
-    const res = await app.fetch(new Request('https://my-app.void.app/page'), env, createCtx());
-
-    expect(workerFetch).toHaveBeenCalledOnce();
-    expect(res.status).toBe(200);
-    expect(res.headers.get('content-type')).toBe('text/html');
-    expect(await res.text()).toBe(html);
-    for (const cached of edgeCacheStore.values()) {
-      expect(await cached.clone().text()).not.toBe(STUB_BODY);
-    }
-  });
-
   it('does not buffer the body for non-matching responses (large JSON API reply)', async () => {
     const largeBody = JSON.stringify({ items: new Array(100).fill({ x: 1 }) });
     const apiResponse = new Response(largeBody, {
@@ -900,86 +833,6 @@ describe('WfP asset fallback on CF stub', () => {
       '<html>mirror</html>',
     );
     expect(edgeCacheStore.has('https://my-app.void.app/index.html?_v=v1')).toBe(false);
-  });
-
-  it('repairs and purges a pre-existing ISR edge poison entry', async () => {
-    const request = new Request('https://my-app.void.app/page');
-    const cacheKey = isrEdgeCacheKey(request, '/page', 'v1');
-    const cachedStub = cachedStubResponse('public, s-maxage=60, max-age=0, must-revalidate');
-    markSharedCachePolicy(cachedStub.headers);
-    edgeCacheStore.set(cacheKey.url, cachedStub);
-    const html = '<html>mirror</html>';
-    const { env, workerFetch } = createEnv({
-      routing: {
-        workerName: 'user-app',
-        projectId: 'proj_1',
-        version: 'v1',
-        ssr: true,
-        revalidate: { '/page': 60 },
-        pages: [{ pattern: '/page', revalidate: 60 }],
-        assetManifestId: 'dep_abc',
-      },
-      servingManifest: { '/page': 'hashhtml' },
-      staticAssets: {
-        'assets/proj_1/hashhtml': {
-          content: new TextEncoder().encode(html).buffer as ArrayBuffer,
-          ct: 'text/html',
-        },
-      },
-      workerResponse: new Response('should not run'),
-    });
-
-    const res = await app.fetch(request, env, createCtx());
-
-    expect(workerFetch).not.toHaveBeenCalled();
-    expect(res.status).toBe(200);
-    expect(await res.text()).toBe(html);
-    expect(edgeCacheStore.has(cacheKey.url)).toBe(false);
-  });
-
-  it('repairs and purges a pre-existing ISR storage poison entry', async () => {
-    const request = new Request('https://my-app.void.app/page');
-    const html = '<html>mirror</html>';
-    const stubBytes = new TextEncoder().encode(STUB_BODY);
-    const { env, workerFetch, isrDelete } = createEnv({
-      routing: {
-        workerName: 'user-app',
-        projectId: 'proj_1',
-        version: 'v1',
-        ssr: true,
-        revalidate: { '/page': 60 },
-        pages: [{ pattern: '/page', revalidate: 60 }],
-        assetManifestId: 'dep_abc',
-      },
-      servingManifest: { '/page': 'hashhtml' },
-      staticAssets: {
-        'assets/proj_1/hashhtml': {
-          content: new TextEncoder().encode(html).buffer as ArrayBuffer,
-          ct: 'text/html',
-        },
-      },
-      isrCacheEntry: {
-        value: packIsrValue(
-          {
-            'content-type': 'text/plain;charset=UTF-8',
-            'content-length': String(STUB_BODY.length),
-          },
-          stubBytes.buffer as ArrayBuffer,
-        ),
-        metadata: { s: 200, c: Date.now(), t: 60, p: SHARED_CACHE_POLICY_VERSION },
-      },
-      workerResponse: new Response('should not run'),
-    });
-
-    const res = await app.fetch(request, env, createCtx());
-
-    expect(workerFetch).not.toHaveBeenCalled();
-    expect(res.status).toBe(200);
-    expect(await res.text()).toBe(html);
-    expect(isrDelete).toHaveBeenCalledOnce();
-    for (const cached of edgeCacheStore.values()) {
-      expect(await cached.clone().text()).not.toBe(STUB_BODY);
-    }
   });
 
   it('checks fallback rewrite responses for the CF asset stub before returning', async () => {

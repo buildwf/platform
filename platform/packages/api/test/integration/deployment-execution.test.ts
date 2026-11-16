@@ -191,9 +191,7 @@ describe('durable deployment admission and observation', () => {
     ['static', 'static'],
     ['spa', 'spa'],
     ['void', 'static'],
-    ['framework', 'static'],
     ['void', 'worker'],
-    ['framework', 'worker'],
   ] as const)(
     'stages one attributed receipt for a %s app before queue delivery',
     async (type, kind) => {
@@ -840,8 +838,6 @@ describe('durable execution claim and revocation', () => {
           bindings: { d1: ['DB'] },
           type: 'void',
           queues: [{ name: 'demo-queue', bindingName: 'QUEUE_DEMO_QUEUE' }],
-          revalidate: 60,
-          prerender: ['/'],
           migrations,
         },
         workerFiles: { 'index.js': btoa('export default {};') },
@@ -852,7 +848,7 @@ describe('durable execution claim and revocation', () => {
       const originalAppend = execution.appendDeploymentEvent;
       let failures = 0;
       vi.spyOn(execution, 'appendDeploymentEvent').mockImplementation(async (...args) => {
-        if (args[3].event === 'prerender' && (failure === 'persistent' || failures === 0)) {
+        if (args[3].event === 'worker_upload' && (failure === 'persistent' || failures === 0)) {
           failures++;
           if (failure === 'lost acknowledgement') {
             await originalAppend(...args);
@@ -868,9 +864,11 @@ describe('durable execution claim and revocation', () => {
       const operation = await getDeploymentOperation(env.db, id);
       expect(operation).toMatchObject({ status: 'terminal', inputs_deleted: true });
       expect(operation?.events.at(-1)?.event).toMatchObject({ event: 'done', deployment: id });
-      expect(operation?.events.some(({ event }) => event.event === 'prerender_done')).toBe(true);
+      expect(operation?.events.some(({ event }) => event.event === 'worker_upload_done')).toBe(
+        true,
+      );
       if (failure === 'transient') {
-        expect(operation?.events.some(({ event }) => event.event === 'prerender')).toBe(true);
+        expect(operation?.events.some(({ event }) => event.event === 'worker_upload')).toBe(true);
       }
       expect(failures).toBeGreaterThan(0);
       const duplicate = await run(id);

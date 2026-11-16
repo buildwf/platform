@@ -622,15 +622,4 @@ describe('validateManifestShape sandbox + static/spa rejection', () => {
       }),
     ).toBeNull();
   });
-
-  it('accepts manifest.sandbox when type is "framework"', () => {
-    expect(
-      validateManifestShape({
-        version: 3,
-        bindings: {},
-        type: 'framework',
-        sandbox,
-      }),
-    ).toBeNull();
-  });
 });

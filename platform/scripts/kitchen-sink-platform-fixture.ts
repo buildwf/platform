@@ -13,25 +13,21 @@ export function prepareKitchenSinkPlatformFixture(
   try {
     rmSync(join(fixture.root, '.env'), { force: true });
     if (!options.sandbox) {
-      for (const path of [
-        'routes/api/sandbox.ts',
-        'pages/sandbox.tsx',
-        'pages/sandbox.server.ts',
-        'lib/sandbox-demo.ts',
-      ]) {
+      for (const path of ['routes/api/sandbox.ts', 'src/Sandbox.tsx', 'lib/sandbox-demo.ts']) {
         rmSync(join(fixture.root, path), { force: true });
       }
-      for (const [path, pattern] of [
-        ['pages/layout.tsx', /<Link href="\/sandbox">Sandbox<\/Link>\s*\|\s*/],
-        ['pages/index.tsx', /\s*<li>\s*<Link href="\/sandbox">Sandbox<\/Link>[^<]*<\/li>/],
-      ] as const) {
-        const file = join(fixture.root, path);
-        const source = readFileSync(file, 'utf8');
+      const app = join(fixture.root, 'src/App.tsx');
+      let source = readFileSync(app, 'utf8');
+      for (const pattern of [
+        /<Link href="\/sandbox">Sandbox<\/Link>\s*\|(\{' '\})?\s*/,
+        /\s*'\/sandbox': lazyPage\(lazy\(\(\) => import\('\.\/Sandbox\.tsx'\)\)\),/,
+      ]) {
         if (!pattern.test(source)) {
-          throw new Error(`Update the hosted kitchen-sink fixture navigation for ${path}.`);
+          throw new Error('Update the hosted kitchen-sink fixture navigation in src/App.tsx.');
         }
-        writeFileSync(file, source.replace(pattern, ''));
+        source = source.replace(pattern, '');
       }
+      writeFileSync(app, source);
     } else {
       cpSync(join(workspaceRoot, 'platform/scripts/fixtures/kitchen-sink-sandbox'), fixture.root, {
         recursive: true,

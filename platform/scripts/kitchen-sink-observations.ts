@@ -95,28 +95,3 @@ export function waitForFreshHeartbeat(
     options,
   );
 }
-
-export function waitForChangedRender(
-  read: () => Promise<string | null>,
-  previous: string,
-  options: PollOptions,
-): Promise<string> {
-  return pollObservation(
-    read,
-    (value) => value !== null && value !== previous && Number.isFinite(Date.parse(value)),
-    'The rendered timestamp did not change after revalidation; check the purge outcome, ISR cache configuration, and fixture loader',
-    options,
-  );
-}
-
-export function waitForIsrCacheHit(
-  read: () => Promise<string | null>,
-  options: PollOptions,
-): Promise<string> {
-  return pollObservation(
-    read,
-    (value) => value === 'HIT',
-    'No ISR cache hit was observed; check the deployment ISR manifest and dispatch cache configuration',
-    options,
-  );
-}

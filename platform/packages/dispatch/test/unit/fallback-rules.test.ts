@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { Env } from '../../src/env.ts';
 import app from '../../src/index.ts';
-import { SHARED_CACHE_POLICY_VERSION } from '../../src/isr.ts';
+import { SHARED_CACHE_POLICY_VERSION } from '../../src/shared-cache.ts';
 import type { AssetConfig } from '../../src/static.ts';
 
 // Mock caches.default (same pattern as index.test.ts).
@@ -679,114 +679,5 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
     const res = await app.fetch(new Request('https://test.void.app/app/x'), env, createCtx());
     expect(res.status).toBe(404);
     expect(workerFetch).toHaveBeenCalledTimes(2);
-  });
-
-  it('applies fallbackRules before returning an ISR miss response', async () => {
-    const { env, workerFetch, kvStore } = createWorkerEnv({
-      routing: {
-        workerName: 'spa-worker',
-        projectId: 'proj_1',
-        ssr: true,
-        revalidate: 60,
-        version: 'dep_1',
-        fallbackRules: [{ source: '/*', destination: '/index.html', status: 200 }],
-      },
-      workerHandler: (req) => {
-        if (new URL(req.url).pathname === '/index.html') {
-          return new Response('<html>spa</html>', {
-            status: 200,
-            headers: { 'Content-Type': 'text/html' },
-          });
-        }
-        return new Response('not found', { status: 404 });
-      },
-    });
-
-    const ctx = createCtx();
-    const res = await app.fetch(new Request('https://test.void.app/app/settings'), env, ctx);
-
-    expect(res.status).toBe(200);
-    expect(await res.text()).toBe('<html>spa</html>');
-    expect(workerFetch).toHaveBeenCalledTimes(2);
-    expect(new URL((workerFetch.mock.calls[0]![0] as Request).url).pathname).toBe('/app/settings');
-    expect(new URL((workerFetch.mock.calls[1]![0] as Request).url).pathname).toBe('/index.html');
-
-    await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
-    // Shell fallbacks are served live, not ISR-cached: a dotted HTML target
-    // (`/index.html`) is indistinguishable here from a dynamic per-user endpoint,
-    // so NO ISR entry — base key or `#rw=` variant — is written (see
-    // `isFallbackTargetCacheable`). The shell is still SERVED (200 + body above).
-    expect(
-      [...kvStore.keys()].some((key) =>
-        key.startsWith('proj_1/isr/v3/dep_1/test.void.app/app/settings'),
-      ),
-    ).toBe(false);
-
-    edgeCacheStore.clear();
-    // The shell is re-rendered live on every request — never a cache HIT.
-    const second = await app.fetch(
-      new Request('https://test.void.app/app/settings'),
-      env,
-      createCtx(),
-    );
-
-    expect(second.status).toBe(200);
-    expect(second.headers.get('x-isr-cache')).not.toBe('HIT');
-    expect(await second.text()).toBe('<html>spa</html>');
-    expect(workerFetch).toHaveBeenCalledTimes(4);
-  });
-
-  it('serves the correct per-query shell live for fallback renders (no ISR variants cached)', async () => {
-    const { env, workerFetch, kvStore } = createWorkerEnv({
-      routing: {
-        workerName: 'spa-worker',
-        projectId: 'proj_1',
-        ssr: true,
-        revalidate: 60,
-        version: 'dep_1',
-        fallbackRules: [{ source: '/*', destination: '/index.html', status: 200 }],
-        queryAllowlist: { '/app/*': ['q'] },
-      },
-      workerHandler: (req) => {
-        const url = new URL(req.url);
-        if (url.pathname === '/index.html') {
-          const original = req.headers.get('X-Void-Original-URL');
-          const q = original ? new URL(original).searchParams.get('q') : null;
-          return new Response(`<html>${q ?? ''}</html>`, {
-            status: 200,
-            headers: { 'Content-Type': 'text/html' },
-          });
-        }
-        return new Response('not found', { status: 404 });
-      },
-    });
-
-    const send = async (url: string) => {
-      const ctx = createCtx();
-      const res = await app.fetch(new Request(url), env, ctx);
-      await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
-      return res;
-    };
-
-    expect(await (await send('https://test.void.app/app/settings?q=a&cb=1')).text()).toBe(
-      '<html>a</html>',
-    );
-    expect(await (await send('https://test.void.app/app/settings?q=b&cb=1')).text()).toBe(
-      '<html>b</html>',
-    );
-    expect(await (await send('https://test.void.app/app/settings?q=a&cb=2')).text()).toBe(
-      '<html>a</html>',
-    );
-
-    // Shell fallbacks are served live, not ISR-cached (see
-    // `isFallbackTargetCacheable`): each send re-renders — no cache HIT saves a
-    // fetch (3 sends × 2 fetches = 6) — and NO ISR variant keys are written. The
-    // per-query bodies above still prove the allowlisted `q` reaches the render.
-    expect(workerFetch).toHaveBeenCalledTimes(6);
-    expect(
-      [...kvStore.keys()].some((key) =>
-        key.startsWith('proj_1/isr/v3/dep_1/test.void.app/app/settings'),
-      ),
-    ).toBe(false);
   });
 });

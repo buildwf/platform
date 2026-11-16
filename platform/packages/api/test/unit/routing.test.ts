@@ -328,33 +328,11 @@ describe('buildRoutingJson', () => {
     expect(parsed.staticDeploymentId).toBeUndefined();
   });
 
-  it('passes manifest.pages through to the routing blob', () => {
-    const pages = [{ pattern: '/a' }, { pattern: '/b/:x', revalidate: 60 }];
-    const parsed = JSON.parse(
-      buildRoutingJson({
-        ...base,
-        manifest: { type: 'void', ssr: true, pages } as unknown as DeployManifest,
-      }),
-    );
-    expect(parsed.pages).toEqual(pages);
-  });
-
   it('omits pages when the manifest has none', () => {
     const parsed = JSON.parse(
       buildRoutingJson({ ...base, manifest: { type: 'void' } as unknown as DeployManifest }),
     );
     expect(parsed.pages).toBeUndefined();
-  });
-
-  it('passes manifest.pathRevalidate through to the routing blob', () => {
-    const pathRevalidate = { '/blog/private': 0, '/blog/*': 3600 };
-    const parsed = JSON.parse(
-      buildRoutingJson({
-        ...base,
-        manifest: { type: 'void', ssr: true, pathRevalidate } as unknown as DeployManifest,
-      }),
-    );
-    expect(parsed.pathRevalidate).toEqual(pathRevalidate);
   });
 
   it('omits pathRevalidate when the manifest has none or it is empty', () => {

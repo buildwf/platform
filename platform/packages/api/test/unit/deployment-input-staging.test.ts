@@ -82,9 +82,7 @@ describe('prepareDeploymentInput', () => {
     ['static', 'static', 0],
     ['spa', 'spa', 0],
     ['void', 'static', 0],
-    ['framework', 'static', 0],
     ['void', 'worker', 1],
-    ['framework', 'worker', 1],
   ] as const)(
     'attributes %s input using its single existing receipt write',
     async (appType, kind, moduleCount) => {

@@ -569,22 +569,21 @@ describe('proxy worker', () => {
       expect(env.AI.run).not.toHaveBeenCalled();
     });
 
-    it.each([
-      'https://ai-proxy/ai/run',
-      'https://proxy/revalidate',
-      'https://email-proxy/email/send',
-    ])('checks the body project token on the binding host %s', async (url) => {
-      const response = await worker.fetch(
-        new Request(url, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ projectId: 'proj_000000000001', aiToken: 'invalid' }),
-        }),
-        createEnv(),
-      );
-      expect(response.status).toBe(403);
-      expect(await response.json()).toEqual({ error: 'invalid project token' });
-    });
+    it.each(['https://ai-proxy/ai/run', 'https://email-proxy/email/send'])(
+      'checks the body project token on the binding host %s',
+      async (url) => {
+        const response = await worker.fetch(
+          new Request(url, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ projectId: 'proj_000000000001', aiToken: 'invalid' }),
+          }),
+          createEnv(),
+        );
+        expect(response.status).toBe(403);
+        expect(await response.json()).toEqual({ error: 'invalid project token' });
+      },
+    );
   });
 
   it('verifies email receipts independently of project login authentication', async () => {
@@ -2554,69 +2553,6 @@ describe('proxy worker', () => {
         reason: 'monthly_quota',
         message: 'AI usage limit exceeded',
       });
-    });
-  });
-
-  describe('revalidate: /revalidate', () => {
-    it('forwards revalidation to API via service binding', async () => {
-      const apiFetch = vi.fn(
-        async () =>
-          new Response(JSON.stringify({ purged: 2 }), {
-            headers: { 'content-type': 'application/json' },
-          }),
-      );
-      const env = createEnv({}, {}, { fetch: apiFetch });
-
-      const res = await worker.fetch(
-        post('/revalidate', {
-          paths: ['/', '/blog'],
-          projectId: 'proj_000000000001',
-          aiToken: aiTokens['proj_000000000001'],
-        }),
-        env,
-      );
-
-      expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ purged: 2 });
-
-      expect(apiFetch).toHaveBeenCalledOnce();
-      // Fetcher.fetch() receives (url: string, init: RequestInit)
-      const [url, init] = apiFetch.mock.calls[0];
-      expect(url).toBe('https://api/internal/revalidate/proj_000000000001');
-      expect(init.method).toBe('POST');
-      expect(new Headers(init.headers).get('x-void-internal')).toBe(aiTokens['proj_000000000001']);
-      expect(JSON.parse(init.body)).toEqual({ paths: ['/', '/blog'] });
-    });
-
-    it('forwards all:true revalidation', async () => {
-      const apiFetch = vi.fn(
-        async () =>
-          new Response(JSON.stringify({ purged: 10 }), {
-            headers: { 'content-type': 'application/json' },
-          }),
-      );
-      const env = createEnv({}, {}, { fetch: apiFetch });
-
-      const res = await worker.fetch(
-        post('/revalidate', {
-          all: true,
-          projectId: 'proj_000000000001',
-          aiToken: aiTokens['proj_000000000001'],
-        }),
-        env,
-      );
-
-      expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ purged: 10 });
-
-      const [, init] = apiFetch.mock.calls[0];
-      expect(JSON.parse(init.body)).toEqual({ all: true });
-    });
-
-    it('rejects unauthenticated revalidation requests', async () => {
-      const res = await worker.fetch(post('/revalidate', { paths: ['/'] }), createEnv());
-
-      expect(res.status).toBe(400);
     });
   });
 

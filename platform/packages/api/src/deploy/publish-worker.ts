@@ -1,12 +1,3 @@
-import { isrCacheKey } from '@void/isr';
-import {
-  hasSharedCacheOptOut,
-  resolvePageTtl,
-  resolveRevalidateTtl,
-  SHARED_CACHE_POLICY_VERSION,
-  type IsrCacheMetadata,
-} from '@void/isr/core';
-import { platformProjectHostname, readPlatformApplication } from '@void/platform';
 import { sql as drizzleSql } from 'drizzle-orm';
 import { type Context } from 'hono';
 import { type AssetManifestEntry } from '../assets.ts';
@@ -24,7 +15,6 @@ import {
   type Db,
 } from '../db.ts';
 import type { ApiEnv } from '../env.ts';
-import { createIsrStore } from '../isr-store.ts';
 import { getProjectQueueName } from '../naming.ts';
 import { type DeployLogger } from '../observability/logger.ts';
 import { resolvePlanLimits } from '../plans.ts';
@@ -50,7 +40,6 @@ import {
 } from '../types.ts';
 import type { WorkerModule } from '../worker-upload.ts';
 import { resolveProjectZeroTrustRouting } from '../zero-trust/routing.ts';
-import { clearIsrCache, serializePrerenderHeaders, packIsrValue } from './cache.ts';
 import { assertDeploymentCanProceed } from './guards.ts';
 import {
   commitCutoverLive,
@@ -271,94 +260,6 @@ export async function publishWorkerDeployment(input: {
 
   const hasCrons = manifest.schedules && manifest.schedules.length > 0;
 
-  await clearIsrCache(
-    createIsrStore(context.env.STATIC_ASSETS_R2, context.env.ISR_CACHE),
-    projectId,
-    deployment.id,
-  );
-  await assertDeploymentCanProceed(context.get('db'), deployment.id, projectId);
-
-  input.currentStep = 'prerender';
-  if (
-    manifest.prerender &&
-    manifest.prerender.length > 0 &&
-    (manifest.revalidate || (manifest.pages && manifest.pages.length > 0))
-  ) {
-    markPhase('prerender');
-    emit({ event: 'prerender', pages: manifest.prerender.length });
-    input.logger.info('status_transition', 'status_change', {
-      from: input.currentStatus,
-      to: 'prerendering',
-    });
-    if (!input.cutoverProtected) {
-      await updateDeploymentStatus(context.get('db'), deployment.id, 'prerendering');
-      input.currentStatus = 'prerendering';
-    }
-    await assertDeploymentCanProceed(context.get('db'), deployment.id, projectId);
-    const application = readPlatformApplication(context.env);
-
-    await uploadPool(manifest.prerender, 3, async (pathname) => {
-      const ttl = resolvePageTtl(
-        manifest.pages,
-        manifest.revalidate,
-        manifest.pathRevalidate,
-        pathname,
-      );
-      if (ttl <= 0) {
-        return;
-      }
-      try {
-        const userWorker = context.env.DISPATCH.get(workerName);
-        const slugHost = platformProjectHostname(project, application);
-        const url = `https://${slugHost}${pathname}`;
-        const response = await userWorker.fetch(new Request(url));
-        // Mirror dispatch's live-miss / background write gate so prewarm
-        // cannot seed an entry the edge would refuse. A render that opts
-        // out — `x-revalidate: 0` (→ effectiveTtl 0) or `Cache-Control:
-        // private/no-store/no-cache` — must NOT be warmed: dispatch serves
-        // a HIT without re-checking opt-out, and `serializePrerenderHeaders`
-        // strips `Cache-Control`, so the opt-out is only visible HERE,
-        // before the write. `x-revalidate` overrides the TTL exactly as
-        // dispatch's `resolveRevalidateTtl` does; a full 200 is required
-        // (parity with the dispatch write sites — no partial/redirect body).
-        const effectiveTtl = resolveRevalidateTtl(response, ttl);
-        if (
-          response.status === 200 &&
-          effectiveTtl > 0 &&
-          !hasSharedCacheOptOut(response) &&
-          (manifest.type !== 'framework' ||
-            response.headers.get('content-type')?.toLowerCase().split(';', 1)[0]?.trim() ===
-              'text/html')
-        ) {
-          // Host-scope the warmed key to the slug host implied by the
-          // fetch URL — dispatch reads `<pid>/isr/v3/<did>/<host>/<path>`
-          // keyed on the request hostname, so without this the warmed
-          // bytes are a permanent cold miss (see @void/isr `isrCacheKey`).
-          const key = isrCacheKey(projectId, deployment.id, slugHost, pathname);
-          const headers = serializePrerenderHeaders(response);
-          const body = await response.arrayBuffer();
-          const packed = packIsrValue(headers, body);
-          await createIsrStore(context.env.STATIC_ASSETS_R2).put(key, packed, {
-            // `c` (createdAt) + `t` (ttl) are REQUIRED by dispatch's
-            // `readIsrCache` — it returns null (permanent cold miss)
-            // without them. `satisfies IsrCacheMetadata` makes any field
-            // drift a typecheck error.
-            metadata: {
-              s: response.status,
-              c: Date.now(),
-              t: effectiveTtl,
-              p: SHARED_CACHE_POLICY_VERSION,
-            } satisfies IsrCacheMetadata,
-          });
-        }
-      } catch {
-        // non-blocking
-      }
-    });
-    emit({ event: 'prerender_done' });
-  }
-  await assertDeploymentCanProceed(context.get('db'), deployment.id, projectId);
-
   // Routing switch
   await snapshotCronState();
   await assertDeploymentCanProceed(context.get('db'), deployment.id, projectId);
@@ -439,7 +340,7 @@ export async function publishWorkerDeployment(input: {
     deploymentId: deployment.id,
     cutoverOwnerId,
     deployBuild,
-    projectType: manifest.type ?? (manifest.framework ? 'framework' : 'void'),
+    projectType: manifest.type ?? 'void',
   });
   input.cutoverCommitted = true;
   input.currentStatus = 'live';
@@ -618,15 +519,6 @@ export async function publishWorkerDeployment(input: {
             });
           }
         }
-        await clearIsrCache(
-          createIsrStore(context.env.STATIC_ASSETS_R2, context.env.ISR_CACHE),
-          projectId,
-          old.id,
-        ).catch((e) =>
-          input.logger.error('retention_cleanup', 'evicted_isr_cache_clear_failed', e, {
-            evictedDeploymentId: old.id,
-          }),
-        );
       } catch (e) {
         input.logger.warn('retention_cleanup', 'eviction_partial_failure', {
           evictedDeploymentId: old.id,

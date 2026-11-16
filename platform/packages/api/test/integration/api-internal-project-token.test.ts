@@ -137,13 +137,6 @@ describe('per-project token checks', () => {
     expect(run).toHaveBeenCalledOnce();
   });
 
-  it('rejects a login JWT presented as a project id and token at /internal/revalidate', async () => {
-    const forged = await loginJwtAsProjectToken();
-    const response = await internalRequest('revalidate', forged.projectId, forged.token);
-    expect(response.status).toBe(403);
-    expect(await response.json()).toEqual({ error: 'invalid internal auth' });
-  });
-
   it.each(['resolve-resource', 'resolve-worker', 'verify-prerender-build'])(
     'rejects a login JWT presented as a project id and credential at /internal/%s',
     async (route) => {
@@ -171,11 +164,6 @@ describe('per-project token checks', () => {
     const proxyAuth = async (route: ProxyInternalRoute) => ({
       'x-void-proxy-internal': await deriveProxyInternalAuth(JWT_SECRET, route, project.id),
     });
-
-    const revalidated = await internalRequest('revalidate', project.id, token, {
-      paths: ['/about'],
-    });
-    expect(revalidated.status).toBe(200);
 
     const resource = await internalRequest(
       'resolve-resource',
@@ -246,54 +234,6 @@ describe('project token generations', () => {
     expect(response.status).toBe(403);
     expect(await response.json()).toEqual({ error: 'invalid project token' });
     expect(run).not.toHaveBeenCalled();
-  });
-
-  it('accepts the legacy and generation 1 tokens at /internal/revalidate while no floor is set', async () => {
-    const project = await liveProject();
-    for (const gen of [0, 1]) {
-      const response = await internalRequest(
-        'revalidate',
-        project.id,
-        await deriveProxyToken(JWT_SECRET, project.id, gen),
-        { paths: ['/about'] },
-      );
-      expect(response.status).toBe(200);
-    }
-  });
-
-  it('applies the floor at /internal/revalidate', async () => {
-    const project = await liveProject();
-    await setFloor(project.id, '{"gen":1}');
-    for (const gen of [1, 2]) {
-      const response = await internalRequest(
-        'revalidate',
-        project.id,
-        await deriveProxyToken(JWT_SECRET, project.id, gen),
-        { paths: ['/about'] },
-      );
-      expect(response.status).toBe(200);
-    }
-    const legacy = await internalRequest(
-      'revalidate',
-      project.id,
-      await hmacSignState(project.id, JWT_SECRET),
-      { paths: ['/about'] },
-    );
-    expect(legacy.status).toBe(403);
-    expect(await legacy.json()).toEqual({ error: 'invalid internal auth' });
-  });
-
-  it('fails closed at /internal/revalidate when the floor is malformed', async () => {
-    const project = await liveProject();
-    await setFloor(project.id, 'not json');
-    const response = await internalRequest(
-      'revalidate',
-      project.id,
-      await hmacSignState(project.id, JWT_SECRET),
-      { paths: ['/about'] },
-    );
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ error: 'project token state unavailable' });
   });
 });
 

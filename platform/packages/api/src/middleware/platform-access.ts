@@ -16,7 +16,6 @@ function internallyAuthenticated(method: string, path: string): boolean {
       (/^\/internal\/(?:resolve-resource|resolve-worker|verify-owner|verify-prerender-build)\/[^/]+$/.test(
         path,
       ) ||
-        path === '/internal/revalidate' ||
         path === '/internal/email/domain-credential' ||
         path === '/internal/email/probe-ingress' ||
         path === '/internal/email/resolve-ingress' ||

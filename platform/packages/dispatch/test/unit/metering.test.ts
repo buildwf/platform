@@ -96,12 +96,12 @@ describe('recordRequest', () => {
 
     recordRequest(env, {
       projectId: 'proj_1',
-      type: 'isr',
+      type: 'ssr',
       method: 'GET',
       status: 200,
       responseBytes: 5000,
       durationMs: 100,
-      slug: 'isr-app',
+      slug: 'ssr-app',
     });
 
     const dp = writes[0] as { doubles: Array<number> };
@@ -112,7 +112,7 @@ describe('recordRequest', () => {
 
   it('handles all supported request types', () => {
     const { env, writes } = createMockEnv();
-    const types = ['api', 'static', 'ssr', 'isr', 'websocket'] as const;
+    const types = ['api', 'static', 'ssr', 'websocket'] as const;
 
     for (const type of types) {
       recordRequest(env, {
@@ -126,9 +126,9 @@ describe('recordRequest', () => {
       });
     }
 
-    expect(writes).toHaveLength(5);
+    expect(writes).toHaveLength(4);
     const recordedTypes = (writes as Array<{ blobs: Array<string> }>).map((w) => w.blobs[1]);
-    expect(recordedTypes).toEqual(['api', 'static', 'ssr', 'isr', 'websocket']);
+    expect(recordedTypes).toEqual(['api', 'static', 'ssr', 'websocket']);
   });
 });
 

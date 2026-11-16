@@ -1220,19 +1220,17 @@ const app = new Hono<ApiEnv>()
           );
           const targetType =
             manifest?.type ??
-            (manifest?.framework
-              ? 'framework'
-              : target.bundle_stored || manifest?.workerMain
-                ? 'void'
-                : manifest?.static === 'spa'
-                  ? 'spa'
-                  : manifest?.static === 'ssg'
-                    ? 'static'
-                    : manifest?.assetConfig?.not_found_handling === 'single-page-application'
-                      ? 'spa'
-                      : manifest?.assetConfig?.not_found_handling === '404-page'
-                        ? 'static'
-                        : 'void');
+            (target.bundle_stored || manifest?.workerMain
+              ? 'void'
+              : manifest?.static === 'spa'
+                ? 'spa'
+                : manifest?.static === 'ssg'
+                  ? 'static'
+                  : manifest?.assetConfig?.not_found_handling === 'single-page-application'
+                    ? 'spa'
+                    : manifest?.assetConfig?.not_found_handling === '404-page'
+                      ? 'static'
+                      : 'void');
           const isStaticDeployment = targetType === 'static' || targetType === 'spa';
           let targetHasAssets = false;
           if (target.asset_hashes) {

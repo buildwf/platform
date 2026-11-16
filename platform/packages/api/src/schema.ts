@@ -393,7 +393,7 @@ export const projects = pgTable(
     preview_client_id: text('preview_client_id').references(() => oauthClients.id),
     preview_workspace_id: text('preview_workspace_id'),
     preview_expires_at: timestamp('preview_expires_at', { mode: 'string', withTimezone: true }),
-    type: text('mode').notNull().default('void').$type<'void' | 'spa' | 'static' | 'framework'>(),
+    type: text('mode').notNull().default('void').$type<'void' | 'spa' | 'static'>(),
     active_deployment_id: text('active_deployment_id'),
     websocket_version: integer('websocket_version').notNull().default(0),
     // Highest proxy token generation issued for this project. 0 = legacy token.

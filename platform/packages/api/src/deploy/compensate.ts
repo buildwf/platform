@@ -16,7 +16,6 @@ import {
 } from '../db.ts';
 import { sendDeployFailedEmail } from '../email.ts';
 import type { ApiEnv } from '../env.ts';
-import { createIsrStore } from '../isr-store.ts';
 import { type DeployLogger } from '../observability/logger.ts';
 import { ProjectAccessDeniedError } from '../project-access.ts';
 import { reconcileManagedDurableObjects } from '../provisioning/durable-objects.ts';
@@ -33,7 +32,6 @@ import {
   resolveProjectZeroTrustRoutingForPublication,
   withProjectZeroTrustRouting,
 } from '../zero-trust/routing.ts';
-import { clearIsrCache } from './cache.ts';
 import { PROJECT_DELETING_ERROR_MESSAGE, SUPERSEDED_BUILD_ERROR_MESSAGE } from './guards.ts';
 import {
   cutoverIntentKey,
@@ -455,11 +453,9 @@ export async function recoverFailedDeployment(input: {
       force: true,
     }).catch(() => {});
     input.currentStatus = 'live';
-    await updateProjectType(
-      context.get('db'),
-      projectId,
-      failedManifest.type ?? (failedManifest.framework ? 'framework' : 'void'),
-    ).catch(() => {});
+    await updateProjectType(context.get('db'), projectId, failedManifest.type ?? 'void').catch(
+      () => {},
+    );
     await setActiveDeployment(context.get('db'), projectId, failedDeployment.id).catch(() => {});
     await markDeploymentRetained(context.get('db'), failedDeployment.id, true).catch(() => {});
     emitSlugDone();
@@ -479,15 +475,6 @@ export async function recoverFailedDeployment(input: {
       }),
     );
     await cleanupSandboxController();
-    await clearIsrCache(
-      createIsrStore(context.env.STATIC_ASSETS_R2, context.env.ISR_CACHE),
-      projectId,
-      failedDeployment.id,
-    ).catch((e) =>
-      logger.error('catch', 'isr_cache_clear_failed', e, {
-        deploymentId: failedDeployment.id,
-      }),
-    );
     logger.info('status_transition', 'status_change', {
       deploymentId: failedDeployment.id,
       from: input.currentStatus,

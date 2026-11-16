@@ -1,7 +1,7 @@
 import { readUsageSigningKey, signUsageEvent } from '@voidcloud/api/usage-auth';
 import type { Env } from './env.ts';
 
-export type RequestType = 'api' | 'static' | 'ssr' | 'isr' | 'websocket';
+export type RequestType = 'api' | 'static' | 'ssr' | 'websocket';
 export type FailureKind =
   | 'platform-static-asset-timeout'
   | 'platform-static-asset-error'

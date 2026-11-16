@@ -6,11 +6,8 @@ export function hasExtension(pathname: string): boolean {
 }
 
 /**
- * An `/api` route (worker-dynamic). Such a path must never enter the shared
- * page ISR cache — directly, or via a fallback that rewrites a page 404 into a
- * 200 from `/api/*`. A `/api` response is per-request dynamic (cookies, auth,
- * live data); caching it under a page URL would serve one caller's response to
- * everyone.
+ * An `/api` route (worker-dynamic). A `/api` response is per-request dynamic
+ * (cookies, auth, live data), so it never enters a shared cache.
  */
 export function isApiPath(pathname: string): boolean {
   return pathname === '/api' || pathname.startsWith('/api/');

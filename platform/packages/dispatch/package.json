@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "@void/edge": "workspace:*",
-    "@void/isr": "workspace:*",
     "@voidcloud/api": "workspace:*",
     "jose": "catalog:"
   },

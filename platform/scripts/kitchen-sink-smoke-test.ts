@@ -17,9 +17,7 @@ import { describe, it, before, after } from 'node:test';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import {
   resetKitchenSink,
-  waitForChangedRender,
   waitForFreshHeartbeat,
-  waitForIsrCacheHit,
   waitForRenderedText,
 } from './kitchen-sink-observations.ts';
 
@@ -154,7 +152,7 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
     return { ctx, page };
   }
 
-  void it('1 — home SSR + asset caching', async () => {
+  void it('1 — home + asset caching', async () => {
     const { ctx, page } = await freshPage();
     try {
       await goto(page, '/');
@@ -468,62 +466,6 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
           return readTimestamp(page, 'Last Heartbeat');
         },
         { timeoutMs: 150_000, notBefore: resetCompletedAt },
-      );
-    } finally {
-      await ctx.close();
-    }
-  });
-
-  void it('11 — ISR revalidation', async () => {
-    const { ctx, page } = await freshPage();
-    try {
-      if (Object.keys(CF_ACCESS).length === 0) {
-        await waitForIsrCacheHit(
-          async () => {
-            const response = await goto(page, '/revalidate');
-            return response?.headers()['x-isr-cache'] ?? null;
-          },
-          { timeoutMs: 15_000, intervalMs: 500 },
-        );
-      } else {
-        await goto(page, '/revalidate');
-      }
-      const renderedAt = await readTimestamp(page, 'Rendered at:');
-      assert.ok(
-        renderedAt && Number.isFinite(Date.parse(renderedAt)),
-        'initial rendered timestamp is valid',
-      );
-
-      const completed = page.waitForResponse(
-        (response) =>
-          new URL(response.url()).pathname === '/revalidate' &&
-          response.request().method() === 'POST',
-        { timeout: TIMEOUT },
-      );
-      await page.click('button:has-text("Revalidate /revalidate")');
-      const actionResponse = await completed;
-      assert.ok(
-        actionResponse.ok(),
-        `Revalidation action failed (HTTP ${actionResponse.status()}); inspect the app and provider purge logs.`,
-      );
-
-      await page.waitForFunction(
-        () => {
-          const button = Array.from(document.querySelectorAll('button')).find((candidateButton) =>
-            candidateButton.textContent?.includes('Revalidate /revalidate'),
-          );
-          return button && !button.disabled;
-        },
-        { timeout: TIMEOUT },
-      );
-
-      await waitForChangedRender(
-        async () => {
-          await goto(page, '/revalidate');
-          return readTimestamp(page, 'Rendered at:');
-        },
-        renderedAt,
-        { timeoutMs: 15_000, intervalMs: 500 },
       );
     } finally {
       await ctx.close();

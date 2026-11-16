@@ -117,7 +117,6 @@ import internalEmailDomainCredential from './routes/internal-email.ts';
 import internalGitHubWebhook from './routes/internal-github-webhook.ts';
 import internalResolveResource from './routes/internal-resolve-resource.ts';
 import internalResolveWorker from './routes/internal-resolve-worker.ts';
-import internalRevalidate from './routes/internal-revalidate.ts';
 import internalVerifyOwner from './routes/internal-verify-owner.ts';
 import internalVerifyPrerenderBuild from './routes/internal-verify-prerender-build.ts';
 import me from './routes/me.ts';
@@ -131,7 +130,6 @@ import {
 import projectTokens from './routes/project-tokens.ts';
 import projectZeroTrustRoutes from './routes/project-zero-trust.ts';
 import projects from './routes/projects.ts';
-import revalidate from './routes/revalidate.ts';
 import secrets from './routes/secrets.ts';
 import { projectUsage, accountUsage } from './routes/usage.ts';
 import { webhookRoutes } from './routes/webhooks.ts';
@@ -562,7 +560,6 @@ const app = new Hono<ApiEnv>()
   .get('/.well-known/oauth-authorization-server', oauthMetadata)
   .route('/oauth', oauth)
   .route('/auth', oidcRoutes)
-  .route('/internal/revalidate', internalRevalidate)
   .use('/internal/email/*', capabilityMiddleware('email'))
   .route('/internal/email/domain-credential', internalEmailDomainCredential)
   .route('/internal/email/actions', internalEmailActions)
@@ -597,7 +594,6 @@ const app = new Hono<ApiEnv>()
   .route('/projects', projectZeroTrustRoutes)
   .route('/projects', deploy)
   .route('/projects', deleteRoute)
-  .route('/projects', revalidate)
   .route('/projects', secrets)
   .route('/projects', domains)
   .route('/projects', emailRoutes)

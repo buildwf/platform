@@ -1,7 +1,7 @@
-import { isEventStreamResponse } from '@void/isr/runtime';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { Env } from '../../src/env.ts';
 import app from '../../src/index.ts';
+import { isEventStreamResponse } from '../../src/shared-cache.ts';
 
 const edgeCacheStore = new Map<string, Response>();
 
@@ -124,54 +124,5 @@ describe('SSE dispatch passthrough', () => {
     expect(textSpy).not.toHaveBeenCalled();
     expect(edgeCacheStore.size).toBe(0);
     expect((analyticsWrites[0] as { doubles: Array<number> }).doubles[1]).toBe(0);
-  });
-
-  it('does not write ISR cache for SSE responses', async () => {
-    const { env, isrWrites } = createEnv({
-      routing: {
-        workerName: 'user-app',
-        projectId: 'proj_1',
-        ssr: true,
-        revalidate: 60,
-        version: 'dep_1',
-      },
-      workerFetchImpl: () => sseResponse('data: live\n\n', { 'x-revalidate': '60' }),
-    });
-
-    const response = await app.fetch(new Request('https://my-app.void.app/live'), env, createCtx());
-
-    expect(await response.text()).toBe('data: live\n\n');
-    expect(isrWrites).toEqual([]);
-  });
-
-  it('bypasses ISR cache reads for EventSource requests', async () => {
-    edgeCacheStore.set(
-      'https://my-app.void.app/live?__void_isr=dep_1',
-      new Response('<!doctype html><p>cached html</p>', {
-        headers: { 'Content-Type': 'text/html', 'x-isr-cache': 'HIT' },
-      }),
-    );
-    const { env, workerFetch } = createEnv({
-      routing: {
-        workerName: 'user-app',
-        projectId: 'proj_1',
-        ssr: true,
-        revalidate: 60,
-        version: 'dep_1',
-      },
-      workerFetchImpl: () => sseResponse('data: live\n\n'),
-    });
-
-    const response = await app.fetch(
-      new Request('https://my-app.void.app/live', {
-        headers: { Accept: 'text/event-stream' },
-      }),
-      env,
-      createCtx(),
-    );
-
-    expect(workerFetch).toHaveBeenCalledOnce();
-    expect(response.headers.get('content-type')).toBe('text/event-stream; charset=utf-8');
-    expect(await response.text()).toBe('data: live\n\n');
   });
 });

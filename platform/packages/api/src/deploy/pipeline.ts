@@ -694,7 +694,7 @@ export async function runDeploymentPipeline(input: {
       if (hasWorkerFiles && manifest.type === undefined) {
         // Rollback identifies retained Workers from their manifest, including
         // older clients that omit type and workerMain but configure asset fallbacks.
-        manifest = { ...manifest, type: manifest.framework ? 'framework' : 'void' };
+        manifest = { ...manifest, type: 'void' };
       }
       const finalManifestRaw = JSON.stringify(manifest);
 

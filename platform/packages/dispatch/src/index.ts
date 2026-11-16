@@ -1,10 +1,4 @@
-import {
-  matchLiteralPattern,
-  PAGES_PROTOCOL_VERSION,
-  redirectToHttps,
-  type ProjectZeroTrustRouting,
-} from '@void/edge';
-import { clientRevalidateResponse, isEventStreamResponse } from '@void/isr/runtime';
+import { matchLiteralPattern, redirectToHttps, type ProjectZeroTrustRouting } from '@void/edge';
 import {
   PLATFORM_HEALTH_HOSTNAME_LABEL,
   platformHealthHostname,
@@ -16,28 +10,6 @@ import { projectAccessVerifier } from './access.ts';
 import type { Env } from './env.ts';
 import { createErrorResponse, createMaintenanceResponse } from './error-page.ts';
 import { applyHeaderRules, type HeaderRule } from './headers.ts';
-import {
-  readIsrCache,
-  writeIsrCache,
-  deleteIsrCache,
-  isStale,
-  isrCacheResponse,
-  isrEdgeCacheKey,
-  isrEdgeCacheKeyJson,
-  hasCurrentSharedCachePolicy,
-  hasSharedCacheOptOut,
-  SHARED_CACHE_POLICY_HEADER,
-  markSharedCachePolicy,
-  resolveRevalidateTtl,
-  resolvePathTtl,
-  resolvePageTtl,
-  matchesLiteralPage,
-  isDottedPathIsrEligible,
-  shouldBypassIsr,
-  isFrameworkDocumentRequest,
-  extractPageDataFromHtml,
-  normalizePageDataForJsonCache,
-} from './isr.ts';
 import { createLimitResponse } from './limit-response.ts';
 import {
   recordPlatformLog,
@@ -50,14 +22,17 @@ import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from './platform-lifec
 import { applicationEdgeCache, resolveProjectHostname } from './project-hostname.ts';
 import { classifyDynamicRequestType, hasExtension, isApiPath } from './request-type.ts';
 import { applyRoutingRules, mergeQueryIntoLocation, type RedirectRule } from './routing-rules.ts';
+import {
+  bypassesSharedCache,
+  clientRevalidateResponse,
+  hasCurrentSharedCachePolicy,
+  hasSharedCacheOptOut,
+  isEventStreamResponse,
+  markSharedCachePolicy,
+  SHARED_CACHE_POLICY_HEADER,
+} from './shared-cache.ts';
 import { resolveStaticPath, resolveAssetContentType, safeDecodePathname } from './static.ts';
 import type { AssetConfig } from './static.ts';
-import {
-  buildVariantOriginalUrl,
-  exactQueryAllowlist,
-  hasUnlistedQueryParams,
-  type QueryAllowlist,
-} from './variant-key.ts';
 import {
   DispatchTimeoutError,
   resolveTimeoutMs,
@@ -69,15 +44,8 @@ type RoutingEntry = Readonly<{
   workerName: string;
   projectId: string;
   userId?: string;
-  type?: 'void' | 'spa' | 'static' | 'framework';
+  type?: 'void' | 'spa' | 'static';
   ssr?: boolean;
-  revalidate?: number | Record<string, number>;
-  pages?: ReadonlyArray<{ pattern: string; revalidate?: number }>;
-  // RAW per-path `routing.revalidate` OBJECT config (pages mode). Resolved at
-  // the edge against the real request path for a matched inherit-eligible page
-  // (a `pages` entry with no baked `revalidate`) — honors per-path `0` opt-outs
-  // a dynamic pattern straddles. Distinct from the folded `revalidate` map.
-  pathRevalidate?: Record<string, number>;
   version?: string;
   limits?: Record<string, number>;
   suspended?: string;
@@ -88,10 +56,6 @@ type RoutingEntry = Readonly<{
   redirectRules?: ReadonlyArray<RedirectRule>;
   alwaysUseHttps?: boolean;
   fallbackRules?: ReadonlyArray<RedirectRule>;
-  // Per-pathname allowlist of query params that are part of the ISR variant
-  // key on a rewrite. Default (no entry / no allowlist) drops every param,
-  // so an attacker can't fan out the cache by varying `?utm`/`?cb`/etc.
-  queryAllowlist?: QueryAllowlist;
   staticDeploymentId?: string;
   assetManifestId?: string;
   assetConfig?: AssetConfig;
@@ -121,7 +85,6 @@ type QueueRoutingEntry = Readonly<{
   proxyToken?: string;
 }>;
 
-const CLIENT_REVALIDATE_CACHE_CONTROL = 'public, max-age=0, must-revalidate';
 const STATIC_ASSET_HEDGE_DELAY_MS = 1000;
 const PLATFORM_QUEUE_RETRY_DELAY_SECONDS = 300;
 // Batches of a project whose owner an administrator suspended wait here. Each
@@ -137,16 +100,6 @@ const QUEUE_TOKEN_REJECTED_RETRY_DELAY_SECONDS = 120;
 const PLATFORM_STATIC_ASSET_TIMEOUT: FailureKind = 'platform-static-asset-timeout';
 const PLATFORM_STATIC_ASSET_ERROR: FailureKind = 'platform-static-asset-error';
 const PLATFORM_STATIC_ASSET_MISSING: FailureKind = 'platform-static-asset-missing';
-
-// How long a STALE ISR entry may keep being served without a successful refresh
-// before a background revalidation evicts it. Measured from when the entry became
-// STALE (`createdAt + ttl`), NOT from creation — so an entry with a long TTL still
-// gets the full grace of STALE tolerance and a transient failure right after expiry
-// does not evict immediately. Bounds the "serve stale forever" window for a
-// permanently-removed page (origin now 404s and falls back to a non-cacheable shell,
-// so the entry can neither refresh nor authoritatively opt-out-evict) while staying
-// far above any transient deploy-race 404 so normal stale-while-revalidate is intact.
-const ISR_STALE_EVICT_GRACE_SECONDS = 86_400; // 24h of STALE tolerance
 
 /**
  * Whether Cloudflare Access may treat this path as part of the `/health`
@@ -206,63 +159,6 @@ export function isHtmlResponse(response: Response): boolean {
   );
 }
 
-function jsonCacheResponse(pageData: string, ttl: number, state: 'HIT' | 'MISS'): Response {
-  const response = new Response(pageData, {
-    headers: {
-      'content-type': 'application/json',
-      'X-VoidPages': 'true',
-      'X-VoidPages-Version': PAGES_PROTOCOL_VERSION,
-      Vary: 'X-VoidPages, X-VoidPages-Version',
-      'Cache-Control': `public, s-maxage=${ttl}, max-age=0, must-revalidate`,
-      'x-isr-cache': state,
-    },
-  });
-  markSharedCachePolicy(response.headers);
-  return response;
-}
-
-async function populateJsonEdgeCache(
-  cache: Cache,
-  cacheKey: Request,
-  response: Response,
-  ttl: number,
-  state: 'HIT' | 'MISS',
-): Promise<void> {
-  const fromHeader = response.headers.get('x-void-page-data');
-  const pageData = fromHeader
-    ? normalizePageDataForJsonCache(fromHeader)
-    : extractPageDataFromHtml(await response.clone().text());
-  if (!pageData) {
-    return;
-  }
-  await cache.put(cacheKey, jsonCacheResponse(pageData, ttl, state));
-}
-
-type SharedIsrEntry = Readonly<{
-  projectId: string;
-  deploymentId: string;
-  host: string;
-  pathname: string;
-  originalUrl?: string;
-  htmlKey: Request;
-  jsonKey: Request;
-}>;
-
-async function deleteSharedIsrEntry(env: Env, entry: SharedIsrEntry): Promise<void> {
-  await Promise.all([
-    deleteIsrCache(
-      env,
-      entry.projectId,
-      entry.deploymentId,
-      entry.host,
-      entry.pathname,
-      entry.originalUrl,
-    ),
-    applicationEdgeCache.delete(entry.htmlKey),
-    applicationEdgeCache.delete(entry.jsonKey),
-  ]);
-}
-
 async function applyWorkerFallbackRules(opts: {
   response: Response;
   worker: { fetch(request: Request): Promise<Response> };
@@ -272,18 +168,15 @@ async function applyWorkerFallbackRules(opts: {
   url: URL;
   originalRequestUrl: string;
   originalUrlHeader?: string;
-  originalUrlVariant?: string;
   deadline?: Readonly<{ startedAt: number; timeoutMs: number }>;
 }): Promise<{
   response: Response;
   pathname: string;
-  originalUrlVariant?: string;
   applied: boolean;
 }> {
   const unchanged = {
     response: opts.response,
     pathname: opts.pathname,
-    originalUrlVariant: opts.originalUrlVariant,
     applied: false,
   };
   if (opts.response.status !== 404 || !opts.routing.fallbackRules?.length) {
@@ -299,9 +192,6 @@ async function applyWorkerFallbackRules(opts: {
   }
 
   const fallbackHeader = opts.originalUrlHeader ?? opts.originalRequestUrl;
-  const originalUrlVariant =
-    opts.originalUrlVariant ??
-    buildVariantOriginalUrl(opts.originalRequestUrl, opts.pathname, opts.routing.queryAllowlist);
   const fallbackUrl = new URL(opts.url.toString());
   fallbackUrl.pathname = fallback.destination;
   const fallbackRequest = rebuildRequest(opts.dispatchReq, fallbackUrl.toString(), (headers) =>
@@ -318,37 +208,8 @@ async function applyWorkerFallbackRules(opts: {
             'dispatch',
           ),
     pathname: fallback.destination,
-    originalUrlVariant,
     applied: true,
   };
-}
-
-function buildFallbackOriginalUrlVariant(
-  requestUrl: string,
-  pathname: string,
-  requestHost: string,
-  routing: RoutingEntry,
-  originalUrlVariant: string | undefined,
-): string | undefined {
-  // ISR keys a request by its allowlisted query params. A redirect-rule rewrite
-  // already built that variant. Fallback rewrites are discovered after the
-  // first worker/static miss, but ISR needs the read key before dispatching: if
-  // a fallback rule can handle this pathname, use the same original-URL variant
-  // a later fallback dispatch would expose via X-Void-Original-URL so
-  // query-allowlisted renders cannot collide with the direct ISR key. A direct
-  // request keys on its allowlisted params too, and keeps the bare key when it
-  // has none.
-  if (originalUrlVariant) {
-    return originalUrlVariant;
-  }
-  const variant = buildVariantOriginalUrl(requestUrl, pathname, routing.queryAllowlist);
-  const fallback = routing.fallbackRules?.length
-    ? applyRoutingRules(pathname, routing.fallbackRules, requestHost)
-    : undefined;
-  if (fallback?.type === 'rewrite') {
-    return variant;
-  }
-  return new URL(variant).search ? variant : undefined;
 }
 
 function resolveCachedWfpFallbackPathname(
@@ -581,7 +442,7 @@ async function maybeServeWfpAssetFallback(opts: {
   } catch (error) {
     // Once the CF poison stub is confirmed, never pass its HTTP 200 through:
     // callers may cache successful responses. Surface an attributed platform
-    // 503 instead so the failure is retryable without poisoning edge/ISR caches.
+    // 503 instead so the failure is retryable without poisoning edge caches.
     if (error instanceof DispatchTimeoutError) {
       if (!stubConfirmed) {
         return {
@@ -627,7 +488,7 @@ async function maybeServeWfpAssetFallback(opts: {
 /**
  * Rebuild a `Request` with mutated headers, optionally under a new URL.
  * Handles the body-preservation cases we hit at three points in the fetch
- * handler (ingress header-strip, rewrite URL swap, post-ISR dispatch):
+ * handler (ingress header-strip, rewrite URL swap, fallback dispatch):
  *
  * - Body already consumed/locked: drop body and any stale framing headers
  *   (`content-length` / `transfer-encoding`) — some runtimes reject bodiless
@@ -849,7 +710,6 @@ const dispatcher = {
       );
     }
     let pathname = url.pathname;
-    let sharedIsrEntry: SharedIsrEntry | undefined;
     let requestType: RequestType =
       request.headers.get('upgrade')?.toLowerCase() === 'websocket' ? 'websocket' : 'static';
 
@@ -907,15 +767,9 @@ const dispatcher = {
       return meter(timeoutResponse(503, 'dispatch'));
     };
 
-    // Routing rules — redirects short-circuit, rewrites modify pathname
-    // Two distinct values flow out of a rewrite:
-    //   - `originalUrlVariant`: feeds the ISR variant key. Normalized via
-    //     `routing.queryAllowlist` so an attacker can't fan out cache slots
-    //     by varying `?utm`/`?cb`/etc.
-    //   - `originalUrlHeader`: the X-Void-Original-URL surfaced to user
-    //     workers for `c.originalUrl()`. Carries the full request URL —
-    //     user code expects to see the actual URL the client sent.
-    let originalUrlVariant: string | undefined;
+    // Routing rules — redirects short-circuit, rewrites modify pathname.
+    // `originalUrlHeader` is the X-Void-Original-URL surfaced to user workers
+    // for `c.originalUrl()`: the full URL the client sent.
     let originalUrlHeader: string | undefined;
     if (routing.redirectRules?.length) {
       const result = applyRoutingRules(pathname, routing.redirectRules, url.hostname);
@@ -931,13 +785,12 @@ const dispatcher = {
         // (see `packages/api/src/routes/deploy.ts`). Dispatch trusts those two
         // gates and does not re-validate here.
         originalUrlHeader = request.url;
-        originalUrlVariant = buildVariantOriginalUrl(request.url, pathname, routing.queryAllowlist);
         pathname = result.destination;
         url.pathname = pathname;
       }
     }
 
-    // If rewritten, build the request the worker + ISR should see (rewritten
+    // If rewritten, build the request the worker should see (rewritten
     // URL + original-URL header).
     let workerRequest = request;
     if (originalUrlHeader) {
@@ -1171,368 +1024,9 @@ const dispatcher = {
       }
     }
 
-    // ISR: stale-while-revalidate for configured paths
-    // Two-layer cache: Edge (per-colo) → KV → Worker (render)
-    // Pages protocol (X-VoidPages) uses a separate JSON edge cache; HTML uses KV+edge.
-    // ISR applies to SSR page paths only. An API route or an asset-extension
-    // path that happens to match a catch-all page pattern must render live and
-    // never enter the ISR cache — mirrors the write-back path check below and
-    // how meta-frameworks resolve API routes to non-ISR outputs.
-    const isSsrPath =
-      routing.ssr === true &&
-      (routing.type !== 'framework' || isFrameworkDocumentRequest(request)) &&
-      isIsrEligiblePath(pathname, routing.pages, routing.revalidate, routing.pathRevalidate);
-    if (isSsrPath && (routing.revalidate || routing.pages?.length)) {
-      const isrTtl = resolvePageTtl(
-        routing.pages,
-        routing.revalidate,
-        routing.pathRevalidate,
-        pathname,
-      );
-      // Range requests must render LIVE so the origin produces a correct partial
-      // response (`206 Partial Content`) for the requested byte range. They must
-      // never read the shared ISR entry (a full body for a partial request) nor
-      // write it (a truncated 206 that a later full request would then be served),
-      // so bail out of the ISR ladder entirely before any cache read or write.
-      if (
-        isrTtl > 0 &&
-        request.method === 'GET' &&
-        !request.headers.has('Range') &&
-        // Let the app negotiate older clients instead of serving a rich JSON cache hit.
-        (!request.headers.has('X-VoidPages') ||
-          request.headers.get('X-VoidPages-Version') === PAGES_PROTOCOL_VERSION) &&
-        !shouldBypassIsr(request)
-      ) {
-        const isPagesRequest = request.headers.has('X-VoidPages');
-        const isrDeploymentId = routing.version ?? 'legacy';
-        const cache = applicationEdgeCache;
-        const isrOriginalUrlVariant = buildFallbackOriginalUrlVariant(
-          request.url,
-          pathname,
-          url.hostname,
-          routing,
-          originalUrlVariant,
-        );
-        // The key drops these params, but a render may still read them. Never
-        // store such a render under the shared key. Match the allowlist on the
-        // pre-rewrite path, as the rewrite variant does.
-        const unlisted = hasUnlistedQueryParams(
-          request.url,
-          new URL(request.url).pathname,
-          routing.queryAllowlist,
-        );
-        const cacheKey = isrEdgeCacheKey(request, pathname, isrDeploymentId, isrOriginalUrlVariant);
-        const jsonCacheKey = isrEdgeCacheKeyJson(
-          request,
-          pathname,
-          isrDeploymentId,
-          isrOriginalUrlVariant,
-        );
-        sharedIsrEntry = {
-          projectId: routing.projectId,
-          deploymentId: isrDeploymentId,
-          host: url.hostname,
-          pathname,
-          originalUrl: isrOriginalUrlVariant,
-          htmlKey: cacheKey,
-          jsonKey: jsonCacheKey,
-        };
-
-        // Pages protocol: check JSON edge cache, fall through on miss
-        if (isPagesRequest) {
-          const jsonCached = await cache.match(jsonCacheKey);
-          if (jsonCached && hasCurrentSharedCachePolicy(jsonCached)) {
-            requestType = 'isr';
-            return meter(clientRevalidateResponse(jsonCached));
-          }
-          if (jsonCached) {
-            await cache.delete(jsonCacheKey);
-          }
-          // Miss — fall through to general dispatch (worker returns JSON for X-VoidPages)
-        } else {
-          // HTML path: Edge → KV → Worker
-          const purgePoisonedIsrEntry = async (): Promise<void> => {
-            await deleteSharedIsrEntry(env, sharedIsrEntry!);
-          };
-
-          // L1: Edge cache (per-colo)
-          const edgeCached = await cache.match(cacheKey);
-          if (edgeCached && hasCurrentSharedCachePolicy(edgeCached)) {
-            requestType = 'isr';
-            const repairResult = await maybeServeWfpAssetFallback({
-              env,
-              routing,
-              pathname,
-              response: edgeCached,
-              userAgent: request.headers.get('user-agent'),
-              timeoutMs,
-              fallbackPathname: resolveCachedWfpFallbackPathname(pathname, routing, url.hostname),
-            });
-            if (repairResult.response !== edgeCached) {
-              ctx.waitUntil(purgePoisonedIsrEntry());
-              return meter(
-                repairResult.response.ok
-                  ? clientRevalidateResponse(repairResult.response)
-                  : repairResult.response,
-                repairResult.failureKind,
-              );
-            }
-            return meter(clientRevalidateResponse(edgeCached));
-          }
-          if (edgeCached) {
-            await cache.delete(cacheKey);
-          }
-
-          // L2: KV
-          const cached = await readIsrCache(
-            env,
-            routing.projectId,
-            isrDeploymentId,
-            url.hostname,
-            pathname,
-            isrOriginalUrlVariant,
-          );
-          if (cached) {
-            const stale = isStale(cached);
-            const cacheResponse = isrCacheResponse(cached, stale);
-            const repairResult = await maybeServeWfpAssetFallback({
-              env,
-              routing,
-              pathname,
-              response: cacheResponse,
-              userAgent: request.headers.get('user-agent'),
-              timeoutMs,
-              fallbackPathname: resolveCachedWfpFallbackPathname(pathname, routing, url.hostname),
-            });
-            if (repairResult.response !== cacheResponse) {
-              ctx.waitUntil(purgePoisonedIsrEntry());
-              requestType = 'isr';
-              return meter(
-                repairResult.response.ok
-                  ? clientRevalidateResponse(repairResult.response)
-                  : repairResult.response,
-                repairResult.failureKind,
-              );
-            }
-            if (stale) {
-              const staleCacheResponse = cacheResponse.clone();
-              // Refresh from the key's own URL, not the triggering one.
-              let revalidateRequest = workerRequest;
-              if (unlisted) {
-                const keyUrl = new URL(workerRequest.url);
-                keyUrl.search = isrOriginalUrlVariant ? new URL(isrOriginalUrlVariant).search : '';
-                revalidateRequest = rebuildRequest(workerRequest, keyUrl.toString(), (headers) => {
-                  if (originalUrlHeader && isrOriginalUrlVariant) {
-                    headers.set('X-Void-Original-URL', isrOriginalUrlVariant);
-                  }
-                });
-              }
-              ctx.waitUntil(
-                revalidateInBackground(
-                  env,
-                  routing,
-                  revalidateRequest,
-                  url.hostname,
-                  pathname,
-                  isrTtl,
-                  cacheKey,
-                  jsonCacheKey,
-                  cached.createdAt + cached.ttl * 1000,
-                  isrOriginalUrlVariant,
-                  timeoutMs,
-                ).then(async (sharedEntryChanged) => {
-                  if (!sharedEntryChanged) {
-                    await cache.put(cacheKey, staleCacheResponse);
-                  }
-                }),
-              );
-            }
-            requestType = 'isr';
-            if (!stale) {
-              ctx.waitUntil(cache.put(cacheKey, cacheResponse.clone()));
-            }
-            return meter(clientRevalidateResponse(cacheResponse));
-          }
-
-          // Cache miss: render via worker, cache in background
-          requestType = 'isr';
-          const worker = getWorker(env, routing);
-          const isrWorkerStartedAt = Date.now();
-          const isrWorkerDeadline =
-            env.DISPATCH_TIMEOUT_MS === undefined
-              ? undefined
-              : { startedAt: isrWorkerStartedAt, timeoutMs: workerTimeoutMs };
-          let workerResponse: Response;
-          try {
-            workerResponse = await withTimeout(
-              worker.fetch(workerRequest),
-              remainingTimeoutBudget(isrWorkerStartedAt, workerTimeoutMs, 'dispatch'),
-              'dispatch',
-            );
-          } catch (error) {
-            if (error instanceof DispatchTimeoutError) {
-              return meterWorkerTimeout();
-            }
-            throw error;
-          }
-          let isWorkerEventStream = isEventStreamResponse(workerResponse);
-          let workerResponseFailureKind: FailureKind | undefined;
-          // The pathname the ISR write is effectively for. A fallback rewrite can
-          // turn a page 404 into a 200 from `/api/*` — a dynamic body that must
-          // never be cached under the original page URL. `fallbackResult` is
-          // block-scoped below, so capture its post-fallback pathname AND whether a
-          // fallback fired here (the write gate needs both, out of that scope).
-          let effectiveMissPathname = pathname;
-          let missFallbackApplied = false;
-          if (!isWorkerEventStream) {
-            const assetFallbackResult = await maybeServeWfpAssetFallback({
-              env,
-              routing,
-              pathname,
-              response: workerResponse,
-              userAgent: request.headers.get('user-agent'),
-              deadline: isrWorkerDeadline,
-            });
-            workerResponse = assetFallbackResult.response;
-            workerResponseFailureKind = assetFallbackResult.failureKind;
-            isWorkerEventStream = isEventStreamResponse(workerResponse);
-          }
-          if (!isWorkerEventStream) {
-            let fallbackResult: Awaited<ReturnType<typeof applyWorkerFallbackRules>>;
-            try {
-              fallbackResult = await applyWorkerFallbackRules({
-                response: workerResponse,
-                worker,
-                dispatchReq: workerRequest,
-                routing,
-                pathname,
-                url,
-                originalRequestUrl: request.url,
-                originalUrlHeader,
-                originalUrlVariant: isrOriginalUrlVariant,
-                deadline: isrWorkerDeadline,
-              });
-            } catch (error) {
-              if (error instanceof DispatchTimeoutError) {
-                return meterWorkerTimeout();
-              }
-              throw error;
-            }
-            if (fallbackResult.applied) {
-              missFallbackApplied = true;
-              effectiveMissPathname = fallbackResult.pathname;
-              workerResponse = fallbackResult.response;
-              isWorkerEventStream = isEventStreamResponse(workerResponse);
-              if (!isWorkerEventStream) {
-                const assetFallbackResult = await maybeServeWfpAssetFallback({
-                  env,
-                  routing,
-                  pathname: fallbackResult.pathname,
-                  response: workerResponse,
-                  userAgent: request.headers.get('user-agent'),
-                  deadline: isrWorkerDeadline,
-                });
-                workerResponse = assetFallbackResult.response;
-                workerResponseFailureKind = assetFallbackResult.failureKind;
-                isWorkerEventStream = isEventStreamResponse(workerResponse);
-              }
-            }
-          }
-          if (isWorkerEventStream) {
-            return meter(workerResponse);
-          }
-          const ttl = resolveRevalidateTtl(workerResponse, isrTtl);
-          // Only a full 200 may enter the shared full-response cache. `.ok` is
-          // 200–299 (INCLUDING 206 Partial Content), which would poison the entry.
-          // Also gate on the POST-fallback pathname: a fallback that rewrote the
-          // page 404 into a 200 from `/api/*` must never be cached under the
-          // original page URL (an `/api` body is per-request dynamic). Never cache
-          // a response that DECLARES itself uncacheable via Cache-Control
-          // (private/no-store/no-cache). Finally — the shared-cache-safety gate —
-          // when a FALLBACK was APPLIED the render may enter the ORIGINAL page key
-          // ONLY when the fallback TARGET is the WINNING EXACT declared literal ISR
-          // page AND the render is HTML (see `isFallbackTargetCacheable`). Any other
-          // target — a dotted `text/html` shell (`/account.html`), an undeclared
-          // extensionless target (e.g. `/* → /graphql`), a catch-all/param page
-          // match — is INDISTINGUISHABLE here from a per-user dynamic endpoint, so it
-          // is NOT shared-cached (it is still SERVED live). Positive identification —
-          // never the mere ABSENCE of an opt-out header — is required: a
-          // user-configured rewrite to a private endpoint must not be able to poison
-          // the page key just by omitting Cache-Control.
-          if (
-            !unlisted &&
-            ttl > 0 &&
-            workerResponse.status === 200 &&
-            (routing.type !== 'framework' || isHtmlResponse(workerResponse)) &&
-            !isApiPath(effectiveMissPathname) &&
-            !hasSharedCacheOptOut(workerResponse) &&
-            (!missFallbackApplied ||
-              isFallbackTargetCacheable(
-                routing.pages,
-                effectiveMissPathname,
-                workerResponse,
-                routing.pathRevalidate,
-              ))
-          ) {
-            ctx.waitUntil(
-              writeIsrCache(
-                env,
-                routing.projectId,
-                isrDeploymentId,
-                url.hostname,
-                pathname,
-                workerResponse,
-                ttl,
-                isrOriginalUrlVariant,
-              ),
-            );
-            ctx.waitUntil(populateJsonEdgeCache(cache, jsonCacheKey, workerResponse, ttl, 'HIT'));
-            const cacheHeaders = new Headers(workerResponse.headers);
-            cacheHeaders.set(
-              'Cache-Control',
-              `public, s-maxage=${ttl}, max-age=0, must-revalidate`,
-            );
-            cacheHeaders.set('x-isr-cache', 'MISS');
-            markSharedCachePolicy(cacheHeaders);
-            cacheHeaders.delete('x-void-page-data');
-            cacheHeaders.delete('set-cookie');
-            // Later requests read this copy from the edge, so it is stored as a HIT;
-            // only this client response reports the MISS.
-            const edgeHeaders = new Headers(cacheHeaders);
-            edgeHeaders.set('x-isr-cache', 'HIT');
-            const cacheResponse = new Response(workerResponse.clone().body, {
-              status: workerResponse.status,
-              headers: edgeHeaders,
-            });
-            ctx.waitUntil(cache.put(cacheKey, cacheResponse.clone()));
-
-            const clientHeaders = new Headers(cacheHeaders);
-            clientHeaders.set('Cache-Control', CLIENT_REVALIDATE_CACHE_CONTROL);
-            clientHeaders.delete(SHARED_CACHE_POLICY_HEADER);
-            const clientResponse = new Response(workerResponse.body, {
-              status: workerResponse.status,
-              headers: clientHeaders,
-            });
-            return meter(clientResponse, workerResponseFailureKind);
-          }
-          if (
-            workerResponse.status === 200 &&
-            !missFallbackApplied &&
-            (ttl === 0 ||
-              hasSharedCacheOptOut(workerResponse) ||
-              (routing.type === 'framework' && !isHtmlResponse(workerResponse)))
-          ) {
-            ctx.waitUntil(purgePoisonedIsrEntry());
-          }
-          return meter(workerResponse, workerResponseFailureKind);
-        }
-      }
-    }
-
     // Edge-cache non-hashed static assets using deploy-versioned cache keys.
     // The same request gate feeds both cache reads and writes. Credentialed,
-    // Range, and Pages-protocol requests must reach the worker instead of a
-    // shared representation. For SSR deployments, a dotted path is only a
+    // and Range requests must reach the worker instead of a shared representation. For SSR deployments, a dotted path is only a
     // candidate when the emitted asset manifest positively identifies it.
     const staticCachePathname = pathname;
     // `false` only when this SSR deploy's asset manifest was read and no asset
@@ -1544,24 +1038,9 @@ const dispatcher = {
 
     let staticCacheKey: Request | undefined;
     if (isStaticCandidate) {
-      // Project allowlisted query params into the key so a dynamic extensioned
-      // route whose body depends on the query (e.g. an image/badge endpoint that
-      // declares `queryAllowlist`) caches per-variant instead of collapsing to the
-      // first render. Only EXACT (wildcard-free) allowlist patterns opt in: this
-      // static-candidate cache has no per-path variant cap (unlike ISR), so a broad
-      // `*` / prefix-wildcard entry here could let a cache-buster query fan out
-      // true static assets. `buildVariantOriginalUrl` drops the query entirely when
-      // no pattern matches, so a route with no exact match keeps its pathname-only
-      // key — unchanged behavior. The allowlist is authored against the user-facing
-      // path, so match on the original request pathname (a rewrite above may have
-      // reassigned `pathname` to a destination).
-      const cacheUrl = new URL(
-        buildVariantOriginalUrl(
-          request.url,
-          new URL(request.url).pathname,
-          exactQueryAllowlist(routing.queryAllowlist),
-        ),
-      );
+      // A deployed file's body does not depend on the query, so key on the path.
+      const cacheUrl = new URL(request.url);
+      cacheUrl.search = '';
       cacheUrl.searchParams.set('_v', String(routing.version));
       const candidateCacheKey = new Request(cacheUrl.toString());
       staticCacheKey = candidateCacheKey;
@@ -1790,11 +1269,6 @@ const dispatcher = {
       // The user worker is the equivalent path resolver here, so
       // a 404 is the analogue of a static-asset miss. Single-pass: the
       // rewrite target's response is returned as-is even if it's also 404.
-      //
-      // `fallbackResult` is block-scoped below, but the ISR write-back gate
-      // needs to know whether a fallback fired (the fallback-target positive-ID
-      // check). Hoist the flag out here — mirrors the miss-write's
-      // `missFallbackApplied`.
       let writebackFallbackApplied = false;
       if (!isEventStream) {
         const fallbackResult = await applyWorkerFallbackRules({
@@ -1806,14 +1280,12 @@ const dispatcher = {
           url,
           originalRequestUrl: request.url,
           originalUrlHeader,
-          originalUrlVariant,
           deadline: workerDeadline,
         });
         if (fallbackResult.applied) {
           writebackFallbackApplied = true;
           pathname = fallbackResult.pathname;
           url.pathname = pathname;
-          originalUrlVariant = fallbackResult.originalUrlVariant;
           response = fallbackResult.response;
           isEventStream = isEventStreamResponse(response);
           if (!isEventStream) {
@@ -1832,33 +1304,11 @@ const dispatcher = {
         }
       }
 
-      if (
-        sharedIsrEntry &&
-        response.status === 200 &&
-        !writebackFallbackApplied &&
-        (resolveRevalidateTtl(
-          response,
-          resolvePageTtl(
-            routing.pages,
-            routing.revalidate,
-            routing.pathRevalidate,
-            sharedIsrEntry.pathname,
-          ),
-        ) === 0 ||
-          hasSharedCacheOptOut(response) ||
-          (routing.type === 'framework' && !isHtmlResponse(response)))
-      ) {
-        ctx.waitUntil(deleteSharedIsrEntry(env, sharedIsrEntry));
-      }
-
       // Cache static asset at edge if eligible. Require a full 200 — `.ok` is
-      // 200–299 and would admit a `206 Partial Content` (a Range request to a
-      // dotted SSR path skips the ISR ladder and falls through here), poisoning
-      // the shared `<path>?_v=` key with a partial body that a later full request
-      // could then be served. Mirrors the `status === 200` guard at the ISR sites.
+      // 200–299 and would admit a `206 Partial Content`, poisoning the shared
+      // `<path>?_v=` key with a partial body that a later full request could then be served.
       if (staticCacheKey && !writebackFallbackApplied && isStaticCacheResponseEligible(response)) {
         const res = new Response(response.body, response);
-        res.headers.delete('x-void-page-data');
         const finalRes = applyHeaderRules(res, pathname, routing.headerRules);
         const cacheRes = new Response(finalRes.clone().body, finalRes);
         cacheRes.headers.set(
@@ -1885,94 +1335,6 @@ const dispatcher = {
         requestType = dynamicType;
       }
 
-      // Write ISR cache on miss — skip pages protocol responses (JSON, not HTML)
-      // Guard: only cache GET requests without credentials, and respect worker x-revalidate
-      // Range requests are excluded here too: a partial (206) response must never
-      // be written into the shared full-response ISR cache. Mirrors the ISR-ladder
-      // guard above.
-      if (
-        (routing.revalidate || routing.pages?.length) &&
-        !isEventStream &&
-        !request.headers.has('X-VoidPages') &&
-        request.method === 'GET' &&
-        !request.headers.has('Range') &&
-        (routing.type !== 'framework' || isFrameworkDocumentRequest(request)) &&
-        !shouldBypassIsr(request)
-      ) {
-        const configTtl = resolvePageTtl(
-          routing.pages,
-          routing.revalidate,
-          routing.pathRevalidate,
-          pathname,
-        );
-        // Config TTL is the gatekeeper — worker x-revalidate can reduce but not enable ISR
-        const isrTtl = configTtl > 0 ? resolveRevalidateTtl(response, configTtl) : 0;
-        // Only a full 200 is cacheable — `.ok` (200–299) would let a 206 poison the entry.
-        // `pathname` is the POST-fallback pathname, so the SSR path check below
-        // already skips a fallback that rewrote to `/api` — the same `/api` exclusion
-        // the miss-write and background-revalidation sites spell out with
-        // `!isApiPath(effective…)`. (This SSR-path gate is stricter than those two:
-        // it also skips extension targets, but requests reaching this branch are not
-        // the ssr+revalidate ISR-ladder path where SPA `/index.html` fallbacks cache.)
-        // A path with a file extension never enters the ISR cache here, even when
-        // metering labels it `ssr` because the app's own route answered.
-        //
-        // Fallback positive-ID gate — the same one the miss-write and background sites
-        // enforce: when a FALLBACK rewrote this request, the render may enter the shared
-        // cache under the fallback TARGET key ONLY when that target is a positively
-        // identified declared literal ISR page rendering HTML (`isFallbackTargetCacheable`).
-        // A non-fallback SSR render is unaffected. This makes all three ISR write sites
-        // apply identical fallback policy: a rewrite to an undeclared dynamic target
-        // (e.g. `/api/* → /graphql`) is served LIVE but never shared-cached, even when it
-        // omits a Cache-Control opt-out. (Without this, such a write is unreadable —
-        // keyed `<target>#rw=hash(<original non-ISR-eligible path>)`, which no later
-        // request recomputes — but it is still a wasted KV write and a defense-in-depth
-        // gap, so the gate is correct as both consistency and hardening.)
-        if (
-          isrTtl > 0 &&
-          response.status === 200 &&
-          routing.ssr &&
-          !isApiPath(pathname) &&
-          !hasExtension(pathname) &&
-          (routing.type !== 'framework' || isHtmlResponse(response)) &&
-          !hasSharedCacheOptOut(response) &&
-          (!writebackFallbackApplied ||
-            isFallbackTargetCacheable(routing.pages, pathname, response, routing.pathRevalidate))
-        ) {
-          const isrDeploymentId = routing.version ?? 'legacy';
-          ctx.waitUntil(
-            writeIsrCache(
-              env,
-              routing.projectId,
-              isrDeploymentId,
-              url.hostname,
-              pathname,
-              response,
-              isrTtl,
-              originalUrlVariant,
-            ),
-          );
-          const jsonCacheKey = isrEdgeCacheKeyJson(
-            request,
-            pathname,
-            isrDeploymentId,
-            originalUrlVariant,
-          );
-          ctx.waitUntil(
-            populateJsonEdgeCache(applicationEdgeCache, jsonCacheKey, response, isrTtl, 'HIT'),
-          );
-        }
-      }
-
-      // Strip internal header before returning to client
-      if (response.headers.has('x-void-page-data')) {
-        const stripped = new Response(response.body, response);
-        stripped.headers.delete('x-void-page-data');
-        return meter(
-          applyHeaderRules(stripped, pathname, routing.headerRules),
-          responseFailureKind,
-        );
-      }
       return meter(applyHeaderRules(response, pathname, routing.headerRules), responseFailureKind);
     } catch (err) {
       if (err instanceof DispatchTimeoutError) {
@@ -2350,240 +1712,6 @@ function getWorker(env: Env, routing: RoutingEntry): Fetcher {
   return env.DISPATCH.get(routing.workerName);
 }
 
-/**
- * Revalidate an ISR page in the background.
- * Dispatches to the user worker (always as HTML, no X-VoidPages), writes HTML
- * to KV + HTML edge cache, and populates JSON edge cache from embedded page data.
- * Errors are caught and logged — serve stale, don't retry.
- */
-async function revalidateInBackground(
-  env: Env,
-  routing: RoutingEntry,
-  request: Request,
-  host: string,
-  pathname: string,
-  defaultTtl: number,
-  cacheKey: Request,
-  jsonCacheKey: Request,
-  staleSinceMs: number,
-  originalUrl?: string | null,
-  timeoutMs = 10000,
-): Promise<boolean> {
-  try {
-    const worker = getWorker(env, routing);
-    const revalidationStartedAt = Date.now();
-    // Strip Pages protocol headers so the worker always returns HTML.
-    // Use rebuildRequest so request.cf (country/colo/botManagement/tlsClientAuth)
-    // survives the rebuild — otherwise the background re-render runs with
-    // cf === undefined and writes wrong-geo/wrong-bot HTML into the ISR cache.
-    const cleanRequest = rebuildRequest(request, request.url, (headers) => {
-      headers.delete('X-VoidPages');
-      headers.delete('X-VoidPages-Version');
-    });
-    let response = await withTimeout(
-      worker.fetch(cleanRequest),
-      remainingTimeoutBudget(revalidationStartedAt, timeoutMs, 'dispatch'),
-      'dispatch',
-    );
-    if (isEventStreamResponse(response)) {
-      return false;
-    }
-    // Capture the ORIGIN page's OWN pre-fallback status. Only a genuine removal
-    // signal (404/410 Gone) may later drive grace-eviction; a transient 5xx / 429 /
-    // timeout must PRESERVE the stale entry (stale-while-revalidate). Read it here,
-    // before `applyWorkerFallbackRules` reassigns `response` to a fallback target.
-    const originalStatus = response.status;
-    const fallbackResult = await applyWorkerFallbackRules({
-      response,
-      worker,
-      dispatchReq: cleanRequest,
-      routing,
-      pathname,
-      url: new URL(cleanRequest.url),
-      originalRequestUrl: request.url,
-      originalUrlHeader: request.headers.get('X-Void-Original-URL') ?? undefined,
-      originalUrlVariant: originalUrl ?? undefined,
-      deadline: { startedAt: revalidationStartedAt, timeoutMs },
-    });
-    response = fallbackResult.response;
-    if (isEventStreamResponse(response)) {
-      return false;
-    }
-    const assetFallbackResult = await maybeServeWfpAssetFallback({
-      env,
-      routing,
-      pathname: fallbackResult.pathname,
-      response,
-      userAgent: request.headers.get('user-agent'),
-      deadline: { startedAt: revalidationStartedAt, timeoutMs },
-    });
-    response = assetFallbackResult.response;
-    if (isEventStreamResponse(response)) {
-      return false;
-    }
-    const ttl = resolveRevalidateTtl(response, defaultTtl);
-    const cache = applicationEdgeCache;
-    // Evict every shared representation of this entry: KV + HTML edge + JSON edge.
-    const evictSharedEntry = async () => {
-      await deleteIsrCache(
-        env,
-        routing.projectId,
-        routing.version ?? 'legacy',
-        host,
-        pathname,
-        originalUrl,
-      );
-      await cache.delete(cacheKey);
-      await cache.delete(jsonCacheKey);
-    };
-    // The pathname this background re-render effectively resolved to. A fallback
-    // rewrite (page 404 → 200 from `/api/*`) must not overwrite the page's ISR
-    // entry with a dynamic API body — same guard as the miss-write.
-    const effectiveBgPathname = fallbackResult.applied ? fallbackResult.pathname : pathname;
-    // Only a full 200 may refresh the shared cache — a background re-render that
-    // returns 206/etc. (`.ok` is 200–299) must not overwrite the good entry.
-    // A re-render that falls back to `/api/*` must not overwrite the page's entry
-    // with a dynamic API body. And — the shared-cache-safety gate mirrored from the
-    // miss-write — when a FALLBACK was APPLIED the re-render may refresh the ORIGINAL
-    // page key ONLY when its TARGET is the winning EXACT declared literal ISR page
-    // and the render is HTML; any other target (a dotted shell, an undeclared
-    // extensionless `/graphql`) is not shared-cached and must not overwrite the entry.
-    if (
-      ttl > 0 &&
-      response.status === 200 &&
-      (routing.type !== 'framework' || isHtmlResponse(response)) &&
-      !isApiPath(effectiveBgPathname) &&
-      !hasSharedCacheOptOut(response) &&
-      (!fallbackResult.applied ||
-        isFallbackTargetCacheable(
-          routing.pages,
-          effectiveBgPathname,
-          response,
-          routing.pathRevalidate,
-        ))
-    ) {
-      await writeIsrCache(
-        env,
-        routing.projectId,
-        routing.version ?? 'legacy',
-        host,
-        pathname,
-        response,
-        ttl,
-        originalUrl,
-      );
-      // Update HTML edge cache with fresh response
-      const headers = new Headers(response.headers);
-      headers.set('x-isr-cache', 'HIT');
-      headers.set('Cache-Control', `public, s-maxage=${ttl}, max-age=0, must-revalidate`);
-      markSharedCachePolicy(headers);
-      headers.delete('set-cookie');
-      headers.delete('x-void-page-data');
-      await cache.put(
-        cacheKey,
-        new Response(response.clone().body, {
-          status: response.status,
-          headers,
-        }),
-      );
-      await populateJsonEdgeCache(cache, jsonCacheKey, response, ttl, 'HIT');
-      return true;
-    } else if (
-      response.status === 200 &&
-      !isApiPath(effectiveBgPathname) &&
-      !fallbackResult.applied &&
-      (ttl === 0 ||
-        hasSharedCacheOptOut(response) ||
-        (routing.type === 'framework' && !isHtmlResponse(response)))
-    ) {
-      // Evict the stale shared entry ONLY on an AUTHORITATIVE opt-out render of the
-      // ORIGIN page itself: a successful render (200, NOT an `/api/*` fallback, and
-      // NOT ANY applied fallback) that has withdrawn its public representation —
-      // either a permanent `x-revalidate: 0` opt-out OR a `Cache-Control` opt-out
-      // (private/no-store/no-cache). A FALLBACK firing means the ORIGIN page 404'd
-      // (often transiently — deploy race); the fallback TARGET's cache intent must
-      // NOT delete the origin page's last-known-good entry, so `!fallbackResult.applied`
-      // gates eviction to an authoritative render of the origin page. A transient
-      // non-200 (even one carrying `x-revalidate: 0`) likewise must NOT evict — keep
-      // serving the last known-good entry (stale-while-revalidate resilience). The
-      // write gate already refuses to cache non-authoritative content, so eviction
-      // must mirror it. Removes KV + HTML + JSON edge.
-      try {
-        await evictSharedEntry();
-      } catch (error) {
-        console.error('ISR privacy eviction failed:', error);
-      }
-      return true;
-    } else if (
-      (originalStatus === 404 || originalStatus === 410) &&
-      Date.now() - staleSinceMs > ISR_STALE_EVICT_GRACE_SECONDS * 1000
-    ) {
-      // Convergence — ONLY on positive removal evidence: the ORIGIN page's OWN
-      // pre-fallback render returned 404 or 410 (gone). Such a re-render could neither
-      // refresh this entry nor trigger the authoritative opt-out eviction above (a
-      // permanent origin 404 that falls back to a non-declared shell — the write gate
-      // refuses to cache it). It has now been STALE (since `createdAt + ttl`) beyond the bounded
-      // grace — far past any transient deploy-race 404 — so the page is permanently
-      // removed: evict it rather than serve its last cached body forever. A 5xx / 429 /
-      // timeout / any other status is a DEGRADED DEPENDENCY, not a removal — it MUST
-      // keep serving stale (stale-while-revalidate is exactly what protects that
-      // request), so it never reaches this branch. Measuring from stale-onset (not
-      // creation) means a long-TTL entry still gets the full grace and a transient
-      // failure right after expiry keeps serving stale within the grace.
-      try {
-        await evictSharedEntry();
-      } catch (error) {
-        console.error('ISR stale-entry eviction failed:', error);
-      }
-      return true;
-    }
-    return false;
-  } catch (err) {
-    console.error('ISR revalidation failed:', err);
-    return false;
-  }
-}
-
-// ISR eligibility for a REQUEST's own pathname: SSR page paths only — never an
-// `/api` route. A dotted path is ISR-eligible only when it matches a declared
-// page route that is NOT a broad catch-all — a literal (`/feed.xml`) or a
-// single-segment param (`/blog/:slug`, so `/blog/release.v2` gets ISR). A broad
-// catch-all (`/:path{.+}`, `*`) that merely happens to match a static asset like
-// `/robots.txt` does NOT make it page-ISR content. This is the read-gate
-// predicate; it deliberately does NOT gate the fallback WRITE sites, which key
-// off the fallback TARGET (see `isFallbackTargetCacheable`).
-function isIsrEligiblePath(
-  pathname: string,
-  pages: ReadonlyArray<{ pattern: string; revalidate?: number }> | undefined,
-  revalidate: number | Record<string, number> | undefined,
-  pathRevalidate: Record<string, number> | undefined,
-): boolean {
-  if (isApiPath(pathname)) {
-    return false;
-  }
-  if (!hasExtension(pathname)) {
-    return true;
-  }
-  return isDottedPathIsrEligible(pages, revalidate, pathRevalidate, pathname);
-}
-
-// A fallback render may enter the shared ORIGINAL page key ONLY when the target is
-// the WINNING EXACT declared literal ISR page AND the render is HTML. There is no
-// safe path-shape signal for a "static shell": a dotted `text/html` target
-// (`/account.html`) is indistinguishable here from a dynamic per-user endpoint, so
-// path shape is NOT trusted. A static SPA shell reached via fallback is still
-// SERVED live; it is simply no longer opportunistically ISR-cached under a page key
-// (its cache home is the static-asset path). Full metadata-verified shell caching
-// would need an async asset-manifest lookup this write path does not have.
-function isFallbackTargetCacheable(
-  pages: ReadonlyArray<{ pattern: string; revalidate?: number }> | undefined,
-  targetPathname: string,
-  response: Response,
-  pathRevalidate: Record<string, number> | undefined,
-): boolean {
-  return isHtmlResponse(response) && matchesLiteralPage(pages, targetPathname, pathRevalidate);
-}
-
 /** Match Cloudflare's glob-only rules, with asset exclusions taking precedence. */
 function workerRunsBeforeAssets(routing: RoutingEntry, pathname: string): boolean {
   if (routing.staticDeploymentId) {
@@ -2608,14 +1736,11 @@ function workerRunsBeforeAssets(routing: RoutingEntry, pathname: string): boolea
 
 /**
  * Every static cache shares one representation across callers, so credentials,
- * EventSource semantics, partial requests, and Pages-protocol requests bypass it.
+ * EventSource semantics, and partial requests bypass it.
  */
 function isSharedStaticCacheRequestEligible(request: Request): boolean {
   return Boolean(
-    request.method === 'GET' &&
-    !request.headers.has('Range') &&
-    !request.headers.has('X-VoidPages') &&
-    !shouldBypassIsr(request),
+    request.method === 'GET' && !request.headers.has('Range') && !bypassesSharedCache(request),
   );
 }
 

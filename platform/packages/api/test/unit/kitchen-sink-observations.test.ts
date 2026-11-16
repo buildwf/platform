@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
 import {
   resetKitchenSink,
-  waitForChangedRender,
   waitForFreshHeartbeat,
-  waitForIsrCacheHit,
 } from '../../../../scripts/kitchen-sink-observations.ts';
 
 function clock() {
@@ -83,38 +81,5 @@ describe('kitchen-sink acceptance observations', () => {
       waitForFreshHeartbeat(read, { ...options, notBefore: options.now() }),
     ).resolves.toBe('2026-10-01T00:00:01Z');
     expect(read).toHaveBeenCalledTimes(2);
-  });
-
-  it('does not accept an unchanged render or a non-date label as proof of a purge', async () => {
-    const options = clock();
-    const previous = '2026-10-01T00:00:00Z';
-    const read = vi
-      .fn()
-      .mockResolvedValueOnce(previous)
-      .mockResolvedValueOnce('void/isr')
-      .mockResolvedValueOnce('2026-10-01T00:00:02Z');
-    await expect(waitForChangedRender(read, previous, options)).resolves.toBe(
-      '2026-10-01T00:00:02Z',
-    );
-    expect(read).toHaveBeenCalledTimes(3);
-  });
-
-  it('fails when the cached render remains unchanged after an accepted purge', async () => {
-    const options = clock();
-    const previous = '2026-10-01T00:00:00Z';
-    await expect(waitForChangedRender(async () => previous, previous, options)).rejects.toThrow(
-      'check the purge outcome, ISR cache configuration, and fixture loader',
-    );
-  });
-
-  it('requires an actual cache hit before testing a purge on a public target', async () => {
-    const options = clock();
-    const read = vi
-      .fn()
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce('MISS')
-      .mockResolvedValueOnce('HIT');
-    await expect(waitForIsrCacheHit(read, options)).resolves.toBe('HIT');
-    expect(read).toHaveBeenCalledTimes(3);
   });
 });

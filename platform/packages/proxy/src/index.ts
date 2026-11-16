@@ -16,7 +16,6 @@ import { verifyTenantProxyToken } from './proxy-token.ts';
 import { r2 } from './r2.ts';
 import { readRequestJson, requestBodyMaxBytes, RequestBodyError } from './request-body.ts';
 import { verifyPrerenderAuthority, verifyProjectDeployAccess } from './resolve.ts';
-import { revalidate } from './revalidate.ts';
 import type { Env, JwtPayload, ProxyBody, ProxyEnv } from './types.ts';
 
 const app = new Hono<ProxyEnv>();
@@ -330,7 +329,6 @@ app.route('/ai', ai);
 app.route('/d1', d1);
 app.route('/kv', kv);
 app.route('/r2', r2);
-app.route('/revalidate', revalidate);
 app.route('/email', email);
 
 export default { fetch: app.fetch };

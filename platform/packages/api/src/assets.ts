@@ -2,7 +2,6 @@ import { extname } from 'node:path';
 import { createHasher } from 'blake3-jit';
 import mime from 'mime';
 import { retryWithBackoff } from './cf-api.ts';
-import { isrObjectPrefix } from './isr-store.ts';
 import type { AssetConfig } from './types.ts';
 
 class AssetUploadError extends Error {
@@ -764,7 +763,8 @@ export async function deleteWorkerBundle(
 export async function deleteProjectAssets(r2: R2Bucket, projectId: string): Promise<void> {
   await paginatedR2Delete(r2, `assets/${projectId}/`);
   await paginatedR2Delete(r2, `deployment-inputs/${projectId}/`);
-  await paginatedR2Delete(r2, isrObjectPrefix(projectId));
+  // Page caches written by earlier releases, which served ISR.
+  await paginatedR2Delete(r2, `isr-cache/${projectId}/`);
 }
 
 /**

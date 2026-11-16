@@ -84,15 +84,15 @@ export const POST = () => sendEmail({ to: 'test@example.com', subject: 'Test', t
   });
 
   it('preserves the native Sandbox example while removing its hosted routes and links', () => {
-    for (const path of ['routes/api/sandbox.ts', 'pages/sandbox.tsx', 'pages/sandbox.server.ts']) {
+    for (const path of ['routes/api/sandbox.ts', 'src/Sandbox.tsx']) {
       expect(existsSync(resolve(fixture.root, path))).toBe(false);
       expect(
         existsSync(resolve(import.meta.dirname, '../../../../playground/kitchen-sink', path)),
       ).toBe(true);
     }
-    for (const path of ['pages/layout.tsx', 'pages/index.tsx']) {
-      expect(readFileSync(resolve(fixture.root, path), 'utf8')).not.toContain('href="/sandbox"');
-    }
+    const app = readFileSync(resolve(fixture.root, 'src/App.tsx'), 'utf8');
+    expect(app).not.toContain('href="/sandbox"');
+    expect(app).not.toContain('Sandbox.tsx');
   });
 
   it('includes the Sandbox example when explicitly enabled without copying local secrets', () => {
@@ -100,18 +100,15 @@ export const POST = () => sendEmail({ to: 'test@example.com', subject: 'Test', t
     try {
       for (const path of [
         'routes/api/sandbox.ts',
-        'pages/sandbox.tsx',
-        'pages/sandbox.server.ts',
+        'src/Sandbox.tsx',
         'lib/sandbox-demo.ts',
         'routes/api/acceptance/sandbox.ts',
       ]) {
         expect(existsSync(resolve(sandboxFixture.root, path))).toBe(true);
       }
-      for (const path of ['pages/layout.tsx', 'pages/index.tsx']) {
-        expect(readFileSync(resolve(sandboxFixture.root, path), 'utf8')).toContain(
-          'href="/sandbox"',
-        );
-      }
+      expect(readFileSync(resolve(sandboxFixture.root, 'src/App.tsx'), 'utf8')).toContain(
+        'href="/sandbox"',
+      );
       expect(existsSync(resolve(sandboxFixture.root, '.env'))).toBe(false);
     } finally {
       sandboxFixture.cleanup();
