@@ -8,7 +8,6 @@ import 'virtual:group-icons.css';
 import './styles.css';
 import DocFooter from './DocFooter.vue';
 import FileTree from './FileTree.vue';
-import PagesFileTree from './PagesFileTree.vue';
 import RoutesFileTree from './RoutesFileTree.vue';
 import logoDark from './void-dark.svg';
 import logoLight from './void-light.svg';
@@ -64,7 +63,6 @@ export default {
   },
   enhanceApp({ app }) {
     app.component('FileTree', FileTree);
-    app.component('PagesFileTree', PagesFileTree);
     app.component('RoutesFileTree', RoutesFileTree);
     app.component('VoidAppFileTree', VoidAppFileTree);
     app.provide(themeContextKey, {

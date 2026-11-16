@@ -226,7 +226,7 @@ curl -X DELETE http://localhost:5173/__void/inbox \
 
 The inbox keeps the most recent 100 messages through HMR and clears on a full server restart.
 
-The dev inbox works in native Void apps, TanStack Start, and React Router. It is unavailable in SvelteKit, Nuxt, Analog, and Astro; sends from those apps return `BINDING_MISSING`. Use `createEmailTestHarness` from `void/email/testing` to capture sends in tests. If a configured inbox cannot be reached, `sendEmail` returns `UPSTREAM_ERROR` without sending.
+The dev inbox works in Void apps. Use `createEmailTestHarness` from `void/email/testing` to capture sends in tests. If a configured inbox cannot be reached, `sendEmail` returns `UPSTREAM_ERROR` without sending.
 
 Remove the deprecated `sendInDev` option to use the local inbox. Deploy the app to test real delivery.
 

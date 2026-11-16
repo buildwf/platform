@@ -5,7 +5,7 @@ outline: deep
 
 # Receiving Email {#inbound}
 
-Receive mail with handlers in the top-level `email/` directory. Inbound handlers require a native Void app; framework and Node.js, Bun, or Deno builds do not support them.
+Receive mail with handlers in the top-level `email/` directory. Inbound handlers require a Void app with a Worker.
 
 ```ts
 // email/_default.ts — fallback for any unmatched recipient

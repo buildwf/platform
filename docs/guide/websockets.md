@@ -5,10 +5,6 @@ outline: deep
 
 # WebSockets
 
-::: warning ⚠️ Void Apps Only
-Typed WebSocket routes currently work in native Void apps. They aren't available in meta-framework mode yet.
-:::
-
 Create a `.ws.ts` route to send typed messages between your server and connected clients. Each route instance has its own Cloudflare Durable Object for shared state. WebSocket routes require the Cloudflare target.
 
 For example, `/rooms/[id]` gives each chat room its own instance. Use it for chat, presence, collaborative documents, or notifications.

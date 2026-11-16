@@ -44,7 +44,7 @@ routes/
 
 `.dev` routes run only in development; `.prod` routes run in builds, deployments, and production previews. A resource used only by `.dev` routes is not provisioned for production.
 
-Suffixes apply in `routes/` and [`pages/`](./pages-routing/overview.md#environment-only-pages), not in `middleware/`, `crons/`, or `queues/`. `void prepare` generates types for both environments.
+Suffixes apply in `routes/`, not in `middleware/`, `crons/`, or `queues/`. `void prepare` generates types for both environments.
 
 Each file exports named HTTP method constants to handle specific methods:
 
@@ -82,7 +82,7 @@ See [Database](./database.md) for queries with D1, PostgreSQL, or MySQL.
 
 ### JSX handlers
 
-Use `.tsx` or `.jsx` when a server handler contains JSX. Route files use your app's JSX settings. In React or Solid, render JSX to HTML with the framework's server renderer. For example, in React:
+Use `.tsx` or `.jsx` when a server handler contains JSX. Route files use your app's JSX settings. In a React app, render JSX to HTML with React's server renderer:
 
 ```tsx
 // routes/hello.tsx → GET /hello
@@ -92,7 +92,7 @@ import { defineHandler } from 'void';
 export const GET = defineHandler((c) => c.html(renderToStaticMarkup(<h1>Hello!</h1>)));
 ```
 
-For API-only, Vue, or Svelte apps, add `hono` as a dependency and configure [Hono's JSX](https://hono.dev/docs/guides/jsx) in `vite.config.ts`:
+For API-only apps, add `hono` as a dependency and configure [Hono's JSX](https://hono.dev/docs/guides/jsx) in `vite.config.ts`:
 
 ```ts
 // vite.config.ts

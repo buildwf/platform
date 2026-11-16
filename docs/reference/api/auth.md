@@ -93,19 +93,19 @@ export const GET = defineHandler((c) => {
 });
 ```
 
-For protected pages, pass `throwRedirect` to [redirect unauthenticated visitors to login](../../guide/auth.md#protect-a-server-route):
+To send a signed-out browser to a login page, pass `throwRedirect` to [redirect unauthenticated visitors to login](../../guide/auth.md#protect-a-server-route):
 
 ```ts
 import { defineHandler } from 'void';
 import { requireAuth } from 'void/auth';
 
-export const loader = defineHandler((c) => {
+export const GET = defineHandler((c) => {
   const user = requireAuth(c, { throwRedirect: '/login' });
   return { email: user.email };
 });
 ```
 
-`throwRedirect` works in loaders, actions, and middleware. When signed out, it throws a redirect with status `302` for GET/HEAD requests or `303` for other methods, stopping execution. When signed in, it returns the user normally.
+`throwRedirect` works in handlers and middleware. When signed out, it throws a redirect with status `302` for GET/HEAD requests or `303` for other methods, stopping execution. When signed in, it returns the user normally.
 
 The destination is application-controlled.
 
@@ -174,18 +174,13 @@ await auth.signIn.email({ email, password });
 await auth.signOut();
 ```
 
-The exact client methods come from Better Auth. In pages apps, Void automatically chooses the framework-specific Better Auth client package when available.
-
-For regular SPA apps that use Void for API/file routes without Void Pages mode, import the framework-specific client explicitly:
+The exact client methods come from Better Auth. For React hooks such as `useSession()`, import the React client:
 
 ```ts
 import { auth } from 'void/client/react';
-// or: 'void/client/vue'
-// or: 'void/client/svelte'
-// or: 'void/client/solid'
 ```
 
-Those subpaths keep the same `fetch`, `fetchStream`, and auth exports as `void/client`, but bind `auth` and `createAuthClient` to Better Auth's framework package.
+That subpath keeps the same `fetch`, `fetchStream`, and auth exports as `void/client`, but binds `auth` and `createAuthClient` to Better Auth's React package.
 
 ## `createAuthClient` {#createauthclient}
 

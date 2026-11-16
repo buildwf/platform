@@ -1,6 +1,6 @@
 # Void
 
-Full-stack framework for Cloudflare Workers, powered by Vite.
+React single-page apps with an optional backend on Cloudflare Workers, powered by Vite.
 
 ## Context Overview
 
@@ -19,7 +19,6 @@ Deploy hosted production before publishing the npm packages: the CLI checks the 
 
 - **Do not use Python for repository scripts or automation**, including inline CI scripts and ad-hoc maintenance commands. Use Node.js with TypeScript/JavaScript, or shell/PowerShell where appropriate.
 - **Keep user-facing documentation focused on using Void.** Explain public APIs, configuration, observable behavior, and actions users need to take. Do not add implementation details, internal workarounds, defensive checks, normalization rules, or bug-fix history unless they help users make a decision or resolve an actionable problem. Maintainer-only knowledge belongs in source comments, repository/package `AGENTS.md`, or contributor guides. This applies to app guides, API/CLI references, consumer-facing READMEs, and shipped app-development skills. Code examples should type-check. When an API does not infer a route, param, or path type, annotate the example with the public type that checks it, such as `PageParams`, `RouteUrl`, or `routeUrl()`.
-- **Keep Pages examples framework-agnostic.** Void Pages supports React, Vue, Svelte, and Solid. When a docs example uses an adapter API and the syntax differs, show all four in a `::: code-group` with those tab labels. When the code is the same, write it once; if only the import path differs, name the other packages in a comment (`@void/react`, `@void/vue`, `@void/svelte`, `@void/solid`). Do not use one framework's component syntax, import, or file extension as the only example. Keep a single framework when the section is that framework's own API, a labeled custom SSR renderer, a JSX route handler, or an integration guide. Do not wrap a one-snippet example in a code group.
 - **Keep native Cloudflare deploys Workers Free-compatible by default.** New public Void SDK/runtime features must work with `void deploy --platform cloudflare` on Workers Free unless the underlying Cloudflare product has no Free offering. Paid-only functionality must be explicitly opt-in, inferred and emitted only when the app uses it, and checked before provisioning or building. Its documentation and deploy error must name the required Cloudflare product/plan, link to enable it, and explain any API-token permissions. Platform-internal paid services must never become requirements of a single-app native Cloudflare deploy. Add regression coverage proving that an app which does not use the paid feature emits no paid binding and performs no entitlement probe.
 - Every implementation plan should include the following:
   - During plan generation: ask clarifying questions when necessary, especially around developer-experience defining design decisions.
@@ -67,13 +66,8 @@ pnpm workspaces managed through Vite+. Shared dependency versions use the **pnpm
 | [`packages/deploy-core`](./packages/deploy-core)             | `@void/deploy-core`       | Shared deployment manifests, events, and target-neutral contracts |
 | [`packages/deploy-cloudflare`](./packages/deploy-cloudflare) | `@void/deploy-cloudflare` | Direct Cloudflare config and verified upload primitives           |
 | [`packages/edge`](./packages/edge)                           | `@void/edge`              | Shared routing, headers, and static edge runtime                  |
-| [`packages/isr`](./packages/isr)                             | `@void/isr`               | Shared ISR protocol, core logic, and direct runtime               |
 | [`packages/platform`](./packages/platform/README.md)         | `@void/platform`          | Self-hosted installation contracts and packaged platform runtime  |
 | [`packages/void`](./packages/void/AGENTS.md)                 | `void`                    | Core Vite plugin — routing, inference, migrations, CLI            |
-| [`packages/react`](./packages/react/README.md)               | `@void/react`             | React framework adapter for Pages mode (SSR, Link, useForm)       |
-| [`packages/vue`](./packages/vue/README.md)                   | `@void/vue`               | Vue framework adapter for Pages mode (SSR, Link, useForm)         |
-| [`packages/svelte`](./packages/svelte/README.md)             | `@void/svelte`            | Svelte 5 framework adapter for Pages mode (SSR, Link, useForm)    |
-| [`packages/solid`](./packages/solid/README.md)               | `@void/solid`             | SolidJS framework adapter for Pages mode (SSR, Link, useForm)     |
 | [`docs`](./docs)                                             | (private)                 | Documentation site (VitePress)                                    |
 | [`platform`](./platform/README.md)                           | (private)                 | Self-hosted platform source, routing, proxy, logs, and dashboard  |
 | `playground/*`                                               | (private)                 | local apps for testing                                            |

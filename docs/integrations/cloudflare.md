@@ -21,15 +21,13 @@ export const GET = defineHandler(async (c) => {
 });
 ```
 
-TanStack Start and React Router can import bindings from `cloudflare:workers`:
+Server code outside a handler can also import bindings from `cloudflare:workers`:
 
 ```ts
 import { env } from 'cloudflare:workers';
 
 const { results } = await env.DB.prepare('SELECT * FROM users').all();
 ```
-
-Other frameworks use their own binding access. Follow your [framework's setup guide](./frameworks/overview.md).
 
 ### TypeScript setup
 
@@ -80,7 +78,7 @@ export default defineConfig({
 
 Put binding arrays, resource IDs, routes, and service bindings under `cloudflare`. Void preserves your configured bindings and adds missing inferred resources. The `worker` field takes precedence for compatibility settings and variables. See [Configuration](../reference/config.md).
 
-Commit `void.lock.json` when Void records resource IDs or Durable Object migrations. Keep generated Cloudflare config out of Git. Frameworks that require an adapter config path use `.void-wrangler.jsonc`; their setup guides show the required options.
+Commit `void.lock.json` when Void records resource IDs or Durable Object migrations. Keep generated Cloudflare config out of Git.
 
 Declare environment variables in `env.ts`, put local values in `.env`, and set production server values with `void secret put`. See [Environment Variables](../guide/env-vars.md).
 
@@ -115,8 +113,6 @@ If no destination is selected, Void offers to link the existing Worker. Accept t
 Keep the first deployment focused on the existing app. Add resources, auth, migrations, or other runtime features after linking. If the Worker has a newer inactive upload, activate or remove it in Cloudflare before retrying.
 
 Readiness checks need either an existing [version metadata binding](https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata/) or access to [Version URLs](https://developers.cloudflare.com/workers/versions-and-deployments/version-urls/). Void stops before activation if neither is available.
-
-Prerendered pages can require a new ISR cache. Void asks whether to enable it and saves the choice as `routing.isr`. Choose `false` to render those pages on each request instead. In CI, set that choice before deploying. Existing caches retain their IDs.
 
 If linking reports a missing binding, use the existing Worker's binding name and resource ID in `cloudflare` and `inference.bindings`. Keep `.void/cloudflare-link.json` when retrying.
 
@@ -202,14 +198,13 @@ Void restores recorded triggers along with the code. Versions without a complete
 
 #### Scope and limitations
 
-Void deploys native apps, static sites, SPAs, supported SSGs, and Cloudflare builds from TanStack Start, React Router, SvelteKit, Nuxt, Analog, and Astro. The vinext adapters are experimental.
+Void deploys Void apps (a React SPA with an optional backend), static SPAs, static sites, and supported SSGs.
 
-- Native apps support Void routing rules. Framework apps on the direct target must configure redirects, rewrites, fallbacks, and headers through their framework or Worker.
+- Void apps support Void routing rules for redirects, rewrites, fallbacks, and headers.
 - `--skip-build` works for existing static output. Worker apps require a fresh build.
 - Named Cloudflare environments aren't supported. Use a separate Void project config for each target.
 - Sandbox requires Workers Paid and Docker. See [Sandbox requirements](../guide/sandboxes.md#deployment) for plan and token permissions.
 - Email to arbitrary recipients requires Workers Paid; verified recipients and inbound mail work on Workers Free. See [Email](../guide/email/domains.md#your-own-cloudflare-account).
-- Node.js, Bun, and Deno use their [own deployment path](./nodejs-bun-deno.md).
 
 Commit Durable Object migration history in `void.lock.json`. Do not delete or reorder deployed steps.
 
@@ -244,11 +239,3 @@ void secret put OPENAI_API_KEY
 ```
 
 `ai.provider('openai').fetch(...)` then uses that gateway and key. See the [AI guide](../guide/ai.md) for examples. Use [AI Gateway analytics](https://developers.cloudflare.com/ai-gateway/) to inspect account usage.
-
-### ISR on your Cloudflare account {#isr-self-host}
-
-Configure [revalidation](../guide/edge/revalidation.md) globally, per path, or per page. Void provisions the cache automatically.
-
-`revalidate()` clears shared storage and the current data center's edge cache. Other data centers can serve cached responses until their cache lifetime expires. Pages data requests in a data center that hasn't rendered the HTML are generated live.
-
-Each deploy starts with a fresh cache.

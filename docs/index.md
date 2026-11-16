@@ -32,25 +32,25 @@ features:
   - iconify: lucide:wand-sparkles
     visual: resources
     title: Typed from Database to UI
-    details: Share types across your database, server loaders, and page components.
+    details: Share types across your database, API routes, and React components.
     highlights:
       - Types from your database schema
-      - Typed loaders, actions, and APIs
+      - Typed API routes and fetch client
       - Server code stays on the server
     guide:
       text: Explore Type Safety
       link: /guide/type-safety
   - iconify: lucide:blocks
     visual: frameworks
-    title: Use Your Favorite Framework
-    details: Build with Void's adapters or keep your existing Vite framework.
+    title: React SPAs with a Backend
+    details: Build a React single-page app and add server routes when you need them.
     highlights:
-      - Ships with adapters for Async React, Vue, Svelte, and Solid
-      - Supports TanStack Start, SvelteKit, Nuxt, and more
-      - Build APIs, SPAs, or server-rendered pages
+      - React SPA built and served by Vite
+      - Optional API routes, middleware, and jobs
+      - Deploy static SPAs and static sites too
     guide:
-      text: Explore Frameworks
-      link: /integrations/frameworks/overview
+      text: Explore App Types
+      link: /guide/app-types
 platform_features:
   - id: platform-ai-coding
     iconify: lucide:bot

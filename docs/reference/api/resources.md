@@ -1,5 +1,5 @@
 ---
-description: 'Clients for KV, object storage, AI, cache revalidation, and logs.'
+description: 'Clients for KV, object storage, AI, and logs.'
 outline: deep
 ---
 
@@ -94,29 +94,6 @@ Default secret names for `ai.provider()`. Use `apiKeyEnv` to choose another name
 | `fal`              | `FAL_API_KEY`         |
 | `ideogram`         | `IDEOGRAM_API_KEY`    |
 | `parallel`         | `PARALLEL_API_KEY`    |
-
-## ISR {#isr}
-
-Imported from `"void/isr"`.
-
-### `revalidate(options)` {#revalidate-options}
-
-Revalidate ISR-cached pages on demand. In local development this is a no-op because there is no edge ISR cache.
-
-```ts
-import { revalidate } from 'void/isr';
-
-await revalidate({ paths: ['/', '/blog/hello'] });
-await revalidate({ all: true });
-```
-
-With [`routing.typedRoutes`](../config.md#routing-typedroutes), each path must match one of your routes. Build paths with `routeUrl()`, or use `as RouteUrl` for paths you validate at runtime. Without this setting, `RouteUrl` is `string`.
-
-**Signature:**
-
-```ts
-function revalidate(options: { paths?: RouteUrl[]; all?: boolean }): Promise<void>;
-```
 
 ## Logging {#logging}
 

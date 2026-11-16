@@ -33,20 +33,20 @@ void init [--tsconfig] [--github] [--git | --no-git]
           [--toolchain <name>] [--framework <name>] [--starter <name>] [--deploy <target>]
 ```
 
-Set up a new or existing Void project. In an empty directory, choose Vite+ or Vite, a framework, and a D1, PostgreSQL, MySQL, or Static Pages starter. The new app's `void.config.ts` turns on [`routing.typedRoutes`](../config.md#routing-typedroutes).
+Set up a new or existing Void project. In an empty directory, choose Vite+ or Vite and a D1, PostgreSQL, MySQL, or SPA-only React starter. The new app's `void.config.ts` turns on [`routing.typedRoutes`](../config.md#routing-typedroutes).
 
 Pass your choices as flags to scaffold from a script or coding agent:
 
-| Flag          | Values                                    |
-| ------------- | ----------------------------------------- |
-| `--toolchain` | `vite-plus`, `vite`                       |
-| `--framework` | `react`, `vue`, `svelte`, `solid`         |
-| `--starter`   | `sqlite`, `postgresql`, `mysql`, `static` |
-| `--deploy`    | `cloudflare`, `void`, `none`              |
+| Flag          | Values                                 |
+| ------------- | -------------------------------------- |
+| `--toolchain` | `vite-plus`, `vite`                    |
+| `--framework` | `react`                                |
+| `--starter`   | `sqlite`, `postgresql`, `mysql`, `spa` |
+| `--deploy`    | `cloudflare`, `void`, `none`           |
 
 ```sh
-void init --toolchain vite-plus --framework react --starter sqlite --deploy none
-npm create void@latest my-app -- --toolchain vite-plus --framework react --starter sqlite --deploy none
+void init --toolchain vite-plus --starter sqlite --deploy none
+npm create void@latest my-app -- --toolchain vite-plus --starter sqlite --deploy none
 ```
 
 For non-interactive scaffolding, choose `--deploy none` and run `void connect` later to sign in.

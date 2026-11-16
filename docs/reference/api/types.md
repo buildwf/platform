@@ -70,21 +70,6 @@ interface TypedHandler<V extends ValidatorSlots = {}, R = unknown> {
 }
 ```
 
-## `HeadDescriptor` {#headdescriptor}
-
-Shape of page head metadata returned by `defineHead`. All fields are optional.
-
-```ts
-interface HeadDescriptor {
-  title?: string;
-  meta?: Array<{ name?: string; property?: string; content?: string; charset?: string }>;
-  link?: Array<{ rel: string; href: string; [key: string]: string | undefined }>;
-  script?: Array<{ src?: string; innerHTML?: string; [key: string]: string | undefined }>;
-  htmlAttrs?: Record<string, string>;
-  bodyAttrs?: Record<string, string>;
-}
-```
-
 ## `RouteMap` {#routemap}
 
 Generated route types used by the typed `fetch` client. Contains each route’s methods, inputs, and outputs.
@@ -120,7 +105,7 @@ routeUrl('/users/[id]', {
 
 Static routes accept optional `query` and `hash` options. Pass raw parameter values for URL encoding. Catch-all parameters preserve `/` separators between segments. Invalid or missing path parameters throw a `TypeError`.
 
-Use the returned [`RouteUrl`](#route-types) with `Link`, `<a>`, and `c.redirect()`. See [Typed URLs and Navigation](../../guide/type-safety.md#typed-urls-and-navigation) for setup and examples.
+Use the returned [`RouteUrl`](#route-types) with `fetch()`, `<a>`, and `c.redirect()`. See [Typed URLs and Navigation](../../guide/type-safety.md#typed-urls-and-navigation) for setup and examples.
 
 ### Route types {#route-types}
 
@@ -128,19 +113,14 @@ Import these types from `void/routes`:
 
 | Type                  | Description                                                                                       |
 | --------------------- | ------------------------------------------------------------------------------------------------- |
-| `RoutePathMap`        | Generated map of page, HTTP, and WebSocket route patterns to their parameter names.               |
+| `RoutePathMap`        | Generated map of HTTP and WebSocket route patterns to their parameter names.                      |
 | `RoutePath`           | Union of the known route patterns in `RoutePathMap`.                                              |
-| `PagePathMap`         | Generated map of page patterns to their parameter names.                                          |
-| `PagePath`            | Union of the page patterns in `PagePathMap`; accepted by `useParams()`.                           |
-| `PageParams<P>`       | The params page `P` receives, such as `{ id: string }` for `/users/[id]`.                         |
 | `RouteOptions<P>`     | Options for a route pattern `P`, including its required `params`, optional `query`, and `hash`.   |
 | `RouteDestination<P>` | `{ pathname: P }` with `RouteOptions<P>`. Defaults to all known routes when `P` is omitted.       |
 | `RouteUrl`            | The URL of one of your routes, returned by `routeUrl()`. `string` unless `typedRoutes` is on.     |
 | `Href`                | A `RouteUrl`, a same-page query or hash, or an external URL. `string` unless `typedRoutes` is on. |
-| `RouteUrlInput`       | `Href`, `URL`, or `RouteDestination`; accepted by router navigation methods and `c.redirect()`.   |
+| `RouteUrlInput`       | `Href`, `URL`, or `RouteDestination`; accepted by `c.redirect()`.                                 |
 | `RouteQuery`          | Query keys mapped to `RouteQueryValue` or readonly arrays of those values.                        |
 | `RouteQueryValue`     | `string`, `number`, `boolean`, `null`, or `undefined`.                                            |
-
-Annotate a dynamic page's `getPrerenderPaths()` as `Promise<PageParams<P>[]>` so TypeScript checks those param names. See [Prerender paths](../../guide/type-safety.md#prerender-paths).
 
 `typedRoutes` is [`routing.typedRoutes`](../config.md#routing-typedroutes). See [Checked URL strings](../../guide/type-safety.md#checked-url-strings).

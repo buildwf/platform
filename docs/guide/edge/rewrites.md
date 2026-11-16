@@ -108,16 +108,6 @@ You can also place rules in Vite's `publicDir`, which defaults to `public/`:
 
 The file can include [3xx redirects](./redirects) too. Rules in `void.config.ts` take precedence over file rules; within each group, the first match wins.
 
-## Client navigation
-
-Rewrites run on the server. In Pages mode, a client-side `<Link href="/docs">` navigation may fetch loader data for `/docs` rather than the rewritten route `/en/docs`.
-
-Use `<a href="/docs">` to make a full server request when the destination has a different loader. Use a redirect if the URL should change.
-
-## ISR cache keys with rewrites
-
-Purge the destination path, such as `/en/docs/foo`, to clear rewritten cache entries. See [Cache keys and rewrites](./revalidation#cache-keys-and-rewrites).
-
 ## Debugging with `X-Void-Routing`
 
 During development, inspect the `X-Void-Routing` response header in your browser's Network tab. It shows the matching rule and where it was declared:

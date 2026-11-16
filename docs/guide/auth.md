@@ -6,7 +6,7 @@ outline: deep
 # Authentication
 
 ::: warning ⚠️ Void Apps Only
-Void-managed auth requires a native Void app on Cloudflare. For meta-frameworks or Node.js, Bun, and Deno, use Better Auth directly.
+Void-managed auth requires a Void app with a backend. For a static SPA without `routes/`, use Better Auth directly.
 :::
 
 Void configures [Better Auth](https://www.better-auth.com/) for your app, including its database connection, API routes, and client. Start with email and password, or add a social login provider.
@@ -53,26 +53,22 @@ export const GET = defineHandler((c) => {
 });
 ```
 
-In a page loader, pass `throwRedirect` to send unauthenticated visitors to your login page instead of a plain-text `401`:
+Pass `throwRedirect` to send unauthenticated visitors to your login page instead of a plain-text `401`:
 
 ```ts
-// pages/dashboard.server.ts
-import { defineHandler, type InferProps } from 'void';
+// routes/account/export.ts
+import { defineHandler } from 'void';
 import { requireAuth } from 'void/auth';
 
-export type Props = InferProps<typeof loader>;
-
-export const loader = defineHandler((c) => {
+export const GET = defineHandler((c) => {
   const user = requireAuth(c, {
     throwRedirect: '/login',
   });
-  return { user };
+  return { email: user.email };
 });
 ```
 
-The same option works in actions and middleware. It throws a redirect, stopping execution: `302` for GET/HEAD requests and `303` for other methods. Document requests follow the redirect normally; Pages client navigation follows it without reloading the document.
-
-Signing in does not replay a rejected action.
+The same option works in middleware. It throws a redirect, stopping execution: `302` for GET/HEAD requests and `303` for other methods.
 
 To allow unauthenticated access, use `getUser()` and return the nullable user. For custom guards, you can also [throw a redirect](../integrations/hono.md#redirects) from a helper.
 

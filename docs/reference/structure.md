@@ -1,19 +1,19 @@
 ---
-description: 'See how routes, pages, middleware, and other optional directories map onto a Void app.'
+description: 'See how the React app, routes, middleware, and other optional directories map onto a Void app.'
 outline: deep
 ---
 
 <script setup>
 const items = [
+  { name: "src/", description: "React single-page app", link: "#src" },
+  { name: "index.html", description: "SPA entry document", link: "#src" },
   { name: "routes/", description: "API endpoints (file-based routing)", link: "#routes" },
-  { name: "pages/", description: "Full-stack server-rendered pages", link: "#pages" },
   { name: "middleware/", description: "Global request middleware", link: "#middleware" },
   { name: "db/", description: "Drizzle schema and SQL migrations", link: "#db" },
   { name: "crons/", description: "Scheduled cron jobs", link: "#crons" },
   { name: "queues/", description: "Async queue consumers", link: "#queues" },
   { name: "email/", description: "Inbound email handlers", link: "#email" },
   { name: "durable-objects/", description: "Durable State modules", link: "#durable-objects" },
-  { name: "src/", description: "Shared app code", link: "#src" },
   { name: "public/", description: "Static assets (served as-is)", link: "#public" },
   { name: ".void/", description: "Auto-generated (gitignored)", link: "#void" },
   { name: "vite.config.ts", description: "Vite config with voidPlugin()", link: "#config-files" },
@@ -57,7 +57,7 @@ const dbItems = [
 
 ## Overview
 
-A Void app uses file-based conventions to define routes, pages, middleware, and more. All directories are optional, so you only need the pieces your app actually uses.
+A Void app is a React single-page app (`index.html` + `src/`) with optional file-based conventions for API routes, middleware, and more. All directories are optional, so you only need the pieces your app actually uses.
 
 <FileTree :items="items" />
 
@@ -76,19 +76,6 @@ File-based HTTP API endpoints built on [Hono](https://hono.dev). Each file expor
 - **Environment suffix**: `debug.dev.ts` builds in development only, `metrics.prod.ts` in production only
 
 See [Server Routing](/guide/server-routing) for the full guide.
-
-## `pages/`
-
-Full-stack server-rendered pages with co-located data loading. Available with Vue, React, Svelte, and Solid adapters.
-
-<PagesFileTree />
-
-- **`.server.ts` (or `.tsx`, `.js`, `.jsx`, `.mts`, `.mjs`) files** export `loader` for `GET` data and `action` for mutations, paired with the page component of the same name
-- **Layouts** nest automatically and persist across navigations
-- **Markdown** pages are supported with frontmatter
-- **Environment suffix**: `debug.dev.tsx` is served in development only, `stats.prod.tsx` in production only
-
-See [Pages Routing](/guide/pages-routing/overview) for the full guide.
 
 ## `middleware/`
 
@@ -128,7 +115,7 @@ Generate schema with `void gen model` or write it by hand. Generate migrations w
 
 ## `src/`
 
-Shared application code such as components, utilities, and types. This directory has no special convention, so organize it however you like.
+The React single-page app. `index.html` loads `src/main.tsx`, which renders the app in the browser; Vite bundles it into static assets. Beyond that entry, organize components, utilities, and types however you like.
 
 ## `public/`
 

@@ -76,22 +76,6 @@ void gen middleware auth
 
 The prefix is auto-detected from existing middleware files.
 
-## `void gen ssr` {#void-gen-ssr}
-
-```
-void gen ssr [--react | --vue | --svelte | --solid]
-```
-
-Scaffold SSR entry points and a minimal App component for your framework.
-
-Creates three files:
-
-- `src/main.ssr.{tsx,ts}`: server entry with `defineRender`
-- `src/main.client.{tsx,ts}`: client entry with hydration
-- `src/App.{tsx,vue,svelte}`: minimal interactive component
-
-If no flag is provided, the framework is auto-detected from `package.json` dependencies.
-
 ## `void gen cron` {#void-gen-cron}
 
 ```

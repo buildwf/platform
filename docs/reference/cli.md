@@ -68,7 +68,6 @@ Platform administrators can also choose AI Gateway logging [per project](./cli/p
 | `void project rollback`           | Roll back to a previous deployment                                            |
 | `void project cancel`             | Cancel an active deployment                                                   |
 | `void project zero-trust`         | Inspect or override project Zero Trust protection                             |
-| `void project purge-cache`        | Purge all cached pages (Void platform)                                        |
 | `void build logs`                 | Stream, tail, or download build logs                                          |
 | `void email status`               | Show email readiness on your own Cloudflare account (`--platform cloudflare`) |
 | `void email setup`                | Set email up on your own Cloudflare account, without deploying                |

@@ -33,7 +33,7 @@ import { defineConfig } from 'void/config';
 
 export default defineConfig({
   cloudflare: { name: 'my-app' },
-  routing: { revalidate: 60 },
+  routing: { typedRoutes: true },
 });
 ```
 

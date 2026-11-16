@@ -24,7 +24,7 @@ On a Void platform, an accepted deployment continues if the CLI disconnects. The
 
 The CLI reports stalled progress and automatic recovery, and waits up to 30 minutes after acceptance. If it times out, the deployment can continue; check `void project status` before trying another deployment.
 
-For an existing Void Worker, `void deploy` can link the Worker and migrate its root Cloudflare config. Keep the first deployment focused on the existing app. See [Deploy an existing Worker](../../integrations/cloudflare.md#deploy-an-existing-worker) for requirements and the ISR cache choice.
+For an existing Void Worker, `void deploy` can link the Worker and migrate its root Cloudflare config. Keep the first deployment focused on the existing app. See [Deploy an existing Worker](../../integrations/cloudflare.md#deploy-an-existing-worker) for requirements.
 
 For Drizzle projects, deploy performs a read-only schema drift check. If a new migration would be generated, deploy stops and tells you to run `void db generate`, review the migration, commit it yourself, and rerun `void deploy`.
 

@@ -115,10 +115,6 @@ void project rollback
 
 Cloudflare logs use a live tail; team platforms retain log history. Before rolling back, check that the earlier code works with your current database schema. See [Project commands](../reference/cli/project.md).
 
-## Other runtimes
-
-Build a standalone server for [Node.js, Bun, or Deno](../integrations/nodejs-bun-deno.md) using the `target` setting. Deploy `dist/ssr` and `dist/client` together using your own hosting. Cloudflare bindings such as D1, KV, R2, and Workers AI are unavailable on these targets.
-
 ## Usage and execution limit pages
 
 Team platforms return a structured HTTP 429 to API and Pages action requests when an app exceeds its request or CPU allowance. Browser requests get an error page.

@@ -147,5 +147,3 @@ curl -X POST http://localhost:5173/__void/queue \
   -H "x-void-dev-trigger: <printed-token>" \
   -d '{"queue":"my-queue","messages":[{"id":"1","timestamp":'"$(date +%s000)"',"body":{"hello":"world"},"attempts":1}]}'
 ```
-
-In supported meta-frameworks, use `/__void/queue` to test a consumer manually. It runs inside the framework adapter's development runtime with that adapter's bindings. Sending to a queue binding doesn't automatically invoke the consumer in this mode.

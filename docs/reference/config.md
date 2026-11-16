@@ -1,5 +1,5 @@
 ---
-description: 'Configure routing, inference, output, and the deployment target in void.config.ts.'
+description: 'Configure routing, inference, resources, and deployment in void.config.ts.'
 outline: deep
 ---
 
@@ -17,10 +17,8 @@ import { defineConfig } from 'void/config';
 
 export default defineConfig({
   sourceDir: 'src',
-  target: 'cloudflare',
   auth: { providers: ['email', 'github', 'google'] },
   routing: {
-    revalidate: { '/': 60, '*': 30 },
     headers: {
       '/assets/*': ['Cache-Control: public, max-age=31536000, immutable'],
       '/*': ['X-Frame-Options: DENY', 'X-Content-Type-Options: nosniff'],
@@ -54,7 +52,7 @@ The shorter JSON fragments below show individual fields to place inside `defineC
 
 Directory containing Void source conventions, relative to the project root.
 
-When omitted, Void uses the existing project-root conventions: `pages/`, `routes/`, `middleware/`, `crons/`, `queues/`, `db/`, `auth.ts`, and `env.ts`.
+When omitted, Void uses the existing project-root conventions: `routes/`, `middleware/`, `crons/`, `queues/`, `db/`, `auth.ts`, and `env.ts`.
 
 When set, those conventions move under the configured directory:
 
@@ -62,7 +60,7 @@ When set, those conventions move under the configured directory:
 { "sourceDir": "src" }
 ```
 
-With that config, Void reads `src/pages`, `src/routes`, `src/db/schema.ts`, `src/db/migrations`, `src/auth.ts`, and `src/env.ts`. Project files such as `void.config.ts`, `vite.config.ts`, `package.json`, `tsconfig.json`, `public/`, and the local-only `.env` stay at the project root. Void does not scan both locations; if source conventions exist in both places during dev/build, remove one copy so the active source tree is unambiguous.
+With that config, Void reads `src/routes`, `src/db/schema.ts`, `src/db/migrations`, `src/auth.ts`, and `src/env.ts`. Project files such as `void.config.ts`, `vite.config.ts`, `package.json`, `tsconfig.json`, `public/`, and the local-only `.env` stay at the project root. Void does not scan both locations; if source conventions exist in both places during dev/build, remove one copy so the active source tree is unambiguous.
 
 ### `ai`
 
@@ -184,53 +182,6 @@ During development, `email.from` is the default sender in the local inbox. On a 
 
 For direct Cloudflare deployment, this address selects the mail domain and default sender. Use a zone or subdomain in your account; an existing mail provider's MX records are preserved. Without `email.from`, Void skips automatic setup and preserves authored `cloudflare.send_email` bindings and `cloudflare.addresses`; check their readiness yourself. `--require-email` still refuses deployment when automatic setup cannot be verified. See [Email setup](../guide/email/domains.md#your-own-cloudflare-account).
 
-### `head`
-
-Site-wide HTML `<head>` defaults for pages mode. Sets a title template, default meta tags, links, scripts, and HTML/body attributes. Per-page `head()` exports and middleware defaults merge on top of these with clear precedence: **page > middleware > config**.
-
-| Field           | Type                     | Description                                                      |
-| --------------- | ------------------------ | ---------------------------------------------------------------- |
-| `title`         | `string`                 | Default page title (overridden by page `head()`)                 |
-| `titleTemplate` | `string`                 | Wraps the resolved title. `%s` is replaced with the page title.  |
-| `meta`          | `Array<object>`          | Default `<meta>` tags (deduped by `name`/`property`, page wins)  |
-| `link`          | `Array<object>`          | Default `<link>` tags (concatenated: config, middleware, page)   |
-| `script`        | `Array<object>`          | Default `<script>` tags (concatenated: config, middleware, page) |
-| `htmlAttrs`     | `Record<string, string>` | Attributes on `<html>` (shallow merge, page wins)                |
-| `bodyAttrs`     | `Record<string, string>` | Attributes on `<body>` (shallow merge, page wins)                |
-
-```json
-{
-  "head": {
-    "titleTemplate": "%s | My Site",
-    "htmlAttrs": { "lang": "en" },
-    "meta": [
-      { "charset": "utf-8" },
-      { "name": "viewport", "content": "width=device-width, initial-scale=1" }
-    ],
-    "link": [{ "rel": "icon", "href": "/favicon.svg" }]
-  }
-}
-```
-
-See [Head Management](../guide/pages-routing/head) for the full merge behavior, `HeadDescriptor` shape, and per-page usage.
-
-### `output`
-
-Output mode. Controls the default rendering strategy for pages.
-
-| Value                | Default prerender | Per-page override                | Prerender timing           |
-| -------------------- | ----------------- | -------------------------------- | -------------------------- |
-| `"server"` (default) | `false`           | `export const prerender = true`  | Deploy-time (platform ISR) |
-| `"static"`           | `true`            | `export const prerender = false` | Build or deploy post-build |
-
-When set to `"static"`, pages are prerendered to HTML in `dist/client/`. Individual pages can opt out with `export const prerender = false`. Dynamic pages need [`getPrerenderPaths()`](../guide/ssg.md#per-page-overrides) to be prerendered. Annotate its return type with [`PageParams`](./api/types.md#route-types) so TypeScript checks the param names.
-
-When omitted or set to `"server"`, pages are server-rendered on request. Individual pages can opt into deploy-time prerendering with `export const prerender = true`, or opt out of server-rendered component HTML with `export const ssr = false`.
-
-```json
-{ "output": "static" }
-```
-
 ### `remote`
 
 Use a deployed Void project's D1, KV, and R2 resources during local development. Writes affect real data. See [Remote Development](../guide/remote-dev.md).
@@ -278,25 +229,6 @@ Enable and configure Cloudflare Sandboxes. Importing from `void/sandbox` enables
 Supported sizes are `lite` and `standard-1` through `standard-4`. Native deploys build Dockerfiles with Docker; registry images must be digest-pinned references from the Cloudflare managed registry. Custom images must include the matching Sandbox SDK helper. For a local Dockerfile, supply `platformImage` when deploying to a managed platform. See [Sandboxes](../guide/sandboxes.md) for image setup and runtime examples.
 
 Sandbox requires [Workers Paid](https://dash.cloudflare.com/?to=/:account/workers/plans) and Containers access. Managed runtime tokens need Account / Containers: Edit and Account / Cloudchamber: Edit. See [Sandbox deployment](../guide/sandboxes.md#deployment).
-
-### `target`
-
-Deploy target runtime. Defaults to `"cloudflare"`.
-
-| Value          | Description                                               |
-| -------------- | --------------------------------------------------------- |
-| `"cloudflare"` | Cloudflare Workers (default), with full platform features |
-| `"node"`       | Node.js, using `@hono/node-server`                        |
-| `"bun"`        | Bun, using `Bun.serve()`                                  |
-| `"deno"`       | Deno, using `Deno.serve()`                                |
-
-Non-CF targets disable CF binding imports (`void/db`, `void/kv`, `void/auth`, `void/storage`, `void/ai`, `void/sandbox`, `void/env`). Importing any of these with a non-CF target produces a compile-time error. File-based routing, middleware, and `void/client` all work normally.
-
-Void-managed WebSocket route files (`*.ws.ts`) are Cloudflare-only because they compile to Durable Objects. The `void/ws` subpath itself is not blocked on non-CF targets so client-side `connect()` code can still be bundled where a browser-like `WebSocket` runtime is available.
-
-```json
-{ "target": "node" }
-```
 
 ### `worker`
 
@@ -369,7 +301,7 @@ This choice applies to subsequent `void deploy` runs. Atomic deployment sends tr
 
 ### `routing`
 
-Routing and edge configuration for headers, redirects, rewrites, and caching.
+Routing and edge configuration for headers, redirects, rewrites, and fallbacks.
 
 #### `routing.alwaysUseHttps`
 
@@ -381,21 +313,9 @@ routing: {
 }
 ```
 
-#### `routing.trailingSlash`
-
-Give Pages URLs a trailing slash and prerender them as directory indexes. For example, `/posts/` produces `posts/index.html`; `/posts` redirects to `/posts/`.
-
-```ts
-routing: {
-  trailingSlash: true,
-}
-```
-
-The default is `false`, which writes `posts.html`. API routes keep their URLs, and third-party frameworks use their own routing settings. See [Static Site Generation](../guide/ssg.md#trailing-slashes-and-directory-indexes) for hosting details.
-
 #### `routing.typedRoutes`
 
-Check URL strings against your app's routes in links, router methods, redirects, rewrites, island forms, cache revalidation, and stream clients. This changes TypeScript checks only; navigation at runtime stays the same.
+Check URL strings against your app's routes in redirects, rewrites, and stream clients. This changes TypeScript checks only; navigation at runtime stays the same.
 
 ```ts
 routing: {
@@ -403,7 +323,7 @@ routing: {
 }
 ```
 
-The default is `false`; `void init` enables it for new apps. See [Checked URL strings](../guide/type-safety#checked-url-strings) for accepted URLs and casts for values you validate at runtime. To check `routing.prerender`, [annotate its paths](#routing-prerender).
+The default is `false`; `void init` enables it for new apps. See [Checked URL strings](../guide/type-safety#checked-url-strings) for accepted URLs and casts for values you validate at runtime.
 
 #### `routing.headers`
 
@@ -466,72 +386,6 @@ Fallback rewrites. Same shape as `rewrites`, but rules only fire when no static 
 }
 ```
 
-#### `routing.isr`
-
-Boolean switch for Void's ISR caching. When omitted or `true`, Void infers caching from your revalidate and prerender settings. Setting it to `false` disables ISR and edge prerendering for the whole app, including per-page exports:
-
-```json
-{
-  "routing": {
-    "isr": false
-  }
-}
-```
-
-Build-time HTML generation with `output: "static"` is unaffected. Set `isr` to `true` to enable your configured cache policies again.
-
-#### `routing.revalidate`
-
-ISR revalidation TTL in seconds, either globally or per path. See [Revalidation](../guide/edge/revalidation.md) for details.
-
-```json
-{
-  "routing": {
-    "revalidate": {
-      "/": 60,
-      "/docs/*": 31536000,
-      "*": 30
-    }
-  }
-}
-```
-
-#### `routing.revalidateQueryAllowlist`
-
-Query parameters to keep in ISR cache keys. Keys are source URL patterns, values are query parameter names to keep. The listed parameters are part of the cache key for every request to a matching path; all other query parameters are left out of the key. When omitted, ISR cache keys drop every incoming query parameter to avoid unbounded cache fanout.
-
-```json
-{
-  "routing": {
-    "revalidateQueryAllowlist": {
-      "/search": ["q"],
-      "/products/*": ["variant", "currency"],
-      "*": []
-    }
-  }
-}
-```
-
-#### `routing.prerender`
-
-Paths to prerender as static HTML at deploy time. Each path must start with `/`. See [Edge Prerendering](../guide/edge/prerendering.md) for details.
-
-```json
-{
-  "routing": {
-    "prerender": ["/", "/about", "/pricing"]
-  }
-}
-```
-
-In `void.config.ts`, annotate the array with [`RouteUrl`](./api/types.md#route-types) so TypeScript checks the paths when [`routing.typedRoutes`](#routing-typedroutes) is on:
-
-```ts
-import type { RouteUrl } from 'void/routes';
-
-prerender: ['/', '/about', '/pricing'] satisfies RouteUrl[],
-```
-
 #### `routing.notFound`
 
 Override how the asset layer answers a request that matched no asset and no worker route. One of `"single-page-application"`, `"404-page"`, or `"none"`. If omitted, Void infers it — see [Static Assets](../guide/edge/static-assets.md#navigation-and-middleware).
@@ -545,8 +399,6 @@ Override how the asset layer answers a request that matched no asset and no work
 ```
 
 Use `"404-page"` for a generated static site with a `404.html`, `"single-page-application"` for a client router, or `"none"` to keep the Worker's own 404. API and middleware routing remain unchanged.
-
-SvelteKit, Nuxt, Analog, and Astro use their own error pages and ignore this setting. For direct Cloudflare deployment with TanStack Start, React Router, or vinext, set a complete asset policy in your framework's Cloudflare config. See [Static Assets](../guide/edge/static-assets.md#navigation-and-middleware).
 
 ### `inference`
 
@@ -576,10 +428,10 @@ Custom binding names work with `void/db`, `void/kv`, and `void/storage` during d
 
 #### `inference.build`
 
-Override the build command. Useful for frameworks with their own CLIs (Nuxt, Astro) or static apps with custom build scripts. If omitted, the CLI uses the detected default build command for the current app type. It applies to every app type, including `"void"` (where the default is `vite build`).
+Override the build command. Useful for static apps with custom build scripts. If omitted, the CLI uses the detected default build command for the current app type. It applies to every app type, including `"void"` (where the default is `vite build`).
 
 ```json
-{ "inference": { "build": "nuxt build --preset cloudflare-module" } }
+{ "inference": { "build": "vitepress build" } }
 ```
 
 The command is run through a shell from the project root, with the project's own `node_modules/.bin` on `PATH`, so bare binaries and `&&` chains work:
@@ -602,8 +454,7 @@ Override which directories are scanned for [binding inference](./resource-infere
 
 App type. If omitted, auto-detected on first deploy. See [Supported App Types](../guide/app-types.md).
 
-- `"void"`: worker plus assets, including API routes, SSR, and jobs
-- `"framework"`: a meta-framework app such as TanStack Start, React Router, SvelteKit, Nuxt, or Astro
+- `"void"`: React SPA assets plus a Worker for API routes, middleware, and jobs
 - `"static"`: fully rendered HTML files from VitePress, plain HTML, or external tools. Non-matching paths return `404.html` or a 404 response.
 - `"spa"`: static output with SPA fallback. Non-file paths fall back to `index.html` with a `200` status so client-side routing works out of the box.
 

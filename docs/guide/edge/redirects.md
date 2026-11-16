@@ -24,9 +24,9 @@ Define URL redirects in [`void.config.ts`](../../reference/config) using the `ro
 - **Destinations** can be strings (default `302`) or objects with `to` and optional `status`. Supported statuses: `301`, `302`, `303`, `307`, `308`.
 - `:splat` in the destination is replaced with the portion of the path matched by `*` in the source pattern.
 - Destination query strings are merged into the `Location` header (the destination's parameters take precedence on per-key conflict). To drop the incoming query, write an explicit reset like `?`.
-- For redirects from a handler, loader, or middleware, use [`c.redirect()`](../../reference/api/rewrites.md#c-rewrite-destination). It sends the location you provide without adding the request query. Named actions keep their own query parameters and drop the action key when redirecting to GET.
+- For redirects from a handler or middleware, use [`c.redirect()`](../../reference/api/rewrites.md#c-rewrite-destination). It sends the location you provide without adding the request query.
 - When multiple rules match, the **first match wins**. Put specific patterns before catch-all patterns.
-- Redirects are evaluated **before** the request reaches the worker, so they short-circuit static asset serving, ISR, and SSR.
+- Redirects are evaluated **before** the request reaches the worker, so they short-circuit static asset serving and route handlers.
 
 ## Domain-level redirects
 
@@ -73,11 +73,9 @@ This option requires the Cloudflare target and works for Void apps and static si
 
 For direct Cloudflare deployments, also enable [Always Use HTTPS](https://developers.cloudflare.com/ssl/edge-certificates/additional-options/always-use-https/) on your zone to cover assets served directly by Cloudflare.
 
-For direct Cloudflare deployments of SvelteKit, Nuxt, Astro, Analog, TanStack Start, React Router, or vinext, configure HTTPS in the framework or your Cloudflare zone. Use `routing.alwaysUseHttps` only for their static builds, deployed with `--dir` or `inference.appType`.
+## `_redirects` files
 
-## Framework `_redirects` files
-
-Void reads `_redirects` files produced by supported frameworks. You can also place one in Vite's `publicDir`:
+Void reads `_redirects` files produced by your build, such as a static site generator's output. You can also place one in Vite's `publicDir`:
 
 ```text
 /old-page  /new-page     301

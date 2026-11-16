@@ -126,7 +126,6 @@ const referenceItems = [
       { text: 'Resource Clients', link: '/reference/api/resources' },
       { text: 'Types', link: '/reference/api/types' },
       { text: 'Environment Variables', link: '/reference/api/env' },
-      { text: 'Pages Adapters', link: '/reference/api/pages' },
     ],
   },
 ];
@@ -138,23 +137,9 @@ const referenceLinks = {
 };
 
 const integrationItems = [
-  {
-    text: 'Meta Frameworks',
-    collapsed: false,
-    items: [
-      { text: 'Overview', link: '/integrations/frameworks/overview' },
-      { text: 'TanStack Start', link: '/integrations/frameworks/tanstack-start' },
-      { text: 'React Router', link: '/integrations/frameworks/react-router' },
-      { text: 'Astro', link: '/integrations/frameworks/astro' },
-      { text: 'SvelteKit', link: '/integrations/frameworks/sveltekit' },
-      { text: 'Nuxt', link: '/integrations/frameworks/nuxt' },
-      { text: 'Analog', link: '/integrations/frameworks/analog' },
-    ],
-  },
   { text: 'Coding Agents', link: '/integrations/agents' },
   { text: 'Hono', link: '/integrations/hono' },
   { text: 'Cloudflare', link: '/integrations/cloudflare' },
-  { text: 'Node.js / Bun / Deno', link: '/integrations/nodejs-bun-deno' },
 ];
 
 const integrationLinks = {
@@ -307,34 +292,15 @@ export default extendConfig(
             items: [
               { text: 'Server Routing', link: '/guide/server-routing' },
               {
-                text: 'Pages Routing',
-                collapsed: true,
-                items: [
-                  { text: 'Overview', link: '/guide/pages-routing/overview' },
-                  { text: 'Layouts & Shared Data', link: '/guide/pages-routing/layouts' },
-                  { text: 'Loaders & Props', link: '/guide/pages-routing/loaders' },
-                  { text: 'Actions & Forms', link: '/guide/pages-routing/actions-and-forms' },
-                  { text: 'Not Found & Errors', link: '/guide/pages-routing/errors' },
-                  { text: 'View Transitions', link: '/guide/pages-routing/view-transitions' },
-                  { text: 'Head Management', link: '/guide/pages-routing/head' },
-                  { text: 'Islands', link: '/guide/pages-routing/islands' },
-                  { text: 'Markdown', link: '/guide/pages-routing/markdown' },
-                ],
-              },
-              {
                 text: 'Edge Routing',
                 collapsed: true,
                 items: [
                   { text: 'Static Assets Caching', link: '/guide/edge/static-assets' },
-                  { text: 'Revalidation (ISR)', link: '/guide/edge/revalidation' },
-                  { text: 'Edge Prerendering', link: '/guide/edge/prerendering' },
                   { text: 'Custom Headers', link: '/guide/edge/headers' },
                   { text: 'Redirects', link: '/guide/edge/redirects' },
                   { text: 'Rewrites', link: '/guide/edge/rewrites' },
                 ],
               },
-              { text: 'Custom SSR', link: '/guide/ssr' },
-              { text: 'SSG', link: '/guide/ssg' },
             ],
           },
           {
@@ -455,7 +421,7 @@ export default extendConfig(
             title: 'Docs',
             items: [
               { text: 'Guide', link: '/guide/' },
-              { text: 'Integrations', link: '/integrations/frameworks/overview' },
+              { text: 'Integrations', link: '/integrations/agents' },
               { text: 'Reference', link: '/reference/structure' },
             ],
           },

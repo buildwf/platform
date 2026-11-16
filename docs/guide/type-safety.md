@@ -1,20 +1,18 @@
 ---
-description: 'Carry types from your database schema through route handlers and page loaders to the UI.'
+description: 'Carry types from your database schema through route handlers to the UI.'
 outline: deep
 ---
 
 # Type Safety
 
-Void infers types from your database schema, route handlers, and page loaders. When you change a field, TypeScript shows which queries, requests, and components need to change.
+Void infers types from your database schema and route handlers. When you change a field, TypeScript shows which queries, requests, and components need to change.
 
 ## The Type Pipeline
 
-<img src="./type-pipeline.svg" alt="Type pipeline: Drizzle schema flows to DB types, branching into route handlers (typed fetch), page loaders (component props), and page actions (useForm / action())" style="max-width: 720px; width: 100%;" />
+<img src="./type-pipeline.svg" alt="Type pipeline: Drizzle schema flows to DB types, then into route handlers and the typed fetch client" style="max-width: 720px; width: 100%;" />
 
 1. **Database types** come from your [Drizzle schema](./database.md#schema-definition). Column types are known at compile time.
 2. **Route handlers:** return types and validator schemas become the generated `RouteMap`, which the [typed fetch](./typed-fetch) client consumes.
-3. **Page loaders:** return types flow into page components as props via `InferProps`.
-4. **Page actions:** validator schemas flow into `useForm` and `action()` for typed data, errors, and URL autocomplete.
 
 All generated types live in `.void/` and update automatically when source files or schema change.
 
@@ -49,129 +47,41 @@ await fetch('/api/users', {
 
 The Drizzle schema defines database columns, runtime validation, handler input types, and client-side type checking all at once. For endpoints that don't map to a table, use any [Standard Schema](./server-routing.md#manual-validators) library.
 
-## Loader → Page Props
-
-In [pages mode](./pages-routing/overview), a loader's return type flows into the page component via `InferProps`:
-
-```ts
-// pages/users/index.server.ts
-export type Props = InferProps<typeof loader>;
-
-export const loader = defineHandler(async (c) => {
-  return { users: await db.select().from(users) };
-});
-```
-
-::: code-group
-
-```tsx [React]
-// pages/users/index.tsx
-import type { Props } from './index.server';
-
-export default function UsersPage({ users }: Props) {
-  // users: { id: number; name: string; ... }[]
-}
-```
-
-```vue [Vue]
-<!-- pages/users/index.vue -->
-<script setup lang="ts">
-import type { Props } from './index.server';
-
-const { users } = defineProps<Props>(); // users: { id: number; name: string; ... }[]
-</script>
-```
-
-```svelte [Svelte]
-<!-- pages/users/index.svelte -->
-<script lang="ts">
-  import type { Props } from './index.server';
-
-  let { users }: Props = $props(); // users: { id: number; name: string; ... }[]
-</script>
-```
-
-```tsx [Solid]
-// pages/users/index.tsx
-import type { Props } from './index.server';
-
-export default function UsersPage(props: Props) {
-  // props.users: { id: number; name: string; ... }[]
-}
-```
-
-:::
-
-No manual interface is needed. Props stay in sync with whatever the loader returns.
-
-## Action → useForm
-
-When a page action uses `withValidator()`, the body schema flows through to `useForm`. That gives you typed `data`, typed `errors` keys, and URL autocomplete:
-
-```ts
-// pages/users/create.server.ts
-export const action = defineHandler.withValidator({
-  body: insertUserSchema,
-})(async (c, { body }) => {
-  await db.insert(users).values(body);
-});
-```
-
-```ts
-const form = useForm('/users/create', { name: '', email: '' });
-//                    ^ autocompletes     ^ must match body schema
-
-form.errors.email; // ✓ string | undefined
-form.errors.foo; // ✗ TypeScript error
-```
-
-[Named actions](./pages-routing/actions-and-forms#named-actions) work the same way. The `?actionName` suffix selects the right types for that action:
-
-```ts
-const updateForm = useForm('/users/[id]?update', { name: '' }, { params: { id } });
-const deleteForm = useForm('/users/[id]?delete', { id: '' }, { params: { id } });
-// Each form's data and errors are typed from their respective validators
-```
-
-The `action()` helper gets the same type checking. See [Actions & Forms](./pages-routing/actions-and-forms) for the full API.
-
 ## Typed URLs and Navigation
 
-To link to a user's profile, pass its route pattern and ID to `routeUrl()`:
+To build the URL of an API route, pass its route pattern and parameters to `routeUrl()`:
 
 ```ts
 import { routeUrl } from 'void/routes';
 
-const url = routeUrl('/users/[id]', {
+const url = routeUrl('/api/users/[id]', {
   params: { id: 42 },
-  query: { tab: 'activity' },
-  hash: 'details',
+  query: { fields: 'name' },
 });
-// /users/42?tab=activity#details
+// /api/users/42?fields=name
 ```
 
-TypeScript checks the route and required parameter names. Patterns follow your filenames: `pages/users/[id].tsx`, `.vue`, or `.svelte` uses `/users/[id]`.
+TypeScript checks the route and required parameter names. Patterns follow your filenames: `routes/api/users/[id].ts` uses `/api/users/[id]`.
 
 Parameters accept strings or numbers and are URL-encoded for you. Query values can be strings, numbers, booleans, or arrays. Arrays become repeated keys; `null` and `undefined` values are omitted.
 
-The same bracket patterns work with typed `fetch()`, WebSocket `connect()`, page actions, and `useParams()`.
+The same bracket patterns work with typed `fetch()` and WebSocket `connect()`.
 
-Pass the returned string to `Link`, a plain `<a>`, or `c.redirect()`. For programmatic navigation and `c.rewrite()`, you can pass a destination object directly:
+Pass the returned string to `fetch()`, an `<a>`, or `c.redirect()`. For `c.redirect()` and `c.rewrite()`, you can pass a destination object directly:
 
 ```ts
 import type { RouteDestination } from 'void/routes';
 
-const profile = {
-  pathname: '/users/[id]',
+const user = {
+  pathname: '/api/users/[id]',
   params: { id: 42 },
-  query: { tab: 'activity' },
-  hash: 'details',
+  query: { fields: 'name' },
 } satisfies RouteDestination;
 ```
 
-Destination objects check and encode parameters just like `routeUrl()`. See [Pages Routing](./pages-routing/overview.md#typed-navigation) for client navigation and [Rewrites](../reference/api/rewrites.md#c-rewrite-destination) for server navigation.
+Destination objects check and encode parameters just like `routeUrl()`. See [Rewrites](../reference/api/rewrites.md#c-rewrite-destination) for server navigation.
 
-For a catch-all page such as `pages/files/[...path].tsx`, `.vue`, or `.svelte`, use `/files/[...path]` and pass the full path as one value:
+For a catch-all route such as `routes/files/[...path].ts`, use `/files/[...path]` and pass the full path as one value:
 
 ```ts
 routeUrl('/files/[...path]', { params: { path: 'docs/get started' } });
@@ -185,95 +95,9 @@ routeUrl('/files/[...]', { params: { '*': 'docs/get started' } });
 // /files/docs/get%20started
 ```
 
-### Page params
-
-Pass the current page's pattern to `useParams()` to get typed parameters:
-
-::: code-group
-
-```tsx [React]
-import { useParams } from '@void/react';
-
-const { id } = useParams<'/users/[id]'>(); // id: string
-useParams<'/users/[id]'>().idd; // Type error: no such param
-useParams<'/userz/[id]'>(); // Type error: no page matches
-```
-
-```vue [Vue]
-<script setup lang="ts">
-import { useParams } from '@void/vue';
-
-const params = useParams<'/users/[id]'>();
-params.id; // string
-params.idd; // Type error: no such param
-useParams<'/userz/[id]'>(); // Type error: no page matches
-</script>
-```
-
-```svelte [Svelte]
-<script lang="ts">
-  import { useParams } from '@void/svelte';
-
-  const params = useParams<'/users/[id]'>();
-  params.id; // string
-  params.idd; // Type error: no such param
-  useParams<'/userz/[id]'>(); // Type error: no page matches
-</script>
-```
-
-```tsx [Solid]
-import { useParams } from '@void/solid';
-
-const params = useParams<'/users/[id]'>();
-params.id; // string
-params.idd; // Type error: no such param
-useParams<'/userz/[id]'>(); // Type error: no page matches
-```
-
-:::
-
-Use a page pattern, rather than an HTTP or WebSocket route. Named catch-alls such as `/files/[...path]` return `{ path: string }`; unnamed catch-alls have no named params.
-
-The type argument doesn't change which page is read. Without it, `useParams()` returns `Record<string, string>`.
-
-On the server, `c.req.param('slug')` accepts any name. Read the params object through `PageParams` so a missing or misspelled name is a type error:
-
-```ts
-import type { PageParams } from 'void/routes';
-
-const { slug } = c.req.param() as PageParams<'/posts/[slug]'>;
-```
-
-### Prerender paths
-
-Annotate `getPrerenderPaths()` with `PageParams` to check that every path includes the page's required parameters:
-
-```ts
-// pages/blog/[slug].server.ts
-import type { PageParams } from 'void/routes';
-
-export async function getPrerenderPaths(): Promise<PageParams<'/blog/[slug]'>[]> {
-  return [{ slug: 'hello-world' }];
-}
-```
-
-Void doesn't infer this return type from the filename; include the annotation to catch missing or misspelled keys. Custom SSR returns full paths instead, typed as `Promise<string[]>`. See [Edge Prerendering](./edge/prerendering.md#dynamic-pages-with-params) and [Static Site Generation](./ssg.md#per-page-overrides).
-
-For `routing.prerender`, use `satisfies RouteUrl[]` to check paths when [`routing.typedRoutes`](../reference/config.md#routing-typedroutes) is enabled:
-
-```ts
-// void.config.ts
-import { defineConfig } from 'void/config';
-import type { RouteUrl } from 'void/routes';
-
-export default defineConfig({
-  routing: { prerender: ['/', '/blog/hello-world'] satisfies RouteUrl[] },
-});
-```
-
 ### Checked URL strings
 
-Enable [`routing.typedRoutes`](../reference/config.md#routing-typedroutes) to catch misspelled URLs in links, router calls, redirects, rewrites, cache revalidation, island forms, and stream clients. Apps created with `void init` already have it enabled. For an existing app:
+Enable [`routing.typedRoutes`](../reference/config.md#routing-typedroutes) to catch misspelled URLs in redirects, rewrites, and stream clients. Apps created with `void init` already have it enabled. For an existing app:
 
 ```ts
 // void.config.ts
@@ -286,65 +110,19 @@ export default defineConfig({
 
 A string must then match one of your routes, optionally followed by a query string or hash:
 
-::: code-group
-
-```tsx [React]
-import { Link } from '@void/react';
-import { routeUrl } from 'void/routes';
-
-<Link href="/about">About</Link>
-<Link href={`/users/${user.id}?tab=activity`}>Profile</Link>
-<Link href={routeUrl('/users/[id]', { params: { id } })}>Profile</Link>
-<Link href="/abuot">About</Link> // Type error: no route matches
+```ts
+c.redirect('/api/health');
+c.redirect(`/api/users/${user.id}?fields=name`);
+c.redirect('/api/helth'); // Type error: no route matches
 ```
 
-```vue [Vue]
-<script setup lang="ts">
-import { Link } from '@void/vue';
-import { routeUrl } from 'void/routes';
-</script>
+Redirects also accept same-page queries and hashes (`?page=2`, `#comments`), and `http://`, `https://`, `mailto:`, and `tel:` URLs. Use absolute paths within your app; relative paths such as `../settings` are rejected. Static path segments accept raw text such as `/café menu` or uppercase percent encoding such as `/caf%C3%A9%20menu`.
 
-<template>
-  <Link href="/about">About</Link>
-  <Link :href="`/users/${user.id}?tab=activity`">Profile</Link>
-  <Link :href="routeUrl('/users/[id]', { params: { id } })">Profile</Link>
-  <!-- Type error: no route matches -->
-  <Link href="/abuot">About</Link>
-</template>
-```
-
-```svelte [Svelte]
-<script lang="ts">
-  import { Link } from '@void/svelte';
-  import { routeUrl } from 'void/routes';
-</script>
-
-<Link href="/about">About</Link>
-<Link href={`/users/${user.id}?tab=activity`}>Profile</Link>
-<Link href={routeUrl('/users/[id]', { params: { id } })}>Profile</Link>
-<!-- Type error: no route matches -->
-<Link href="/abuot">About</Link>
-```
-
-```tsx [Solid]
-import { Link } from '@void/solid';
-import { routeUrl } from 'void/routes';
-
-<Link href="/about">About</Link>
-<Link href={`/users/${user.id}?tab=activity`}>Profile</Link>
-<Link href={routeUrl('/users/[id]', { params: { id } })}>Profile</Link>
-<Link href="/abuot">About</Link> // Type error: no route matches
-```
-
-:::
-
-Links also accept same-page queries and hashes (`?page=2`, `#comments`), and `http://`, `https://`, `mailto:`, and `tel:` URLs. Use absolute paths within your app; relative paths such as `../settings` are rejected. Static path segments accept raw text such as `/café menu` or uppercase percent encoding such as `/caf%C3%A9%20menu`.
-
-String checks use TypeScript patterns, which don't validate individual dynamic segments. For example, `/users/[id]` also accepts `/users/` and `/users/42/edit`. A root dynamic page can accept `//example.com`. Prefer `routeUrl()` to encode parameters, and validate untrusted URLs at runtime.
+String checks use TypeScript patterns, which don't validate individual dynamic segments. For example, `/users/[id]` also accepts `/users/` and `/users/42/edit`. A root dynamic route can accept `//example.com`. Prefer `routeUrl()` to encode parameters, and validate untrusted URLs at runtime.
 
 The [SSE](./sse.md#client) and [live stream](./live.md#subscribe-from-the-browser) clients accept route URLs and external `http://` or `https://` URLs. Same-page links, `mailto:`, `tel:`, and `ws://` aren't stream destinations.
 
-`c.redirect()` accepts the same strings as links, plus a `URL` or destination object. For a URL from a provider SDK, your CMS, or `public/`, use `as Href` to skip the type check:
+`c.redirect()` also accepts a `URL` or destination object. For a URL from a provider SDK, your CMS, or `public/`, use `as Href` to skip the type check:
 
 ```ts
 import { routeUrl, type Href } from 'void/routes';
@@ -364,78 +142,30 @@ Cast only URLs you trust. Validate request values such as `?redirectTo=` before 
 
 `void/routes` exports two types for these strings:
 
-- `RouteUrl`: the URL of one of your routes. `routeUrl()` returns it, and `c.rewrite()`, `useIslandForm()`, and `revalidate({ paths })` accept it. Annotate a `routing.prerender` list with it.
-- `Href`: anything a link or `c.redirect()` can point to: a `RouteUrl`, a same-page query or hash, or an external URL.
+- `RouteUrl`: the URL of one of your routes. `routeUrl()` returns it, and `c.rewrite()` accepts it.
+- `Href`: anything `c.redirect()` can point to: a `RouteUrl`, a same-page query or hash, or an external URL.
 
 Use these types for URLs you check at runtime:
 
-::: code-group
-
-```tsx [React]
-import { Link } from '@void/react';
+```ts
 import type { Href, RouteUrl } from 'void/routes';
 
-<Link href={post.path as RouteUrl}>{post.title}</Link>
-<Link href={user.website as Href}>Website</Link>
+c.rewrite(post.path as RouteUrl);
+c.redirect(user.website as Href);
 ```
-
-```vue [Vue]
-<script setup lang="ts">
-import { Link } from '@void/vue';
-import type { Href, RouteUrl } from 'void/routes';
-
-const postHref = post.path as RouteUrl;
-const website = user.website as Href;
-</script>
-
-<template>
-  <Link :href="postHref">{{ post.title }}</Link>
-  <Link :href="website">Website</Link>
-</template>
-```
-
-```svelte [Svelte]
-<script lang="ts">
-  import { Link } from '@void/svelte';
-  import type { Href, RouteUrl } from 'void/routes';
-
-  const postHref = post.path as RouteUrl;
-  const website = user.website as Href;
-</script>
-
-<Link href={postHref}>{post.title}</Link>
-<Link href={website}>Website</Link>
-```
-
-```tsx [Solid]
-import { Link } from '@void/solid';
-import type { Href, RouteUrl } from 'void/routes';
-
-<Link href={post.path as RouteUrl}>{post.title}</Link>
-<Link href={user.website as Href}>Website</Link>
-```
-
-:::
 
 The dev server keeps route types up to date. After changing `routing.typedRoutes`, restart it or run `void prepare`. For CI and standalone typechecking, follow [Setup](#setup). See the [API reference](../reference/api/types.md#void-routes) for the URL helper and route types.
 
 ## What Gets Checked
 
-| Layer               | What's type-checked                                                                                                                                                                                                   |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Database            | Table columns, value types, insert/update shapes from Drizzle schema                                                                                                                                                  |
-| Handlers            | `c.env` bindings, validator input, return type                                                                                                                                                                        |
-| Fetch client        | Route paths, HTTP methods, `body`/`query`/`params`, response type                                                                                                                                                     |
-| Navigation          | Route patterns and required parameter names and values in `routeUrl()` and destination objects                                                                                                                        |
-| Links               | With `routing.typedRoutes`, URL strings in `Link`, router methods, `c.rewrite()`, `useIslandForm()`, and SSE and live stream clients                                                                                  |
-| `c.redirect`        | With `routing.typedRoutes`, route URLs, same-page queries and hashes, destination objects, `URL` values, and `http://`, `https://`, `mailto:`, and `tel:` literals. A string TypeScript cannot check needs `as Href`. |
-| `useParams`         | Page patterns and the names of the params they return                                                                                                                                                                 |
-| `c.req.param`       | Page param names, when the result is annotated with `PageParams`                                                                                                                                                      |
-| `getPrerenderPaths` | Page param names, when the return type is annotated with `PageParams`                                                                                                                                                 |
-| `revalidate`        | With `routing.typedRoutes`, URL strings in `paths`                                                                                                                                                                    |
-| `routing.prerender` | Paths, when the array is annotated with `satisfies RouteUrl[]`                                                                                                                                                        |
-| `useForm`           | Action URLs, `data` fields, `errors` keys, `reset()` args (including `{ initial: true }`), `params`, `resetOnSuccess`                                                                                                 |
-| `action()`          | Action URLs, `data` payload, `params`                                                                                                                                                                                 |
+| Layer        | What's type-checked                                                                                                                                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Database     | Table columns, value types, insert/update shapes from Drizzle schema                                                                                                                                                  |
+| Handlers     | `c.env` bindings, validator input, return type                                                                                                                                                                        |
+| Fetch client | Route paths, HTTP methods, `body`/`query`/`params`, response type                                                                                                                                                     |
+| Navigation   | Route patterns and required parameter names and values in `routeUrl()` and destination objects                                                                                                                        |
+| Rewrites     | With `routing.typedRoutes`, URL strings in `c.rewrite()` and SSE and live stream clients                                                                                                                              |
+| `c.redirect` | With `routing.typedRoutes`, route URLs, same-page queries and hashes, destination objects, `URL` values, and `http://`, `https://`, `mailto:`, and `tel:` literals. A string TypeScript cannot check needs `as Href`. |
 
 ## Serialization
 

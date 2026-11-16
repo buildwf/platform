@@ -73,7 +73,7 @@ vpr dev
 
 :::
 
-Open `http://localhost:5173`. In a Pages starter, `pages/` contains your UI and companion `.server.ts` files contain its server loaders and actions. Loaders return data to page components as typed props.
+Open `http://localhost:5173`. `src/` contains your React app, and `routes/` contains the server routes it calls.
 
 ## Call a server route
 
@@ -119,11 +119,8 @@ Void opens your browser to sign in when needed, builds the app, provisions resou
 
 Install Void and run `void init` with your package manager as shown [above](#create-an-app). Setup adds `voidPlugin()` to your Vite config and creates the remaining project files. If the config needs a manual edit, the CLI shows the change to make.
 
-For a meta framework such as TanStack Start, React Router, or SvelteKit, follow its [integration guide](../integrations/frameworks/overview.md).
-
 ## Next steps
 
-- [Pages Routing](./pages-routing/overview.md): loaders, layouts, and forms
 - [Server Routing](./server-routing.md): params, middleware, and validation
 - [Database](./database.md): queries and migrations
 - [Environment Variables](./env-vars.md): local values and production secrets

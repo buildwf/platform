@@ -93,7 +93,7 @@ method disablement does not revoke these independent deploy credentials.
 
 Store the printed `VOID_TOKEN` and `VOID_API_URL` in the CI secret manager. The
 Access pair passes the perimeter; the scoped Void credential authorizes only
-this project's deploy workflow. When prerendering or remote proxy bindings are
+this project's deploy workflow. When remote proxy bindings are
 used on an Access-protected platform, store `VOID_ACCESS_CREDENTIALS` as an
 origin-keyed JSON secret containing both exact HTTPS origins, even if both use
 the same service-token pair:
@@ -206,15 +206,3 @@ Permanently delete a hosted Void project and all its resources (databases, KV na
 If `[name]` is omitted, uses the linked project.
 
 For direct Cloudflare targets this command refuses to run. Inferred resources can be shared, so Void never performs automatic teardown; verify ownership and remove resources explicitly with Cloudflare tooling.
-
-## `void project purge-cache` {#void-project-purge-cache}
-
-```
-void project purge-cache [--project <name>]
-```
-
-Purge all cached pages for the linked project. The edge cache will clear within seconds.
-
-If `--project` is provided, purges that project's cache instead of the linked project.
-
-This command is hosted-only. For direct Cloudflare targets, redeploy or purge the configured ISR KV namespace yourself.

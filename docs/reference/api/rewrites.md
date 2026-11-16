@@ -47,10 +47,6 @@ return c.redirect(requested.origin === new URL(c.req.url).origin ? requested : '
 
 `c.redirect()` sends the location you provide without adding the request query. From `/sign-in?redirectTo=/notes`, `c.redirect('/notes')` goes to `/notes`. Configured [`routing.redirects`](../../guide/edge/redirects.md) merge query parameters instead.
 
-A [named action](../../guide/pages-routing/actions-and-forms.md#named-actions) keeps its own query parameters. For example, `POST /users/42?delete&tab=profile` with `c.redirect('/users/42')` redirects to `/users/42?tab=profile`. The action key is removed when the redirect changes the method to GET.
-
-Redirects that preserve the method keep the action key: `307` and `308`, or `301` and `302` after `PUT`, `PATCH`, or `DELETE`. Parameters added from the [current page's query](../../guide/pages-routing/actions-and-forms.md#query-parameters-after-submission) aren't carried into the redirect.
-
 ```ts
 import { defineHandler } from 'void';
 
@@ -74,8 +70,7 @@ interface CloudContext {
 - `destination` must start with a single `/` and point at an internal path. External URLs, protocol-relative destinations (`//host/...`), and anything non-path-absolute throw immediately — use `fetch()` for cross-origin calls.
 - Destinations whose final path segment ends in a known static-asset extension (e.g. `/hero.png`, `/app.css`, `/data.json`) throw `VoidAssetRewriteError` (exported from `"void"`) before the re-dispatch. Runtime rewrites cannot reach assets — use a static `routing.rewrites` rule or a `_redirects` `200!` entry. `.html` is deliberately excluded from this guard because `.html` paths may be legitimate route handlers. See [Rewrites](../../guide/edge/rewrites.md#runtime-rewrites-cannot-reach-static-assets).
 - Middleware re-runs on every rewrite hop. Guard side-effects with [`c.isRewritten()`](#c-originalurl-c-isrewritten).
-- Client-side SPA navigation via `Link` does not trigger server rewrites; only full HTTP requests do.
-- Purge the destination path to clear rewritten [ISR entries](../../guide/edge/revalidation.md#cache-keys-and-rewrites).
+- Client-side SPA navigation does not trigger server rewrites; only full HTTP requests do.
 
 ## `c.originalUrl()` / `c.isRewritten()` {#c-originalurl-c-isrewritten}
 

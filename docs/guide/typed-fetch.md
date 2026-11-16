@@ -91,24 +91,8 @@ try {
 | `retry`   | `number`                 | Number of retry attempts (default: 1 for GET).             |
 | `timeout` | `number`                 | Request timeout in milliseconds.                           |
 
-## Isomorphic Fetch During SSR
+## Server-Side Fetch
 
-`fetch()` also works in server-side rendering and route handlers. Calls to your app run without an HTTP round-trip.
-
-```ts
-// src/main.ssr.tsx
-import { fetch } from "void/client";
-import { defineRender } from "void";
-
-export default defineRender(async (c, assetTags) => {
-  // This calls your API route directly with no HTTP request
-  const data = await fetch("/api/users");
-
-  const html = renderToString(<App users={data} />);
-  return new Response(html, {
-    headers: { "content-type": "text/html" },
-  });
-});
-```
+`fetch()` also works in route handlers. Calls to your app run without an HTTP round-trip.
 
 Server-side calls to your app forward the incoming request's `cookie` and `authorization` headers. Explicit headers take precedence. For an external `baseURL`, supply authentication headers explicitly.

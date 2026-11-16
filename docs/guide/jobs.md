@@ -71,10 +71,10 @@ curl -X POST http://localhost:5173/__void/scheduled \
   -d '{"cron":"0 * * * *","scheduledTime":'"$(date +%s000)"'}'
 ```
 
-The endpoint works in native Void apps and supported frameworks. Framework jobs run in the adapter's development runtime and use the bindings it provides.
+The endpoint works in Void apps during development.
 
 ## Deployment behavior
 
-Native scheduled events do not require a manual HTTP token. For framework deployments, HTTP requests to `/__void/scheduled` require a matching `x-void-internal` token: the managed platform supplies its proxy token, or you can explicitly configure `CRON_SECRET` for manual calls. An absent or mismatched token returns `401` without running a job.
+Deployed jobs run from Cloudflare's scheduled events and do not require a manual HTTP token.
 
 On a Void platform, each project can use up to 100 different cron expressions and 1,000 schedules (each expression a job exports counts as one schedule). Jobs that share an expression count once toward the expression limit. When you deploy to your own Cloudflare account, Cloudflare's [Cron Trigger limits](https://developers.cloudflare.com/workers/platform/limits/) apply instead.

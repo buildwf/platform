@@ -165,8 +165,6 @@ On a Void platform, each class keeps its storage across deployments and rollback
 
 A project supports up to 32 distinct custom classes, including removed classes whose storage is retained. Keep resource names and instance names stable to preserve data. Upgrade an older Void installation before deploying an app that uses custom Durable Objects.
 
-Custom Durable Object modules are not supported in meta-frameworks or on Node.js, Bun, and Deno.
-
 This is separate from [typed WebSocket routes](./websockets.md), which also use SQLite-backed Durable Objects and work on both direct Cloudflare and hosted Void deployments.
 
 ## Native Durable Object classes

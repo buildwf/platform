@@ -38,7 +38,7 @@ export const GET = defineHandler(
 ```
 
 ::: warning
-`cache()` stores one response per URL and returns it to every visitor. It skips requests with an `Authorization` header, but not cookies. Use it only on routes whose response is the same for everyone, never on a route that reads the signed-in user. To cache pages, use [revalidation](../guide/edge/revalidation.md), which skips requests that carry a cookie.
+`cache()` stores one response per URL and returns it to every visitor. It skips requests with an `Authorization` header, but not cookies. Use it only on routes whose response is the same for everyone, never on a route that reads the signed-in user.
 :::
 
 ```ts
@@ -107,7 +107,7 @@ For the full list of built-in middleware, see the [Hono documentation](https://h
 
 ### Redirects
 
-Return `c.redirect()` from a handler to redirect. From a shared helper, throw an `HTTPException` with the redirect response in `res`. This works in loaders, actions, and middleware, including client-side page visits:
+Return `c.redirect()` from a handler to redirect. From a shared helper, throw an `HTTPException` with the redirect response in `res`. This works in handlers and middleware:
 
 ```ts
 // lib/require-page-user.ts

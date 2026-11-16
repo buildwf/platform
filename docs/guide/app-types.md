@@ -1,48 +1,30 @@
 ---
-description: 'Build a Void app, use your existing Vite framework, or deploy a static site. Void manages resources and deployment for each.'
+description: 'Build a Void app (a React single-page app with an optional backend) or deploy a static SPA or static site.'
 outline: deep
 ---
 
 # Supported App Types
 
-Void supports three types of apps:
+Void supports two kinds of apps, both deployed to Cloudflare:
 
-1. **Void apps:** Vite apps powered by Void's framework layer, including [API routes](./server-routing.md), [pages mode](./pages-routing/overview.md), [auth](./auth.md), [crons](./jobs.md), and [queues](./queues.md)
-2. **Meta frameworks:** [TanStack Start](https://tanstack.com/start/latest), [React Router](https://reactrouter.com/), [SvelteKit](https://svelte.dev/docs/kit), [Nuxt](https://nuxt.com/), and [Astro](https://astro.build/)
-3. **Static sites:** SPAs, sites built with tools like [VitePress](https://vitepress.dev/), or any directory of static files
+1. **Void apps:** a React single-page app (`index.html` + `src/`) with an optional backend in `routes/`, plus [auth](./auth.md), [crons](./jobs.md), [queues](./queues.md), and the other Void features
+2. **Static apps:** a pre-built SPA, a site built with a tool like [VitePress](https://vitepress.dev/), or any directory of static files
 
 The type is auto-detected from your project structure, or you can set it explicitly in [`void.config.ts`](../reference/config.md).
 
 ## Void Apps
 
-In a Void app, Void handles server routing and deployment. Use React, Vue, Svelte, or Solid for server-rendered pages, or build a frontend with any library that works with Vite.
-
-A Void app can be **API-only** (just `routes/`), a **SPA + API** (frontend in `src/` with API routes), or **full-stack with pages mode** (server-rendered pages in `pages/` with co-located data loading):
+A Void app is a React single-page app that Vite builds into static assets. The browser renders every page; Void does not render HTML on the server. Add files to `routes/` when the app needs a backend:
 
 <VoidAppFileTree annotations />
 
-Void serves API routes, page rendering, and optional [custom SSR](./ssr.md) alongside static assets. Resources such as D1, KV, and R2 are [inferred from your code](../reference/resource-inference.md) and provisioned when you deploy.
+Void serves the API routes from a Cloudflare Worker alongside the SPA's assets. Unknown paths serve `index.html`, so client-side routing works. Resources such as D1, KV, and R2 are [inferred from your code](../reference/resource-inference.md) and provisioned when you deploy.
 
-Void apps can also use [`output: 'static'`](./ssg.md) to pre-render all pages at build time. That gives you a fully static site that can be deployed anywhere, with no Cloudflare Worker required.
+A Void app without `routes/`, middleware, or other server features is a plain SPA: it deploys as static assets with no Worker.
 
 **Deploy:** `void deploy` builds the app, provisions resources, applies migrations, and uploads it to your saved Cloudflare or Void target. See [Deployment](./deployment.md) for setup.
 
-## Meta Frameworks
-
-Void supports deploying Vite-based meta-framework apps with `void deploy`. The framework owns routing and SSR. Void handles [binding inference](../reference/resource-inference.md), [typed DB queries](./database.md), migrations, and deployment.
-
-| Framework                                           | Detected from package   | Setup guide                                           |
-| --------------------------------------------------- | ----------------------- | ----------------------------------------------------- |
-| [TanStack Start](https://tanstack.com/start/latest) | `@tanstack/react-start` | [Guide](../integrations/frameworks/tanstack-start.md) |
-| [React Router v7](https://reactrouter.com/)         | `@react-router/dev`     | [Guide](../integrations/frameworks/react-router.md)   |
-| [SvelteKit](https://svelte.dev/docs/kit)            | `@sveltejs/kit`         | [Guide](../integrations/frameworks/sveltekit.md)      |
-| [Nuxt](https://nuxt.com/)                           | `nuxt`                  | [Guide](../integrations/frameworks/nuxt.md)           |
-| [Analog](https://analogjs.org/)                     | `@analogjs/platform`    | [Guide](../integrations/frameworks/analog.md)         |
-| [Astro](https://astro.build/)                       | `astro`                 | [Guide](../integrations/frameworks/astro.md)          |
-
-Add `voidPlugin()` to the framework's Vite config to get binding inference, typed DB generation, migration management, cron jobs, queues, and caching. Void-managed auth is not supported in framework mode; use Better Auth's official integration for your framework. See the [Meta Frameworks Integration](../integrations/frameworks/overview.md) for supported features and setup guides.
-
-## Pre-built Static Sites
+## Pre-built Static Apps
 
 Any project that produces static files, whether that is an SPA, a static site, or a plain directory. Void serves the assets without requiring application code.
 
@@ -115,5 +97,5 @@ To lock the app type and skip auto-detection, set `inference.appType` in [`void.
 }
 ```
 
-- `inference.appType`: `"void"`, `"framework"`, `"spa"`, or `"static"`
+- `inference.appType`: `"void"`, `"spa"`, or `"static"`
 - `inference.outputDir`: output directory for static app types (relative to project root, defaults to `"dist"`)

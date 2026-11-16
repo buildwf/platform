@@ -30,11 +30,9 @@ export default defineConfig({
 
 If `build.assetsDir` is set to `""`, meaning hashed files live at the root, the optimization is skipped because there is no directory-based way to distinguish hashed from non-hashed files.
 
-Supported meta-frameworks use their own asset directories automatically.
-
 ### Native Cloudflare deployments
 
-For apps that use Void routing, `void deploy --platform cloudflare` gives generated JavaScript bundles with content fingerprints immutable caching. Framework integrations use their asset configuration and `_headers` file. Files copied from `public/` and custom build outputs with stable filenames keep normal revalidation, even when they live in the assets directory. CSS and other assets keep Cloudflare's default or your configured `Cache-Control`.
+For Void apps, `void deploy --platform cloudflare` gives generated JavaScript bundles with content fingerprints immutable caching. Files copied from `public/` and custom build outputs with stable filenames keep normal revalidation, even when they live in the assets directory. CSS and other assets keep Cloudflare's default or your configured `Cache-Control`.
 
 Use [Custom Headers](./headers) to choose a cache policy for other files. Apply immutable caching only to URLs that change whenever their content changes.
 
@@ -50,13 +48,13 @@ Browsers revalidate these files on each request.
 
 **What gets cached:**
 
-- All `GET` requests for non-SSR projects such as SPAs and static sites
-- GET requests with file extensions (`.ico`, `.png`, `.css`, etc.) in SSR projects
+- All `GET` requests for static projects such as SPAs and static sites
+- GET requests with file extensions (`.ico`, `.png`, `.css`, etc.) in Void apps with a Worker
 
 **What does NOT get cached:**
 
 - `/api/*` routes, which always hit the worker
-- SSR-rendered pages (paths without file extensions in SSR projects)
+- Paths without file extensions in Void apps with a Worker
 - Non-GET requests
 - Requests carrying `Cookie`, `Authorization`, or `Cf-Access-Jwt-Assertion` credentials
 - Responses other than a complete `200`
@@ -75,7 +73,7 @@ You can override caching headers or add your own for any static asset path using
 
 ## Navigation and middleware
 
-Void serves static files directly unless application code needs to handle the request first. API requests reach your Worker. Apps with middleware, routes outside `/api`, Pages, or SSR run application code before serving fallback HTML.
+Void serves static files directly unless application code needs to handle the request first. API requests reach your Worker. Apps with middleware or routes outside `/api` run application code before serving fallback HTML.
 
 SPAs serve `index.html` for unmatched HTML navigation so client-side routing works. For a static site with a `404.html` page, set [`routing.notFound`](../../reference/config.md#routing-notfound):
 
@@ -89,12 +87,8 @@ export default defineConfig({
 
 Choose `single-page-application`, `404-page`, or `none`. These settings preserve which requests reach middleware and API handlers. Intentional API `404` responses keep their status and body.
 
-SvelteKit, Nuxt, Analog, and Astro handle their own error pages and ignore `routing.notFound`. For direct Cloudflare deployment with TanStack Start, React Router, or vinext, configure the asset binding, directory, and routing policy through the framework's Cloudflare config.
-
-On direct Cloudflare deployments, SvelteKit, Nuxt, Analog, and Astro serve built files and prerendered pages without running the Worker. Other requests reach the framework.
-
 To run server code before serving an asset, set [`run_worker_first`](https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first) under `cloudflare.assets` in `void.config.ts`. Setting it to `true` runs the Worker on every request and counts toward Worker request usage.
 
-## API routes and SSR pages
+## API routes
 
-API responses and SSR pages are not cached as static assets. Use [Revalidation](./revalidation) to cache public rendered pages.
+API responses are not cached as static assets. Set `Cache-Control` in the handler to let browsers cache them.

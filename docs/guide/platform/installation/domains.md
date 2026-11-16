@@ -30,7 +30,7 @@ Apps on one application domain can set cookies that the other apps there receive
 
 In testing mode, each app gets a `workers.dev` URL. These URLs continue working after you add a domain; new apps then use the domain.
 
-Testing URLs support WebSockets, SSE, and shared ISR storage, but skip the extra edge response cache. Their forwarding Workers remain for manual cleanup after uninstall. Platform disablement and project suspension still block their traffic.
+Testing URLs support WebSockets and SSE, but skip the extra edge response cache. Their forwarding Workers remain for manual cleanup after uninstall. Platform disablement and project suspension still block their traffic.
 
 ## Other Domain Options
 

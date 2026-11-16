@@ -46,7 +46,7 @@ with `.void/*` and `!.void/project.json`. Rotate with `void project token renew 
 
 If Cloudflare Access protects the platform, Access proof and the project
 credential are both required; the service token does not grant Void user or
-operator authority. A deploy that uses prerendering or remote bindings calls
+operator authority. A deploy that uses remote bindings calls
 both the API and proxy, so store `VOID_ACCESS_CREDENTIALS` in the CI secret
 manager with entries for both exact HTTPS origins. Include both entries even
 when the same admitted service-token pair is used for both origins:

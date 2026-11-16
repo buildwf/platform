@@ -192,7 +192,7 @@ A new custom domain becomes reachable only after its project’s protection is r
 
 ### Caching
 
-Requests carrying an Access token bypass [ISR](/guide/edge/revalidation#cache-bypass) and the [static asset edge cache](/guide/edge/static-assets#non-hashed-assets). Protected pages render on each request, which can increase latency and request usage. Public projects keep their shared caches.
+Requests carrying an Access token bypass the [static asset edge cache](/guide/edge/static-assets#non-hashed-assets), which can increase latency and request usage. Public projects keep their shared caches.
 
 ## Recovery
 

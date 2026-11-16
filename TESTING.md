@@ -72,9 +72,6 @@ The named shortcuts select the current test projects:
 ```sh
 vp run test:unit
 vp run test:integration
-vp run test:metaframeworks
-vp run test:pages:react-vue
-vp run test:pages:svelte-solid
 vp run test:platform
 ```
 
@@ -222,7 +219,7 @@ workspace links can hide. They do not publish packages or deploy applications.
 | ---------------------------------------------------------------------------------------------------- | --------------------------------------- |
 | Documentation only                                                                                   | Skip install/build/browser jobs         |
 | Routine code changes                                                                                 | One React app with each of npm and pnpm |
-| Package manifests, lockfiles, packaging configuration, adapters, scaffolding, or packed-test tooling | Full four-framework matrix              |
+| Package manifests, lockfiles, packaging configuration, adapters, scaffolding, or packed-test tooling | Full matrix                             |
 | Release tags                                                                                         | Full matrix on Linux and macOS          |
 | Manual workflow run                                                                                  | Choose smoke or full                    |
 
@@ -243,7 +240,7 @@ VOID_PACKED_SUITE=full node .github/scripts/packed-consumer.mjs
 node --test --test-timeout=10000 .github/scripts/packed-*.test.mjs
 ```
 
-`VOID_PACKED_PM=npm|pnpm` and `VOID_PACKED_FRAMEWORK=react|vue|svelte|solid` select a focused
+`VOID_PACKED_PM=npm|pnpm` selects a focused
 local run. `VOID_PACKED_TOOLCHAIN=vite-plus` verifies Vite+ initialization, the workspace's
 tested Vite+ version, the generated `vp` build/dev/preview commands, and `vp test` with the
 app's Vite config. CI checks a React
@@ -252,19 +249,6 @@ The interactive initializer is a Node.js script using the system `script` PTY
 utility and Bash; it has no Python or native npm dependency.
 
 ## Browser readiness and Windows CI
-
-Pages scroll regressions run in Chromium by default. On a machine with Playwright WebKit support,
-run the same document navigation, reload, SPA navigation, and suspended-render cases in WebKit:
-
-```sh
-vp exec playwright install webkit
-VOID_TEST_BROWSER=webkit vp test run packages/react/test/integration packages/vue/test/integration packages/svelte/test/integration packages/solid/test/integration -t 'restores.*scroll'
-```
-
-Use `waitForIslandsHydrated` from `test/browser-helpers.ts` before asserting island state or
-interacting with islands. Pass the expected minimum count when checking a multi-island fixture.
-Each island imports and hydrates independently, so a selector matching one hydrated island does
-not establish that its siblings are ready. The helper rejects empty or partially hydrated pages.
 
 For SPA navigation, wait for a client readiness signal before setting the document marker and
 clicking. The Nuxt and SvelteKit playgrounds expose `h1[data-hydrated="true"]` after client startup.
@@ -402,9 +386,8 @@ Run deeper fixtures only after the baseline succeeds:
 
 | Fixture      | Expected coverage                                                      |
 | ------------ | ---------------------------------------------------------------------- |
-| Kitchen sink | SSR/hydration, D1, KV, R2, queues, cron, ISR, auth, and Workers AI     |
+| Kitchen sink | React SPA, D1, KV, R2, queues, cron, auth, and Workers AI              |
 | WebSockets   | Durable Object migrations, typed WebSocket routing, and socket traffic |
-| Framework    | At least one detected third-party framework build and deployment       |
 | Static       | Assets, headers, redirects, rewrites, ignores, and 404 handling        |
 | Sandbox      | Containers and Sandbox runtime; paid-plan test only                    |
 
