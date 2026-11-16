@@ -12,6 +12,7 @@ import type { Hono } from 'hono';
 /** The Analytics Engine binding Void adds when an app has procedures. */
 export const ANALYTICS_BINDING = 'ANALYTICS';
 export const RPC_BASE_PATH = '/rpc';
+export const MCP_PATH = '/mcp';
 
 type ProcedureModule = readonly [prefix: string, exports: Record<string, unknown>];
 
@@ -64,5 +65,14 @@ export function mountProcedures(
   }) => rpc(c.req.raw, c.env, { waitUntil: (p) => c.executionCtx.waitUntil(p) });
   app.all(RPC_BASE_PATH, handle);
   app.all(`${RPC_BASE_PATH}/*`, handle);
+  // Every procedure that chose `.mcp()` is a tool. The MCP server loads on the first request,
+  // so apps that never use it pay no startup cost.
+  const mcp = (async () => {
+    const { mcpHandler } = await import('@eeao/mcp');
+    return mcpHandler(registry, { name: options.name, version: options.version, route: MCP_PATH });
+  })();
+  app.all(MCP_PATH, async (c) =>
+    (await mcp)(c.req.raw, c.env, { waitUntil: (p) => c.executionCtx.waitUntil(p) }),
+  );
   return registry;
 }

@@ -94,6 +94,14 @@
       "types": "./dist/runtime/procedure.d.mts",
       "import": "./dist/runtime/procedure.mjs"
     },
+    "./rpc": {
+      "types": "./dist/runtime/rpc.d.mts",
+      "import": "./dist/runtime/rpc.mjs"
+    },
+    "./rpc/react": {
+      "types": "./dist/runtime/rpc-react.d.mts",
+      "import": "./dist/runtime/rpc-react.mjs"
+    },
     "./routes": {
       "types": "./dist/routes-stub.d.mts",
       "import": "./dist/routes-stub.mjs",
@@ -299,11 +307,14 @@
     "@eeao/analytics": "link:../../eeaao/typescript/packages/analytics",
     "@eeao/core": "link:../../eeaao/typescript/packages/core",
     "@eeao/http": "link:../../eeaao/typescript/packages/http",
+    "@eeao/mcp": "link:../../eeaao/typescript/packages/mcp",
+    "@modelcontextprotocol/server": "^2.4.0",
     "@napi-rs/keyring": "catalog:",
     "@void/deploy-cloudflare": "workspace:*",
     "@void/deploy-core": "workspace:*",
     "@void/edge": "workspace:*",
     "@void/platform": "workspace:*",
+    "agents": "^0.33.0",
     "better-auth": "catalog:",
     "better-sqlite3": "^13.0.3",
     "blake3-jit": "^1.1.0",
@@ -335,6 +346,7 @@
     "@types/node": "catalog:",
     "@types/pg": "^8.23.1",
     "@types/proper-lockfile": "^4.1.4",
+    "@types/react": "^19.2.0",
     "@voidzero-dev/vite-plus-prompts": "catalog:",
     "arktype": "catalog:",
     "ci-info": "catalog:",
@@ -345,6 +357,7 @@
     "pathslash": "catalog:",
     "pglite-server": "0.1.5",
     "picocolors": "^1.1.1",
+    "react": "catalog:",
     "tinyglobby": "^0.2.17",
     "typescript": "catalog:",
     "valibot": "^1.5.0",
@@ -354,12 +367,16 @@
   },
   "peerDependencies": {
     "arktype": ">=2.0.0",
+    "react": ">=18.0.0",
     "valibot": ">=1.0.0-beta.7",
     "vite": "^8.0.0",
     "zod": "^3.25.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {
     "arktype": {
+      "optional": true
+    },
+    "react": {
       "optional": true
     },
     "valibot": {

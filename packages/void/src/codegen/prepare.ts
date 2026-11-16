@@ -11,6 +11,7 @@ import { generateAuthTypes } from './auth-types.ts';
 import { generateBindingTypes } from './binding-types.ts';
 import { generateDbDts } from './db-types.ts';
 import { findEnvFileForPaths, generateEnvTypes } from './env-types.ts';
+import { generateProcedureTypes } from './procedure-types.ts';
 import { ensureProjectTsconfig } from './project-tsconfig.ts';
 import { generateQueueTypes } from './queue-types.ts';
 import { generateRouteTypes } from './route-types.ts';
@@ -88,6 +89,14 @@ export async function prepareProject(root: string): Promise<PrepareProjectResult
     writeGeneratedFile(outDir, 'queues.d.ts', dts, written);
   } else {
     removeGeneratedFile(outDir, 'queues.d.ts', removed);
+  }
+
+  // .void/tsconfig.json lists procedures.d.ts whenever the procedures directory exists.
+  if (existsSync(paths.proceduresDir)) {
+    const dts = generateProcedureTypes(scan.procedures ?? [], paths.proceduresDir, outDir);
+    writeGeneratedFile(outDir, 'procedures.d.ts', dts, written);
+  } else {
+    removeGeneratedFile(outDir, 'procedures.d.ts', removed);
   }
 
   const schema = discoverSchema(root, paths);

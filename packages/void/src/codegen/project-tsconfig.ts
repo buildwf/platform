@@ -40,6 +40,7 @@ export function createProjectTsconfig(
   const includeEnv = existsSync(join(outDir, 'env.d.ts'));
   const includeAuth = existsSync(join(outDir, 'auth.d.ts'));
   const includeBindings = existsSync(join(outDir, 'bindings.d.ts'));
+  const includeProcedures = existsSync(pathsConfig.proceduresDir);
   const files = [
     ...(includeRoutes ? ['routes.d.ts'] : []),
     ...(hasDb ? ['db.d.ts'] : []),
@@ -47,6 +48,7 @@ export function createProjectTsconfig(
     ...(includeEnv ? ['env.d.ts'] : []),
     ...(includeAuth ? ['auth.d.ts'] : []),
     ...(includeBindings ? ['bindings.d.ts'] : []),
+    ...(includeProcedures ? ['procedures.d.ts'] : []),
   ];
 
   const tsconfig: ProjectTsconfig = { files };

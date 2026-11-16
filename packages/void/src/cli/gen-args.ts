@@ -28,6 +28,11 @@ export const genSubcommands: Array<SubcommandDef> = [
   { name: 'middleware', arg: '<name>', description: 'Generate a numbered middleware file' },
   { name: 'cron', arg: '<name>', description: 'Generate a cron job file' },
   { name: 'queue', arg: '<name>', description: 'Generate a queue consumer file' },
+  {
+    name: 'procedure',
+    arg: '<file.name>',
+    description: 'Generate a procedure, such as contacts.get',
+  },
 ];
 
 export type GenArgs =
@@ -40,7 +45,8 @@ export type GenArgs =
   | { subcommand: 'route'; path: string; methods: Array<string> }
   | { subcommand: 'middleware'; name: string }
   | { subcommand: 'cron'; name: string }
-  | { subcommand: 'queue'; name: string };
+  | { subcommand: 'queue'; name: string }
+  | { subcommand: 'procedure'; name: string };
 
 const COLUMN_TYPES = new Set(['string', 'text', 'datetime', 'integer', 'boolean', 'real', 'blob']);
 
@@ -151,6 +157,24 @@ function parseHyphenatedNameArgs(
   return { subcommand, name };
 }
 
+/** `contacts.get` is the `get` export of `procedures/contacts.ts`; `billing.invoices.list` nests. */
+function parseProcedureArgs(args: Array<string>): GenArgs {
+  const [name, extra] = args;
+  if (!name) {
+    throw new Error('gen: Usage: void gen procedure <file.name>, such as contacts.get.');
+  }
+  if (extra) {
+    throw new Error(`gen: Unexpected argument '${extra}'.`);
+  }
+  const segments = name.split('.');
+  if (segments.length < 2 || !segments.every((segment) => NAME_RE.test(segment))) {
+    throw new Error(
+      'gen: Procedure names are lowercase dot-separated words, such as contacts.get: the last word is the export, the rest is the file.',
+    );
+  }
+  return { subcommand: 'procedure', name };
+}
+
 export function parseGenArgs(args: Array<string>): GenArgs {
   const [subcommand, ...rest] = args;
 
@@ -173,5 +197,9 @@ export function parseGenArgs(args: Array<string>): GenArgs {
     return parseHyphenatedNameArgs(rest, 'queue', 'Queue');
   }
 
-  throw new Error('gen: Usage: void gen <model|migration|route|middleware|cron|queue>.');
+  if (subcommand === 'procedure') {
+    return parseProcedureArgs(rest);
+  }
+
+  throw new Error('gen: Usage: void gen <model|migration|route|middleware|cron|queue|procedure>.');
 }

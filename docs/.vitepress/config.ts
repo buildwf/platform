@@ -345,6 +345,7 @@ export default extendConfig(
               },
               { text: 'Sandboxes', link: '/guide/sandboxes' },
               { text: 'Cron Jobs', link: '/guide/jobs' },
+              { text: 'Procedures', link: '/guide/procedures' },
               { text: 'Queues', link: '/guide/queues' },
               { text: 'WebSockets', link: '/guide/websockets' },
               { text: 'Server-Sent Events', link: '/guide/sse' },

@@ -4,13 +4,13 @@ import { parseGenArgs } from '../../src/cli/gen-args.ts';
 describe('parseGenArgs', () => {
   it('errors on no subcommand', () => {
     expect(() => parseGenArgs([])).toThrow(
-      'gen: Usage: void gen <model|migration|route|middleware|cron|queue>.',
+      'gen: Usage: void gen <model|migration|route|middleware|cron|queue|procedure>.',
     );
   });
 
   it('errors on unknown subcommand', () => {
     expect(() => parseGenArgs(['unknown'])).toThrow(
-      'gen: Usage: void gen <model|migration|route|middleware|cron|queue>.',
+      'gen: Usage: void gen <model|migration|route|middleware|cron|queue|procedure>.',
     );
   });
 

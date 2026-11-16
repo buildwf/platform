@@ -1444,6 +1444,10 @@ const HELP_TREE: HelpTree = {
       ),
       cron: basicSubcommand('Generate a cron job file.', 'void gen cron <name>'),
       queue: basicSubcommand('Generate a queue consumer file.', 'void gen queue <name>'),
+      procedure: basicSubcommand(
+        'Generate a procedure, such as contacts.get.',
+        'void gen procedure <file.name>',
+      ),
     },
   },
   info: {
