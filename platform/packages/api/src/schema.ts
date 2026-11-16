@@ -1261,6 +1261,28 @@ export const projectDatabaseCredentials = pgTable('project_database_credentials'
 });
 
 // ---------------------------------------------------------------------------
+// project_credentials — third-party tokens the proxy attaches to outbound requests.
+// Never injected into a worker, never returned by any procedure after it is stored.
+// ---------------------------------------------------------------------------
+export const projectCredentials = pgTable(
+  'project_credentials',
+  {
+    project_id: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    provider: text('provider').notNull(),
+    ciphertext: text('ciphertext').notNull(),
+    iv: text('iv').notNull(),
+    key_version: text('key_version').notNull(),
+    /** Repositories (owner/name) the token may reach through the proxy. */
+    repositories: text('repositories').array().notNull(),
+    created_at: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { mode: 'string' }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.project_id, table.provider] })],
+);
+
+// ---------------------------------------------------------------------------
 // github_installations — GitHub App installations.
 //
 // `user_id` is the owner of a personal (account_type='User') installation and

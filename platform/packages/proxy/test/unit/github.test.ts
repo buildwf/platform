@@ -1,0 +1,125 @@
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import worker from '../../src/index.ts';
+import { clearProxyTokenStateCache } from '../../src/proxy-token.ts';
+
+const JWT_SECRET = 'test-secret-key';
+const PROJECT = 'proj_000000000001';
+
+async function signAiToken(projectId: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(JWT_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(projectId)));
+  let binary = '';
+  for (const byte of sig) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function createEnv(credential: Response | null) {
+  return {
+    AI: { run: vi.fn(), models: vi.fn(), toMarkdown: vi.fn() },
+    JWT_SECRET,
+    ROUTING: { get: vi.fn(async () => null), put: vi.fn(), delete: vi.fn() },
+    API: {
+      fetch: vi.fn(async (url: string) =>
+        url.includes('/internal/credential/') && credential
+          ? credential.clone()
+          : Response.json({ error: 'not found' }, { status: 404 }),
+      ),
+    },
+    CF_ACCOUNT_ID: 'test-account',
+    CF_API_TOKEN: 'test-token',
+    DISPATCH: { get: vi.fn() },
+  };
+}
+
+function post(body: unknown): Request {
+  return new Request('https://proxy/github/request', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+const stored = () => Response.json({ token: 'ghp_secret', repositories: ['buildwf/dedworc'] });
+
+describe('POST /github/request', () => {
+  let aiToken: string;
+  const originalFetch = globalThis.fetch;
+
+  beforeAll(async () => {
+    aiToken = await signAiToken(PROJECT);
+  });
+  beforeEach(clearProxyTokenStateCache);
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  it('attaches the stored token and never returns it', async () => {
+    const upstream = vi.fn(async () => Response.json({ number: 7 }, { status: 201 }));
+    globalThis.fetch = upstream as unknown as typeof fetch;
+    const env = createEnv(stored());
+    const res = await worker.fetch(
+      post({
+        projectId: PROJECT,
+        aiToken,
+        method: 'POST',
+        path: '/repos/buildwf/dedworc/pulls',
+        body: { title: 'x', head: 'a', base: 'main' },
+      }),
+      env,
+    );
+    expect(res.status).toBe(201);
+    expect(await res.text()).not.toContain('ghp_secret');
+    const [url, init] = upstream.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://api.github.com/repos/buildwf/dedworc/pulls');
+    expect((init.headers as Record<string, string>).authorization).toBe('Bearer ghp_secret');
+  });
+
+  it('refuses a repository the credential does not cover', async () => {
+    globalThis.fetch = vi.fn() as unknown as typeof fetch;
+    const res = await worker.fetch(
+      post({ projectId: PROJECT, aiToken, path: '/repos/other/repo/pulls' }),
+      createEnv(stored()),
+    );
+    expect(res.status).toBe(403);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    '/user',
+    '/repos/buildwf/dedworc/../../user',
+    '/repos//x/y',
+    'https://evil.test/repos/a/b',
+  ])('refuses path %s', async (path) => {
+    globalThis.fetch = vi.fn() as unknown as typeof fetch;
+    const res = await worker.fetch(
+      post({ projectId: PROJECT, aiToken, path }),
+      createEnv(stored()),
+    );
+    expect(res.status).toBe(400);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('answers 404 when no credential is stored', async () => {
+    const res = await worker.fetch(
+      post({ projectId: PROJECT, aiToken, path: '/repos/buildwf/dedworc/pulls' }),
+      createEnv(null),
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('rejects an invalid project token', async () => {
+    const res = await worker.fetch(
+      post({ projectId: PROJECT, aiToken: 'bad', path: '/repos/buildwf/dedworc/pulls' }),
+      createEnv(stored()),
+    );
+    expect(res.status).toBe(403);
+  });
+});

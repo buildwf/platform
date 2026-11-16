@@ -102,6 +102,13 @@ export {
 } from './db/secrets.ts';
 
 export {
+  listProjectCredentials,
+  getProjectCredential,
+  upsertProjectCredential,
+  deleteProjectCredential,
+} from './db/credentials.ts';
+
+export {
   createResource,
   getProjectResources,
   getResourceByBinding,
