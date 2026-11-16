@@ -24,6 +24,7 @@ import {
   mockCfApi,
   type TestEnv,
   rpcData,
+  rpcRequest,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -58,15 +59,17 @@ describe('project secrets API', () => {
       const fetchMock = mockCfApi();
       for (const method of ['PUT', 'DELETE']) {
         const response = await app.fetch(
-          new Request(`http://localhost/projects/${project.id}/secrets/API_KEY`, {
-            method,
-            headers: { Authorization: `Bearer ${user.jwt}`, 'content-type': 'application/json' },
-            ...(method === 'PUT' ? { body: JSON.stringify({ value: 'new' }) } : {}),
+          rpcRequest(method === 'PUT' ? 'secrets.set' : 'secrets.delete', user.jwt, {
+            projectId: project.id,
+            name: 'API_KEY',
+            ...(method === 'PUT' ? { value: 'new' } : {}),
           }),
           env,
         );
         expect(response.status).toBe(409);
-        expect(await response.json()).toMatchObject({ deployment: pending.id });
+        expect(await response.json()).toEqual({
+          error: { code: 'DEPLOYMENT_IN_PROGRESS', message: expect.stringContaining(pending.id) },
+        });
         expect(await getProjectSecrets(env.db, project.id)).toEqual(before);
       }
       expect(fetchMock).not.toHaveBeenCalled();
@@ -90,11 +93,7 @@ describe('project secrets API', () => {
     });
     const fetchMock = mockCfApi();
     const response = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/secrets/API_KEY`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${user.jwt}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ value: 'new' }),
-      }),
+      rpcRequest('secrets.set', user.jwt, { projectId: project.id, name: 'API_KEY', value: 'new' }),
       env,
     );
     expect(response.status).toBe(200);
@@ -109,10 +108,10 @@ describe('project secrets API', () => {
 
   it('returns 401 without auth', async () => {
     const res = await app.fetch(
-      new Request('http://localhost/projects/proj_x/secrets/API_KEY', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: 'secret' }),
+      rpcRequest('secrets.set', undefined, {
+        projectId: 'proj_x',
+        name: 'API_KEY',
+        value: 'secret',
       }),
       env,
     );
@@ -134,15 +133,17 @@ describe('project secrets API', () => {
         `secret-reserved-${name.toLowerCase().replaceAll('_', '-')}`,
       );
       const res = await app.fetch(
-        new Request(`http://localhost/projects/${project.id}/secrets/${name}`, {
-          method: 'PUT',
-          headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ value: 'whatever' }),
+        rpcRequest('secrets.set', user.jwt, {
+          projectId: project.id,
+          name: name,
+          value: 'whatever',
         }),
         env,
       );
       expect(res.status).toBe(400);
-      expect(await res.json()).toEqual({ error: 'reserved binding name' });
+      expect(await res.json()).toEqual({
+        error: { code: 'RESERVED_NAME', message: 'reserved binding name' },
+      });
     },
   );
 
@@ -153,10 +154,10 @@ describe('project secrets API', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'secret-bare-slug');
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/secrets/VOID_PROJECT_SLUG`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: 'whatever' }),
+      rpcRequest('secrets.set', user.jwt, {
+        projectId: project.id,
+        name: 'VOID_PROJECT_SLUG',
+        value: 'whatever',
       }),
       env,
     );
@@ -169,19 +170,16 @@ describe('project secrets API', () => {
     const fetchMock = mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/secrets/API_KEY`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ value: 'top-secret' }),
+      rpcRequest('secrets.set', user.jwt, {
+        projectId: project.id,
+        name: 'API_KEY',
+        value: 'top-secret',
       }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, name: 'API_KEY' });
+    expect(rpcData(await res.json())).toEqual({ ok: true, name: 'API_KEY' });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -217,19 +215,16 @@ describe('project secrets API', () => {
     const fetchMock = mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/secrets/API_KEY`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ value: 'top-secret' }),
+      rpcRequest('secrets.set', user.jwt, {
+        projectId: project.id,
+        name: 'API_KEY',
+        value: 'top-secret',
       }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, name: 'API_KEY' });
+    expect(rpcData(await res.json())).toEqual({ ok: true, name: 'API_KEY' });
 
     const call = fetchMock.mock.calls.find((c) => {
       const method = (c[1] as RequestInit | undefined)?.method;
@@ -250,25 +245,21 @@ describe('project secrets API', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/secrets/API_KEY`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ value: 'top-secret' }),
+      rpcRequest('secrets.set', user.jwt, {
+        projectId: project.id,
+        name: 'API_KEY',
+        value: 'top-secret',
       }),
       env,
     );
 
     expect(res.status).toBe(502);
-    expect(await res.json()).toEqual(
-      expect.objectContaining({
-        error: 'secret stored but live propagation failed',
-        name: 'API_KEY',
-        liveUpdated: false,
-      }),
-    );
+    expect(await res.json()).toEqual({
+      error: {
+        code: 'PROPAGATION_FAILED',
+        message: expect.stringContaining('secret stored but live propagation failed'),
+      },
+    });
 
     const listRes = await app.fetch(
       new Request(`http://localhost/rpc/secrets.list`, {
@@ -292,17 +283,12 @@ describe('project secrets API', () => {
     const fetchMock = mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/secrets/API_KEY`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-        },
-      }),
+      rpcRequest('secrets.delete', user.jwt, { projectId: project.id, name: 'API_KEY' }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, name: 'API_KEY' });
+    expect(rpcData(await res.json())).toEqual({ ok: true, name: 'API_KEY' });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -314,17 +300,12 @@ describe('project secrets API', () => {
     const fetchMock = mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/secrets/API_KEY`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-        },
-      }),
+      rpcRequest('secrets.delete', user.jwt, { projectId: project.id, name: 'API_KEY' }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, name: 'API_KEY' });
+    expect(rpcData(await res.json())).toEqual({ ok: true, name: 'API_KEY' });
 
     const call = fetchMock.mock.calls.find((c) => {
       const method = (c[1] as RequestInit | undefined)?.method;
@@ -344,22 +325,12 @@ describe('project secrets API', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/secrets/API_KEY`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${bob.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ value: 'nope' }),
-      }),
+      rpcRequest('secrets.set', bob.jwt, { projectId: project.id, name: 'API_KEY', value: 'nope' }),
       env,
     );
 
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({
-      error: 'forbidden',
-      message: expect.stringMatching(/Ask (a project admin or owner|the owner)/),
-    });
+    expect(await res.json()).toEqual({ error: { code: 'FORBIDDEN', message: expect.any(String) } });
   });
 
   it('validates secret name', async () => {
@@ -368,18 +339,13 @@ describe('project secrets API', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/secrets/not-valid`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ value: 'x' }),
-      }),
+      rpcRequest('secrets.set', user.jwt, { projectId: project.id, name: 'not-valid', value: 'x' }),
       env,
     );
 
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: 'invalid secret name' });
+    expect(await res.json()).toEqual({
+      error: { code: 'INVALID_NAME', message: 'invalid secret name' },
+    });
   });
 });

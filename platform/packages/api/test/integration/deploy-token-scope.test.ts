@@ -27,6 +27,7 @@ import {
   readAllEvents,
   type TestEnv,
   rpcData,
+  rpcRequest,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -378,11 +379,7 @@ describe('deploy token scope enforcement', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/secrets/FOO`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: 'pwned' }),
-      }),
+      rpcRequest('secrets.set', token, { projectId: project.id, name: 'FOO', value: 'pwned' }),
       env,
     );
     expect(res.status).toBe(403);

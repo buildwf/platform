@@ -72,6 +72,7 @@ import {
   type CfApiMocks,
   type MockCfApiHandle,
   type TestEnv,
+  rpcRequest,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -1486,13 +1487,10 @@ describe('proxy token rotation', () => {
         if (method === 'GET' && script === fx.worker(fx.active) && !secretWrite) {
           secretWrite = Promise.resolve(
             app.fetch(
-              new Request(`http://localhost/projects/${fx.projectId}/secrets/RACE_SECRET`, {
-                method: 'PUT',
-                headers: {
-                  Authorization: `Bearer ${fx.ownerJwt}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ value: 'race-value' }),
+              rpcRequest('secrets.set', fx.ownerJwt, {
+                projectId: fx.projectId,
+                name: 'RACE_SECRET',
+                value: 'race-value',
               }),
               testEnv,
             ),
