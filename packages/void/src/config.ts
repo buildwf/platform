@@ -1,4 +1,10 @@
-import { isRecord, type AssetConfig } from '@void/deploy-core';
+import {
+  isRecord,
+  isR2LocationHint,
+  R2_LOCATION_HINTS,
+  type AssetConfig,
+  type StorageConfig,
+} from '@void/deploy-core';
 import type { RewriteDestination } from 'void/routes';
 import {
   VOID_AUTH_PROVIDERS,
@@ -171,6 +177,7 @@ export type CloudflareConfig = Record<string, unknown> & {
 
 /** Shape of the Void project config. All fields optional. */
 export type VoidConfig = {
+  storage?: StorageConfig;
   sourceDir?: string;
   auth?: AuthConfig;
   routing?: RoutingConfig;
@@ -440,7 +447,18 @@ function validateConfigObject(obj: unknown): VoidConfig {
     validateSourceDir(obj.sourceDir, CONFIG_FILE);
   }
 
-  // Validate auth
+  if (obj.storage !== undefined) {
+    if (
+      !isRecord(obj.storage) ||
+      Object.keys(obj.storage).some((key) => key !== 'locationHint') ||
+      (obj.storage.locationHint !== undefined && !isR2LocationHint(obj.storage.locationHint))
+    ) {
+      throw new Error(
+        `config: "storage.locationHint" in ${CONFIG_FILE} must be one of: ${R2_LOCATION_HINTS.join(', ')}.`,
+      );
+    }
+  }
+
   if (obj.auth !== undefined) {
     if (!isRecord(obj.auth)) {
       throw new Error(`config: "auth" in ${CONFIG_FILE} must be an object.`);

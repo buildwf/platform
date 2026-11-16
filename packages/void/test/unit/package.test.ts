@@ -106,6 +106,13 @@ describe('buildVoidManifest', () => {
         { bindingName: 'WORKSPACE', className: 'WorkspaceDurableObject', storage: 'sqlite' },
       ],
     });
+    const withStorage = buildVoidManifest({
+      bindings: makeBindings({ needsR2: true }),
+      durableObjects: [{ bindingName: 'WORKSPACE', className: 'WorkspaceDurableObject' }],
+      storage: { locationHint: 'apac' },
+    });
+    expect(withStorage.version).toBe(5);
+    expect(withStorage.durableObjects).toEqual(durable.durableObjects);
   });
   it('advertises authenticated email protocol only for a managed inbound handler', () => {
     expect(

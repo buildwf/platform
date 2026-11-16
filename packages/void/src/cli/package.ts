@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import type { StorageConfig } from '@void/deploy-core';
 import { hash as blake3hash } from 'blake3-jit';
 import ignore from 'ignore';
 import { extname, join, relative } from 'pathslash';
@@ -443,6 +444,7 @@ export function buildVoidManifest(opts: {
   hashedAssetsPrefix?: string;
   headerRules?: Array<HeaderRule>;
   alwaysUseHttps?: boolean;
+  storage?: StorageConfig;
   redirectRules?: Array<DevRedirectRule>;
   fallbackRules?: Array<DevRedirectRule>;
   dialect?: 'sqlite' | 'postgresql' | 'mysql';
@@ -486,6 +488,10 @@ export function buildVoidManifest(opts: {
   }
   if (bindings.needsAuth) {
     manifest.auth = true;
+  }
+  if (opts.bindings.needsR2 && opts.storage?.locationHint) {
+    manifest.storage = opts.storage;
+    manifest.version = 5;
   }
   applyResourceBindings(
     manifest,

@@ -238,6 +238,7 @@ export async function runFullDeploy(
   const manifest = buildVoidManifest({
     bindings: liveConfig ? { ...bindings, needsLive: true } : bindings,
     alwaysUseHttps: voidConfig.routing?.alwaysUseHttps,
+    storage: voidConfig.storage,
     hasEmailHandlers: routeScan.email !== undefined && hasEmailHandlers(routeScan.email),
     migrations: validatedMigrations,
     schedules,
