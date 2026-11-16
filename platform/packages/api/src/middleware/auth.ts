@@ -5,7 +5,7 @@ import { activeOAuthApproval, OAuthError } from '../auth/oauth.ts';
 import { validateHumanSession } from '../auth/sessions.ts';
 import { ACTIVE_BUILD_STATUSES, getBuild, getUser } from '../db.ts';
 import { type ApiEnv, isDevBypass } from '../env.ts';
-import { deploymentOperations, projectDeployCredentials, projects, users } from '../schema.ts';
+import { projectDeployCredentials, projects, users } from '../schema.ts';
 import { isAdminSuspended } from '../suspension.ts';
 
 /**
@@ -18,19 +18,9 @@ import { isAdminSuspended } from '../suspension.ts';
  * 15-minute CI token could take over the project. Default-deny: anything not
  * listed here is rejected with 403.
  *
- * The set is the exact list of authenticated API calls `void deploy` makes
- * (traced from `packages/void/src/cli/{deploy,client}.ts`):
- *   - `GET  /projects`                         listProjects (slug→id resolution)
- *   - `GET  /projects/resolve?slug=...`        resolve one project by slug
- *   - `GET  /projects/:id`                     read the linked project
- *   - `GET  /projects/:id/resources`           getResources (PostgreSQL gate)
+ * Procedures under `/rpc` have their own allowlist below. The REST calls still open to a
+ * deploy token, traced from `packages/void/src/cli/{deploy,client}.ts`:
  *   - `POST /projects/:id/database`            provisionDatabase (PostgreSQL gate)
- *   - `GET  /projects/:id/deployments`         listDeployments (live-binding restore)
- *   - `GET  /projects/:id/deployments/:d/events` deployment event stream
- *   - `GET  /projects/:id/secrets`             listSecrets (env.ts schema validation)
- *   - `POST /projects/:id/deploy/preflight`    asset preflight
- *   - `POST /projects/:id/deploy/upload-urls`  presigned R2 PUT URLs
- *   - `POST /projects/:id/deploy/worker-upload-urls` presigned Worker module PUTs
  *   - `POST /projects/:id/deploy`              manifest finalize
  *
  * `:id` is matched against `payload.project` by the caller — the entries
@@ -38,19 +28,39 @@ import { isAdminSuspended } from '../suspension.ts';
  */
 type DeployAllowEntry = Readonly<{ method: string; segments: ReadonlyArray<string | null> }>;
 const DEPLOY_TOKEN_ALLOWLIST: ReadonlyArray<DeployAllowEntry> = [
-  { method: 'GET', segments: ['projects'] },
-  { method: 'GET', segments: ['projects', 'resolve'] },
-  { method: 'GET', segments: ['projects', null] },
-  { method: 'GET', segments: ['projects', null, 'resources'] },
   { method: 'POST', segments: ['projects', null, 'database'] },
-  { method: 'GET', segments: ['projects', null, 'deployments'] },
-  { method: 'GET', segments: ['projects', null, 'deployments', ':deploymentId', 'events'] },
-  { method: 'GET', segments: ['projects', null, 'secrets'] },
-  { method: 'POST', segments: ['projects', null, 'deploy', 'preflight'] },
-  { method: 'POST', segments: ['projects', null, 'deploy', 'upload-urls'] },
-  { method: 'POST', segments: ['projects', null, 'deploy', 'worker-upload-urls'] },
   { method: 'POST', segments: ['projects', null, 'deploy'] },
 ];
+
+/**
+ * Procedures a scoped deploy token may call: the ones `void deploy` makes. Each checks the token's
+ * project itself (`canOnProject`), because a procedure's project is in its body, not its path.
+ */
+const DEPLOY_TOKEN_PROCEDURES: ReadonlySet<string> = new Set([
+  'projects.list',
+  'projects.resolve',
+  'projects.get',
+  'projects.resources',
+  'deployments.list',
+  'deployments.events',
+  'secrets.list',
+  'deploy.preflight',
+  'deploy.uploadUrls',
+  'deploy.workerUploadUrls',
+]);
+
+/** Procedures an OAuth publish approval may call: its one deployment and nothing else. */
+const OAUTH_DEPLOY_PROCEDURES: ReadonlySet<string> = new Set([
+  'projects.get',
+  'deployments.events',
+  'deploy.uploadUrls',
+]);
+
+/** The procedure an `/rpc/<name>` request calls, or null for any other path. */
+function rpcProcedure(method: string, path: string): string | null {
+  const match = method === 'POST' ? /^\/rpc\/([A-Za-z0-9.]+)$/.exec(path) : null;
+  return match?.[1] ?? null;
+}
 
 /**
  * Returns `true` when `method`+`path` is on the deploy-token allowlist for the
@@ -60,6 +70,10 @@ const DEPLOY_TOKEN_ALLOWLIST: ReadonlyArray<DeployAllowEntry> = [
  * P-scoped token can never reach another project's path.
  */
 function isDeployTokenAllowed(method: string, path: string, projectScope: string): boolean {
+  const procedure = rpcProcedure(method, path);
+  if (procedure) {
+    return DEPLOY_TOKEN_PROCEDURES.has(procedure);
+  }
   const segments = path.split('/').filter((segment) => segment.length > 0);
   return DEPLOY_TOKEN_ALLOWLIST.some((entry) => {
     if (entry.method !== method || entry.segments.length !== segments.length) {
@@ -149,6 +163,7 @@ export const authMiddleware: MiddlewareHandler<ApiEnv> = async (context, next) =
   }
 
   context.set('user', user);
+  context.set('tokenAudience', payload.aud as NonNullable<ApiEnv['Variables']['tokenAudience']>);
   const projectId = context.req.path.match(/^\/projects\/(proj_[a-z0-9]+)(?:\/|$)/)?.[1];
   if (projectId && payload.aud !== 'oauth-preview') {
     const [project] = await context
@@ -189,38 +204,16 @@ export const authMiddleware: MiddlewareHandler<ApiEnv> = async (context, next) =
       }
       const path = context.req.path;
       const base = '/projects/' + payload.project;
+      const procedure = rpcProcedure(context.req.method, path);
       const allowed =
-        (context.req.method === 'POST' &&
-          [base + '/deploy/upload-urls', base + '/deploy'].includes(path)) ||
-        (context.req.method === 'GET' &&
-          (path === base || (path.startsWith(base + '/deployments/') && path.endsWith('/events'))));
+        (procedure !== null && OAUTH_DEPLOY_PROCEDURES.has(procedure)) ||
+        (context.req.method === 'POST' && path === base + '/deploy');
       if (!allowed) {
         throw new OAuthError(
           'access_denied',
           'This credential permits only the approved deployment.',
           403,
         );
-      }
-      if (context.req.method === 'GET' && path.endsWith('/events')) {
-        const deploymentId = path.slice((base + '/deployments/').length, -'/events'.length);
-        const [receipt] = await context
-          .get('db')
-          .select({ id: deploymentOperations.id })
-          .from(deploymentOperations)
-          .where(
-            and(
-              eq(deploymentOperations.id, deploymentId),
-              eq(deploymentOperations.project_id, payload.project),
-              eq(deploymentOperations.idempotency_key, approval.id),
-            ),
-          );
-        if (!receipt) {
-          throw new OAuthError(
-            'access_denied',
-            'This credential can read only its own deployment receipt.',
-            403,
-          );
-        }
       }
       context.set('deployScope', payload.project);
       context.set('oauthApproval', approval.id);

@@ -23,6 +23,7 @@ import {
   cfError,
   mockCfApi,
   type TestEnv,
+  rpcData,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -191,16 +192,22 @@ describe('project secrets API', () => {
     await createTestProjectSecret(env.db, env, project.id, 'API_KEY', 'top-secret');
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/secrets`, {
+      new Request(`http://localhost/rpc/secrets.list`, {
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ projectId: project.id }),
       }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual([{ name: 'API_KEY' }, { name: 'BETTER_AUTH_SECRET' }]);
+    expect(rpcData(await res.json())).toEqual([
+      { name: 'API_KEY' },
+      { name: 'BETTER_AUTH_SECRET' },
+    ]);
   });
 
   it('propagates secret updates to the active versioned worker', async () => {
@@ -264,15 +271,18 @@ describe('project secrets API', () => {
     );
 
     const listRes = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/secrets`, {
+      new Request(`http://localhost/rpc/secrets.list`, {
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ projectId: project.id }),
       }),
       env,
     );
     expect(listRes.status).toBe(200);
-    expect(await listRes.json()).toEqual([{ name: 'API_KEY' }]);
+    expect(rpcData(await listRes.json())).toEqual([{ name: 'API_KEY' }]);
   });
 
   it('deletes a secret for owned project', async () => {

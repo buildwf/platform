@@ -3,8 +3,32 @@ import type { Db } from '../db.ts';
 import type { ApiEnv } from '../env.ts';
 import type { User } from '../types.ts';
 
-/** Who is calling and the connection their request already opened. */
-export type Caller = { user: User; db: Db };
+/**
+ * What the bearer token allows beyond its user. A full `api` token has no scope; the others
+ * name the one project they were minted for, and `canOnProject` refuses any other.
+ */
+export type Credential = Readonly<{
+  audience: NonNullable<ApiEnv['Variables']['tokenAudience']>;
+  /** The only project this credential may touch. */
+  project?: string;
+  /** The remote build a deploy token is bound to. */
+  build?: string;
+  /** The CI credential a deploy token came from. */
+  credentialId?: string;
+  /** The publish approval an OAuth deploy token came from. */
+  approval?: string;
+  /** Token expiry, epoch seconds. */
+  expiresAt?: number;
+}>;
+
+/** Who is calling, with the connection their request already opened. */
+export type Caller = {
+  user: User;
+  db: Db;
+  credential: Credential;
+  /** The Access identity the platform's gate validated, when it has one. */
+  companyIdentity?: { issuer: string; subject: string };
+};
 
 const callers = new WeakMap<Request, Caller>();
 

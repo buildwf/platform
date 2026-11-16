@@ -1,6 +1,22 @@
 import { type } from 'arktype';
+import {
+  getAccessibleProjectBySlug,
+  getAccessibleProjectsByUserId,
+  getDomainsByProjectIds,
+  getLatestDeploymentsByProjectIds,
+  getProjectResources,
+} from '../../db.ts';
+import { isDevBypass } from '../../env.ts';
+import { type ProjectListItem, sortProjectList } from '../../project-list.ts';
+import { projectWithUrl } from '../../project-url.ts';
 import { ProjectCreateError, createProjectForUser } from '../../routes/projects.ts';
+import { getRequestsDataset, queryProjectRequestOverview } from '../../routes/usage.ts';
+import { canOnProject, grantedAccess } from '../access.ts';
 import { member, procedure } from '../procedure.ts';
+
+const projectIdInput = type({ projectId: 'string' });
+const owner = { id: 'string', login: 'string' } as const;
+const projectView = type({ id: 'string', slug: 'string', role: 'string', owner });
 
 export const create = procedure('projects.create')
   .use(member)
@@ -42,3 +58,132 @@ export const create = procedure('projects.create')
       throw error;
     }
   });
+
+export const list = procedure('projects.list')
+  .use(member)
+  .noAuthz({ reason: 'Lists only projects the caller can already access' })
+  .noInput()
+  .output(type({ id: 'string', slug: 'string', role: 'string', owner }).array())
+  .noErrors({ reason: 'An empty list is a valid answer, not an error' })
+  .mcp({
+    description: 'List your projects with traffic and latest deployment',
+    effect: 'read',
+    idempotent: true,
+  })
+  .cli({ command: 'project list', description: 'List your projects' })
+  .handler(async ({ env, ctx }) => {
+    const all = await getAccessibleProjectsByUserId(ctx.db, ctx.user.id);
+    // A scoped deploy token needs only its own project, for slug-to-id resolution. Listing the
+    // rest would let a leaked build-time token read every other project's domains and traffic.
+    const projects = ctx.credential.project
+      ? all.filter(({ project }) => project.id === ctx.credential.project)
+      : all;
+    const ids = projects.map(({ project }) => project.id);
+    const [domains, latest, overview] =
+      ids.length > 0
+        ? await Promise.all([
+            getDomainsByProjectIds(ctx.db, ids),
+            getLatestDeploymentsByProjectIds(ctx.db, ids),
+            isDevBypass(env)
+              ? Promise.resolve(new Map())
+              : queryProjectRequestOverview(
+                  env.CF_ACCOUNT_ID,
+                  env.CF_API_TOKEN,
+                  getRequestsDataset(env),
+                  ids,
+                ),
+          ])
+        : [new Map(), new Map(), new Map()];
+    return projects
+      .map(({ project: p, role, owner }): ProjectListItem => {
+        const pDomains = domains.get(p.id);
+        const domain =
+          pDomains?.find((d: { status: string }) => d.status === 'active') ?? pDomains?.[0];
+        const o = overview.get(p.id);
+        return {
+          ...projectWithUrl(p, env),
+          role,
+          owner: { id: owner.id, login: owner.login },
+          custom_domain: domain?.hostname ?? null,
+          latest_deployment: latest.get(p.id) ?? null,
+          traffic: {
+            requests5m: o?.requests5m ?? 0,
+            lastSeenAt: o?.lastSeenAt ?? null,
+            sparkline5m: o?.sparkline5m ?? Array.from({ length: 20 }, () => 0),
+          },
+          health: {
+            responses4xx15m: o?.responses4xx15m ?? 0,
+            responses5xx15m: o?.responses5xx15m ?? 0,
+            errorRate5xx15m: o?.errorRate5xx15m ?? 0,
+          },
+        };
+      })
+      .sort(sortProjectList);
+  });
+
+export const choices = procedure('projects.choices')
+  .use(member)
+  .noAuthz({ reason: 'Lists only projects the caller can already access' })
+  .noInput()
+  .output(projectView.array())
+  .noErrors({ reason: 'An empty list is a valid answer, not an error' })
+  .noMcp({ reason: 'Agents use projects.list, which carries the same names' })
+  .cli({ command: 'project choices', description: 'List projects without traffic summaries' })
+  .handler(async ({ env, ctx }) =>
+    (await getAccessibleProjectsByUserId(ctx.db, ctx.user.id)).map(({ project, role, owner }) => ({
+      ...projectWithUrl(project, env),
+      role,
+      owner: { id: owner.id, login: owner.login },
+    })),
+  );
+
+export const resolve = procedure('projects.resolve')
+  .use(member)
+  .noAuthz({ reason: 'Resolves only a project the caller can already access' })
+  .input(type({ slug: type('string <= 56').and(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/) }))
+  .output(type({ project: projectView.or('null') }))
+  .noErrors({ reason: 'An unknown or inaccessible slug is a valid answer: project is null' })
+  .noMcp({ reason: 'Agents use projects.list, which carries the same names' })
+  .cli({ command: 'project resolve', description: 'Look up one project by slug' })
+  .handler(async ({ env, ctx, input }) => {
+    const access = await getAccessibleProjectBySlug(ctx.db, ctx.user.id, input.slug);
+    if (!access || (ctx.credential.project && ctx.credential.project !== access.project.id)) {
+      return { project: null };
+    }
+    return {
+      project: {
+        ...projectWithUrl(access.project, env),
+        role: access.role,
+        owner: { id: access.owner.id, login: access.owner.login },
+      },
+    };
+  });
+
+export const get = procedure('projects.get')
+  .use(member)
+  .input(projectIdInput)
+  .authz({ policy: 'project-read', check: canOnProject('read') })
+  .output(projectView)
+  .noErrors({ reason: 'A missing or hidden project is refused by the authz check' })
+  .mcp({ description: 'Read one project', effect: 'read', idempotent: true })
+  .cli({ command: 'project get', description: 'Show one project' })
+  .handler(({ env, ctx }) => {
+    const { project, role, owner } = grantedAccess(ctx);
+    return { ...projectWithUrl(project, env), role, owner: { id: owner.id, login: owner.login } };
+  });
+
+export const resources = procedure('projects.resources')
+  .use(member)
+  .input(projectIdInput)
+  .authz({ policy: 'project-read', check: canOnProject('read') })
+  .output(type({ id: 'string' }).array())
+  .noErrors({ reason: 'A project with no resources returns an empty list' })
+  .mcp({
+    description: 'List the bindings provisioned for a project',
+    effect: 'read',
+    idempotent: true,
+  })
+  .cli({ command: 'project resources', description: 'List a project’s resources' })
+  .handler(async ({ ctx }) => [
+    ...(await getProjectResources(ctx.db, grantedAccess(ctx).project.id)),
+  ]);

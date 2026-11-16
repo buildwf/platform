@@ -59,6 +59,7 @@ import {
   JWT_SECRET,
   type MockCfApiHandle,
   type TestEnv,
+  rpcData,
 } from './helpers.ts';
 import { setTestDb } from './setup.ts';
 
@@ -4683,20 +4684,21 @@ describe('POST /projects/:id/deploy (static)', () => {
     expect(await env.ROUTING.get(`manifest:${source.id}`)).toBeNull();
 
     const preflight = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+      new Request(`http://localhost/rpc/deploy.preflight`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          projectId: project.id,
           hasWorker: false,
           assetManifest: { '/index.html': { hash, size: bytes.length } },
         }),
       }),
       env,
     );
-    expect(await preflight.json()).toEqual({
+    expect(rpcData(await preflight.json())).toEqual({
       needed: ['/index.html'],
       total: 1,
       skipped: 0,
@@ -5955,10 +5957,10 @@ describe('asset_hashes storage', () => {
 describe('POST /projects/:id/deploy/preflight', () => {
   it('returns 401 without auth', async () => {
     const res = await app.fetch(
-      new Request('http://localhost/projects/proj_fake/deploy/preflight', {
+      new Request('http://localhost/rpc/deploy.preflight', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assetManifest: {} }),
+        body: JSON.stringify({ projectId: 'proj_fake', assetManifest: {} }),
       }),
       env,
     );
@@ -5970,13 +5972,14 @@ describe('POST /projects/:id/deploy/preflight', () => {
     const project = await createTestProject(env.db, user.id);
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+      new Request(`http://localhost/rpc/deploy.preflight`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          projectId: project.id,
           assetManifest: {
             '/index.html': { hash: 'a'.repeat(32), size: 100 },
             '/app.js': { hash: 'b'.repeat(32), size: 200 },
@@ -5987,7 +5990,11 @@ describe('POST /projects/:id/deploy/preflight', () => {
     );
 
     expect(res.status).toBe(200);
-    const data = (await res.json()) as { needed: Array<string>; total: number; skipped: number };
+    const data = rpcData(await res.json()) as {
+      needed: Array<string>;
+      total: number;
+      skipped: number;
+    };
     expect(data.needed.sort()).toEqual(['/app.js', '/index.html']);
     expect(data.total).toBe(2);
     expect(data.skipped).toBe(0);
@@ -6028,13 +6035,14 @@ describe('POST /projects/:id/deploy/preflight', () => {
     await env.STATIC_ASSETS_R2.put(`assets/${project.id}/${'a'.repeat(32)}`, new Uint8Array(100));
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+      new Request(`http://localhost/rpc/deploy.preflight`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          projectId: project.id,
           assetManifest: {
             '/index.html': { hash: 'a'.repeat(32), size: 100 }, // unchanged
             '/app.js': { hash: 'f'.repeat(32), size: 250 }, // changed
@@ -6047,7 +6055,11 @@ describe('POST /projects/:id/deploy/preflight', () => {
     );
 
     expect(res.status).toBe(200);
-    const data = (await res.json()) as { needed: Array<string>; total: number; skipped: number };
+    const data = rpcData(await res.json()) as {
+      needed: Array<string>;
+      total: number;
+      skipped: number;
+    };
     expect(data.needed.sort()).toEqual(['/app.js', '/new.js']);
     expect(data.total).toBe(3);
     expect(data.skipped).toBe(1);
@@ -6097,18 +6109,18 @@ describe('POST /projects/:id/deploy/preflight', () => {
     );
 
     const response = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+      new Request(`http://localhost/rpc/deploy.preflight`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ assetManifest: newerManifest }),
+        body: JSON.stringify({ projectId: project.id, assetManifest: newerManifest }),
       }),
       env,
     );
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
+    expect(rpcData(await response.json())).toEqual({
       needed: ['/index.html'],
       total: 1,
       skipped: 0,
@@ -6160,18 +6172,20 @@ describe('POST /projects/:id/deploy/preflight', () => {
     );
 
     const response = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+      new Request(`http://localhost/rpc/deploy.preflight`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ assetManifest: newerManifest }),
+        body: JSON.stringify({ projectId: project.id, assetManifest: newerManifest }),
       }),
       env,
     );
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: 'project_requires_normalization' });
+    expect(await response.json()).toMatchObject({
+      error: { code: 'PROJECT_NEEDS_NORMALIZATION' },
+    });
     expect((await getProject(env.db, project.id))?.active_deployment_id).toBeNull();
   });
 
@@ -6401,13 +6415,14 @@ describe('POST /projects/:id/deploy/preflight', () => {
 
       // Historical serving metadata alone cannot prove scoped R2 availability.
       const res = await app.fetch(
-        new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+        new Request(`http://localhost/rpc/deploy.preflight`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${user.jwt}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
+            projectId: project.id,
             assetManifest: {
               '/index.html': { hash: 'a'.repeat(32), size: 100 }, // unchanged
               '/app.js': { hash: 'b'.repeat(32), size: 200 }, // unchanged
@@ -6420,7 +6435,11 @@ describe('POST /projects/:id/deploy/preflight', () => {
       );
 
       expect(res.status).toBe(200);
-      const data = (await res.json()) as { needed: Array<string>; total: number; skipped: number };
+      const data = rpcData(await res.json()) as {
+        needed: Array<string>;
+        total: number;
+        skipped: number;
+      };
       // Every asset is absent from the scoped R2 store.
       expect(data.needed.sort()).toEqual(['/app.js', '/index.html', '/style.css']);
       expect(data.total).toBe(3);
@@ -6459,13 +6478,14 @@ describe('POST /projects/:id/deploy/preflight', () => {
       await env.STATIC_ASSETS_R2.put(`assets/${project.id}/${'a'.repeat(32)}`, new Uint8Array(100));
 
       const res = await app.fetch(
-        new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+        new Request(`http://localhost/rpc/deploy.preflight`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${user.jwt}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
+            projectId: project.id,
             assetManifest: {
               '/index.html': { hash: 'a'.repeat(32), size: 100 }, // unchanged
               '/app.js': { hash: 'f'.repeat(32), size: 250 }, // changed
@@ -6476,7 +6496,11 @@ describe('POST /projects/:id/deploy/preflight', () => {
       );
 
       expect(res.status).toBe(200);
-      const data = (await res.json()) as { needed: Array<string>; total: number; skipped: number };
+      const data = rpcData(await res.json()) as {
+        needed: Array<string>;
+        total: number;
+        skipped: number;
+      };
       // static→static should still dedup
       expect(data.needed.sort()).toEqual(['/app.js']);
       expect(data.total).toBe(2);
@@ -6507,13 +6531,14 @@ describe('POST /projects/:id/deploy/preflight', () => {
       const indexBytes = new TextEncoder().encode('<h1>hello</h1>');
       const appBytes = new TextEncoder().encode('console.log(1)');
       const preflightRes = await app.fetch(
-        new Request(`http://localhost/projects/${project.id}/deploy/preflight`, {
+        new Request(`http://localhost/rpc/deploy.preflight`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${user.jwt}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
+            projectId: project.id,
             assetManifest: {
               '/index.html': {
                 hash: computeAssetHash(indexBytes.buffer, '/index.html'),
@@ -6530,7 +6555,7 @@ describe('POST /projects/:id/deploy/preflight', () => {
         env,
       );
       expect(preflightRes.status).toBe(200);
-      const pfData = (await preflightRes.json()) as {
+      const pfData = rpcData(await preflightRes.json()) as {
         needed: Array<string>;
         total: number;
         skipped: number;

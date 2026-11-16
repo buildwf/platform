@@ -842,7 +842,7 @@ export class PlatformClient {
     name: string,
     action: string,
     input?: unknown,
-    permission?: ProjectPermission,
+    { permission, signal }: { permission?: ProjectPermission; signal?: AbortSignal } = {},
   ): Promise<T> {
     const res = await this.request(`${this.baseUrl}/rpc/${name}`, {
       method: 'POST',
@@ -852,6 +852,7 @@ export class PlatformClient {
         ...this.authHeaders,
       },
       body: input === undefined ? '' : JSON.stringify(input),
+      ...(signal && { signal }),
     });
     const text = await res.text();
     if (res.ok) {
@@ -907,33 +908,33 @@ export class PlatformClient {
   }
 
   async listProjects(): Promise<Array<ProjectResponse>> {
-    return this.json(`${this.baseUrl}/projects`, 'Failed to list projects');
+    return this.rpc('projects.list', 'Failed to list projects');
   }
 
   /** A lightweight project list for interactive linking. */
   async listProjectChoices(): Promise<Array<ProjectResponse>> {
-    return this.json(`${this.baseUrl}/projects/choices`, 'Failed to list project choices');
+    return this.rpc('projects.choices', 'Failed to list project choices');
   }
 
   /** Resolve one known project without loading account-wide deployment and traffic summaries. */
   async getProject(projectId: string): Promise<ProjectResponse | null> {
-    const res = await this.request(`${this.baseUrl}/projects/${encodeURIComponent(projectId)}`, {
-      headers: { ...this.authHeaders },
-    });
-    if (res.status === 404) {
-      return null;
+    try {
+      return await this.rpc('projects.get', 'Failed to get project', { projectId });
+    } catch (error) {
+      // A project the caller cannot read is, to them, a project that does not exist.
+      if (error instanceof PlatformApiError && error.status === 403) {
+        return null;
+      }
+      throw error;
     }
-    if (!res.ok) {
-      await throwPlatformApiError('Failed to get project', res);
-    }
-    return res.json();
   }
 
   /** Resolve a slug through the current platform contract. */
   async findProjectBySlug(slug: string): Promise<ProjectResponse | null> {
-    const body = await this.json<{ project: ProjectResponse | null }>(
-      `${this.baseUrl}/projects/resolve?${new URLSearchParams({ slug })}`,
+    const body = await this.rpc<{ project: ProjectResponse | null }>(
+      'projects.resolve',
       'Failed to resolve project',
+      { slug },
     );
     return body.project;
   }
@@ -1098,9 +1099,10 @@ export class PlatformClient {
   }
 
   async listDeployments(projectId: string): Promise<DeploymentListResponse> {
-    return this.json(
-      `${this.baseUrl}/projects/${projectId}/deployments`,
+    return this.rpc(
+      'deployments.list',
       'Failed to list deployments',
+      { projectId },
       {
         permission: 'read',
       },
@@ -1152,30 +1154,12 @@ export class PlatformClient {
   ): Promise<{ needed: Array<string>; total: number; skipped: number }> {
     const total = Object.keys(assetManifest).length;
     try {
-      const res = await this.request(`${this.baseUrl}/projects/${projectId}/deploy/preflight`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...this.authHeaders,
-        },
-        body: JSON.stringify({ assetManifest, ...(hasWorker && { hasWorker }) }),
-      });
-
-      if (!res.ok) {
-        const error = new PlatformApiError(
-          'Preflight failed',
-          res.status,
-          await res.text(),
-          isCloudflareAccessChallenge(res) ? undefined : 'deploy',
-        );
-        if (isPreflightRejection(error)) {
-          throw error;
-        }
-        // Preflight not supported or error — fall back to uploading everything
-        return { needed: Object.keys(assetManifest), total, skipped: 0 };
-      }
-
-      return res.json();
+      return await this.rpc(
+        'deploy.preflight',
+        'Preflight failed',
+        { projectId, assetManifest, ...(hasWorker && { hasWorker }) },
+        { permission: 'deploy' },
+      );
     } catch (error) {
       if (isPreflightRejection(error)) {
         throw error;
@@ -1189,34 +1173,18 @@ export class PlatformClient {
     projectId: string,
     assets: Array<DeployAssetUploadRequest>,
   ): Promise<Record<string, { url: string; headers: Record<string, string> }>> {
-    const url = `${this.baseUrl}/projects/${projectId}/deploy/upload-urls`;
-    this.cliLog?.info('upload_urls_post', { url, assetCount: assets.length });
-
-    const res = await this.request(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.authHeaders,
-      },
-      body: JSON.stringify({ assets }),
-    });
-
-    const cfRay = res.headers.get('cf-ray');
-    const cfCacheStatus = res.headers.get('cf-cache-status');
-    this.cliLog?.info('upload_urls_response', {
-      status: res.status,
-      cfRay,
-      cfCacheStatus,
-    });
-
-    if (!res.ok) {
-      await throwPlatformApiError('Failed to request upload URLs', res, 'deploy');
-    }
-
-    const json = (await res.json()) as {
+    this.cliLog?.info('upload_urls_post', { assetCount: assets.length });
+    const { urls } = await this.rpc<{
       urls: Record<string, { url: string; headers: Record<string, string> }>;
-    };
-    return json.urls;
+    }>(
+      'deploy.uploadUrls',
+      'Failed to request upload URLs',
+      { projectId, assets },
+      {
+        permission: 'deploy',
+      },
+    );
+    return urls;
   }
 
   /**
@@ -1228,29 +1196,15 @@ export class PlatformClient {
     projectId: string,
     modules: Array<DeployWorkerModule>,
   ): Promise<DeployWorkerUploadResponse> {
-    const url = `${this.baseUrl}/projects/${projectId}/deploy/worker-upload-urls`;
-    this.cliLog?.info('worker_upload_urls_post', { url, moduleCount: modules.length });
-
-    const request: DeployWorkerUploadRequest = { modules };
-    const res = await this.request(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.authHeaders,
-      },
-      body: JSON.stringify(request),
-    });
-    this.cliLog?.info('worker_upload_urls_response', {
-      status: res.status,
-      cfRay: res.headers.get('cf-ray'),
-    });
-
-    if (!res.ok) {
-      await throwPlatformApiError('Failed to request worker upload URLs', res, 'deploy');
-    }
+    this.cliLog?.info('worker_upload_urls_post', { moduleCount: modules.length });
+    const json = await this.rpc<Partial<DeployWorkerUploadResponse> | null>(
+      'deploy.workerUploadUrls',
+      'Failed to request worker upload URLs',
+      { projectId, modules },
+      { permission: 'deploy' },
+    );
 
     // Module i uploads to urls[i], so a short or malformed list must not start.
-    const json = (await res.json()) as Partial<DeployWorkerUploadResponse> | null;
     if (
       typeof json?.id !== 'string' ||
       !json.id ||
@@ -1514,7 +1468,6 @@ export class PlatformClient {
     let cursor = since;
     let failures = 0;
     while (Date.now() < deadline) {
-      const url = `${this.baseUrl}/projects/${encodeURIComponent(projectId)}/deployments/${encodeURIComponent(deploymentId)}/events?since=${cursor}`;
       let page: {
         deploymentId: string;
         events: Array<{ seq: number; event: unknown }>;
@@ -1523,16 +1476,17 @@ export class PlatformClient {
         heartbeat?: unknown;
       };
       try {
-        const response = await this.request(url, {
-          headers: { ...this.authHeaders },
-          signal: AbortSignal.timeout(
-            Math.max(1, Math.min(DEPLOY_OBSERVATION_TIMEOUT_MS, deadline - Date.now())),
-          ),
-        });
-        if (!response.ok) {
-          await throwPlatformApiError('Failed to observe deployment', response, 'read');
-        }
-        page = (await response.json()) as typeof page;
+        page = await this.rpc<typeof page>(
+          'deployments.events',
+          'Failed to observe deployment',
+          { projectId, deploymentId, since: cursor },
+          {
+            permission: 'read',
+            signal: AbortSignal.timeout(
+              Math.max(1, Math.min(DEPLOY_OBSERVATION_TIMEOUT_MS, deadline - Date.now())),
+            ),
+          },
+        );
         if (Date.now() >= deadline) {
           throw new DeploymentObservationTimeoutError(deploymentId);
         }
@@ -1605,9 +1559,12 @@ export class PlatformClient {
   }
 
   async listSecrets(projectId: string): Promise<Array<{ name: string }>> {
-    return this.json(`${this.baseUrl}/projects/${projectId}/secrets`, 'Failed to list secrets', {
-      permission: 'configure',
-    });
+    return this.rpc(
+      'secrets.list',
+      'Failed to list secrets',
+      { projectId },
+      { permission: 'configure' },
+    );
   }
 
   async setSecret(projectId: string, name: string, value: string): Promise<SecretResponse> {
@@ -1702,9 +1659,12 @@ export class PlatformClient {
   }
 
   async getResources(projectId: string): Promise<Array<{ type: string; binding_name: string }>> {
-    return this.json(`${this.baseUrl}/projects/${projectId}/resources`, 'Failed to get resources', {
-      permission: 'read',
-    });
+    return this.rpc(
+      'projects.resources',
+      'Failed to get resources',
+      { projectId },
+      { permission: 'read' },
+    );
   }
 
   async provisionDatabase(projectId: string, connectionString: string): Promise<{ ok: boolean }> {

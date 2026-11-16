@@ -53,6 +53,7 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
+  rpcData,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -157,12 +158,11 @@ async function getEvents(
   targetProject = project.id,
 ) {
   return app.fetch(
-    new Request(
-      `https://api.test/projects/${targetProject}/deployments/${id}/events?since=${since}`,
-      {
-        headers: { Authorization: `Bearer ${jwt}` },
-      },
-    ),
+    new Request(`https://api.test/rpc/deployments.events`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId: targetProject, deploymentId: id, since: since }),
+    }),
     queuedEnv,
   );
 }
@@ -236,7 +236,7 @@ describe('durable deployment admission and observation', () => {
       status: 'terminal',
       inputs_deleted: true,
     });
-    const page = (await (await getEvents(id)).json()) as {
+    const page = rpcData(await (await getEvents(id)).json()) as {
       deploymentId: string;
       terminal: boolean;
       events: Array<{ seq: number; event: DeployEvent }>;
@@ -520,19 +520,19 @@ describe('durable deployment admission and observation', () => {
       .update(deploymentOperations)
       .set({ events, last_seq: 101, status: 'terminal' })
       .where(eq(deploymentOperations.id, id));
-    const first = (await (await getEvents(id)).json()) as {
+    const first = rpcData(await (await getEvents(id)).json()) as {
       events: Array<unknown>;
       lastSeq: number;
       terminal: boolean;
     };
     expect(first.events).toHaveLength(100);
     expect(first).toMatchObject({ lastSeq: 100, terminal: false });
-    expect(await (await getEvents(id, 100)).json()).toMatchObject({
+    expect(rpcData(await (await getEvents(id, 100)).json())).toMatchObject({
       events: [{ seq: 101, event: done }],
       lastSeq: 101,
       terminal: true,
     });
-    expect(await (await getEvents(id, 101)).json()).toMatchObject({
+    expect(rpcData(await (await getEvents(id, 101)).json())).toMatchObject({
       events: [],
       lastSeq: 101,
       terminal: true,
@@ -558,7 +558,7 @@ describe('durable deployment admission and observation', () => {
           last_seq: started ? 1 : 0,
         })
         .where(eq(deploymentOperations.id, id));
-      const page = await (await getEvents(id, started ? 1 : 0)).json();
+      const page = rpcData(await (await getEvents(id, started ? 1 : 0)).json());
       expect(page).toMatchObject({
         events: [],
         terminal: false,
@@ -596,7 +596,11 @@ describe('durable deployment admission and observation', () => {
     const other = await createTestUser(env.db, 'other-observer');
     const ownedProject = await createTestProject(env.db, user.id);
     const unauthenticated = await app.fetch(
-      new Request(`https://api.test/projects/${project.id}/deployments/${id}/events`),
+      new Request(`https://api.test/rpc/deployments.events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id, deploymentId: id }),
+      }),
       queuedEnv,
     );
     expect(unauthenticated.status).toBe(401);
@@ -626,7 +630,7 @@ describe('durable deployment admission and observation', () => {
       { id: activeId, status: 'live' },
     ]);
     expect(await getDeploymentOperation(env.db, noOpId)).toMatchObject({ status: 'terminal' });
-    const page = (await (await getEvents(noOpId)).json()) as {
+    const page = rpcData(await (await getEvents(noOpId)).json()) as {
       deploymentId: string;
       events: Array<{ event: DeployEvent }>;
     };
@@ -1208,15 +1212,19 @@ describe('durable execution of directly uploaded Worker modules', () => {
       }),
     );
     const response = await app.fetch(
-      new Request(`https://api.test/projects/${project.id}/deploy/worker-upload-urls`, {
+      new Request(`https://api.test/rpc/deploy.workerUploadUrls`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${user.jwt}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ modules }),
+        headers: {
+          Authorization: `Bearer ${user.jwt}`,
+          'content-type': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ projectId: project.id, modules }),
       }),
       queuedEnv,
     );
     expect(response.status).toBe(200);
-    const { id } = (await response.json()) as { id: string };
+    const { id } = rpcData(await response.json()) as { id: string };
     const prefix = `deployment-inputs/${project.id}/${id}/`;
     for (const [index, text] of Object.values(files).entries()) {
       await env.STATIC_ASSETS_R2.put(`${prefix}${index}`, text);

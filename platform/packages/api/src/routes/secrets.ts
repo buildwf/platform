@@ -57,16 +57,6 @@ async function withProjectSecretUpdate(
 
 const app = new Hono<ApiEnv>()
 
-  .get('/:id/secrets', async (context) => {
-    const projectId = context.req.param('id');
-    const access = await requireProjectRouteCapability(context, projectId, 'configure');
-    if (access instanceof Response) {
-      return access;
-    }
-
-    return context.json(await listProjectSecretNames(context.get('db'), projectId));
-  })
-
   .put('/:id/secrets/:name', async (context) => {
     const projectId = context.req.param('id');
     const secretName = context.req.param('name');

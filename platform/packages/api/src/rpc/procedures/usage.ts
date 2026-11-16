@@ -1,7 +1,6 @@
 import { type } from 'arktype';
-import { requireProjectCapability } from '../../project-access.ts';
 import { UsageUnavailableError, getAccountUsage, getProjectUsage } from '../../routes/usage.ts';
-import { canOnProject } from '../access.ts';
+import { canOnProject, grantedAccess } from '../access.ts';
 import { member, procedure } from '../procedure.ts';
 
 const totals = { requests: 'number', bandwidthBytes: 'number', aiNeurons: 'number' } as const;
@@ -44,7 +43,7 @@ export const project = procedure('projects.usage')
   .cli({ command: 'project usage', description: 'Show one project’s usage this billing period' })
   .handler(async ({ env, ctx, input, fail }) => {
     // Usage is billed to the project's owner, whose cycle may differ from the caller's.
-    const { owner } = await requireProjectCapability(ctx.db, input.projectId, ctx.user.id, 'read');
+    const { owner } = grantedAccess(ctx);
     try {
       return await getProjectUsage(env, input.projectId, owner.billing_cycle_start);
     } catch (error) {

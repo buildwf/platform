@@ -28,6 +28,7 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
+  rpcData,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -56,6 +57,17 @@ function authed(path: string, jwt: string, method = 'GET', body?: unknown): Requ
     ...(method !== 'GET' && body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
 }
+
+/** Calls a procedure as `jwt`. */
+function rpc(name: string, jwt: string, body: unknown): Request {
+  return authed(`/rpc/${name}`, jwt, 'POST', body);
+}
+
+/** Deploy routes that are procedures now, by their old path suffix. */
+const RPC_ROUTES: Record<string, string> = {
+  '/deploy/preflight': 'deploy.preflight',
+  '/deploy/upload-urls': 'deploy.uploadUrls',
+};
 
 async function projectState() {
   return Promise.all([
@@ -175,26 +187,38 @@ describe('project route membership capabilities', () => {
     });
     vi.stubGlobal('fetch', provider);
     const routingWrite = vi.spyOn(env.ROUTING, 'put');
+    const procedure = RPC_ROUTES[suffix];
     const response = await app.fetch(
-      authed(
-        `/projects/${project.id}${suffix}`,
-        reader.jwt,
-        method,
-        method === 'DELETE'
-          ? undefined
-          : {
-              value: 'must-not-be-written',
-              role: 'admin',
-              email: 'nobody@example.com',
-            },
-      ),
+      procedure
+        ? authed(`/rpc/${procedure}`, reader.jwt, 'POST', {
+            projectId: project.id,
+            assets: [],
+            assetManifest: {},
+          })
+        : authed(
+            `/projects/${project.id}${suffix}`,
+            reader.jwt,
+            method,
+            method === 'DELETE'
+              ? undefined
+              : { value: 'must-not-be-written', role: 'admin', email: 'nobody@example.com' },
+          ),
       env,
     );
 
     expect(response.status).toBe(403);
-    const body = (await response.json()) as { error: string; message: string };
-    expect(body).toEqual({ error: 'forbidden', message: expect.stringContaining(guidance) });
-    expect(body.message).toMatch(/Ask (a project admin or owner|the owner)/);
+    const raw = (await response.json()) as {
+      error: string | { code: string; message: string };
+      message?: string;
+    };
+    const body = raw;
+    if (procedure) {
+      // Procedures answer with one generic FORBIDDEN, not per-capability guidance.
+      expect(raw).toEqual({ error: { code: 'FORBIDDEN', message: expect.any(String) } });
+    } else {
+      expect(raw).toEqual({ error: 'forbidden', message: expect.stringContaining(guidance) });
+      expect(raw.message).toMatch(/Ask (a project admin or owner|the owner)/);
+    }
     for (const privateValue of [owner.id, owner.login, project.id, project.slug]) {
       expect(JSON.stringify(body)).not.toContain(privateValue);
     }
@@ -251,20 +275,20 @@ describe('project route membership capabilities', () => {
     const stranger = await createTestUser(env.db, 'stranger');
     const project = await createTestProject(env.db, owner.id, 'private-project');
     const before = await projectState();
-    const denied = await app.fetch(authed(`/projects/${project.id}`, stranger.jwt), env);
+    const denied = await app.fetch(
+      rpc('projects.get', stranger.jwt, { projectId: project.id }),
+      env,
+    );
     expect(denied.status).toBe(403);
-    expect(await denied.json()).toEqual({
-      error: 'forbidden',
-      message:
-        'You need project access to view this project. Ask a project admin or owner to invite you.',
-    });
-    const missing = await app.fetch(authed('/projects/missing', stranger.jwt), env);
-    expect(missing.status).toBe(404);
-    expect(await missing.json()).toEqual({
-      error: 'project not found',
-      message:
-        'This project could not be found. Check the project ID or refresh your project list.',
-    });
+    const deniedBody = await denied.json();
+    expect(deniedBody).toEqual({ error: { code: 'FORBIDDEN', message: expect.any(String) } });
+    // A missing project is indistinguishable from a private one.
+    const missing = await app.fetch(
+      rpc('projects.get', stranger.jwt, { projectId: 'missing' }),
+      env,
+    );
+    expect(missing.status).toBe(403);
+    expect(await missing.json()).toEqual(deniedBody);
     expect(await projectState()).toEqual(before);
   });
 
@@ -283,13 +307,14 @@ describe('project route membership capabilities', () => {
       .set({ suspended_reason: 'private policy violation details' })
       .where(eq(users.id, owner.id));
     const before = await projectState();
-    const response = await app.fetch(authed(`/projects/${project.id}`, reader.jwt), env);
+    const response = await app.fetch(
+      rpc('projects.get', reader.jwt, { projectId: project.id }),
+      env,
+    );
     expect(response.status).toBe(403);
-    expect(await response.json()).toEqual({
-      error: 'project owner suspended',
-      message:
-        "This project's owner account is suspended. Ask the owner to contact the platform administrator to restore access.",
-    });
+    const body = await response.json();
+    expect(body).toEqual({ error: { code: 'FORBIDDEN', message: expect.any(String) } });
+    expect(JSON.stringify(body)).not.toContain('private policy violation details');
     expect(await projectState()).toEqual(before);
   });
 
@@ -505,9 +530,9 @@ describe('project route membership capabilities', () => {
     });
     mockCfApi();
 
-    const listResponse = await app.fetch(authed('/projects', reader.jwt), env);
+    const listResponse = await app.fetch(rpc('projects.list', reader.jwt, {}), env);
     expect(listResponse.status).toBe(200);
-    expect(await listResponse.json()).toMatchObject([
+    expect(rpcData(await listResponse.json())).toMatchObject([
       {
         id: project.id,
         slug: project.slug,
@@ -516,19 +541,25 @@ describe('project route membership capabilities', () => {
       },
     ]);
 
-    const detail = await app.fetch(authed(`/projects/${project.id}`, reader.jwt), env);
+    const detail = await app.fetch(rpc('projects.get', reader.jwt, { projectId: project.id }), env);
     expect(detail.status).toBe(200);
-    expect(await detail.json()).toMatchObject({
+    expect(rpcData(await detail.json())).toMatchObject({
       id: project.id,
       role: 'reader',
       owner: { id: owner.id },
     });
 
-    const resources = await app.fetch(authed(`/projects/${project.id}/resources`, reader.jwt), env);
+    const resources = await app.fetch(
+      rpc('projects.resources', reader.jwt, { projectId: project.id }),
+      env,
+    );
     expect(resources.status).toBe(200);
-    expect(await resources.json()).toEqual([]);
+    expect(rpcData(await resources.json())).toEqual([]);
 
-    const secrets = await app.fetch(authed(`/projects/${project.id}/secrets`, reader.jwt), env);
+    const secrets = await app.fetch(
+      rpc('secrets.list', reader.jwt, { projectId: project.id }),
+      env,
+    );
     expect(secrets.status).toBe(403);
     const deletion = await app.fetch(authed(`/projects/${project.id}`, reader.jwt, 'DELETE'), env);
     expect(deletion.status).toBe(403);
@@ -546,7 +577,7 @@ describe('project route membership capabilities', () => {
     });
 
     const secrets = await app.fetch(
-      authed(`/projects/${project.id}/secrets`, collaborator.jwt),
+      rpc('secrets.list', collaborator.jwt, { projectId: project.id }),
       env,
     );
     expect(secrets.status).toBe(200);
