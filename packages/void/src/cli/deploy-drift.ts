@@ -32,7 +32,6 @@ const DRIFT_PROJECT_SKIPPED_ENTRIES = new Set([
   '.wrangler',
   '.turbo',
   '.next',
-  '.svelte-kit',
   '.output',
 ]);
 

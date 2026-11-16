@@ -66,7 +66,7 @@ export function isViteBuildOrPreview(): boolean {
  * Point Cloudflare remote bindings opened in this process at the login from
  * `void connect` and `void cloudflare login`. The Cloudflare Vite plugin and
  * Wrangler's platform proxy authenticate remote bindings here, in dev, preview
- * and build prerendering. They read cf's login only when `CLOUDFLARE_CF_AUTH`
+ * and build. They read cf's login only when `CLOUDFLARE_CF_AUTH`
  * is present (any value), and Wrangler's separate login otherwise. The keyring
  * flag selects the encrypted cf profile that Void's login writes. Environment
  * API tokens still take precedence, and the OAuth token stays in the store.
@@ -158,16 +158,13 @@ export function getOrCreateDevTriggerToken(root: string): string {
 }
 
 // Request paths that would return the dev-trigger token: `.void/dev-trigger-token`,
-// the generated `.void/dev-triggers.ts`, Nitro's dev bundle (`.nuxt/dev/` for
-// Nuxt, `dist/.nitro/dev/` for Analog), which inlines that module, and Astro's
-// `.astro/dev.log`, which records the startup hint when `astro dev` runs in the
-// background (`--background`, or started by a coding agent). Also
+// the generated `.void/dev-triggers.ts`. Also
 // `.void/drizzle.config.json`, where older CLI versions wrote database URLs.
 // Matched anywhere in the decoded, lower-cased path so `/@fs/<abs>/`, `/@id/`,
-// a base such as `/_nuxt/`, case-insensitive file systems, dot segments, `//`,
+// a base prefix, case-insensitive file systems, dot segments, `//`,
 // `%2e`, `\` and Windows trailing dots/spaces all hit.
 const DEV_TRIGGER_SECRET_PATH_RE =
-  /(?:^|\/)\.void[. ]*\/(?:.*\/)?(?:dev-trigger|drizzle\.config\.json)|(?:^|\/)\.(?:nuxt|nitro)[. ]*\/(?:.*\/)?dev\/|(?:^|\/)\.astro[. ]*\/(?:.*\/)?dev\.log/;
+  /(?:^|\/)\.void[. ]*\/(?:.*\/)?(?:dev-trigger|drizzle\.config\.json)/;
 
 export function isDevTriggerSecretRequest(url: string | undefined): boolean {
   if (!url) {

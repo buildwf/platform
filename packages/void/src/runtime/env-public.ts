@@ -20,7 +20,7 @@
  * ```
  *
  * The `env` proxy reads from the underlying runtime env (Cloudflare worker
- * bindings, Node `process.env`, Nuxt globals, etc.) via `getRuntimeEnv()`,
+ * bindings, Node `process.env`, etc.) via `getRuntimeEnv()`,
  * and validates each key on first access using the registered schema.
  *
  * Bindings (`DB`, `KV`, `STORAGE`, `AI`, queue handlers) and other env keys

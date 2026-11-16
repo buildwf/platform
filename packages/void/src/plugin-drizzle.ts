@@ -118,9 +118,8 @@ function createVoidDbModule(
         return VIRTUAL_DB_ID;
       }
 
-      // Resolve @schema alias explicitly via resolveId so it works in
-      // meta-framework SSR environments (Astro's workerd runner, etc.)
-      // where Vite's config-level resolve.alias may not be applied.
+      // Resolve @schema alias explicitly via resolveId so it works where
+      // Vite's config-level resolve.alias may not be applied.
       if (schema && (id === '@schema' || id.startsWith('@schema/'))) {
         if (id === '@schema') {
           return schema.path;
@@ -426,9 +425,8 @@ export function drizzlePlugin(
 }
 
 /**
- * `void/db` and `@schema` for bundles that do not run Void's Vite plugins: Nitro's (Nuxt and
- * Analog server routes, through `void/nitro`) and the cron and queue handler bundle that deploys
- * build. Without it they load the package's static `void/db`, a D1 client without the app's
+ * `void/db` and `@schema` for bundles that do not run Void's Vite plugins, such as the cron and
+ * queue handler bundle that deploys build. Without it they load the package's static `void/db`, a D1 client without the app's
  * schema. It reads the dialect, schema and D1 binding from the project, as the Vite plugin does.
  * Its hooks are plain Rollup hooks; Vite also needs `enforce` to run them before its resolver.
  *
@@ -497,8 +495,7 @@ export function voidDbBundlerPlugin(
         // The promise API sits next to the driver, named the way `sqlDriver` names the driver.
         return promiseApi ? (await driver).replace(/mysql2\.mjs$/, 'promise.mjs') : driver;
       }
-      // The driver needs workerd's own Node modules: Nitro replaces them with stubs when its
-      // `cloudflare.nodeCompat` option is off.
+      // The driver needs workerd's own Node modules.
       if (
         id.startsWith('node:') &&
         importer &&

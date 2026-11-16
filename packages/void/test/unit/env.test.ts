@@ -5,7 +5,7 @@ const globalScope = globalThis as {
   __env__?: unknown;
 };
 
-const originalNuxtEnv = globalScope.__env__;
+const originalGlobalEnv = globalScope.__env__;
 
 describe('runtime env resolution', () => {
   beforeEach(() => {
@@ -13,25 +13,25 @@ describe('runtime env resolution', () => {
   });
 
   afterAll(() => {
-    if (originalNuxtEnv === undefined) {
+    if (originalGlobalEnv === undefined) {
       delete globalScope.__env__;
     } else {
-      globalScope.__env__ = originalNuxtEnv;
+      globalScope.__env__ = originalGlobalEnv;
     }
   });
 
-  it('reads Nuxt env from global __env__', () => {
-    globalScope.__env__ = { DB: { tag: 'nuxt-db' } };
-    expect(getRuntimeBinding('DB')).toEqual({ tag: 'nuxt-db' });
+  it('reads global env from global __env__', () => {
+    globalScope.__env__ = { DB: { tag: 'global-db' } };
+    expect(getRuntimeBinding('DB')).toEqual({ tag: 'global-db' });
   });
 
-  it('ignores pending Nuxt env promises', () => {
-    globalScope.__env__ = Promise.resolve({ DB: { tag: 'nuxt-db' } });
+  it('ignores pending global env promises', () => {
+    globalScope.__env__ = Promise.resolve({ DB: { tag: 'global-db' } });
     expect(() => getRuntimeEnv()).toThrow('env: Cloudflare env is unavailable');
   });
 
   it('uses request-scoped context env when provided', () => {
-    globalScope.__env__ = { DB: { tag: 'nuxt-db' } };
+    globalScope.__env__ = { DB: { tag: 'global-db' } };
 
     const value = withRuntimeEnv({ DB: { tag: 'scoped-db' } }, () => getRuntimeBinding('DB'));
     expect(value).toEqual({ tag: 'scoped-db' });

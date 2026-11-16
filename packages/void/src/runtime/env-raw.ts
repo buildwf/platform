@@ -51,19 +51,19 @@ function asEnv(value: unknown): RuntimeEnv | null {
   return value as RuntimeEnv;
 }
 
-function getNuxtEnv(): RuntimeEnv | null {
+function getGlobalEnv(): RuntimeEnv | null {
   return asEnv((globalThis as RuntimeEnv & { __env__?: unknown }).__env__);
 }
 
-/** Resolve raw env from AsyncLocalStorage, Nuxt globals, or CF module env. */
+/** Resolve raw env from AsyncLocalStorage, the ambient `globalThis.__env__`, or CF module env. */
 export function getRawRuntimeEnv(): RuntimeEnv {
   return (
     envContext.getStore() ??
-    getNuxtEnv() ??
+    getGlobalEnv() ??
     cloudflareEnv ??
     (() => {
       throw new Error(
-        'env: Cloudflare env is unavailable. Use void runtime bindings inside Nuxt/SvelteKit/Analog server request handlers or Worker handlers.',
+        'env: Cloudflare env is unavailable. Use void runtime bindings inside Worker handlers.',
       );
     })()
   );
