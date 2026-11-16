@@ -54,6 +54,7 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
+  rpcRequest,
 } from './helpers.ts';
 
 // The callback mints an installation token (which would otherwise require a
@@ -3101,14 +3102,11 @@ describe('DELETE /projects/:id/github', () => {
         context.set('db', env.db);
         await next();
       })
-      .use('/projects/*', authMiddleware)
-      .post('/projects/:id/database', (context) => context.json({ ok: true }));
+      .use('/rpc/*', authMiddleware)
+      .post('/rpc/database.provision', (context) => context.json({ ok: true }));
 
     const before = await guardApp.fetch(
-      new Request(`http://localhost/projects/${project.id}/database`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${deployToken}` },
-      }),
+      rpcRequest('database.provision', deployToken, { projectId: project.id }),
       env,
     );
     expect(before.status).toBe(200);
@@ -3126,10 +3124,7 @@ describe('DELETE /projects/:id/github', () => {
 
     // Now the same token is rejected by the guard (build no longer active).
     const after = await guardApp.fetch(
-      new Request(`http://localhost/projects/${project.id}/database`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${deployToken}` },
-      }),
+      rpcRequest('database.provision', deployToken, { projectId: project.id }),
       env,
     );
     expect(after.status).toBe(403);

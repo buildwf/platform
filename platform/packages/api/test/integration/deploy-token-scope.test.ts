@@ -530,7 +530,7 @@ describe('deploy token scope enforcement', () => {
   // must reject a token whose bound build is no longer active, otherwise a
   // superseded/cancelled runner could still mutate real project state.
   const ALLOWLISTED_MUTATING_ROUTES: ReadonlyArray<{ name: string; path: string; rpc?: string }> = [
-    { name: 'POST /projects/:id/database', path: 'database' },
+    { name: 'POST /projects/:id/database', path: 'database', rpc: 'database.provision' },
     {
       name: 'POST /projects/:id/deploy/preflight',
       path: 'deploy/preflight',

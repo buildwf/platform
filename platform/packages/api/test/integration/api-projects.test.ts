@@ -838,24 +838,18 @@ describe('PUT /projects/:id/database-url', () => {
         return result;
       });
 
-      const requestUrl = `http://localhost/projects/${project.id}/${suffix}`;
-      const requestOptions = {
-        headers: {
-          Authorization: `Bearer ${collaborator.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const res = await app.fetch(
+        rpcRequest(method === 'POST' ? 'database.provision' : 'database.setUrl', collaborator.jwt, {
+          projectId: project.id,
           connectionString: 'postgresql://void_user:pass@db.example.com/appdb',
         }),
-      };
-      const request =
-        method === 'POST'
-          ? new Request(requestUrl, { method: 'POST', ...requestOptions })
-          : new Request(requestUrl, { method: 'PUT', ...requestOptions });
-      const res = await app.fetch(request, env);
+        env,
+      );
 
       expect(res.status).toBe(403);
-      expect(await res.json()).toEqual({ error: 'forbidden', message: expect.any(String) });
+      expect(await res.json()).toEqual({
+        error: { code: 'ACCESS_DENIED', message: expect.any(String) },
+      });
       expect(downgraded).toBe(true);
       expect(cf).not.toHaveBeenCalled();
       expect(
@@ -885,21 +879,15 @@ describe('PUT /projects/:id/database-url', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          connectionString: 'postgresql://void_user:pass@db.example.com/appdb',
-        }),
+      rpcRequest('database.provision', user.jwt, {
+        projectId: project.id,
+        connectionString: 'postgresql://void_user:pass@db.example.com/appdb',
       }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    expect(rpcData(await res.json())).toEqual({ ok: true });
     const rows = await env.db.select().from(resources).where(eq(resources.project_id, project.id));
     expect(rows).toMatchObject([
       { type: 'hyperdrive', cf_id: 'hd-post-created', binding_name: 'HYPERDRIVE' },
@@ -930,22 +918,16 @@ describe('PUT /projects/:id/database-url', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          connectionString:
-            'postgresql://void_user:p%40ss@db.example.com:25060/appdb?sslmode=verify-full&sslrootcert=/home/dev/prod-ca-2021.crt',
-        }),
+      rpcRequest('database.setUrl', user.jwt, {
+        projectId: project.id,
+        connectionString:
+          'postgresql://void_user:p%40ss@db.example.com:25060/appdb?sslmode=verify-full&sslrootcert=/home/dev/prod-ca-2021.crt',
       }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    expect(rpcData(await res.json())).toEqual({ ok: true });
     const rows = await env.db.select().from(resources).where(eq(resources.project_id, project.id));
     expect(rows).toMatchObject([
       { type: 'hyperdrive', cf_id: 'hd-created', binding_name: 'HYPERDRIVE' },
@@ -976,21 +958,15 @@ describe('PUT /projects/:id/database-url', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          connectionString: 'mysql://void_user:p%40ss@mysql.example.com/appdb',
-        }),
+      rpcRequest('database.setUrl', user.jwt, {
+        projectId: project.id,
+        connectionString: 'mysql://void_user:p%40ss@mysql.example.com/appdb',
       }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    expect(rpcData(await res.json())).toEqual({ ok: true });
     const rows = await env.db.select().from(resources).where(eq(resources.project_id, project.id));
     expect(rows).toMatchObject([
       { type: 'hyperdrive', cf_id: 'hd-mysql-created', binding_name: 'HYPERDRIVE' },
@@ -1003,20 +979,19 @@ describe('PUT /projects/:id/database-url', () => {
     const cf = mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ connectionString: 'sqlite://user:pass@db.example.com/appdb' }),
+      rpcRequest('database.setUrl', user.jwt, {
+        projectId: project.id,
+        connectionString: 'sqlite://user:pass@db.example.com/appdb',
       }),
       env,
     );
 
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({
-      error: 'Connection string must start with "postgres://", "postgresql://", or "mysql://".',
+      error: {
+        code: 'CONNECTION_STRING_INVALID',
+        message: 'Connection string must start with "postgres://", "postgresql://", or "mysql://".',
+      },
     });
     expect(cf).not.toHaveBeenCalled();
   });
@@ -1053,21 +1028,15 @@ describe('PUT /projects/:id/database-url', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          connectionString: 'postgres://void_user:pass@db.example.com/appdb?sslmode=verify-full',
-        }),
+      rpcRequest('database.setUrl', user.jwt, {
+        projectId: project.id,
+        connectionString: 'postgres://void_user:pass@db.example.com/appdb?sslmode=verify-full',
       }),
       env,
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    expect(rpcData(await res.json())).toEqual({ ok: true });
   });
 
   it('surfaces Cloudflare Hyperdrive errors as JSON instead of a generic 500', async () => {
@@ -1079,23 +1048,19 @@ describe('PUT /projects/:id/database-url', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          connectionString: 'postgresql://void_user:pass@db.example.com/appdb',
-        }),
+      rpcRequest('database.setUrl', user.jwt, {
+        projectId: project.id,
+        connectionString: 'postgresql://void_user:pass@db.example.com/appdb',
       }),
       env,
     );
 
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({
-      error: 'Failed to provision Hyperdrive',
-      detail: 'origin database is unreachable',
+      error: {
+        code: 'PROVISIONING_FAILED',
+        message: 'Failed to provision Hyperdrive: origin database is unreachable',
+      },
     });
   });
 });
@@ -1106,16 +1071,13 @@ describe('GET /projects/:id/database-url', () => {
     const project = await createTestProject(env.db, user.id, 'pg-app-get-404');
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('database.getUrl', user.jwt, { projectId: project.id }),
       env,
     );
 
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({
-      error: 'database_url_not_stored',
-      message: expect.stringContaining('void db set-url'),
+      error: { code: 'NOT_STORED', message: expect.stringContaining('void db set-url') },
     });
   });
 
@@ -1125,9 +1087,7 @@ describe('GET /projects/:id/database-url', () => {
     const project = await createTestProject(env.db, owner.id, 'pg-app-get-403');
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        headers: { Authorization: `Bearer ${other.jwt}` },
-      }),
+      rpcRequest('database.getUrl', other.jwt, { projectId: project.id }),
       env,
     );
 
@@ -1146,14 +1106,12 @@ describe('GET /projects/:id/database-url', () => {
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        headers: { Authorization: `Bearer ${collaborator.jwt}` },
-      }),
+      rpcRequest('database.getUrl', collaborator.jwt, { projectId: project.id }),
       env,
     );
 
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: 'forbidden', message: expect.any(String) });
+    expect(await res.json()).toEqual({ error: { code: 'FORBIDDEN', message: expect.any(String) } });
   });
 
   it('round-trips the connection string via POST /:id/database', async () => {
@@ -1164,26 +1122,17 @@ describe('GET /projects/:id/database-url', () => {
     mockCfApi();
 
     const postRes = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ connectionString }),
-      }),
+      rpcRequest('database.provision', user.jwt, { projectId: project.id, connectionString }),
       env,
     );
     expect(postRes.status).toBe(200);
 
     const getRes = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('database.getUrl', user.jwt, { projectId: project.id }),
       env,
     );
     expect(getRes.status).toBe(200);
-    expect(await getRes.json()).toEqual({ url: connectionString });
+    expect(rpcData(await getRes.json())).toEqual({ url: connectionString });
   });
 
   it('returns 409 from POST /:id/database once teardown has begun', async () => {
@@ -1196,21 +1145,17 @@ describe('GET /projects/:id/database-url', () => {
     const cf = mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          connectionString: 'postgresql://void_user:pass@db.example.com/appdb',
-        }),
+      rpcRequest('database.provision', user.jwt, {
+        projectId: project.id,
+        connectionString: 'postgresql://void_user:pass@db.example.com/appdb',
       }),
       env,
     );
 
     expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ error: 'Project is being deleted' });
+    expect(await res.json()).toEqual({
+      error: { code: 'PROJECT_DELETING', message: 'Project is being deleted' },
+    });
     // Bailed before touching Cloudflare — no Hyperdrive create attempted.
     expect(cf).not.toHaveBeenCalled();
   });
@@ -1225,15 +1170,9 @@ describe('GET /projects/:id/database-url', () => {
     vi.spyOn(db, 'createResource').mockRejectedValueOnce(new Error('insert failed'));
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          connectionString: 'postgresql://void_user:pass@db.example.com/appdb',
-        }),
+      rpcRequest('database.provision', user.jwt, {
+        projectId: project.id,
+        connectionString: 'postgresql://void_user:pass@db.example.com/appdb',
       }),
       env,
     );
@@ -1256,26 +1195,17 @@ describe('GET /projects/:id/database-url', () => {
     mockCfApi();
 
     const putRes = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ connectionString }),
-      }),
+      rpcRequest('database.setUrl', user.jwt, { projectId: project.id, connectionString }),
       env,
     );
     expect(putRes.status).toBe(200);
 
     const getRes = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('database.getUrl', user.jwt, { projectId: project.id }),
       env,
     );
     expect(getRes.status).toBe(200);
-    expect(await getRes.json()).toEqual({ url: connectionString });
+    expect(rpcData(await getRes.json())).toEqual({ url: connectionString });
   });
 
   it('returns 409 from PUT /:id/database-url once teardown has begun', async () => {
@@ -1286,21 +1216,17 @@ describe('GET /projects/:id/database-url', () => {
     const cf = mockCfApi();
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          connectionString: 'postgres://void_user:secret@db.example.com/mydb',
-        }),
+      rpcRequest('database.setUrl', user.jwt, {
+        projectId: project.id,
+        connectionString: 'postgres://void_user:secret@db.example.com/mydb',
       }),
       env,
     );
 
     expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ error: 'Project is being deleted' });
+    expect(await res.json()).toEqual({
+      error: { code: 'PROJECT_DELETING', message: 'Project is being deleted' },
+    });
     expect(cf).not.toHaveBeenCalled();
   });
 
@@ -1313,36 +1239,20 @@ describe('GET /projects/:id/database-url', () => {
     mockCfApi();
 
     await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ connectionString: first }),
-      }),
+      rpcRequest('database.setUrl', user.jwt, { projectId: project.id, connectionString: first }),
       env,
     );
     await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ connectionString: second }),
-      }),
+      rpcRequest('database.setUrl', user.jwt, { projectId: project.id, connectionString: second }),
       env,
     );
 
     const getRes = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('database.getUrl', user.jwt, { projectId: project.id }),
       env,
     );
     expect(getRes.status).toBe(200);
-    expect(await getRes.json()).toEqual({ url: second });
+    expect(rpcData(await getRes.json())).toEqual({ url: second });
   });
 });
 
@@ -1356,15 +1266,9 @@ describe('database URL persistence ordering — CF failure must not overwrite st
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          connectionString: 'postgresql://void_user:pass@db.example.com/appdb',
-        }),
+      rpcRequest('database.provision', user.jwt, {
+        projectId: project.id,
+        connectionString: 'postgresql://void_user:pass@db.example.com/appdb',
       }),
       env,
     );
@@ -1374,13 +1278,11 @@ describe('database URL persistence ordering — CF failure must not overwrite st
 
     // No credential row should have been written
     const getRes = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('database.getUrl', user.jwt, { projectId: project.id }),
       env,
     );
     expect(getRes.status).toBe(404);
-    expect(await getRes.json()).toMatchObject({ error: 'database_url_not_stored' });
+    expect(await getRes.json()).toMatchObject({ error: { code: 'NOT_STORED' } });
   });
 
   it('POST /:id/database leaves pre-existing credentials unchanged when createHyperdrive rejects', async () => {
@@ -1391,13 +1293,9 @@ describe('database URL persistence ordering — CF failure must not overwrite st
     // Seed a successful first set via the happy path
     mockCfApi();
     const firstRes = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ connectionString: originalUrl }),
+      rpcRequest('database.provision', user.jwt, {
+        projectId: project.id,
+        connectionString: originalUrl,
       }),
       env,
     );
@@ -1414,15 +1312,9 @@ describe('database URL persistence ordering — CF failure must not overwrite st
     expect(rows.find((r) => r.type === 'hyperdrive')).toBeDefined();
 
     const putRes = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          connectionString: 'postgresql://void_user:new@db2.example.com/otherdb',
-        }),
+      rpcRequest('database.setUrl', user.jwt, {
+        projectId: project.id,
+        connectionString: 'postgresql://void_user:new@db2.example.com/otherdb',
       }),
       env,
     );
@@ -1430,13 +1322,11 @@ describe('database URL persistence ordering — CF failure must not overwrite st
 
     // The stored URL must still be the original
     const getRes = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('database.getUrl', user.jwt, { projectId: project.id }),
       env,
     );
     expect(getRes.status).toBe(200);
-    expect(await getRes.json()).toEqual({ url: originalUrl });
+    expect(rpcData(await getRes.json())).toEqual({ url: originalUrl });
   });
 
   it('PUT /:id/database-url does not write credentials when createHyperdrive rejects (no existing resource)', async () => {
@@ -1448,15 +1338,9 @@ describe('database URL persistence ordering — CF failure must not overwrite st
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          connectionString: 'postgresql://void_user:pass@db.example.com/appdb',
-        }),
+      rpcRequest('database.setUrl', user.jwt, {
+        projectId: project.id,
+        connectionString: 'postgresql://void_user:pass@db.example.com/appdb',
       }),
       env,
     );
@@ -1480,13 +1364,9 @@ describe('database URL persistence ordering — CF failure must not overwrite st
     // Seed an existing hyperdrive resource and a stored credential via the happy path
     mockCfApi();
     const firstRes = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ connectionString: originalUrl }),
+      rpcRequest('database.setUrl', user.jwt, {
+        projectId: project.id,
+        connectionString: originalUrl,
       }),
       env,
     );
@@ -1498,15 +1378,9 @@ describe('database URL persistence ordering — CF failure must not overwrite st
     });
 
     const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${user.jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          connectionString: 'postgresql://void_user:new@db2.example.com/otherdb',
-        }),
+      rpcRequest('database.setUrl', user.jwt, {
+        projectId: project.id,
+        connectionString: 'postgresql://void_user:new@db2.example.com/otherdb',
       }),
       env,
     );
@@ -1516,13 +1390,11 @@ describe('database URL persistence ordering — CF failure must not overwrite st
 
     // The stored URL must still be the original (not overwritten with the rejected URL)
     const getRes = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/database-url`, {
-        headers: { Authorization: `Bearer ${user.jwt}` },
-      }),
+      rpcRequest('database.getUrl', user.jwt, { projectId: project.id }),
       env,
     );
     expect(getRes.status).toBe(200);
-    expect(await getRes.json()).toEqual({ url: originalUrl });
+    expect(rpcData(await getRes.json())).toEqual({ url: originalUrl });
   });
 });
 

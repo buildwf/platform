@@ -1,5 +1,6 @@
 import { defineRegistry } from '@eeao/core';
 import * as credentials from './procedures/credentials.ts';
+import * as database from './procedures/database.ts';
 import * as deploy from './procedures/deploy.ts';
 import * as deployments from './procedures/deployments.ts';
 import * as domains from './procedures/domains.ts';
@@ -24,6 +25,9 @@ export const registry = defineRegistry([
   deploy.workerUploadUrls,
   deployments.list,
   deployments.events,
+  database.provision,
+  database.setUrl,
+  database.getUrl,
   domains.add,
   domains.list,
   domains.status,
