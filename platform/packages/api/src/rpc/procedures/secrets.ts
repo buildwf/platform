@@ -18,7 +18,11 @@ import {
   requireProjectCapability,
   type ProjectAccess,
 } from '../../project-access.ts';
-import { deleteWorkerSecret, encryptProjectSecret, putWorkerSecret } from '../../project-secrets.ts';
+import {
+  deleteWorkerSecret,
+  encryptProjectSecret,
+  putWorkerSecret,
+} from '../../project-secrets.ts';
 import { isReservedBindingName } from '../../reserved-bindings.ts';
 import { canOnProject } from '../access.ts';
 import { member, procedure, type Caller } from '../procedure.ts';
@@ -49,7 +53,10 @@ const WRITE_ERRORS = {
     status: 409,
     message: 'deployment or rollback in progress; retry secret changes when it completes',
   },
-  PROPAGATION_FAILED: { status: 502, message: 'secret changed in storage but live propagation failed' },
+  PROPAGATION_FAILED: {
+    status: 502,
+    message: 'secret changed in storage but live propagation failed',
+  },
 } as const;
 
 type WriteRefusal = { code: keyof typeof WRITE_ERRORS; message?: string };
@@ -80,7 +87,10 @@ async function withProjectSecretUpdate<T>(
     if (access.project.status === 'deleting') return { code: 'PROJECT_DELETING' } as const;
     const pending = await getActiveDeployment(tx, projectId);
     if (pending) {
-      return { code: 'DEPLOYMENT_IN_PROGRESS', message: `${WRITE_ERRORS.DEPLOYMENT_IN_PROGRESS.message} (${pending.id})` } as const;
+      return {
+        code: 'DEPLOYMENT_IN_PROGRESS',
+        message: `${WRITE_ERRORS.DEPLOYMENT_IN_PROGRESS.message} (${pending.id})`,
+      } as const;
     }
     return update(tx, access);
   });

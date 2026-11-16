@@ -133,7 +133,11 @@ describe('project secrets API', () => {
         `secret-reserved-${name.toLowerCase().replaceAll('_', '-')}`,
       );
       const res = await app.fetch(
-        rpcRequest('secrets.set', user.jwt, { projectId: project.id, name: name, value: 'whatever' }),
+        rpcRequest('secrets.set', user.jwt, {
+          projectId: project.id,
+          name: name,
+          value: 'whatever',
+        }),
         env,
       );
       expect(res.status).toBe(400);
@@ -150,7 +154,11 @@ describe('project secrets API', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'secret-bare-slug');
     const res = await app.fetch(
-      rpcRequest('secrets.set', user.jwt, { projectId: project.id, name: 'VOID_PROJECT_SLUG', value: 'whatever' }),
+      rpcRequest('secrets.set', user.jwt, {
+        projectId: project.id,
+        name: 'VOID_PROJECT_SLUG',
+        value: 'whatever',
+      }),
       env,
     );
     expect(res.status).toBe(200);
@@ -162,7 +170,11 @@ describe('project secrets API', () => {
     const fetchMock = mockCfApi();
 
     const res = await app.fetch(
-      rpcRequest('secrets.set', user.jwt, { projectId: project.id, name: 'API_KEY', value: 'top-secret' }),
+      rpcRequest('secrets.set', user.jwt, {
+        projectId: project.id,
+        name: 'API_KEY',
+        value: 'top-secret',
+      }),
       env,
     );
 
@@ -203,7 +215,11 @@ describe('project secrets API', () => {
     const fetchMock = mockCfApi();
 
     const res = await app.fetch(
-      rpcRequest('secrets.set', user.jwt, { projectId: project.id, name: 'API_KEY', value: 'top-secret' }),
+      rpcRequest('secrets.set', user.jwt, {
+        projectId: project.id,
+        name: 'API_KEY',
+        value: 'top-secret',
+      }),
       env,
     );
 
@@ -229,7 +245,11 @@ describe('project secrets API', () => {
     });
 
     const res = await app.fetch(
-      rpcRequest('secrets.set', user.jwt, { projectId: project.id, name: 'API_KEY', value: 'top-secret' }),
+      rpcRequest('secrets.set', user.jwt, {
+        projectId: project.id,
+        name: 'API_KEY',
+        value: 'top-secret',
+      }),
       env,
     );
 

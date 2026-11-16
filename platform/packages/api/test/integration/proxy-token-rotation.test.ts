@@ -1487,7 +1487,11 @@ describe('proxy token rotation', () => {
         if (method === 'GET' && script === fx.worker(fx.active) && !secretWrite) {
           secretWrite = Promise.resolve(
             app.fetch(
-              rpcRequest('secrets.set', fx.ownerJwt, { projectId: fx.projectId, name: 'RACE_SECRET', value: 'race-value' }),
+              rpcRequest('secrets.set', fx.ownerJwt, {
+                projectId: fx.projectId,
+                name: 'RACE_SECRET',
+                value: 'race-value',
+              }),
               testEnv,
             ),
           );

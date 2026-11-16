@@ -1622,32 +1622,38 @@ export class PlatformClient {
   }
 
   async addDomain(projectId: string, hostname: string): Promise<DomainResponse> {
-    return this.json(`${this.baseUrl}/projects/${projectId}/domains`, 'Failed to add domain', {
-      method: 'POST',
-      body: { hostname },
-      permission: 'settings',
-    });
+    return this.rpc(
+      'domains.add',
+      'Failed to add domain',
+      { projectId, hostname },
+      { permission: 'settings' },
+    );
   }
 
   async listDomains(projectId: string): Promise<Array<DomainResponse>> {
-    return this.json(`${this.baseUrl}/projects/${projectId}/domains`, 'Failed to list domains', {
-      permission: 'read',
-    });
+    return this.rpc(
+      'domains.list',
+      'Failed to list domains',
+      { projectId },
+      { permission: 'read' },
+    );
   }
 
   async getDomainStatus(projectId: string, domainId: string): Promise<DomainStatusResponse> {
-    return this.json(
-      `${this.baseUrl}/projects/${projectId}/domains/${domainId}`,
+    return this.rpc(
+      'domains.status',
       'Failed to get domain status',
+      { projectId, domainId },
       { permission: 'read' },
     );
   }
 
   async removeDomain(projectId: string, domainId: string): Promise<{ ok: boolean }> {
-    return this.json(
-      `${this.baseUrl}/projects/${projectId}/domains/${domainId}`,
+    return this.rpc(
+      'domains.remove',
       'Failed to remove domain',
-      { method: 'DELETE', permission: 'settings' },
+      { projectId, domainId },
+      { permission: 'settings' },
     );
   }
 

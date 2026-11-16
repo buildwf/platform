@@ -107,7 +107,6 @@ import { oidcRoutes } from './routes/auth-oidc.ts';
 import auth from './routes/auth.ts';
 import deleteRoute from './routes/delete.ts';
 import deploy from './routes/deploy.ts';
-import domains from './routes/domains.ts';
 import emailConfirm from './routes/email-confirm.ts';
 import emailRoutes from './routes/email.ts';
 import { githubProjectRoutes, githubRoutes } from './routes/github.ts';
@@ -590,7 +589,6 @@ const app = new Hono<ApiEnv>()
   .route('/projects', projectZeroTrustRoutes)
   .route('/projects', deploy)
   .route('/projects', deleteRoute)
-  .route('/projects', domains)
   .route('/projects', emailRoutes)
   .route('/projects', githubProjectRoutes);
 

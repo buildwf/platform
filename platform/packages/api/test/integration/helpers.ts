@@ -1959,3 +1959,8 @@ export function rpcRequest(procedure: string, token: string | undefined, input?:
     body: input === undefined ? '' : JSON.stringify(input),
   });
 }
+
+/** The message of a failed `/rpc` response. */
+export function rpcError(body: unknown): string {
+  return (body as { error: { message: string } }).error.message;
+}

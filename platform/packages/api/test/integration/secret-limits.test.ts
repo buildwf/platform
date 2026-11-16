@@ -45,7 +45,11 @@ describe('secret limits', () => {
     mockCfApi();
 
     const res = await app.fetch(
-      rpcRequest('secrets.set', user.jwt, { projectId: project.id, name: 'BIG_SECRET', value: 'x'.repeat(128 * 1024 + 1) }),
+      rpcRequest('secrets.set', user.jwt, {
+        projectId: project.id,
+        name: 'BIG_SECRET',
+        value: 'x'.repeat(128 * 1024 + 1),
+      }),
       env,
     );
 

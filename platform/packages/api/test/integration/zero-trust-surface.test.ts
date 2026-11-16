@@ -24,6 +24,8 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
+  rpcRequest,
+  rpcData,
 } from './helpers.ts';
 
 let env: TestEnv;
@@ -375,21 +377,25 @@ describe('Zero Trust domain activation', () => {
     );
     const domainStatus = () =>
       app.fetch(
-        new Request(`http://localhost/projects/${project.id}/domains/dom_surface_domain`, {
-          headers: { Authorization: `Bearer ${owner.jwt}` },
+        rpcRequest('domains.status', owner.jwt, {
+          projectId: project.id,
+          domainId: 'dom_surface_domain',
         }),
         bindings(),
       );
 
     const waiting = await domainStatus();
     expect(waiting.status).toBe(200);
-    expect(await waiting.json()).toMatchObject({ status: 'pending', awaiting_deployment: false });
+    expect(rpcData(await waiting.json())).toMatchObject({
+      status: 'pending',
+      awaiting_deployment: false,
+    });
     expect(await env.ROUTING.get('domain:surface-domain.example.com')).toBeNull();
 
     await initializeNewProjectZeroTrust(bindings(), env.db, project.id);
     const activated = await domainStatus();
     expect(activated.status).toBe(200);
-    expect(await activated.json()).toMatchObject({ status: 'active' });
+    expect(rpcData(await activated.json())).toMatchObject({ status: 'active' });
     const published = JSON.parse((await env.ROUTING.get('domain:surface-domain.example.com'))!);
     expect(published).toMatchObject({ workerName: 'user-surface-domain', projectId: project.id });
     expect(published.zeroTrust).toBeUndefined();
