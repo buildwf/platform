@@ -50,7 +50,7 @@ export function ProjectDetailPage({ path, platformName, username }: AdminPagePro
       <SectionStack>
         <h1>{project.slug}</h1>
 
-        <Table className="void-admin-detail-table">
+        <Table className="nosam-admin-detail-table">
           <TableBody>
             <TableRow>
               <TableHeaderCell>ID</TableHeaderCell>
@@ -84,7 +84,7 @@ export function ProjectDetailPage({ path, platformName, username }: AdminPagePro
               <TableHeaderCell>Owner</TableHeaderCell>
               <TableCell>
                 {owner ? (
-                  <Link className="void-admin-resource-link" href={`/admin/users/${owner.id}`}>
+                  <Link className="nosam-admin-resource-link" href={`/admin/users/${owner.id}`}>
                     {owner.login}
                   </Link>
                 ) : (
@@ -99,7 +99,7 @@ export function ProjectDetailPage({ path, platformName, username }: AdminPagePro
             <TableRow>
               <TableHeaderCell>Email</TableHeaderCell>
               <TableCell>
-                <Link className="void-admin-resource-link" href={`/admin/email/${project.id}`}>
+                <Link className="nosam-admin-resource-link" href={`/admin/email/${project.id}`}>
                   usage, limits, destinations
                 </Link>
               </TableCell>

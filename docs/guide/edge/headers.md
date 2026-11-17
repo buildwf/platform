@@ -1,11 +1,11 @@
 ---
-description: 'Set custom response headers from void.config.ts. Match URL patterns to header names and values.'
+description: 'Set custom response headers from nosam.config.ts. Match URL patterns to header names and values.'
 outline: deep
 ---
 
 # Custom Headers
 
-Define custom response headers in [`void.config.ts`](../../reference/config) using the `routing.headers` field. Keys are URL patterns, values are arrays of `"Name: value"` strings.
+Define custom response headers in [`nosam.config.ts`](../../reference/config) using the `routing.headers` field. Keys are URL patterns, values are arrays of `"Name: value"` strings.
 
 ```json
 {
@@ -25,7 +25,7 @@ Define custom response headers in [`void.config.ts`](../../reference/config) usi
 - **Header values** use `Name: value` format. The value may contain colons.
 - All matching rules are merged. When multiple rules set the same header name, the **last match wins**.
 - User-defined `Cache-Control` overrides the built-in default. The default still applies when no rule matches.
-- With [authentication](../auth.md), responses to requests with cookies or credentials stay private, and auth endpoints stay uncached, in development and on direct Cloudflare deployments. On a [Void platform](../deployment.md#deploy-to-a-team-platform), header rules can replace those cache settings. Keep public cache rules away from signed-in pages and `/api/auth/*`.
+- With [authentication](../auth.md), responses to requests with cookies or credentials stay private, and auth endpoints stay uncached, in development and on direct Cloudflare deployments. On a [Nosam platform](../deployment.md#deploy-to-a-team-platform), header rules can replace those cache settings. Keep public cache rules away from signed-in pages and `/api/auth/*`.
 - Rules also apply to errors, including 404s. Use immutable caching only for URLs that change with their content, so a missing file isn't cached under a permanent URL.
 
 ## Scope
@@ -36,12 +36,12 @@ For hashed assets, you can add headers, but the platform keeps control of cachin
 
 ### Cookie headers
 
-On a [Void platform](../deployment.md#deploy-to-a-team-platform), set cookies in your app's response. Header rules ignore `Set-Cookie`, remove `"cookies"` from `Clear-Site-Data`, and ignore `Clear-Site-Data` rules containing `"*"`. You can use directives such as `"cache"` and `"storage"` in header rules.
+On a [Nosam platform](../deployment.md#deploy-to-a-team-platform), set cookies in your app's response. Header rules ignore `Set-Cookie`, remove `"cookies"` from `Clear-Site-Data`, and ignore `Clear-Site-Data` rules containing `"*"`. You can use directives such as `"cache"` and `"storage"` in header rules.
 
 These limits apply on all of your app's hostnames, including custom domains, to protect cookies for other apps on the shared domain. Your app's own cookie headers can still affect those apps, so scope cookies carefully. See [Domains and Resources](../platform/installation/domains.md#adding-a-domain).
 
-During local development and with `void deploy --platform cloudflare`, header rules apply both headers as written.
+During local development and with `nosam deploy --platform cloudflare`, header rules apply both headers as written.
 
 ## `_headers` files
 
-On a Void platform, Void reads `_headers` files produced by your build, such as a static site generator's output. Your `routing.headers` rules run afterward, so they can override framework defaults.
+On a Nosam platform, Nosam reads `_headers` files produced by your build, such as a static site generator's output. Your `routing.headers` rules run afterward, so they can override framework defaults.

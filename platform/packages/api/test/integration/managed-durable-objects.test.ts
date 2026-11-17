@@ -89,7 +89,7 @@ beforeEach(async () => {
     }
     const name = /\/scripts\/([^/?]+)/.exec(url)?.[1];
     if (
-      name?.startsWith('void-do-') &&
+      name?.startsWith('nosam-do-') &&
       (url.endsWith('/bindings') || url.endsWith('/settings')) &&
       !provider.state.hostScripts.has(name)
     ) {
@@ -101,10 +101,10 @@ beforeEach(async () => {
         { status: 404 },
       );
     }
-    if (name?.startsWith('void-do-') && url.endsWith('/settings') && !init?.method) {
+    if (name?.startsWith('nosam-do-') && url.endsWith('/settings') && !init?.method) {
       return cfSuccess({ bindings: provider.state.hostScripts.get(name)!.bindings });
     }
-    if (stallPublication && init?.method === 'PUT' && name?.startsWith('void-do-')) {
+    if (stallPublication && init?.method === 'PUT' && name?.startsWith('nosam-do-')) {
       await new Response(init.body).arrayBuffer();
       stalled = true;
       return new Promise<Response>((_resolve, reject) => {
@@ -128,8 +128,8 @@ beforeEach(async () => {
       // Simulate a write committed by Cloudflare whose acknowledgement is lost.
       if (
         failPublication &&
-        name.startsWith('void-do-') &&
-        JSON.stringify(metadata).includes('__VOID_DURABLE_DEPLOYMENT') &&
+        name.startsWith('nosam-do-') &&
+        JSON.stringify(metadata).includes('__NOSAM_DURABLE_DEPLOYMENT') &&
         JSON.stringify(metadata).includes('dpl_')
       ) {
         failPublication = false;
@@ -137,7 +137,7 @@ beforeEach(async () => {
       }
       return cfSuccess({});
     }
-    if (init?.method === 'DELETE' && name?.startsWith('void-do-') && response.ok) {
+    if (init?.method === 'DELETE' && name?.startsWith('nosam-do-') && response.ok) {
       return cfSuccess(null);
     }
     return response;
@@ -158,7 +158,7 @@ function deployBody(
     version: customBindings.length ? 4 : 3,
     assetManifestVersion: 2,
     bindings: {},
-    type: 'void',
+    type: 'nosam',
     compatibilityDate: '2026-10-01',
     ...(customBindings.length ? { durableObjects: { bindings: customBindings } } : {}),
     ...extra,
@@ -212,7 +212,7 @@ async function rollback(id: string) {
 function currentRelease(worker: string) {
   return provider.state.hostScripts
     .get(worker)
-    ?.bindings.find((value) => value.name === '__VOID_DURABLE_DEPLOYMENT')?.text;
+    ?.bindings.find((value) => value.name === '__NOSAM_DURABLE_DEPLOYMENT')?.text;
 }
 
 describe('managed native Durable Objects', () => {
@@ -254,7 +254,7 @@ describe('managed native Durable Objects', () => {
   });
 
   it('runs the published class through real RPC and retains data after upgrade, rollback, and restart', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'void-managed-native-'));
+    const directory = mkdtempSync(join(tmpdir(), 'nosam-managed-native-'));
     let runtime: Miniflare | undefined;
     const worker = await durableObjectWorkerName(project.id, binding.className);
     const start = async (id: string) => {
@@ -292,9 +292,9 @@ describe('managed native Durable Objects', () => {
               compatibilityDate: '2026-10-01',
               modules: Object.entries(native.modules)
                 .sort(([a], [b]) =>
-                  a === '__void_durable_entry.js'
+                  a === '__nosam_durable_entry.js'
                     ? -1
-                    : b === '__void_durable_entry.js'
+                    : b === '__nosam_durable_entry.js'
                       ? 1
                       : a.localeCompare(b),
                 )
@@ -378,10 +378,10 @@ describe('managed native Durable Objects', () => {
     const migrations = writes.filter((write) => write.name === worker && write.metadata.migrations);
     expect(migrations).toHaveLength(1);
     const activeWrite = writes.filter((write) => write.name === worker).at(-1)!;
-    expect(activeWrite.modules['__void_durable_entry.js']).toContain(
+    expect(activeWrite.modules['__nosam_durable_entry.js']).toContain(
       'export {WorkspaceDurableObject}',
     );
-    expect(activeWrite.modules['__void_durable_entry.js']).toContain('status:404');
+    expect(activeWrite.modules['__nosam_durable_entry.js']).toContain('status:404');
     const appWrite = writes.find((write) => write.name === `user-${project.slug}-${readded.id}`)!;
     expect(appWrite.metadata.bindings).toContainEqual({
       type: 'durable_object_namespace',
@@ -542,14 +542,14 @@ describe('managed native Durable Objects', () => {
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
-          'x-void-deploy-idempotency-key': crypto.randomUUID(),
+          'x-nosam-deploy-idempotency-key': crypto.randomUUID(),
         },
         body: JSON.stringify(deployBody('two')),
       }),
       queuedEnv,
     );
     await response.body?.cancel();
-    const id = response.headers.get('x-void-deployment-id')!;
+    const id = response.headers.get('x-nosam-deployment-id')!;
     // The application upload ends 9.5 minutes into the run. Too little is left
     // to move the host and still move it back, so the host is not touched.
     const now = Date.now.bind(Date);
@@ -560,7 +560,7 @@ describe('managed native Durable Objects', () => {
 
     await processDeploymentBatch(
       {
-        queue: 'void-deployments',
+        queue: 'nosam-deployments',
         messages: [{ body: { deploymentId: id }, ack: vi.fn(), retry: vi.fn() }],
       } as unknown as MessageBatch<unknown>,
       queuedEnv,
@@ -678,11 +678,11 @@ describe('managed native Durable Objects', () => {
     const worker = await durableObjectWorkerName(project.id, binding.className);
     const appToken = provider.state.hostScripts
       .get(`user-${project.slug}-${first.id}`)!
-      .bindings.find((value) => value.name === '__VOID_PROXY_TOKEN')!.text;
+      .bindings.find((value) => value.name === '__NOSAM_PROXY_TOKEN')!.text;
     expect(
       provider.state.hostScripts
         .get(worker)!
-        .bindings.find((value) => value.name === '__VOID_PROXY_TOKEN')!.text,
+        .bindings.find((value) => value.name === '__NOSAM_PROXY_TOKEN')!.text,
     ).toBe(appToken);
     expect(appToken).toMatch(/^2\./);
   });
@@ -704,7 +704,7 @@ describe('managed native Durable Objects', () => {
     const plain = await deploy('plain', []);
     expect(plain.id).toBeDefined();
     expect(await getProjectResources(env.db, project.id)).toHaveLength(0);
-    expect(writes.every((write) => !write.name.startsWith('void-do-'))).toBe(true);
+    expect(writes.every((write) => !write.name.startsWith('nosam-do-'))).toBe(true);
     expect(provider.mock.calls.every(([input]) => !String(input).includes('/containers/'))).toBe(
       true,
     );
@@ -774,7 +774,7 @@ describe('managed native Durable Objects', () => {
       (value) => value.type === 'durable-object',
     )!;
     const host = provider.state.hostScripts.get(resource.cf_id)!;
-    const owner = host.bindings.find((value) => value.name === '__VOID_DURABLE_OWNER')!;
+    const owner = host.bindings.find((value) => value.name === '__NOSAM_DURABLE_OWNER')!;
     const original = owner.text;
     owner.text = 'foreign-project';
     await expect(

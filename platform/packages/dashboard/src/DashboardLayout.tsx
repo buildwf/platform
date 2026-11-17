@@ -15,7 +15,7 @@ const footerConfig = {
   nav: [
     {
       items: [
-        { link: 'https://void.cloud/', text: 'Void Cloud' },
+        { link: 'https://void.cloud/', text: 'Nosam Cloud' },
         { link: 'https://voidzero.dev/', text: 'VoidZero' },
       ],
       title: 'COMPANY',

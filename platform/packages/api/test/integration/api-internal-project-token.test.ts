@@ -69,7 +69,7 @@ async function internalRequest(
   token: string | Record<string, string>,
   body: unknown = {},
 ): Promise<Response> {
-  const auth = typeof token === 'string' ? { 'x-void-internal': token } : token;
+  const auth = typeof token === 'string' ? { 'x-nosam-internal': token } : token;
   return app.fetch(
     new Request(`http://localhost/internal/${route}/${projectId}`, {
       method: route === 'ai-logging' ? 'GET' : 'POST',
@@ -144,7 +144,7 @@ describe('per-project token checks', () => {
     async (route) => {
       const forged = await loginJwtAsProjectToken();
       const asProxy = await internalRequest(route, forged.projectId, {
-        'x-void-proxy-internal': forged.token,
+        'x-nosam-proxy-internal': forged.token,
       });
       expect(asProxy.status).toBe(403);
       expect(await asProxy.json()).toEqual({ error: 'invalid internal auth' });
@@ -164,7 +164,7 @@ describe('per-project token checks', () => {
     mockCfApi();
     const token = await hmacSignState(project.id, JWT_SECRET);
     const proxyAuth = async (route: ProxyInternalRoute) => ({
-      'x-void-proxy-internal': await deriveProxyInternalAuth(JWT_SECRET, route, project.id),
+      'x-nosam-proxy-internal': await deriveProxyInternalAuth(JWT_SECRET, route, project.id),
     });
 
     const resource = await internalRequest(
@@ -293,7 +293,7 @@ describe('proxy credential on the metadata routes', () => {
       const response = await internalRequest(
         route,
         project.id,
-        { 'x-void-proxy-internal': await deriveProxyInternalAuth(JWT_SECRET, route, project.id) },
+        { 'x-nosam-proxy-internal': await deriveProxyInternalAuth(JWT_SECRET, route, project.id) },
         bodies[route],
       );
       expect(response.status).toBe(200);
@@ -307,7 +307,7 @@ describe('proxy credential on the metadata routes', () => {
       'resolve-worker',
       projectId,
       {
-        'x-void-proxy-internal': await deriveProxyInternalAuth(
+        'x-nosam-proxy-internal': await deriveProxyInternalAuth(
           JWT_SECRET,
           'resolve-worker',
           projectId,
@@ -369,7 +369,7 @@ describe('proxy credential on the metadata routes', () => {
       const response = await internalRequest(
         route,
         project.id,
-        { 'x-void-proxy-internal': await deriveProxyInternalAuth(JWT_SECRET, other, project.id) },
+        { 'x-nosam-proxy-internal': await deriveProxyInternalAuth(JWT_SECRET, other, project.id) },
         bodies[route],
       );
       expect(response.status).toBe(403);
@@ -385,12 +385,12 @@ describe('proxy credential on the metadata routes', () => {
         route,
         project.id,
         {
-          'x-void-proxy-internal': await deriveProxyInternalAuth(
+          'x-nosam-proxy-internal': await deriveProxyInternalAuth(
             JWT_SECRET,
             route,
             'proj_000000000999',
           ),
-          'x-void-internal': await hmacSignState(project.id, JWT_SECRET),
+          'x-nosam-internal': await hmacSignState(project.id, JWT_SECRET),
         },
         bodies[route],
       );

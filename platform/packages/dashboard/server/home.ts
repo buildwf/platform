@@ -1,4 +1,4 @@
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 import { fetchApi, type CurrentUser } from '../lib/api.ts';
 import { discoveryDisplayName } from '../lib/platform-title.ts';
 
@@ -8,9 +8,9 @@ export type Props = Readonly<{
 }>;
 
 export const loader = defineHandler<Props>(async (context) => {
-  let platformName = 'Void Cloud';
+  let platformName = 'Nosam Cloud';
   try {
-    const response = await fetchApi(context, '/.well-known/void-platform');
+    const response = await fetchApi(context, '/.well-known/nosam-platform');
     if (response.ok) {
       platformName = discoveryDisplayName((await response.json()) as { displayName?: unknown });
     }

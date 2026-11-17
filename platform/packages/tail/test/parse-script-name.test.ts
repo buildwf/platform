@@ -4,14 +4,14 @@ import { parseScriptName } from '../src/index.ts';
 describe('parseScriptName', () => {
   it('attributes stable Durable Object Workers through platform-owned tags', () => {
     expect(
-      parseScriptName('void-do-proj_example-hash', undefined, [
-        'void-project:user-my-app',
-        'void-deployment:dpl_abc123',
+      parseScriptName('nosam-do-proj_example-hash', undefined, [
+        'nosam-project:user-my-app',
+        'nosam-deployment:dpl_abc123',
       ]),
     ).toEqual({ projectKey: 'user-my-app', deployId: 'dpl_abc123' });
-    expect(parseScriptName('void-do-proj_example-hash')).toBeNull();
+    expect(parseScriptName('nosam-do-proj_example-hash')).toBeNull();
     expect(
-      parseScriptName('void-do-proj_example-hash', undefined, ['void-project:__platform-dispatch']),
+      parseScriptName('nosam-do-proj_example-hash', undefined, ['nosam-project:__platform-dispatch']),
     ).toBeNull();
   });
   it('parses versioned script name', () => {
@@ -36,30 +36,30 @@ describe('parseScriptName', () => {
   });
 
   it('filters out non-user, non-platform scripts', () => {
-    expect(parseScriptName('void-api')).toBeNull();
-    expect(parseScriptName('void-tail')).toBeNull();
-    expect(parseScriptName('void-proxy')).toBeNull();
+    expect(parseScriptName('nosam-api')).toBeNull();
+    expect(parseScriptName('nosam-tail')).toBeNull();
+    expect(parseScriptName('nosam-proxy')).toBeNull();
   });
 
-  it('accepts void-dispatch under __platform-dispatch project key', () => {
-    expect(parseScriptName('void-dispatch')).toEqual({
+  it('accepts nosam-dispatch under __platform-dispatch project key', () => {
+    expect(parseScriptName('nosam-dispatch')).toEqual({
       projectKey: '__platform-dispatch',
       deployId: '',
     });
   });
 
-  it('accepts void-dispatch-staging under __platform-dispatch-staging project key', () => {
-    expect(parseScriptName('void-dispatch-staging')).toEqual({
+  it('accepts nosam-dispatch-staging under __platform-dispatch-staging project key', () => {
+    expect(parseScriptName('nosam-dispatch-staging')).toEqual({
       projectKey: '__platform-dispatch-staging',
       deployId: '',
     });
   });
 
   it('accepts the configured self-hosted dispatch Worker name', () => {
-    expect(parseScriptName('void-company-dispatch', 'void-company-dispatch')).toEqual({
+    expect(parseScriptName('nosam-company-dispatch', 'nosam-company-dispatch')).toEqual({
       projectKey: '__platform-dispatch',
       deployId: '',
     });
-    expect(parseScriptName('void-other-dispatch', 'void-company-dispatch')).toBeNull();
+    expect(parseScriptName('nosam-other-dispatch', 'nosam-company-dispatch')).toBeNull();
   });
 });

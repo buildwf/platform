@@ -202,7 +202,7 @@ describe('WfP asset fallback on CF stub', () => {
     const res = await app.fetch(new Request('https://my-app.void.app/logo.png'), env, createCtx());
 
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-storage-error')).toBe('static-asset-missing');
+    expect(res.headers.get('x-nosam-storage-error')).toBe('static-asset-missing');
     expect(analyticsWrite.mock.calls[0]?.[0].blobs[5]).toBe('platform-static-asset-missing');
     expect(edgeCacheStore.size).toBe(0);
   });
@@ -220,7 +220,7 @@ describe('WfP asset fallback on CF stub', () => {
     const res = await app.fetch(new Request('https://my-app.void.app/logo.png'), env, createCtx());
 
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-storage-error')).toBe('static-asset-missing');
+    expect(res.headers.get('x-nosam-storage-error')).toBe('static-asset-missing');
     expect(await res.text()).toBe('');
     expect(analyticsWrite).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -244,7 +244,7 @@ describe('WfP asset fallback on CF stub', () => {
     const res = await app.fetch(new Request('https://my-app.void.app/logo.png'), env, createCtx());
 
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-storage-error')).toBe('static-asset-missing');
+    expect(res.headers.get('x-nosam-storage-error')).toBe('static-asset-missing');
     expect(analyticsWrite.mock.calls[0]?.[0].blobs[5]).toBe('platform-static-asset-missing');
   });
 
@@ -264,7 +264,7 @@ describe('WfP asset fallback on CF stub', () => {
     const res = await app.fetch(new Request('https://my-app.void.app/logo.png'), env, createCtx());
 
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-storage-error')).toBe('static-asset-missing');
+    expect(res.headers.get('x-nosam-storage-error')).toBe('static-asset-missing');
     expect(analyticsWrite.mock.calls[0]?.[0].blobs[5]).toBe('platform-static-asset-missing');
     expect(edgeCacheStore.size).toBe(0);
   });
@@ -289,7 +289,7 @@ describe('WfP asset fallback on CF stub', () => {
 
     expect(staticAssetsGet).toHaveBeenCalledTimes(2);
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-storage-error')).toBe('static-asset-read');
+    expect(res.headers.get('x-nosam-storage-error')).toBe('static-asset-read');
     expect(analyticsWrite.mock.calls[0]?.[0].blobs[5]).toBe('platform-static-asset-error');
     expect(edgeCacheStore.size).toBe(0);
   });
@@ -322,7 +322,7 @@ describe('WfP asset fallback on CF stub', () => {
 
     expect(staticAssetsGet).toHaveBeenCalledTimes(2);
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-timeout')).toBe('static-asset');
+    expect(res.headers.get('x-nosam-timeout')).toBe('static-asset');
     expect(analyticsWrite.mock.calls[0]?.[0].blobs[5]).toBe('platform-static-asset-timeout');
     expect(edgeCacheStore.size).toBe(0);
   });
@@ -349,7 +349,7 @@ describe('WfP asset fallback on CF stub', () => {
     expect(manifestGet).toHaveBeenCalledTimes(2);
     expect(staticAssetsGet).not.toHaveBeenCalled();
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-storage-error')).toBe('static-asset-read');
+    expect(res.headers.get('x-nosam-storage-error')).toBe('static-asset-read');
     expect(analyticsWrite.mock.calls[0]?.[0].blobs[5]).toBe('platform-static-asset-error');
     expect(edgeCacheStore.size).toBe(0);
   });
@@ -382,7 +382,7 @@ describe('WfP asset fallback on CF stub', () => {
     expect(manifestGet).toHaveBeenCalledTimes(2);
     expect(staticAssetsGet).not.toHaveBeenCalled();
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-timeout')).toBe('static-asset');
+    expect(res.headers.get('x-nosam-timeout')).toBe('static-asset');
     expect(analyticsWrite.mock.calls[0]?.[0].blobs[5]).toBe('platform-static-asset-timeout');
     expect(edgeCacheStore.size).toBe(0);
   });
@@ -423,7 +423,7 @@ describe('WfP asset fallback on CF stub', () => {
     expect(manifestGet).toHaveBeenCalledTimes(2);
     expect(staticAssetsGet).toHaveBeenCalledTimes(2);
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-timeout')).toBe('static-asset');
+    expect(res.headers.get('x-nosam-timeout')).toBe('static-asset');
     expect(analyticsWrite.mock.calls[0]?.[0].blobs[5]).toBe('platform-static-asset-timeout');
     expect(edgeCacheStore.size).toBe(0);
   });
@@ -453,7 +453,7 @@ describe('WfP asset fallback on CF stub', () => {
 
     expect(manifestGet).toHaveBeenCalledTimes(2);
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-timeout')).toBe('static-asset');
+    expect(res.headers.get('x-nosam-timeout')).toBe('static-asset');
     expect(analyticsWrite.mock.calls[0]?.[0].blobs[5]).toBe('platform-static-asset-timeout');
   });
 
@@ -479,7 +479,7 @@ describe('WfP asset fallback on CF stub', () => {
 
     expect(workerFetch).toHaveBeenCalledOnce();
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-timeout')).toBe('static-asset');
+    expect(res.headers.get('x-nosam-timeout')).toBe('static-asset');
     expect(analyticsWrite.mock.calls[0]?.[0].blobs[5]).toBe('platform-static-asset-timeout');
     expect(edgeCacheStore.size).toBe(0);
   });
@@ -513,7 +513,7 @@ describe('WfP asset fallback on CF stub', () => {
     expect(workerFetch).toHaveBeenCalledOnce();
     expect(manifestGet).toHaveBeenCalledTimes(2);
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-timeout')).toBe('static-asset');
+    expect(res.headers.get('x-nosam-timeout')).toBe('static-asset');
     expect(analyticsWrite.mock.calls[0]?.[0].blobs[5]).toBe('platform-static-asset-timeout');
     expect(edgeCacheStore.size).toBe(0);
   });
@@ -544,7 +544,7 @@ describe('WfP asset fallback on CF stub', () => {
     expect(workerFetch).toHaveBeenCalledOnce();
     expect(manifestGet).toHaveBeenCalledTimes(2);
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-timeout')).toBe('static-asset');
+    expect(res.headers.get('x-nosam-timeout')).toBe('static-asset');
     expect(edgeCacheStore.size).toBe(0);
   });
 
@@ -573,7 +573,7 @@ describe('WfP asset fallback on CF stub', () => {
 
     expect(workerFetch).toHaveBeenCalledOnce();
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-timeout')).toBe('dispatch');
+    expect(res.headers.get('x-nosam-timeout')).toBe('dispatch');
     expect(usageSend).toHaveBeenCalledWith(
       expect.objectContaining({ event: expect.objectContaining({ status: 503 }) }),
     );
@@ -609,7 +609,7 @@ describe('WfP asset fallback on CF stub', () => {
     expect(workerFetch).toHaveBeenCalledOnce();
     expect(manifestGet).toHaveBeenCalledTimes(2);
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-timeout')).toBe('static-asset');
+    expect(res.headers.get('x-nosam-timeout')).toBe('static-asset');
     expect(analyticsWrite.mock.calls[0]?.[0].blobs[5]).toBe('platform-static-asset-timeout');
     expect(edgeCacheStore.size).toBe(0);
   });
@@ -639,7 +639,7 @@ describe('WfP asset fallback on CF stub', () => {
 
     expect(workerFetch).toHaveBeenCalledTimes(2);
     expect(res.status).toBe(503);
-    expect(res.headers.get('x-void-timeout')).toBe('dispatch');
+    expect(res.headers.get('x-nosam-timeout')).toBe('dispatch');
     expect(edgeCacheStore.size).toBe(0);
   });
 

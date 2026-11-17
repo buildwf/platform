@@ -256,7 +256,7 @@ type EmailStepRoute = Pick<
 >;
 
 export function emailInstallationId(env: Bindings): string {
-  return env.PLATFORM_INSTALLATION_ID ?? 'void-hosted';
+  return env.PLATFORM_INSTALLATION_ID ?? 'nosam-hosted';
 }
 async function lockEmailZoneConnectionIdentity(
   tx: Tx,
@@ -338,12 +338,12 @@ async function probeDeployedRelay(
     : await readConnectionSecret(env, connection);
   const challenge = randomSecret();
   const response = await fetch(
-    `https://${connection.ingress_worker_name}.${subdomain}.workers.dev/__void/email/probe`,
+    `https://${connection.ingress_worker_name}.${subdomain}.workers.dev/__nosam/email/probe`,
     {
       method: 'POST',
       headers: {
-        'X-Void-Probe-Challenge': challenge,
-        'X-Void-Probe-Generation': String(generation),
+        'X-Nosam-Probe-Challenge': challenge,
+        'X-Nosam-Probe-Generation': String(generation),
       },
       signal: AbortSignal.timeout(10_000),
     },
@@ -449,7 +449,7 @@ function ingressName(installationId: string, zoneId: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '-')
     .slice(-48);
-  return `void-email-${suffix}`;
+  return `nosam-email-${suffix}`;
 }
 function isCloudflareEmailRoutingMx(exchange: string): boolean {
   return /\.mx\.cloudflare\.net$/i.test(exchange);
@@ -1674,7 +1674,7 @@ export async function requestEmailDomainAdd(
           throw new EmailOperationError(
             existingRoute.inbound_mode === 'none'
               ? 'email domain is set up as outbound-only; remove it before adding it with inbound mail'
-              : 'email domain receives mail through Void; remove it before adding it as outbound-only',
+              : 'email domain receives mail through Nosam; remove it before adding it as outbound-only',
             409,
           );
         }

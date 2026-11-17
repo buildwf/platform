@@ -150,13 +150,13 @@ onBeforeUnmount(() => {
 <template>
   <section
     :id="studio ? undefined : 'terminal'"
-    class="void-demos"
-    :class="{ 'void-demos-studio': studio, 'void-demos-capture': capture }"
+    class="nosam-demos"
+    :class="{ 'nosam-demos-studio': studio, 'nosam-demos-capture': capture }"
   >
     <div class="demos-container">
       <header v-if="!capture" class="demos-header">
         <div>
-          <p class="demos-eyebrow">Void / {{ studio ? 'Terminal studio' : 'In your terminal' }}</p>
+          <p class="demos-eyebrow">Nosam / {{ studio ? 'Terminal studio' : 'In your terminal' }}</p>
           <h2>
             {{ studio ? 'See what shipping feels like.' : 'A few commands. A lot of possibility.' }}
           </h2>
@@ -169,7 +169,7 @@ onBeforeUnmount(() => {
           }}
         </p>
       </header>
-      <div v-if="!capture" class="demos-tabs" role="tablist" aria-label="Void terminal examples">
+      <div v-if="!capture" class="demos-tabs" role="tablist" aria-label="Nosam terminal examples">
         <button
           v-for="(item, index) in terminalDemos"
           :id="'demo-tab-' + item.id"
@@ -292,7 +292,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.void-demos {
+.nosam-demos {
   background: #101116;
   color: #e9eaf1;
   padding: 88px 32px;
@@ -532,11 +532,11 @@ onBeforeUnmount(() => {
   line-height: 1.7;
   border-radius: 6px;
 }
-.void-demos-studio {
+.nosam-demos-studio {
   min-height: 100vh;
   padding-block: 60px;
 }
-.void-demos-capture {
+.nosam-demos-capture {
   position: fixed;
   inset: 0;
   z-index: 1000;
@@ -548,7 +548,7 @@ onBeforeUnmount(() => {
   overflow: auto;
   background: #101116;
 }
-.void-demos-capture .demos-container {
+.nosam-demos-capture .demos-container {
   width: min(100%, 1040px);
 }
 .demo-exit-capture {
@@ -569,16 +569,16 @@ onBeforeUnmount(() => {
   width: 18px;
   height: 18px;
 }
-.void-demos button:focus-visible,
-.void-demos a:focus-visible,
-.void-demos input:focus-visible,
-.void-demos select:focus-visible,
-.void-demos summary:focus-visible {
+.nosam-demos button:focus-visible,
+.nosam-demos a:focus-visible,
+.nosam-demos input:focus-visible,
+.nosam-demos select:focus-visible,
+.nosam-demos summary:focus-visible {
   outline: 2px solid #a2b1ff;
   outline-offset: 5px;
 }
 @media (max-width: 740px) {
-  .void-demos {
+  .nosam-demos {
     padding: 48px 24px;
   }
   .demos-header {
@@ -617,7 +617,7 @@ onBeforeUnmount(() => {
   .demo-footnote {
     align-items: flex-start;
   }
-  .void-demos-capture {
+  .nosam-demos-capture {
     padding: 20px;
   }
 }

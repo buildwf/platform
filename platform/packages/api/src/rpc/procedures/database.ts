@@ -37,19 +37,19 @@ const ERRORS = {
   ACCESS_DENIED: { status: 403, message: 'project access denied' },
   ALREADY_PROVISIONED: {
     status: 409,
-    message: 'Hyperdrive already provisioned. Use `void db set-url` to update.',
+    message: 'Hyperdrive already provisioned. Use `nosam db set-url` to update.',
   },
   CONNECTION_STRING_INVALID: { status: 400, message: 'invalid database connection string' },
   PROVISIONING_FAILED: { status: 502, message: 'Failed to provision Hyperdrive' },
   PERSISTENCE_FAILED: {
     status: 500,
     message:
-      'Failed to persist database URL after Cloudflare accepted it. Run `void db set-url` again to re-sync.',
+      'Failed to persist database URL after Cloudflare accepted it. Run `nosam db set-url` again to re-sync.',
   },
   NOT_STORED: {
     status: 404,
     message:
-      "This project's database URL is not stored on the platform yet. Run `void db set-url` once to populate it.",
+      "This project's database URL is not stored on the platform yet. Run `nosam db set-url` once to populate it.",
   },
 } as const;
 

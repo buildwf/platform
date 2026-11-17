@@ -21,7 +21,7 @@ function assertSchemaFixturePreserved(original, rows, projectModeMigrationApplie
   for (const [table, row] of Object.entries(original)) {
     for (const [key, value] of Object.entries(row)) {
       // 0054 deliberately normalizes the obsolete Worker mode to the public
-      // Void mode. Permit only this exact conversion after its immutable SQL
+      // Nosam mode. Permit only this exact conversion after its immutable SQL
       // was applied; every other pre-existing value must remain identical.
       const expected =
         projectModeMigrationApplied &&
@@ -29,7 +29,7 @@ function assertSchemaFixturePreserved(original, rows, projectModeMigrationApplie
         row.id === 'proj_compat' &&
         key === 'mode' &&
         value === 'worker'
-          ? 'void'
+          ? 'nosam'
           : value;
       assert.deepEqual(
         rows[table]?.[key],
@@ -43,7 +43,7 @@ function assertSchemaFixturePreserved(original, rows, projectModeMigrationApplie
 async function runSchemaFixture(command) {
   const snapshot =
     process.env.COMPAT_FIXTURE_PATH ??
-    (process.env.RUNNER_TEMP ? `${process.env.RUNNER_TEMP}/void-schema-fixture.json` : undefined);
+    (process.env.RUNNER_TEMP ? `${process.env.RUNNER_TEMP}/nosam-schema-fixture.json` : undefined);
   if (!snapshot || !process.env.COMPAT_DATABASE_URL) {
     throw new Error('A disposable compatibility database and fixture path are required.');
   }

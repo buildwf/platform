@@ -1,16 +1,16 @@
-# Void Platform
+# Nosam Platform
 
-The Void platform runs in your Cloudflare account and lets developers deploy
-applications through the Void CLI. This repository contains its control plane,
+The Nosam platform runs in your Cloudflare account and lets developers deploy
+applications through the Nosam CLI. This repository contains its control plane,
 routing, proxy, log ingestion, and optional dashboard and build services.
 
 The API, dispatch, proxy, tail, and email gateway Workers are packaged into
-[`@void/platform`](../packages/platform/README.md). A released or source-built
-runtime can be installed and upgraded with `void platform`. The installer tracks
+[`@nosam/platform`](../packages/platform/README.md). A released or source-built
+runtime can be installed and upgraded with `nosam platform`. The installer tracks
 resource ownership, applies compatible migrations, and preserves credentials
 across upgrades.
 
-Start with [Self-host a Void Platform](../docs/guide/self-hosted-platform.md) to
+Start with [Self-host a Nosam Platform](../docs/guide/self-hosted-platform.md) to
 install it, [Platform Administration](../docs/guide/platform-administration.md) to
 operate it, or [Platform Development](../docs/guide/platform-development.md) to
 work on a fork. The dashboard and managed builds are optional source components;
@@ -44,15 +44,15 @@ relative to `platform/` unless they begin with `../`.
 | -------------------------------------------- | --------------------------------------------------------- |
 | `vp run build:core`                          | Build shared packages, CLI, and packaged platform runtime |
 | `vp run build:platform`                      | Build the platform source apps                            |
-| `vp run --filter @voidcloud/platform dev`    | Start the dashboard development server                    |
+| `vp run --filter @nosamcloud/platform dev`    | Start the dashboard development server                    |
 | `vp run build:all`                           | Build all packages, platform apps, and playgrounds        |
 | `vp test run --project 'platform-*'`         | Run platform tests                                        |
 | `vp run check`                               | Typecheck the workspace                                   |
-| `vp run --filter @voidcloud/platform health` | Check the selected platform using operator authentication |
+| `vp run --filter @nosamcloud/platform health` | Check the selected platform using operator authentication |
 
 The workspace `dev` and `build` scripts in `platform/package.json` apply to the
 dashboard. They do not start the API or install a platform. Deployment scripts
-in that file serve the existing Void Cloud deployment; see [operations](#operations).
+in that file serve the existing Nosam Cloud deployment; see [operations](#operations).
 
 ## Operator CLI
 
@@ -64,14 +64,14 @@ With a local PostgreSQL server running, build the shared packages and set up the
 
 ```sh
 vp run build:core
-vp run --filter @voidcloud/api setup --admin-email dev@example.com
-vp run --filter @voidcloud/api dev --local --enable-containers=false --host localhost --port 8787
+vp run --filter @nosamcloud/api setup --admin-email dev@example.com
+vp run --filter @nosamcloud/api dev --local --enable-containers=false --host localhost --port 8787
 ```
 
 Open `http://localhost:8787/admin/`. To work on the dashboard, start it separately:
 
 ```sh
-vp run --filter @voidcloud/dashboard dev
+vp run --filter @nosamcloud/dashboard dev
 ```
 
 The [development guide](../docs/guide/platform-development.md) explains the local
@@ -84,20 +84,20 @@ Platform source lives in `platform/packages/`; public SDK packages live in the r
 
 ## Operations
 
-For an installed platform, use `void platform` lifecycle and administrator
-commands. `vp run --filter @voidcloud/platform health` forwards to
-`void platform system health`, using the selected connection and operator login.
-Automation supplies `VOID_OPERATOR_TOKEN` and an explicit `VOID_API_URL`.
+For an installed platform, use `nosam platform` lifecycle and administrator
+commands. `vp run --filter @nosamcloud/platform health` forwards to
+`nosam platform system health`, using the selected connection and operator login.
+Automation supplies `NOSAM_OPERATOR_TOKEN` and an explicit `NOSAM_API_URL`.
 
-Void Cloud maintains an existing deployment that predates the installer. Its
-`platform/package.json` deployment scripts and `platform/deployments/void-cloud.json`
-descriptor belong to that deployment. The [Void Cloud operations note](./meta/operations.md)
+Nosam Cloud maintains an existing deployment that predates the installer. Its
+`platform/package.json` deployment scripts and `platform/deployments/nosam-cloud.json`
+descriptor belong to that deployment. The [Nosam Cloud operations note](./meta/operations.md)
 explains its environments and credentials without storing account-specific
 inventories or personal access assignments in the repository.
 
-The hosted deploy/smoke workflows target the existing Void Cloud deployment.
-Forks build their own runtime and use `void platform install` or
-`void platform upgrade --runtime`, as shown in the development guide.
+The hosted deploy/smoke workflows target the existing Nosam Cloud deployment.
+Forks build their own runtime and use `nosam platform install` or
+`nosam platform upgrade --runtime`, as shown in the development guide.
 
 ## Implementation Notes
 

@@ -1,19 +1,19 @@
-import { isRecord } from '@void/deploy-core';
-import type { AiLoggingMode } from '@void/platform/ai-logging';
-import { deriveAiUsageTag } from '@voidcloud/api/proxy-token';
+import { isRecord } from '@nosam/deploy-core';
+import type { AiLoggingMode } from '@nosam/platform/ai-logging';
+import { deriveAiUsageTag } from '@nosamcloud/api/proxy-token';
 import { Hono } from 'hono';
 import { applyAiLoggingHeaders, bindingAiLogging, readAiLoggingMode } from './ai-logging.ts';
 import { asRecord, asString } from './body.ts';
 import type { ProxyEnv } from './types.ts';
 
-const DEFAULT_GATEWAY_ID = 'void';
+const DEFAULT_GATEWAY_ID = 'nosam';
 const PROVIDER_AUTH_DEFAULTS: Record<string, { header: string; prefix: string }> = {
   'google-ai-studio': { header: 'x-goog-api-key', prefix: '' },
 };
-const VOID_FILE_MARKER = '__voidFile';
+const NOSAM_FILE_MARKER = '__nosamFile';
 
 type SerializedFileInput = Readonly<{
-  [VOID_FILE_MARKER]: true;
+  [NOSAM_FILE_MARKER]: true;
   data: string;
   name?: string;
   type?: string;
@@ -43,7 +43,7 @@ function isSerializedFileInput(value: unknown): value is SerializedFileInput {
   return (
     typeof value === 'object' &&
     value !== null &&
-    (value as Record<string, unknown>)[VOID_FILE_MARKER] === true &&
+    (value as Record<string, unknown>)[NOSAM_FILE_MARKER] === true &&
     typeof (value as Record<string, unknown>).data === 'string' &&
     ((value as Record<string, unknown>).name === undefined ||
       typeof (value as Record<string, unknown>).name === 'string') &&

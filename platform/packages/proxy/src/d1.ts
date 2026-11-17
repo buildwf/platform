@@ -24,7 +24,7 @@ d1.post('/query', async (context) => {
     return dispatchRes;
   }
 
-  // Fallback: CF REST API (for old deploys without /__void handler)
+  // Fallback: CF REST API (for old deploys without /__nosam handler)
   let dbId: string;
   try {
     dbId = await resolveResource(context.env.API, context.env.JWT_SECRET, projectId, 'd1', binding);

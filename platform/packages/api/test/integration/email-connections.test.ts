@@ -200,7 +200,7 @@ describe('durable zone email connections', () => {
     const response = await app.fetch(
       new Request('https://api/internal/email/resolve-ingress', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-void-internal': proof },
+        headers: { 'content-type': 'application/json', 'x-nosam-internal': proof },
         body: JSON.stringify({
           accountId: connection.account_id,
           zoneId: connection.zone_id,
@@ -824,7 +824,7 @@ describe('durable zone email connections', () => {
     ).toBe(syncs[0]);
   });
 
-  it.runIf(Boolean(process.env.VOID_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
     'orders project-admin demotion before durable email-domain mutations',
     async () => {
       const failures: NonNullable<Parameters<typeof stubCustomerCf>[0]>['failOn'] = {};
@@ -947,7 +947,7 @@ describe('durable zone email connections', () => {
     20_000,
   );
 
-  it.runIf(Boolean(process.env.VOID_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
     'serializes concurrent first assignments on the same Cloudflare zone',
     async () => {
       const user = await createTestUser(env.db);
@@ -1024,7 +1024,7 @@ describe('durable zone email connections', () => {
     15_000,
   );
 
-  it.runIf(Boolean(process.env.VOID_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
     'keeps provider status read-back behind the route-to-connection removal lock order',
     async () => {
       const user = await createTestUser(env.db);
@@ -1093,7 +1093,7 @@ describe('durable zone email connections', () => {
     15_000,
   );
 
-  it.runIf(Boolean(process.env.VOID_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
     'keeps inbound probe read-back behind the route-to-connection removal lock order',
     async () => {
       const user = await createTestUser(env.db);
@@ -1896,7 +1896,7 @@ describe('durable zone email connections', () => {
     ).toBe('removed');
     expect(
       await resolveEmailIngress(env.db, {
-        installationId: 'void-hosted',
+        installationId: 'nosam-hosted',
         accountId: 'customer-account',
         zoneId: zones['transfer.example.com'].id,
         ingressName: (await resolveEmailDomain(env.db, 'transfer.example.com'))!.connection
@@ -1957,7 +1957,7 @@ describe('durable zone email connections', () => {
       )[0]?.status,
     ).toBe('completed');
     const live = await resolveEmailIngress(env.db, {
-      installationId: 'void-hosted',
+      installationId: 'nosam-hosted',
       accountId: 'customer-account',
       zoneId: zones['transfer.example.com'].id,
       ingressName: (await resolveEmailDomain(env.db, 'transfer.example.com'))!.connection
@@ -2174,7 +2174,7 @@ describe('durable zone email connections', () => {
     ).toBe('completed');
   });
 
-  it.runIf(Boolean(process.env.VOID_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
     'serializes late provider success with unknown-operation read-back',
     async () => {
       const user = await createTestUser(env.db);
@@ -2272,7 +2272,7 @@ describe('durable zone email connections', () => {
     15_000,
   );
 
-  it.runIf(Boolean(process.env.VOID_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
     'serializes an expired lease with a late provider failure',
     async () => {
       const user = await createTestUser(env.db);
@@ -2383,7 +2383,7 @@ describe('durable zone email connections', () => {
     15_000,
   );
 
-  it.runIf(Boolean(process.env.VOID_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
     'keeps operator recovery ineligible for 24 real hours under a non-UTC process timezone',
     async () => {
       const previousTimezone = process.env.TZ;
@@ -2952,7 +2952,7 @@ describe('durable zone email connections', () => {
       EMAIL_SENDER_DOMAIN: 'mail.example.com',
       EMAIL_SHARED_ACCOUNT_ID: env.CF_ACCOUNT_ID,
       EMAIL_SHARED_ZONE_ID: 'platform-mail-zone',
-      EMAIL_SHARED_INGRESS_NAME: 'void-email-gateway',
+      EMAIL_SHARED_INGRESS_NAME: 'nosam-email-gateway',
     } as ApiEnv['Bindings'];
     const stub = stubCustomerCf({
       zones: {
@@ -2976,12 +2976,12 @@ describe('durable zone email connections', () => {
     const route = await resolveEmailDomain(env.db, 'example.com');
     expect(route?.route.inbound_status).toBe('ready');
     expect(route?.route.outbound_status).toBe('ready');
-    expect(route?.connection.ingress_worker_name).toBe('void-email-gateway');
+    expect(route?.connection.ingress_worker_name).toBe('nosam-email-gateway');
     const nativeRoute = await resolveEmailIngress(env.db, {
-      installationId: 'void-hosted',
+      installationId: 'nosam-hosted',
       accountId: env.CF_ACCOUNT_ID,
       zoneId: 'platform-mail-zone',
-      ingressName: 'void-email-gateway',
+      ingressName: 'nosam-email-gateway',
       recipient: 'inbox@example.com',
     });
     expect(nativeRoute?.route.project_id).toBe(project.id);
@@ -3082,7 +3082,7 @@ describe('durable zone email connections', () => {
 });
 
 describe('outbound-only email domains', () => {
-  // Microsoft 365 / Google Workspace keep the apex MX; Void only onboards Email Sending.
+  // Microsoft 365 / Google Workspace keep the apex MX; Nosam only onboards Email Sending.
   const FOREIGN_MX = { 'outbound.example.com': ['brand-example.mail.protection.outlook.com'] };
   const INBOUND_TAGS = [
     'mxLookup',
@@ -3141,7 +3141,7 @@ describe('outbound-only email domains', () => {
     expect(inboundCalls(stub.calls)).toEqual([]);
     await expect(
       resolveEmailIngress(env.db, {
-        installationId: 'void-hosted',
+        installationId: 'nosam-hosted',
         accountId: 'customer-account',
         zoneId: zones['outbound.example.com'].id,
         ingressName: resolved!.connection.ingress_worker_name,
@@ -3371,7 +3371,7 @@ describe('shared mail domain ingress', () => {
       EMAIL_SENDER_DOMAIN: 'mail.example.com',
       EMAIL_SHARED_ACCOUNT_ID: env.CF_ACCOUNT_ID,
       EMAIL_SHARED_ZONE_ID: 'platform-mail-zone',
-      EMAIL_SHARED_INGRESS_NAME: 'void-email-gateway',
+      EMAIL_SHARED_INGRESS_NAME: 'nosam-email-gateway',
     } as ApiEnv['Bindings'];
   }
 
@@ -3436,7 +3436,7 @@ describe('shared mail domain ingress', () => {
     return app.fetch(
       new Request('https://api/internal/email/resolve-ingress', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-void-internal': proof },
+        headers: { 'content-type': 'application/json', 'x-nosam-internal': proof },
         body: JSON.stringify({
           accountId: connection.account_id,
           zoneId: connection.zone_id,

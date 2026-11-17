@@ -9,7 +9,7 @@ created: 2026-10-02
 ## Contract
 
 Installation administrators manage plan definitions and effective limits through
-`void platform config plans` or the administration dashboard's Plans page. Existing built-in plan IDs, names, numeric defaults
+`nosam platform config plans` or the administration dashboard's Plans page. Existing built-in plan IDs, names, numeric defaults
 and build container selection remain unchanged. Before an explicit default is
 saved, hosted signup uses `free` and self-hosted signup uses `custom` as today.
 Tenant application configuration cannot change installation policy.
@@ -77,7 +77,7 @@ built-in IDs. Preserve usage totals during this preparation.
 
 ## Implementation and verification
 
-The validated contract lives in `@void/platform/plans`. The API resolves the saved
+The validated contract lives in `@nosam/platform/plans`. The API resolves the saved
 catalog from platform settings, while the operator API reuses administrator
 sessions and audit events. The CLI previews each change, applies its exact
 revision, and continues bounded account updates until completion or a retryable

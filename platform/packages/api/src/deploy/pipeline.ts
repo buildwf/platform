@@ -1,4 +1,4 @@
-import { platformProjectHostnames, readPlatformApplication } from '@void/platform';
+import { platformProjectHostnames, readPlatformApplication } from '@nosam/platform';
 import { and, eq, or, sql as drizzleSql } from 'drizzle-orm';
 import { type Context } from 'hono';
 import { findR2Assets, persistedR2AssetSizes } from '../asset-inventory.ts';
@@ -661,7 +661,7 @@ export async function runDeploymentPipeline(input: {
           if (verified.size !== size || verified.hashes.some((value) => value !== hash)) {
             emit({
               event: 'error',
-              message: 'Uploaded asset differs from the artifact approved on Void.',
+              message: 'Uploaded asset differs from the artifact approved on Nosam.',
               step: currentStep,
             });
             return;
@@ -694,7 +694,7 @@ export async function runDeploymentPipeline(input: {
       if (hasWorkerFiles && manifest.type === undefined) {
         // Rollback identifies retained Workers from their manifest, including
         // older clients that omit type and workerMain but configure asset fallbacks.
-        manifest = { ...manifest, type: 'void' };
+        manifest = { ...manifest, type: 'nosam' };
       }
       const finalManifestRaw = JSON.stringify(manifest);
 
@@ -715,7 +715,7 @@ export async function runDeploymentPipeline(input: {
           const unique = Array.from(new Set(unbound));
           emit({
             event: 'error',
-            message: `routing rule host not bound to project: ${unique.join(', ')} — add the domain (\`void domain add\`) before deploying rules scoped to it`,
+            message: `routing rule host not bound to project: ${unique.join(', ')} — add the domain (\`nosam domain add\`) before deploying rules scoped to it`,
             step: currentStep,
           });
           return;
@@ -837,7 +837,7 @@ export async function runDeploymentPipeline(input: {
         // them directly into `assetsByHash` (not into our R2 — they're
         // a deploy-local artifact, not a CLI-uploaded asset).
         if (!isStaticOnly && Object.keys(assetManifest).length > 0) {
-          const bustPath = `/.void-deploy/${deployment.id}.txt`;
+          const bustPath = `/.nosam-deploy/${deployment.id}.txt`;
           const bustContent = `${deployment.id}\n${Date.now()}\n`;
           const bustBytes = new TextEncoder().encode(bustContent);
           const bustBuffer = bustBytes.buffer.slice(

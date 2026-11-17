@@ -33,7 +33,7 @@ async function resolveWorker(projectId: string): Promise<Response> {
   return app.fetch(
     new Request(`http://localhost/internal/resolve-worker/${projectId}`, {
       method: 'POST',
-      headers: { 'x-void-proxy-internal': auth },
+      headers: { 'x-nosam-proxy-internal': auth },
     }),
     env,
   );

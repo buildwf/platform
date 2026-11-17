@@ -1,4 +1,4 @@
-import { int, mysqlTable, varchar } from 'void/schema-mysql';
+import { int, mysqlTable, varchar } from 'nosam/schema-mysql';
 
 export const users = mysqlTable('users', {
   id: int('id').primaryKey().autoincrement(),

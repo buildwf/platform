@@ -5,7 +5,7 @@ export default defineConfig({
     tasks: {
       // The last step of the `build` script: records the source revision in the runtime manifest.
       // It isn't cached, so a new revision reruns only this step, and it gets the full
-      // environment, including VOID_PLATFORM_SOURCE_REVISION.
+      // environment, including NOSAM_PLATFORM_SOURCE_REVISION.
       'build:stamp': {
         command: 'node scripts/stamp-source-revision.mjs',
         cache: false,

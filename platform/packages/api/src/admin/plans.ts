@@ -1,4 +1,4 @@
-import type { PlatformPlanCatalog } from '@void/platform/plans';
+import type { PlatformPlanCatalog } from '@nosam/platform/plans';
 import type { PlanAiLoggingSettings } from '../ai-logging-policy.ts';
 import type { PlanCatalogAction } from '../operator/plans.ts';
 

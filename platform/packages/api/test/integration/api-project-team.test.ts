@@ -143,7 +143,9 @@ const api = {
   async fetch(req: Request, bindings: unknown): Promise<Response> {
     const response = await app.fetch(req, bindings as TestEnv);
     const op = translated.get(req);
-    if (!op) return response;
+    if (!op) {
+      return response;
+    }
     const body = (await response.json()) as {
       data?: Record<string, unknown>;
       error?: { code: string; message: string };
@@ -158,7 +160,9 @@ const api = {
     if (['team.revokeInvitation', 'team.remove', 'team.leave'].includes(op.procedure)) {
       return new Response(null, { status: 204 });
     }
-    if (op.procedure === 'team.respond' && !data.member) return new Response(null, { status: 204 });
+    if (op.procedure === 'team.respond' && !data.member) {
+      return new Response(null, { status: 204 });
+    }
     return Response.json(data, {
       status: op.procedure === 'team.invite' && !data.refreshed ? 201 : 200,
     });
@@ -750,7 +754,7 @@ describe('project team API', () => {
     const emailEnv = {
       ...env,
       EMAIL: { send } as unknown as SendEmail,
-      EMAIL_FROM: 'Void Platform <platform@example.com>',
+      EMAIL_FROM: 'Nosam Platform <platform@example.com>',
       AUTH_REDIRECT_URI: 'http://localhost/auth/callback',
       PLATFORM_INSTALLATION_ID: 'test-installation',
     };
@@ -840,7 +844,7 @@ describe('project team API', () => {
       {
         ...env,
         EMAIL: { send } as unknown as SendEmail,
-        EMAIL_FROM: 'Void Platform <platform@example.com>',
+        EMAIL_FROM: 'Nosam Platform <platform@example.com>',
         AUTH_REDIRECT_URI: 'http://localhost/auth/callback',
         PLATFORM_INSTALLATION_ID: 'test-installation',
       },

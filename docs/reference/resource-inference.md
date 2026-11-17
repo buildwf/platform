@@ -1,27 +1,27 @@
 ---
-description: 'Void detects the Cloudflare resources your code uses and provisions the matching bindings. Manual configuration is optional.'
+description: 'Nosam detects the Cloudflare resources your code uses and provisions the matching bindings. Manual configuration is optional.'
 outline: deep
 ---
 
 # Resource Inference
 
-Void automatically detects which Cloudflare resources your project uses by scanning source files at startup. In most cases, there is no manual configuration. Use a resource in code, and Void provisions the matching binding for local development.
+Nosam automatically detects which Cloudflare resources your project uses by scanning source files at startup. In most cases, there is no manual configuration. Use a resource in code, and Nosam provisions the matching binding for local development.
 
 ## Detected Bindings
 
 | Binding          | Type                       | Detected by import                                                                              | Detected by env access                                                         |
 | ---------------- | -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `DB`             | `D1Database`               | `import { db } from "void/db"`                                                                  | `env.DB` or `c.env.DB`                                                         |
-| `KV`             | `KVNamespace`              | `import { kv } from "void/kv"`                                                                  | `env.KV` or `c.env.KV`                                                         |
-| `STORAGE`        | `R2Bucket`                 | `import { storage } from "void/storage"`                                                        | `env.STORAGE` or `c.env.STORAGE`                                               |
-| `AI`             | `Ai`                       | `import { ai } from "void/ai"`                                                                  | `env.AI` or `c.env.AI`                                                         |
-| `SANDBOX`        | Managed Sandbox capability | `import { getSandbox } from "void/sandbox"`                                                     | `getSandbox()`; native Cloudflare also exposes `env.SANDBOX` / `c.env.SANDBOX` |
-| Auth             | none                       | `import { ... } from "void/auth"` or `import { auth } from "void/client"` / `void/client/react` | none                                                                           |
-| `QUEUE_*`        | `Queue`                    | `import { queues } from "void/queues"`                                                          | `env.QUEUE_*`                                                                  |
-| `VOID_LIVE`      | `DurableObjectNamespace`   | `import { defineLiveStream } from "void/live"`                                                  | n/a                                                                            |
+| `DB`             | `D1Database`               | `import { db } from "nosam/db"`                                                                  | `env.DB` or `c.env.DB`                                                         |
+| `KV`             | `KVNamespace`              | `import { kv } from "nosam/kv"`                                                                  | `env.KV` or `c.env.KV`                                                         |
+| `STORAGE`        | `R2Bucket`                 | `import { storage } from "nosam/storage"`                                                        | `env.STORAGE` or `c.env.STORAGE`                                               |
+| `AI`             | `Ai`                       | `import { ai } from "nosam/ai"`                                                                  | `env.AI` or `c.env.AI`                                                         |
+| `SANDBOX`        | Managed Sandbox capability | `import { getSandbox } from "nosam/sandbox"`                                                     | `getSandbox()`; native Cloudflare also exposes `env.SANDBOX` / `c.env.SANDBOX` |
+| Auth             | none                       | `import { ... } from "nosam/auth"` or `import { auth } from "nosam/client"` / `nosam/client/react` | none                                                                           |
+| `QUEUE_*`        | `Queue`                    | `import { queues } from "nosam/queues"`                                                          | `env.QUEUE_*`                                                                  |
+| `NOSAM_LIVE`      | `DurableObjectNamespace`   | `import { defineLiveStream } from "nosam/live"`                                                  | n/a                                                                            |
 | filename-derived | `DurableObjectNamespace`   | A default-exported `defineDurableState()` module in `durable-objects/`                          | n/a                                                                            |
 
-Auth detection also triggers when importing the `auth` specifier from `void/client` or a framework-specific client subpath such as `void/client/react` (but not when importing only `fetch`).
+Auth detection also triggers when importing the `auth` specifier from `nosam/client` or a framework-specific client subpath such as `nosam/client/react` (but not when importing only `fetch`).
 
 Static bracket access such as `c.env['KV']` and destructured properties such as
 `const { DB, KV: cache } = c.env` are also detected. For keys chosen at runtime,
@@ -31,7 +31,7 @@ Durable state is inferred from files in `durable-objects/`. For example, `durabl
 
 ## Scanned Directories
 
-Void apps scan these directories by default. With [`sourceDir`](./config.md#sourcedir) configured, Void scans that source tree instead:
+Nosam apps scan these directories by default. With [`sourceDir`](./config.md#sourcedir) configured, Nosam scans that source tree instead:
 
 | Directory     | Contains               |
 | ------------- | ---------------------- |
@@ -47,7 +47,7 @@ Void apps scan these directories by default. With [`sourceDir`](./config.md#sour
 Regardless of mode, these are always checked:
 
 - **Application source** in `src/` or your configured `sourceDir`, including resource and auth imports
-- **`durable-objects/`**, which is scanned for typed Durable Object state modules in native Void apps
+- **`durable-objects/`**, which is scanned for typed Durable Object state modules in native Nosam apps
 
 ## Custom Scan Directories
 

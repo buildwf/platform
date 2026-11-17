@@ -1,4 +1,4 @@
-import type { PlatformCapabilities } from '@void/platform';
+import type { PlatformCapabilities } from '@nosam/platform';
 import type { MiddlewareHandler } from 'hono';
 import type { ApiEnv } from './env.ts';
 
@@ -50,7 +50,7 @@ export function capabilityMiddleware(
         {
           error: 'platform capability unavailable',
           capability,
-          message: `This Void platform does not enable ${capability}.`,
+          message: `This Nosam platform does not enable ${capability}.`,
         },
         501,
       );

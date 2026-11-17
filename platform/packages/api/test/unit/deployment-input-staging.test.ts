@@ -81,8 +81,8 @@ describe('prepareDeploymentInput', () => {
   it.each([
     ['static', 'static', 0],
     ['spa', 'spa', 0],
-    ['void', 'static', 0],
-    ['void', 'worker', 1],
+    ['nosam', 'static', 0],
+    ['nosam', 'worker', 1],
   ] as const)(
     'attributes %s input using its single existing receipt write',
     async (appType, kind, moduleCount) => {
@@ -100,7 +100,7 @@ describe('prepareDeploymentInput', () => {
       const { input, prefix } = await staging;
       expect(r2.started).toEqual([
         ...Array.from({ length: moduleCount }, (_, index) => `${prefix}${index}`),
-        `${prefix}receipt-void-platform-${kind}`,
+        `${prefix}receipt-nosam-platform-${kind}`,
       ]);
       expect(input).toMatchObject({
         body: { manifest: { type: appType } },
@@ -121,9 +121,9 @@ describe('prepareDeploymentInput', () => {
     const staging = prepareDeploymentInput(
       r2 as unknown as R2Bucket,
       'prj_test',
-      { manifest: { type: 'void' }, workerFiles: { ignored: true } },
+      { manifest: { type: 'nosam' }, workerFiles: { ignored: true } },
       modules,
-      { appType: 'void' },
+      { appType: 'nosam' },
     );
     // Keep the pool full, and release puts out of start order: newest first.
     for (let released = 0; released < count; released++) {
@@ -131,12 +131,12 @@ describe('prepareDeploymentInput', () => {
       expect(r2.started.some((key) => key.includes('/receipt'))).toBe(false);
       r2.pending.pop()!.release();
     }
-    expect(await r2.releaseNext()).toMatch(/receipt-void-platform-worker$/);
+    expect(await r2.releaseNext()).toMatch(/receipt-nosam-platform-worker$/);
     const { input, prefix, digest } = await staging;
 
     expect(r2.maxInFlight).toBe(R2_CONCURRENCY);
     expect(r2.started).toHaveLength(count + 1);
-    expect(r2.started.at(-1)).toBe(`${prefix}receipt-void-platform-worker`);
+    expect(r2.started.at(-1)).toBe(`${prefix}receipt-nosam-platform-worker`);
     expect(input.body).not.toHaveProperty('workerFiles');
     expect(input.modules.map(({ name, key }) => ({ name, key }))).toEqual(
       Array.from({ length: count }, (_, index) => ({
@@ -156,9 +156,9 @@ describe('prepareDeploymentInput', () => {
     const again = prepareDeploymentInput(
       sequential as unknown as R2Bucket,
       'prj_test',
-      { manifest: { type: 'void' } },
+      { manifest: { type: 'nosam' } },
       files(count),
-      { appType: 'void' },
+      { appType: 'nosam' },
     );
     for (let released = 0; released <= count; released++) {
       await sequential.releaseNext();
@@ -172,9 +172,9 @@ describe('prepareDeploymentInput', () => {
     const staging = prepareDeploymentInput(
       r2 as unknown as R2Bucket,
       'prj_test',
-      { manifest: { type: 'void' } },
+      { manifest: { type: 'nosam' } },
       files(count),
-      { appType: 'void' },
+      { appType: 'nosam' },
     );
     const outcome = staging.then(
       () => null,
@@ -207,14 +207,14 @@ describe('prepareDeploymentInput', () => {
     const staging = prepareDeploymentInput(
       r2 as unknown as R2Bucket,
       'prj_test',
-      { manifest: { type: 'void' } },
+      { manifest: { type: 'nosam' } },
       files(1),
-      { appType: 'void' },
+      { appType: 'nosam' },
     );
     const outcome = staging.catch((error: unknown) => error);
     await r2.releaseNext();
     expect(await r2.releaseNext(new Error('Receipt write failed'))).toMatch(
-      /receipt-void-platform-worker$/,
+      /receipt-nosam-platform-worker$/,
     );
     expect(await outcome).toEqual(new Error('Receipt write failed'));
     expect(r2.deletedWhileInFlight).toBe(false);

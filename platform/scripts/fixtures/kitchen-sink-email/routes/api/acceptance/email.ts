@@ -1,11 +1,11 @@
-import { defineHandler } from 'void';
-import { sendEmail, type SendEmailOptions } from 'void/email';
-import { env } from 'void/env';
-import { kv } from 'void/kv';
+import { defineHandler } from 'nosam';
+import { sendEmail, type SendEmailOptions } from 'nosam/email';
+import { env } from 'nosam/env';
+import { kv } from 'nosam/kv';
 
 export const POST = defineHandler(async (c) => {
   const secret = env.SECRET_KEY;
-  if (typeof secret !== 'string' || !secret || c.req.header('x-void-e2e-token') !== secret) {
+  if (typeof secret !== 'string' || !secret || c.req.header('x-nosam-e2e-token') !== secret) {
     return c.json({ error: 'unauthorized' }, 401);
   }
   const body = await c.req.json<SendEmailOptions>();
@@ -14,7 +14,7 @@ export const POST = defineHandler(async (c) => {
 
 export const GET = defineHandler(async (c) => {
   const secret = env.SECRET_KEY;
-  if (typeof secret !== 'string' || !secret || c.req.header('x-void-e2e-token') !== secret) {
+  if (typeof secret !== 'string' || !secret || c.req.header('x-nosam-e2e-token') !== secret) {
     return c.json({ error: 'unauthorized' }, 401);
   }
   const subject = c.req.query('subject');

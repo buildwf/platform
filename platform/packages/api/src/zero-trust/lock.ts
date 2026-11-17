@@ -6,7 +6,7 @@ import { markProjectError } from './state.ts';
 
 /**
  * Written by platform uninstall while it holds the configuration lock, after
- * its final check. Mirrored in packages/void/src/cli/platform-zero-trust-uninstall.ts.
+ * its final check. Mirrored in packages/nosam/src/cli/platform-zero-trust-uninstall.ts.
  */
 export const PLATFORM_UNINSTALL_SETTING = 'platform.uninstall';
 
@@ -16,7 +16,7 @@ export const PLATFORM_UNINSTALL_SETTING = 'platform.uninstall';
  * take it exclusive to claim, checkpoint and finish, so they never overtake
  * project work. Platform uninstall holds the same key from its final check
  * until it disables traffic
- * (packages/void/src/cli/platform-zero-trust-uninstall.ts), and records the
+ * (packages/nosam/src/cli/platform-zero-trust-uninstall.ts), and records the
  * uninstall before it releases. A request admitted before traffic was disabled
  * may still be waiting here, so every holder refuses once that record exists
  * rather than create an Access application uninstall did not see.

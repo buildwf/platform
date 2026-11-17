@@ -1,8 +1,8 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite-plus';
-import { voidPlugin } from 'void';
+import { nosamPlugin } from 'nosam';
 
 export default defineConfig({
-  plugins: [react(), voidPlugin()],
+  plugins: [react(), nosamPlugin()],
   optimizeDeps: { include: ['valibot'] },
 });

@@ -1,8 +1,8 @@
 import { DropdownMenu } from '@astryxdesign/core/DropdownMenu';
 import { CircleUserRound } from 'lucide-react';
 import type { ReactNode } from 'react';
-import logoDark from '../assets/logos/void-dark.svg';
-import logoLight from '../assets/logos/void-light.svg';
+import logoDark from '../assets/logos/nosam-dark.svg';
+import logoLight from '../assets/logos/nosam-light.svg';
 
 const EXTERNAL_URL_RE = /^(?:[a-z]+:|\/\/)/i;
 
@@ -30,7 +30,7 @@ export default function AppHeader({
           <div className="dashboard-brand-spacer" />
           <picture>
             <source media="(prefers-color-scheme: dark)" srcSet={logoLight} />
-            <img alt="Void" className="dashboard-logo" src={logoDark} />
+            <img alt="Nosam" className="dashboard-logo" src={logoDark} />
           </picture>
         </a>
       </div>

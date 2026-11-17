@@ -56,7 +56,7 @@ const GITHUB_APP_USER_OAUTH_ENV = {
 const CODE_VERIFIER = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ'; // 43 chars
 const WRONG_VERIFIER = 'ZYXWVUTSRQPONMLKJIHGFEDCBA0123456789._~-abcd'; // 44 chars, well-formed
 // The GitHub account id carried by the default `mintJoinCode` / `runJoinCallback`.
-// The revocation tombstone is keyed by THIS id, not the joiner's Void
+// The revocation tombstone is keyed by THIS id, not the joiner's Nosam
 // user id, so the join-flow revocation tests record the tombstone against it.
 const JOIN_ACCOUNT_ID = '5551234';
 
@@ -223,7 +223,7 @@ async function runJoinCallback(opts: {
   return { res, body, joinCode, target };
 }
 
-// Seed an installation Void tracks, with no owner. `accountType` defaults to
+// Seed an installation Nosam tracks, with no owner. `accountType` defaults to
 // 'Organization' (the only account type org-share admits) — pass 'User' to seed
 // an unlinked personal install for the Organization-only guard regressions.
 async function seedInstall(opts: {
@@ -296,7 +296,7 @@ describe('GET /github/join-url', () => {
     expect(state.redirect).toBe(redirect);
     expect(typeof state.exp).toBe('number');
     expect((state.exp as number) > Date.now()).toBe(true);
-    // The crux: state carries NO Void user id (the bind is deferred to complete).
+    // The crux: state carries NO Nosam user id (the bind is deferred to complete).
     expect('userId' in state).toBe(false);
   });
 
@@ -782,11 +782,11 @@ describe('POST /github/join/complete', () => {
     expect(await countAllMemberRows(env.db)).toBe(0);
   });
 
-  it('excludes installs outside the caller accessible set and installs Void does not track', async () => {
+  it('excludes installs outside the caller accessible set and installs Nosam does not track', async () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
-    // 700: accessible AND Void-known → eligible.
-    // 800: Void-known but NOT in the accessible set → excluded.
-    // 999: accessible but NOT Void-known → excluded.
+    // 700: accessible AND Nosam-known → eligible.
+    // 800: Nosam-known but NOT in the accessible set → excluded.
+    // 999: accessible but NOT Nosam-known → excluded.
     await seedInstall({ installationId: '700' });
     await seedInstall({ installationId: '800' });
 

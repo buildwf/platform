@@ -132,7 +132,7 @@ async function recover(
   { failure, preserveTriggers }: (typeof recoveries)[number],
   rollback?: Parameters<typeof setup>[2],
 ) {
-  const directory = mkdtempSync(join(tmpdir(), 'void-rollback-checks-'));
+  const directory = mkdtempSync(join(tmpdir(), 'nosam-rollback-checks-'));
   const configPath = join(directory, 'wrangler.json');
   writeFileSync(configPath, JSON.stringify({ name: 'site' }));
   try {
@@ -194,7 +194,7 @@ it.each(recoveries)(
       expect.not.objectContaining({ bypassDeploymentChecks: true }),
       expect.objectContaining({ bypassDeploymentChecks: true }),
     ]);
-    // Void checks that it still owns traffic between the refusal and the forced retry.
+    // Nosam checks that it still owns traffic between the refusal and the forced retry.
     const refused = calls.indexOf(rollbacks[0]!);
     expect(
       calls.slice(refused, calls.indexOf(rollbacks[1]!)).map((operation) => operation.type),

@@ -155,7 +155,7 @@ describe('POST /projects/:id/deploy/upload-urls', () => {
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
-          'X-Void-CLI-Version': '0.8.3',
+          'X-Nosam-CLI-Version': '0.8.3',
         },
         body: JSON.stringify({
           projectId: project.id,
@@ -383,7 +383,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
         id: liveId,
         project_id: project.id,
         status: 'live',
-        manifest: JSON.stringify(v2Manifest({ type: 'void' })),
+        manifest: JSON.stringify(v2Manifest({ type: 'nosam' })),
         asset_hashes: JSON.stringify({
           '/app.js': { hash: reusedHash, size: 12, store: 'r2', scope: 'project' },
         }),
@@ -438,7 +438,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
       id: liveId,
       project_id: project.id,
       status: 'live',
-      manifest: JSON.stringify(v2Manifest({ type: 'void' })),
+      manifest: JSON.stringify(v2Manifest({ type: 'nosam' })),
       asset_hashes: JSON.stringify({
         '/app.js': { hash, size: 12, store: 'r2', scope: 'project' },
       }),
@@ -478,7 +478,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
           method: 'POST',
           headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            manifest: v2Manifest({ type: 'void' }),
+            manifest: v2Manifest({ type: 'nosam' }),
             assetManifest: { '/app.js': { blake3: hash, md5: MD5(0x43), size: 12 } },
             workerFiles: {
               'index.js': btoa('export default { fetch() { return new Response("ok"); } };'),
@@ -537,7 +537,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
           method: 'POST',
           headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            manifest: v2Manifest({ type: 'void' }),
+            manifest: v2Manifest({ type: 'nosam' }),
             assetManifest: { '/app.js': { blake3: hash, md5: MD5(8), size: 12 } },
             workerFiles: {
               'index.js': btoa('export default { fetch() { return new Response("ok"); } };'),
@@ -581,7 +581,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          manifest: v2Manifest({ type: 'void' }),
+          manifest: v2Manifest({ type: 'nosam' }),
           assetManifest: { '/app.js': { blake3: hash, md5: MD5(9), size: 12 } },
           workerFiles: { 'index.js': btoa('export default {};') },
           preflight: 'true',
@@ -618,7 +618,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
-          'X-Void-CLI-Version': '0.8.3',
+          'X-Nosam-CLI-Version': '0.8.3',
         },
         body: JSON.stringify({
           manifest: v2Manifest({
@@ -749,8 +749,8 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
   it.each([
     { mode: 'spa', retained: false, failBundleDelete: false },
     { mode: 'spa', retained: true, failBundleDelete: false },
-    { mode: 'void', retained: true, failBundleDelete: false },
-    { mode: 'void', retained: true, failBundleDelete: true },
+    { mode: 'nosam', retained: true, failBundleDelete: false },
+    { mode: 'nosam', retained: true, failBundleDelete: true },
   ] as const)(
     'protects stored-history assets until bundle eviction: $mode, retained=$retained, delete failure=$failBundleDelete',
     async ({ mode, retained, failBundleDelete }) => {
@@ -777,7 +777,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
         status: retained ? 'live' : 'failed',
         retained,
         bundle_stored: true,
-        manifest: JSON.stringify(v2Manifest({ type: 'void' })),
+        manifest: JSON.stringify(v2Manifest({ type: 'nosam' })),
         asset_hashes: JSON.stringify({
           '/history.js': { hash: oldHash, size: 16, store: 'r2', scope: 'project' },
         }),
@@ -808,7 +808,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
             userId: user.id,
             deploymentId: storedId,
             workerName: `user-${project.slug}-${storedId}`,
-            type: 'void',
+            type: 'nosam',
           }),
         );
       }
@@ -838,7 +838,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
               assetManifest: {
                 '/index.html': { blake3: newHash, md5: MD5(0x4a51), size: bytes.length },
               },
-              ...(mode === 'void'
+              ...(mode === 'nosam'
                 ? { workerFiles: { 'index.js': btoa('export default {};') } }
                 : {}),
             }),
@@ -1013,7 +1013,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            manifest: v2Manifest({ type: 'void' }),
+            manifest: v2Manifest({ type: 'nosam' }),
             assetManifest: {
               '/static/helper.js': {
                 blake3: assetHash,
@@ -1066,7 +1066,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
         project_id: project.id,
         status: 'live',
         retained: true,
-        manifest: JSON.stringify(v2Manifest({ type: hasWorker ? 'void' : 'spa' })),
+        manifest: JSON.stringify(v2Manifest({ type: hasWorker ? 'nosam' : 'spa' })),
         asset_hashes: JSON.stringify({ '/app.js': { hash, size: bytes.length, store: 'r2' } }),
         created_at: sql`now()`,
         deployed_at: sql`now()`,
@@ -1099,7 +1099,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
           method: 'POST',
           headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            manifest: v2Manifest({ type: hasWorker ? 'void' : 'spa' }),
+            manifest: v2Manifest({ type: hasWorker ? 'nosam' : 'spa' }),
             assetManifest: { '/app.js': { blake3: hash, md5: MD5(0xb1b2), size: bytes.length } },
             ...(hasWorker ? { workerFiles: { 'index.js': btoa('export default {};') } } : {}),
           }),
@@ -1424,7 +1424,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            manifest: v2Manifest({ type: 'void' }),
+            manifest: v2Manifest({ type: 'nosam' }),
             assetManifest: {},
             source: null,
             commit: null,
@@ -1496,7 +1496,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          manifest: v2Manifest({ type: 'void' }),
+          manifest: v2Manifest({ type: 'nosam' }),
           assetManifest: {},
           workerFiles: { 'index.js': b64 },
           source: null,
@@ -1854,7 +1854,7 @@ describe('CF asset-upload-session body never carries v2 manifest extras', () => 
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'void' },
+            manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'nosam' },
             // v2 entries — `blake3` and `md5` MUST be stripped before
             // reaching CF.
             assetManifest: {
@@ -1960,7 +1960,7 @@ describe('direct Worker module upload', () => {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'void' },
+          manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'nosam' },
           assetManifest: {},
           source: null,
           commit: null,

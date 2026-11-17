@@ -8,7 +8,7 @@ import {
   setBuildCheckRunId,
 } from '../db.ts';
 import type { ApiEnv } from '../env.ts';
-import { VOID_BUILD_CHECK_RUN_NAME, createCheckRun } from '../github/check-run.ts';
+import { NOSAM_BUILD_CHECK_RUN_NAME, createCheckRun } from '../github/check-run.ts';
 import {
   getBranchHeadComparisonStatus,
   getRepoInstallation,
@@ -31,10 +31,10 @@ const ALLOWED_OIDC_EVENTS = new Set(['push', 'workflow_dispatch']);
 
 // GitHub's `workflow_ref` / `job_workflow_ref` claims are formatted
 // `OWNER/REPO/PATH/TO/workflow.yml@REF` (e.g.
-// `octo/repo/.github/workflows/void-deploy.yml@refs/heads/main`). Returns the
+// `octo/repo/.github/workflows/nosam-deploy.yml@refs/heads/main`). Returns the
 // workflow file PATH (the part between the `OWNER/REPO/` prefix and the `@REF`
 // suffix) when the claim names the given repository, else null. Used to confirm
-// the running workflow is the scaffolded `void-deploy.yml` for the connected
+// the running workflow is the scaffolded `nosam-deploy.yml` for the connected
 // repo rather than some other workflow.
 function workflowPathForRepo(workflowRef: string, repository: string): string | null {
   const prefix = `${repository}/`;
@@ -53,8 +53,8 @@ function workflowPathForRepo(workflowRef: string, repository: string): string | 
 // Response 200:  { token: string, projectId: string }
 //   - `token` is a project-scoped deploy token (aud:'deploy') whose TTL is
 //     sized to the owner's plan build timeout + margin (so a long build can't
-//     expire it mid-deploy). The workflow exports it as VOID_TOKEN and runs
-//     `void deploy --project <slug>`.
+//     expire it mid-deploy). The workflow exports it as NOSAM_TOKEN and runs
+//     `nosam deploy --project <slug>`.
 // Errors:
 //   503 { error } — GitHub App not configured in this environment.
 //   400 { error } — missing/invalid body.
@@ -84,10 +84,10 @@ app.post('/github-oidc', async (context) => {
   }
   const projectSlug = typeof body.project === 'string' ? body.project : undefined;
 
-  // The scaffolded workflow requests audience `void` (see the CLI's GitHub
+  // The scaffolded workflow requests audience `nosam` (see the CLI's GitHub
   // Actions workflow). Enforce it so a token minted for some other audience
   // can't be replayed here.
-  const claims = await verifyGithubOidcToken(body.oidcToken, { audience: 'void' });
+  const claims = await verifyGithubOidcToken(body.oidcToken, { audience: 'nosam' });
   if (!claims) {
     return context.json({ error: 'invalid or expired oidc token' }, 401);
   }
@@ -160,8 +160,8 @@ app.post('/github-oidc', async (context) => {
   }
 
   // Bind the deploy token to the connection's authorized workflow file
-  // (project-configured `workflow_path`, default `.github/workflows/void-deploy.yml`
-  // as scaffolded by `void init --github`). The running workflow file must equal
+  // (project-configured `workflow_path`, default `.github/workflows/nosam-deploy.yml`
+  // as scaffolded by `nosam init --github`). The running workflow file must equal
   // that path under the OIDC token's OWN repository, so any OTHER workflow in the
   // repo that can request `id-token: write` (a hand-added workflow, an unsafe
   // `pull_request_target`) can't act as a deploy oracle. `workflowPathForRepo`
@@ -172,7 +172,7 @@ app.post('/github-oidc', async (context) => {
   // is already verified and keyed on the verified repo id).
   const tokenWorkflowPath = workflowPathForRepo(workflowRef, claims.repository);
   if (tokenWorkflowPath !== connection.workflow_path) {
-    return context.json({ error: 'oidc token is not from the void deploy workflow' }, 401);
+    return context.json({ error: 'oidc token is not from the nosam deploy workflow' }, 401);
   }
 
   const user = await getUser(db, connection.user_id);
@@ -373,7 +373,7 @@ app.post('/github-oidc', async (context) => {
     return context.json({ error: 'oidc sha is not the current branch head' }, 409);
   }
 
-  // Best-effort: create the executor-agnostic "Void Build" GitHub Check Run so
+  // Best-effort: create the executor-agnostic "Nosam Build" GitHub Check Run so
   // the github_actions path reports deploy status on the commit — mirroring the
   // container path (which creates it inside the BuildManager DO). Placed AFTER
   // the post-create freshness re-check so the cancel-and-return branch above can
@@ -399,14 +399,14 @@ app.post('/github-oidc', async (context) => {
   // run, attempt) while the build is still active reuses the in-flight row
   // (`result.outcome === 'reused'`), which already carries the check_run_id
   // its creating exchange persisted. Creating
-  // again would POST a SECOND "Void Build" run and overwrite the id, orphaning the
+  // again would POST a SECOND "Nosam Build" run and overwrite the id, orphaning the
   // first `in_progress` forever. A reused build whose earlier create FAILED still
   // has a null id, so a retry is allowed and cannot duplicate.
   //
   // Residual (bounded, cosmetic): two TRULY CONCURRENT exchanges for the same
   // (project, run, attempt) can both read a null id inside this create+persist
   // window and both POST — a duplicate check, one left `in_progress`. That needs
-  // parallel `void deploy` runs in the SAME run+attempt (a single deploy exchanges
+  // parallel `nosam deploy` runs in the SAME run+attempt (a single deploy exchanges
   // once; a re-run gets a new attempt → a new row/check; CLI retries are
   // sequential → already closed by the sync guard), so it is a pathological-
   // workflow case with no deploy/security impact. `setBuildCheckRunId` is CAS
@@ -419,7 +419,7 @@ app.post('/github-oidc', async (context) => {
         connection.installation_id,
         claims.repository,
         {
-          name: VOID_BUILD_CHECK_RUN_NAME,
+          name: NOSAM_BUILD_CHECK_RUN_NAME,
           headSha: claims.sha,
           externalId: build.id,
           // The GitHub Actions run page is this build's real details view (the
@@ -428,7 +428,7 @@ app.post('/github-oidc', async (context) => {
           // container path uses. `build.logs_url` is the same run URL the webhook
           // completion reads, so create and complete stay consistent.
           detailsUrl: build.logs_url ?? undefined,
-          title: 'Void deploy in progress',
+          title: 'Nosam deploy in progress',
           summary: `Deploying \`${branch}\` @ ${claims.sha.slice(0, 7)} via GitHub Actions`,
         },
       );

@@ -349,7 +349,7 @@ describe('GET /admin/builds/:id (build page)', () => {
     expect(
       JSON.parse(
         html.match(
-          /<script type="application\/json" id="void-admin-page">([\s\S]*?)<\/script>/,
+          /<script type="application\/json" id="nosam-admin-page">([\s\S]*?)<\/script>/,
         )![1]!,
       ),
     ).toMatchObject({ component: 'buildDetail' });

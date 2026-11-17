@@ -407,10 +407,10 @@ describe('enrichLiveManifest', () => {
         version: 3,
         bindings: {},
         live: {
-          bindingName: 'VOID_LIVE',
-          className: 'VoidLiveStreamDurableObject',
+          bindingName: 'NOSAM_LIVE',
+          className: 'NosamLiveStreamDurableObject',
           storage: 'sqlite',
-          classes: ['VoidLiveStreamDurableObject'],
+          classes: ['NosamLiveStreamDurableObject'],
         },
       },
       null,
@@ -420,7 +420,7 @@ describe('enrichLiveManifest', () => {
     expect(result.changed).toBe(true);
     expect(result.nextVersion).toBe(1);
     expect(result.manifest.live?.migrations).toEqual([
-      { tag: 'live-v1', newSqliteClasses: ['VoidLiveStreamDurableObject'] },
+      { tag: 'live-v1', newSqliteClasses: ['NosamLiveStreamDurableObject'] },
     ]);
   });
 
@@ -429,11 +429,11 @@ describe('enrichLiveManifest', () => {
       version: 3,
       bindings: {},
       live: {
-        bindingName: 'VOID_LIVE',
-        className: 'VoidLiveStreamDurableObject',
+        bindingName: 'NOSAM_LIVE',
+        className: 'NosamLiveStreamDurableObject',
         storage: 'sqlite',
-        classes: ['VoidLiveStreamDurableObject'],
-        migrations: [{ tag: 'live-v1', newSqliteClasses: ['VoidLiveStreamDurableObject'] }],
+        classes: ['NosamLiveStreamDurableObject'],
+        migrations: [{ tag: 'live-v1', newSqliteClasses: ['NosamLiveStreamDurableObject'] }],
       },
     };
 
@@ -442,10 +442,10 @@ describe('enrichLiveManifest', () => {
         version: 3,
         bindings: {},
         live: {
-          bindingName: 'VOID_LIVE',
-          className: 'VoidLiveStreamDurableObject',
+          bindingName: 'NOSAM_LIVE',
+          className: 'NosamLiveStreamDurableObject',
           storage: 'sqlite',
-          classes: ['VoidLiveStreamDurableObject', 'VoidLiveStreamDurableObject'],
+          classes: ['NosamLiveStreamDurableObject', 'NosamLiveStreamDurableObject'],
         },
       },
       previousManifest,
@@ -454,7 +454,7 @@ describe('enrichLiveManifest', () => {
 
     expect(result.changed).toBe(false);
     expect(result.nextVersion).toBe(1);
-    expect(result.manifest.live?.classes).toEqual(['VoidLiveStreamDurableObject']);
+    expect(result.manifest.live?.classes).toEqual(['NosamLiveStreamDurableObject']);
     expect(result.manifest.live?.migrations).toEqual(previousManifest.live?.migrations);
   });
 
@@ -463,11 +463,11 @@ describe('enrichLiveManifest', () => {
       version: 3,
       bindings: {},
       live: {
-        bindingName: 'VOID_LIVE',
-        className: 'VoidLiveStreamDurableObject',
+        bindingName: 'NOSAM_LIVE',
+        className: 'NosamLiveStreamDurableObject',
         storage: 'sqlite',
-        classes: ['VoidLiveStreamDurableObject'],
-        migrations: [{ tag: 'live-v1', newSqliteClasses: ['VoidLiveStreamDurableObject'] }],
+        classes: ['NosamLiveStreamDurableObject'],
+        migrations: [{ tag: 'live-v1', newSqliteClasses: ['NosamLiveStreamDurableObject'] }],
       },
     };
 
@@ -484,10 +484,10 @@ describe('enrichLiveManifest', () => {
         version: 3,
         bindings: {},
         live: {
-          bindingName: 'VOID_LIVE',
-          className: 'VoidLiveStreamDurableObject',
+          bindingName: 'NOSAM_LIVE',
+          className: 'NosamLiveStreamDurableObject',
           storage: 'sqlite',
-          classes: ['VoidLiveStreamDurableObject'],
+          classes: ['NosamLiveStreamDurableObject'],
         },
       },
       null,
@@ -497,7 +497,7 @@ describe('enrichLiveManifest', () => {
     expect(result.changed).toBe(true);
     expect(result.nextVersion).toBe(4);
     expect(result.manifest.live?.migrations).toEqual([
-      { tag: 'live-v4', newSqliteClasses: ['VoidLiveStreamDurableObject'] },
+      { tag: 'live-v4', newSqliteClasses: ['NosamLiveStreamDurableObject'] },
     ]);
   });
 });
@@ -506,16 +506,16 @@ describe('buildSandboxUploadMetadata', () => {
   const sandbox = {
     bindingName: 'SANDBOX',
     className: 'Sandbox',
-    containerName: 'void-sandbox',
+    containerName: 'nosam-sandbox',
     image: 'docker.io/cloudflare/sandbox:0.8.11',
   };
 
   it('gives the tenant only the trusted Sandbox service', () => {
-    expect(buildSandboxUploadBindings(sandbox, 'void-sb-project-deployment')).toEqual([
+    expect(buildSandboxUploadBindings(sandbox, 'nosam-sb-project-deployment')).toEqual([
       {
         type: 'service',
-        name: '__VOID_SANDBOX',
-        service: 'void-sb-project-deployment',
+        name: '__NOSAM_SANDBOX',
+        service: 'nosam-sb-project-deployment',
       },
     ]);
   });
@@ -524,13 +524,13 @@ describe('buildSandboxUploadMetadata', () => {
     expect(
       buildDurableObjectUploadMigrations(
         [{ tag: 'ws-v1', newClasses: ['ChatRoom'] }],
-        [{ tag: 'live-v2', newSqliteClasses: ['VoidLiveStreamDurableObject'] }],
+        [{ tag: 'live-v2', newSqliteClasses: ['NosamLiveStreamDurableObject'] }],
       ),
     ).toEqual({
       new_tag: 'live-v2',
       steps: [
         { new_classes: ['ChatRoom'] },
-        { new_sqlite_classes: ['VoidLiveStreamDurableObject'] },
+        { new_sqlite_classes: ['NosamLiveStreamDurableObject'] },
       ],
     });
   });
@@ -538,16 +538,16 @@ describe('buildSandboxUploadMetadata', () => {
   it('serializes live Durable Object binding metadata', () => {
     expect(
       buildLiveUploadBindings({
-        bindingName: 'VOID_LIVE',
-        className: 'VoidLiveStreamDurableObject',
+        bindingName: 'NOSAM_LIVE',
+        className: 'NosamLiveStreamDurableObject',
         storage: 'sqlite',
-        classes: ['VoidLiveStreamDurableObject'],
+        classes: ['NosamLiveStreamDurableObject'],
       }),
     ).toEqual([
       {
         type: 'durable_object_namespace',
-        name: 'VOID_LIVE',
-        class_name: 'VoidLiveStreamDurableObject',
+        name: 'NOSAM_LIVE',
+        class_name: 'NosamLiveStreamDurableObject',
       },
     ]);
   });
@@ -559,13 +559,13 @@ describe('buildSandboxUploadMetadata', () => {
           { tag: 'ws-v1', newClasses: ['ChatRoom'] },
           { tag: 'ws-v3', newClasses: ['PresenceRoom'] },
         ],
-        [{ tag: 'live-v2', newSqliteClasses: ['VoidLiveStreamDurableObject'] }],
+        [{ tag: 'live-v2', newSqliteClasses: ['NosamLiveStreamDurableObject'] }],
       ),
     ).toEqual({
       new_tag: 'ws-v3',
       steps: [
         { new_classes: ['ChatRoom'] },
-        { new_sqlite_classes: ['VoidLiveStreamDurableObject'] },
+        { new_sqlite_classes: ['NosamLiveStreamDurableObject'] },
         { new_classes: ['PresenceRoom'] },
       ],
     });
@@ -576,7 +576,7 @@ describe('validateManifestShape sandbox + static/spa rejection', () => {
   const sandbox = {
     bindingName: 'SANDBOX',
     className: 'Sandbox',
-    containerName: 'void-sandbox',
+    containerName: 'nosam-sandbox',
     image: 'docker.io/cloudflare/sandbox:0.8.11',
   };
 
@@ -602,18 +602,18 @@ describe('validateManifestShape sandbox + static/spa rejection', () => {
     ).toBe('sandbox is not supported for static/spa deployments');
   });
 
-  it('accepts manifest.sandbox when type is "void"', () => {
+  it('accepts manifest.sandbox when type is "nosam"', () => {
     expect(
       validateManifestShape({
         version: 3,
         bindings: {},
-        type: 'void',
+        type: 'nosam',
         sandbox,
       }),
     ).toBeNull();
   });
 
-  it('accepts manifest.sandbox when type is omitted (defaults to void/framework)', () => {
+  it('accepts manifest.sandbox when type is omitted (defaults to nosam/framework)', () => {
     expect(
       validateManifestShape({
         version: 3,

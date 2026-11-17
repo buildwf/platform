@@ -1,4 +1,4 @@
-import { browserPageLead, browserPageStatus } from '@void/platform/browser-page';
+import { browserPageLead, browserPageStatus } from '@nosam/platform/browser-page';
 import type { Context } from 'hono';
 import { platformBrowserPage } from '../../browser-page.ts';
 import type { ApiEnv } from '../../env.ts';
@@ -17,7 +17,7 @@ export function adminAccessRejected(
     title,
     browserPageStatus('error') +
       browserPageLead(title, message) +
-      '<a class="void-auth-button void-auth-button-primary" href="/admin/logout">Sign in with another account</a>',
+      '<a class="nosam-auth-button nosam-auth-button-primary" href="/admin/logout">Sign in with another account</a>',
     403,
   );
 }
@@ -34,7 +34,7 @@ export function adminRequestRejected(
       'Request could not be verified',
       browserPageStatus('error') +
         browserPageLead('Request could not be verified', message) +
-        '<a class="void-auth-button void-auth-button-primary" href="/admin/">Refresh dashboard</a>',
+        '<a class="nosam-auth-button nosam-auth-button-primary" href="/admin/">Refresh dashboard</a>',
       403,
     );
   }

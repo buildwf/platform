@@ -1,5 +1,5 @@
-import { signEmailReceipt } from '@void/platform/email-protocol';
-import { deriveAiUsageTag, deriveProxyToken } from '@voidcloud/api/proxy-token';
+import { signEmailReceipt } from '@nosam/platform/email-protocol';
+import { deriveAiUsageTag, deriveProxyToken } from '@nosamcloud/api/proxy-token';
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vite-plus/test';
 import worker from '../../src/index.ts';
 import { PLATFORM_DISABLED_KEY } from '../../src/platform-lifecycle.ts';
@@ -231,7 +231,7 @@ describe('proxy worker', () => {
   it('admits installer health checks during a sandbox drain', async () => {
     const res = await worker.fetch(
       new Request('https://proxy.void.cloud/health', {
-        headers: { 'X-Void-Platform-Probe': 'probe-token' },
+        headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
       }),
       createEnv(undefined, undefined, undefined, 'installation-id', 'probe-token', 'sandbox-drain'),
     );
@@ -241,7 +241,7 @@ describe('proxy worker', () => {
   it('admits installer health checks while public traffic is disabled', async () => {
     const res = await worker.fetch(
       new Request('https://proxy.void.cloud/health', {
-        headers: { 'X-Void-Platform-Probe': 'probe-token' },
+        headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
       }),
       createEnv(
         undefined,
@@ -258,7 +258,7 @@ describe('proxy worker', () => {
   it('rejects the legacy public installer header while disabled', async () => {
     const res = await worker.fetch(
       new Request('https://proxy.void.cloud/health', {
-        headers: { 'X-Health-Check': 'void-admin' },
+        headers: { 'X-Health-Check': 'nosam-admin' },
       }),
       createEnv(
         undefined,
@@ -271,7 +271,7 @@ describe('proxy worker', () => {
     expect(res.status).toBe(503);
   });
 
-  it('does not read the lifecycle gate for hosted Void Cloud', async () => {
+  it('does not read the lifecycle gate for hosted Nosam Cloud', async () => {
     const env = createEnv();
     const res = await worker.fetch(new Request('https://proxy.void.cloud/health'), env);
     expect(res.status).toBe(200);
@@ -529,7 +529,7 @@ describe('proxy worker', () => {
       return { request, pull };
     }
 
-    it.each(['https://proxy.void.cloud', 'https://void-proxy.example.workers.dev'])(
+    it.each(['https://proxy.void.cloud', 'https://nosam-proxy.example.workers.dev'])(
       'refuses a request to %s without a header before reading its body',
       async (host) => {
         const { request, pull } = streamedPost(`${host}/ai/run`);
@@ -601,7 +601,7 @@ describe('proxy worker', () => {
         post(
           '/email/verify-receipt',
           { ...claims, receipt: await signEmailReceipt(claims, receiptKey) },
-          { 'x-void-internal': auth },
+          { 'x-nosam-internal': auth },
         ),
         env,
       );
@@ -632,7 +632,7 @@ describe('proxy worker', () => {
         post(
           '/email/verify-receipt',
           { ...claims, receipt: await signEmailReceipt(claims, EMAIL_SIGNING_SECRET) },
-          { 'x-void-internal': await signAiToken(projectId, JWT_SECRET) },
+          { 'x-nosam-internal': await signAiToken(projectId, JWT_SECRET) },
         ),
         createEnv(),
       );
@@ -1129,14 +1129,14 @@ describe('proxy worker', () => {
 
       it('accepts a token at the floor and rejects the legacy token below it', async () => {
         const accepted = await verifyReceipt(createEnv(undefined, { [floorKey]: '{"gen":1}' }), {
-          'x-void-internal': await deriveProxyToken(JWT_SECRET, projectId, 1),
+          'x-nosam-internal': await deriveProxyToken(JWT_SECRET, projectId, 1),
         });
         expect(accepted.status).toBe(200);
         expect(await accepted.json()).toEqual({ valid: true, receiptId: claims.receiptId });
 
         clearProxyTokenStateCache();
         const rejected = await verifyReceipt(createEnv(undefined, { [floorKey]: '{"gen":1}' }), {
-          'x-void-internal': aiTokens[projectId],
+          'x-nosam-internal': aiTokens[projectId],
         });
         expect(rejected.status).toBe(403);
         expect(await rejected.json()).toEqual({ valid: false });
@@ -1145,7 +1145,7 @@ describe('proxy worker', () => {
       it('fails closed with 503 when the floor cannot be read', async () => {
         const env = createEnv();
         env.ROUTING.get.mockRejectedValue(new Error('kv unavailable'));
-        const res = await verifyReceipt(env, { 'x-void-internal': aiTokens[projectId] });
+        const res = await verifyReceipt(env, { 'x-nosam-internal': aiTokens[projectId] });
         expect(res.status).toBe(503);
         expect(await res.json()).toEqual({ valid: false });
       });
@@ -1244,7 +1244,7 @@ describe('proxy worker', () => {
       expect(await res.json()).toEqual({
         error: 'platform capability unavailable',
         capability: 'ai',
-        message: 'This Void platform does not enable AI.',
+        message: 'This Nosam platform does not enable AI.',
       });
       for (const binding of Object.values(env.AI)) {
         expect(binding).not.toHaveBeenCalled();
@@ -1324,7 +1324,7 @@ describe('proxy worker', () => {
       const env = createEnv(
         {
           gateway: vi.fn(() => ({
-            getUrl: async () => 'https://gateway.test/v1/account/void/openai',
+            getUrl: async () => 'https://gateway.test/v1/account/nosam/openai',
             run: vi.fn(),
           })),
         },
@@ -1355,7 +1355,7 @@ describe('proxy worker', () => {
       for (const method of [env.AI.run, env.AI.toMarkdown]) {
         const options = method.mock.calls[0]!.at(-1) as Record<string, unknown>;
         expect(options.gateway).toStrictEqual({
-          id: 'void',
+          id: 'nosam',
           metadata: { projectId: usageTags[PROJECT] },
         });
         expect(options).not.toHaveProperty('extraHeaders');
@@ -1425,7 +1425,7 @@ describe('proxy worker', () => {
         for (const method of [env.AI.run, env.AI.toMarkdown]) {
           const options = method.mock.calls[0]!.at(-1) as Record<string, unknown>;
           expect(options.gateway).toStrictEqual({
-            id: 'void',
+            id: 'nosam',
             metadata: { projectId: usageTags[PROJECT] },
             collectLog,
           });
@@ -1534,7 +1534,7 @@ describe('proxy worker', () => {
           path: 'files',
           body: {
             type: 'form',
-            entries: [{ name: 'file', value: { __voidFile: true, data: '%%%' } }],
+            entries: [{ name: 'file', value: { __nosamFile: true, data: '%%%' } }],
           },
         },
       },
@@ -1594,13 +1594,13 @@ describe('proxy worker', () => {
         {
           signal: expect.any(AbortSignal),
           max_tokens: 100,
-          gateway: { id: 'void', metadata: { projectId: usageTags['proj_000000000042'] } },
+          gateway: { id: 'nosam', metadata: { projectId: usageTags['proj_000000000042'] } },
         },
       );
     });
 
     it('uses the installation-specific AI Gateway', async () => {
-      const env = { ...createEnv(), AI_GATEWAY_ID: 'void-team' };
+      const env = { ...createEnv(), AI_GATEWAY_ID: 'nosam-team' };
       await worker.fetch(
         post('/ai/run', {
           model: 'm',
@@ -1616,12 +1616,12 @@ describe('proxy worker', () => {
         {},
         {
           signal: expect.any(AbortSignal),
-          gateway: { id: 'void-team', metadata: { projectId: usageTags['proj_000000000042'] } },
+          gateway: { id: 'nosam-team', metadata: { projectId: usageTags['proj_000000000042'] } },
         },
       );
     });
 
-    it('preserves user gateway options while forcing Void gateway id and project metadata', async () => {
+    it('preserves user gateway options while forcing Nosam gateway id and project metadata', async () => {
       const env = createEnv();
       await worker.fetch(
         post('/ai/run', {
@@ -1647,7 +1647,7 @@ describe('proxy worker', () => {
         {
           signal: expect.any(AbortSignal),
           gateway: {
-            id: 'void',
+            id: 'nosam',
             skipCache: true,
             cacheTtl: 60,
             metadata: { projectId: usageTags['proj_000000000042'] },
@@ -1702,7 +1702,7 @@ describe('proxy worker', () => {
         {
           signal: expect.any(AbortSignal),
           gateway: {
-            id: 'void',
+            id: 'nosam',
             eventId: 'event-1',
             metadata: { projectId: usageTags['proj_000000000042'] },
           },
@@ -1730,7 +1730,7 @@ describe('proxy worker', () => {
         {
           signal: expect.any(AbortSignal),
           gateway: {
-            id: 'void',
+            id: 'nosam',
             cacheKey: 'proj_000000000042:k',
             metadata: { projectId: usageTags['proj_000000000042'] },
           },
@@ -1855,7 +1855,7 @@ describe('proxy worker', () => {
         {},
         {
           signal: expect.any(AbortSignal),
-          gateway: { id: 'void', metadata: { projectId: usageTags['proj_000000000099'] } },
+          gateway: { id: 'nosam', metadata: { projectId: usageTags['proj_000000000099'] } },
         },
       );
     });
@@ -1923,13 +1923,13 @@ describe('proxy worker', () => {
         { content: 'hello' },
         {
           format: 'md',
-          gateway: { id: 'void', metadata: { projectId: usageTags['proj_000000000000'] } },
+          gateway: { id: 'nosam', metadata: { projectId: usageTags['proj_000000000000'] } },
         },
       );
     });
 
     it('converts through the installation gateway without caller gateway control', async () => {
-      const env = { ...createEnv(), AI_GATEWAY_ID: 'void-team' };
+      const env = { ...createEnv(), AI_GATEWAY_ID: 'nosam-team' };
 
       await worker.fetch(
         post('/ai/toMarkdown', {
@@ -1948,7 +1948,7 @@ describe('proxy worker', () => {
       expect(env.AI.toMarkdown).toHaveBeenCalledWith(
         { content: 'hello' },
         {
-          gateway: { id: 'void-team', metadata: { projectId: usageTags['proj_000000000042'] } },
+          gateway: { id: 'nosam-team', metadata: { projectId: usageTags['proj_000000000042'] } },
           extraHeaders: { 'x-keep': 'yes' },
           conversionOptions: { image: { descriptionLanguage: 'en' } },
         },
@@ -1966,7 +1966,7 @@ describe('proxy worker', () => {
     function mockProviderGateway(provider = 'openai') {
       const getUrlMock = vi.fn(
         async (requestedProvider?: string) =>
-          `https://gateway.test/v1/account/void/${requestedProvider ?? provider}/`,
+          `https://gateway.test/v1/account/nosam/${requestedProvider ?? provider}/`,
       );
       const runMock = vi.fn();
       const gateway = vi.fn(() => ({ getUrl: getUrlMock, run: runMock }));
@@ -2002,12 +2002,12 @@ describe('proxy worker', () => {
 
       expect(res.status).toBe(200);
       expect(await res.json()).toEqual({ id: 'resp_1' });
-      expect(gateway).toHaveBeenCalledWith('void');
+      expect(gateway).toHaveBeenCalledWith('nosam');
       expect(getUrlMock).toHaveBeenCalledWith('openai');
       expect(runMock).not.toHaveBeenCalled();
       expect(fetchMock).toHaveBeenCalledOnce();
       expect(fetchMock.mock.calls[0][0]).toBe(
-        'https://gateway.test/v1/account/void/openai/chat/completions',
+        'https://gateway.test/v1/account/nosam/openai/chat/completions',
       );
 
       const init = fetchMock.mock.calls[0][1]!;
@@ -2026,7 +2026,7 @@ describe('proxy worker', () => {
     it('uses the installation-specific gateway for provider requests', async () => {
       mockProviderFetch('{}', { headers: { 'content-type': 'application/json' } });
       const { gateway } = mockProviderGateway();
-      const env = { ...createEnv({ gateway }), AI_GATEWAY_ID: 'void-team' };
+      const env = { ...createEnv({ gateway }), AI_GATEWAY_ID: 'nosam-team' };
 
       const response = await worker.fetch(
         post('/ai/provider', {
@@ -2040,7 +2040,7 @@ describe('proxy worker', () => {
       );
 
       expect(response.status).toBe(200);
-      expect(gateway).toHaveBeenCalledWith('void-team');
+      expect(gateway).toHaveBeenCalledWith('nosam-team');
     });
 
     it('uses Google AI Studio API-key header for provider-native requests', async () => {
@@ -2068,7 +2068,7 @@ describe('proxy worker', () => {
       expect(res.status).toBe(200);
       expect(getUrlMock).toHaveBeenCalledWith('google-ai-studio');
       expect(fetchMock.mock.calls[0][0]).toBe(
-        'https://gateway.test/v1/account/void/google-ai-studio/v1/models/gemini-2.5-flash:generateContent',
+        'https://gateway.test/v1/account/nosam/google-ai-studio/v1/models/gemini-2.5-flash:generateContent',
       );
       const headers = new Headers(fetchMock.mock.calls[0][1]!.headers);
       expect(headers.get('x-goog-api-key')).toBe('google-key');
@@ -2208,7 +2208,7 @@ describe('proxy worker', () => {
               {
                 name: 'image',
                 value: {
-                  __voidFile: true,
+                  __nosamFile: true,
                   data: btoa('png-bytes'),
                   name: 'source.png',
                   type: 'image/png',

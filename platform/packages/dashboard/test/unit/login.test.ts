@@ -31,7 +31,7 @@ describe('dashboard login discovery', () => {
     });
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(platformPageTitle('Sign in', 'Example Platform')).toBe(
-      'Sign in · Example Platform · Void',
+      'Sign in · Example Platform · Nosam',
     );
   });
   it('binds localhost dashboard login to a complete PKCE code flow', async () => {
@@ -57,7 +57,7 @@ describe('dashboard login discovery', () => {
     expect(redirect.origin).toBe('http://localhost:5173');
     expect(redirect.searchParams.get('state')).toBeTruthy();
     expect(response.headers.getSetCookie()).toEqual(
-      expect.arrayContaining([expect.stringContaining('void_auth_pkce=')]),
+      expect.arrayContaining([expect.stringContaining('nosam_auth_pkce=')]),
     );
   });
   it('does not classify localhost-prefixed public hosts as loopback', async () => {

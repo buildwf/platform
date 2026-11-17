@@ -209,33 +209,33 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="terminal"
-    class="void-terminal"
-    :class="{ 'void-terminal--home': appearance === 'home' }"
+    class="nosam-terminal"
+    :class="{ 'nosam-terminal--home': appearance === 'home' }"
     :data-demo="demo.id"
   >
-    <div v-if="appearance === 'studio'" class="void-terminal-bar" aria-hidden="true">
-      <span class="void-terminal-dots"><i /><i /><i /></span>
-      <span class="void-terminal-directory">{{ demo.directory }}</span>
-      <span class="void-terminal-wordmark">void</span>
+    <div v-if="appearance === 'studio'" class="nosam-terminal-bar" aria-hidden="true">
+      <span class="nosam-terminal-dots"><i /><i /><i /></span>
+      <span class="nosam-terminal-directory">{{ demo.directory }}</span>
+      <span class="nosam-terminal-wordmark">void</span>
     </div>
-    <div ref="viewport" class="void-terminal-viewport" aria-hidden="true">
-      <div class="void-terminal-output">
+    <div ref="viewport" class="nosam-terminal-viewport" aria-hidden="true">
+      <div class="nosam-terminal-output">
         <div
           v-for="line in renderedLines"
           :key="line.id"
-          class="void-terminal-line"
-          :class="line.box && ['void-terminal-box-line', 'void-terminal-box-' + line.box]"
+          class="nosam-terminal-line"
+          :class="line.box && ['nosam-terminal-box-line', 'nosam-terminal-box-' + line.box]"
           :style="line.box ? { '--box-columns': line.columns } : undefined"
         >
           <span v-if="line.spinner" class="tone-blue">{{ spinnerFrame + ' ' }}</span
-          ><span class="void-terminal-content"
+          ><span class="nosam-terminal-content"
             ><span
               v-for="(segment, index) in line.segments"
               :key="index"
               :class="['tone-' + (segment.tone || 'base'), { 'terminal-bold': segment.bold }]"
               >{{ segment.text }}</span
             ></span
-          ><span v-if="line.caret" class="void-terminal-caret" />
+          ><span v-if="line.caret" class="nosam-terminal-caret" />
         </div>
       </div>
     </div>
@@ -247,7 +247,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.void-terminal {
+.nosam-terminal {
   --terminal-base: #e5e7ef;
   --terminal-muted: #8c91a4;
   --terminal-blue: #8c9fff;
@@ -268,7 +268,7 @@ onBeforeUnmount(() => {
   font-variant-ligatures: none;
   -webkit-font-smoothing: antialiased;
 }
-.void-terminal-bar {
+.nosam-terminal-bar {
   display: flex;
   align-items: center;
   gap: 18px;
@@ -279,38 +279,38 @@ onBeforeUnmount(() => {
   color: var(--terminal-muted);
   font-size: 11px;
 }
-.void-terminal-dots {
+.nosam-terminal-dots {
   display: flex;
   gap: 7px;
 }
-.void-terminal-dots i {
+.nosam-terminal-dots i {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: #454852;
 }
-.void-terminal-directory {
+.nosam-terminal-directory {
   flex: 1;
 }
-.void-terminal-wordmark {
+.nosam-terminal-wordmark {
   color: #c8ccd8;
   font-weight: 600;
   letter-spacing: -0.06em;
   font-size: 15px;
 }
-.void-terminal-viewport {
+.nosam-terminal-viewport {
   height: 520px;
   overflow: auto;
   scrollbar-width: none;
   overscroll-behavior: contain;
 }
-.void-terminal-viewport::-webkit-scrollbar {
+.nosam-terminal-viewport::-webkit-scrollbar {
   display: none;
 }
-.void-terminal-output {
+.nosam-terminal-output {
   padding: 25px 30px 32px;
 }
-.void-terminal-line {
+.nosam-terminal-line {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   min-height: 22px;
@@ -318,33 +318,33 @@ onBeforeUnmount(() => {
   font-size: 13px;
   letter-spacing: 0;
 }
-.void-terminal-box-line {
+.nosam-terminal-box-line {
   position: relative;
   width: calc(var(--box-columns) * 1ch);
   white-space: pre;
 }
-.void-terminal-box-line::before {
+.nosam-terminal-box-line::before {
   content: '';
   position: absolute;
   inset: 0 0.5ch;
   border-left: 1px solid var(--terminal-muted);
   border-right: 1px solid var(--terminal-muted);
 }
-.void-terminal-box-top::before {
+.nosam-terminal-box-top::before {
   top: 50%;
   border-top: 1px solid var(--terminal-muted);
   border-radius: 4px 4px 0 0;
 }
-.void-terminal-box-bottom::before {
+.nosam-terminal-box-bottom::before {
   bottom: 50%;
   border-bottom: 1px solid var(--terminal-muted);
   border-radius: 0 0 4px 4px;
 }
-.void-terminal-box-line .void-terminal-content {
+.nosam-terminal-box-line .nosam-terminal-content {
   position: relative;
   margin-left: 3ch;
 }
-.void-terminal-box-top .void-terminal-content {
+.nosam-terminal-box-top .nosam-terminal-content {
   margin-left: 2.5ch;
   padding: 0 0.5ch;
   background: #15171d;
@@ -370,7 +370,7 @@ onBeforeUnmount(() => {
 .terminal-bold {
   font-weight: 700;
 }
-.void-terminal-caret {
+.nosam-terminal-caret {
   display: inline-block;
   width: 8px;
   height: 15px;
@@ -388,34 +388,34 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 @media (min-width: 1100px) {
-  .void-terminal-line {
+  .nosam-terminal-line {
     font-size: 14px;
     line-height: 24px;
     min-height: 24px;
   }
-  .void-terminal-viewport {
+  .nosam-terminal-viewport {
     height: 560px;
   }
 }
 @media (max-width: 640px) {
-  .void-terminal-bar {
+  .nosam-terminal-bar {
     padding: 0 18px;
     height: 42px;
   }
-  .void-terminal-output {
+  .nosam-terminal-output {
     padding: 20px 16px;
   }
-  .void-terminal-line {
+  .nosam-terminal-line {
     font-size: 10px;
     line-height: 20px;
     min-height: 20px;
   }
-  .void-terminal-viewport {
+  .nosam-terminal-viewport {
     height: 460px;
   }
 }
 
-.void-terminal--home {
+.nosam-terminal--home {
   --terminal-base: #ffffff;
   --terminal-muted: #aaa6b2;
   --terminal-green: #22ff73;
@@ -426,27 +426,27 @@ onBeforeUnmount(() => {
   box-shadow: none;
   font-family: var(--font-mono);
 }
-.void-terminal--home .void-terminal-viewport {
+.nosam-terminal--home .nosam-terminal-viewport {
   height: 100%;
   overflow: hidden;
   overscroll-behavior: auto;
 }
-.void-terminal--home .void-terminal-output {
+.nosam-terminal--home .nosam-terminal-output {
   padding: 24px 32px;
 }
-.void-terminal--home .void-terminal-line {
+.nosam-terminal--home .nosam-terminal-line {
   font-size: 14px;
   line-height: 22px;
   min-height: 22px;
 }
-.void-terminal--home .void-terminal-box-top .void-terminal-content {
+.nosam-terminal--home .nosam-terminal-box-top .nosam-terminal-content {
   background: #111111;
 }
 @media (max-width: 640px) {
-  .void-terminal--home .void-terminal-output {
+  .nosam-terminal--home .nosam-terminal-output {
     padding: 20px 16px;
   }
-  .void-terminal--home .void-terminal-line {
+  .nosam-terminal--home .nosam-terminal-line {
     font-size: 11px;
     line-height: 19px;
     min-height: 19px;

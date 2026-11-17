@@ -15,7 +15,7 @@
  * See the email design's recipient-consent section for the trust boundary.
  */
 
-import { browserPageLead, browserPageStatus } from '@void/platform/browser-page';
+import { browserPageLead, browserPageStatus } from '@nosam/platform/browser-page';
 import { Hono, type Context } from 'hono';
 import { verifyConfirmToken } from '../auth/confirm-token.ts';
 import { platformBrowserPage } from '../browser-page.ts';
@@ -145,10 +145,10 @@ app.post('/destinations/confirm', async (context) => {
 });
 
 function consentPage(slug: string, address: string, token: string): string {
-  return `<div class="void-auth-lead"><h1 id="void-auth-title">Allow ${escapeHtml(slug)} to email ${escapeHtml(address)}?</h1>
-<p>The Void project <strong>${escapeHtml(slug)}</strong> wants permission to send email to <strong>${escapeHtml(address)}</strong>.</p></div>
-<form method="post" action="?token=${escapeHtml(token)}"><button class="void-auth-button void-auth-button-primary" type="submit">Confirm</button></form>
-<p class="void-auth-note">If you didn't expect this, close this page. No permission is granted until you select Confirm.</p>`;
+  return `<div class="nosam-auth-lead"><h1 id="nosam-auth-title">Allow ${escapeHtml(slug)} to email ${escapeHtml(address)}?</h1>
+<p>The Nosam project <strong>${escapeHtml(slug)}</strong> wants permission to send email to <strong>${escapeHtml(address)}</strong>.</p></div>
+<form method="post" action="?token=${escapeHtml(token)}"><button class="nosam-auth-button nosam-auth-button-primary" type="submit">Confirm</button></form>
+<p class="nosam-auth-note">If you didn't expect this, close this page. No permission is granted until you select Confirm.</p>`;
 }
 
 function successPage(slug: string, address: string, alreadyVerified: boolean): string {
@@ -158,9 +158,9 @@ function successPage(slug: string, address: string, alreadyVerified: boolean): s
     : `You've authorized <strong>${escapeHtml(slug)}</strong> to send email to <strong>${escapeHtml(address)}</strong>.`;
   return (
     browserPageStatus('success') +
-    `<div class="void-auth-lead"><h1 id="void-auth-title">${heading}</h1>
+    `<div class="nosam-auth-lead"><h1 id="nosam-auth-title">${heading}</h1>
 <p>${lead}</p></div>
-<p class="void-auth-note">If you didn't expect this, ignore future emails from this project — no further permission will be granted without your action.</p>`
+<p class="nosam-auth-note">If you didn't expect this, ignore future emails from this project — no further permission will be granted without your action.</p>`
   );
 }
 

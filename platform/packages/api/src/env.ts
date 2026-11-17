@@ -71,11 +71,11 @@ export type ApiEnv = Env & {
      * CF Access service-token pair for reaching the Access-gated staging hosts
      * (`api.staging.void.cloud`). Held ONLY by the staging API worker. The
      * `BuildManager` forwards these into a staging container build so the
-     * `void deploy` child can authenticate past CF Access when calling the
+     * `nosam deploy` child can authenticate past CF Access when calling the
      * staging deploy endpoint — non-interactive automation can't do the
      * `cloudflared` browser flow. Optional: unset everywhere except staging, so
      * production (not Access-gated) and dev tolerate absence. See
-     * `meta/operations.md` (Staging Access Control) and the `void-staging-programmatic`
+     * `meta/operations.md` (Staging Access Control) and the `nosam-staging-programmatic`
      * service token.
      */
     CF_ACCESS_CLIENT_ID_STAGING?: string;
@@ -94,17 +94,17 @@ export type ApiEnv = Env & {
      * Name of the tail-consumer Worker that receives runtime logs (Tail Worker).
      * Wired into per-user-script `tail_consumers` metadata on each WfP upload.
      * This is the only log path for invocations that skip the dispatch Worker
-     * (crons, `/__void/migrate`, Durable Object alarms). Queue deliveries go
+     * (crons, `/__nosam/migrate`, Durable Object alarms). Queue deliveries go
      * through the dispatch Worker. The dispatch Worker's own consumer also
      * receives the user items it invoked, each in its own tail invocation, so
      * those rows are stored twice; log queries collapse them
      * (`observability/log-rows.ts`).
-     * Falls back to `void-tail` when unset.
+     * Falls back to `nosam-tail` when unset.
      */
     TAIL_SERVICE_NAME?: string;
     /** Set to `minimal` when URLs, log messages and exception messages are not recorded. */
     PLATFORM_RUNTIME_LOGS?: 'minimal';
-    VOID_PROXY_SERVICE?: string;
+    NOSAM_PROXY_SERVICE?: string;
     /** Private readiness checks, attached after the proxy Worker has been provisioned. */
     PLATFORM_PROXY?: Fetcher;
     SANDBOX_CONTROL_SERVICE?: string;

@@ -1,11 +1,11 @@
-# @void/edge
+# @nosam/edge
 
-Routing and static asset helpers shared by [Void](https://void.cloud)'s direct Cloudflare deployments and platform runtime.
+Routing and static asset helpers shared by Nosam's direct Cloudflare deployments and platform runtime.
 
-Configure redirects, rewrites, headers, and asset behavior through `void.config.ts`.
+Configure redirects, rewrites, headers, and asset behavior through `nosam.config.ts`.
 
 ## Documentation
 
-See [Static Assets](https://void.cloud/guide/edge/static-assets) and the [configuration reference](https://void.cloud/reference/config#routing).
+See Static Assets and the configuration reference.
 
-Read the [Void documentation](https://void.cloud) online or use the Markdown guides and references in `node_modules/void/docs/`, included with the `void` package.
+Read the Nosam documentation online or use the Markdown guides and references in `node_modules/nosam/docs/`, included with the `nosam` package.

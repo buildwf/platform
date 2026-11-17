@@ -1,10 +1,10 @@
-import { matchLiteralPattern, redirectToHttps, type ProjectZeroTrustRouting } from '@void/edge';
+import { matchLiteralPattern, redirectToHttps, type ProjectZeroTrustRouting } from '@nosam/edge';
 import {
   PLATFORM_HEALTH_HOSTNAME_LABEL,
   platformHealthHostname,
   readPlatformApplication,
   resolvePlatformApplicationEnvironment,
-} from '@void/platform';
+} from '@nosam/platform';
 import { WorkerEntrypoint } from 'cloudflare:workers';
 import { projectAccessVerifier } from './access.ts';
 import type { Env } from './env.ts';
@@ -44,7 +44,7 @@ type RoutingEntry = Readonly<{
   workerName: string;
   projectId: string;
   userId?: string;
-  type?: 'void' | 'spa' | 'static';
+  type?: 'nosam' | 'spa' | 'static';
   ssr?: boolean;
   version?: string;
   limits?: Record<string, number>;
@@ -78,9 +78,9 @@ type QueueRoutingEntry = Readonly<{
   workerName: string;
   projectId: string;
   queueName: string;
-  // HMAC-signed proxy token matching the user worker's __VOID_PROXY_TOKEN
-  // binding. The framework-generated /__void/queue handler rejects relays
-  // without a matching `x-void-internal` header with 401. Absent on entries
+  // HMAC-signed proxy token matching the user worker's __NOSAM_PROXY_TOKEN
+  // binding. The framework-generated /__nosam/queue handler rejects relays
+  // without a matching `x-nosam-internal` header with 401. Absent on entries
   // written by older API versions.
   proxyToken?: string;
 }>;
@@ -127,13 +127,13 @@ function platformHealthExceptionPath(request: Request, url: URL): boolean {
 }
 
 // Fast body-less response for an operation bounded by `withTimeout` that
-// stalled past the budget. `X-Void-Timeout` names the stalled operation for
+// stalled past the budget. `X-Nosam-Timeout` names the stalled operation for
 // observability; 503s advertise a short `Retry-After` so clients back off.
 function timeoutResponse(status: number, label: string): Response {
   return new Response(null, {
     status,
     headers: {
-      'X-Void-Timeout': label,
+      'X-Nosam-Timeout': label,
       ...(status === 503 ? { 'Retry-After': '5' } : {}),
     },
   });
@@ -146,7 +146,7 @@ function staticAssetFailureResponse(kind: FailureKind): Response {
   return new Response(null, {
     status: 503,
     headers: {
-      'X-Void-Storage-Error':
+      'X-Nosam-Storage-Error':
         kind === PLATFORM_STATIC_ASSET_MISSING ? 'static-asset-missing' : 'static-asset-read',
       'Retry-After': '5',
     },
@@ -182,7 +182,7 @@ async function applyWorkerFallbackRules(opts: {
   if (opts.response.status !== 404 || !opts.routing.fallbackRules?.length) {
     return unchanged;
   }
-  if (opts.routing.type === 'void' && opts.response.headers.get('X-Void-No-Match') !== '1') {
+  if (opts.routing.type === 'nosam' && opts.response.headers.get('X-Nosam-No-Match') !== '1') {
     return unchanged;
   }
 
@@ -195,7 +195,7 @@ async function applyWorkerFallbackRules(opts: {
   const fallbackUrl = new URL(opts.url.toString());
   fallbackUrl.pathname = fallback.destination;
   const fallbackRequest = rebuildRequest(opts.dispatchReq, fallbackUrl.toString(), (headers) =>
-    headers.set('X-Void-Original-URL', fallbackHeader),
+    headers.set('X-Nosam-Original-URL', fallbackHeader),
   );
 
   return {
@@ -537,7 +537,7 @@ const dispatcher = {
     if (
       !env.PLATFORM_INSTALLATION_ID &&
       url.pathname === '/health' &&
-      request.headers.get('X-Health-Check') === 'void-admin'
+      request.headers.get('X-Health-Check') === 'nosam-admin'
     ) {
       return Response.json({ ok: true });
     }
@@ -547,7 +547,7 @@ const dispatcher = {
     if (
       env.PLATFORM_HEALTH_PROBE_TOKEN &&
       url.pathname === '/health' &&
-      request.headers.get('X-Void-Platform-Probe') === env.PLATFORM_HEALTH_PROBE_TOKEN
+      request.headers.get('X-Nosam-Platform-Probe') === env.PLATFORM_HEALTH_PROBE_TOKEN
     ) {
       return Response.json({
         ok: true,
@@ -579,14 +579,14 @@ const dispatcher = {
     const timeoutMs = resolveTimeoutMs(env.DISPATCH_TIMEOUT_MS);
     const workerTimeoutMs = resolveTimeoutMs(env.DISPATCH_TIMEOUT_MS, 0);
 
-    // Block Void-internal routes from external HTTP access.
-    // Only /__void/* is reserved by the platform — other __ prefixes
+    // Block Nosam-internal routes from external HTTP access.
+    // Only /__nosam/* is reserved by the platform — other __ prefixes
     // (e.g. /__nuxt_content, /__og-image__) are user/framework assets.
     if (
-      url.pathname.startsWith('/__void/') ||
+      url.pathname.startsWith('/__nosam/') ||
       // Legacy: old SDK versions register these top-level paths. Block them
       // at the edge so we don't rely solely on worker-side token checks.
-      // TODO: remove once all deployed workers use /__void/* paths. See #88
+      // TODO: remove once all deployed workers use /__nosam/* paths. See #88
       url.pathname === '/__scheduled' ||
       url.pathname === '/__queue'
     ) {
@@ -631,7 +631,7 @@ const dispatcher = {
         return createErrorResponse(request, 404, 'Not Found', { 'Cache-Control': 'no-store' });
       }
       const headers = new Headers(request.headers);
-      headers.set('X-Void-Preview-URL', request.url);
+      headers.set('X-Nosam-Preview-URL', request.url);
       headers.delete('Authorization');
       return env.PREVIEW_API.fetch(
         new Request('https://preview.invalid/oauth/preview-serve/' + routing.projectId, {
@@ -699,14 +699,14 @@ const dispatcher = {
       );
     }
 
-    // Strip any client-supplied X-Void-Original-URL on entry. Dispatch owns this
+    // Strip any client-supplied X-Nosam-Original-URL on entry. Dispatch owns this
     // header: the only legitimate source is a dispatch-side rewrite below, which
     // sets it on `workerRequest` with the true original URL. Allowing a client
     // value to flow through would let callers spoof the "original URL" seen by
     // user workers that trust the header.
-    if (request.headers.has('X-Void-Original-URL')) {
+    if (request.headers.has('X-Nosam-Original-URL')) {
       request = rebuildRequest(request, request.url, (headers) =>
-        headers.delete('X-Void-Original-URL'),
+        headers.delete('X-Nosam-Original-URL'),
       );
     }
     let pathname = url.pathname;
@@ -741,7 +741,7 @@ const dispatcher = {
         );
       }
       const res = new Response(response.body, response);
-      res.headers.delete('X-Void-No-Match');
+      res.headers.delete('X-Nosam-No-Match');
       // Cache API and upstream responses have immutable headers. Strip the
       // internal cache marker only from this writable client response.
       res.headers.delete(SHARED_CACHE_POLICY_HEADER);
@@ -768,7 +768,7 @@ const dispatcher = {
     };
 
     // Routing rules — redirects short-circuit, rewrites modify pathname.
-    // `originalUrlHeader` is the X-Void-Original-URL surfaced to user workers
+    // `originalUrlHeader` is the X-Nosam-Original-URL surfaced to user workers
     // for `c.originalUrl()`: the full URL the client sent.
     let originalUrlHeader: string | undefined;
     if (routing.redirectRules?.length) {
@@ -795,7 +795,7 @@ const dispatcher = {
     let workerRequest = request;
     if (originalUrlHeader) {
       workerRequest = rebuildRequest(request, url.toString(), (headers) =>
-        headers.set('X-Void-Original-URL', originalUrlHeader),
+        headers.set('X-Nosam-Original-URL', originalUrlHeader),
       );
     }
 
@@ -1431,17 +1431,17 @@ const dispatcher = {
       const body = JSON.stringify({ queue: queueName, messages });
       const queueHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
       if (proxyToken) {
-        queueHeaders['x-void-internal'] = proxyToken;
+        queueHeaders['x-nosam-internal'] = proxyToken;
       }
       let res = await worker.fetch(
-        new Request('https://internal/__void/queue', {
+        new Request('https://internal/__nosam/queue', {
           method: 'POST',
           headers: queueHeaders,
           body,
         }),
       );
-      // Legacy: fall back for workers deployed before the /__void/ migration.
-      // TODO: remove once all deployed workers use /__void/* paths.
+      // Legacy: fall back for workers deployed before the /__nosam/ migration.
+      // TODO: remove once all deployed workers use /__nosam/* paths.
       if (res.status === 404) {
         res = await worker.fetch(
           new Request('https://internal/__queue', {

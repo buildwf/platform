@@ -1,4 +1,4 @@
-import { platformHealthHostname, readPlatformApplication } from '@void/platform';
+import { platformHealthHostname, readPlatformApplication } from '@nosam/platform';
 import { sql } from 'drizzle-orm';
 import type { Db } from '../db.ts';
 import type { ApiEnv } from '../env.ts';

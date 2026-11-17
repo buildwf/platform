@@ -1,6 +1,6 @@
-# @voidcloud/api
+# @nosamcloud/api
 
-Control-plane API and administrator UI for a Void platform.
+Control-plane API and administrator UI for a Nosam platform.
 
 It owns platform auth, projects, deployments, domains, secrets, provisioning, rollback, usage/account enforcement, and Deploy-on-GitHub (GitHub App connect, push-triggered builds, GitHub Actions OIDC). The worker uses Hono plus Drizzle over PostgreSQL via Hyperdrive.
 
@@ -11,7 +11,7 @@ It owns platform auth, projects, deployments, domains, secrets, provisioning, ro
 - **Internal API**: resource resolution and revalidation used by other platform workers
 - **Admin UI**: React pages under `/admin/*`, server-rendered for first load and backed by a private Fate endpoint
 - **Lifecycle status**: `/admin/status` and its GET JSON endpoint project display fields from the installer-owned PostgreSQL checkpoint. Maintenance admits these routes and administrator sign-in through normal Access and admin authentication. Keep the exception narrow, retain existing Sandbox drain operator access, and keep the Fate POST endpoint and administrator writes gated.
-- **Self-hosted owner setup**: dashboard OAuth and normal signup share the first-user transaction and configured GitHub identity check. Dashboard login can create the first owner without a CLI login; it never promotes existing users. Void Cloud keeps its existing admin-only login behavior.
+- **Self-hosted owner setup**: dashboard OAuth and normal signup share the first-user transaction and configured GitHub identity check. Dashboard login can create the first owner without a CLI login; it never promotes existing users. Nosam Cloud keeps its existing admin-only login behavior.
 - **Background work**:
   - `scheduled()` for periodic usage enforcement and rollover checks
   - `queue()` for usage-event ingestion
@@ -65,12 +65,12 @@ src/
     usage.ts
   admin/
     fate/                     # Admin-only Fate schema, data loaders, typed client, and SSR snapshots
-    react/                    # React page components and Void page-router entry
+    react/                    # React page components and Nosam page-router entry
     routes/                   # Admin page shells, audited form actions, and log polling
     middleware/auth.ts        # Admin cookie auth + same-origin guard on every write
 container/
   Dockerfile                  # node:26.12.1-slim + pinned corepack + bun build image
-  build-agent.mjs             # Downloads source tarball, installs deps, runs `npx void deploy`
+  build-agent.mjs             # Downloads source tarball, installs deps, runs `npx nosam deploy`
 drizzle/
   0000_*.sql
   ...
@@ -82,7 +82,7 @@ drizzle/
 
 ### Public API
 
-- `GET /` — server-rendered welcome page with the platform name, CLI installation and connection instructions, and links to the administrator dashboard and Void quickstart.
+- `GET /` — server-rendered welcome page with the platform name, CLI installation and connection instructions, and links to the administrator dashboard and Nosam quickstart.
 - `GET /health`
 - `GET /auth/login`
 - `GET /auth/callback`
@@ -120,7 +120,7 @@ The owner's plan, quota, and suspension state govern every role's work.
 - `GET /github/installations` (auth) — installations accessible to the user
 - `GET /github/callback` (public, HMAC-signed state) — App install callback
 - `POST /webhooks/github` (public, HMAC-verified) — `push` queues a container build and pokes the scheduler; `installation`/`installation_repositories` sync access; `workflow_run` completes GitHub Actions builds
-- `POST /auth/github-oidc` (public) — verify a GitHub Actions OIDC token, create the Actions build row, and mint a scoped `VOID_TOKEN` (`{ oidcToken, project }` -> `{ token, projectId, buildId }`)
+- `POST /auth/github-oidc` (public) — verify a GitHub Actions OIDC token, create the Actions build row, and mint a scoped `NOSAM_TOKEN` (`{ oidcToken, project }` -> `{ token, projectId, buildId }`)
 
 The webhook and OIDC endpoints return `503` when the GitHub App secrets are unset,
 so the worker runs without them. Do not add an Access `Everyone` or path bypass
@@ -141,7 +141,7 @@ HMAC. See [Platform Development](../../../docs/guide/platform/development/runtim
 - `POST /internal/verify-owner/:projectId` — legacy URL that live-checks the caller's project deploy capability
 
 `resolve-resource` and `resolve-worker` authenticate
-the proxy with its own key (`x-void-proxy-internal`) and do not accept project
+the proxy with its own key (`x-nosam-proxy-internal`) and do not accept project
 tokens. `revalidate` checks the project token forwarded by the proxy against
 the project's accept floor (see the proxy README).
 
@@ -176,7 +176,7 @@ owner and ownership periods atomically; usage counters and routing converge
 afterward, and retries repair an already-committed transfer without moving its
 billing boundary.
 
-Managed Sandbox disablement uses `void platform system sandbox-drain`. The
+Managed Sandbox disablement uses `nosam platform system sandbox-drain`. The
 preview inventories bounded pages of deployment manifests and container
 resources without writing. Apply closes the activation gate, cancels active
 Sandbox deployments, and deletes only container applications corroborated by a
@@ -221,7 +221,7 @@ their deployment-time GitHub/Google configuration. After callback, the API
 validates the signed state and provider identity, then signs in the linked
 account or applies the installation's signup policy to a new account. In a
 configurable installation, a matching email address does not automatically
-link another login method; users link it explicitly with `void account link` or
+link another login method; users link it explicitly with `nosam account link` or
 the optional dashboard's **Account** page.
 
 A successful login signs a JWT and redirects back:
@@ -230,16 +230,16 @@ A successful login signs a JWT and redirects back:
 - new CLI redirects with `code_challenge_method=S256` receive a short-lived `?code=...` for `POST /auth/cli/token`
 - legacy localhost CLI redirects still receive `?token=...`
 
-The CLI entrypoint is `void auth login`, not `void login`.
+The CLI entrypoint is `nosam auth login`, not `nosam login`.
 
-Dashboard auth uses the same JWT model, stored in the `void_token` cookie.
+Dashboard auth uses the same JWT model, stored in the `nosam_token` cookie.
 
 ## Deploy Flow
 
 `POST /projects/:id/deploy` handles both worker and static deploys. Before either branch runs, the deploy endpoint validates the manifest wire-shape — including `redirectRules` / `fallbackRules` structure and destination constraints (path-absolute, no embedded query on `status: 200` entries) — so malformed routing rules are rejected before any resources are provisioned. See [`src/routes/deploy.ts`](./src/routes/deploy.ts).
 
 Queued deployment input uses the existing R2 staging marker
-`deployment-inputs/<projectId>/<attemptId>/receipt-void-platform-<kind>`, where
+`deployment-inputs/<projectId>/<attemptId>/receipt-nosam-platform-<kind>`, where
 `kind` is `spa` for SPA manifests, `worker` for apps with Worker modules, or
 `static` for other apps without Worker modules. The marker
 identifies prepared deployment attempts, including cached redeploys and attempts
@@ -257,7 +257,7 @@ older `receipt` markers. No additional R2 write or analytics binding is needed.
 3. upload worker modules and assets to CF via `assets-upload-session`
 4. also mirror assets to platform `STATIC_ASSETS`/`STATIC_ASSETS_R2` and write a serving manifest to `ROUTING` (safety net for CF asset dedupe poisoning — see `meta/design-docs/0066`)
 5. upload a versioned worker: `user-{slug}-{deploymentId}`
-6. call `POST /__void/migrate` on that new worker
+6. call `POST /__nosam/migrate` on that new worker
 7. update routing KV (with `assetManifestId`) and active domains only after migrations succeed
 8. mark the deployment live and run retention cleanup (evicts mirrored assets + serving manifests for deployments dropped from the retention window)
 
@@ -276,14 +276,14 @@ Connect a repo through a GitHub App; a `git push` then builds and deploys automa
 - **Trigger**: `POST /webhooks/github` verifies the HMAC signature, then on `push` writes a `builds` row and pokes the `BuildScheduler`.
 - **Executors** (per `github_connections.build_executor`, default `container`):
   - **CF Container** — `BuildScheduler` (global, alarm-driven queue with per-plan concurrency from the installation catalog) atomically claims a build and starts its configured instance size: `BuildManager` (`standard-3` = 2 vCPU / 8 GiB / 16 GB) or `BuildManagerLarge` (`standard-4` = 4 vCPU / 12 GiB / 20 GB). The class is routed by the persisted `builds.instance_type` (`standard-3` / `standard-4`, captured from the effective plan at admission) via `buildManagerNamespace` in `build-namespace.ts`; cancel and reaper paths use the same picker, so they address the same class the build started on. `BuildManagerLarge` extends `BuildManager`, which extends `@cloudflare/containers` `Container`, enforces a timeout alarm, and persists status to Postgres via Hyperdrive.
-  - **GitHub Actions** — `void init --github` scaffolds a workflow that calls `POST /auth/github-oidc`; the verified job runs `void deploy` and reports back via the `workflow_run` webhook.
-- **Build mechanism**: both executors run the real `void deploy` CLI with a short-lived, project-scoped deploy token (`aud: "deploy"`, minted by `auth/deploy-token.ts`). There is no artifact-upload endpoint; `routes/deploy.ts` is unchanged. The container agent (`container/build-agent.mjs`) downloads the source tarball, installs deps, and runs `npx void deploy --project <slug>` with `VOID_TOKEN` + `VOID_API_URL`.
-- **Check Run**: container builds publish a "Void Build" GitHub Check Run (head SHA = the build's `commit_sha`/webhook `after`), created `in_progress` at build start and finalized `success`/`failure`/`cancelled` at every terminal site. Best-effort — a Check Run API error never fails or perturbs a build/deploy. `details_url` is the application URL derived from the configured `SITE_DOMAIN` for the in-progress/success/failure states (omitted on cancel). The helper (`github/check-run.ts`) is executor-agnostic; Actions check-runs are deferred (the native workflow check already covers them) and the helper is ready for a future PR. Configure Checks write permission and the relevant webhook subscriptions when enabling this integration. `builds.check_run_id` has no index (nothing queries by it — deferred).
+  - **GitHub Actions** — `nosam init --github` scaffolds a workflow that calls `POST /auth/github-oidc`; the verified job runs `nosam deploy` and reports back via the `workflow_run` webhook.
+- **Build mechanism**: both executors run the real `nosam deploy` CLI with a short-lived, project-scoped deploy token (`aud: "deploy"`, minted by `auth/deploy-token.ts`). There is no artifact-upload endpoint; `routes/deploy.ts` is unchanged. The container agent (`container/build-agent.mjs`) downloads the source tarball, installs deps, and runs `npx nosam deploy --project <slug>` with `NOSAM_TOKEN` + `NOSAM_API_URL`.
+- **Check Run**: container builds publish a "Nosam Build" GitHub Check Run (head SHA = the build's `commit_sha`/webhook `after`), created `in_progress` at build start and finalized `success`/`failure`/`cancelled` at every terminal site. Best-effort — a Check Run API error never fails or perturbs a build/deploy. `details_url` is the application URL derived from the configured `SITE_DOMAIN` for the in-progress/success/failure states (omitted on cancel). The helper (`github/check-run.ts`) is executor-agnostic; Actions check-runs are deferred (the native workflow check already covers them) and the helper is ready for a future PR. Configure Checks write permission and the relevant webhook subscriptions when enabling this integration. `builds.check_run_id` has no index (nothing queries by it — deferred).
 - **Build logs**: `BuildManager` pulls container stdout/stderr into the DO with a `pollLogs()` loop — a non-starting `getTcpPort().fetch()` against the agent's paged `GET /logs?since=N` (deliberately NOT `containerFetch`, which would auto-resurrect an exited container) on a ~1s cadence, advancing its cursor only after SQLite ingestion and feeding the SQLite `logs` table + WebSocket fan-out. On natural exit, the agent keeps its control server alive with an 8s idle deadline that resets only when the acknowledged cursor advances and a 120s non-resettable absolute cap. After a moving final page, the same pull callback sends one empty follow-up request so `since=<last ingested seq>` acknowledges durable ingestion without waiting another tick. Forced teardown instead single-flights the whole join, fresh bounded pull, liveness recheck, and signal sequence so concurrent callers cannot ingest after the termination marker. The DO also serves a read-only `GET /logs?since=N` -> `{ lines, lastSeq }`. The admin build views (below) consume this; `github_actions` builds have no DO log store and link out to their GitHub Actions run.
 
 ## Email
 
-Projects send and receive mail through `void/email`. The API authorizes routing, consent, suspension, and quota reservations in PostgreSQL. The proxy submits outbound mail, and the dedicated email gateway authenticates inbound zone traffic and dispatches it to the active project worker.
+Projects send and receive mail through `nosam/email`. The API authorizes routing, consent, suspension, and quota reservations in PostgreSQL. The proxy submits outbound mail, and the dedicated email gateway authenticates inbound zone traffic and dispatches it to the active project worker.
 
 ### Sender identity is per-environment
 
@@ -291,8 +291,8 @@ The platform mail domain is a configured var, `EMAIL_SENDER_DOMAIN` — never a 
 
 A project's sender address is `<slug>+noreply@<EMAIL_SENDER_DOMAIN>`. Deployed user workers receive the two halves as plain-text bindings:
 
-- `__VOID_EMAIL_DOMAIN` — the value of `EMAIL_SENDER_DOMAIN`
-- `__VOID_PROJECT_SLUG` — the project slug, injected for **every** project (it predates this feature but used to be sandbox-only)
+- `__NOSAM_EMAIL_DOMAIN` — the value of `EMAIL_SENDER_DOMAIN`
+- `__NOSAM_PROJECT_SLUG` — the project slug, injected for **every** project (it predates this feature but used to be sandbox-only)
 
 The runtime defaults `from` from those two bindings and refuses to send when either is missing, rather than falling back to a baked-in domain.
 
@@ -315,7 +315,7 @@ Only reservations that never started can be cancelled and refunded. Started or u
 Destinations are added through the owner/project-administrator `POST /projects/:id/email/destinations` consent flow. Operators cannot consent on a recipient’s behalf. Incomplete provider operations retain their operation ID and outcome for reconciliation or audited recovery; the page must not report them as completed.
 
 Shared inbound recipient creation has the same explicit recovery boundary:
-operators discover intents with `void platform email shared-recipients`, inspect
+operators discover intents with `nosam platform email shared-recipients`, inspect
 the exact provider resource, and use `shared-recipient-resolve --plan` before
 applying an attested outcome. Recovery waits at least 24 hours, requires the
 original execution to have ended, and pins the inspected identity and attempt.
@@ -437,8 +437,8 @@ From the repository root, with PostgreSQL and its client tools available:
 
 ```sh
 vp run build:core
-vp run --filter @voidcloud/api setup --admin-email dev@example.com
-vp run --filter @voidcloud/api dev --local --enable-containers=false --host localhost --port 8787
+vp run --filter @nosamcloud/api setup --admin-email dev@example.com
+vp run --filter @nosamcloud/api dev --local --enable-containers=false --host localhost --port 8787
 ```
 
 Open `http://localhost:8787/admin/`. Setup creates the local database, applies
@@ -474,9 +474,9 @@ Optional vars:
 - `DASHBOARD_URL` — optional frontend origin for project links
 - `PLATFORM_DISPLAY_NAME` — name shown on onboarding pages and emails
 - `EMAIL_FROM` — optional sender override for the `EMAIL` binding. Without it, an installation sends from `noreply@<EMAIL_SENDER_DOMAIN>` with `PLATFORM_DISPLAY_NAME` as the name
-- `VOID_PROXY_SERVICE`
+- `NOSAM_PROXY_SERVICE`
 - `SITE_DOMAIN`
-- `EMAIL_SENDER_DOMAIN` — platform mail domain for this environment (`mail.void.cloud` in production). Set on the proxy worker too, and handed to deployed user workers as `__VOID_EMAIL_DOMAIN`. See [Email](#email).
+- `EMAIL_SENDER_DOMAIN` — platform mail domain for this environment (`mail.void.cloud` in production). Set on the proxy worker too, and handed to deployed user workers as `__NOSAM_EMAIL_DOMAIN`. See [Email](#email).
 - `GITHUB_APP_ID` — Deploy-on-GitHub App identifier
 - `GITHUB_APP_PRIVATE_KEY` — PKCS#8 PEM (convert GitHub's PKCS#1 with `openssl pkcs8 -topk8 -nocrypt`)
 - `GITHUB_APP_SLUG` — App slug, used to build the install URL
@@ -487,17 +487,17 @@ Optional vars:
 The GitHub App secrets are optional: when unset, `/webhooks/github` and `/auth/github-oidc` return `503` and the rest of the worker runs normally. They are the App for Deploy-on-GitHub, separate from the sign-in OAuth app above. The ingress secret is also optional and does not enable any route unless the standalone Worker and service binding are configured.
 
 The core installer includes the email gateway and enables platform email when
-both `VOID_EMAIL_SENDER_DOMAIN` and `VOID_EMAIL_SHARED_ZONE_ID` are configured.
+both `NOSAM_EMAIL_SENDER_DOMAIN` and `NOSAM_EMAIL_SHARED_ZONE_ID` are configured.
 It sets `AUTH_REDIRECT_URI` to the platform's OAuth callback URL, and it sets
 `PLATFORM_DISPLAY_NAME` and `EMAIL_SENDER_DOMAIN`. Platform mail uses the origin
 of `AUTH_REDIRECT_URI` for links and comes from
-`noreply@<EMAIL_SENDER_DOMAIN>`; an installed platform does not default to Void
+`noreply@<EMAIL_SENDER_DOMAIN>`; an installed platform does not default to Nosam
 Cloud senders or dashboard links. Do not set these values or `EMAIL_FROM` on
 installed Workers in the Cloudflare dashboard. The next lifecycle command stops
-until the operator lets Void replace that change; see
-[Platform Workers changed outside Void](../../../docs/guide/platform/installation/maintenance.md#workers-changed-outside-void).
+until the operator lets Nosam replace that change; see
+[Platform Workers changed outside Nosam](../../../docs/guide/platform/installation/maintenance.md#workers-changed-outside-nosam).
 
-Administrators manage access with `void platform signup` and `void platform invitation`. Signup eligibility comes from the installation's own allowlist and bootstrap administrator configuration.
+Administrators manage access with `nosam platform signup` and `nosam platform invitation`. Signup eligibility comes from the installation's own allowlist and bootstrap administrator configuration.
 
 ## Tests
 
@@ -523,4 +523,4 @@ Release modules and encrypted binding metadata are stored under the deployment's
 
 ## Connected apps
 
-Registered confidential OAuth clients use code + S256 PKCE with identity-only grants. Each publish requires Void consent for an exact artifact and project, then uses an audience-separated, revocable credential and a durable deployment receipt. Admin registration/disablement lives at `/admin/connected-apps`; user disconnection lives at `/oauth/connections`. See [the design record](../../meta/design-docs/0091-connected-apps.md) and [operator guide](../../../docs/guide/platform/administration/connected-apps.md).
+Registered confidential OAuth clients use code + S256 PKCE with identity-only grants. Each publish requires Nosam consent for an exact artifact and project, then uses an audience-separated, revocable credential and a durable deployment receipt. Admin registration/disablement lives at `/admin/connected-apps`; user disconnection lives at `/oauth/connections`. See [the design record](../../meta/design-docs/0091-connected-apps.md) and [operator guide](../../../docs/guide/platform/administration/connected-apps.md).

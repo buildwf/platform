@@ -5,7 +5,7 @@ outline: deep
 
 # Rewrites {#rewrites}
 
-URL rewrites re-dispatch a request at a different internal path without changing the browser's URL. `c.rewrite()`, `c.originalUrl()`, and `c.isRewritten()` are available on every Hono `Context` the Void runtime hands you. See the [Rewrites guide](../../guide/edge/rewrites.md) for the full overview, including static `routing.rewrites` / `routing.fallbacks` in [`void.config.ts`](../config.md#routing).
+URL rewrites re-dispatch a request at a different internal path without changing the browser's URL. `c.rewrite()`, `c.originalUrl()`, and `c.isRewritten()` are available on every Hono `Context` the Nosam runtime hands you. See the [Rewrites guide](../../guide/edge/rewrites.md) for the full overview, including static `routing.rewrites` / `routing.fallbacks` in [`nosam.config.ts`](../config.md#routing).
 
 ## `c.rewrite(destination)` {#c-rewrite-destination}
 
@@ -28,7 +28,7 @@ With [`routing.typedRoutes`](../config.md#routing-typedroutes), `c.redirect()` c
 For a string TypeScript can't check, such as a payment provider's checkout URL, use `as Href`:
 
 ```ts
-import { routeUrl, type Href } from 'void/routes';
+import { routeUrl, type Href } from 'nosam/routes';
 
 declare const checkoutUrl: string;
 
@@ -38,7 +38,7 @@ return c.redirect('https://example.com/login');
 return c.redirect(checkoutUrl as Href);
 ```
 
-A cast skips the type check; Void doesn't validate redirect destinations at runtime. For request values such as `?redirectTo=`, check the origin before redirecting:
+A cast skips the type check; Nosam doesn't validate redirect destinations at runtime. For request values such as `?redirectTo=`, check the origin before redirecting:
 
 ```ts
 const requested = new URL(c.req.query('redirectTo') ?? '/', c.req.url);
@@ -48,7 +48,7 @@ return c.redirect(requested.origin === new URL(c.req.url).origin ? requested : '
 `c.redirect()` sends the location you provide without adding the request query. From `/sign-in?redirectTo=/notes`, `c.redirect('/notes')` goes to `/notes`. Configured [`routing.redirects`](../../guide/edge/redirects.md) merge query parameters instead.
 
 ```ts
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 
 export const GET = defineHandler((c) => {
   const locale = c.req.header('accept-language')?.startsWith('de') ? 'de' : 'en';
@@ -68,7 +68,7 @@ interface CloudContext {
 **Caveats:**
 
 - `destination` must start with a single `/` and point at an internal path. External URLs, protocol-relative destinations (`//host/...`), and anything non-path-absolute throw immediately — use `fetch()` for cross-origin calls.
-- Destinations whose final path segment ends in a known static-asset extension (e.g. `/hero.png`, `/app.css`, `/data.json`) throw `VoidAssetRewriteError` (exported from `"void"`) before the re-dispatch. Runtime rewrites cannot reach assets — use a static `routing.rewrites` rule or a `_redirects` `200!` entry. `.html` is deliberately excluded from this guard because `.html` paths may be legitimate route handlers. See [Rewrites](../../guide/edge/rewrites.md#runtime-rewrites-cannot-reach-static-assets).
+- Destinations whose final path segment ends in a known static-asset extension (e.g. `/hero.png`, `/app.css`, `/data.json`) throw `NosamAssetRewriteError` (exported from `"nosam"`) before the re-dispatch. Runtime rewrites cannot reach assets — use a static `routing.rewrites` rule or a `_redirects` `200!` entry. `.html` is deliberately excluded from this guard because `.html` paths may be legitimate route handlers. See [Rewrites](../../guide/edge/rewrites.md#runtime-rewrites-cannot-reach-static-assets).
 - Middleware re-runs on every rewrite hop. Guard side-effects with [`c.isRewritten()`](#c-originalurl-c-isrewritten).
 - Client-side SPA navigation does not trigger server rewrites; only full HTTP requests do.
 
@@ -77,7 +77,7 @@ interface CloudContext {
 Context methods for inspecting rewrite state. `c.originalUrl()` returns the pre-rewrite URL as a `URL` object, or `null` on the first, non-rewritten hop. `c.isRewritten()` returns `true` on any re-dispatched context and `false` on the original. Use them for both static and middleware rewrites.
 
 ```ts
-import { defineMiddleware } from 'void';
+import { defineMiddleware } from 'nosam';
 
 export default defineMiddleware(async (c, next) => {
   if (!c.isRewritten()) {
@@ -100,12 +100,12 @@ interface CloudContext {
 ## `RewriteDestination` {#rewritedestination}
 
 ```ts
-import type { RewriteDestination } from 'void/routes';
+import type { RewriteDestination } from 'nosam/routes';
 ```
 
 Suggests known route patterns in your editor while also accepting dynamic strings. Used as:
 
 - The parameter type of [`c.rewrite()`](#c-rewrite-destination), unless `routing.typedRoutes` is on.
-- The type of `destination` entries in `routing.rewrites` and `routing.fallbacks` in [`void.config.ts`](../config.md#routing).
+- The type of `destination` entries in `routing.rewrites` and `routing.fallbacks` in [`nosam.config.ts`](../config.md#routing).
 
-Like [`RouteMap`](./types.md#routemap), `RewriteDestination` lives in the virtual `void/routes` module and is refreshed whenever routes change.
+Like [`RouteMap`](./types.md#routemap), `RewriteDestination` lives in the virtual `nosam/routes` module and is refreshed whenever routes change.

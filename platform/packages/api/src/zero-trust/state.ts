@@ -1,4 +1,4 @@
-import { platformProjectHostnames, readPlatformApplication } from '@void/platform';
+import { platformProjectHostnames, readPlatformApplication } from '@nosam/platform';
 import { and, eq, isNotNull, or, sql } from 'drizzle-orm';
 import type { Db, DbOrTx } from '../db.ts';
 import { getDomainsByProjectId } from '../db.ts';
@@ -35,7 +35,7 @@ export async function applicationName(env: ApiEnv['Bindings'], suffix: string): 
     byte.toString(16).padStart(2, '0'),
   ).join('');
   const nonce = crypto.randomUUID().replaceAll('-', '');
-  return `void-${identity}-${fingerprint}-${nonce}-${suffix}`.slice(0, 120);
+  return `nosam-${identity}-${fingerprint}-${nonce}-${suffix}`.slice(0, 120);
 }
 
 export async function clientForConfiguration(

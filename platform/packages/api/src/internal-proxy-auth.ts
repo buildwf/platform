@@ -43,7 +43,7 @@ export async function checkTenantProxyToken(
 
 /**
  * Authenticates the proxy on an internal metadata route. The proxy signs
- * `x-void-proxy-internal` with its own key, bound to the route and project.
+ * `x-nosam-proxy-internal` with its own key, bound to the route and project.
  * Tenant project tokens are not accepted here.
  *
  * Returns null when the call may proceed, else the error response.

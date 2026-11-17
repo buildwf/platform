@@ -148,7 +148,7 @@ async function fixture(type: RouteType, initiallyProtected: boolean) {
             staticDeploymentId: deploymentId,
             assetConfig: { not_found_handling: '404-page' },
           }
-        : { type: 'void', workerName: 'user-' + project.slug + '-' + deploymentId }),
+        : { type: 'nosam', workerName: 'user-' + project.slug + '-' + deploymentId }),
       customMetadata: { preserve: true },
       ...(protection ? { zeroTrust: protection } : {}),
     });

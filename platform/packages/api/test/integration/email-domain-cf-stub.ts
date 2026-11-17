@@ -158,7 +158,7 @@ export function stubCustomerCf(
       });
     }
 
-    if (url.endsWith('.workers.dev/__void/email/probe')) {
+    if (url.endsWith('.workers.dev/__nosam/email/probe')) {
       await record({ tag: 'relayProbe', method, url });
       const failure = fail('relayProbe');
       if (failure) {
@@ -169,8 +169,8 @@ export function stubCustomerCf(
       if (!secret || !scriptSubdomains.get(name)) {
         return new Response(null, { status: 404 });
       }
-      const challenge = new Headers(init?.headers).get('X-Void-Probe-Challenge') ?? '';
-      const generation = Number(new Headers(init?.headers).get('X-Void-Probe-Generation'));
+      const challenge = new Headers(init?.headers).get('X-Nosam-Probe-Challenge') ?? '';
+      const generation = Number(new Headers(init?.headers).get('X-Nosam-Probe-Generation'));
       const metadata = [...calls]
         .reverse()
         .find((call) => call.tag === 'scriptPut' && call.url.includes(`/scripts/${name}`))?.body as
@@ -178,9 +178,9 @@ export function stubCustomerCf(
         | undefined;
       const binding = (name: string) =>
         metadata?.bindings?.find((row) => row.name === name)?.text ?? '';
-      const accountId = binding('VOID_EMAIL_ACCOUNT'),
-        zoneId = binding('VOID_EMAIL_ZONE'),
-        ingressName = binding('VOID_EMAIL_INGRESS');
+      const accountId = binding('NOSAM_EMAIL_ACCOUNT'),
+        zoneId = binding('NOSAM_EMAIL_ZONE'),
+        ingressName = binding('NOSAM_EMAIL_INGRESS');
       const data = [
         'email-relay-proof-v1',
         accountId,

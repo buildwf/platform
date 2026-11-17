@@ -2,7 +2,7 @@ import {
   isPlatformSignupAllowed,
   parsePlatformSignupAllowlistEntry,
   type PlatformSignupAllowlistEntry,
-} from '@void/platform';
+} from '@nosam/platform';
 
 export type AllowlistEntry = PlatformSignupAllowlistEntry;
 

@@ -323,7 +323,7 @@ async function sweepPerDeployContainerOrphans(
     const orphanName = perDeployContainerApplicationName(
       projectId,
       deployment.id,
-      manifest.sandbox.containerName ?? 'void-sandbox',
+      manifest.sandbox.containerName ?? 'nosam-sandbox',
     );
     const orphan = await findContainerApplication(
       context.env.CF_ACCOUNT_ID,

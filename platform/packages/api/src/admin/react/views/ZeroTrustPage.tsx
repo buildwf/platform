@@ -102,11 +102,11 @@ export function ZeroTrustPage({ path, platformName, username }: AdminPageProps) 
     policyIds.length === 0;
   return (
     <Layout platformName={platformName} title="Zero Trust" username={username}>
-      <PageStack className="void-admin-zero-trust">
-        <SectionStack as="header" className="void-admin-zero-trust-intro">
+      <PageStack className="nosam-admin-zero-trust">
+        <SectionStack as="header" className="nosam-admin-zero-trust-intro">
           <Heading level={1}>Project Zero Trust</Heading>
           <p>
-            Void manages a wildcard Cloudflare Access application for protected projects and
+            Nosam manages a wildcard Cloudflare Access application for protected projects and
             exact-host bypass applications for public exceptions. The Cloudflare API token is
             encrypted and never shown again.
           </p>
@@ -122,7 +122,7 @@ export function ZeroTrustPage({ path, platformName, username }: AdminPageProps) 
             titleId="zero-trust-status-heading"
             headerAccessory={<Badge label={badge.label} variant={badge.variant} />}
           >
-            <dl className="void-admin-zero-trust-details">
+            <dl className="nosam-admin-zero-trust-details">
               <div>
                 <dt>Current operation</dt>
                 <dd>{operation ? `${operation.kind} · ${operation.phase}` : 'None'}</dd>
@@ -203,11 +203,11 @@ export function ZeroTrustPage({ path, platformName, username }: AdminPageProps) 
               as="form"
               method="post"
               action={`${HOME}/configure`}
-              className="void-admin-zero-trust-form"
+              className="nosam-admin-zero-trust-form"
             >
               {publicOnly && (
                 <p>
-                  Void manages public app rules for this account. Leave policy fields blank to
+                  Nosam manages public app rules for this account. Leave policy fields blank to
                   replace its token, or enter company identities and policies to configure
                   protection.
                 </p>
@@ -269,7 +269,7 @@ export function ZeroTrustPage({ path, platformName, username }: AdminPageProps) 
         {configured && (
           <section aria-labelledby="zero-trust-maintenance-heading">
             <AdminCard title="Maintenance" titleId="zero-trust-maintenance-heading">
-              <div className="void-admin-zero-trust-actions">
+              <div className="nosam-admin-zero-trust-actions">
                 <form method="post" action={`${HOME}/reconcile`}>
                   <Button type="submit" label="Reconcile drift" variant="secondary" />
                 </form>
@@ -277,7 +277,7 @@ export function ZeroTrustPage({ path, platformName, username }: AdminPageProps) 
                   <form
                     method="post"
                     action={`${HOME}/disable`}
-                    data-confirm="Remove Void-managed Access protection? Apps may become public or be blocked by account-wide Default-Deny."
+                    data-confirm="Remove Nosam-managed Access protection? Apps may become public or be blocked by account-wide Default-Deny."
                   >
                     <Button
                       type="submit"

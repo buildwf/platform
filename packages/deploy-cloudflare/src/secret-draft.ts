@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
-import { isRecord } from '@void/deploy-core';
+import { isRecord } from '@nosam/deploy-core';
 
 /**
  * `wrangler secret put` creates a fetch-only draft before attaching a first secret to a Worker.
@@ -60,23 +60,23 @@ export function isWranglerSecretOnlyDraft(entry: Record<string, unknown>): boole
   );
 }
 
-// Keep these bytes aligned with the private placeholder written by Void's
+// Keep these bytes aligned with the private placeholder written by Nosam's
 // Cloudflare secret transport. Unlike the legacy Wrangler placeholder, cf
 // uploads include a compatibility date, so metadata alone cannot distinguish
 // them from an existing fetch-only application after a secret update.
-export const VOID_SECRET_DRAFT_SOURCE =
+export const NOSAM_SECRET_DRAFT_SOURCE =
   'export default { fetch() { return new Response(""); } };\n';
 
-/** Message on the placeholder that Void's secret transport deploys to a Worker without code. */
-export const VOID_SECRET_DRAFT_MESSAGE = 'void:secret-draft';
+/** Message on the placeholder that Nosam's secret transport deploys to a Worker without code. */
+export const NOSAM_SECRET_DRAFT_MESSAGE = 'nosam:secret-draft';
 
 /**
- * Annotations of a Void secret placeholder, checked before its source is inspected:
+ * Annotations of a Nosam secret placeholder, checked before its source is inspected:
  * - `api`: the secret transport uploaded and deployed the placeholder and its first secrets in
  *   one Workers API request.
  * - `cf_cli`: `cf workers secrets` added secrets to a deployed placeholder.
  */
-export function isVoidSecretDraftHeader(entry: Record<string, unknown>): boolean {
+export function isNosamSecretDraftHeader(entry: Record<string, unknown>): boolean {
   if (!isRecord(entry.annotations)) {
     return false;
   }
@@ -88,13 +88,13 @@ export function isVoidSecretDraftHeader(entry: Record<string, unknown>): boolean
   return (
     entry.source === 'api' &&
     keys.length === 2 &&
-    annotations['workers/message'] === VOID_SECRET_DRAFT_MESSAGE &&
+    annotations['workers/message'] === NOSAM_SECRET_DRAFT_MESSAGE &&
     annotations['workers/triggered_by'] === 'create_version_api'
   );
 }
 
-/** Prove a Void secret placeholder from the exact immutable version's source. */
-export function isVoidSecretOnlyDraft(entry: Record<string, unknown>): boolean {
+/** Prove a Nosam secret placeholder from the exact immutable version's source. */
+export function isNosamSecretOnlyDraft(entry: Record<string, unknown>): boolean {
   const metadataFields = new Set([
     'id',
     'number',
@@ -116,7 +116,7 @@ export function isVoidSecretOnlyDraft(entry: Record<string, unknown>): boolean {
   ]);
   if (
     Object.keys(entry).some((key) => !metadataFields.has(key)) ||
-    !isVoidSecretDraftHeader(entry) ||
+    !isNosamSecretDraftHeader(entry) ||
     entry.main_module !== 'index.js' ||
     !Array.isArray(entry.urls) ||
     entry.urls.length !== 0 ||
@@ -133,7 +133,7 @@ export function isVoidSecretOnlyDraft(entry: Record<string, unknown>): boolean {
     Object.keys(module).length !== 3 ||
     module.name !== 'index.js' ||
     module.content_type !== 'application/javascript+module' ||
-    module.content_base64 !== Buffer.from(VOID_SECRET_DRAFT_SOURCE).toString('base64')
+    module.content_base64 !== Buffer.from(NOSAM_SECRET_DRAFT_SOURCE).toString('base64')
   ) {
     return false;
   }

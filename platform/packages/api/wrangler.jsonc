@@ -1,16 +1,16 @@
 {
-  "name": "void-api",
+  "name": "nosam-api",
   "main": "src/worker/index.ts",
   "services": [
     {
       "binding": "PREVIEW_DISPATCH",
-      "service": "void-dispatch",
+      "service": "nosam-dispatch",
       "entrypoint": "PreviewDispatcher",
     },
   ],
   "build": { "command": "node scripts/build-worker.mjs" },
   "alias": {
-    "void:sandbox-controller-source": "./dist/sandbox-controller-source.ts",
+    "nosam:sandbox-controller-source": "./dist/sandbox-controller-source.ts",
   },
   "assets": { "directory": "./dist/admin-assets" },
   "compatibility_date": "2026-02-12",
@@ -31,7 +31,7 @@
     {
       "binding": "HYPERDRIVE",
       "id": "7bd6b2a606a347819ad3421867840736",
-      // Local dev: `pnpm setup` creates the void_dev role and database
+      // Local dev: `pnpm setup` creates the nosam_dev role and database
       "localConnectionString": "postgresql://void_dev:void_dev@localhost:5432/void_api_dev",
     },
   ],
@@ -48,13 +48,13 @@
   "r2_buckets": [
     {
       "binding": "STATIC_ASSETS_R2",
-      "bucket_name": "void-static-assets-overflow",
+      "bucket_name": "nosam-static-assets-overflow",
     },
   ],
   "dispatch_namespaces": [
     {
       "binding": "DISPATCH",
-      "namespace": "void-users",
+      "namespace": "nosam-users",
     },
   ],
   "durable_objects": {
@@ -145,26 +145,26 @@
   ],
   "queues": {
     "producers": [
-      { "binding": "CRON_FIRES_QUEUE", "queue": "void-cron-fires" },
-      { "binding": "USAGE_EVENTS_QUEUE", "queue": "void-usage-events" },
-      { "binding": "DEPLOYMENTS_QUEUE", "queue": "void-deployments" },
+      { "binding": "CRON_FIRES_QUEUE", "queue": "nosam-cron-fires" },
+      { "binding": "USAGE_EVENTS_QUEUE", "queue": "nosam-usage-events" },
+      { "binding": "DEPLOYMENTS_QUEUE", "queue": "nosam-deployments" },
     ],
     "consumers": [
       {
-        "queue": "void-usage-events",
+        "queue": "nosam-usage-events",
         "max_batch_size": 100,
         "max_batch_timeout": 5,
       },
       // Cron firings deferred from CronScheduler DO. See cron-fires-queue.ts
       // for why the DO can't dispatch directly.
       {
-        "queue": "void-cron-fires",
+        "queue": "nosam-cron-fires",
         "max_batch_size": 50,
         "max_batch_timeout": 1,
         "max_retries": 3,
       },
       {
-        "queue": "void-deployments",
+        "queue": "nosam-deployments",
         "max_batch_size": 1,
         "max_batch_timeout": 1,
         "max_retries": 100,
@@ -184,24 +184,24 @@
   },
   "routes": [{ "pattern": "api.void.cloud", "custom_domain": true }],
   "vars": {
-    "CRON_FIRES_QUEUE_NAME": "void-cron-fires",
-    "DEPLOYMENTS_QUEUE_NAME": "void-deployments",
+    "CRON_FIRES_QUEUE_NAME": "nosam-cron-fires",
+    "DEPLOYMENTS_QUEUE_NAME": "nosam-deployments",
     "PLATFORM_ENV": "production",
-    "AUTH_REDIRECT_URI": "https://api.void.cloud/auth/callback",
-    "SANDBOX_CONTROL_SERVICE": "void-api",
+    "AUTH_REDIRECT_URI": "https://void-nosam-api.buildwithfriends.workers.dev/auth/callback",
+    "SANDBOX_CONTROL_SERVICE": "nosam-api",
     "PROXY_URL": "https://proxy.void.cloud",
-    "REQUESTS_DATASET": "void_requests",
-    "TAIL_SERVICE_NAME": "void-tail",
+    "REQUESTS_DATASET": "nosam_requests",
+    "TAIL_SERVICE_NAME": "nosam-tail",
     // Must match packages/proxy/wrangler.jsonc — the proxy validates senders against its own copy.
     "EMAIL_SENDER_DOMAIN": "mail.void.cloud",
-    "EMAIL_GATEWAY_ORIGIN": "https://void-email-gateway.voidzer0.workers.dev",
+    "EMAIL_GATEWAY_ORIGIN": "https://nosam-email-gateway.voidzer0.workers.dev",
     "EMAIL_SHARED_ACCOUNT_ID": "f721b8e515fbab226f41e2807edaece7",
     "EMAIL_SHARED_ZONE_ID": "5b66f5cb84fd7dcfdd0170515e622181",
-    "EMAIL_SHARED_INGRESS_NAME": "void-email-gateway",
+    "EMAIL_SHARED_INGRESS_NAME": "nosam-email-gateway",
     // Bucket name plumbing for the presigned R2 PUT URL path. Must match the
     // `r2_buckets[].bucket_name` value above — the binding surfaces an
     // R2Bucket object but not its name, and the presigner needs the name.
-    "R2_STATIC_ASSETS_BUCKET": "void-static-assets-overflow",
+    "R2_STATIC_ASSETS_BUCKET": "nosam-static-assets-overflow",
   },
   // Encrypted Worker secrets: CF_API_TOKEN, CF_ACCOUNT_ID, CF_ZONE_ID, JWT_SECRET, EMAIL_SIGNING_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
   // R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY are S3-compatible API tokens used to presign direct-to-R2 asset uploads (see src/r2-presign.ts).
@@ -213,11 +213,11 @@
       "services": [
         {
           "binding": "PREVIEW_DISPATCH",
-          "service": "void-dispatch",
+          "service": "nosam-dispatch",
           "entrypoint": "PreviewDispatcher",
         },
       ],
-      "name": "void-api",
+      "name": "nosam-api",
       "version_metadata": { "binding": "VERSION_METADATA" },
       "secrets": { "required": ["EMAIL_SIGNING_SECRET"] },
       "hyperdrive": [
@@ -239,13 +239,13 @@
       "r2_buckets": [
         {
           "binding": "STATIC_ASSETS_R2",
-          "bucket_name": "void-static-assets-overflow",
+          "bucket_name": "nosam-static-assets-overflow",
         },
       ],
       "dispatch_namespaces": [
         {
           "binding": "DISPATCH",
-          "namespace": "void-users",
+          "namespace": "nosam-users",
         },
       ],
       "durable_objects": {
@@ -310,24 +310,24 @@
       ],
       "queues": {
         "producers": [
-          { "binding": "CRON_FIRES_QUEUE", "queue": "void-cron-fires" },
-          { "binding": "USAGE_EVENTS_QUEUE", "queue": "void-usage-events" },
-          { "binding": "DEPLOYMENTS_QUEUE", "queue": "void-deployments" },
+          { "binding": "CRON_FIRES_QUEUE", "queue": "nosam-cron-fires" },
+          { "binding": "USAGE_EVENTS_QUEUE", "queue": "nosam-usage-events" },
+          { "binding": "DEPLOYMENTS_QUEUE", "queue": "nosam-deployments" },
         ],
         "consumers": [
           {
-            "queue": "void-usage-events",
+            "queue": "nosam-usage-events",
             "max_batch_size": 100,
             "max_batch_timeout": 5,
           },
           {
-            "queue": "void-cron-fires",
+            "queue": "nosam-cron-fires",
             "max_batch_size": 50,
             "max_batch_timeout": 1,
             "max_retries": 3,
           },
           {
-            "queue": "void-deployments",
+            "queue": "nosam-deployments",
             "max_batch_size": 1,
             "max_batch_timeout": 1,
             "max_retries": 100,
@@ -344,31 +344,31 @@
       ],
       "routes": [{ "pattern": "api.void.cloud", "custom_domain": true }],
       "vars": {
-        "CRON_FIRES_QUEUE_NAME": "void-cron-fires",
-        "DEPLOYMENTS_QUEUE_NAME": "void-deployments",
+        "CRON_FIRES_QUEUE_NAME": "nosam-cron-fires",
+        "DEPLOYMENTS_QUEUE_NAME": "nosam-deployments",
         "PLATFORM_ENV": "production",
-        "AUTH_REDIRECT_URI": "https://api.void.cloud/auth/callback",
-        "SANDBOX_CONTROL_SERVICE": "void-api",
+        "AUTH_REDIRECT_URI": "https://void-nosam-api.buildwithfriends.workers.dev/auth/callback",
+        "SANDBOX_CONTROL_SERVICE": "nosam-api",
         "PROXY_URL": "https://proxy.void.cloud",
-        "REQUESTS_DATASET": "void_requests",
-        "TAIL_SERVICE_NAME": "void-tail",
+        "REQUESTS_DATASET": "nosam_requests",
+        "TAIL_SERVICE_NAME": "nosam-tail",
         "EMAIL_SENDER_DOMAIN": "mail.void.cloud",
-        "EMAIL_GATEWAY_ORIGIN": "https://void-email-gateway.voidzer0.workers.dev",
+        "EMAIL_GATEWAY_ORIGIN": "https://nosam-email-gateway.voidzer0.workers.dev",
         "EMAIL_SHARED_ACCOUNT_ID": "f721b8e515fbab226f41e2807edaece7",
         "EMAIL_SHARED_ZONE_ID": "5b66f5cb84fd7dcfdd0170515e622181",
-        "EMAIL_SHARED_INGRESS_NAME": "void-email-gateway",
-        "R2_STATIC_ASSETS_BUCKET": "void-static-assets-overflow",
+        "EMAIL_SHARED_INGRESS_NAME": "nosam-email-gateway",
+        "R2_STATIC_ASSETS_BUCKET": "nosam-static-assets-overflow",
       },
     },
     "staging": {
       "services": [
         {
           "binding": "PREVIEW_DISPATCH",
-          "service": "void-dispatch-staging",
+          "service": "nosam-dispatch-staging",
           "entrypoint": "PreviewDispatcher",
         },
       ],
-      "name": "void-api-staging",
+      "name": "nosam-api-staging",
       "version_metadata": { "binding": "VERSION_METADATA" },
       "secrets": { "required": ["EMAIL_SIGNING_SECRET"] },
       "hyperdrive": [
@@ -390,13 +390,13 @@
       "r2_buckets": [
         {
           "binding": "STATIC_ASSETS_R2",
-          "bucket_name": "void-static-assets-overflow-staging",
+          "bucket_name": "nosam-static-assets-overflow-staging",
         },
       ],
       "dispatch_namespaces": [
         {
           "binding": "DISPATCH",
-          "namespace": "void-users-staging",
+          "namespace": "nosam-users-staging",
         },
       ],
       "durable_objects": {
@@ -461,24 +461,24 @@
       ],
       "queues": {
         "producers": [
-          { "binding": "CRON_FIRES_QUEUE", "queue": "void-cron-fires-staging" },
-          { "binding": "USAGE_EVENTS_QUEUE", "queue": "void-usage-events-staging" },
-          { "binding": "DEPLOYMENTS_QUEUE", "queue": "void-deployments-staging" },
+          { "binding": "CRON_FIRES_QUEUE", "queue": "nosam-cron-fires-staging" },
+          { "binding": "USAGE_EVENTS_QUEUE", "queue": "nosam-usage-events-staging" },
+          { "binding": "DEPLOYMENTS_QUEUE", "queue": "nosam-deployments-staging" },
         ],
         "consumers": [
           {
-            "queue": "void-usage-events-staging",
+            "queue": "nosam-usage-events-staging",
             "max_batch_size": 100,
             "max_batch_timeout": 5,
           },
           {
-            "queue": "void-cron-fires-staging",
+            "queue": "nosam-cron-fires-staging",
             "max_batch_size": 50,
             "max_batch_timeout": 1,
             "max_retries": 3,
           },
           {
-            "queue": "void-deployments-staging",
+            "queue": "nosam-deployments-staging",
             "max_batch_size": 1,
             "max_batch_timeout": 1,
             "max_retries": 100,
@@ -494,26 +494,26 @@
       ],
       "routes": [{ "pattern": "api.staging.void.cloud", "custom_domain": true }],
       "vars": {
-        "CRON_FIRES_QUEUE_NAME": "void-cron-fires-staging",
-        "DEPLOYMENTS_QUEUE_NAME": "void-deployments-staging",
-        "DISPATCH_NAMESPACE": "void-users-staging",
-        "DISPATCH_WORKER_NAME": "void-dispatch-staging",
-        "VOID_PROXY_SERVICE": "void-proxy-staging",
+        "CRON_FIRES_QUEUE_NAME": "nosam-cron-fires-staging",
+        "DEPLOYMENTS_QUEUE_NAME": "nosam-deployments-staging",
+        "DISPATCH_NAMESPACE": "nosam-users-staging",
+        "DISPATCH_WORKER_NAME": "nosam-dispatch-staging",
+        "NOSAM_PROXY_SERVICE": "nosam-proxy-staging",
         "SITE_DOMAIN": "staging.void.app",
         "DASHBOARD_URL": "https://dash.staging.void.cloud",
         "AUTH_REDIRECT_URI": "https://api.staging.void.cloud/auth/callback",
-        "LOGS_DATASET": "void_logs_staging",
-        "REQUESTS_DATASET": "void_requests_staging",
+        "LOGS_DATASET": "nosam_logs_staging",
+        "REQUESTS_DATASET": "nosam_requests_staging",
         "EMAIL_SENDER_DOMAIN": "mail.voidcloud.dev",
-        "EMAIL_GATEWAY_ORIGIN": "https://void-email-gateway-staging.voidzer0.workers.dev",
+        "EMAIL_GATEWAY_ORIGIN": "https://nosam-email-gateway-staging.voidzer0.workers.dev",
         "EMAIL_SHARED_ACCOUNT_ID": "f721b8e515fbab226f41e2807edaece7",
         "EMAIL_SHARED_ZONE_ID": "57fc5c5286e74843013704368205de38",
-        "EMAIL_SHARED_INGRESS_NAME": "void-email-gateway-staging",
+        "EMAIL_SHARED_INGRESS_NAME": "nosam-email-gateway-staging",
         "PLATFORM_ENV": "staging",
-        "SANDBOX_CONTROL_SERVICE": "void-api-staging",
+        "SANDBOX_CONTROL_SERVICE": "nosam-api-staging",
         "PROXY_URL": "https://proxy.staging.void.cloud",
-        "TAIL_SERVICE_NAME": "void-tail-staging",
-        "R2_STATIC_ASSETS_BUCKET": "void-static-assets-overflow-staging",
+        "TAIL_SERVICE_NAME": "nosam-tail-staging",
+        "R2_STATIC_ASSETS_BUCKET": "nosam-static-assets-overflow-staging",
       },
     },
   },

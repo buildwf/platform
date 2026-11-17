@@ -1,42 +1,42 @@
 ---
-description: 'Create a Void app, run it locally, and deploy it. You can also add Void to an existing Vite app.'
+description: 'Create a Nosam app, run it locally, and deploy it. You can also add Nosam to an existing Vite app.'
 outline: deep
 ---
 
 # Quickstart
 
-Create a Void app, run it locally, and deploy it. You can also [add Void to an existing Vite app](#adding-to-an-existing-vite-app).
+Create a Nosam app, run it locally, and deploy it. You can also [add Nosam to an existing Vite app](#adding-to-an-existing-vite-app).
 
 ## Create an app
 
-In an empty directory, install Void and run setup:
+In an empty directory, install Nosam and run setup:
 
 ::: code-group
 
 ```sh [npm]
-npm install -D void
-npx void init
+npm install -D nosam
+npx nosam init
 ```
 
 ```sh [pnpm]
-pnpm add -D void
-pnpm void init
+pnpm add -D nosam
+pnpm nosam init
 ```
 
 ```sh [yarn]
-yarn add -D void
-yarn void init
+yarn add -D nosam
+yarn nosam init
 ```
 
 ```sh [bun]
-# bunx runs Void with the `node` on your PATH: use Node.js 24.22+ or 26.12+
-bun add -D void
-bunx void init
+# bunx runs Nosam with the `node` on your PATH: use Node.js 24.22+ or 26.12+
+bun add -D nosam
+bunx nosam init
 ```
 
 ```sh [vp]
-vp add -D void
-vpx void init
+vp add -D nosam
+vpx nosam init
 ```
 
 :::
@@ -45,7 +45,7 @@ Choose your UI framework, a starter, and a deployment target. Vite+ is the defau
 
 You do not need to install Vite+ globally. Setup preserves your existing package-manager versions and lockfiles.
 
-With pnpm, `pnpm create void my-app` also creates the project directory and configures native build permissions for you.
+With pnpm, `pnpm create nosam my-app` also creates the project directory and configures native build permissions for you.
 
 ## Run locally
 
@@ -80,50 +80,50 @@ Open `http://localhost:5173`. `src/` contains your React app, and `routes/` cont
 Edit `routes/api/hello.ts`, or create it if your starter doesn't include it:
 
 ```ts
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 
 export const GET = defineHandler(() => {
-  return { message: 'Hello from Void' };
+  return { message: 'Hello from Nosam' };
 });
 ```
 
-Visit `http://localhost:5173/api/hello` to see the response. From your client code, call it with Void's typed fetch:
+Visit `http://localhost:5173/api/hello` to see the response. From your client code, call it with Nosam's typed fetch:
 
 ```ts
-import { fetch } from 'void/client';
+import { fetch } from 'nosam/client';
 
 const { message } = await fetch('/api/hello');
 ```
 
 The file path defines the URL, and the handler defines the response type. Change `message` in the handler and TypeScript checks the client against the new shape.
 
-Database starters also include `db/schema.ts`. Its Drizzle schema defines your tables and query types; Void runs a local database and provisions one when you deploy.
+Database starters also include `db/schema.ts`. Its Drizzle schema defines your tables and query types; Nosam runs a local database and provisions one when you deploy.
 
 ## Deploy
 
 If you chose a target during setup:
 
 ```sh
-npx void deploy
+npx nosam deploy
 ```
 
 If you skipped setup, select your Cloudflare account:
 
 ```sh
-npx void deploy --platform cloudflare
+npx nosam deploy --platform cloudflare
 ```
 
-Void opens your browser to sign in when needed, builds the app, provisions resources, applies migrations, and prints the deployed URL. Later deploys use the saved target. See [Deployment](./deployment.md) for team platforms, CI, and rollback.
+Nosam opens your browser to sign in when needed, builds the app, provisions resources, applies migrations, and prints the deployed URL. Later deploys use the saved target. See [Deployment](./deployment.md) for team platforms, CI, and rollback.
 
 ## Adding to an existing Vite app
 
-Install Void and run `void init` with your package manager as shown [above](#create-an-app). Setup adds `voidPlugin()` to your Vite config and creates the remaining project files. If the config needs a manual edit, the CLI shows the change to make.
+Install Nosam and run `nosam init` with your package manager as shown [above](#create-an-app). Setup adds `nosamPlugin()` to your Vite config and creates the remaining project files. If the config needs a manual edit, the CLI shows the change to make.
 
 ## Next steps
 
 - [Server Routing](./server-routing.md): params, middleware, and validation
 - [Database](./database.md): queries and migrations
 - [Environment Variables](./env-vars.md): local values and production secrets
-- [Coding Agents](../integrations/agents.md): use Void's bundled docs and skills
+- [Coding Agents](../integrations/agents.md): use Nosam's bundled docs and skills
 
-If a manual pnpm install reports blocked build scripts, run `pnpm approve-builds` for `esbuild`, `sharp`, and `workerd`. Set `better-sqlite3: false` in `pnpm-workspace.yaml`'s `allowBuilds`; Void uses its bundled binaries.
+If a manual pnpm install reports blocked build scripts, run `pnpm approve-builds` for `esbuild`, `sharp`, and `workerd`. Set `better-sqlite3: false` in `pnpm-workspace.yaml`'s `allowBuilds`; Nosam uses its bundled binaries.

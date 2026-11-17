@@ -19,7 +19,7 @@ test('waits for the bound Local URL, including colored output', () => {
 
 for (const mode of ['dev', 'preview']) {
   test(`discovers Vite's actual ${mode} port without probing a competing listener`, async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'void-packed-server-'));
+    const directory = mkdtempSync(join(tmpdir(), 'nosam-packed-server-'));
     const competing = createServer();
     let probes = 0;
     competing.on('connection', (socket) => {

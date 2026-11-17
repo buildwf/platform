@@ -4,7 +4,7 @@
  * of replaying opaque bodies whose private headers were stripped at write time.
  */
 export const SHARED_CACHE_POLICY_VERSION = 3 as const;
-export const SHARED_CACHE_POLICY_HEADER = 'x-void-shared-cache-policy';
+export const SHARED_CACHE_POLICY_HEADER = 'x-nosam-shared-cache-policy';
 
 const CLIENT_REVALIDATE_CACHE_CONTROL = 'public, max-age=0, must-revalidate';
 

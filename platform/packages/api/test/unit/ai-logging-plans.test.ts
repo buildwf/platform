@@ -1,4 +1,4 @@
-import { createDefaultPlanCatalog } from '@void/platform/plans';
+import { createDefaultPlanCatalog } from '@nosam/platform/plans';
 import { describe, expect, test } from 'vite-plus/test';
 import { planAiLoggingChanges, startPlanAiLoggingPublish } from '../../src/ai-logging-plans.ts';
 import { proposePlanAiLogging } from '../../src/operator/plans.ts';

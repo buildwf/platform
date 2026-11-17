@@ -1,14 +1,14 @@
-# @voidcloud/dashboard
+# @nosamcloud/dashboard
 
-Optional authentication frontend for a Void platform, built as a React SPA
-with Void server routes. The administrator UI is served by the API Worker.
+Optional authentication frontend for a Nosam platform, built as a React SPA
+with Nosam server routes. The administrator UI is served by the API Worker.
 
 ## Architecture
 
-- **React SPA** - `index.html` + `src/`, with `voidPlugin()` serving `routes/`. Each page
+- **React SPA** - `index.html` + `src/`, with `nosamPlugin()` serving `routes/`. Each page
   loads its data from an internal `/api/page/*` endpoint (to be replaced by eeao procedures).
 - **Auth** - enabled platform login methods via the API's `/auth/login` flow. The JWT is
-  stored in an httpOnly cookie (`void_token`). Middleware validates the token with
+  stored in an httpOnly cookie (`nosam_token`). Middleware validates the token with
   `GET /me`.
 - **Styling** - Dashboard-local CSS, fonts, assets, and React components in `ui/`,
   with Astryx's neutral theme for buttons, stacks, and the account menu.
@@ -30,14 +30,14 @@ running and its client tools on your path:
 
 ```sh
 vp run build:core
-vp run --filter @voidcloud/api setup --admin-email dev@example.com
-vp run --filter @voidcloud/api dev --local --enable-containers=false --host localhost --port 8787
+vp run --filter @nosamcloud/api setup --admin-email dev@example.com
+vp run --filter @nosamcloud/api dev --local --enable-containers=false --host localhost --port 8787
 ```
 
 In another terminal:
 
 ```sh
-vp run --filter @voidcloud/dashboard dev
+vp run --filter @nosamcloud/dashboard dev
 ```
 
 Setup creates an ignored API `.dev.vars` file and a dashboard `.env` file.
@@ -69,7 +69,7 @@ separate copy in `playground-local/my-dashboard`, keeping the app’s source,
 assets, package manifest and TypeScript configuration. Exclude local environment
 files, dependencies and generated output. Give the copied package a unique
 private name and keep its `build: vp build` script. In the copied Vite config,
-keep `voidPlugin()` and `voidReact()`, and remove the local API
+keep `nosamPlugin()` and `nosamReact()`, and remove the local API
 `persistTo` option.
 
 Replace the copied `cloudflare` configuration with your deployment settings:
@@ -91,10 +91,10 @@ Replace the copied `cloudflare` configuration with your deployment settings:
 From the repository root, run `vp install` and `vp run build:core`. Configure the
 API’s accepted dashboard origin using the
 [optional dashboard instructions](../../../docs/guide/platform/installation/domains.md#optional-dashboard).
-Then deploy from the copied app directory with the public Void CLI:
+Then deploy from the copied app directory with the public Nosam CLI:
 
 ```sh
-vp exec void deploy --platform cloudflare
+vp exec nosam deploy --platform cloudflare
 ```
 
 The `API` binding sends server requests to your installed API, while
@@ -110,10 +110,10 @@ lib/
 ui/
   components/               # Dashboard header and footer
   styles/                   # Design tokens, reset, and shell styles
-  assets/                   # Void logos and bundled social icons
+  assets/                   # Nosam logos and bundled social icons
   fonts/                    # APK Protocol, KH Teka Mono, and Inter
 middleware/
-  01.auth.ts                # void_token validation through /me
+  01.auth.ts                # nosam_token validation through /me
 pages/
   layout.tsx                # Shared navigation progress
   _layouts/dashboard.tsx    # Authenticated shell with logout

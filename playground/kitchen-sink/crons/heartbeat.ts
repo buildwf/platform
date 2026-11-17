@@ -1,4 +1,4 @@
-import { defineScheduled } from 'void';
+import { defineScheduled } from 'nosam';
 
 export const cron = '* * * * *';
 

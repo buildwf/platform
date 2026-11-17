@@ -134,7 +134,7 @@ describe('platform human session revocation', () => {
       app.fetch(
         new Request(`http://localhost/internal/verify-owner/${project.id}`, {
           method: 'POST',
-          headers: { 'X-Void-Internal': internalToken, 'Content-Type': 'application/json' },
+          headers: { 'X-Nosam-Internal': internalToken, 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: admin.id, jwt, proxyOrigin }),
         }),
         env,
@@ -146,7 +146,7 @@ describe('platform human session revocation', () => {
     expect((await proxyCheck()).status).toBe(403);
   });
 
-  it('rejects a different employee presenting another employee’s otherwise valid Void session', async () => {
+  it('rejects a different employee presenting another employee’s otherwise valid Nosam session', async () => {
     await env.db.update(platformAuthSettings).set({
       protection: {
         teamDomain: 'https://company.cloudflareaccess.com',

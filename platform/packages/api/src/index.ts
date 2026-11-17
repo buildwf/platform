@@ -4,7 +4,7 @@ import {
   resolvePlatformApplicationEnvironment,
   PLATFORM_DISABLED_KEY,
   PLATFORM_DISABLED_VALUE,
-} from '@void/platform';
+} from '@nosam/platform';
 import { eq, lt, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { adminFateHandler } from './admin/fate/server.ts';
@@ -219,11 +219,11 @@ const app = new Hono<ApiEnv>()
     const installerProbe =
       healthProbeToken !== undefined &&
       healthProbeToken !== '' &&
-      context.req.header('X-Void-Platform-Probe') === healthProbeToken &&
+      context.req.header('X-Nosam-Platform-Probe') === healthProbeToken &&
       (context.req.path === '/health' ||
-        context.req.path === '/.well-known/void-platform' ||
+        context.req.path === '/.well-known/nosam-platform' ||
         context.req.path === '/internal/platform/sandbox-drain' ||
-        context.req.path === '/__void/platform/deployment-execution' ||
+        context.req.path === '/__nosam/platform/deployment-execution' ||
         (context.req.path === '/internal/platform/email-bootstrap' &&
           context.req.method === 'POST') ||
         (context.req.path === '/internal/platform/app-access' && context.req.method === 'POST') ||
@@ -238,7 +238,7 @@ const app = new Hono<ApiEnv>()
       isSandboxDrainMaintenanceRequest(context.req.raw);
     const authenticationSetup =
       context.env.PLATFORM_AUTH_SETUP_TOKEN &&
-      context.req.header('X-Void-Auth-Setup') &&
+      context.req.header('X-Nosam-Auth-Setup') &&
       context.req.method === 'POST' &&
       context.req.path === '/internal/platform/auth-initialize';
     // An upgrade or repair pauses traffic until it commits.
@@ -270,7 +270,7 @@ const app = new Hono<ApiEnv>()
         context.req.method === 'GET' &&
         (context.req.path === '/admin' || context.req.path.startsWith('/admin/')) &&
         (context.req.header('Accept')?.includes('text/html') ||
-          context.req.header('X-VoidPages') === 'true')
+          context.req.header('X-NosamPages') === 'true')
       ) {
         context.header('Cache-Control', 'private, no-store');
         return context.redirect('/admin/status', 302);
@@ -334,7 +334,7 @@ const app = new Hono<ApiEnv>()
           throw new Error('The database does not match the deployed platform installation.');
         }
       } else {
-        // Void Cloud does not use the self-hosted installation claim. Still
+        // Nosam Cloud does not use the self-hosted installation claim. Still
         // exercise the configured database and a required schema relation so
         // this endpoint cannot report healthy from Worker startup alone.
         await context.get('db').execute(sql`SELECT 1 FROM "users" LIMIT 1`);
@@ -345,7 +345,7 @@ const app = new Hono<ApiEnv>()
       return context.json({ status: 'unhealthy' }, 503);
     }
   })
-  .get('/.well-known/void-platform', async (context) => {
+  .get('/.well-known/nosam-platform', async (context) => {
     context.header('Cache-Control', 'no-store');
     const settings = await readAuthSettings(context.get('db'));
     const setupPending = settings && !!(await pendingAuthenticationSetup(context.get('db')));
@@ -386,7 +386,7 @@ const app = new Hono<ApiEnv>()
             }
           : {}),
         capabilities,
-        displayName: context.env.PLATFORM_DISPLAY_NAME ?? 'Void Cloud',
+        displayName: context.env.PLATFORM_DISPLAY_NAME ?? 'Nosam Cloud',
         ...(context.env.DASHBOARD_URL ? { dashboardUrl: context.env.DASHBOARD_URL } : {}),
         installationId: context.env.PLATFORM_INSTALLATION_ID ?? null,
         platformVersion: context.env.PLATFORM_VERSION ?? 'hosted',
@@ -407,7 +407,7 @@ const app = new Hono<ApiEnv>()
     const healthProbeToken = context.env.PLATFORM_HEALTH_PROBE_TOKEN;
     if (
       !healthProbeToken ||
-      context.req.header('X-Void-Platform-Probe') !== healthProbeToken ||
+      context.req.header('X-Nosam-Platform-Probe') !== healthProbeToken ||
       !context.env.PLATFORM_INSTALLATION_ID ||
       !getPlatformCapabilities(context.env).email
     ) {
@@ -485,7 +485,7 @@ const app = new Hono<ApiEnv>()
   })
   .get('/internal/platform/sandbox-drain', async (context) => {
     const healthProbeToken = context.env.PLATFORM_HEALTH_PROBE_TOKEN;
-    if (!healthProbeToken || context.req.header('X-Void-Platform-Probe') !== healthProbeToken) {
+    if (!healthProbeToken || context.req.header('X-Nosam-Platform-Probe') !== healthProbeToken) {
       return context.json({ error: 'not found' }, 404);
     }
     try {
@@ -503,9 +503,9 @@ const app = new Hono<ApiEnv>()
       );
     }
   })
-  .get('/__void/platform/deployment-execution', async (context) => {
+  .get('/__nosam/platform/deployment-execution', async (context) => {
     const token = context.env.PLATFORM_HEALTH_PROBE_TOKEN;
-    if (!token || context.req.header('X-Void-Platform-Probe') !== token) {
+    if (!token || context.req.header('X-Nosam-Platform-Probe') !== token) {
       return context.json({ error: 'not found' }, 404);
     }
     return context.json(
@@ -568,7 +568,7 @@ const app = new Hono<ApiEnv>()
   .use('/github/*', capabilityMiddleware('managedBuilds'))
   .route('/github', githubRoutes)
   // The gateway relays this exact route through its API service binding. The
-  // HMAC-signed token is the credential, so recipients need no Void or Access
+  // HMAC-signed token is the credential, so recipients need no Nosam or Access
   // session. A platform without email issued no token and returns the standard
   // capability response.
   .use('/email/*', capabilityMiddleware('email'))
@@ -933,7 +933,7 @@ async function scheduled(
 // activation gate (tryActivateDomain) and activate it if CF has finished
 // validating ownership + cert AND the project has live slug routing. This is
 // what lets a domain come online after the user configures DNS without them
-// re-running `void domain status`. Per-domain failures (e.g. a CF API error)
+// re-running `nosam domain status`. Per-domain failures (e.g. a CF API error)
 // are isolated so one bad domain never aborts the batch. `retriggerDcv` is
 // forwarded to tryActivateDomain to gate the HTTP-DCV re-trigger PATCH — only
 // the hourly tier passes `true` (see the scheduled() call sites).
@@ -952,7 +952,7 @@ async function reconcilePendingDomains(
   const projectMap = new Map(projectRows.map((project) => [project.id, project]));
 
   // Batch-load the owners of the loaded projects so we can skip domains whose
-  // owner is ADMIN-suspended. The authenticated `void domain status` route is
+  // owner is ADMIN-suspended. The authenticated `nosam domain status` route is
   // behind authMiddleware, which 403s admin-suspended owners; the cron must
   // match that — it should never advance a domain the authed path would
   // refuse. Usage-suspended owners (isAdminSuspended === false) are NOT skipped
@@ -1042,7 +1042,7 @@ export async function cleanupStalePendingDomains(
   let cleaned = 0;
   for (const domain of stale) {
     // The `stale` snapshot can be racy: a user may finish DNS on day 8, or a
-    // concurrent `void domain status` poll may activate the domain between the
+    // concurrent `nosam domain status` poll may activate the domain between the
     // snapshot and now. Re-check CF live before tearing anything down so we
     // never delete a hostname that has since verified.
     let live;

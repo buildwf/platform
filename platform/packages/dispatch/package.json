@@ -1,5 +1,5 @@
 {
-  "name": "@voidcloud/dispatch",
+  "name": "@nosamcloud/dispatch",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,8 +8,8 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
-    "@void/edge": "workspace:*",
-    "@voidcloud/api": "workspace:*",
+    "@nosam/edge": "workspace:*",
+    "@nosamcloud/api": "workspace:*",
     "jose": "catalog:"
   },
   "devDependencies": {

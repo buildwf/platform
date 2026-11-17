@@ -193,7 +193,7 @@ const app = new Hono<ApiEnv>()
             // would have been the second registrant and taken the
             // per-project platform link (Option B); promoting by address
             // here would hand it the other registration's consent instead.
-            // So a NON-owner row stays pending — `void email disallow` then
+            // So a NON-owner row stays pending — `nosam email disallow` then
             // `allow` re-registers it, and because the address is now
             // CF-verified that add takes the platform link. This GET must
             // not mail that link itself. The OWNER's own address is Option
@@ -462,7 +462,7 @@ const app = new Hono<ApiEnv>()
     //     API; `deleteDestination` + a fresh create is the only way, and the
     //     DELETE route takes it only when no other project references the
     //     tag). Report that as `verificationSent: false` rather than let a
-    //     bare 201 read as "a link went out": `void email allow` prints
+    //     bare 201 read as "a link went out": `nosam email allow` prints
     //     "Verification email sent" from the status code alone.
     const inserted = await tryInsertWithRetry(
       context,

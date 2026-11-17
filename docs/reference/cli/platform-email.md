@@ -10,22 +10,22 @@ Use your administrator session for these commands. See [Platform Management](./p
 Decide who mail from the shared sender may reach, who registers email domains, and a project's outbound caps:
 
 ```sh
-void platform email policy
-void platform email policy-set <verified|domains|any> [--domains <domain[,domain...]>]
-void platform email settings
-void platform email settings-set --domains <self-serve|admin>
-void platform email limit <project-id|slug> [--monthly <n>] [--burst <n>]
-void platform email logs <project-id|slug> [--page <n>] [--limit <n>] [--json]
-void platform email attempts [--project <id|slug>] [--page <n>] [--limit <n>]
-void platform email attempt-resolve <attempt-id> --ended --reason <text>
-void platform email operation-resolve <operation-id> --ended --outcome <applied|not-applied> --reason <text>
-void platform email shared-recipients [--project <id|slug>] [--page <n>] [--limit <n>]
-void platform email shared-recipient-resolve <recipient-id> --ended --outcome <applied|not-applied> --reason <text>
+nosam platform email policy
+nosam platform email policy-set <verified|domains|any> [--domains <domain[,domain...]>]
+nosam platform email settings
+nosam platform email settings-set --domains <self-serve|admin>
+nosam platform email limit <project-id|slug> [--monthly <n>] [--burst <n>]
+nosam platform email logs <project-id|slug> [--page <n>] [--limit <n>] [--json]
+nosam platform email attempts [--project <id|slug>] [--page <n>] [--limit <n>]
+nosam platform email attempt-resolve <attempt-id> --ended --reason <text>
+nosam platform email operation-resolve <operation-id> --ended --outcome <applied|not-applied> --reason <text>
+nosam platform email shared-recipients [--project <id|slug>] [--page <n>] [--limit <n>]
+nosam platform email shared-recipient-resolve <recipient-id> --ended --outcome <applied|not-applied> --reason <text>
 ```
 
 `policy` decides which recipients a project's `<slug>+tag@<mail domain>` sender reaches: `verified` (the default) means only that project's verified destinations; `domains` adds every address on the listed domains; `any` lifts the check. Neither widens delivery to addresses on the platform's own mail domain: those stay verified-destination-only, so no project reaches another project's inbox without its consent. Cloudflare still refuses a destination it has not verified until the platform mail domain is onboarded for Email Sending, so under `domains` or `any` such refusals arrive as per-recipient `UNVERIFIED_DESTINATION` results. Custom-domain sends are not affected.
 
-`settings-set --domains admin` tells `void email domain add` to print the administrator's command instead of starting token setup. `limit` overrides the project's monthly and rolling 60-second caps (defaults 200 and 10); a project page in the admin UI shows and clears them.
+`settings-set --domains admin` tells `nosam email domain add` to print the administrator's command instead of starting token setup. `limit` overrides the project's monthly and rolling 60-second caps (defaults 200 and 10); a project page in the admin UI shows and clears them.
 
 `logs` inspects retained receipt and recipient outcomes, including operation IDs, provider references, error codes, and policy versions. Pages contain at most 100 records, newest first; use `--json` for all fields. After project deletion, use its project ID to inspect metadata until the 30-day retention period expires. Message content and credentials are never included.
 
@@ -66,12 +66,12 @@ If the intent or provider ownership changes, inspect a new plan.
 Register and maintain email domains for projects whose owners hold no Cloudflare credential:
 
 ```sh
-void platform email domains [--project <id|slug>]
-void platform email domain-add <domain> --project <id|slug> [--token-stdin] [--outbound-only]
-void platform email domain-status <domain>
-void platform email domain-sync <domain>
-void platform email domain-rotate-secret <domain>
-void platform email domain-remove <domain> [--token-stdin]
+nosam platform email domains [--project <id|slug>]
+nosam platform email domain-add <domain> --project <id|slug> [--token-stdin] [--outbound-only]
+nosam platform email domain-status <domain>
+nosam platform email domain-sync <domain>
+nosam platform email domain-rotate-secret <domain>
+nosam platform email domain-remove <domain> [--token-stdin]
 ```
 
 `domain-add` uses the platform's Cloudflare credential for zones in its account. For another account, pipe a scoped Cloudflare API token on standard input with `--token-stdin --yes`. Managed custom inbound email requires the Cloudflare zone apex (`example.com`). If its MX records already belong to another mail provider, such as Microsoft 365 or Google Workspace, add `--outbound-only` to send from the apex while that provider keeps receiving its mail; see [Sending from a domain that already receives mail](../../guide/platform/administration/email.md#sending-from-a-domain-that-already-receives-mail). Otherwise use the project's shared email address or choose another unused zone. Native Cloudflare deployments also support literal recipient addresses on subdomains; see [Your own Cloudflare account](../../guide/email/domains.md#your-own-cloudflare-account).

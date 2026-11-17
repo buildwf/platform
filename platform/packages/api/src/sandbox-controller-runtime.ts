@@ -4,7 +4,7 @@ import {
   validateSandboxOptions,
   type SandboxOptions,
   type SandboxInstance,
-} from 'void/_sandbox-container';
+} from 'nosam/_sandbox-container';
 import { getSandboxShim } from './sandbox-shim.ts';
 
 type Admission = { ok: true } | { ok: false; reason: string };
@@ -16,20 +16,20 @@ type Control = {
 };
 type ControllerEnv = {
   SANDBOX: DurableObjectNamespace<SandboxController>;
-  __VOID_SANDBOX_CONTROL: Control;
-  __VOID_SANDBOX_IMAGE?: string;
-  __VOID_SANDBOX_INSTANCE?: SandboxInstance;
+  __NOSAM_SANDBOX_CONTROL: Control;
+  __NOSAM_SANDBOX_IMAGE?: string;
+  __NOSAM_SANDBOX_INSTANCE?: SandboxInstance;
 };
 type Lease = { generation: string; phase: 'pending' | 'running' | 'stopped' };
-const LEASE_KEY = '__voidSandboxLease';
-const ACTIVITY_KEY = '__voidSandboxActivity';
+const LEASE_KEY = '__nosamSandboxLease';
+const ACTIVITY_KEY = '__nosamSandboxActivity';
 type Activity = { lastActivity: number; idleDeadline: number };
 const HEARTBEAT_MS = 30_000;
 const CONTROL_TIMEOUT_MS = 5_000;
 
 function denied(reason: string): Error {
   return new Error(
-    `VOID_SANDBOX_${reason === 'concurrency' || reason === 'runtime_budget' ? reason : 'unavailable'}`,
+    `NOSAM_SANDBOX_${reason === 'concurrency' || reason === 'runtime_budget' ? reason : 'unavailable'}`,
   );
 }
 async function bounded<T>(operation: Promise<T>): Promise<T> {
@@ -247,7 +247,7 @@ export class SandboxController extends SandboxContainer<ControllerEnv> {
     }
   }
   protected override get image(): string {
-    return this.env.__VOID_SANDBOX_IMAGE === 'cloudflare/debian-trixie'
+    return this.env.__NOSAM_SANDBOX_IMAGE === 'cloudflare/debian-trixie'
       ? 'cloudflare/debian-trixie'
       : this.container.images.default!;
   }
@@ -261,14 +261,14 @@ export class SandboxController extends SandboxContainer<ControllerEnv> {
   }
   async #control(method: 'reserve' | 'started' | 'heartbeat', lease: Lease): Promise<void> {
     const result = await bounded(
-      this.env.__VOID_SANDBOX_CONTROL[method](this.ctx.id.toString(), lease.generation),
+      this.env.__NOSAM_SANDBOX_CONTROL[method](this.ctx.id.toString(), lease.generation),
     );
     if (!result.ok) {
       throw denied(result.reason);
     }
   }
   protected override async beforeStart(): Promise<void> {
-    this.instanceType = this.env.__VOID_SANDBOX_INSTANCE ?? 'lite';
+    this.instanceType = this.env.__NOSAM_SANDBOX_INSTANCE ?? 'lite';
     let lease = await this.ctx.storage.get<Lease>(LEASE_KEY);
     if (lease?.phase === 'running' && this.container.running) {
       await this.#control('heartbeat', lease);
@@ -293,7 +293,7 @@ export class SandboxController extends SandboxContainer<ControllerEnv> {
   }
   protected override async initialize(): Promise<void> {
     await super.initialize();
-    if (this.env.__VOID_SANDBOX_IMAGE === 'cloudflare/debian-trixie') {
+    if (this.env.__NOSAM_SANDBOX_IMAGE === 'cloudflare/debian-trixie') {
       const bytes = await getSandboxShim();
       const result = await this.initializationOutput(
         [
@@ -349,7 +349,7 @@ export class SandboxController extends SandboxContainer<ControllerEnv> {
       await this.ctx.storage.put(LEASE_KEY, { ...lease, phase: 'stopped' } satisfies Lease);
       await this.#arm();
       await bounded(
-        this.env.__VOID_SANDBOX_CONTROL.stopped(this.ctx.id.toString(), lease.generation),
+        this.env.__NOSAM_SANDBOX_CONTROL.stopped(this.ctx.id.toString(), lease.generation),
       );
       await this.ctx.storage.delete(LEASE_KEY);
       await this.ctx.storage.delete(ACTIVITY_KEY);
@@ -387,7 +387,7 @@ export class SandboxController extends SandboxContainer<ControllerEnv> {
     } catch (error) {
       this.#generation.failure = error instanceof Error ? error : denied('unavailable');
       await this.destroy().catch(() => {});
-      console.error('[void/sandbox] lifecycle check failed', error);
+      console.error('[nosam/sandbox] lifecycle check failed', error);
     } finally {
       if (await this.ctx.storage.get(LEASE_KEY)) {
         await this.#arm();

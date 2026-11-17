@@ -15,16 +15,16 @@ export function getPlatformDisplayName(
     return name;
   }
   if (bindings.PLATFORM_INSTALLATION_ID) {
-    return 'Void Platform';
+    return 'Nosam Platform';
   }
   const apiUrl = getPlatformApiUrl(bindings, requestUrl);
-  return ['https://api.void.cloud', 'https://api.staging.void.cloud'].includes(apiUrl)
-    ? 'Void Cloud'
-    : 'Void Platform';
+  return ['https://void-nosam-api.buildwithfriends.workers.dev', 'https://api.staging.void.cloud'].includes(apiUrl)
+    ? 'Nosam Cloud'
+    : 'Nosam Platform';
 }
 
 export function formatPlatformPageTitle(page: string, platformName: string): string {
-  return `${page} · ${platformName}${/\bvoid\b/i.test(platformName) ? '' : ' · Void'}`;
+  return `${page} · ${platformName}${/\bnosam\b/i.test(platformName) ? '' : ' · Nosam'}`;
 }
 
 /** Use configured deployment identity or the actual request URL, never forwarded headers. */
@@ -39,7 +39,7 @@ export function getPlatformApiUrl(env: PlatformIdentityEnv, requestUrl?: string)
     configuredUrl ||
       (env.PLATFORM_ENV === 'staging'
         ? 'https://api.staging.void.cloud'
-        : 'https://api.void.cloud'),
+        : 'https://void-nosam-api.buildwithfriends.workers.dev'),
   );
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
     throw new Error('The platform API URL must be an HTTP(S) URL without credentials.');
@@ -53,5 +53,5 @@ export function platformConnectCommand(apiUrl: string): string {
   // Keep an explicit protocol when it differs from the CLI's hostname default.
   const address = url.protocol === (local ? 'http:' : 'https:') ? url.host : url.origin;
   // Quote even unusual but valid URL hostnames safely when the command is copied into a shell.
-  return `void connect '${address.replaceAll("'", "'\\''")}'`;
+  return `nosam connect '${address.replaceAll("'", "'\\''")}'`;
 }

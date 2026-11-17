@@ -79,7 +79,7 @@ function relayContext() {
     [RELAY_GATEWAY_ORIGIN_BINDING]: 'https://gateway.example.test',
     [RELAY_ACCOUNT_BINDING]: 'acct_1',
     [RELAY_ZONE_BINDING]: 'zone_1',
-    [RELAY_INGRESS_BINDING]: 'void-zone-ingress',
+    [RELAY_INGRESS_BINDING]: 'nosam-zone-ingress',
   };
   const rawBytes = new TextEncoder().encode(MIME_BODY);
   const message: RelayMessage = {
@@ -144,12 +144,12 @@ describe('RELAY_SOURCE', () => {
     // would go out chunked, and the proxy refuses a length-less body.
     expect(init.headers).toEqual({
       Authorization: `Bearer ${RELAY_SECRET}`,
-      'X-Void-Email-Account': 'acct_1',
-      'X-Void-Email-Zone': 'zone_1',
-      'X-Void-Email-Ingress': 'void-zone-ingress',
-      'X-Void-Email-Request-Id': expect.stringMatching(/^[a-f0-9-]{36}$/),
-      'X-Void-Email-From': 'sender@example.org',
-      'X-Void-Email-To': 'support@acme.com',
+      'X-Nosam-Email-Account': 'acct_1',
+      'X-Nosam-Email-Zone': 'zone_1',
+      'X-Nosam-Email-Ingress': 'nosam-zone-ingress',
+      'X-Nosam-Email-Request-Id': expect.stringMatching(/^[a-f0-9-]{36}$/),
+      'X-Nosam-Email-From': 'sender@example.org',
+      'X-Nosam-Email-To': 'support@acme.com',
     });
     // Streamed straight through — no base64, no JSON envelope. The body is
     // the fixed-length transform's readable side, not the raw stream, and
@@ -177,7 +177,7 @@ describe('RELAY_SOURCE', () => {
     expect(message.setReject).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledOnce();
     expect((fetchMock.mock.calls[0][1] as RequestInit).headers).toMatchObject({
-      'X-Void-Email-To': 'user@other-acme.com',
+      'X-Nosam-Email-To': 'user@other-acme.com',
     });
     expect(ctx.waitUntil).toHaveBeenCalledTimes(2);
   });
@@ -253,9 +253,9 @@ describe('RELAY_SOURCE', () => {
     const { env } = relayContext();
     const challenge = 'a'.repeat(64);
     const response = await loadRelayWorker().fetch(
-      new Request('https://worker.example/__void/email/probe', {
+      new Request('https://worker.example/__nosam/email/probe', {
         method: 'POST',
-        headers: { 'X-Void-Probe-Challenge': challenge, 'X-Void-Probe-Generation': '7' },
+        headers: { 'X-Nosam-Probe-Challenge': challenge, 'X-Nosam-Probe-Generation': '7' },
       }),
       env,
     );
@@ -271,7 +271,7 @@ describe('RELAY_SOURCE', () => {
     expect(proof).toMatchObject({
       accountId: 'acct_1',
       zoneId: 'zone_1',
-      ingressName: 'void-zone-ingress',
+      ingressName: 'nosam-zone-ingress',
       generation: 7,
       challenge,
     });
@@ -286,7 +286,7 @@ describe('RELAY_SOURCE', () => {
       'email-relay-proof-v1',
       'acct_1',
       'zone_1',
-      'void-zone-ingress',
+      'nosam-zone-ingress',
       '7',
       challenge,
     ].join('\n');
@@ -298,7 +298,7 @@ describe('RELAY_SOURCE', () => {
     expect(
       (
         await loadRelayWorker().fetch(
-          new Request('https://worker.example/__void/email/probe', { method: 'POST' }),
+          new Request('https://worker.example/__nosam/email/probe', { method: 'POST' }),
           env,
         )
       ).status,

@@ -871,7 +871,7 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
       const result = await queryProjectAiUsage(
         this.env.CF_ACCOUNT_ID,
         this.env.CF_API_TOKEN,
-        this.env.AI_GATEWAY_ID ?? 'void',
+        this.env.AI_GATEWAY_ID ?? 'nosam',
         this.env.JWT_SECRET,
         projectId,
         since,
@@ -1019,7 +1019,7 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
       const result = await queryProjectAiUsage(
         this.env.CF_ACCOUNT_ID,
         this.env.CF_API_TOKEN,
-        this.env.AI_GATEWAY_ID ?? 'void',
+        this.env.AI_GATEWAY_ID ?? 'nosam',
         this.env.JWT_SECRET,
         window.projectId,
         since,

@@ -3,7 +3,7 @@ import { isProjectId } from './id.ts';
 /**
  * Tenant proxy tokens.
  *
- * A tenant Worker authenticates to the platform with `__VOID_PROXY_TOKEN`.
+ * A tenant Worker authenticates to the platform with `__NOSAM_PROXY_TOKEN`.
  * Two forms exist:
  *
  * - legacy (generation 0): base64url(HMAC-SHA256(JWT_SECRET, projectId)),
@@ -335,7 +335,7 @@ export function createProxyTokenStateCache(
 // --- Proxy-to-API metadata auth ---
 
 /** Header the proxy uses to authenticate itself to the API metadata routes. */
-export const PROXY_INTERNAL_AUTH_HEADER = 'x-void-proxy-internal';
+export const PROXY_INTERNAL_AUTH_HEADER = 'x-nosam-proxy-internal';
 
 export type ProxyInternalRoute =
   | 'resolve-worker'

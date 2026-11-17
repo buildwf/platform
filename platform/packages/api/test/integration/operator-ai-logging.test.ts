@@ -51,7 +51,7 @@ import {
   rpcData,
 } from './helpers.ts';
 
-// Hosted Void Cloud does not set PLATFORM_AUTH_DATABASE_UNCACHED. Nothing here may
+// Hosted Nosam Cloud does not set PLATFORM_AUTH_DATABASE_UNCACHED. Nothing here may
 // depend on it.
 let env: TestEnv;
 let token: string;
@@ -303,7 +303,7 @@ describe('operator project override', () => {
   });
 
   // Needs real PostgreSQL: PGlite runs one connection, so nothing ever waits on a lock.
-  test.runIf(Boolean(process.env.VOID_TEST_DATABASE_URL))(
+  test.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
     'a publisher that waited for the lock writes the change committed during its wait',
     async () => {
       const project = await seedProject();
@@ -384,7 +384,7 @@ describe('plan defaults', () => {
     'an account on an unknown plan follows the default plan: %s',
     async (_name, overrides, savedCatalog, defaultPlanId) => {
       if (savedCatalog) {
-        const { createDefaultPlanCatalog } = await import('@void/platform/plans');
+        const { createDefaultPlanCatalog } = await import('@nosam/platform/plans');
         await setPlatformSetting(env.db, PLAN_CATALOG_SETTING, {
           ...createDefaultPlanCatalog('free'),
           defaultPlanId: 'pro',
@@ -524,7 +524,7 @@ describe('project create', () => {
   });
 
   // Needs real PostgreSQL: PGlite runs one connection, so nothing ever waits on a lock.
-  test.runIf(Boolean(process.env.VOID_TEST_DATABASE_URL))(
+  test.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
     'a user plan change waits for a project create and then publishes it',
     async () => {
       await setPlatformSetting(env.db, PLAN_AI_LOGGING_SETTING, { modes: { pro: 'off' } });

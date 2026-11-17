@@ -1,11 +1,11 @@
 ---
-description: 'Stream events from a route handler to the browser. Void formats the messages, sends keepalives, and closes the stream.'
+description: 'Stream events from a route handler to the browser. Nosam formats the messages, sends keepalives, and closes the stream.'
 outline: deep
 ---
 
 # Server-Sent Events
 
-Use `void/sse` to stream events from a route handler to the browser. Void formats messages, sends keepalives, and closes the stream when the request ends.
+Use `nosam/sse` to stream events from a route handler to the browser. Nosam formats messages, sends keepalives, and closes the stream when the request ends.
 
 SSE is a good fit for AI tokens, progress updates, or logs produced by one request. If other requests need to publish to connected clients, see [Live Event Streams](./live.md). Store events yourself if clients need to replay them.
 
@@ -15,8 +15,8 @@ Return `eventStream()` from a route handler:
 
 ```ts
 // routes/api/events.ts
-import { defineHandler } from 'void';
-import { eventStream } from 'void/sse';
+import { defineHandler } from 'nosam';
+import { eventStream } from 'nosam/sse';
 
 export const GET = defineHandler((c) => {
   return eventStream(
@@ -73,7 +73,7 @@ Writing to a closed stream throws `SseStreamClosedError`.
 Use `formatSseText()` to format a payload you have already serialized:
 
 ```ts
-import { formatSseText } from 'void/sse';
+import { formatSseText } from 'nosam/sse';
 
 const frame = formatSseText({
   event: 'post.update',
@@ -104,7 +104,7 @@ return eventStream(start, {
 Browsers send `Last-Event-ID` when reconnecting after an event with an `id` field. Use `getLastEventId()` to resume from your own storage:
 
 ```ts
-import { getLastEventId } from 'void/sse';
+import { getLastEventId } from 'nosam/sse';
 
 export const GET = defineHandler((c) => {
   const lastId = getLastEventId(c.req.raw);
@@ -116,10 +116,10 @@ export const GET = defineHandler((c) => {
 
 ## Client
 
-Use `connectEventStream()` from the browser-only `void/sse/client` subpath:
+Use `connectEventStream()` from the browser-only `nosam/sse/client` subpath:
 
 ```ts
-import { connectEventStream } from 'void/sse/client';
+import { connectEventStream } from 'nosam/sse/client';
 
 const stream = connectEventStream<{
   ready: { now: number };
@@ -142,7 +142,7 @@ stream.close();
 
 The client wraps native `EventSource`. It supports cookie credentials and typed event handlers, but it does not support request bodies or arbitrary headers. Use cookie auth, signed URLs, or a fetch-based streaming route when you need custom headers.
 
-With [`routing.typedRoutes`](../reference/config.md#routing-typedroutes), TypeScript checks the URL against your routes, such as `` `/api/jobs/${id}` ``. External `http://` and `https://` URLs also work. For a URL you validate at runtime, use `as RouteUrl` from `void/routes` to skip the type check.
+With [`routing.typedRoutes`](../reference/config.md#routing-typedroutes), TypeScript checks the URL against your routes, such as `` `/api/jobs/${id}` ``. External `http://` and `https://` URLs also work. For a URL you validate at runtime, use `as RouteUrl` from `nosam/routes` to skip the type check.
 
 JSON parsing is the default. Set `parse: 'text'` or pass a custom parser for non-JSON payloads:
 
@@ -159,7 +159,7 @@ logs.on('line', (event) => {
 SSE routes are ordinary route handlers, so use the same auth checks you use for JSON routes:
 
 ```ts
-import { requireAuth } from 'void/auth';
+import { requireAuth } from 'nosam/auth';
 
 export const GET = defineHandler(async (c) => {
   const user = await requireAuth(c);

@@ -43,7 +43,7 @@ async function invokeWorker(
 ): Promise<InvokeOutcome> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (message.proxyToken) {
-    headers['x-void-internal'] = message.proxyToken;
+    headers['x-nosam-internal'] = message.proxyToken;
   }
   const body = JSON.stringify({ cron: message.cron, scheduledTime: message.scheduledTime });
 
@@ -51,9 +51,9 @@ async function invokeWorker(
   try {
     const worker = env.DISPATCH.get(message.workerName);
     res = await worker.fetch(
-      new Request('https://internal/__void/scheduled', { method: 'POST', headers, body }),
+      new Request('https://internal/__nosam/scheduled', { method: 'POST', headers, body }),
     );
-    // Legacy: workers deployed before /__void/* migration listened on /__scheduled.
+    // Legacy: workers deployed before /__nosam/* migration listened on /__scheduled.
     if (res.status === 404) {
       // Drain the orphaned 404 body before reassigning — same reason as
       // the success-path drain below. .catch() because this runs inside
@@ -114,7 +114,7 @@ export async function processCronFiresBatch(
         const status = outcome.status;
         if (status === 401 || status === 403) {
           // Auth drift between CronScheduler's stored proxyToken and the
-          // user worker's baked __VOID_PROXY_TOKEN. Retrying would yield
+          // user worker's baked __NOSAM_PROXY_TOKEN. Retrying would yield
           // the same 401 (same token in, same status out), so we ack; the
           // next deploy's /sync resyncs the token. Logged with a stable
           // greppable marker so ops can alert on this. Right after a token

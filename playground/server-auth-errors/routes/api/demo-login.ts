@@ -1,5 +1,5 @@
-import { defineHandler } from 'void';
-import { getAuth } from 'void/auth';
+import { defineHandler } from 'nosam';
+import { getAuth } from 'nosam/auth';
 import { demoUser } from '../../src/demo-user.ts';
 
 // This demo always signs in the same user, regardless of the submitted fields.

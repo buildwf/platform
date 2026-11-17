@@ -374,7 +374,7 @@ export function workerUploadBody(
   readAhead: ReadAhead = WORKER_UPLOAD_READ_AHEAD,
 ): TrackedStream & Readonly<{ contentType: string; length: number }> {
   const encoder = new TextEncoder();
-  const boundary = `----VoidWorkerUpload${crypto.randomUUID().replaceAll('-', '')}`;
+  const boundary = `----NosamWorkerUpload${crypto.randomUUID().replaceAll('-', '')}`;
   const metadataBytes = encoder.encode(JSON.stringify(metadata));
   const parts = [
     {

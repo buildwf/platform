@@ -1,4 +1,4 @@
-import { PLATFORM_DISABLED_KEY, PLATFORM_SANDBOX_DRAIN_KEY } from '@void/platform';
+import { PLATFORM_DISABLED_KEY, PLATFORM_SANDBOX_DRAIN_KEY } from '@nosam/platform';
 import { sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 import app from '../../src/index.ts';
@@ -89,7 +89,7 @@ describe('GET /health', () => {
     await establishBootstrapSandboxDrainCheckpoint();
     const res = await app.fetch(
       new Request('http://localhost/internal/platform/sandbox-drain', {
-        headers: { 'X-Void-Platform-Probe': 'probe-token' },
+        headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
       }),
       {
         ...env,
@@ -124,7 +124,7 @@ describe('GET /health', () => {
     try {
       const res = await app.fetch(
         new Request('http://localhost/internal/platform/sandbox-drain', {
-          headers: { 'X-Void-Platform-Probe': 'probe-token' },
+          headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
         }),
         {
           ...env,
@@ -161,7 +161,7 @@ describe('GET /health', () => {
     try {
       const res = await app.fetch(
         new Request('http://localhost/internal/platform/sandbox-drain', {
-          headers: { 'X-Void-Platform-Probe': 'probe-token' },
+          headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
         }),
         {
           ...env,
@@ -188,7 +188,7 @@ describe('GET /health', () => {
     try {
       const res = await app.fetch(
         new Request('http://localhost/health', {
-          headers: { 'X-Void-Platform-Probe': 'probe-token' },
+          headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
         }),
         {
           ...env,
@@ -209,7 +209,7 @@ describe('GET /health', () => {
     try {
       const res = await app.fetch(
         new Request('http://localhost/health', {
-          headers: { 'X-Health-Check': 'void-admin' },
+          headers: { 'X-Health-Check': 'nosam-admin' },
         }),
         {
           ...env,

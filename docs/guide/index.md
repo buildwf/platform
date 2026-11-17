@@ -1,11 +1,11 @@
 ---
-description: 'Void builds React single-page apps with an optional backend on Cloudflare Workers, powered by Vite. It connects routing, data, and deployment in one project.'
+description: 'Nosam builds React single-page apps with an optional backend on Cloudflare Workers, powered by Vite. It connects routing, data, and deployment in one project.'
 outline: deep
 ---
 
-# What is Void?
+# What is Nosam?
 
-Void builds React single-page apps with an optional backend on Cloudflare Workers, powered by Vite. Build your UI as a React SPA and write server code in the same project. Void connects routing, data access, and deployment while keeping types shared across your app.
+Nosam builds React single-page apps with an optional backend on Cloudflare Workers, powered by Vite. Build your UI as a React SPA and write server code in the same project. Nosam connects routing, data access, and deployment while keeping types shared across your app.
 
 Start with the [Quickstart](./quickstart.md) to create and deploy an app.
 
@@ -17,17 +17,17 @@ The backend is optional. Files in `routes/` define [server routes](./server-rout
 
 ## Resources from your code
 
-Import `db` from `void/db` to query your database. Void provides a local database during development and provisions one when you deploy. Imports also enable resources such as [KV](./kv.md), [object storage](./storage.md), and [queues](./queues.md). Use configuration when you need to connect existing resources.
+Import `db` from `nosam/db` to query your database. Nosam provides a local database during development and provisions one when you deploy. Imports also enable resources such as [KV](./kv.md), [object storage](./storage.md), and [queues](./queues.md). Use configuration when you need to connect existing resources.
 
 Your Drizzle schema defines database types. Handlers infer response types, and typed fetch checks their callers. Changing a field shows you which parts of the app need to change.
 
 ## From local development to production
 
-Vite runs your app locally with Cloudflare's runtime. `void deploy` builds it, provisions resources, applies database migrations, and publishes it. [Environment variables](./env-vars.md) use a schema, local values, and production secrets.
+Vite runs your app locally with Cloudflare's runtime. `nosam deploy` builds it, provisions resources, applies database migrations, and publishes it. [Environment variables](./env-vars.md) use a schema, local values, and production secrets.
 
-Deploy to [your own Cloudflare account](./deployment.md#deploy-to-cloudflare), or connect to a [Void platform](./self-hosted-platform.md) run by your team. Both use the same application APIs. A platform adds shared access, deployment history, and administration.
+Deploy to [your own Cloudflare account](./deployment.md#deploy-to-cloudflare), or connect to a [Nosam platform](./self-hosted-platform.md) run by your team. Both use the same application APIs. A platform adds shared access, deployment history, and administration.
 
-Void also deploys [static SPAs and static sites](./app-types.md) without a backend.
+Nosam also deploys [static SPAs and static sites](./app-types.md) without a backend.
 
 ## Next steps
 

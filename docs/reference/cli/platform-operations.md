@@ -10,10 +10,10 @@ Use your administrator session for these commands. See [Platform Management](./p
 Find a deployment, inspect its manifest, or request cancellation:
 
 ```sh
-void platform deployment list [--project <id-or-slug>] [--status <status>] [--search <text>] [--page <n>] [--limit <n>]
-void platform deployment show <id>
-void platform deployment cancel <id>
-void platform deployment migrate-assets <id> [--cursor <cursor>] [--plan|--yes]
+nosam platform deployment list [--project <id-or-slug>] [--status <status>] [--search <text>] [--page <n>] [--limit <n>]
+nosam platform deployment show <id>
+nosam platform deployment cancel <id>
+nosam platform deployment migrate-assets <id> [--cursor <cursor>] [--plan|--yes]
 ```
 
 Cancellation applies while a deployment is pending, uploading, or migrating, and can be requested again while it is canceling. A deployment that has begun switching traffic, is compensating for a failure, or has finished cannot be canceled through this command.
@@ -23,7 +23,7 @@ Cancellation applies while a deployment is pending, uploading, or migrating, and
 Read its runtime logs with:
 
 ```sh
-void platform deployment logs <id> [--since <time>] [--cursor <cursor>] [--limit <n>] [--follow]
+nosam platform deployment logs <id> [--since <time>] [--cursor <cursor>] [--limit <n>] [--follow]
 ```
 
 The default is the last hour, oldest first, with up to 100 records. `--since` accepts a duration such as `10m`, `2h`, or `1d`, an ISO date, or epoch milliseconds. Set `--limit` from 1 to 500 and pass the response's `nextCursor` as `--cursor` to read another page.
@@ -35,8 +35,8 @@ The default is the last hour, oldest first, with up to 100 records. `--since` ac
 Inspect a build or read its output:
 
 ```sh
-void platform build show <id>
-void platform build logs <id> [--since <sequence>] [--limit <n>] [--follow]
+nosam platform build show <id>
+nosam platform build logs <id> [--since <sequence>] [--limit <n>] [--follow]
 ```
 
 Build logs start at sequence `0` and return up to 500 lines. Use the returned `lastSeq` as `--since` to continue; `--limit` accepts 1 to 500. Container log retrieval requires managed builds to be enabled. GitHub Actions builds return an external log URL.
@@ -48,14 +48,14 @@ Following waits for the final logs after the build becomes terminal. If completi
 Inspect activity, check service health, or review administrative changes:
 
 ```sh
-void platform system overview
-void platform system health
-void platform system cli-versions
-void platform system asset-migrations [--page <n>] [--limit <n>]
-void platform system events [--page <n>] [--limit <n>]
-void platform system backfill-queue-tokens
-void platform system sandbox-drain [--cursor <opaque-cursor>]
-void platform system rotate-proxy-tokens [--project <id> | --all]
+nosam platform system overview
+nosam platform system health
+nosam platform system cli-versions
+nosam platform system asset-migrations [--page <n>] [--limit <n>]
+nosam platform system events [--page <n>] [--limit <n>]
+nosam platform system backfill-queue-tokens
+nosam platform system sandbox-drain [--cursor <opaque-cursor>]
+nosam platform system rotate-proxy-tokens [--project <id> | --all]
 ```
 
 `overview` shows platform totals and recent activity. `health` checks the configured services and database, and exits with a nonzero status if a check fails. `cli-versions` reports the CLI versions used by deployments.
@@ -72,16 +72,16 @@ Use the [platform lifecycle commands](./platform-installation.md#lifecycle-comma
 
 ## Hosted Workers {#operator-workers}
 
-The following commands manage the Workers of the hosted Void Cloud platform.
+The following commands manage the Workers of the hosted Nosam Cloud platform.
 They are unavailable on a self-hosted installation; use the
 [lifecycle commands](./platform-installation.md#lifecycle-commands) there instead.
 
 ```sh
-void platform worker list [--environment <production|staging>]
-void platform worker show <worker-name> [--environment <production|staging>]
-void platform worker rollback <worker-name> <version-id> [--environment <production|staging>]
-void platform worker rollback-all [--environment <production|staging>]
-void platform worker events [batch-id] [--environment <production|staging>]
+nosam platform worker list [--environment <production|staging>]
+nosam platform worker show <worker-name> [--environment <production|staging>]
+nosam platform worker rollback <worker-name> <version-id> [--environment <production|staging>]
+nosam platform worker rollback-all [--environment <production|staging>]
+nosam platform worker events [batch-id] [--environment <production|staging>]
 ```
 
 Use a name from `worker list`, such as `api` or `proxy`. `show` lists its

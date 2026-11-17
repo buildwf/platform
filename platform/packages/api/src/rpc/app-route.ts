@@ -17,7 +17,7 @@ export const appRegistry = defineRegistry([
 
 const rpc = rpcHandler(appRegistry, {
   basePath: '/app-rpc',
-  openapi: { title: 'Void platform connected applications', version: '1' },
+  openapi: { title: 'Nosam platform connected applications', version: '1' },
 });
 
 /** Mounted without `authMiddleware`: the caller is whoever holds the grant's bearer token. */

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
-import { fetch } from 'void/client';
+import { fetch } from 'nosam/client';
 
 const loadUsers = () => fetch('/api/users');
 const loadPosts = () => fetch('/api/posts');
@@ -43,7 +43,7 @@ function App() {
     <div style={{ maxWidth: 800, margin: '0 auto', padding: 20 }}>
       <h1>Database (PostgreSQL)</h1>
       <p>
-        PostgreSQL via <code>void/db</code> + Drizzle ORM.
+        PostgreSQL via <code>nosam/db</code> + Drizzle ORM.
       </p>
 
       <h2>Add User</h2>

@@ -12,7 +12,7 @@ import { projects, users } from '../schema.ts';
 
 const app = new Hono<ApiEnv>();
 app.use('*', async (context, next) => {
-  if (!context.req.header('x-void-internal')) {
+  if (!context.req.header('x-nosam-internal')) {
     return context.json({ error: 'forbidden' }, 403);
   }
   await next();
@@ -42,7 +42,7 @@ app.post('/', async (context) => {
     return context.json({ error: 'invalid domain or project' }, 400);
   }
   const normalized = normalizeEmailDomain(domain);
-  const signature = context.req.header('x-void-internal');
+  const signature = context.req.header('x-nosam-internal');
   if (
     !context.env.EMAIL_SIGNING_SECRET ||
     !signature ||

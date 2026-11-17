@@ -28,19 +28,19 @@ export function inspectPackage(tarball) {
   assert(isHttpsUrl(manifest.homepage), `${manifest.name}: homepage must be an HTTPS URL`);
   assert(isHttpsUrl(manifest.bugs?.url), `${manifest.name}: bugs.url must be an HTTPS URL`);
   assert(files.has('package/LICENSE'), `${manifest.name}: missing packaged LICENSE`);
-  if (manifest.name === 'void') {
+  if (manifest.name === 'nosam') {
     for (const file of [
       'docs/guide/quickstart.md',
       'docs/reference/cli.md',
-      'skills/void/SKILL.md',
-      'skills/migrate-vite-cloudflare-to-void/SKILL.md',
+      'skills/nosam/SKILL.md',
+      'skills/migrate-vite-cloudflare-to-nosam/SKILL.md',
       'AGENTS_TEMPLATE.md',
     ]) {
-      assert(files.has(`package/${file}`), `void: missing bundled ${file}`);
+      assert(files.has(`package/${file}`), `nosam: missing bundled ${file}`);
     }
     assert(
-      ![...files].some((file) => file.startsWith('package/skills/void/docs/')),
-      'void: docs must be bundled at the package root',
+      ![...files].some((file) => file.startsWith('package/skills/nosam/docs/')),
+      'nosam: docs must be bundled at the package root',
     );
   }
   for (const field of [
@@ -93,7 +93,7 @@ export function inspectPackage(tarball) {
 /** Read-only loopback registry: local release cohort plus public npm dependencies. */
 export async function startPackedRegistry(packages) {
   const byName = new Map(packages.map((pkg) => [pkg.manifest.name, pkg]));
-  const byFile = new Map(packages.map((pkg, index) => [`/_void_tarball/${index}.tgz`, pkg]));
+  const byFile = new Map(packages.map((pkg, index) => [`/_nosam_tarball/${index}.tgz`, pkg]));
   const metadata = new Map();
   let metadataBytes = 0;
   const server = createServer(async (request, response) => {
@@ -128,11 +128,11 @@ export async function startPackedRegistry(packages) {
         return;
       }
       if (
-        name === 'void' ||
-        name.startsWith('void/') ||
-        name === 'create-void' ||
-        name.startsWith('create-void/') ||
-        name.startsWith('@void/')
+        name === 'nosam' ||
+        name.startsWith('nosam/') ||
+        name === 'create-nosam' ||
+        name.startsWith('create-nosam/') ||
+        name.startsWith('@nosam/')
       ) {
         // Never let missing local versions silently resolve to a registry release.
         response.writeHead(404).end('Package is outside the packed release cohort.');

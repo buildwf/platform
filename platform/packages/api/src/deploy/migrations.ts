@@ -86,8 +86,8 @@ export async function probeWorkerMigrationCapabilities(
 ): Promise<CapabilityProbeResult> {
   try {
     const response = await userWorker.fetch(
-      new Request('https://internal/__void/migrate/capabilities', {
-        headers: { 'x-void-internal': token },
+      new Request('https://internal/__nosam/migrate/capabilities', {
+        headers: { 'x-nosam-internal': token },
         signal: AbortSignal.timeout(10_000),
       }),
     );
@@ -145,9 +145,9 @@ export async function dispatchStableAppMigration(
   deploymentId: string,
   logger: DeployLogger,
 ): Promise<UserWorkerMigrationResult> {
-  const request = new Request('https://internal/__void/migrate/app', {
+  const request = new Request('https://internal/__nosam/migrate/app', {
     body: JSON.stringify({ attemptId, deploymentId }),
-    headers: { 'content-type': 'application/json', 'x-void-internal': token },
+    headers: { 'content-type': 'application/json', 'x-nosam-internal': token },
     method: 'POST',
     signal: AbortSignal.timeout(300_000),
   });
@@ -177,8 +177,8 @@ async function reconcileStableAppMigration(
   attemptId: string,
 ): Promise<UserWorkerMigrationResult> {
   const response = await userWorker.fetch(
-    new Request(`https://internal/__void/migrate/app/attempt/${encodeURIComponent(attemptId)}`, {
-      headers: { 'x-void-internal': token },
+    new Request(`https://internal/__nosam/migrate/app/attempt/${encodeURIComponent(attemptId)}`, {
+      headers: { 'x-nosam-internal': token },
       signal: AbortSignal.timeout(30_000),
     }),
   );
@@ -201,8 +201,8 @@ export async function dispatchStableAuthMigration(
   token: string,
 ): Promise<void> {
   const response = await userWorker.fetch(
-    new Request('https://internal/__void/migrate/auth', {
-      headers: { 'x-void-internal': token },
+    new Request('https://internal/__nosam/migrate/auth', {
+      headers: { 'x-nosam-internal': token },
       method: 'POST',
       signal: AbortSignal.timeout(300_000),
     }),

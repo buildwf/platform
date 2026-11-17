@@ -1,6 +1,6 @@
 import { posts } from '@schema';
-import { defineHandler } from 'void';
-import { db, eq } from 'void/db';
+import { defineHandler } from 'nosam';
+import { db, eq } from 'nosam/db';
 
 export const DELETE = defineHandler(async (c) => {
   const [deleted] = await db

@@ -1,5 +1,5 @@
 {
-  "name": "@voidcloud/dashboard",
+  "name": "@nosamcloud/dashboard",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -16,7 +16,7 @@
     "@astryxdesign/theme-neutral": "catalog:",
     "@eeao/core": "link:../../../eeaao/typescript/packages/core",
     "@stylexjs/stylex": "catalog:",
-    "@void/platform": "workspace:*",
+    "@nosam/platform": "workspace:*",
     "hono": "catalog:platform",
     "lucide-react": "catalog:",
     "react": "catalog:",
@@ -27,11 +27,11 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "catalog:",
-    "@voidcloud/api": "workspace:*",
+    "@nosamcloud/api": "workspace:*",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plus": "catalog:",
-    "void": "workspace:*",
+    "nosam": "workspace:*",
     "wrangler": "catalog:platform"
   }
 }

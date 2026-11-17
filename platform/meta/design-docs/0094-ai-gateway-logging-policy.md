@@ -26,7 +26,7 @@ every account to be off.
 installer creates gateways with logging on, and the platform never reads the value.
 
 The proxy applies the mode to Workers AI `run`, `toMarkdown` and provider-native
-calls, from deployed Workers and from `void dev` of a linked project. It still
+calls, from deployed Workers and from `nosam dev` of a linked project. It still
 strips every caller-supplied `collectLog`, `collectLogPayload` and `cf-aig-*` key
 first, including `sessionOptions.extraHeaders`.
 
@@ -40,7 +40,7 @@ authority.
 
 Release 1.8.0 read the policy from the API, and so from PostgreSQL, on every AI
 call, and the API refused that read unless `PLATFORM_AUTH_DATABASE_UNCACHED=true`.
-That flag is a self-hosted statement about the auth database path. Hosted Void
+That flag is a self-hosted statement about the auth database path. Hosted Nosam
 Cloud never sets it, so every hosted AI call returned 503. A setting that changes
 rarely does not belong on the per-call path.
 
@@ -84,9 +84,9 @@ plan default and loosen logging on re-upgrade. Plan limits must also be an exact
 numeric key set, and the plan publish must not wait on the usage-counter Durable
 Object calls that account reconciliation makes.
 
-Shared code lives in `@void/platform/ai-logging`
+Shared code lives in `@nosam/platform/ai-logging`
 ([source](../../../packages/platform/src/ai-logging.ts)), so the proxy, the API and
-the installer in `packages/void` use one resolver, one key name and one parser
+the installer in `packages/nosam` use one resolver, one key name and one parser
 without importing `platform/`.
 
 ## Request path
@@ -260,7 +260,7 @@ two reads.
 
 ## Installer projection
 
-[platform-ai-logging-projection.ts](../../../packages/void/src/cli/platform-ai-logging-projection.ts)
+[platform-ai-logging-projection.ts](../../../packages/nosam/src/cli/platform-ai-logging-projection.ts)
 runs on every install, upgrade and repair, twice: after the database schema is
 prepared and before the Worker upload (the new proxy may go live before the new
 API), and after the upload (to catch writes the old API made to PostgreSQL only).
@@ -288,7 +288,7 @@ plan settings fail the command before any upload.
 - Never roll the hosted API back to 1.8.x: its route returns 503 without the flag.
   Rolling only the proxy back works against the new API.
 - No new binding, variable, secret or Hyperdrive change. Native
-  `void deploy --platform cloudflare` is untouched.
+  `nosam deploy --platform cloudflare` is untouched.
 
 ## Known limits
 

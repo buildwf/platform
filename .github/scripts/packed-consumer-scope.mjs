@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url';
 const fullSuitePaths = [
   /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.node-version|\.npmrc|\.pnpmfile\.cjs|vite\.config\.[jt]s)$/,
   /^packages\/[^/]+\/(?:package\.json|(?:vite|tsdown)\.config\.[cm]?[jt]s|tsconfig[^/]*\.json)$/,
-  /^packages\/(?:create-void|react|vue|svelte|solid|md)\/(?:src|bin)\//,
-  /^packages\/void\/src\/cli\/(?:init|template|package|agents)(?:[-./])/,
+  /^packages\/(?:create-nosam|react|vue|svelte|solid|md)\/(?:src|bin)\//,
+  /^packages\/nosam\/src\/cli\/(?:init|template|package|agents)(?:[-./])/,
   /^\.github\/scripts\/(?:packed-|release-policy)/,
   /^\.github\/workflows\/(?:packed-consumers|prepublish-test|publish)\.yml$/,
 ];

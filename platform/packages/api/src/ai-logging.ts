@@ -1,4 +1,4 @@
-import type { BuiltinPlanId } from '@void/platform/plans';
+import type { BuiltinPlanId } from '@nosam/platform/plans';
 import { eq, sql, type SQL } from 'drizzle-orm';
 import {
   AI_LOGGING_CACHE_TTL_SECONDS,

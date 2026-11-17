@@ -221,7 +221,7 @@ export type SandboxManifestMeta = {
   migrations?: ReadonlyArray<SandboxMigrationMeta>;
   /** Written by the managed platform, never accepted from deployment clients. */
   runtime?: { protocol: 1 | 2 };
-  /** Managed transport implemented by the application's bundled Void runtime. */
+  /** Managed transport implemented by the application's bundled Nosam runtime. */
   controllerProtocol?: 1 | 2;
 };
 
@@ -272,7 +272,7 @@ export type DeployManifest = {
   schedules?: Array<ScheduleMeta>;
   queues?: Array<QueueMeta>;
   ssr?: boolean;
-  type?: 'void' | 'spa' | 'static';
+  type?: 'nosam' | 'spa' | 'static';
   /** @deprecated Legacy v1 static deployment discriminator. */
   static?: 'spa' | 'ssg';
   assetConfig?: AssetConfig;

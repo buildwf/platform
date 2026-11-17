@@ -1,4 +1,4 @@
-import { defineEmail } from 'void/email';
+import { defineEmail } from 'nosam/email';
 
 /**
  * Fallback for any inbound message that doesn't match a per-address handler.

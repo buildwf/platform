@@ -71,7 +71,7 @@ describe('platform application addressing', () => {
     expect(parsePlatformDeploymentManifest(manifest)).toEqual(manifest);
     expect(createApplicationRoutes(application)).toEqual([]);
     expect(platformProjectHostname(project, application)).toBe(
-      'void-123456abcdef-kitchen-sink-123456abcdef.my-account.workers.dev',
+      'nosam-123456abcdef-kitchen-sink-123456abcdef.my-account.workers.dev',
     );
     expect(
       platformProjectIngressName({ ...project, slug: 'a'.repeat(63) }, workersDev).length,

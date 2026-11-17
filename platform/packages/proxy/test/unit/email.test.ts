@@ -23,7 +23,7 @@ const { clearProxyTokenStateCache } = await import('../../src/proxy-token.ts');
 // `mimeBase64` a tenant posts — so the proxy's From pin is checked against
 // every `From:` shape it really renders, not against hand-typed lookalikes.
 const { buildMime, normalizeEmail } =
-  await import('../../../../../packages/void/src/runtime/email/mime.ts');
+  await import('../../../../../packages/nosam/src/runtime/email/mime.ts');
 
 const JWT_SECRET = 'test-secret-key';
 const EMAIL_SIGNING_SECRET = 'test-email-signing-key-independent';
@@ -424,7 +424,7 @@ describe('POST /email/send — platform capability', () => {
     expect(await res.json()).toEqual({
       error: 'platform capability unavailable',
       capability: 'email',
-      message: 'This Void platform does not enable email.',
+      message: 'This Nosam platform does not enable email.',
     });
     expect((env.SEND_EMAIL as { send: ReturnType<typeof vi.fn> }).send).not.toHaveBeenCalled();
     expect(nonAuthKvReads(kv)).toEqual([]);

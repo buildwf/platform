@@ -57,7 +57,7 @@ import { authMiddleware } from '../middleware/auth.ts';
 import { users } from '../schema.ts';
 import { isSignupAllowed, getAllowlist } from '../signup-allowlist.ts';
 
-const DEFAULT_REDIRECT_URI = 'https://api.void.cloud/auth/callback';
+const DEFAULT_REDIRECT_URI = 'https://void-nosam-api.buildwithfriends.workers.dev/auth/callback';
 const DASHBOARD_AUTH_CODE_TTL_SECONDS = 5 * 60;
 const CLI_AUTH_CODE_TTL_SECONDS = 5 * 60;
 
@@ -432,7 +432,7 @@ app.get('/callback', async (context) => {
       }
       if (resolvedProvider === 'github') {
         // Enforce RFC 0074's one-github-identity-per-account invariant on the login
-        // path too (Vercel model: a Void account has a single GitHub login identity;
+        // path too (Vercel model: a Nosam account has a single GitHub login identity;
         // extra repo access is via installations, not a second identity). `providerId`
         // is guaranteed NOT yet an oauth row (the getUserByOAuthAccount branch above
         // handled that), so linkGitHubIdentity either links it (existing had no github)

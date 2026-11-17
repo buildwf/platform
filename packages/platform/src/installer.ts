@@ -315,7 +315,7 @@ export function resolvePlatformRuntime(
     }
   } catch (error) {
     throw new Error(
-      `Void Platform runtime directory is unavailable at ${requestedDirectory}: ${error instanceof Error ? error.message : String(error)}`,
+      `Nosam Platform runtime directory is unavailable at ${requestedDirectory}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
   const { contents, manifest } = readRuntimeManifestFile(join(directory, 'manifest.json'));
@@ -339,7 +339,7 @@ function readRuntimeManifestFile(path: string): {
     };
   } catch (error) {
     throw new Error(
-      `Void Platform deployment artifacts are missing or invalid at ${path}: ${error instanceof Error ? error.message : String(error)}`,
+      `Nosam Platform deployment artifacts are missing or invalid at ${path}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }

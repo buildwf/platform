@@ -1,16 +1,16 @@
-/** A concrete destination that can execute a Void deployment. */
-export type DeployTarget = 'cloudflare' | 'void';
+/** A concrete destination that can execute a Nosam deployment. */
+export type DeployTarget = 'cloudflare' | 'nosam';
 
-export type DeployAppType = 'void' | 'spa' | 'static';
+export type DeployAppType = 'nosam' | 'spa' | 'static';
 
 /**
- * @deprecated Void does not read deploy target capabilities. Removed in the
+ * @deprecated Nosam does not read deploy target capabilities. Removed in the
  * next major version.
  */
 export type DeployCapabilitySupport = 'supported' | 'partial' | 'unsupported';
 
 /**
- * @deprecated Void does not read deploy target capabilities. They do not gate
+ * @deprecated Nosam does not read deploy target capabilities. They do not gate
  * deploys or appear in diagnostics. Removed in the next major version.
  */
 export type DeployTargetCapabilities = {
@@ -42,7 +42,7 @@ export type DeployTargetCapabilities = {
  */
 export type DeployTargetAdapter<TOptions, TContext> = {
   readonly target: DeployTarget;
-  /** @deprecated Void ignores this field. Removed in the next major version. */
+  /** @deprecated Nosam ignores this field. Removed in the next major version. */
   readonly capabilities: DeployTargetCapabilities;
   deploy(root: string, options: TOptions, context: TContext): Promise<void>;
 };

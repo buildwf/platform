@@ -1,6 +1,6 @@
 import { minLength, pipe } from 'valibot';
-import { createInsertSchema } from 'void/drizzle-valibot';
-import { pgTable, serial, integer, text, boolean, timestamp } from 'void/schema-pg';
+import { createInsertSchema } from 'nosam/drizzle-valibot';
+import { pgTable, serial, integer, text, boolean, timestamp } from 'nosam/schema-pg';
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),

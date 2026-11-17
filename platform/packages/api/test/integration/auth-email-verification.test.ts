@@ -363,7 +363,7 @@ describe('email verification gating on account linking', () => {
       expect.objectContaining({
         from: 'Example Platform <platform@example.com>',
         subject: 'Welcome to Example Platform',
-        text: expect.stringContaining("void connect 'api.example.com'"),
+        text: expect.stringContaining("nosam connect 'api.example.com'"),
       }),
     );
   });
@@ -780,7 +780,7 @@ describe('email verification gating on account linking', () => {
     // has fully committed before the auto-add gets its answer.
     const emailEnv = () => ({
       ...env,
-      EMAIL_GATEWAY_ORIGIN: 'https://void-email-gateway-staging.voidzer0.workers.dev',
+      EMAIL_GATEWAY_ORIGIN: 'https://nosam-email-gateway-staging.voidzer0.workers.dev',
       EMAIL_SENDER_DOMAIN: 'mail.voidcloud.dev',
     });
 

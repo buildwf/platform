@@ -389,7 +389,7 @@ describe('Zero Trust recovery', () => {
         JSON.parse(String(init.body)).domain === '*.apps.example.com'
       ) {
         loseWildcardCreate = false;
-        // The provider committed the replacement, but Void never received its ID.
+        // The provider committed the replacement, but Nosam never received its ID.
         return providerError('Gateway timeout', 504);
       }
       return response;
@@ -450,7 +450,7 @@ describe('Zero Trust recovery', () => {
         JSON.parse(String(init.body)).domain === '*.apps.example.com'
       ) {
         oldTokenRevoked = true;
-        // The provider committed the app, but Void never received its ID.
+        // The provider committed the app, but Nosam never received its ID.
         return providerError('Authentication error', 403);
       }
       return response;
@@ -894,7 +894,7 @@ describe('Zero Trust recovery', () => {
         // A prior API version could create and checkpoint a public exception
         // while wildcard teardown was failed. Preserve this reachable upgrade
         // state to prove finalization revisits outstanding cleanup handles.
-        const bypassName = 'void-late-disable-public-checkpoint';
+        const bypassName = 'nosam-late-disable-public-checkpoint';
         cloudflare.applications.set('late-bypass', {
           id: 'late-bypass',
           name: bypassName,

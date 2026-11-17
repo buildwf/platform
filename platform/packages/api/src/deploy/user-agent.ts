@@ -7,5 +7,5 @@ export function platformAppUploadUserAgent(
   const version = env.PLATFORM_VERSION || 'hosted';
   const installationId =
     env.PLATFORM_INSTALLATION_ID || `hosted-${env.PLATFORM_ENV || 'production'}`;
-  return `void-platform/${encodeURIComponent(version)} void-installation/${encodeURIComponent(installationId)}`;
+  return `nosam-platform/${encodeURIComponent(version)} nosam-installation/${encodeURIComponent(installationId)}`;
 }

@@ -1,6 +1,6 @@
 import { Container } from '@cloudflare/containers';
 import { Terminal } from '@xterm/headless';
-import voidPackageJson from '../../../../packages/void/package.json' with { type: 'json' };
+import nosamPackageJson from '../../../../packages/nosam/package.json' with { type: 'json' };
 import {
   DEPLOY_TOKEN_HARD_MAX_MINUTES,
   deployTokenTtlSecondsForBuildMinutes,
@@ -25,7 +25,7 @@ import {
 import type { ApiEnv } from './env.ts';
 import {
   type CheckRunConclusion,
-  VOID_BUILD_CHECK_RUN_NAME,
+  NOSAM_BUILD_CHECK_RUN_NAME,
   completeCheckRun,
   createCheckRun,
 } from './github/check-run.ts';
@@ -176,7 +176,7 @@ export const LOG_TERMINAL_DRAIN_RETRY_WINDOW_MS = 7000;
 // agent cannot report a terminal status by design (`handleStatus` rejects them). So
 // an `enforceTimeout` that comes due INSIDE that barrier wins its CAS and overwrites
 // a successful, already-live deploy with `failed` / 'build timed out', completing the
-// check run as a failure with `void deploy exited with code 0` sitting in its own log
+// check run as a failure with `nosam deploy exited with code 0` sitting in its own log
 // tail. Routing KV and the `deployments` row are already committed by then and are
 // never rolled back, so the deployment stays live — only the report is wrong, which
 // is worse than it sounds for anyone reading it.
@@ -264,8 +264,8 @@ export function withDeadline<T>(work: Promise<T>, ms: number, reason: string): P
 }
 
 // Bundled from the release's SDK manifest. Used only when the application has
-// no local Void dependency; never resolve the moving npm "latest" channel.
-export const PINNED_VOID_CLI_VERSION = voidPackageJson.version;
+// no local Nosam dependency; never resolve the moving npm "latest" channel.
+export const PINNED_NOSAM_CLI_VERSION = nosamPackageJson.version;
 
 // Ceiling on how long a queued build may wait for the just-in-time branch-head
 // freshness recheck to succeed. While the GitHub compare API is unreachable
@@ -1163,8 +1163,8 @@ type ContainerPortSurface = {
  * enforces a wall-clock timeout, and writes every status transition back to
  * Postgres via Hyperdrive.
  *
- * The container runs the real `void deploy` CLI (see container/build-agent.mjs) with a
- * short-lived project-scoped `VOID_TOKEN`, so the platform's deploy endpoint is
+ * The container runs the real `nosam deploy` CLI (see container/build-agent.mjs) with a
+ * short-lived project-scoped `NOSAM_TOKEN`, so the platform's deploy endpoint is
  * unchanged. This DO never dispatches to user workers — DO→container,
  * DO→Hyperdrive, and DO→`api.github.com` are all allowed here.
  */
@@ -1437,7 +1437,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
     // The catch also covers the step AFTER a successful `this.start()` (arming
     // the timeout schedule). That runs before onStop's reaper is reliably
     // wired, so a throw there would mark the row failed +
-    // free the slot while the container keeps running the real `void deploy`
+    // free the slot while the container keeps running the real `nosam deploy`
     // CLI with a live token — publishing a deployment for a build Postgres calls
     // `failed`. Track whether start() succeeded so the catch can best-effort
     // stop() the container before finalizing. A pre-start throw (token mint)
@@ -1448,7 +1448,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
       // The push webhook checks freshness at ENQUEUE, but a missed/delayed
       // newer-push webhook can leave a stale queued build that the scheduler runs
       // and publishes. Mirror the OIDC path's gate: prove the commit is still the
-      // branch head before minting VOID_TOKEN. `getBranchHeadComparisonStatus`
+      // branch head before minting NOSAM_TOKEN. `getBranchHeadComparisonStatus`
       // returns null (never throws) on API failure, so a transient outage drives
       // the requeue/age-fail path below rather than the catch's fail.
       const headComparison = await getBranchHeadComparisonStatus(
@@ -1556,7 +1556,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
       //       WITHOUT terminalizing, the scheduler re-queues, and startBuild re-runs
       //       on the SAME DO. We reuse the id from DO storage, or — if that best-effort
       //       cache write was lost — from the persisted `builds.check_run_id` on the
-      //       `row` already read above, so a requeue never POSTs a SECOND `Void Build`
+      //       `row` already read above, so a requeue never POSTs a SECOND `Nosam Build`
       //       run (which would orphan the first one `in_progress`).
       //   (b) SHA guard — config.commitSha is `build.commit_sha ?? ''`; a check-run
       //       POST with head_sha:'' is a guaranteed GitHub 422, so skip creation when
@@ -1571,11 +1571,11 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
         null;
       if (!checkRunId && config.commitSha) {
         checkRunId = await createCheckRun(this.env, config.installationId, config.repoFullName, {
-          name: VOID_BUILD_CHECK_RUN_NAME,
+          name: NOSAM_BUILD_CHECK_RUN_NAME,
           headSha: config.commitSha,
           externalId: config.buildId,
           detailsUrl: this.projectUrl(config),
-          title: 'Void build in progress',
+          title: 'Nosam build in progress',
           summary: `Building \`${config.branch}\` @ ${config.commitSha.slice(0, 7)}`,
         });
         if (checkRunId) {
@@ -1635,7 +1635,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
       // flow, so it relies on the service-token pair being forwarded (below). If
       // staging is missing EITHER secret, the build would otherwise run all the
       // way through download/install/build and only fail at the Access edge when
-      // `void deploy` calls the API — a confusing late failure that wastes a
+      // `nosam deploy` calls the API — a confusing late failure that wastes a
       // container slot. Reject up front as a build failure with a clear message;
       // the catch finalizes it (failed + pokeScheduler) so the slot frees. The
       // pair is all-or-nothing: a half-configured pair is as broken as none.
@@ -1656,7 +1656,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
       // max so even an "unlimited" custom plan can't mint an unbounded-life
       // token, then padded with a fixed margin so the token outlives the build.
       const ttlSeconds = deployTokenTtlSecondsForBuildMinutes(config.timeoutMinutes);
-      const voidToken = await signDeployToken(
+      const nosamToken = await signDeployToken(
         {
           projectId: config.projectId,
           userId: config.userId,
@@ -1691,12 +1691,12 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
         return;
       }
       const sourceTarballUrl = generateSourceTarballUrl(config.repoFullName, config.commitSha);
-      const voidApiUrl =
+      const nosamApiUrl =
         this.env.PLATFORM_ENV === 'staging'
           ? 'https://api.staging.void.cloud'
-          : 'https://api.void.cloud';
+          : 'https://void-nosam-api.buildwithfriends.workers.dev';
 
-      // Staging API hosts sit behind CF Access; the `void deploy` child can't do
+      // Staging API hosts sit behind CF Access; the `nosam deploy` child can't do
       // the interactive `cloudflared` flow (no TTY/binary in the container), so
       // forward the staging service-token pair under the names the CLI reads
       // (`CF_ACCESS_CLIENT_ID`/`SECRET`). Production isn't Access-gated, so this
@@ -1735,14 +1735,14 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
         PROJECT_SLUG: config.projectSlug,
         SOURCE_TARBALL_URL: sourceTarballUrl,
         SOURCE_TOKEN: sourceToken,
-        VOID_TOKEN: voidToken,
-        VOID_API_URL: voidApiUrl,
-        ...(this.env.PROXY_URL ? { VOID_PROXY_URL: this.env.PROXY_URL } : {}),
-        VOID_PROJECT: config.projectSlug,
-        VOID_CLI_VERSION: PINNED_VOID_CLI_VERSION,
+        NOSAM_TOKEN: nosamToken,
+        NOSAM_API_URL: nosamApiUrl,
+        ...(this.env.PROXY_URL ? { NOSAM_PROXY_URL: this.env.PROXY_URL } : {}),
+        NOSAM_PROJECT: config.projectSlug,
+        NOSAM_CLI_VERSION: PINNED_NOSAM_CLI_VERSION,
         DO_LOG_URL: 'https://manager/logs',
         AGENT_TOKEN: agentToken,
-        // Commit/source metadata for `void deploy`. The extracted tarball has no
+        // Commit/source metadata for `nosam deploy`. The extracted tarball has no
         // `.git`, so the CLI's `getGitCommit` would record a NULL commit — leaving
         // the deployment unlinked (onStop's getDeploymentByProjectAndCommit can't
         // match) and breaking same-SHA redelivery dedup. The CLI reads GITHUB_SHA
@@ -1765,7 +1765,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
       // AFTER the container is already live. If the marker only flipped on the
       // line after a resolved start(), that onStart-reject would be treated as a
       // pre-launch failure and the catch would skip teardown, leaving the
-      // container running the real `void deploy` CLI with a live token while
+      // container running the real `nosam deploy` CLI with a live token while
       // Postgres records the build `failed` — pinning a global fleet slot until
       // the idle net. A genuine pre-launch throw still can't stop a non-existent
       // container: the capacity error originates in `startContainerIfNotRunning`
@@ -1854,7 +1854,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
       // the container down. If the container already launched, a throw here (the
       // onStart-reject inside start(), or schedule arming) must force it down
       // before we finalize as failed — otherwise it keeps running the real
-      // `void deploy` CLI with a live token while Postgres says `failed`, pinning
+      // `nosam deploy` CLI with a live token while Postgres says `failed`, pinning
       // a fleet slot until the idle net. `forceStopContainer` SIGTERMs THEN
       // SIGKILLs (idempotent / TERMINAL-safe) so a SIGTERM-ignoring build agent
       // can't outlive the failure; `stop()` alone is SIGTERM-only. Best-effort so
@@ -1877,7 +1877,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
       // even though this manager has already decided startup failed. The write is
       // captured rather than awaited inline so it still cannot GATE the teardown —
       // rethrown below only after forceStopContainer and pokeScheduler, or a
-      // Hyperdrive blip would leave the container running the real `void deploy`
+      // Hyperdrive blip would leave the container running the real `nosam deploy`
       // CLI with a live token while Postgres says `failed`, pinning a fleet slot
       // until the idle net. `revokeBuildRow`, not the bare helper: a write that
       // PENDS never reaches the catch at all, and putting Postgres in front of the
@@ -1946,7 +1946,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
           if (won) {
             await this.finalizeCheckRun(config, 'failure', {
               detailsUrl: this.projectUrl(config),
-              title: 'Void build failed',
+              title: 'Nosam build failed',
               summary: message,
             });
           } else {
@@ -2085,7 +2085,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
       conclusion as CheckRunConclusion,
       {
         detailsUrl: this.projectUrl(config),
-        title: `Void build ${conclusion === 'success' ? 'succeeded' : conclusion}`,
+        title: `Nosam build ${conclusion === 'success' ? 'succeeded' : conclusion}`,
         summary: `Build ${status}.`,
       },
       explicitId,
@@ -2321,7 +2321,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
       try {
         // The deployment link is BEST-EFFORT and must run inside this try. The
         // lookup is a Hyperdrive/Postgres read that can throw on a transient
-        // error AFTER `void deploy` already exited 0; if it threw outside the
+        // error AFTER `nosam deploy` already exited 0; if it threw outside the
         // try, `onStop` would reject before `setStatus` and the
         // `finally`, leaving the build row ACTIVE with no scheduler poke — the
         // deploy live but the concurrency slot pinned until the 75m idle reaper.
@@ -2356,7 +2356,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
         if (won) {
           await this.finalizeCheckRun(config, 'success', {
             detailsUrl: this.projectUrl(config),
-            title: 'Void build succeeded',
+            title: 'Nosam build succeeded',
             summary: deploymentId ? 'Deployment is live.' : 'Build complete.',
           });
         } else {
@@ -2384,7 +2384,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
           // investigations, and the check run is the only surface most people see.
           await this.finalizeCheckRun(config, 'failure', {
             detailsUrl: this.projectUrl(config),
-            title: 'Void build failed',
+            title: 'Nosam build failed',
             summary: `Build exited with code ${params.exitCode} (${params.reason}).`,
           });
         } else {
@@ -2428,7 +2428,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
       // CHECK_RUN_LOG_TAIL_LINES rows and this is the ONE terminalizer that does not
       // force-stop — so nothing else has pulled. `pollLogs`' terminal branch does
       // pull, but up to POLL_SECONDS later, i.e. after the check run is already
-      // completed: its tail then reaches `void build logs` and the live tail while
+      // completed: its tail then reaches `nosam build logs` and the live tail while
       // being permanently absent from the check run a reader actually opens.
       // Deliberately no stop() here — an errored container is left to the base class,
       // and adding a kill would change onError's contract.
@@ -2440,7 +2440,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
         if (won) {
           await this.finalizeCheckRun(config, 'failure', {
             detailsUrl: this.projectUrl(config),
-            title: 'Void build failed',
+            title: 'Nosam build failed',
             summary: message,
           });
         } else {
@@ -2652,7 +2652,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
 
     // AFTER the drain AND a successful signal so it reads as the truthful last
     // line of the build's output. Ingested through the same sink as pulled lines,
-    // so it reaches the live WS tail, `void build logs`, and the check-run tail.
+    // so it reaches the live WS tail, `nosam build logs`, and the check-run tail.
     // Best-effort like everything else on this path: a SQLite/broadcast throw
     // must never affect teardown or strand a pinned fleet slot.
     //
@@ -2791,7 +2791,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
     // as long as the row is in ACTIVE_BUILD_STATUSES, and `routes/deploy.ts`
     // re-checks the same set inside its go-live transaction. `forceStopContainer`
     // spends up to 2x LOG_DRAIN_BUDGET_MS draining logs before it even signals,
-    // and every millisecond of that is a window in which a `void deploy` sitting at
+    // and every millisecond of that is a window in which a `nosam deploy` sitting at
     // its go-live step can still publish — writing routing KV, committing the
     // deployment 'live' — only to be recorded `failed`/'build timed out' immediately
     // after. Revoking first collapses that: the deploy's own re-check then fails and
@@ -2843,7 +2843,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
         if (terminal.won) {
           await this.finalizeCheckRun(config, 'failure', {
             detailsUrl: this.projectUrl(config),
-            title: 'Void build failed',
+            title: 'Nosam build failed',
             summary: 'build timed out',
           });
         } else {
@@ -2913,7 +2913,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
     // Revoke in Postgres BEFORE the teardown, for the same reason as
     // `enforceTimeout`: `builds.status` is the deploy token's authority, and
     // `forceStopContainer` drains logs for up to 2x LOG_DRAIN_BUDGET_MS before it
-    // signals — a window in which a superseded `void deploy` at its go-live step
+    // signals — a window in which a superseded `nosam deploy` at its go-live step
     // would still pass both `middleware/auth.ts` and the go-live transaction's
     // re-check and publish stale code.
     //
@@ -3016,7 +3016,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
         if (terminal.won) {
           await this.finalizeCheckRun(terminal.config, 'cancelled', {
             detailsUrl: this.projectUrl(terminal.config),
-            title: 'Void build cancelled',
+            title: 'Nosam build cancelled',
             summary: reason,
           });
         } else {

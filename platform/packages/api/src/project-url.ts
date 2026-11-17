@@ -2,7 +2,7 @@ import {
   platformProjectHostname,
   readPlatformApplication,
   type PlatformApplicationProject,
-} from '@void/platform';
+} from '@nosam/platform';
 import type { ApiEnv } from './env.ts';
 
 export function projectUrl(project: PlatformApplicationProject, env: ApiEnv['Bindings']): string {

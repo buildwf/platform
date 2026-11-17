@@ -1,5 +1,5 @@
 {
-  "extends": "./.void/tsconfig.json",
+  "extends": "./.nosam/tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
     "module": "NodeNext",
@@ -9,7 +9,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "types": ["void/env"],
+    "types": ["nosam/env"],
     "allowImportingTsExtensions": true
   },
   "include": ["src", "routes", "middleware", "crons", "queues", "lib", "email", "db"]

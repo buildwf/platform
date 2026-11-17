@@ -1,4 +1,4 @@
-import { isRecord } from '@void/deploy-core';
+import { isRecord } from '@nosam/deploy-core';
 import { clientSchema, dataView, memo, type EntityOf } from 'react-fate';
 import { createFateClient } from './client.generated.ts';
 import type {

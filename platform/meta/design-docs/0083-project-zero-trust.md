@@ -22,10 +22,10 @@ written under version 1 unreadable, so they render once after upgrade.
 
 ## Resources and credentials
 
-Void owns only applications recorded in PostgreSQL by ID or by a name committed
+Nosam owns only applications recorded in PostgreSQL by ID or by a name committed
 before the create request (names carry a random nonce, so recovery never adopts
 a pre-existing application). When a recorded ID is gone, the single application
-holding its name is Void's own replacement and is adopted:
+holding its name is Nosam's own replacement and is adopted:
 
 - one wildcard application for the project domain and workers.dev project
   origins (limited to the installation's ingress prefix);
@@ -182,7 +182,7 @@ wildcard) runs in configure and reconcile, and only on request for status
 Cloudflare.
 
 Project deletion removes its Access applications after retryable cleanup and
-before the database cascade. Uninstall does not remove Void-managed Access
+before the database cascade. Uninstall does not remove Nosam-managed Access
 applications; administrators disable first. Uninstall turns off the API that
 can remove them, so before any change, and in `--plan`, the CLI reads
 `zeroTrust.configuration` and `project_zero_trust` straight from PostgreSQL and
@@ -212,4 +212,4 @@ idempotent and the cascade drops the row.
 
 Code: `platform/packages/api/src/zero-trust/` (`installation`, `operation`,
 `project`, `routing`, `maintenance`, `status`, `lock`, `state`); the uninstall
-check is `packages/void/src/cli/platform-zero-trust-uninstall.ts`.
+check is `packages/nosam/src/cli/platform-zero-trust-uninstall.ts`.

@@ -32,7 +32,7 @@ import { presignAssetPut } from '../r2-presign.ts';
 import { listR2Objects, type WorkerModule } from '../worker-upload.ts';
 import { requireProjectRouteCapability } from './project-access.ts';
 
-export { MAX_ROUTING_RULES, validateManifestShape } from '@void/deploy-core';
+export { MAX_ROUTING_RULES, validateManifestShape } from '@nosam/deploy-core';
 
 export async function executeQueuedDeployment(
   env: ApiEnv['Bindings'],
@@ -127,7 +127,7 @@ export async function executeQueuedDeployment(
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        ...(operation.cli_version ? { 'x-void-cli-version': operation.cli_version } : {}),
+        ...(operation.cli_version ? { 'x-nosam-cli-version': operation.cli_version } : {}),
       },
       body: JSON.stringify(operation.payload.body),
     }),

@@ -1,7 +1,7 @@
 {
   // Optional source-runtime component. It is deliberately absent from the core
   // platform installer and from platform/package.json's aggregate deploy tasks.
-  "name": "void-github-webhook-ingress",
+  "name": "nosam-github-webhook-ingress",
   "main": "src/github-webhook-ingress.ts",
   "compatibility_date": "2026-02-12",
   "workers_dev": true,
@@ -9,19 +9,19 @@
   "observability": {
     "enabled": true,
   },
-  "services": [{ "binding": "API", "service": "void-api" }],
+  "services": [{ "binding": "API", "service": "nosam-api" }],
   "env": {
     "production": {
-      "name": "void-github-webhook-ingress",
+      "name": "nosam-github-webhook-ingress",
       "workers_dev": true,
       "preview_urls": false,
-      "services": [{ "binding": "API", "service": "void-api" }],
+      "services": [{ "binding": "API", "service": "nosam-api" }],
     },
     "staging": {
-      "name": "void-github-webhook-ingress-staging",
+      "name": "nosam-github-webhook-ingress-staging",
       "workers_dev": true,
       "preview_urls": false,
-      "services": [{ "binding": "API", "service": "void-api-staging" }],
+      "services": [{ "binding": "API", "service": "nosam-api-staging" }],
     },
   },
 }

@@ -1,7 +1,7 @@
 import {
   platformAuthenticationRecoveryMessage,
   type PlatformAuthenticationRecovery,
-} from '@void/platform';
+} from '@nosam/platform';
 import { eq } from 'drizzle-orm';
 import type { Db } from '../db.ts';
 import type { ApiEnv } from '../env.ts';

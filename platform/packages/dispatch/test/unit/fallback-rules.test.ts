@@ -28,7 +28,7 @@ type StaticRoutingEntry = {
   staticDeploymentId: string;
   projectId: string;
   userId?: string;
-  type?: 'void' | 'spa' | 'static' | 'framework';
+  type?: 'nosam' | 'spa' | 'static' | 'framework';
   assetConfig?: AssetConfig;
   version?: string;
   redirectRules?: Array<{ source: string; destination: string; status: number }>;
@@ -38,7 +38,7 @@ type StaticRoutingEntry = {
 type WorkerRoutingEntry = {
   workerName: string;
   projectId: string;
-  type?: 'void' | 'spa' | 'static' | 'framework';
+  type?: 'nosam' | 'spa' | 'static' | 'framework';
   ssr?: boolean;
   revalidate?: number | Record<string, number>;
   version?: string;
@@ -275,7 +275,7 @@ describe('redirectRules entries (pre-asset phase)', () => {
         projectId: 'proj_1',
         assetConfig: { not_found_handling: 'none', html_handling: 'none' },
         // Status-200 entries in redirectRules come from `routing.rewrites` in
-        // void.json or `200!` in _redirects. Pre-asset phase is implicit in the
+        // nosam.json or `200!` in _redirects. Pre-asset phase is implicit in the
         // list identity — dispatch does not inspect any flag on the rule.
         redirectRules: [{ source: '/legacy/*', destination: '/new.html', status: 200 }],
       },
@@ -530,12 +530,12 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
     expect(new URL((workerFetch.mock.calls[1]![0] as Request).url).pathname).toBe('/index.html');
   });
 
-  it('does not re-dispatch Void app handler 404s without the generated no-match marker', async () => {
+  it('does not re-dispatch Nosam app handler 404s without the generated no-match marker', async () => {
     const { env, workerFetch } = createWorkerEnv({
       routing: {
-        workerName: 'void-worker',
+        workerName: 'nosam-worker',
         projectId: 'proj_1',
-        type: 'void',
+        type: 'nosam',
         fallbackRules: [{ source: '/*', destination: '/index.html', status: 200 }],
       },
       workerHandler: () => new Response('intentional missing', { status: 404 }),
@@ -550,15 +550,15 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
     expect(res.status).toBe(404);
     expect(await res.text()).toBe('intentional missing');
     expect(workerFetch).toHaveBeenCalledTimes(1);
-    expect(res.headers.get('X-Void-No-Match')).toBeNull();
+    expect(res.headers.get('X-Nosam-No-Match')).toBeNull();
   });
 
-  it('re-dispatches Void app generated no-match 404s', async () => {
+  it('re-dispatches Nosam app generated no-match 404s', async () => {
     const { env, workerFetch } = createWorkerEnv({
       routing: {
-        workerName: 'void-worker',
+        workerName: 'nosam-worker',
         projectId: 'proj_1',
-        type: 'void',
+        type: 'nosam',
         fallbackRules: [{ source: '/*', destination: '/index.html', status: 200 }],
       },
       workerHandler: (req) => {
@@ -570,7 +570,7 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
         }
         return new Response('not found', {
           status: 404,
-          headers: { 'X-Void-No-Match': '1' },
+          headers: { 'X-Nosam-No-Match': '1' },
         });
       },
     });
@@ -584,7 +584,7 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
     expect(res.status).toBe(200);
     expect(await res.text()).toBe('<html>spa</html>');
     expect(workerFetch).toHaveBeenCalledTimes(2);
-    expect(res.headers.get('X-Void-No-Match')).toBeNull();
+    expect(res.headers.get('X-Nosam-No-Match')).toBeNull();
   });
 
   it('preserves the request body across worker fallback re-dispatch on POST', async () => {
@@ -597,9 +597,9 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
     const seenBodies: Array<string> = [];
     const { env, workerFetch } = createWorkerEnv({
       routing: {
-        workerName: 'void-worker',
+        workerName: 'nosam-worker',
         projectId: 'proj_1',
-        type: 'void',
+        type: 'nosam',
         fallbackRules: [{ source: '/api/missing', destination: '/api/handler', status: 200 }],
       },
       workerHandler: async (req) => {
@@ -611,7 +611,7 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
         }
         return new Response('not found', {
           status: 404,
-          headers: { 'X-Void-No-Match': '1' },
+          headers: { 'X-Nosam-No-Match': '1' },
         });
       },
     });

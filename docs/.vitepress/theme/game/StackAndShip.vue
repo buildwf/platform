@@ -26,7 +26,7 @@ const layers = computed(() => game.value.tiles.length - 1);
 const shareUrl = computed(
   () =>
     `https://x.com/intent/tweet?${new URLSearchParams({
-      text: `I shipped a stack with ${layers.value} ${layers.value === 1 ? 'layer' : 'layers'}. Deploy Vite apps with Void. Check out void.cloud`,
+      text: `I shipped a stack with ${layers.value} ${layers.value === 1 ? 'layer' : 'layers'}. Deploy Vite apps with Nosam. Check out void.cloud`,
     })}`,
 );
 const framework = computed(() => frameworks[game.value.moving?.framework ?? 0]?.name);
@@ -41,7 +41,7 @@ const originY = computed(
     (top.value.x + top.value.width / 2 + top.value.z + top.value.depth / 2) * 0.36,
 );
 const visibleTiles = computed(() => game.value.tiles.slice(-20));
-const STORAGE_KEY = 'void:stack-and-ship:best';
+const STORAGE_KEY = 'nosam:stack-and-ship:best';
 let frame = 0;
 let lastFrame = 0;
 let droppedAt = -Infinity;

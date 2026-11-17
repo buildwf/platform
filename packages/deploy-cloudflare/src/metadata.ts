@@ -1,4 +1,4 @@
-import { isRecord } from '@void/deploy-core';
+import { isRecord } from '@nosam/deploy-core';
 import type { CloudflareCommandRunner } from './execute.ts';
 
 /**

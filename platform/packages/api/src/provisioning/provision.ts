@@ -1,4 +1,4 @@
-import { createDeployIntent, isR2LocationHint, type R2LocationHint } from '@void/deploy-core';
+import { createDeployIntent, isR2LocationHint, type R2LocationHint } from '@nosam/deploy-core';
 import { getProjectResources, createResource, type Db } from '../db.ts';
 import { getProjectQueueName } from '../naming.ts';
 import type { DeployManifest, Resource } from '../types.ts';
@@ -44,9 +44,9 @@ export async function provisionBindings(
    * transposed pair would provision against the wrong project silently.
    */
   platform: {
-    /** Project slug. Framework reads it as `__VOID_PROJECT_SLUG`. */
+    /** Project slug. Framework reads it as `__NOSAM_PROJECT_SLUG`. */
     projectSlug: string;
-    /** Token the Worker presents to the proxy. Framework reads it as `__VOID_PROXY_TOKEN`. */
+    /** Token the Worker presents to the proxy. Framework reads it as `__NOSAM_PROXY_TOKEN`. */
     proxyToken: string;
     /** Immutable deployment identity for signed inbound email receipts. */
     deploymentId?: string;
@@ -60,7 +60,7 @@ export async function provisionBindings(
      * Optional so a deployment environment with email unconfigured still
      * deploys. When absent the binding is omitted entirely rather than
      * injected empty — the framework's `sendEmail`/`replyEmail` then fail
-     * naming `__VOID_EMAIL_DOMAIN`, which is a far better error than a
+     * naming `__NOSAM_EMAIL_DOMAIN`, which is a far better error than a
      * malformed `slug+noreply@` the proxy rejects for a different reason.
      */
     emailSenderDomain?: string;
@@ -154,7 +154,7 @@ export async function provisionBindings(
         );
         if (!found) {
           throw new Error(
-            `Hyperdrive not provisioned for binding "${resource.bindingName}". Run \`void db set-url\` first.`,
+            `Hyperdrive not provisioned for binding "${resource.bindingName}". Run \`nosam db set-url\` first.`,
           );
         }
         tasks.push(
@@ -176,29 +176,29 @@ export async function provisionBindings(
   // Always inject proxy bindings — used by AI, revalidation, email, and future
   // platform features. The AI-specific usage limit check stays in the proxy
   // (/ai/* middleware).
-  bindings.push({ type: 'service', name: '__VOID_PROXY', service: aiProxyService });
+  bindings.push({ type: 'service', name: '__NOSAM_PROXY', service: aiProxyService });
   bindings.push({ type: 'plain_text', name: '__PROJECT_ID', text: projectId });
-  bindings.push({ type: 'plain_text', name: '__VOID_PROXY_TOKEN', text: platform.proxyToken });
-  // Project slug — the SINGLE producer of `__VOID_PROJECT_SLUG`. `void/email`
+  bindings.push({ type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: platform.proxyToken });
+  // Project slug — the SINGLE producer of `__NOSAM_PROJECT_SLUG`. `nosam/email`
   // needs it on every worker to default an outbound `from` to
   // `<slug>+noreply@<domain>`, and the sandbox runtime reads the same name.
   // Emitted after the user's vars in the upload array, so it cannot be
   // shadowed — see `reserved-bindings.ts`.
-  bindings.push({ type: 'plain_text', name: '__VOID_PROJECT_SLUG', text: platform.projectSlug });
+  bindings.push({ type: 'plain_text', name: '__NOSAM_PROJECT_SLUG', text: platform.projectSlug });
   if (manifest.emailProtocolVersion === 1) {
     if (!platform.deploymentId) {
       throw new Error('email delivery requires a deployment identity');
     }
     bindings.push({
       type: 'plain_text',
-      name: '__VOID_EMAIL_DEPLOYMENT_ID',
+      name: '__NOSAM_EMAIL_DEPLOYMENT_ID',
       text: platform.deploymentId,
     });
   }
   if (platform.emailSenderDomain) {
     bindings.push({
       type: 'plain_text',
-      name: '__VOID_EMAIL_DOMAIN',
+      name: '__NOSAM_EMAIL_DOMAIN',
       text: platform.emailSenderDomain,
     });
   }

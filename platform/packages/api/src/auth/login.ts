@@ -1,9 +1,9 @@
-import type { PlatformLoginConfiguration, PlatformAuthenticationRecovery } from '@void/platform';
+import type { PlatformLoginConfiguration, PlatformAuthenticationRecovery } from '@nosam/platform';
 import {
   browserPageIdentity,
   browserPageLead,
   browserPageStatus,
-} from '@void/platform/browser-page';
+} from '@nosam/platform/browser-page';
 import { and, eq, gt } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
@@ -42,7 +42,7 @@ import { validateRecoveryTest } from './recovery.ts';
 import { isAllowedRedirect, isLocalhostRedirect, isAuthorizationRedirect } from './redirects.ts';
 import { createHumanSession, validateHumanSession, type CompanyIdentity } from './sessions.ts';
 
-const COOKIE = 'void_platform_auth';
+const COOKIE = 'nosam_platform_auth';
 const FLOW_SECONDS = 600;
 const providers = new Map<string, PlatformOidcProvider>();
 
@@ -119,7 +119,7 @@ function authenticationError(
       ],
       ...(bootstrap
         ? {
-            command: `void platform repair ${context.env.PLATFORM_INSTALLATION_ID ?? '<id>'}${groups ? ' --auth-config <path>' : ''}`,
+            command: `nosam platform repair ${context.env.PLATFORM_INSTALLATION_ID ?? '<id>'}${groups ? ' --auth-config <path>' : ''}`,
             returnUrl: '/setup',
           }
         : {}),
@@ -296,7 +296,7 @@ export async function startLoginTest(
       | undefined;
     const actor = saved?.actor;
     if (purpose === 'link') {
-      const browserToken = getCookie(context, 'void_account_session');
+      const browserToken = getCookie(context, 'nosam_account_session');
       const browserSession = browserToken
         ? await verifyJwt(browserToken, context.env.JWT_SECRET, 'api')
         : null;
@@ -460,7 +460,7 @@ export async function startPlatformLogin(
         context.req.query('code_challenge_method') !== 'S256'
       ) {
         throw new AuthenticationConfigurationError(
-          'CLI login requires PKCE. Update the Void CLI and try again.',
+          'CLI login requires PKCE. Update the Nosam CLI and try again.',
           'pkce_required',
           400,
         );
@@ -621,7 +621,7 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
         identity,
         companyIdentity: currentCompany,
       });
-      setCookie(context, 'void_bootstrap_confirm', proof, {
+      setCookie(context, 'nosam_bootstrap_confirm', proof, {
         httpOnly: true,
         secure: true,
         sameSite: 'Strict',
@@ -640,8 +640,8 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
           'Review the account below before giving it administrator access to this platform.',
         ) +
           browserPageIdentity(identity) +
-          '<p class="void-auth-note">This account will be able to manage the platform and its users.</p>' +
-          '<form method="post" action="/auth/bootstrap/confirm"><input type="hidden" name="confirm" value="yes"><button class="void-auth-button void-auth-button-primary" type="submit">Make this account the platform administrator</button></form>',
+          '<p class="nosam-auth-note">This account will be able to manage the platform and its users.</p>' +
+          '<form method="post" action="/auth/bootstrap/confirm"><input type="hidden" name="confirm" value="yes"><button class="nosam-auth-button nosam-auth-button-primary" type="submit">Make this account the platform administrator</button></form>',
       );
     }
     if (attempt.purpose === 'test' || attempt.purpose === 'link') {
@@ -713,7 +713,7 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
           context: { phase: 'confirm', actor: saved.actor },
           expires_at: new Date(Date.now() + 300_000).toISOString(),
         });
-        setCookie(context, 'void_link_confirm', saved.testId + ':' + proof, {
+        setCookie(context, 'nosam_link_confirm', saved.testId + ':' + proof, {
           httpOnly: true,
           secure: true,
           sameSite: 'Strict',
@@ -725,10 +725,10 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
           'Link login method',
           browserPageLead(
             'Link this login method?',
-            'Review the identity before linking it to your existing Void account.',
+            'Review the identity before linking it to your existing Nosam account.',
           ) +
             browserPageIdentity(identity) +
-            '<form method="post" action="/auth/link/confirm"><input type="hidden" name="confirm" value="yes"><button class="void-auth-button void-auth-button-primary" type="submit">Link this identity</button></form>',
+            '<form method="post" action="/auth/link/confirm"><input type="hidden" name="confirm" value="yes"><button class="nosam-auth-button nosam-auth-button-primary" type="submit">Link this identity</button></form>',
         );
       }
       if (saved.actor?.audience === 'admin') {
@@ -740,7 +740,7 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
         browserPageStatus('success') +
           browserPageLead(
             'Login verified',
-            'Return to Void to review the identity and finish configuration.',
+            'Return to Nosam to review the identity and finish configuration.',
           ),
       );
     }
@@ -778,7 +778,7 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
     }
     // Bind ordinary account-link launches to the browser that just proved the existing
     // account. A copied launch URL must never let another browser attach its identity.
-    setCookie(context, 'void_account_session', token, {
+    setCookie(context, 'nosam_account_session', token, {
       httpOnly: true,
       secure: true,
       sameSite: 'Lax',
@@ -876,7 +876,7 @@ export async function confirmIdentityLink(context: Context<ApiEnv>): Promise<Res
     ) {
       throw new Error('Confirmation required');
     }
-    const [id, proof] = (getCookie(context, 'void_link_confirm') ?? '').split(':');
+    const [id, proof] = (getCookie(context, 'nosam_link_confirm') ?? '').split(':');
     if (!id || !proof) {
       throw new Error('Confirmation expired');
     }
@@ -926,7 +926,7 @@ export async function confirmIdentityLink(context: Context<ApiEnv>): Promise<Res
       });
     }
     await db.delete(platformLoginTests).where(eq(platformLoginTests.id, attempt.id));
-    deleteCookie(context, 'void_link_confirm', { path: '/auth/link/confirm' });
+    deleteCookie(context, 'nosam_link_confirm', { path: '/auth/link/confirm' });
     context.header('Cache-Control', 'no-store');
     return platformBrowserPage(
       context,
@@ -934,7 +934,7 @@ export async function confirmIdentityLink(context: Context<ApiEnv>): Promise<Res
       browserPageStatus('success') +
         browserPageLead(
           'Login method linked',
-          'Your login method is linked. You can close this window and return to Void.',
+          'Your login method is linked. You can close this window and return to Nosam.',
         ),
     );
   } catch (error) {

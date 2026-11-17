@@ -100,7 +100,7 @@ r2.on('POST', ['/put', '/put-conditional'], async (context) => {
     return context.json(
       {
         error:
-          'R2 conditional writes require an active deployment with the current Void remote-binding handler. Update your Void platform and redeploy the project.',
+          'R2 conditional writes require an active deployment with the current Nosam remote-binding handler. Update your Nosam platform and redeploy the project.',
       },
       501,
     );

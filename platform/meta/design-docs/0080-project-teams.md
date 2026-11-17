@@ -8,12 +8,12 @@ created: 2026-09-17
 
 ## Summary
 
-Add project-scoped membership to the Void Platform. A project keeps one owner,
+Add project-scoped membership to the Nosam Platform. A project keeps one owner,
 and can additionally have readers, collaborators, and project administrators.
 The owner remains the billing and quota subject regardless of which member
 performs an action.
 
-This is a Void Platform control-plane feature. It does not add an organization
+This is a Nosam Platform control-plane feature. It does not add an organization
 object, change application manifests, or affect projects deployed directly to
 Cloudflare.
 
@@ -37,7 +37,7 @@ Cloudflare.
   accounts.
 - Membership on direct Cloudflare deployments.
 - Multiple owners or project ownership by a group.
-- Project members who do not have their own Void Platform account.
+- Project members who do not have their own Nosam Platform account.
 - Sharing the installation administrator role through a project role.
 - Reading stored secret values. The existing API exposes secret names and
   write/delete operations, not plaintext reads; teams do not change that.
@@ -355,23 +355,23 @@ with role `owner`, but owner mutations return 409.
 
 ### CLI
 
-Add a `void project team` group:
+Add a `nosam project team` group:
 
 ```text
-void project team list [--project <slug>]
-void project team invite <email> --role <role> [--project <slug>]
-void project team invitations [--project <slug>]
-void project team role <user-id> <role> [--project <slug>]
-void project team remove <user-id> [--project <slug>]
-void project team revoke <invitation-id> [--project <slug>]
-void project team leave [--project <slug>]
-void project team pending
-void project team accept <invitation-id>
-void project team decline <invitation-id>
+nosam project team list [--project <slug>]
+nosam project team invite <email> --role <role> [--project <slug>]
+nosam project team invitations [--project <slug>]
+nosam project team role <user-id> <role> [--project <slug>]
+nosam project team remove <user-id> [--project <slug>]
+nosam project team revoke <invitation-id> [--project <slug>]
+nosam project team leave [--project <slug>]
+nosam project team pending
+nosam project team accept <invitation-id>
+nosam project team decline <invitation-id>
 ```
 
 The existing project selector and saved project link identify the project when
-`--project` is absent. Project-scoped commands require a connected Void Platform
+`--project` is absent. Project-scoped commands require a connected Nosam Platform
 project and give a clear error for a direct Cloudflare target. The account-scoped
 `pending`, `accept`, and `decline` commands use the active platform connection,
 independently of the current directory's project or direct Cloudflare target.
@@ -397,7 +397,7 @@ interfaces:
 POST /operator/v1/projects/:id/owner
 { "userId": "user_...", "dryRun": true | false }
 
-void platform project owner <project-id> <user-id> [--plan | --yes]
+nosam platform project owner <project-id> <user-id> [--plan | --yes]
 ```
 
 The dry run reports current and new owner, both plans and suspension states,

@@ -1,8 +1,8 @@
-import { PLATFORM_USAGE_PROTOCOL_VERSION } from '@void/platform';
+import { PLATFORM_USAGE_PROTOCOL_VERSION } from '@nosam/platform';
 
 export const USAGE_PROTOCOL_VERSION = PLATFORM_USAGE_PROTOCOL_VERSION;
 
-export const USAGE_SIGNING_KEY_KV_KEY = '__void:usage-signing-key:v1';
+export const USAGE_SIGNING_KEY_KV_KEY = '__nosam:usage-signing-key:v1';
 /** Operational usage intervals and their replay receipts share one validity window. */
 export const SANDBOX_USAGE_RETENTION_MS = 8 * 24 * 60 * 60_000;
 
@@ -17,7 +17,7 @@ export type SignedUsageEnvelope<T = unknown> = Readonly<{
 }>;
 
 const encoder = new TextEncoder();
-const DERIVATION_CONTEXT = 'void-platform:usage-events:v1';
+const DERIVATION_CONTEXT = 'nosam-platform:usage-events:v1';
 
 function base64url(bytes: ArrayBuffer): string {
   let binary = '';

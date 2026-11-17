@@ -3,7 +3,7 @@ import type {
   PlatformAdmissionPolicy,
   PlatformLoginConfiguration,
   PlatformLoginKind,
-} from '@void/platform';
+} from '@nosam/platform';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -393,7 +393,7 @@ export const projects = pgTable(
     preview_client_id: text('preview_client_id').references(() => oauthClients.id),
     preview_workspace_id: text('preview_workspace_id'),
     preview_expires_at: timestamp('preview_expires_at', { mode: 'string', withTimezone: true }),
-    type: text('mode').notNull().default('void').$type<'void' | 'spa' | 'static'>(),
+    type: text('mode').notNull().default('nosam').$type<'nosam' | 'spa' | 'static'>(),
     active_deployment_id: text('active_deployment_id'),
     websocket_version: integer('websocket_version').notNull().default(0),
     // Highest proxy token generation issued for this project. 0 = legacy token.
@@ -1374,10 +1374,10 @@ export const githubConnections = pgTable(
       .$type<'container' | 'github_actions'>(),
     // The `.github/workflows/*.yml` file the GitHub Actions OIDC exchange binds
     // the deploy token to (see `routes/auth-oidc.ts`). Configurable by members
-    // with project settings access; defaults to the file `void init --github`
+    // with project settings access; defaults to the file `nosam init --github`
     // scaffolds. Only the authenticated connect/update routes write this —
     // never the webhook or the OIDC path — so it stays a trusted server-side pin.
-    workflow_path: text('workflow_path').notNull().default('.github/workflows/void-deploy.yml'),
+    workflow_path: text('workflow_path').notNull().default('.github/workflows/nosam-deploy.yml'),
     created_at: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
     updated_at: timestamp('updated_at', { mode: 'string' }).notNull().defaultNow(),
   },
@@ -1396,7 +1396,7 @@ export const githubConnections = pgTable(
 // github_installation_members — cached org co-membership for the org-shared
 // GitHub App installation flow.
 //
-// Each row records that a Void user (`user_id`) was verified as a member of the
+// Each row records that a Nosam user (`user_id`) was verified as a member of the
 // GitHub account behind a numeric installation (`installation_id`). It is a TTL
 // cache (`expires_at`): NO GitHub token is stored — access is re-verified
 // per-repo, and this table only short-circuits the org-membership check while
@@ -1448,17 +1448,17 @@ export const githubInstallationMembers = pgTable(
 // a legit re-join AFTER re-add mints a fresh artifact with `iat > revoked_at` and
 // is allowed.
 //
-// The tombstone keys on the GitHub ACCOUNT id (X), NOT a Void user id: X is the
+// The tombstone keys on the GitHub ACCOUNT id (X), NOT a Nosam user id: X is the
 // durable identity the stateless artifacts carry, and it is the ONLY identity
 // `member_removed` reliably knows from the webhook payload (`membership.user.id`).
 // A soon-to-be-removed member can pre-mint a join_code + connect_grant while still
-// in the org WITHOUT any Void user / membership / oauth-link, so a user-keyed
+// in the org WITHOUT any Nosam user / membership / oauth-link, so a user-keyed
 // tombstone would find no user to key on and write nothing — leaving a
 // post-removal replay path. Keying by X closes that hole. `installation_id` keys
 // on GitHub's NUMERIC installation id as text with NO FK (mirrors
 // `github_installation_members`); `github_account_id` is the NUMERIC GitHub
-// account id as text with NO FK — it is not a Void user id and the tombstone must
-// outlive Void user deletion.
+// account id as text with NO FK — it is not a Nosam user id and the tombstone must
+// outlive Nosam user deletion.
 // ---------------------------------------------------------------------------
 export const githubInstallationRevocations = pgTable(
   'github_installation_revocations',
@@ -1528,7 +1528,7 @@ export const githubWebhookRedeliveries = pgTable(
 // ---------------------------------------------------------------------------
 // builds — server-side build runs (one per push that triggers a build).
 //
-// A build runs the real `void deploy` CLI in a build environment (CF Container
+// A build runs the real `nosam deploy` CLI in a build environment (CF Container
 // or GitHub Actions runner) and produces a `deployment_id` once the deploy
 // endpoint accepts the manifest. `executor` records which backend ran it;
 // `status` tracks the build lifecycle independent of the deployment's status.

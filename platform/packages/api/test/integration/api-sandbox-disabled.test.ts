@@ -60,7 +60,7 @@ describe('managed Sandbox capability disablement', () => {
               controllerProtocol: 2,
               bindingName: 'SANDBOX',
               className: 'Sandbox',
-              containerName: 'void-sandbox',
+              containerName: 'nosam-sandbox',
               image:
                 'registry.cloudflare.com/account/code-sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
               migrations: [{ tag: 'sandbox-v1', newSqliteClasses: ['Sandbox'] }],
@@ -76,7 +76,7 @@ describe('managed Sandbox capability disablement', () => {
     expect(response.status).toBe(501);
     expect(await response.json()).toEqual({
       event: 'error',
-      message: 'This Void platform does not enable sandbox deployments.',
+      message: 'This Nosam platform does not enable sandbox deployments.',
     });
   });
 
@@ -94,7 +94,7 @@ describe('managed Sandbox capability disablement', () => {
           sandbox: {
             bindingName: 'SANDBOX',
             className: 'Sandbox',
-            containerName: 'void-sandbox',
+            containerName: 'nosam-sandbox',
             image:
               'registry.cloudflare.com/account/code-sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           },
@@ -116,7 +116,7 @@ describe('managed Sandbox capability disablement', () => {
 
     expect(response.status).toBe(501);
     expect(await response.json()).toEqual({
-      error: 'This Void platform does not enable rollback to Sandbox deployments.',
+      error: 'This Nosam platform does not enable rollback to Sandbox deployments.',
     });
   });
 });

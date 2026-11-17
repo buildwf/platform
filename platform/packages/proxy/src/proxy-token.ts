@@ -3,7 +3,7 @@ import {
   deriveProxyToken,
   ProxyTokenStateError,
   verifyProxyToken,
-} from '@voidcloud/api/proxy-token';
+} from '@nosamcloud/api/proxy-token';
 import type { Env } from './types.ts';
 
 // One floor cache per isolate, shared by every request it serves.

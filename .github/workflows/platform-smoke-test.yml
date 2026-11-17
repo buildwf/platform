@@ -7,7 +7,7 @@ on:
         required: true
       CF_ACCESS_CLIENT_SECRET_STAGING:
         required: true
-      VOID_TOKEN_STAGING:
+      NOSAM_TOKEN_STAGING:
         required: true
   schedule:
     - cron: '0 0 * * *' # daily at 8am SGT (midnight UTC)
@@ -17,7 +17,7 @@ permissions: {}
 
 jobs:
   check-ref:
-    if: ${{ vars.VOID_PLATFORM_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main' }}
+    if: ${{ vars.NOSAM_PLATFORM_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       # Reusable runs use the caller's ref. Reject case variants before secrets.
@@ -25,7 +25,7 @@ jobs:
         run: test "$GITHUB_REF" = 'refs/heads/main'
 
   smoke-test:
-    if: ${{ vars.VOID_PLATFORM_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main' }}
+    if: ${{ vars.NOSAM_PLATFORM_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main' }}
     needs: check-ref
     runs-on: blacksmith-4vcpu-ubuntu-2404
     # Configure all three credentials in Staging. Reusable callers must declare
@@ -44,9 +44,9 @@ jobs:
         env:
           CF_ACCESS_CLIENT_ID_STAGING: ${{ secrets.CF_ACCESS_CLIENT_ID_STAGING }}
           CF_ACCESS_CLIENT_SECRET_STAGING: ${{ secrets.CF_ACCESS_CLIENT_SECRET_STAGING }}
-          VOID_TOKEN_STAGING: ${{ secrets.VOID_TOKEN_STAGING }}
+          NOSAM_TOKEN_STAGING: ${{ secrets.NOSAM_TOKEN_STAGING }}
         run: |
-          for name in CF_ACCESS_CLIENT_ID_STAGING CF_ACCESS_CLIENT_SECRET_STAGING VOID_TOKEN_STAGING; do
+          for name in CF_ACCESS_CLIENT_ID_STAGING CF_ACCESS_CLIENT_SECRET_STAGING NOSAM_TOKEN_STAGING; do
             if [[ -z "${!name}" ]]; then
               echo "::error::Missing $name. Configure it in the Staging environment."
               exit 1
@@ -63,9 +63,9 @@ jobs:
       - name: Initialize missing kitchen-sink fixture secrets
         run: node platform/scripts/kitchen-sink-staging-env.ts
         env:
-          VOID_TOKEN: ${{ secrets.VOID_TOKEN_STAGING }}
-          VOID_API_URL: https://api.staging.void.cloud
-          VOID_ACCESS_ORIGIN: https://api.staging.void.cloud
+          NOSAM_TOKEN: ${{ secrets.NOSAM_TOKEN_STAGING }}
+          NOSAM_API_URL: https://api.staging.void.cloud
+          NOSAM_ACCESS_ORIGIN: https://api.staging.void.cloud
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID_STAGING }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET_STAGING }}
       - name: Prepare the hosted kitchen-sink fixture
@@ -75,15 +75,15 @@ jobs:
         timeout-minutes: 32
         working-directory: ${{ steps.fixture.outputs.path }}
         run: |
-          node "$GITHUB_WORKSPACE/packages/void/dist/cli/cli.mjs" connect "$VOID_API_URL" --no-login
-          node "$GITHUB_WORKSPACE/packages/void/dist/cli/cli.mjs" deploy --project kitchen-sink
+          node "$GITHUB_WORKSPACE/packages/nosam/dist/cli/cli.mjs" connect "$NOSAM_API_URL" --no-login
+          node "$GITHUB_WORKSPACE/packages/nosam/dist/cli/cli.mjs" deploy --project kitchen-sink
         env:
-          VOID_TOKEN: ${{ secrets.VOID_TOKEN_STAGING }}
-          VOID_API_URL: https://api.staging.void.cloud
+          NOSAM_TOKEN: ${{ secrets.NOSAM_TOKEN_STAGING }}
+          NOSAM_API_URL: https://api.staging.void.cloud
           STAGING: '1'
-          VOID_ACCESS_ORIGIN: https://api.staging.void.cloud
+          NOSAM_ACCESS_ORIGIN: https://api.staging.void.cloud
           # Prerendering uses the separately protected resource proxy.
-          VOID_ACCESS_CREDENTIALS: >-
+          NOSAM_ACCESS_CREDENTIALS: >-
             {"https://proxy.staging.void.cloud": {
               "CF_ACCESS_CLIENT_ID": ${{ toJSON(secrets.CF_ACCESS_CLIENT_ID_STAGING) }},
               "CF_ACCESS_CLIENT_SECRET": ${{ toJSON(secrets.CF_ACCESS_CLIENT_SECRET_STAGING) }}
@@ -95,7 +95,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: staging-deployment-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ~/.void/logs/deploy-*.jsonl
+          path: ~/.nosam/logs/deploy-*.jsonl
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7

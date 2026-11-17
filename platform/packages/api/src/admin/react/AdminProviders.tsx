@@ -21,7 +21,7 @@ type AdminShared = {
 export function AdminUiProviders({ children }: { children: ReactNode }) {
   return (
     <Theme theme={neutralTheme}>
-      <div className="void-admin-toast-provider">
+      <div className="nosam-admin-toast-provider">
         <LayerProvider toast={{ position: 'topEnd', maxVisible: 3 }}>
           <LinkProvider component={Link}>{children}</LinkProvider>
         </LayerProvider>
@@ -60,7 +60,7 @@ export function AdminProviders({ children }: { children: ReactNode }) {
       <FateClient client={fate} key={session}>
         <AdminFateErrorBoundary
           key={shared.adminPageUrl}
-          platformName={shared.platformName ?? 'Void Platform'}
+          platformName={shared.platformName ?? 'Nosam Platform'}
         >
           {children}
         </AdminFateErrorBoundary>

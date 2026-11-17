@@ -1,13 +1,13 @@
 import { join } from 'node:path';
 import { Hono } from 'hono';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import type { CloudEnv } from 'void/handler';
-import { UsageLimit } from 'void/limits';
+import type { CloudEnv } from 'nosam/handler';
+import { UsageLimit } from 'nosam/limits';
 import { kitchenSinkSourceFixture } from './kitchen-sink-source-fixture.ts';
 
 const mocks = vi.hoisted(() => ({ getSandbox: vi.fn() }));
-vi.mock('void', async () => import('void/handler'));
-vi.mock('void/sandbox', () => ({
+vi.mock('nosam', async () => import('nosam/handler'));
+vi.mock('nosam/sandbox', () => ({
   getSandbox: mocks.getSandbox,
   SandboxLimitError: class extends Error {},
 }));
@@ -54,9 +54,9 @@ describe('kitchen-sink Sandbox requests', () => {
           await bothStarted;
           // The command reads its program only after both requests have
           // written files, reproducing the race when they share a container.
-          const marker = files.get('/workspace/void-kitchen-sink-code-lab/user-code.mjs');
+          const marker = files.get('/workspace/nosam-kitchen-sink-code-lab/user-code.mjs');
           const output = JSON.stringify({ value: marker });
-          files.set('/workspace/void-kitchen-sink-code-lab/output.json', output);
+          files.set('/workspace/nosam-kitchen-sink-code-lab/output.json', output);
           return {
             exitCode: 0,
             stdout: new TextEncoder().encode(output),

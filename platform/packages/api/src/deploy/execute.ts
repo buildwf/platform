@@ -2,7 +2,7 @@ import {
   MIGRATION_CLASSIFIER_VERSION,
   validateManifestShape,
   isSandboxRegistryImage,
-} from '@void/deploy-core';
+} from '@nosam/deploy-core';
 import { and, eq, sql as drizzleSql } from 'drizzle-orm';
 import { type Context } from 'hono';
 import { paginatedR2Delete, type AssetManifestEntry } from '../assets.ts';
@@ -187,7 +187,7 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
     }
     throw error;
   }
-  const cliVersion = context.req.header('x-void-cli-version') ?? null;
+  const cliVersion = context.req.header('x-nosam-cli-version') ?? null;
 
   const actor = context.get('user');
   let owner = access.owner;
@@ -295,7 +295,7 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
         context.get('db'),
         context.get('oauthApproval')!,
         projectId,
-        context.req.header('x-void-deploy-idempotency-key'),
+        context.req.header('x-nosam-deploy-idempotency-key'),
         body,
         context.get('companyIdentity'),
       );
@@ -325,7 +325,7 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
       {
         event: 'error',
         message:
-          'SQLite migrations require an updated Void runtime. Upgrade void, rebuild the app, and deploy again.',
+          'SQLite migrations require an updated Nosam runtime. Upgrade void, rebuild the app, and deploy again.',
       },
       400,
     );
@@ -374,7 +374,7 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
       {
         event: 'error',
         message:
-          'Managed Sandboxes require an updated Void runtime. Upgrade void, rebuild the app, and deploy again.',
+          'Managed Sandboxes require an updated Nosam runtime. Upgrade void, rebuild the app, and deploy again.',
       },
       400,
     );
@@ -407,7 +407,7 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
     return context.json(
       {
         event: 'error',
-        message: 'This Void platform does not enable sandbox deployments.',
+        message: 'This Nosam platform does not enable sandbox deployments.',
       },
       501,
     );
@@ -675,7 +675,7 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
     return context.json({ event: 'error', message: workerFilesProblem }, 400);
   }
   const durable = !execution && context.env.DEPLOYMENTS_QUEUE !== undefined;
-  const idempotencyKey = context.req.header('x-void-deploy-idempotency-key') ?? crypto.randomUUID();
+  const idempotencyKey = context.req.header('x-nosam-deploy-idempotency-key') ?? crypto.randomUUID();
   if (durable && !/^[A-Za-z0-9_-]{1,128}$/.test(idempotencyKey)) {
     return context.json({ error: 'invalid deployment idempotency key' }, 400);
   }

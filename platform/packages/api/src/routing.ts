@@ -1,4 +1,4 @@
-import type { ProjectZeroTrustRouting } from '@void/edge';
+import type { ProjectZeroTrustRouting } from '@nosam/edge';
 import { sql as drizzleSql } from 'drizzle-orm';
 import { getDomainsByProjectIds, getProject, type Db } from './db.ts';
 import type { AssetConfig, DeployManifest } from './types.ts';
@@ -296,7 +296,7 @@ export function buildRoutingJson(opts: {
     workerName: opts.workerName,
     projectId: opts.projectId,
     userId: opts.userId,
-    type: manifest?.type ?? 'void',
+    type: manifest?.type ?? 'nosam',
     ...(manifest?.ssr ? { ssr: true } : {}),
     ...(manifest?.hashedAssetsPrefix ? { hashedAssetsPrefix: manifest.hashedAssetsPrefix } : {}),
     ...(manifest?.headerRules?.length ? { headerRules: manifest.headerRules } : {}),

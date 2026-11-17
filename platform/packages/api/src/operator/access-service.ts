@@ -1,4 +1,4 @@
-import { parsePlatformSignupAllowlistEntry } from '@void/platform';
+import { parsePlatformSignupAllowlistEntry } from '@nosam/platform';
 import { eq, sql } from 'drizzle-orm';
 import type { Context } from 'hono';
 import {

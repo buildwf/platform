@@ -1,5 +1,5 @@
 /** Sanitized beta shape observed on an immutable cf-created secret placeholder. */
-export function voidSecretDraftVersion(): Record<string, unknown> & {
+export function nosamSecretDraftVersion(): Record<string, unknown> & {
   id: string;
   annotations: Record<string, string>;
   bindings: Array<{ name: string; type: string }>;
@@ -32,14 +32,14 @@ export function voidSecretDraftVersion(): Record<string, unknown> & {
   };
 }
 
-/** Sanitized shape of the placeholder that Void's transport uploads and deploys in one request. */
-export function apiSecretDraftVersion(): ReturnType<typeof voidSecretDraftVersion> {
+/** Sanitized shape of the placeholder that Nosam's transport uploads and deploys in one request. */
+export function apiSecretDraftVersion(): ReturnType<typeof nosamSecretDraftVersion> {
   return {
-    ...voidSecretDraftVersion(),
+    ...nosamSecretDraftVersion(),
     number: 1,
     startup_time_ms: 0,
     annotations: {
-      'workers/message': 'void:secret-draft',
+      'workers/message': 'nosam:secret-draft',
       'workers/triggered_by': 'create_version_api',
     },
     source: 'api',

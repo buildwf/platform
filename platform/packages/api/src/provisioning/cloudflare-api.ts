@@ -1,4 +1,4 @@
-import type { R2LocationHint } from '@void/deploy-core';
+import type { R2LocationHint } from '@nosam/deploy-core';
 
 export const CF_API_BASE = 'https://api.cloudflare.com/client/v4/accounts';
 const CF_ZONE_API_BASE = 'https://api.cloudflare.com/client/v4/zones';
@@ -403,7 +403,7 @@ export type ProxyTokenLookup =
   | { kind: 'error'; error: Error };
 
 /**
- * Read the `__VOID_PROXY_TOKEN` plain-text binding that was baked into a
+ * Read the `__NOSAM_PROXY_TOKEN` plain-text binding that was baked into a
  * user worker at deploy time. Used on rollback/backfill so we hand
  * dispatch the EXACT token the target worker expects, rather than
  * re-deriving from the current `JWT_SECRET` — which would 401 if the
@@ -411,7 +411,7 @@ export type ProxyTokenLookup =
  *
  * Returns a typed result so callers can distinguish:
  *   - `found`: use the baked token as-is.
- *   - `missing`: bindings list returned but no `__VOID_PROXY_TOKEN` —
+ *   - `missing`: bindings list returned but no `__NOSAM_PROXY_TOKEN` —
  *     a legacy worker. Callers may fall back to re-derivation with a
  *     visible warning.
  *   - `error`: CF API failure (rate limit, transport, auth, 5xx).
@@ -434,7 +434,7 @@ export async function getDispatchWorkerProxyToken(
     return { kind: 'error', error };
   }
   const token = bindings.find(
-    (binding) => binding.type === 'plain_text' && binding.name === '__VOID_PROXY_TOKEN',
+    (binding) => binding.type === 'plain_text' && binding.name === '__NOSAM_PROXY_TOKEN',
   )?.text;
   if (!token) {
     return { kind: 'missing' };
@@ -484,7 +484,7 @@ export type CustomHostnameInfo = Readonly<{
 // Do NOT add `custom_metadata` here — it's a paid Enterprise SSL-for-SaaS
 // add-on that our CF account is not provisioned for. Sending the field
 // makes CF reject every create with "No custom metadata access has been
-// allocated for this zone or account", breaking `void domain add`.
+// allocated for this zone or account", breaking `nosam domain add`.
 // Forensic attribution is already persisted server-side in the `domains`
 // table (project_id, user_id, created_at) keyed by cf_hostname_id.
 export async function createCustomHostname(
@@ -528,8 +528,8 @@ export async function getCustomHostname(
   );
 }
 
-// Re-send the SSL block via PATCH to re-trigger HTTP DCV. Void's flow is
-// add-domain-first: `void domain add` creates the custom hostname with
+// Re-send the SSL block via PATCH to re-trigger HTTP DCV. Nosam's flow is
+// add-domain-first: `nosam domain add` creates the custom hostname with
 // `ssl.method:'http'` BEFORE the user points the CNAME at `cname.void.app`.
 // Per CF's Create Custom Hostname API docs, "If `http` is used and the domain
 // is not already pointing to the Managed CNAME host, the PATCH method must be

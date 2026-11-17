@@ -1,5 +1,5 @@
-import { tokenizeSql } from '@void/deploy-core';
-import type { ProjectZeroTrustRouting } from '@void/edge';
+import { tokenizeSql } from '@nosam/deploy-core';
+import type { ProjectZeroTrustRouting } from '@nosam/edge';
 import { sql as drizzleSql } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import {
@@ -21,20 +21,14 @@ import {
 import type { Db } from '../db.ts';
 import {
   createProject,
-  createResource,
   getBuild,
   getProjectBuilds,
   getProjectBySlug,
   getProjectByEmailAlias,
-  getAccessibleProjectsByUserId,
-  getAccessibleProjectBySlug,
-  getLatestDeploymentsByProjectIds,
-  getProjectDeployments,
   getProjectResources,
   getActivatedDeployments,
   getTerminalFailedDeployments,
   getDomainsByProjectId,
-  getDomainsByProjectIds,
   getDeployment,
   getActiveDeployment,
   createDeployment,
@@ -54,13 +48,10 @@ import {
   recordMigrationRenames,
   migrationRenameExists,
   invalidateMigrationRenamesForOldName,
-  upsertProjectDatabaseUrl,
-  getProjectDatabaseUrl,
   tryCreateEmailDestination,
-  ACTIVE_BUILD_STATUSES,
 } from '../db.ts';
 import { databaseTimestampMs } from '../deploy/recovery.ts';
-import { type ApiEnv, isDevBypass } from '../env.ts';
+import { type ApiEnv } from '../env.ts';
 import { validateSubmittedExecutionPlans } from '../migrations/execution-plan.ts';
 import { ensureTrackingTable, queryD1, runRemoteMigrations } from '../migrations/remote-runner.ts';
 import { getProjectDeploymentWorkerName, getProjectQueueName } from '../naming.ts';
@@ -68,22 +59,16 @@ import { LOG_ROW_GROUP_BY, runtimeLogsField } from '../observability/log-rows.ts
 import { hasSqlState } from '../pg-errors.ts';
 import { initialPlanDefaultFor, resolvePlan, resolvePlanLimits } from '../plans.ts';
 import { PROJECT_PERMISSION_MESSAGES } from '../project-access.ts';
-import { MAX_SLUG_LENGTH, projectNameError } from '../project-names.ts';
-import { encryptProjectSecret, decryptProjectSecret } from '../project-secrets.ts';
+import { projectNameError } from '../project-names.ts';
+import {} from '../project-secrets.ts';
 import { ProjectRequiresNormalizationError, requireNormalizedProject } from '../project-state.ts';
 import { projectWithUrl } from '../project-url.ts';
 import {
-  CloudflareApiError,
-  InvalidHyperdriveConnectionStringError,
   addQueueConsumer,
-  createHyperdrive,
-  deleteHyperdrive,
   getDispatchWorkerProxyToken,
-  getHyperdriveByName,
   removeQueueConsumer,
   restoreQueueConsumer,
   snapshotQueueConsumer,
-  updateHyperdrive,
 } from '../provisioning/cloudflare-api.ts';
 import { reconcileManagedDurableObjects } from '../provisioning/durable-objects.ts';
 import {
@@ -95,10 +80,7 @@ import {
   isAlreadyExistsError as isDestinationAlreadyExistsError,
 } from '../provisioning/email-routing.ts';
 import { isManagedSandbox, verifySandboxController } from '../provisioning/sandbox-controller.ts';
-import {
-  proxyTokenRotationWarnings,
-  requestRotationIfReplacingUntrustedCode,
-} from '../proxy-token-rotation.ts';
+import { requestRotationIfReplacingUntrustedCode } from '../proxy-token-rotation.ts';
 import { projectRouteKey } from '../routing.ts';
 import {
   buildRoutingJson,
@@ -106,7 +88,7 @@ import {
   computeDispatchLimits,
   resolveRoutingUndo,
 } from '../routing.ts';
-import type { Build, DeployManifest, Project, ProjectRole, User } from '../types.ts';
+import type { Build, DeployManifest, User } from '../types.ts';
 import { ZeroTrustUnavailableError, zeroTrustNotReadyMessage } from '../zero-trust/errors.ts';
 import { lockZeroTrustConfiguration } from '../zero-trust/lock.ts';
 import { initializeNewProjectZeroTrust } from '../zero-trust/project.ts';
@@ -118,7 +100,7 @@ import {
 import { publicProjectZeroTrustState } from '../zero-trust/state.ts';
 import { rollbackCfDestination } from './email.ts';
 import { requireProjectRouteCapability } from './project-access.ts';
-import { getRequestsDataset, queryAnalyticsEngine, queryProjectRequestOverview } from './usage.ts';
+import { getRequestsDataset, queryAnalyticsEngine } from './usage.ts';
 
 const DESTRUCTIVE_PATTERNS = [
   /\bDROP\s+TABLE\b/i,
@@ -149,7 +131,7 @@ const DESTRUCTIVE_PATTERNS = [
   /\bINSERT\s+OR\s+REPLACE\b/i,
 ];
 
-const DESTRUCTIVE_PRAGMA = '-- void:allow-destructive';
+const DESTRUCTIVE_PRAGMA = '-- nosam:allow-destructive';
 
 /**
  * Sentinel error used by the /rollback handler to signal an HTTP
@@ -216,10 +198,10 @@ async function getProjectAccessErrorBody(
  * Resolve the proxy token to use when re-targeting routing/cron at a
  * historical deployment.
  *
- * Preferred path: fetch the EXACT `__VOID_PROXY_TOKEN` plain_text
+ * Preferred path: fetch the EXACT `__NOSAM_PROXY_TOKEN` plain_text
  * binding baked into the target worker. Rotating `JWT_SECRET` after
  * that worker was deployed would make a fresh `hmacSignState` value
- * mismatch the worker and 401 every /__void/queue and /__void/scheduled
+ * mismatch the worker and 401 every /__nosam/queue and /__nosam/scheduled
  * relay.
  *
  * Legacy workers (deployed before the binding was introduced) report
@@ -249,12 +231,12 @@ async function resolveRollbackProxyToken(
   }
   if (lookup.kind === 'error') {
     throw new Error(
-      `rollback: could not read __VOID_PROXY_TOKEN from worker "${workerName}": ${lookup.error.message}`,
+      `rollback: could not read __NOSAM_PROXY_TOKEN from worker "${workerName}": ${lookup.error.message}`,
     );
   }
   // lookup.kind === 'missing' — legacy worker.
   console.warn(
-    `[rollback] worker "${workerName}" has no __VOID_PROXY_TOKEN binding; falling back to current-secret derivation. If JWT_SECRET has rotated since this deployment was live, you must redeploy the project instead.`,
+    `[rollback] worker "${workerName}" has no __NOSAM_PROXY_TOKEN binding; falling back to current-secret derivation. If JWT_SECRET has rotated since this deployment was live, you must redeploy the project instead.`,
   );
   return hmacSignState(projectId, env.JWT_SECRET);
 }
@@ -284,24 +266,24 @@ type LineComment = Readonly<{
  *
  * This is load-bearing for four reasons:
  *
- *   1. A raw `sql.includes('-- void:allow-destructive')` check authorizes
+ *   1. A raw `sql.includes('-- nosam:allow-destructive')` check authorizes
  *      destructive SQL when the pragma appears anywhere in the file,
  *      including inside a string literal. A migration like
- *      `INSERT INTO t VALUES('-- void:allow-destructive'); DROP TABLE users;`
+ *      `INSERT INTO t VALUES('-- nosam:allow-destructive'); DROP TABLE users;`
  *      would slip through — the pragma must only be honored when it is
  *      actually a SQL comment.
  *   2. Running destructive-pattern regexes on the raw SQL false-positives
  *      on data like `VALUES('DROP TABLE users')` and on `-- DROP TABLE`
  *      in a line comment, which could block legitimate migrations.
  *   3. Block comments are intentionally NOT counted toward the pragma. A
- *      docstring like `/* use -- void:allow-destructive to permit drops *\/`
+ *      docstring like `/* use -- nosam:allow-destructive to permit drops *\/`
  *      is documentation, not authorization. They are also replaced with a
  *      single space rather than deleted outright so that token boundaries
  *      are preserved — `DROP/**\/TABLE` must not collapse to `DROPTABLE`,
  *      which would slip the destructive keyword regex entirely.
  *   4. The standalone bit on each line comment lets the caller require
  *      that the destructive pragma occupies its own raw line. Trailing
- *      pragmas like `CREATE TABLE t(id); -- void:allow-destructive`
+ *      pragmas like `CREATE TABLE t(id); -- nosam:allow-destructive`
  *      must not retroactively authorize a later DROP TABLE.
  *
  * Only the SQLite lexical forms are handled: `'...'` strings with `''`
@@ -441,10 +423,10 @@ function hasUnauthorizedDestructive(
     // The pragma is only honored when it appears as a standalone line-comment
     // directive: it must be the sole content of its raw source line (only
     // whitespace before the `--`), and the comment body — after the `--` and
-    // surrounding whitespace — must be exactly `void:allow-destructive`. A
-    // trailing pragma like `CREATE TABLE t(id); -- void:allow-destructive`
+    // surrounding whitespace — must be exactly `nosam:allow-destructive`. A
+    // trailing pragma like `CREATE TABLE t(id); -- nosam:allow-destructive`
     // does not authorize, and neither does a documentation comment like
-    // `-- see void:allow-destructive for details`.
+    // `-- see nosam:allow-destructive for details`.
     const authorized = lineComments.some(
       (line) => line.standalone && line.text.trim() === DESTRUCTIVE_PRAGMA,
     );
@@ -545,7 +527,7 @@ const app = new Hono<ApiEnv>()
       const manifest = JSON.parse(preCheck.manifest) as DeployManifest;
       if (manifest.sandbox && !getPlatformCapabilities(context.env).sandbox) {
         return context.json(
-          { error: 'This Void platform does not enable rollback to Sandbox deployments.' },
+          { error: 'This Nosam platform does not enable rollback to Sandbox deployments.' },
           501,
         );
       }
@@ -745,7 +727,7 @@ const app = new Hono<ApiEnv>()
             if (manifest.sandbox && !getPlatformCapabilities(context.env).sandbox) {
               throw new RollbackError(
                 501,
-                'This Void platform does not enable rollback to Sandbox deployments.',
+                'This Nosam platform does not enable rollback to Sandbox deployments.',
               );
             }
             if (manifest.sandbox) {
@@ -886,7 +868,7 @@ const app = new Hono<ApiEnv>()
           const targetType =
             manifest?.type ??
             (target.bundle_stored || manifest?.workerMain
-              ? 'void'
+              ? 'nosam'
               : manifest?.static === 'spa'
                 ? 'spa'
                 : manifest?.static === 'ssg'
@@ -895,7 +877,7 @@ const app = new Hono<ApiEnv>()
                     ? 'spa'
                     : manifest?.assetConfig?.not_found_handling === '404-page'
                       ? 'static'
-                      : 'void');
+                      : 'nosam');
           const isStaticDeployment = targetType === 'static' || targetType === 'spa';
           let targetHasAssets = false;
           if (target.asset_hashes) {
@@ -1006,14 +988,14 @@ const app = new Hono<ApiEnv>()
             );
             await putRouting(projectRouteKey(lockedProject), routingJson);
 
-            // Resolve the target worker's baked __VOID_PROXY_TOKEN once if
+            // Resolve the target worker's baked __NOSAM_PROXY_TOKEN once if
             // either cron or queues need it. Re-fetching on each path would
             // double the CF API round-trips AND widen the failure window
             // between cron DO sync and queue KV write: a transient CF 429
             // on the second fetch would abort the transaction after cron
             // state was already committed to the DO. The framework's
-            // /__void/scheduled and /__void/queue handlers both validate
-            // against the SAME __VOID_PROXY_TOKEN binding, so one lookup
+            // /__nosam/scheduled and /__nosam/queue handlers both validate
+            // against the SAME __NOSAM_PROXY_TOKEN binding, so one lookup
             // is authoritative for both.
             // The target may hold an older generation than the issued one;
             // its copies get the token it holds.
@@ -1097,7 +1079,7 @@ const app = new Hono<ApiEnv>()
               sweepQueueNames.add(name);
             }
             const queueResources = await getProjectResources(tx, projectId);
-            const dispatchWorkerName = context.env.DISPATCH_WORKER_NAME ?? 'void-dispatch';
+            const dispatchWorkerName = context.env.DISPATCH_WORKER_NAME ?? 'nosam-dispatch';
             const queueResourceByName = new Map(
               queueResources
                 .filter((resource) => resource.type === 'queue')
@@ -2144,7 +2126,7 @@ const app = new Hono<ApiEnv>()
     const createdAtMs = databaseTimestampMs(project.created_at) ?? 0;
     const startMs = Math.max(Date.now() - sinceMs, createdAtMs);
     const sinceStr = new Date(startMs).toISOString().replace('T', ' ').slice(0, 19);
-    const dataset = context.env.LOGS_DATASET ?? 'void_logs';
+    const dataset = context.env.LOGS_DATASET ?? 'nosam_logs';
 
     const deployFilter = deploymentId ? `\n        AND blob7 = '${deploymentId}'` : '';
     let levelFilter = '';
@@ -2288,7 +2270,7 @@ const app = new Hono<ApiEnv>()
     const sinceStr = new Date(Date.now() - sinceMs).toISOString().replace('T', ' ').slice(0, 19);
     const dataset = getRequestsDataset(context.env);
 
-    // void_requests columns (see dispatch recordRequest): blob2 type, blob3
+    // nosam_requests columns (see dispatch recordRequest): blob2 type, blob3
     // method, blob4 status, blob5 slug; double2 responseBytes, double3 durationMs.
     const query = `
       SELECT
@@ -2691,7 +2673,7 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
 
   const userId = context.user.id;
   try {
-    // `void platform uninstall --purge-resources` holds this lock across its last
+    // `nosam platform uninstall --purge-resources` holds this lock across its last
     // check for projects and records the uninstall before releasing it, so a
     // project either commits before that check or is refused here.
     const project = await context.db.transaction(async (tx) => {
@@ -2713,7 +2695,7 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
       zeroTrust = await initializeNewProjectZeroTrust(context.env, context.db, project.id);
     } catch (error) {
       zeroTrustWarning =
-        'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Void retries within an hour. To retry now, a project owner or admin can run `void project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.';
+        'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Nosam retries within an hour. To retry now, a project owner or admin can run `nosam project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.';
       console.error('[zero-trust] new project initialization failed', {
         projectId: project.id,
         error,
@@ -2755,7 +2737,7 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
       // more: whether CF mails a verification link (fresh address) or
       // adopts one the owner already verified is decided by the add above,
       // which has not run yet. The CLI prints this so the verification
-      // email that may follow is explained; `void email destinations`
+      // email that may follow is explained; `nosam email destinations`
       // shows the outcome.
       return {
         ...project,

@@ -14,4 +14,4 @@ interruption is reported separately from a confirmed deployment failure.
 This keeps the deployment record authoritative while giving users progress
 without repeatedly polling a large status response. The implementation
 spans [the deploy route](../../packages/api/src/routes/deploy.ts) and
-[the CLI deploy client](../../../packages/void/src/cli/deploy.ts).
+[the CLI deploy client](../../../packages/nosam/src/cli/deploy.ts).

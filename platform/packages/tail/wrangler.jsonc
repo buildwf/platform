@@ -1,5 +1,5 @@
 {
-  "name": "void-tail",
+  "name": "nosam-tail",
   "main": "src/index.ts",
   "compatibility_date": "2026-02-12",
   "observability": {
@@ -8,25 +8,25 @@
   "analytics_engine_datasets": [
     {
       "binding": "ANALYTICS",
-      "dataset": "void_logs",
+      "dataset": "nosam_logs",
     },
   ],
   "env": {
     "production": {
-      "name": "void-tail",
+      "name": "nosam-tail",
       "analytics_engine_datasets": [
         {
           "binding": "ANALYTICS",
-          "dataset": "void_logs",
+          "dataset": "nosam_logs",
         },
       ],
     },
     "staging": {
-      "name": "void-tail-staging",
+      "name": "nosam-tail-staging",
       "analytics_engine_datasets": [
         {
           "binding": "ANALYTICS",
-          "dataset": "void_logs_staging",
+          "dataset": "nosam_logs_staging",
         },
       ],
     },

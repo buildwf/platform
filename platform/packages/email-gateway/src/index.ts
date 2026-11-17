@@ -127,7 +127,7 @@ async function resolveIngress(
   const response = await beforeDeadline(() =>
     env.API.fetch('https://api/internal/email/resolve-ingress', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-void-internal': proof },
+      headers: { 'content-type': 'application/json', 'x-nosam-internal': proof },
       body: JSON.stringify(input),
       signal: controller.signal,
     }),
@@ -314,12 +314,12 @@ async function ingress(request: Request, env: Env, ctx: ExecutionContext): Promi
   if (request.headers.get('content-encoding')) {
     return new Response(null, { status: 415 });
   }
-  const accountId = request.headers.get('x-void-email-account') ?? '';
-  const zoneId = request.headers.get('x-void-email-zone') ?? '';
-  const ingressName = request.headers.get('x-void-email-ingress') ?? '';
-  const requestId = request.headers.get('x-void-email-request-id') ?? '';
-  const from = request.headers.get('x-void-email-from') ?? '';
-  const to = request.headers.get('x-void-email-to') ?? '';
+  const accountId = request.headers.get('x-nosam-email-account') ?? '';
+  const zoneId = request.headers.get('x-nosam-email-zone') ?? '';
+  const ingressName = request.headers.get('x-nosam-email-ingress') ?? '';
+  const requestId = request.headers.get('x-nosam-email-request-id') ?? '';
+  const from = request.headers.get('x-nosam-email-from') ?? '';
+  const to = request.headers.get('x-nosam-email-to') ?? '';
   const authorization = request.headers.get('authorization') ?? '';
   if (
     [accountId, zoneId, ingressName, from, to, authorization].some(
@@ -429,11 +429,11 @@ async function ingress(request: Request, env: Env, ctx: ExecutionContext): Promi
     if (claim.state === 'completed' && typeof claim.reject === 'boolean') {
       return new Response(null, {
         status: claim.reject ? 403 : 204,
-        headers: { 'x-void-email-receipt': receiptId },
+        headers: { 'x-nosam-email-receipt': receiptId },
       });
     }
     if (claim.state !== 'claimed') {
-      return new Response(null, { status: 503, headers: { 'x-void-email-receipt': receiptId } });
+      return new Response(null, { status: 503, headers: { 'x-nosam-email-receipt': receiptId } });
     }
     const result = await routeRelayed(env, ctx, {
       stub,
@@ -455,7 +455,7 @@ async function ingress(request: Request, env: Env, ctx: ExecutionContext): Promi
     }
     return new Response(null, {
       status: result.reject ? 403 : 204,
-      headers: { 'x-void-email-receipt': receiptId },
+      headers: { 'x-nosam-email-receipt': receiptId },
     });
   } catch (error) {
     console.error(
@@ -560,7 +560,7 @@ async function probe(request: Request, env: Env): Promise<Response> {
     const response = await Promise.race([
       env.API.fetch('https://api/internal/email/probe-ingress', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-void-internal': proof },
+        headers: { 'content-type': 'application/json', 'x-nosam-internal': proof },
         body: JSON.stringify({ accountId, zoneId, ingressName, secret: authorization.slice(7) }),
         signal: controller.signal,
       }),

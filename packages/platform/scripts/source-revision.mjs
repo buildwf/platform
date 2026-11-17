@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 export function resolvePlatformSourceRevision({ repositoryRoot }) {
-  const explicit = process.env.VOID_PLATFORM_SOURCE_REVISION;
+  const explicit = process.env.NOSAM_PLATFORM_SOURCE_REVISION;
   if (explicit) {
     return explicit;
   }

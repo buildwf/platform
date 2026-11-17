@@ -1,7 +1,7 @@
 {
-  "name": "@void/platform",
+  "name": "@nosam/platform",
   "version": "1.9.1",
-  "description": "Packaged runtime and installation contracts for self-hosted Void platforms.",
+  "description": "Packaged runtime and installation contracts for self-hosted Nosam platforms.",
   "homepage": "https://void.cloud",
   "bugs": {
     "url": "https://github.com/voidzero-dev/void/issues"
@@ -51,7 +51,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@void/deploy-core": "workspace:*",
+    "@nosam/deploy-core": "workspace:*",
     "pathslash": "catalog:"
   },
   "devDependencies": {

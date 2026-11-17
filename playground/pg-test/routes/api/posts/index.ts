@@ -1,6 +1,6 @@
 import { users, posts } from '@schema';
-import { defineHandler } from 'void';
-import { db, eq } from 'void/db';
+import { defineHandler } from 'nosam';
+import { db, eq } from 'nosam/db';
 
 export const GET = defineHandler(async () => {
   const all = await db

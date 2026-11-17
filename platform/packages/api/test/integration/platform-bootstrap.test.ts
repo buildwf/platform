@@ -1,7 +1,7 @@
 import {
   platformAuthenticationRecoveryMessage,
   type PlatformAuthenticationRecovery,
-} from '@void/platform';
+} from '@nosam/platform';
 import { eq, sql } from 'drizzle-orm';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { chromium } from 'playwright';
@@ -18,9 +18,9 @@ import {
 import {
   commitAuthenticationRecovery,
   recoverAuthenticationCredential,
-} from '../../../../../packages/void/src/cli/platform-auth-recovery-core.ts';
-import { authenticationSetupRequestHash } from '../../../../../packages/void/src/cli/platform-install-auth.ts';
-import { readPlatformAdministratorSetupConnection } from '../../../../../packages/void/src/cli/platform-installer-database.ts';
+} from '../../../../../packages/nosam/src/cli/platform-auth-recovery-core.ts';
+import { authenticationSetupRequestHash } from '../../../../../packages/nosam/src/cli/platform-install-auth.ts';
+import { readPlatformAdministratorSetupConnection } from '../../../../../packages/nosam/src/cli/platform-installer-database.ts';
 import { AUTH_SETUP_PROOF_PREFIX, initializeAuthentication } from '../../src/auth/bootstrap.ts';
 import { hmacSignState } from '../../src/auth/hmac.ts';
 import { signJwt } from '../../src/auth/jwt.ts';
@@ -174,7 +174,7 @@ async function initialize(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Void-Auth-Setup': signature,
+        'X-Nosam-Auth-Setup': signature,
       },
       body,
     }),
@@ -796,7 +796,7 @@ describe('provider-independent first administrator setup', () => {
     expect((await initialize()).status).toBe(200);
     expect((await initialize()).status).toBe(200);
     const discovery = await (
-      await app.fetch(new Request(`${origin}/.well-known/void-platform`), bindings())
+      await app.fetch(new Request(`${origin}/.well-known/nosam-platform`), bindings())
     ).json();
     expect(discovery).toMatchObject({
       schemaVersion: 3,
@@ -815,7 +815,7 @@ describe('provider-independent first administrator setup', () => {
       PLATFORM_DISPLAY_NAME: '<Example Platform>',
     });
     expect(await adminHtml(setupPage)).toContain(
-      '<title>Set up administrator · &lt;Example Platform&gt; · Void</title>',
+      '<title>Set up administrator · &lt;Example Platform&gt; · Nosam</title>',
     );
     expect((await form('/auth/bootstrap', { code: randomLoginProof() })).status).toBe(403);
     expect(
@@ -825,11 +825,13 @@ describe('provider-independent first administrator setup', () => {
     expect(callback.status).toBe(200);
     const callbackHtml = await adminHtml(callback);
     expect(callbackHtml).toContain('administrator@example.com');
-    expect(callbackHtml).toContain('<title>Confirm platform administrator · Void Platform</title>');
+    expect(callbackHtml).toContain(
+      '<title>Confirm platform administrator · Nosam Platform</title>',
+    );
     expect(await env.db.select().from(users)).toHaveLength(0);
     const proofCookie = callback.headers
       .getSetCookie()
-      .find((cookie) => cookie.startsWith('void_bootstrap_confirm='))!
+      .find((cookie) => cookie.startsWith('nosam_bootstrap_confirm='))!
       .split(';')[0]!;
     expect(
       (
@@ -910,7 +912,7 @@ describe('provider-independent first administrator setup', () => {
     expect(html).toContain('The provider refused the token request.');
     expect(html).toContain('Error code: oidc_token_failed');
     expect(html).toContain(`Callback URL: ${origin}/auth/callback`);
-    expect(html).toContain(`void platform repair ${installationId}</code>`);
+    expect(html).toContain(`nosam platform repair ${installationId}</code>`);
     expect(html).toContain('href="/setup"');
     expect(errors).toHaveBeenCalledWith('[auth] login failed', {
       code: 'oidc_token_failed',

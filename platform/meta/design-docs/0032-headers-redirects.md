@@ -5,7 +5,7 @@ status: implemented
 
 # Headers and redirects
 
-Void accepts response-header and redirect rules from void.json and the
+Nosam accepts response-header and redirect rules from nosam.json and the
 corresponding _headers and _redirects files. The framework parses and merges
 them into the deploy routing contract, and local development applies the
 same rule set. Routing rules run in order with the first match taking effect;

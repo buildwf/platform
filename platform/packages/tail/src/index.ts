@@ -13,7 +13,7 @@ function isFetchEvent(event: TraceItem['event']): event is TraceItemFetchEventIn
  * Parse versioned or legacy worker script names.
  * Versioned: "user-{slug}-dpl_{id}" → projectKey "user-{slug}", deployId "dpl_{id}"
  * Legacy: "user-{slug}" → projectKey "user-{slug}", deployId ""
- * Platform dispatch: "void-dispatch" / "void-dispatch-staging" →
+ * Platform dispatch: "nosam-dispatch" / "nosam-dispatch-staging" →
  *   projectKey "__platform-dispatch" / "__platform-dispatch-staging"
  *   (reserved prefix so admin tooling can surface relay errors without
  *   colliding with any user-* key).
@@ -23,13 +23,13 @@ export function parseScriptName(
   platformDispatchWorkerName?: string,
   scriptTags?: ReadonlyArray<string>,
 ): { projectKey: string; deployId: string } | null {
-  if (scriptName.startsWith('void-do-')) {
-    const project = scriptTags?.find((tag) => /^void-project:user-[a-z0-9-]+$/.test(tag));
-    const deployment = scriptTags?.find((tag) => /^void-deployment:dpl_[a-zA-Z0-9_]+$/.test(tag));
+  if (scriptName.startsWith('nosam-do-')) {
+    const project = scriptTags?.find((tag) => /^nosam-project:user-[a-z0-9-]+$/.test(tag));
+    const deployment = scriptTags?.find((tag) => /^nosam-deployment:dpl_[a-zA-Z0-9_]+$/.test(tag));
     return project && deployment
       ? {
-          projectKey: project.slice('void-project:'.length),
-          deployId: deployment.slice('void-deployment:'.length),
+          projectKey: project.slice('nosam-project:'.length),
+          deployId: deployment.slice('nosam-deployment:'.length),
         }
       : null;
   }
@@ -46,14 +46,14 @@ export function parseScriptName(
   if (platformDispatchWorkerName && scriptName === platformDispatchWorkerName) {
     return { projectKey: '__platform-dispatch', deployId: '' };
   }
-  if (scriptName === 'void-dispatch' || scriptName === 'void-dispatch-staging') {
-    return { projectKey: `__platform-${scriptName.slice('void-'.length)}`, deployId: '' };
+  if (scriptName === 'nosam-dispatch' || scriptName === 'nosam-dispatch-staging') {
+    return { projectKey: `__platform-${scriptName.slice('nosam-'.length)}`, deployId: '' };
   }
   return null;
 }
 
 /**
- * Build the `void_logs` row for one trace event.
+ * Build the `nosam_logs` row for one trace event.
  *
  * Minimal mode drops the request URL and all message text. It keeps each log
  * level and exception name, so `--level` filters still match, and adds the

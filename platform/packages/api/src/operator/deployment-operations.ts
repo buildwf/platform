@@ -251,7 +251,7 @@ export async function deploymentLogs(
       ...runtimeLogsField(env),
     };
   }
-  const dataset = env.LOGS_DATASET ?? 'void_logs';
+  const dataset = env.LOGS_DATASET ?? 'nosam_logs';
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(dataset)) {
     throw new OperatorError(500, 'Invalid logs dataset configuration.');
   }

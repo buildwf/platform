@@ -47,7 +47,7 @@ export async function renderDashboardFatePage(context: Context<ApiEnv>): Promise
   };
   // Page-object navigations carry a cheap route shell. The persistent browser
   // Fate client resolves it from cache or requests the missing view.
-  if (context.req.header('X-VoidPages') === 'true') {
+  if (context.req.header('X-NosamPages') === 'true') {
     return renderAdminPage(context, 'dashboard', 'Dashboard', props);
   }
 
@@ -97,7 +97,7 @@ export async function renderFateListPage(
     platformName: getPlatformDisplayName(context.env, context.req.url),
     username: context.get('user').login,
   };
-  if (context.req.header('X-VoidPages') === 'true') {
+  if (context.req.header('X-NosamPages') === 'true') {
     return renderAdminPage(context, page, title, props);
   }
 
@@ -170,7 +170,7 @@ export async function renderFateDetailPage(
     platformName: getPlatformDisplayName(context.env, context.req.url),
     username: context.get('user').login,
   };
-  if (context.req.header('X-VoidPages') === 'true') {
+  if (context.req.header('X-NosamPages') === 'true') {
     return renderAdminPage(context, page, title, props);
   }
 

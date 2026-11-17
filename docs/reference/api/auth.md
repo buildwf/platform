@@ -1,18 +1,18 @@
 ---
-description: 'Sessions, users, and auth clients from void/auth, plus the browser helpers in void/client.'
+description: 'Sessions, users, and auth clients from nosam/auth, plus the browser helpers in nosam/client.'
 outline: deep
 ---
 
 # Authentication {#auth}
 
-Imported from `"void/auth"`. Client-side helpers imported from `"void/client"`.
+Imported from `"nosam/auth"`. Client-side helpers imported from `"nosam/client"`.
 
 ## `defineAuth(config)` {#defineauth-config}
 
-Advanced escape hatch for customizing Void's Better Auth config.
+Advanced escape hatch for customizing Nosam's Better Auth config.
 
 ```ts
-import { defineAuth } from 'void/auth';
+import { defineAuth } from 'nosam/auth';
 
 export default defineAuth(({ defaults }) => ({
   ...defaults,
@@ -23,7 +23,7 @@ export default defineAuth(({ defaults }) => ({
 **Signature:**
 
 ```ts
-function defineAuth(config: VoidAuthConfig): VoidAuthConfig;
+function defineAuth(config: NosamAuthConfig): NosamAuthConfig;
 ```
 
 ## `getUser()` {#getuser}
@@ -31,7 +31,7 @@ function defineAuth(config: VoidAuthConfig): VoidAuthConfig;
 Returns the current authenticated user, or `null` when no user is present.
 
 ```ts
-import { getUser } from 'void/auth';
+import { getUser } from 'nosam/auth';
 
 const user = getUser();
 ```
@@ -47,7 +47,7 @@ function getUser(): AuthUser | null;
 Returns the current Better Auth request state, or `null`.
 
 ```ts
-import { getSession } from 'void/auth';
+import { getSession } from 'nosam/auth';
 
 const state = getSession();
 ```
@@ -63,8 +63,8 @@ function getSession(): AuthState | null;
 Returns the Better Auth instance for the current request, including plugin APIs inferred from `auth.ts`. Use it with Better Auth plugin helpers or to forward requests to `auth.handler`.
 
 ```ts
-import { defineHandler } from 'void';
-import { getAuth } from 'void/auth';
+import { defineHandler } from 'nosam';
+import { getAuth } from 'nosam/auth';
 
 export const GET = defineHandler((c) => getAuth(c).handler(c.req.raw));
 ```
@@ -86,8 +86,8 @@ Returns the authenticated user from the request context. Without `throwRedirect`
 Use it without options in route handlers or actions when you want a plain-text `401`, not an error page:
 
 ```ts
-import { defineHandler } from 'void';
-import { requireAuth } from 'void/auth';
+import { defineHandler } from 'nosam';
+import { requireAuth } from 'nosam/auth';
 
 export const GET = defineHandler((c) => {
   const user = requireAuth(c);
@@ -98,8 +98,8 @@ export const GET = defineHandler((c) => {
 To send a signed-out browser to a login page, pass `throwRedirect` to [redirect unauthenticated visitors to login](../../guide/auth.md#protect-a-server-route):
 
 ```ts
-import { defineHandler } from 'void';
-import { requireAuth } from 'void/auth';
+import { defineHandler } from 'nosam';
+import { requireAuth } from 'nosam/auth';
 
 export const GET = defineHandler((c) => {
   const user = requireAuth(c, { throwRedirect: '/login' });
@@ -119,7 +119,7 @@ function requireAuth(c: CloudContext, options?: { throwRedirect?: string }): Aut
 
 ## `AuthUser` {#authuser}
 
-Better Auth user shape re-exported by Void. It also includes the fields that Better Auth plugins and `user.additionalFields` in `auth.ts` add, for example `role` from `admin()` or a custom `plan` field. Your tsconfig needs the generated Void types for this; see [Type Safety setup](../../guide/type-safety.md#setup).
+Better Auth user shape re-exported by Nosam. It also includes the fields that Better Auth plugins and `user.additionalFields` in `auth.ts` add, for example `role` from `admin()` or a custom `plan` field. Your tsconfig needs the generated Nosam types for this; see [Type Safety setup](../../guide/type-safety.md#setup).
 
 ```ts
 interface AuthUser {
@@ -135,7 +135,7 @@ interface AuthUser {
 
 ## `AuthSession` {#authsession}
 
-Better Auth session shape re-exported by Void. It also includes the session fields that Better Auth plugins in `auth.ts` add, for example `impersonatedBy` from `admin()`.
+Better Auth session shape re-exported by Nosam. It also includes the session fields that Better Auth plugins in `auth.ts` add, for example `impersonatedBy` from `admin()`.
 
 ```ts
 interface AuthSession {
@@ -151,7 +151,7 @@ interface AuthSession {
 ```
 
 ::: tip Types inside `auth.ts`
-In `auth.ts` and its imports, let Better Auth infer hook types or use its `User` and `Session` types. Using Void's inferred auth types or auth helper results there creates a circular reference. Callbacks such as `sendResetPassword` receive Better Auth's base `User` type.
+In `auth.ts` and its imports, let Better Auth infer hook types or use its `User` and `Session` types. Using Nosam's inferred auth types or auth helper results there creates a circular reference. Callbacks such as `sendResetPassword` receive Better Auth's base `User` type.
 :::
 
 ## `AuthState` {#authstate}
@@ -167,10 +167,10 @@ interface AuthState {
 
 ## `auth` {#auth-1}
 
-Imported from `"void/client"`. This is a ready-to-use Better Auth client instance preconfigured with `basePath: "/api/auth"`.
+Imported from `"nosam/client"`. This is a ready-to-use Better Auth client instance preconfigured with `basePath: "/api/auth"`.
 
 ```ts
-import { auth } from 'void/client';
+import { auth } from 'nosam/client';
 
 await auth.signIn.email({ email, password });
 await auth.signOut();
@@ -179,17 +179,17 @@ await auth.signOut();
 The exact client methods come from Better Auth. For React hooks such as `useSession()`, import the React client:
 
 ```ts
-import { auth } from 'void/client/react';
+import { auth } from 'nosam/client/react';
 ```
 
-That subpath keeps the same `fetch`, `fetchStream`, and auth exports as `void/client`, but binds `auth` and `createAuthClient` to Better Auth's React package.
+That subpath keeps the same `fetch`, `fetchStream`, and auth exports as `nosam/client`, but binds `auth` and `createAuthClient` to Better Auth's React package.
 
 ## `createAuthClient` {#createauthclient}
 
-Imported from `"void/client"`. Re-export of Better Auth's `createAuthClient` for advanced usage.
+Imported from `"nosam/client"`. Re-export of Better Auth's `createAuthClient` for advanced usage.
 
 ```ts
-import { createAuthClient } from 'void/client';
+import { createAuthClient } from 'nosam/client';
 
 const auth = createAuthClient({ basePath: '/api/auth' });
 ```

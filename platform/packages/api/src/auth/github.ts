@@ -74,14 +74,14 @@ export async function getGitHubUser(accessToken: string): Promise<GitHubUser> {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: 'application/vnd.github+json',
-        'User-Agent': 'void-api',
+        'User-Agent': 'nosam-api',
       },
     }),
     fetch('https://api.github.com/user/emails', {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: 'application/vnd.github+json',
-        'User-Agent': 'void-api',
+        'User-Agent': 'nosam-api',
       },
     }),
   ]);

@@ -22,7 +22,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { formatPlatformPageTitle } from '../../../platform-identity.ts';
 import { useNavigation, useRouter } from '../spa.tsx';
 import { PageStack } from './PageStack.tsx';
-import { VoidLogo } from './VoidLogo.tsx';
+import { NosamLogo } from './NosamLogo.tsx';
 
 let isSideNavCollapsed = false;
 
@@ -61,7 +61,7 @@ export function Layout({
 
   return (
     <AppShell
-      className="void-admin-shell"
+      className="nosam-admin-shell"
       height="auto"
       contentPadding={6}
       mobileNav={{ breakpoint: 'lg' }}
@@ -70,8 +70,8 @@ export function Layout({
           label="Platform administration"
           heading={
             <TopNavHeading
-              className="void-admin-brand"
-              logo={<VoidLogo />}
+              className="nosam-admin-brand"
+              logo={<NosamLogo />}
               heading={platformName}
             />
           }
@@ -186,7 +186,7 @@ export function Layout({
         </SideNav>
       }
     >
-      <PageStack className="void-admin-content">{children}</PageStack>
+      <PageStack className="nosam-admin-content">{children}</PageStack>
     </AppShell>
   );
 }

@@ -23,7 +23,7 @@ import {
 import { createUsageCounterFixture } from './usage-counter-fixture.ts';
 
 const cli = fileURLToPath(
-  new URL('../../../../../packages/void/dist/cli/cli.mjs', import.meta.url),
+  new URL('../../../../../packages/nosam/dist/cli/cli.mjs', import.meta.url),
 );
 let env: TestEnv;
 let server: Server;
@@ -102,8 +102,8 @@ function run(args: Array<string>, input?: string) {
     const child = spawn(process.execPath, [cli, 'platform', ...args], {
       env: {
         ...process.env,
-        VOID_API_URL: origin,
-        VOID_OPERATOR_TOKEN: operatorToken,
+        NOSAM_API_URL: origin,
+        NOSAM_OPERATOR_TOKEN: operatorToken,
         // `vp run` forces color; combining it with NO_COLOR emits a Node warning
         // on stderr and corrupts the JSON error response this fixture asserts.
         FORCE_COLOR: undefined,
@@ -140,7 +140,7 @@ test('built CLI configures the logging policy enforced by the actual AI proxy', 
   const { default: proxy } = (await import(/* @vite-ignore */ proxyUrl)) as {
     default: { fetch(request: Request, env: unknown): Promise<Response> };
   };
-  // Hosted Void Cloud does not set the uncached auth-database flag.
+  // Hosted Nosam Cloud does not set the uncached auth-database flag.
   const uncached = env.PLATFORM_AUTH_DATABASE_UNCACHED;
   delete env.PLATFORM_AUTH_DATABASE_UNCACHED;
   onTestFinished(() => {
@@ -193,7 +193,7 @@ test('built CLI configures the logging policy enforced by the actual AI proxy', 
     { prompt: 'private' },
     expect.objectContaining({
       gateway: {
-        id: 'void',
+        id: 'nosam',
         collectLog: true,
         metadata: { projectId: await deriveAiUsageTag(env.JWT_SECRET, project.id) },
       },
@@ -266,7 +266,7 @@ test('built CLI requires acknowledgement, exposes API validation, and honors rev
 });
 
 test('built CLI manages plans and refreshes existing app limits against recorded usage', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'void-plan-cli-'));
+  const directory = await mkdtemp(join(tmpdir(), 'nosam-plan-cli-'));
   try {
     const preview = await run([
       'config',

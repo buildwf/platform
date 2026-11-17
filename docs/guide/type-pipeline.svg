@@ -18,7 +18,7 @@
 
   <rect x="172" y="12" width="100" height="52" class="box" stroke="#7c3aed" fill="#7c3aed" fill-opacity="0.08"/>
   <text x="222" y="34" text-anchor="middle" class="label" fill="#7c3aed">DB types</text>
-  <text x="222" y="50" text-anchor="middle" class="sublabel" fill="#6b7280">.void/db.d.ts</text>
+  <text x="222" y="50" text-anchor="middle" class="sublabel" fill="#6b7280">.nosam/db.d.ts</text>
 
   <rect x="330" y="14" width="130" height="48" class="box" stroke="#2563eb" fill="#2563eb" fill-opacity="0.08"/>
   <text x="395" y="35" text-anchor="middle" class="label" fill="#2563eb">Route handlers</text>

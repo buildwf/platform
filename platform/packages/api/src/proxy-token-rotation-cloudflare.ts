@@ -3,14 +3,14 @@ import type { RotationBudget } from './proxy-token-rotation.ts';
 
 /**
  * Cloudflare calls a proxy token rotation makes against tenant Workers: read a
- * script's bindings, and replace its `__VOID_PROXY_TOKEN` through a settings
+ * script's bindings, and replace its `__NOSAM_PROXY_TOKEN` through a settings
  * PATCH that inherits every other binding (no code upload).
  *
  * Every call is counted against the run's budget and never retried or slept
  * on here; the rotation decides what to do with a rate limit or an error.
  */
 
-const PROXY_TOKEN_BINDING = '__VOID_PROXY_TOKEN';
+const PROXY_TOKEN_BINDING = '__NOSAM_PROXY_TOKEN';
 const REQUEST_TIMEOUT_MS = 60_000;
 /**
  * A call needs at least this much of the run's time left. Starting one closer

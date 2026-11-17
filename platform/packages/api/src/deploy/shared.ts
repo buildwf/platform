@@ -1,4 +1,4 @@
-import { platformProjectHostname, readPlatformApplication } from '@void/platform';
+import { platformProjectHostname, readPlatformApplication } from '@nosam/platform';
 import type { ApiEnv } from '../env.ts';
 import type { Project } from '../types.ts';
 import { isCfAssetPlainText } from './migrations.ts';
@@ -10,7 +10,7 @@ import { isCfAssetPlainText } from './migrations.ts';
 // JSON-mode deploy share the same cap for symmetry.
 export const MAX_UPLOAD_URLS_BATCH = 5000;
 
-export const DEFAULT_TAIL_SERVICE_NAME = 'void-tail';
+export const DEFAULT_TAIL_SERVICE_NAME = 'nosam-tail';
 
 /**
  * Observability metadata for a project Worker upload. Minimal runtime logs

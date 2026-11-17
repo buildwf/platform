@@ -1,4 +1,4 @@
-import { createDefaultPlanCatalog } from '@void/platform/plans';
+import { createDefaultPlanCatalog } from '@nosam/platform/plans';
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import {
@@ -130,7 +130,7 @@ function setCompareSideEffect(fn: (() => Promise<void>) | null): void {
 }
 
 // Controls the mocked `POST /repos/{repo}/check-runs` response for the
-// best-effort "Void Build" check-run create at the end of a successful
+// best-effort "Nosam Build" check-run create at the end of a successful
 // exchange. Default 200 returns a fixed id so happy-path exchanges persist it; a
 // >=400 status models a create failure (`createCheckRun` returns null) — the
 // exchange must still mint a token and persist NO check_run_id. Reset each test.
@@ -165,11 +165,11 @@ function makeApp(overrideEnv: TestEnv): Hono<ApiEnv> {
 function makeClaims(overrides: Partial<GithubOidcClaims> = {}): GithubOidcClaims {
   const repository = overrides.repository ?? 'octo/repo';
   const ref = overrides.ref ?? 'refs/heads/main';
-  // Default the workflow claims to the scaffolded `void-deploy.yml` for the
+  // Default the workflow claims to the scaffolded `nosam-deploy.yml` for the
   // (possibly overridden) repository on the (possibly overridden) ref, so the
   // happy-path exchange satisfies the route's workflow binding. Tests that
   // exercise the binding rejection override `workflow_ref`/`job_workflow_ref`.
-  const scaffoldRef = `${repository}/.github/workflows/void-deploy.yml@${ref}`;
+  const scaffoldRef = `${repository}/.github/workflows/nosam-deploy.yml@${ref}`;
   return {
     repository,
     repository_owner: repository.split('/')[0]!,
@@ -182,11 +182,11 @@ function makeClaims(overrides: Partial<GithubOidcClaims> = {}): GithubOidcClaims
     sha: 'sha-oidc',
     run_id: '987654',
     run_attempt: '1',
-    workflow: 'Deploy to Void',
+    workflow: 'Deploy to Nosam',
     workflow_ref: scaffoldRef,
     job_workflow_ref: scaffoldRef,
     sub: `repo:${repository}:ref:${ref}`,
-    aud: 'void',
+    aud: 'nosam',
     // The workflow trigger event. Defaults to the scaffolded `push` trigger so
     // every happy-path exchange satisfies the route's event allowlist; tests
     // exercising the allowlist override it (e.g. `pull_request_target`).
@@ -202,7 +202,7 @@ async function exchange(
   options?: { withSecrets?: boolean },
 ): Promise<Response> {
   const withSecrets = options?.withSecrets ?? true;
-  // The route creates+persists the best-effort "Void Build" check run
+  // The route creates+persists the best-effort "Nosam Build" check run
   // SYNCHRONOUSLY (awaited before the token response), so the check-run POST and
   // persisted `check_run_id` are already durable when `app.fetch` resolves — no
   // `waitUntil` flush needed.
@@ -317,7 +317,7 @@ beforeEach(async () => {
           checkRunSideEffect = null;
           await effect();
         }
-        // The best-effort "Void Build" check-run create (end of the exchange).
+        // The best-effort "Nosam Build" check-run create (end of the exchange).
         if (checkRunCreateStatus < 200 || checkRunCreateStatus >= 300) {
           return new Response('check-run create failed', { status: checkRunCreateStatus });
         }
@@ -455,7 +455,7 @@ describe('POST /auth/github-oidc', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns 401 when the oidc token audience is not "void"', async () => {
+  it('returns 401 when the oidc token audience is not "nosam"', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'oidc-aud');
     await seedActiveInstallation(env.db, '1');
@@ -674,10 +674,10 @@ describe('POST /auth/github-oidc', () => {
   });
 
   // The github_actions executor has no BuildManager DO, so the OIDC exchange is
-  // the only place the "Void Build" check run can be created. A successful create
+  // the only place the "Nosam Build" check run can be created. A successful create
   // must persist the returned id onto the build so the workflow_run completion
   // handler can finalize it.
-  it('creates and persists a "Void Build" check run for a github_actions exchange', async () => {
+  it('creates and persists a "Nosam Build" check run for a github_actions exchange', async () => {
     const user = await createTestUser(env.db, 'octo-check');
     const project = await createTestProject(env.db, user.id, 'oidc-check');
     await seedActiveInstallation(env.db, '1');
@@ -1196,10 +1196,10 @@ describe('POST /auth/github-oidc', () => {
   // A repeated exchange for the SAME run reuses the in-flight build (above). That
   // reused row already carries the check_run_id its creating exchange persisted,
   // so the check-run create MUST be skipped — otherwise a retry POSTs a SECOND
-  // "Void Build" run and overwrites the id, orphaning the first `in_progress`
+  // "Nosam Build" run and overwrites the id, orphaning the first `in_progress`
   // forever. Distinct per-call ids make an accidental duplicate visible (both the
   // POST count and the persisted id would change).
-  it('creates the "Void Build" check run exactly once across repeated exchanges for the same run', async () => {
+  it('creates the "Nosam Build" check run exactly once across repeated exchanges for the same run', async () => {
     const user = await createTestUser(env.db, 'octo-check-dup');
     const project = await createTestProject(env.db, user.id, 'oidc-check-dup');
     await seedActiveInstallation(env.db, '1');
@@ -1499,7 +1499,7 @@ describe('POST /auth/github-oidc', () => {
         connectionId: connection.id,
         installationId: '1',
         repositoryId: '42',
-        expectedWorkflowPath: '.github/workflows/void-deploy.yml',
+        expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
       }),
       createGithubActionsBuildWithinLimit(env.db, {
         projectId: project.id,
@@ -1508,7 +1508,7 @@ describe('POST /auth/github-oidc', () => {
         connectionId: connection.id,
         installationId: '1',
         repositoryId: '42',
-        expectedWorkflowPath: '.github/workflows/void-deploy.yml',
+        expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
       }),
     ]);
 
@@ -1640,14 +1640,14 @@ describe('POST /auth/github-oidc', () => {
 
   // ---------------------------------------------------------------------------
   // The OIDC exchange must bind the deploy token to the SCAFFOLDED deploy
-  // workflow (`.github/workflows/void-deploy.yml`). Otherwise any other workflow
+  // workflow (`.github/workflows/nosam-deploy.yml`). Otherwise any other workflow
   // in the connected repo that can request `id-token: write` on the connected
   // branch (a hand-added workflow, an unsafe `pull_request_target`, a manual
   // `workflow_dispatch` of a different file) could mint a deploy token and act
   // as a deploy oracle.
   // ---------------------------------------------------------------------------
 
-  it('returns 401 and creates no build when the workflow is not void-deploy.yml', async () => {
+  it('returns 401 and creates no build when the workflow is not nosam-deploy.yml', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'oidc-wrong-workflow');
     await seedActiveInstallation(env.db, '1');
@@ -1675,7 +1675,7 @@ describe('POST /auth/github-oidc', () => {
     expect(projectBuilds.length).toBe(0);
   });
 
-  it('returns 401 when a void-deploy.yml path is spoofed under a different repo prefix', async () => {
+  it('returns 401 when a nosam-deploy.yml path is spoofed under a different repo prefix', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'oidc-spoof-prefix');
     await seedActiveInstallation(env.db, '1');
@@ -1691,9 +1691,9 @@ describe('POST /auth/github-oidc', () => {
     });
 
     const app = makeApp(env);
-    // The path component is void-deploy.yml but the repo prefix is NOT the
+    // The path component is nosam-deploy.yml but the repo prefix is NOT the
     // running repo (`claims.repository`), so the binding must reject it.
-    const spoofed = 'attacker/evil/.github/workflows/void-deploy.yml@refs/heads/main';
+    const spoofed = 'attacker/evil/.github/workflows/nosam-deploy.yml@refs/heads/main';
     setVerifyResult(makeClaims({ workflow_ref: spoofed, job_workflow_ref: spoofed }));
 
     const res = await exchange(app, env, { oidcToken: 'good', project: project.slug });
@@ -1722,7 +1722,7 @@ describe('POST /auth/github-oidc', () => {
     expect((await getProjectBuilds(env.db, project.id)).length).toBe(0);
   });
 
-  it('mints a token for the scaffolded void-deploy.yml workflow on the connected branch', async () => {
+  it('mints a token for the scaffolded nosam-deploy.yml workflow on the connected branch', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'oidc-good-workflow');
     await seedActiveInstallation(env.db, '1');
@@ -1768,7 +1768,7 @@ describe('POST /auth/github-oidc', () => {
     expect((await getProjectBuilds(env.db, project.id)).length).toBe(1);
   });
 
-  it('returns 401 for the scaffolded void-deploy.yml when the connection pins a custom path', async () => {
+  it('returns 401 for the scaffolded nosam-deploy.yml when the connection pins a custom path', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'oidc-custom-rejects-default');
     await seedActiveInstallation(env.db, '1');
@@ -1783,7 +1783,7 @@ describe('POST /auth/github-oidc', () => {
     });
 
     const app = makeApp(env);
-    // makeClaims defaults to the scaffolded void-deploy.yml path, which this
+    // makeClaims defaults to the scaffolded nosam-deploy.yml path, which this
     // connection no longer authorizes (it pins ci.yml) — REPLACE semantics.
     setVerifyResult(makeClaims());
 
@@ -1807,7 +1807,7 @@ describe('POST /auth/github-oidc', () => {
       repositoryId: '42',
       branch: 'main',
       buildExecutor: 'github_actions',
-      // default workflow_path === '.github/workflows/void-deploy.yml'
+      // default workflow_path === '.github/workflows/nosam-deploy.yml'
     });
     await createGitHubConnection(env.db, {
       projectId: projectCustom.id,
@@ -1820,7 +1820,7 @@ describe('POST /auth/github-oidc', () => {
     });
 
     const app = makeApp(env);
-    const defaultRef = 'octo/repo/.github/workflows/void-deploy.yml@refs/heads/main';
+    const defaultRef = 'octo/repo/.github/workflows/nosam-deploy.yml@refs/heads/main';
     const ciRef = 'octo/repo/.github/workflows/ci.yml@refs/heads/main';
 
     // The default-pinned project rejects a ci.yml run...
@@ -1828,7 +1828,7 @@ describe('POST /auth/github-oidc', () => {
     const crossA = await exchange(app, env, { oidcToken: 'good', project: projectDefault.slug });
     expect(crossA.status).toBe(401);
 
-    // ...and the ci.yml-pinned project rejects the scaffolded void-deploy.yml run.
+    // ...and the ci.yml-pinned project rejects the scaffolded nosam-deploy.yml run.
     setVerifyResult(makeClaims({ workflow_ref: defaultRef, job_workflow_ref: defaultRef }));
     const crossB = await exchange(app, env, { oidcToken: 'good', project: projectCustom.slug });
     expect(crossB.status).toBe(401);

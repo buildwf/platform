@@ -1,5 +1,5 @@
-import { defineHandler } from 'void';
-import { getSession } from 'void/auth';
+import { defineHandler } from 'nosam';
+import { getSession } from 'nosam/auth';
 
 export const GET = defineHandler(() => {
   const auth = getSession();

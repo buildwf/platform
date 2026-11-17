@@ -16,7 +16,7 @@ import {
 
 const CONTROLLER_CLASS = 'SandboxController';
 const CONTROLLER_BINDING = 'SANDBOX';
-const OWNER_BINDING = '__VOID_SANDBOX_OWNER';
+const OWNER_BINDING = '__NOSAM_SANDBOX_OWNER';
 
 export type SandboxControllerIdentity = Readonly<{
   projectId: string;
@@ -40,7 +40,7 @@ type WorkerSettings = {
 type SandboxCounterNamespace = DurableObjectNamespace<SandboxConcurrencyCounter>;
 
 export function sandboxControllerWorkerName(projectId: string, deploymentId: string): string {
-  return `void-sb-${projectId}-${deploymentId}`.toLowerCase().replaceAll('_', '-');
+  return `nosam-sb-${projectId}-${deploymentId}`.toLowerCase().replaceAll('_', '-');
 }
 
 export function isManagedSandbox(manifest: DeployManifest | null | undefined): boolean {
@@ -56,7 +56,7 @@ export async function assertManagedSandboxEntitlement(
   } catch {
     throw new Error(
       [
-        'This app uses void/sandbox, but the platform could not verify Cloudflare Containers access.',
+        'This app uses nosam/sandbox, but the platform could not verify Cloudflare Containers access.',
         'Cloudflare Containers require Workers Paid. Enable it for the platform account: https://dash.cloudflare.com/?to=/:account/workers/plans .',
         'The platform runtime API token needs Account / Containers: Edit and Account / Cloudchamber: Edit.',
         'An administrator can update the token and retry. No app resources were provisioned.',
@@ -122,13 +122,13 @@ function controllerTextBindings(
   instance: string,
 ): Record<string, string> {
   return {
-    __VOID_SANDBOX_SOURCE: digest,
-    __VOID_USER_ID: identity.userId,
+    __NOSAM_SANDBOX_SOURCE: digest,
+    __NOSAM_USER_ID: identity.userId,
     __PROJECT_ID: identity.projectId,
-    __VOID_PROJECT_SLUG: identity.slug,
-    __VOID_DEPLOYMENT_ID: identity.deploymentId,
-    __VOID_SANDBOX_IMAGE: image,
-    __VOID_SANDBOX_INSTANCE: instance,
+    __NOSAM_PROJECT_SLUG: identity.slug,
+    __NOSAM_DEPLOYMENT_ID: identity.deploymentId,
+    __NOSAM_SANDBOX_IMAGE: image,
+    __NOSAM_SANDBOX_INSTANCE: instance,
   };
 }
 
@@ -147,7 +147,7 @@ function assertConfiguration(
   // Cloudflare does not return service binding `props` from `/settings`. The
   // plain-text bindings checked above come from the same upload as the props.
   const control = settings.bindings.find(
-    (binding) => binding.type === 'service' && binding.name === '__VOID_SANDBOX_CONTROL',
+    (binding) => binding.type === 'service' && binding.name === '__NOSAM_SANDBOX_CONTROL',
   );
   if (control?.service !== apiService || control.entrypoint !== 'SandboxControl') {
     throw new Error('Sandbox controller authority binding differs from this deployment.');
@@ -199,7 +199,7 @@ export async function provisionSandboxController(input: {
         },
         {
           type: 'service',
-          name: '__VOID_SANDBOX_CONTROL',
+          name: '__NOSAM_SANDBOX_CONTROL',
           service: apiService,
           entrypoint: 'SandboxControl',
           props: identity,
@@ -282,7 +282,7 @@ export async function verifySandboxController(
     perDeployContainerApplicationName(
       projectId,
       deploymentId,
-      sandbox.containerName ?? 'void-sandbox',
+      sandbox.containerName ?? 'nosam-sandbox',
     ),
   );
   if (!application || application.durable_objects?.namespace_id !== namespaceId(settings)) {
@@ -310,7 +310,7 @@ export async function deleteSandboxController(
     perDeployContainerApplicationName(
       projectId,
       deploymentId,
-      sandbox.containerName ?? 'void-sandbox',
+      sandbox.containerName ?? 'nosam-sandbox',
     ),
   );
   if (!settings) {
@@ -365,7 +365,7 @@ async function revokeDeploymentCapacity(
   projectId: string,
   deploymentId: string,
 ): Promise<void> {
-  let userId = settings ? plainTextBinding(settings, '__VOID_USER_ID') : undefined;
+  let userId = settings ? plainTextBinding(settings, '__NOSAM_USER_ID') : undefined;
   let databaseUserId: string | undefined;
   if (db) {
     const [owner] = await db

@@ -53,7 +53,7 @@ async function exchangeInstallCodeForUserToken(
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      'User-Agent': 'void-api',
+      'User-Agent': 'nosam-api',
     },
     body: JSON.stringify({
       client_id: e.GITHUB_APP_CLIENT_ID,
@@ -94,7 +94,7 @@ async function fetchUserAccountId(userToken: string): Promise<string | null> {
     headers: {
       Accept: 'application/vnd.github+json',
       Authorization: `Bearer ${userToken}`,
-      'User-Agent': 'void-api',
+      'User-Agent': 'nosam-api',
       'X-GitHub-Api-Version': GITHUB_API_VERSION,
     },
   });
@@ -155,7 +155,7 @@ async function listUserInstallationIds(userToken: string): Promise<Set<string>> 
       headers: {
         Accept: 'application/vnd.github+json',
         Authorization: `Bearer ${userToken}`,
-        'User-Agent': 'void-api',
+        'User-Agent': 'nosam-api',
         'X-GitHub-Api-Version': GITHUB_API_VERSION,
       },
     });
@@ -234,7 +234,7 @@ export async function authorizeInstallViaUserToken(
  * Discover the installation ids the holder of the OAuth `code` can manage,
  * together with their numeric GitHub account id. Consumed by the JOIN flow,
  * which unions the caller's accessible installations against the ones
- * Void already tracks to decide which connections the caller may join.
+ * Nosam already tracks to decide which connections the caller may join.
  *
  * Fails closed:
  *   - App not configured for user-auth-on-install → `{ installationIds: empty,
@@ -315,7 +315,7 @@ export async function verifyUserRepoAccess(
         headers: {
           Accept: 'application/vnd.github+json',
           Authorization: `Bearer ${userToken}`,
-          'User-Agent': 'void-api',
+          'User-Agent': 'nosam-api',
           'X-GitHub-Api-Version': GITHUB_API_VERSION,
         },
       },

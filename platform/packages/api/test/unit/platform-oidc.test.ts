@@ -1,4 +1,4 @@
-import { parsePlatformLoginConfiguration } from '@void/platform';
+import { parsePlatformLoginConfiguration } from '@nosam/platform';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 import { assertPublicIdentityUrl, PlatformOidcProvider } from '../../src/auth/oidc.ts';
@@ -26,7 +26,7 @@ function fixture(
     kind: 'oidc',
     label: 'Company',
     issuer: 'https://identity.example.com',
-    clientId: 'void-client',
+    clientId: 'nosam-client',
     ...options.configuration,
   });
   const issuer = configuration.issuer!;

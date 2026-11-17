@@ -5,17 +5,17 @@ outline: deep
 
 # Durable State
 
-Use a Durable Object when requests need to share state under one name, such as a shopping cart, room, or rate limiter. Void gives you typed methods and stores the object's state between calls.
+Use a Durable Object when requests need to share state under one name, such as a shopping cart, room, or rate limiter. Nosam gives you typed methods and stores the object's state between calls.
 
-Create a module in `durable-objects/` with `defineDurableState()`. Void provides a SQLite-backed Cloudflare Durable Object for it. This feature supports native Void apps on Void platforms and direct Cloudflare deployments.
+Create a module in `durable-objects/` with `defineDurableState()`. Nosam provides a SQLite-backed Cloudflare Durable Object for it. This feature supports native Nosam apps on Nosam platforms and direct Cloudflare deployments.
 
-Commit `void.lock.json` when Void adds a resource. Keep its deployed migration entries in their original order.
+Commit `nosam.lock.json` when Nosam adds a resource. Keep its deployed migration entries in their original order.
 
 ## Define state and methods
 
 ```ts
 // durable-objects/counter.ts
-import { defineDurableState } from 'void/durable';
+import { defineDurableState } from 'nosam/durable';
 
 export const Counter = defineDurableState({
   initialState: { count: 0 },
@@ -41,7 +41,7 @@ Import your definition and call `get()` with a name to select an object. Method 
 
 ```ts
 // routes/api/counter.ts
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 import { Counter } from '../../durable-objects/counter';
 
 export const POST = defineHandler(async () => {
@@ -55,9 +55,9 @@ The same name always resolves to the same Durable Object. Use `getById(id)` when
 
 ## Execution and persistence
 
-Void loads state before the first operation and runs RPC methods one at a time. After a method, `fetch`, or `alarm` handler succeeds, it saves the updated state.
+Nosam loads state before the first operation and runs RPC methods one at a time. After a method, `fetch`, or `alarm` handler succeeds, it saves the updated state.
 
-If the handler or save fails, Void restores `context.state` to its previous value. Direct writes to `context.storage` aren't included in that rollback.
+If the handler or save fails, Nosam restores `context.state` to its previous value. Direct writes to `context.storage` aren't included in that rollback.
 
 Each method receives:
 
@@ -116,19 +116,19 @@ export const Counter = defineDurableState({
 export default Counter;
 ```
 
-State migrations update your saved values. Void manages Cloudflare’s separate class migrations in `void.lock.json`.
+State migrations update your saved values. Nosam manages Cloudflare’s separate class migrations in `nosam.lock.json`.
 
-For direct Cloudflare deployments, do not delete or reorder generated Durable Object migrations in `void.lock.json` after deployment. For a class addition, rename, or removal on an existing Worker, review the migration and run `void deploy --platform cloudflare --atomic`. If this Worker needs atomic publication on every deploy, set `deploy: { cloudflare: { mode: 'atomic' } }` in `void.config.ts`. Cloudflare applies class lifecycle changes in one deployment. The Worker receives traffic before Void checks readiness, and you cannot roll back across that migration boundary. Staged deploys keep pre-traffic readiness verification.
+For direct Cloudflare deployments, do not delete or reorder generated Durable Object migrations in `nosam.lock.json` after deployment. For a class addition, rename, or removal on an existing Worker, review the migration and run `nosam deploy --platform cloudflare --atomic`. If this Worker needs atomic publication on every deploy, set `deploy: { cloudflare: { mode: 'atomic' } }` in `nosam.config.ts`. Cloudflare applies class lifecycle changes in one deployment. The Worker receives traffic before Nosam checks readiness, and you cannot roll back across that migration boundary. Staged deploys keep pre-traffic readiness verification.
 
 ## Rename a file while keeping its state
 
 Before renaming a deployed definition, run:
 
 ```sh
-void info
+nosam info
 ```
 
-For `durable-objects/counter.ts`, Void prints:
+For `durable-objects/counter.ts`, Nosam prints:
 
 ```text
 To preserve this resource when moving its code, add this to 'defineDurableState':
@@ -155,26 +155,26 @@ Rename the file within `durable-objects/`, update its imports, and deploy. Keep 
 
 `name` is optional. Use a static string, either inline or in a local `const`, containing words that start with a letter, such as `'shopping-cart'`. Names must produce distinct Worker classes and bindings. Changing an existing resource's `name` selects a different resource.
 
-If you already moved the file, `void info` also shows resources recorded in `void.lock.json` without a matching definition. Identify the original resource and use its suggested name. If no name can be suggested, restore the original file from source history and run `void info` before moving it again. Keep the existing lock and migration history.
+If you already moved the file, `nosam info` also shows resources recorded in `nosam.lock.json` without a matching definition. Identify the original resource and use its suggested name. If no name can be suggested, restore the original file from source history and run `nosam info` before moving it again. Keep the existing lock and migration history.
 
 ## Deployment support
 
-Typed state works in local development, on Void platforms, and in direct Cloudflare deploys of native Void apps. Use `void deploy` for a Void platform or `void deploy --platform cloudflare` for your own Cloudflare account.
+Typed state works in local development, on Nosam platforms, and in direct Cloudflare deploys of native Nosam apps. Use `nosam deploy` for a Nosam platform or `nosam deploy --platform cloudflare` for your own Cloudflare account.
 
-On a Void platform, each class keeps its storage across deployments and rollbacks. A rollback restores the class code and keeps the current stored data. Removing a definition makes the class inactive; adding it again with the same resource name restores access to its data. Deleting the project deletes its Durable Object storage.
+On a Nosam platform, each class keeps its storage across deployments and rollbacks. A rollback restores the class code and keeps the current stored data. Removing a definition makes the class inactive; adding it again with the same resource name restores access to its data. Deleting the project deletes its Durable Object storage.
 
-A project supports up to 32 distinct custom classes, including removed classes whose storage is retained. Keep resource names and instance names stable to preserve data. Upgrade an older Void installation before deploying an app that uses custom Durable Objects.
+A project supports up to 32 distinct custom classes, including removed classes whose storage is retained. Keep resource names and instance names stable to preserve data. Upgrade an older Nosam installation before deploying an app that uses custom Durable Objects.
 
-This is separate from [typed WebSocket routes](./websockets.md), which also use SQLite-backed Durable Objects and work on both direct Cloudflare and hosted Void deployments.
+This is separate from [typed WebSocket routes](./websockets.md), which also use SQLite-backed Durable Objects and work on both direct Cloudflare and hosted Nosam deployments.
 
 ## Native Durable Object classes
 
-Use `defineDurableObject` to keep a native Cloudflare class, including classes extending Cloudflare Agents. Void discovers its binding and exports the class without replacing its constructor, lifecycle, or RPC methods. Like Durable State, this supports Void platforms and direct Cloudflare deployments.
+Use `defineDurableObject` to keep a native Cloudflare class, including classes extending Cloudflare Agents. Nosam discovers its binding and exports the class without replacing its constructor, lifecycle, or RPC methods. Like Durable State, this supports Nosam platforms and direct Cloudflare deployments.
 
 ```ts
 // durable-objects/workspace.ts
 import { DurableObject } from 'cloudflare:workers';
-import { defineDurableObject } from 'void/durable';
+import { defineDurableObject } from 'nosam/durable';
 
 class WorkspaceObject extends DurableObject {
   async fetch() {

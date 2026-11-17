@@ -1,4 +1,4 @@
-import { PLATFORM_DISABLED_KEY } from '@void/platform';
+import { PLATFORM_DISABLED_KEY } from '@nosam/platform';
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import app from '../../src/index.ts';
 import { setupEnv, teardownEnv, type TestEnv } from './helpers.ts';
@@ -32,7 +32,7 @@ function request(token?: string) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { 'X-Void-Platform-Probe': token } : {}),
+      ...(token ? { 'X-Nosam-Platform-Probe': token } : {}),
     },
     body: JSON.stringify({ zoneId: 'a'.repeat(32), domain: 'example.com' }),
   });
@@ -51,7 +51,7 @@ describe('deployed runtime domain preflight', () => {
       expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer private-runtime-token');
       const body = JSON.parse(String(init?.body));
       expect(body.files).toHaveLength(1);
-      expect(body.files[0]).toMatch(/^https:\/\/example.com\/\.well-known\/void-domain-check\//);
+      expect(body.files[0]).toMatch(/^https:\/\/example.com\/\.well-known\/nosam-domain-check\//);
       return Response.json({ success: true });
     });
     vi.stubGlobal('fetch', fetcher);

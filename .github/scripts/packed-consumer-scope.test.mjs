@@ -13,7 +13,7 @@ test('skips documentation-only changes and keeps ordinary runtime changes small'
     'skip',
   );
   assert.equal(
-    selectPackedSuite(['docs/guide/env-vars.md', 'packages/void/src/runtime/env-public.ts']),
+    selectPackedSuite(['docs/guide/env-vars.md', 'packages/nosam/src/runtime/env-public.ts']),
     'smoke',
   );
   assert.equal(selectPackedSuite(['platform/packages/api/src/routes/projects.ts']), 'smoke');
@@ -25,12 +25,12 @@ test('runs the full matrix for dependencies, adapters, scaffolding, and packagin
     'pnpm-workspace.yaml',
     '.node-version',
     'package.json',
-    'packages/void/package.json',
-    'packages/void/vite.config.ts',
+    'packages/nosam/package.json',
+    'packages/nosam/vite.config.ts',
     'packages/solid/src/plugin.ts',
     'packages/vue/src/runtime/index.ts',
-    'packages/create-void/src/pm.ts',
-    'packages/void/src/cli/init.ts',
+    'packages/create-nosam/src/pm.ts',
+    'packages/nosam/src/cli/init.ts',
     '.github/scripts/packed-init.mjs',
     '.github/workflows/packed-consumers.yml',
     '.github/workflows/prepublish-test.yml',
@@ -66,7 +66,7 @@ test('compares the full pushed range rather than just the last commit', async ()
     event: { repository, before, after },
     request: async (path) => {
       assert(path.includes(`${before}...${after}`));
-      return { files: [{ filename: 'packages/void/src/runtime/kv.ts' }] };
+      return { files: [{ filename: 'packages/nosam/src/runtime/kv.ts' }] };
     },
   });
   assert.equal(result, 'smoke');

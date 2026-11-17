@@ -1,5 +1,5 @@
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 import { fetchApi, getPublicApiUrl } from '../lib/api.ts';
 import { isLocalDashboardHost } from '../lib/origin.ts';
 import { createPkceChallenge, createPkceVerifier } from '../lib/pkce.ts';
@@ -26,15 +26,15 @@ export const loader = defineHandler<Props>(async (context) => {
   // The nonce is included in both a cookie and the redirect URL. The callback
   // verifies the cookie value matches the URL param — an attacker's crafted
   // callback URL won't match the victim's cookie.
-  const nonce = getCookie(context, 'void_auth_nonce') ?? crypto.randomUUID();
-  setCookie(context, 'void_auth_nonce', nonce, {
+  const nonce = getCookie(context, 'nosam_auth_nonce') ?? crypto.randomUUID();
+  setCookie(context, 'nosam_auth_nonce', nonce, {
     httpOnly: true,
     secure: !isLocal,
     sameSite: 'Lax',
     path: '/',
     maxAge: 300,
   });
-  deleteCookie(context, 'void_auth_nonce', { path: '/auth' });
+  deleteCookie(context, 'nosam_auth_nonce', { path: '/auth' });
 
   const callback = new URL(callbackUrl);
   callback.searchParams.set('login_nonce', nonce);
@@ -44,7 +44,7 @@ export const loader = defineHandler<Props>(async (context) => {
     const state = crypto.randomUUID();
     pkceChallenge = await createPkceChallenge(verifier);
     callback.searchParams.set('state', state);
-    setCookie(context, 'void_auth_pkce', `${state}:${verifier}`, {
+    setCookie(context, 'nosam_auth_pkce', `${state}:${verifier}`, {
       httpOnly: true,
       secure: false,
       sameSite: 'Lax',
@@ -54,10 +54,10 @@ export const loader = defineHandler<Props>(async (context) => {
   }
   const callbackWithNonce = callback.href;
   let methods: Props['methods'] = [];
-  let platformName = 'Void Cloud';
+  let platformName = 'Nosam Cloud';
   let unavailable = false;
   try {
-    const response = await fetchApi(context, '/.well-known/void-platform');
+    const response = await fetchApi(context, '/.well-known/nosam-platform');
     if (!response.ok) {
       throw new Error('Discovery unavailable');
     }

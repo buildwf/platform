@@ -1,4 +1,4 @@
-import { isR2LocationHint, type R2LocationHint } from '@void/deploy-core';
+import { isR2LocationHint, type R2LocationHint } from '@nosam/deploy-core';
 import type { PlatformApplication } from './application.ts';
 import { PLATFORM_LOGIN_KINDS, type PlatformLoginKind } from './authentication.ts';
 import { assertRecord, requiredString } from './validate.ts';
@@ -193,7 +193,7 @@ export function platformDashboardUrl(deployment: PlatformDeploymentManifest): st
 
 export function createPlatformResourceNames(installationSlug: string): PlatformResourceNames {
   const slug = normalizeInstallationSlug(installationSlug);
-  const prefix = `void-${slug}`;
+  const prefix = `nosam-${slug}`;
   const datasetPrefix = prefix.replaceAll('-', '_');
   return {
     aiGateway: prefix,

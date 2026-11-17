@@ -107,10 +107,10 @@ async function seedZeroTrustConfiguration(
       identityProviderIds: ['idp-1'],
       policyIds: ['policy-1'],
       credential: { ciphertext: 'unused', iv: 'unused', keyVersion: 'v1' },
-      wildcardApplicationName: 'void-test-projects',
+      wildcardApplicationName: 'nosam-test-projects',
       wildcardApplication: {
         id: 'access-wildcard',
-        name: 'void-test-projects',
+        name: 'nosam-test-projects',
         audience: 'access-audience',
         destinations: ['*.void.app'],
       },
@@ -359,7 +359,7 @@ describe('project route membership capabilities', () => {
       effective_protected: true,
       status: 'ready',
       protected_application_id: 'access-app-internal',
-      protected_application_name: 'void-internal-name',
+      protected_application_name: 'nosam-internal-name',
       protected_application_audience: 'internal-audience',
     });
 
@@ -406,7 +406,7 @@ describe('project route membership capabilities', () => {
     expect(adminUpdate.status).toBe(409);
     expect(await adminUpdate.json()).toEqual({
       error: 'Project Zero Trust is not ready on this platform.',
-      message: expect.stringContaining('void project zero-trust status'),
+      message: expect.stringContaining('nosam project zero-trust status'),
     });
   });
 
@@ -453,7 +453,7 @@ describe('project route membership capabilities', () => {
         effective_protected: false,
         status: 'ready',
         bypass_application_id: 'access-bypass',
-        bypass_application_name: 'void-test-public',
+        bypass_application_name: 'nosam-test-public',
       });
       const route = JSON.stringify({ projectId: project.id, userId: owner.id });
       await env.ROUTING.put(project.slug, route);
@@ -511,7 +511,7 @@ describe('project route membership capabilities', () => {
         identityProviderIds: ['idp-1'],
         policyIds: ['policy-1'],
         credential: { ciphertext: 'saved', iv: 'saved', keyVersion: 'v1' },
-        wildcardApplicationName: 'void-test-projects',
+        wildcardApplicationName: 'nosam-test-projects',
         wildcardApplication: null,
         operation: null,
         lastError: null,

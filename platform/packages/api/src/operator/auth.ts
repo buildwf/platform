@@ -16,7 +16,7 @@ export const operatorAuth: MiddlewareHandler<ApiEnv> = async (context, next) => 
   if (!authorization?.startsWith('Bearer ')) {
     throw new OperatorError(
       401,
-      'An operator bearer token is required. Run `void platform auth login`.',
+      'An operator bearer token is required. Run `nosam platform auth login`.',
       'unauthorized',
     );
   }

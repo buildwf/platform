@@ -13,19 +13,19 @@ export function LoginErrorPage({
 }) {
   return (
     <AuthPage platformName={platformName}>
-      <div className="void-auth-status void-auth-status-error" aria-label="Error">
+      <div className="nosam-auth-status nosam-auth-status-error" aria-label="Error">
         !
       </div>
-      <div className="void-auth-lead">
-        <h1 id="void-auth-title">Login failed</h1>
+      <div className="nosam-auth-lead">
+        <h1 id="nosam-auth-title">Login failed</h1>
         <p>{message}</p>
       </div>
       {details.map((detail) => (
-        <p key={detail} className="void-auth-note">
+        <p key={detail} className="nosam-auth-note">
           {detail}
         </p>
       ))}
-      <a className="void-auth-button void-auth-button-primary" href="/admin/logout">
+      <a className="nosam-auth-button nosam-auth-button-primary" href="/admin/logout">
         Start a new sign-in
       </a>
     </AuthPage>

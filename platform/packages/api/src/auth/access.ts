@@ -1,4 +1,4 @@
-import { parsePlatformAccessProtection, type PlatformAccessProtection } from '@void/platform';
+import { parsePlatformAccessProtection, type PlatformAccessProtection } from '@nosam/platform';
 import { createRemoteJWKSet, customFetch, jwtVerify } from 'jose';
 import { boundedIdentityResponse } from './identity-network.ts';
 import type { CompanyIdentity } from './sessions.ts';
@@ -14,7 +14,7 @@ export class PlatformAccessError extends Error {
   }
 }
 
-/** Access verifies perimeter policy; Void additionally verifies the signed application assertion. */
+/** Access verifies perimeter policy; Nosam additionally verifies the signed application assertion. */
 export class PlatformAccessVerifier {
   private readonly keys = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 

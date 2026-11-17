@@ -1,5 +1,5 @@
-import { defineHandler } from 'void';
-import { storage } from 'void/storage';
+import { defineHandler } from 'nosam';
+import { storage } from 'nosam/storage';
 
 export const GET = defineHandler(async () => {
   const list = await storage.list({ limit: 20 });

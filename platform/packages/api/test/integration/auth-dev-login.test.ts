@@ -193,7 +193,7 @@ describe('GET /auth/login redirect isolation', () => {
     });
   });
 
-  it('preserves the hosted dashboard default for Void Cloud', async () => {
+  it('preserves the hosted dashboard default for Nosam Cloud', async () => {
     const redirect = encodeURIComponent('https://dash.void.cloud/auth/callback');
     const res = await app.fetch(
       new Request(`http://localhost/auth/login?redirect=${redirect}&provider=github`),

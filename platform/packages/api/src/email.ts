@@ -43,7 +43,7 @@ function platformSender(
   hosted: boolean,
   name: string,
 ): string | EmailAddress {
-  const from = env.EMAIL_FROM?.trim() || (hosted ? 'Void <noreply@void.cloud>' : '');
+  const from = env.EMAIL_FROM?.trim() || (hosted ? 'Nosam <noreply@void.cloud>' : '');
   const domain = env.EMAIL_SENDER_DOMAIN?.trim();
   if ((!from && !domain) || /[\r\n]/.test(from)) {
     throw new Error(
@@ -68,7 +68,7 @@ function emailConfig(env: PlatformEmailEnv) {
   const apiUrl = getPlatformApiUrl(env);
   const hosted =
     !env.PLATFORM_INSTALLATION_ID &&
-    ['https://api.void.cloud', 'https://api.staging.void.cloud'].includes(apiUrl);
+    ['https://void-nosam-api.buildwithfriends.workers.dev', 'https://api.staging.void.cloud'].includes(apiUrl);
   const name = getPlatformDisplayName(env);
   const from = platformSender(env, hosted, name);
   const dashboardUrl =
@@ -118,12 +118,12 @@ export async function sendInvitationEmail(env: PlatformEmailEnv, to: string): Pr
     html: emailHtml(
       `<h2 style="margin-bottom:8px">You're invited to ${escapeHtml(name)}</h2>
 <p>An administrator has invited you to deploy applications on ${escapeHtml(name)}.</p>
-<p>Connect the Void CLI to this platform. When prompted, sign in with an account whose verified email address matches this invitation:</p>
+<p>Connect the Nosam CLI to this platform. When prompted, sign in with an account whose verified email address matches this invitation:</p>
 <pre><code>${escapeHtml(command)}</code></pre>
 <p>${button(inviteUrl, 'Get Started')}</p>`,
       "If you didn't expect this invitation, you can ignore this email.",
     ),
-    text: `You're invited to ${name}.\n\nAn administrator has invited you to deploy applications on ${name}.\n\nConnect the Void CLI to this platform. When prompted, sign in with an account whose verified email address matches this invitation:\n\n${command}\n\nGet started: ${inviteUrl}\n\nIf you didn't expect this invitation, you can ignore this email.`,
+    text: `You're invited to ${name}.\n\nAn administrator has invited you to deploy applications on ${name}.\n\nConnect the Nosam CLI to this platform. When prompted, sign in with an account whose verified email address matches this invitation:\n\n${command}\n\nGet started: ${inviteUrl}\n\nIf you didn't expect this invitation, you can ignore this email.`,
   });
 }
 
@@ -147,13 +147,13 @@ export async function sendProjectInvitationEmail(
     html: emailHtml(
       `<h2 style="margin-bottom:8px">You're invited to ${escapeHtml(params.projectSlug)}</h2>
 <p><strong>${escapeHtml(params.inviterLogin)}</strong> invited you to join <strong>${escapeHtml(params.projectSlug)}</strong> as ${escapeHtml(params.role)} on ${escapeHtml(name)}.</p>
-<p>Connect the Void CLI with this email address, then accept the invitation:</p>
+<p>Connect the Nosam CLI with this email address, then accept the invitation:</p>
 <pre><code>${escapeHtml(command)}
 void project team accept ${escapeHtml(params.invitationId)}</code></pre>
 <p>${button(inviteUrl.href, 'View Invitation')}</p>`,
       "If you didn't expect this invitation, you can decline it or ignore this email.",
     ),
-    text: `You're invited to ${params.projectSlug}\n\n${params.inviterLogin} invited you to join ${params.projectSlug} as ${params.role} on ${name}.\n\nConnect the Void CLI with this email address, then accept the invitation:\n\n${command}\nvoid project team accept ${params.invitationId}\n\nView invitation: ${inviteUrl.href}\n\nIf you didn't expect this invitation, you can decline it or ignore this email.`,
+    text: `You're invited to ${params.projectSlug}\n\n${params.inviterLogin} invited you to join ${params.projectSlug} as ${params.role} on ${name}.\n\nConnect the Nosam CLI with this email address, then accept the invitation:\n\n${command}\nnosam project team accept ${params.invitationId}\n\nView invitation: ${inviteUrl.href}\n\nIf you didn't expect this invitation, you can decline it or ignore this email.`,
   });
 }
 
@@ -169,13 +169,13 @@ export async function sendWelcomeEmail(
     subject: `Welcome to ${name}`,
     html: emailHtml(
       `<h2 style="margin-bottom:8px">Welcome to ${escapeHtml(name)}, ${escapeHtml(login)}</h2>
-<p>Your account is ready. Connect the Void CLI to this platform:</p>
+<p>Your account is ready. Connect the Nosam CLI to this platform:</p>
 <pre><code>${escapeHtml(command)}</code></pre>
 <p>The CLI opens your browser to sign in when needed. See the platform setup guide for the next steps.</p>
 <p>${button(`${apiUrl}/invite`, 'Platform Setup')}</p>`,
       `You received this email because you signed up for ${name}.`,
     ),
-    text: `Welcome to ${name}, ${login}\n\nYour account is ready. Connect the Void CLI to this platform:\n\n${command}\n\nThe CLI opens your browser to sign in when needed. See the platform setup guide for the next steps.\n\nPlatform setup: ${apiUrl}/invite\n\nYou received this email because you signed up for ${name}.`,
+    text: `Welcome to ${name}, ${login}\n\nYour account is ready. Connect the Nosam CLI to this platform:\n\n${command}\n\nThe CLI opens your browser to sign in when needed. See the platform setup guide for the next steps.\n\nPlatform setup: ${apiUrl}/invite\n\nYou received this email because you signed up for ${name}.`,
   });
 }
 
@@ -201,7 +201,7 @@ void project status</code></pre>
 ${projectUrl ? `<p>${button(projectUrl, 'View Project')}</p>` : ''}`,
       `You received this email because you own this project on ${name}.`,
     ),
-    text: `Deploy failed: ${projectSlug}\n\nA deploy to ${projectSlug} on ${name} failed with the following error:\n\n${truncated}\n\nConnect to this platform to inspect the deployment:\n${command}\nvoid project status\n${projectUrl ? `\nView project: ${projectUrl}\n` : ''}\nYou received this email because you own this project on ${name}.`,
+    text: `Deploy failed: ${projectSlug}\n\nA deploy to ${projectSlug} on ${name} failed with the following error:\n\n${truncated}\n\nConnect to this platform to inspect the deployment:\n${command}\nnosam project status\n${projectUrl ? `\nView project: ${projectUrl}\n` : ''}\nYou received this email because you own this project on ${name}.`,
   });
 }
 
@@ -242,8 +242,8 @@ export async function sendErrorAlertEmail(
     ? `between ${utcStamp(window.start)} and ${utcStamp(window.end)}`
     : 'recently';
   const range = window ? suggestRange(window.start, sentAt) : '24h';
-  const requestsHint = `void project requests --status 5xx --range ${range}`;
-  const logsHint = `void project logs --level error --range ${range}`;
+  const requestsHint = `nosam project requests --status 5xx --range ${range}`;
+  const logsHint = `nosam project logs --level error --range ${range}`;
   const hintNote =
     'The first lists every 5xx, including errors generated at the edge that never reach your worker; the second adds worker logs and exceptions.';
   await sendEmail(env, {

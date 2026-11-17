@@ -747,7 +747,7 @@ export async function getTerminalFailedDeployments(
 
 /**
  * The most recent deployment for a project at a given commit SHA. Used to link
- * a finished build back to the deployment the `void deploy` CLI created.
+ * a finished build back to the deployment the `nosam deploy` CLI created.
  */
 export async function getDeploymentByProjectAndCommit(
   db: Db,

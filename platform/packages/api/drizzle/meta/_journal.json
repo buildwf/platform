@@ -414,6 +414,13 @@
       "when": 1794851308254,
       "tag": "0065_project_credentials",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1794887675067,
+      "tag": "0066_project_mode_nosam",
+      "breakpoints": true
     }
   ]
 }

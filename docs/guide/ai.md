@@ -5,29 +5,29 @@ outline: deep
 
 # AI
 
-Run Workers AI models and provider APIs from server code with `ai` from `void/ai`. Provider requests use Cloudflare's [AI Gateway](https://developers.cloudflare.com/ai-gateway/).
+Run Workers AI models and provider APIs from server code with `ai` from `nosam/ai`. Provider requests use Cloudflare's [AI Gateway](https://developers.cloudflare.com/ai-gateway/).
 
 ## Local Development
 
 For a direct Cloudflare project, connect your account and start development:
 
 ```sh
-void connect --platform cloudflare
+nosam connect --platform cloudflare
 npm run dev
 ```
 
-When the app imports `void/ai`, Void enables a remote Workers AI binding during
+When the app imports `nosam/ai`, Nosam enables a remote Workers AI binding during
 development and preview. Requests use your Cloudflare account and its allowance;
 Workers AI has no local simulator. Development and preview use the same
-Cloudflare login as `void connect`; sign in with `void cloudflare login`. A
+Cloudflare login as `nosam connect`; sign in with `nosam cloudflare login`. A
 `CLOUDFLARE_API_TOKEN` takes precedence; use one in an automated environment.
 
 If development stops with a Cloudflare authentication error, run
-`void cloudflare login` in a terminal as a user who can access the deployment
-account shown by `void cloudflare status`, or set `CLOUDFLARE_API_TOKEN`.
+`nosam cloudflare login` in a terminal as a user who can access the deployment
+account shown by `nosam cloudflare status`, or set `CLOUDFLARE_API_TOKEN`.
 `wrangler login` does not affect development.
 
-For a team platform, use `void connect <platform-url>` and link your project.
+For a team platform, use `nosam connect <platform-url>` and link your project.
 Development requests use that platform's account and usage limits.
 If the platform reports that AI is disabled, ask your administrator to enable it.
 This also applies to model listing, Markdown conversion, and provider-native requests.
@@ -37,8 +37,8 @@ This also applies to model listing, Markdown conversion, and provider-native req
 Call `ai.run()` with a model name and inputs. Model names and input types are fully typed from `@cloudflare/workers-types`.
 
 ```ts
-import { defineHandler } from 'void';
-import { ai } from 'void/ai';
+import { defineHandler } from 'nosam';
+import { ai } from 'nosam/ai';
 
 export const POST = defineHandler(async (c) => {
   const { prompt } = await c.req.json();
@@ -59,8 +59,8 @@ You can use any model available through Cloudflare's AI binding, including Worke
 Use `ai.stream()` to get a streaming response with SSE headers that you can return directly from a route handler:
 
 ```ts
-import { defineHandler } from 'void';
-import { ai } from 'void/ai';
+import { defineHandler } from 'nosam';
+import { ai } from 'nosam/ai';
 
 export const POST = defineHandler(async (c) => {
   const { prompt } = await c.req.json();
@@ -71,7 +71,7 @@ export const POST = defineHandler(async (c) => {
 });
 ```
 
-Streaming responses end with a `void:error` SSE event if generation is interrupted after the response starts, or `void:limit` for a usage limit. `fetchStream()` from `void/client` throws `UsageLimit` for limits before or during streaming and `StreamError` for other terminal errors. Catch the error in your UI to stop its generating state, retain partial output, and offer retry. This also applies to streaming provider responses and `ai.run()` with `stream: true`.
+Streaming responses end with a `nosam:error` SSE event if generation is interrupted after the response starts, or `nosam:limit` for a usage limit. `fetchStream()` from `nosam/client` throws `UsageLimit` for limits before or during streaming and `StreamError` for other terminal errors. Catch the error in your UI to stop its generating state, retain partial output, and offer retry. This also applies to streaming provider responses and `ai.run()` with `stream: true`.
 
 ## Listing Models
 
@@ -100,14 +100,14 @@ requests also use your provider credentials and their billing terms.
 
 A team platform uses its own Cloudflare account and may apply per-user limits. Ask your administrator about the available allowance.
 
-Usage limits reject the operation's promise with `UsageLimit` from `void/limits`. It includes `resource`, `reason`, and an optional `retryAt` timestamp. In Void route handlers and Pages actions, an uncaught limit produces a structured HTTP 429 with retry information. In queues, scheduled jobs, and other server code, it remains a rejected promise.
+Usage limits reject the operation's promise with `UsageLimit` from `nosam/limits`. It includes `resource`, `reason`, and an optional `retryAt` timestamp. In Nosam route handlers and Pages actions, an uncaught limit produces a structured HTTP 429 with retry information. In queues, scheduled jobs, and other server code, it remains a rejected promise.
 
 Handling a limit is optional. Use `instanceof UsageLimit` when you want a fallback or a message tailored to your app:
 
 ```ts
-import { defineHandler } from 'void';
-import { ai } from 'void/ai';
-import { UsageLimit } from 'void/limits';
+import { defineHandler } from 'nosam';
+import { ai } from 'nosam/ai';
+import { UsageLimit } from 'nosam/limits';
 
 export const POST = defineHandler(async (c) => {
   const { prompt } = await c.req.json();
@@ -142,7 +142,7 @@ const result = await ai.run('google/gemini-2.5-flash', {
 });
 ```
 
-Pass AI Gateway options as the third argument: `ai.run(model, inputs, { gateway: { skipCache: true } })`. On a team platform, the platform chooses the gateway and sets its metadata and logging; options such as `skipCache` and `cacheTtl` still apply. The platform's logging setting also covers `void dev` in a linked project; an unlinked project uses your own Cloudflare account and its gateway settings.
+Pass AI Gateway options as the third argument: `ai.run(model, inputs, { gateway: { skipCache: true } })`. On a team platform, the platform chooses the gateway and sets its metadata and logging; options such as `skipCache` and `cacheTtl` still apply. The platform's logging setting also covers `nosam dev` in a linked project; an unlinked project uses your own Cloudflare account and its gateway settings.
 
 For provider-native requests on a direct deployment, configure [`ai.gateway`](../integrations/cloudflare.md#ai-self-host).
 
@@ -158,8 +158,8 @@ platform ignores logging, metadata and cost headers.
 ### OpenAI
 
 ```ts
-import { defineHandler } from 'void';
-import { ai } from 'void/ai';
+import { defineHandler } from 'nosam';
+import { ai } from 'nosam/ai';
 
 export const POST = defineHandler(async (c) => {
   const { prompt } = await c.req.json();
@@ -193,7 +193,7 @@ const response = await ai
 
 ### Custom Providers
 
-For providers that are not in Void's default key map, pass the secret name and API-key header:
+For providers that are not in Nosam's default key map, pass the secret name and API-key header:
 
 ```ts
 const response = await ai
@@ -259,7 +259,7 @@ OpenAI-style providers use `Authorization: Bearer <key>`. Google AI Studio uses 
 For production, add your API key as a project secret:
 
 ```bash
-void secret put OPENAI_API_KEY=sk-...
+nosam secret put OPENAI_API_KEY=sk-...
 ```
 
 For local development, add it to `.env` in your project root:

@@ -10,12 +10,12 @@ outline: deep
 Hono `Context` pre-typed with [`CloudEnv`](#cloudenv). This is the type of the `c` parameter in all route handlers and middleware.
 
 ```ts
-import type { CloudContext } from 'void';
+import type { CloudContext } from 'nosam';
 ```
 
 ## `CloudEnv` {#cloudenv}
 
-Hono environment type for Void workers. Extends Hono's `Env` with Cloudflare bindings and context variables.
+Hono environment type for Nosam workers. Extends Hono's `Env` with Cloudflare bindings and context variables.
 
 ```ts
 interface CloudEnv extends Env {
@@ -24,7 +24,7 @@ interface CloudEnv extends Env {
     KV: KVNamespace;
     STORAGE: R2Bucket;
     AI: Ai;
-    SANDBOX: DurableObjectNamespace<import('void/sandbox').VoidPlatformSandbox>;
+    SANDBOX: DurableObjectNamespace<import('nosam/sandbox').NosamPlatformSandbox>;
     ASSETS: { fetch(request: Request): Promise<Response> };
     [key: string]: unknown;
   };
@@ -47,7 +47,7 @@ interface CloudContextVariables {
 **Augmentation example:**
 
 ```ts
-declare module 'void' {
+declare module 'nosam' {
   interface CloudContextVariables {
     requestId: string;
   }
@@ -77,17 +77,17 @@ Generated route types used by the typed `fetch` client. Contains each route’s 
 Keys use route patterns such as `/api/users/[id]` and `/docs/[...slug]`.
 
 ```ts
-import type { RouteMap } from 'void/routes';
+import type { RouteMap } from 'nosam/routes';
 ```
 
-## `void/routes` {#void-routes}
+## `nosam/routes` {#nosam-routes}
 
 ### `routeUrl(path, options?)` {#routeurl-path-options}
 
 Build a relative URL string from a known page, HTTP, or WebSocket route pattern:
 
 ```ts
-import { routeUrl } from 'void/routes';
+import { routeUrl } from 'nosam/routes';
 
 routeUrl('/users/[id]', {
   params: { id: 42 },
@@ -109,7 +109,7 @@ Use the returned [`RouteUrl`](#route-types) with `fetch()`, `<a>`, and `c.redire
 
 ### Route types {#route-types}
 
-Import these types from `void/routes`:
+Import these types from `nosam/routes`:
 
 | Type                  | Description                                                                                       |
 | --------------------- | ------------------------------------------------------------------------------------------------- |

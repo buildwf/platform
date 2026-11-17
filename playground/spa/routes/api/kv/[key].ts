@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 
 // PUT /api/kv/:key — store the raw request body in KV under an e2e-namespaced key.
 export const PUT = defineHandler.withValidator({

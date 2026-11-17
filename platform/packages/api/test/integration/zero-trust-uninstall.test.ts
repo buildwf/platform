@@ -9,8 +9,8 @@ import {
   it,
   vi,
 } from 'vite-plus/test';
-import { readPlatformProjectSlugsConnection } from '../../../../../packages/void/src/cli/platform-installer-database.ts';
-import { assertNoPlatformProjects } from '../../../../../packages/void/src/cli/platform-teardown.ts';
+import { readPlatformProjectSlugsConnection } from '../../../../../packages/nosam/src/cli/platform-installer-database.ts';
+import { assertNoPlatformProjects } from '../../../../../packages/nosam/src/cli/platform-teardown.ts';
 import {
   assertProjectZeroTrustAllowsUninstall,
   fencePlatformProjectZeroTrustConnection,
@@ -18,7 +18,7 @@ import {
   lockPlatformProjectZeroTrustConnection,
   readPlatformProjectZeroTrustStateConnection,
   type QueryConnection,
-} from '../../../../../packages/void/src/cli/platform-zero-trust-uninstall.ts';
+} from '../../../../../packages/nosam/src/cli/platform-zero-trust-uninstall.ts';
 import type { ApiEnv } from '../../src/env.ts';
 import app from '../../src/index.ts';
 import { readZeroTrustConfigurationStrict } from '../../src/zero-trust/configuration.ts';
@@ -210,7 +210,7 @@ describe('platform uninstall check against the API database', () => {
     const refusal = (await check().catch((error: unknown) => error)) as Error;
     expect(refusal).toBeInstanceOf(Error);
     expect(refusal!.message).toContain('Deletion of project stopped-deletion stopped');
-    expect(refusal!.message).toContain('`void project delete <name>`');
+    expect(refusal!.message).toContain('`nosam project delete <name>`');
 
     // The operator follows the dashboard hint first, then reruns the deletion.
     cloudflare.applications.delete(bypass.bypass_application_id!);
@@ -282,12 +282,12 @@ describe('platform uninstall check against the API database', () => {
     expect(await readPlatformProjectSlugsConnection(connection)).toEqual([]);
   });
 
-  it.runIf(Boolean(process.env.VOID_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
     'keeps a project created during the purge-resources final check from committing after it',
     async () => {
       const owner = await createTestUser(env.db, 'racing-creator');
       const platform = bindings();
-      const session = new pg.Client({ connectionString: process.env.VOID_TEST_DATABASE_URL });
+      const session = new pg.Client({ connectionString: process.env.NOSAM_TEST_DATABASE_URL });
       await session.connect();
       try {
         const unlock = await lockPlatformProjectZeroTrustConnection(session);
@@ -324,13 +324,13 @@ describe('platform uninstall check against the API database', () => {
     },
   );
 
-  it.runIf(Boolean(process.env.VOID_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
     'refuses Zero Trust writers that waited on the uninstall lock once it is released',
     async () => {
       const cloudflare = accessApi();
       vi.stubGlobal('fetch', cloudflare.fetcher);
       const platform = bindings();
-      const session = new pg.Client({ connectionString: process.env.VOID_TEST_DATABASE_URL });
+      const session = new pg.Client({ connectionString: process.env.NOSAM_TEST_DATABASE_URL });
       await session.connect();
       try {
         const unlock = await lockPlatformProjectZeroTrustConnection(session);

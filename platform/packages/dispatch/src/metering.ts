@@ -1,4 +1,4 @@
-import { readUsageSigningKey, signUsageEvent } from '@voidcloud/api/usage-auth';
+import { readUsageSigningKey, signUsageEvent } from '@nosamcloud/api/usage-auth';
 import type { Env } from './env.ts';
 
 export type RequestType = 'api' | 'static' | 'ssr' | 'websocket';
@@ -35,7 +35,7 @@ export function recordRequest(
 }
 
 /**
- * Split a WfP script name into the pieces the `void_logs` dataset is keyed on.
+ * Split a WfP script name into the pieces the `nosam_logs` dataset is keyed on.
  *
  * Mirrors `parseScriptName` in `packages/tail/src/index.ts`, restricted to the
  * `user-*` names dispatch can attribute. This MUST agree with the tail worker:
@@ -66,7 +66,7 @@ export function splitWorkerName(
 // Analytics Engine caps the SUM of a data point's blobs at 16 KB. There is no
 // per-blob limit, and a data point over the cap is DROPPED — which
 // `recordPlatformLog` would then swallow, silently losing the row it exists to
-// write. Neither budget is a guess: the longest URL already in `void_logs` is
+// write. Neither budget is a guess: the longest URL already in `nosam_logs` is
 // 6,703 bytes against a p99 of 195, and this row would otherwise carry the URL
 // TWICE (raw in blob4, and as the pathname inside the blob2 message). Together
 // these two caps hold every blob set under ~3.5 KB no matter the input, which
@@ -111,13 +111,13 @@ export function truncateUtf8(value: string, maxBytes: number): string {
 }
 
 /**
- * Write one row into `void_logs` explaining a 503 that dispatch generated.
+ * Write one row into `nosam_logs` explaining a 503 that dispatch generated.
  *
  * A worker cut at the dispatch budget never returns, so it emits no tail event
  * of its own worth reading: the runtime records the invocation as `canceled`,
  * which is indistinguishable from a real client hang-up. Only dispatch knows it
  * was the one that hung up, so only dispatch can say so. Without this row
- * `void project logs` is empty for exactly the failure the user most needs
+ * `nosam project logs` is empty for exactly the failure the user most needs
  * explained.
  *
  * The row is the same seven-blob/two-double shape `packages/tail/src/index.ts`
@@ -162,7 +162,7 @@ export function recordPlatformLog(
   }
 
   const message =
-    `Void platform: your worker did not respond within ${data.timeoutMs} ms. ` +
+    `Nosam platform: your worker did not respond within ${data.timeoutMs} ms. ` +
     `${data.method}${target} was cut short and ` +
     `returned ${data.status}. The operation may still have side effects; ` +
     `check its outcome before retrying.`;

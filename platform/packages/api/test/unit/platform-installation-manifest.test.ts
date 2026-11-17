@@ -5,7 +5,7 @@ import {
   recordInstallationResource,
   recordInstallationStep,
   transitionInstallation,
-} from '@void/platform';
+} from '@nosam/platform';
 import { describe, expect, it } from 'vite-plus/test';
 
 const now = '2026-09-14T00:00:00.000Z';
@@ -36,7 +36,7 @@ describe('platform installation manifest', () => {
         id: 'namespace-id',
         key: 'routing-kv',
         kind: 'kv-namespace',
-        name: 'void-test-platform-routing',
+        name: 'nosam-test-platform-routing',
         ownership: 'created',
         state: 'ready',
       },

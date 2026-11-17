@@ -155,7 +155,7 @@ export async function tryActivateDomain(
   }
 
   // Best-effort re-trigger of HTTP DCV for an add-first domain that hasn't yet
-  // validated. Void creates the CF hostname with `ssl.method:'http'` before the
+  // validated. Nosam creates the CF hostname with `ssl.method:'http'` before the
   // user points the CNAME at `cname.void.app`; per CF's Create Custom Hostname
   // API docs the PATCH method must be used once the domain is pointing at the
   // Managed CNAME for HTTP validation to complete. A no-change PATCH re-sends

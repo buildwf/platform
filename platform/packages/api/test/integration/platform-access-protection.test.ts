@@ -170,7 +170,7 @@ describe('Access-protected platform requests', () => {
     expect((await request('/', await assertion({ service: true }))).status).toBe(403);
     const response = await request('/', await assertion());
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain('Welcome to Void Platform');
+    expect(await response.text()).toContain('Welcome to Nosam Platform');
   });
 
   it('keeps maintenance status behind human Access and a matching, revocable administrator session', async () => {
@@ -229,7 +229,7 @@ describe('Access-protected platform requests', () => {
           method: 'POST',
           headers: {
             ...(access ? { 'Cf-Access-Jwt-Assertion': access } : {}),
-            'X-Void-Platform-Probe': probe,
+            'X-Nosam-Platform-Probe': probe,
           },
         }),
         {
@@ -258,7 +258,7 @@ describe('Access-protected platform requests', () => {
       undefined,
       undefined,
       receipt,
-      { 'x-void-internal': proof },
+      { 'x-nosam-internal': proof },
     );
     expect(accepted.status).toBe(200);
     const refused = await request(
@@ -266,7 +266,7 @@ describe('Access-protected platform requests', () => {
       undefined,
       undefined,
       receipt,
-      { 'x-void-internal': 'invalid' },
+      { 'x-nosam-internal': 'invalid' },
     );
     expect(refused.status).toBe(403);
     expect(await refused.json()).toEqual({ error: 'invalid internal auth' });
@@ -287,14 +287,14 @@ describe('Access-protected platform requests', () => {
         undefined,
         undefined,
         body,
-        { 'x-void-internal': await hmacSignState(payload, env.EMAIL_SIGNING_SECRET) },
+        { 'x-nosam-internal': await hmacSignState(payload, env.EMAIL_SIGNING_SECRET) },
       );
       expect(response.status).toBe(404);
     }
     expect(
       (
         await request('/internal/email/actions/unrecognized', undefined, undefined, receipt, {
-          'x-void-internal': proof,
+          'x-nosam-internal': proof,
         })
       ).status,
     ).toBe(403);
@@ -314,7 +314,7 @@ describe('Access-protected platform requests', () => {
     expect(settings.protection?.teamDomain).toBe(issuer);
     expect((await request('/auth/login')).status).toBe(403);
   });
-  it('requires both the company identity and the matching Void session', async () => {
+  it('requires both the company identity and the matching Nosam session', async () => {
     expect((await request('/rpc/me.get', undefined, humanToken, {})).status).toBe(403);
     expect((await request('/rpc/me.get', await assertion(), undefined, {})).status).toBe(401);
     expect((await request('/rpc/me.get', await assertion(), humanToken, {})).status).toBe(200);
@@ -331,7 +331,7 @@ describe('Access-protected platform requests', () => {
     expect(
       (
         await request('/health', undefined, undefined, undefined, {
-          'X-Void-Platform-Probe': 'probe-fixture',
+          'X-Nosam-Platform-Probe': 'probe-fixture',
         })
       ).status,
     ).toBe(403);
@@ -362,8 +362,8 @@ describe('Access-protected platform requests', () => {
       'X-GitHub-Event': 'ping',
       'X-GitHub-Delivery': deliveryId,
       'X-Hub-Signature-256': await githubSignature(body),
-      'X-Void-GitHub-Ingress-Timestamp': String(timestampSeconds),
-      'X-Void-GitHub-Ingress-Proof': await createGitHubWebhookIngressProof({
+      'X-Nosam-GitHub-Ingress-Timestamp': String(timestampSeconds),
+      'X-Nosam-GitHub-Ingress-Proof': await createGitHubWebhookIngressProof({
         secret: ingressSecret,
         timestampSeconds,
         deliveryId,
@@ -385,17 +385,17 @@ describe('Access-protected platform requests', () => {
     expect((await operation('/webhooks/github')).status).toBe(403);
   });
 
-  it('allows narrow machine operations only with the separate Void authority', async () => {
+  it('allows narrow machine operations only with the separate Nosam authority', async () => {
     const access = await assertion({ service: true });
     expect((await request('/health', access)).status).toBe(403);
     expect(
       (
         await request('/health', access, undefined, undefined, {
-          'X-Void-Platform-Probe': 'probe-fixture',
+          'X-Nosam-Platform-Probe': 'probe-fixture',
         })
       ).status,
     ).toBe(200);
-    expect((await request('/.well-known/void-platform', access)).status).toBe(200);
+    expect((await request('/.well-known/nosam-platform', access)).status).toBe(200);
     expect((await request('/admin/login', access)).status).toBe(403);
     expect((await request('/auth/login', access)).status).toBe(403);
     expect((await request('/projects', access)).status).toBe(403);
@@ -529,7 +529,7 @@ describe('Access-protected platform requests', () => {
         undefined,
         undefined,
         { userId: user.id, jwt: humanToken, accessAssertion, proxyOrigin: proxy },
-        { 'X-Void-Internal': internal },
+        { 'X-Nosam-Internal': internal },
       );
     expect((await check(await assertion({ audience: 'proxy-aud' }))).status).toBe(200);
     expect((await check(await assertion())).status).toBe(403);
@@ -553,7 +553,7 @@ describe('Access-protected platform requests', () => {
             accessAssertion: await assertion({ audience: 'proxy-aud' }),
             proxyOrigin: alternateOrigin,
           },
-          { 'X-Void-Internal': alternateToken },
+          { 'X-Nosam-Internal': alternateToken },
         )
       ).status,
     ).toBe(403);

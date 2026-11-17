@@ -9,7 +9,7 @@ const jwt = `header.${Buffer.from(JSON.stringify({ exp: 4_102_444_800 })).toStri
 let root: string;
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'void-dashboard-access-test-'));
+  root = mkdtempSync(join(tmpdir(), 'nosam-dashboard-access-test-'));
   writeFileSync(
     join(root, 'cloudflared'),
     `#!${process.execPath}\nrequire('node:fs').writeFileSync('probe.json', JSON.stringify(process.argv.slice(2)));\nconsole.log(${JSON.stringify(jwt)});\n`,
@@ -61,7 +61,7 @@ describe('dashboard Access token refresh', () => {
     expect(readFileSync(join(root, '.env'), 'utf8')).toBe(contents);
   });
 
-  it('preserves automatic Void Cloud staging authentication', () => {
+  it('preserves automatic Nosam Cloud staging authentication', () => {
     const result = run('API_URL=https://api.staging.void.cloud\n');
     expect(result.status, result.stderr).toBe(0);
     expect(readFileSync(join(root, '.env'), 'utf8')).toContain('CF_ACCESS_TOKEN=');

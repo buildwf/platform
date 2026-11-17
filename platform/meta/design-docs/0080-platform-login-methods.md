@@ -6,9 +6,9 @@ created: 2026-09-18
 
 # Configurable platform login methods
 
-A Void platform can use GitHub, Google, generic OpenID Connect (OIDC), or
+A Nosam platform can use GitHub, Google, generic OpenID Connect (OIDC), or
 Cloudflare Access for human login. The installer accepts more than one method.
-The API-hosted administrator UI and `void platform config auth` manage methods
+The API-hosted administrator UI and `nosam platform config auth` manage methods
 after installation without redeploying. The current setup and command syntax
 are in the [self-hosting guide](../../../docs/guide/self-hosted-platform.md)
 and [administration guide](../../../docs/guide/platform-administration.md).
@@ -54,7 +54,7 @@ An external identity is scoped by its login connection and stable provider
 subject. The same email address at two providers does not automatically merge
 accounts. An existing user links another identity through an explicit
 authenticated flow, with a fresh provider proof. This keeps project ownership
-on the same Void user and prevents an email match from granting administrator
+on the same Nosam user and prevents an email match from granting administrator
 access. Existing provider identities are preserved during migration.
 
 Login eligibility and account creation are separate choices. Administrators
@@ -97,7 +97,7 @@ Re-enabling does not restore those sessions.
 Disabling preserves at least one usable administrator path and at least one
 enabled login method. Every human-token consumer checks the authoritative
 session and connection state, including proxy access and long-lived streams.
-A human `VOID_TOKEN` used in CI is still a human session. Separate project
+A human `NOSAM_TOKEN` used in CI is still a human session. Separate project
 deployment, build, and app-runtime credentials retain their own scope and
 are not revoked merely because a login method is disabled.
 

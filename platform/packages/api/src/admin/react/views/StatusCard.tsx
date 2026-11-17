@@ -28,7 +28,7 @@ export function LastCheckedTime({
         ? `${seconds}s ago`
         : `${Math.floor(seconds / 60)}m ago`;
   return (
-    <span className="void-admin-health-checked-at" data-unavailable={unavailable || undefined}>
+    <span className="nosam-admin-health-checked-at" data-unavailable={unavailable || undefined}>
       {unavailable ? (
         <span role="status">Status unavailable</span>
       ) : checkedAt !== undefined ? (
@@ -71,11 +71,11 @@ export function StatusCard({
             ? Activity
             : CircleHelp;
   return (
-    <div id={id} className="void-admin-status-card" data-state={state}>
+    <div id={id} className="nosam-admin-status-card" data-state={state}>
       <AdminCard
         title={title}
         titleIcon={
-          <span className="void-admin-health-overall-icon" role="img" aria-label={statusLabel}>
+          <span className="nosam-admin-health-overall-icon" role="img" aria-label={statusLabel}>
             <Icon size={20} aria-hidden="true" />
           </span>
         }

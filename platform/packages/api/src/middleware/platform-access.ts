@@ -77,13 +77,13 @@ export const platformAccessProtection: MiddlewareHandler<ApiEnv> = async (contex
     }
     const probe =
       context.env.PLATFORM_HEALTH_PROBE_TOKEN &&
-      context.req.header('X-Void-Platform-Probe') === context.env.PLATFORM_HEALTH_PROBE_TOKEN;
+      context.req.header('X-Nosam-Platform-Probe') === context.env.PLATFORM_HEALTH_PROBE_TOKEN;
     if (
-      (path === '/.well-known/void-platform' && method === 'GET') ||
+      (path === '/.well-known/nosam-platform' && method === 'GET') ||
       (probe &&
         ((path === '/health' && method === 'GET') ||
           (path === '/internal/platform/sandbox-drain' && method === 'GET') ||
-          (path === '/__void/platform/deployment-execution' && method === 'GET') ||
+          (path === '/__nosam/platform/deployment-execution' && method === 'GET') ||
           (path === '/internal/platform/email-bootstrap' && method === 'POST') ||
           // These handlers also require their installation-specific setup HMAC.
           (path === '/internal/platform/app-access' && method === 'POST') ||

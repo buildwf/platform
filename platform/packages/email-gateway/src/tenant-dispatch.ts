@@ -6,7 +6,7 @@ import {
   signEmailReceipt,
   type EmailWireAction,
   type EmailWireEnvelope,
-} from '@void/platform/email-protocol';
+} from '@nosam/platform/email-protocol';
 
 const MAX_CONCURRENT_PER_PROJECT = 8;
 const TENANT_DISPATCH_DEADLINE_MS = 20_000;
@@ -60,9 +60,9 @@ export async function dispatchBoundedEmailToTenant(
         stub.fetch(`https://worker${EMAIL_RECEIPT_PATH}`, {
           method: 'POST',
           headers: {
-            'content-type': 'application/vnd.void.email-envelope; version=1',
-            'x-void-email-receipt': receipt,
-            'x-void-email-recipient': input.envelope.to,
+            'content-type': 'application/vnd.nosam.email-envelope; version=1',
+            'x-nosam-email-receipt': receipt,
+            'x-nosam-email-recipient': input.envelope.to,
           },
           body: encodeEmailEnvelope(input.envelope),
           signal: controller.signal,
@@ -83,7 +83,7 @@ export async function dispatchBoundedEmailToTenant(
       !response.ok ||
       response.headers.get('content-encoding') ||
       response.headers.get('content-type') !==
-        `application/vnd.void.email-actions; version=${EMAIL_PROTOCOL_VERSION}` ||
+        `application/vnd.nosam.email-actions; version=${EMAIL_PROTOCOL_VERSION}` ||
       !response.body
     ) {
       throw new Error(`invalid email tenant response (${response.status})`);

@@ -29,7 +29,7 @@ import type { TerminatedBuild } from '../db/builds.ts';
 import type { ApiEnv } from '../env.ts';
 import { cancelContainerBuildDos } from '../github/cancel-builds.ts';
 import {
-  VOID_BUILD_CHECK_RUN_NAME,
+  NOSAM_BUILD_CHECK_RUN_NAME,
   completeCheckRun,
   preservedCheckRunConclusion,
   type CheckRunConclusion,
@@ -100,7 +100,7 @@ type InstallationRepositoriesPayload = {
 // (`createCheckRun` requires it, so every run we publish carries one) and it is
 // what makes a per-check rerun hit ONE project. A repo can back several projects
 // on the SAME branch — `project_id` is unique on `github_connections`, the repo
-// and branch are not — so each publishes its own "Void Build" run on the same
+// and branch are not — so each publishes its own "Nosam Build" run on the same
 // commit. Resolving by repo + branch alone would rebuild every one of them from a
 // click on a single check, and could enqueue a container build from a click on
 // another project's `github_actions` check. The id NARROWS the fan-out; it never
@@ -143,7 +143,7 @@ type WorkflowRunPayload = {
 };
 
 // GitHub's `workflow_run.conclusion` → a GitHub Checks conclusion. The
-// "Void Build" check reports GitHub's RUN outcome (not our internal build
+// "Nosam Build" check reports GitHub's RUN outcome (not our internal build
 // status), so it is driven straight from this payload field. GitHub Checks
 // accepts success | failure | cancelled | timed_out (among others); we map the
 // non-success outcomes we care about faithfully and collapse everything else
@@ -219,7 +219,7 @@ async function pokeBuildScheduler(env: ApiEnv['Bindings']): Promise<void> {
  * real capability is re-deploying the current head, which matters when a rollback
  * is active — a rerun can roll forward onto the branch head again. We accept it,
  * because the alternative is mapping GitHub actors to per-project deploy rights,
- * and a connection carries exactly one Void user; gating on `sender` would break
+ * and a connection carries exactly one Nosam user; gating on `sender` would break
  * ordinary team use to close a hole bounded by "redeploy what is already HEAD".
  *
  * FRESHNESS is what makes it safe. The head SHA must still be the connected
@@ -380,7 +380,7 @@ async function rerunBuildForCommit(
     await completeRerun(
       refusedConclusion,
       'Nothing to rebuild',
-      'This repository is no longer connected to a Void project on this branch.',
+      'This repository is no longer connected to a Nosam project on this branch.',
     );
     return context.json({ ok: true, ignored: 'no matching connection' });
   }
@@ -1055,8 +1055,8 @@ export async function handleVerifiedGitHubWebhook(
       // GitHub only delivers `rerequested` for runs OUR App created, but the App
       // may publish more check names later; match ours explicitly so a future run
       // can't accidentally trigger a deploy.
-      if (data.check_run?.name !== VOID_BUILD_CHECK_RUN_NAME) {
-        return context.json({ ok: true, ignored: 'check_run is not the Void build' });
+      if (data.check_run?.name !== NOSAM_BUILD_CHECK_RUN_NAME) {
+        return context.json({ ok: true, ignored: 'check_run is not the Nosam build' });
       }
       const runId = data.check_run?.id;
       return await rerunBuildForCommit(context, db, {
@@ -1159,7 +1159,7 @@ export async function handleVerifiedGitHubWebhook(
       }
 
       const succeeded = data.workflow_run?.conclusion === 'success';
-      // The "Void Build" check reports GitHub's RUN outcome, so its conclusion is
+      // The "Nosam Build" check reports GitHub's RUN outcome, so its conclusion is
       // derived from the webhook payload — NOT from our internal build status.
       const checkConclusion = mapWorkflowRunConclusion(data.workflow_run?.conclusion);
       const headSha = data.workflow_run?.head_sha;
@@ -1168,7 +1168,7 @@ export async function handleVerifiedGitHubWebhook(
       for (const candidate of candidates) {
         const candidateHeadSha = headSha ?? candidate.commit_sha;
 
-        // Complete the "Void Build" GitHub Check Run from GitHub's workflow_run
+        // Complete the "Nosam Build" GitHub Check Run from GitHub's workflow_run
         // conclusion, INDEPENDENT of our internal build-status CAS below.
         // github_actions builds have no BuildManager DO, so completion happens
         // HERE (the container executor completes inside its DO). The check mirrors
@@ -1193,10 +1193,10 @@ export async function handleVerifiedGitHubWebhook(
           const detailsUrl = candidate.logs_url ?? undefined;
           const title =
             checkConclusion === 'success'
-              ? 'Void deploy succeeded'
+              ? 'Nosam deploy succeeded'
               : checkConclusion === 'cancelled'
-                ? 'Void deploy cancelled'
-                : 'Void deploy failed';
+                ? 'Nosam deploy cancelled'
+                : 'Nosam deploy failed';
           const summary =
             checkConclusion === 'success'
               ? `Deployed \`${branchLabel}\` @ ${short} via GitHub Actions`
@@ -1325,7 +1325,7 @@ export async function handleVerifiedGitHubWebhook(
       // auto-deploy trigger. The membership cache is cleared regardless of
       // connection count. The revocation tombstone is stamped ONCE,
       // keyed by the removed GitHub account id (durable, known from the payload
-      // regardless of Void state) — user resolution drives only the sever. DO
+      // regardless of Nosam state) — user resolution drives only the sever. DO
       // cancel is AWAITED after commit. Idempotent in the steady state: a plain
       // redelivery finds the connections already gone and harmlessly re-advances
       // the tombstone high-water mark. NOT idempotent across a re-add interleaving
@@ -1370,7 +1370,7 @@ export async function handleVerifiedGitHubWebhook(
         // Stamp the durable revocation tombstone FIRST and UNCONDITIONALLY, keyed
         // by the removed GitHub account id X — the durable identity the
         // stateless join_code/connect_grant artifacts carry, always known from the
-        // payload even when there is NO Void user to sever (the pre-mint hole).
+        // payload even when there is NO Nosam user to sever (the pre-mint hole).
         // The membership hard-delete below is a TTL cache and cannot make
         // revocation MONOTONIC on its own. `revoked_at = clock_timestamp()` per
         // install so a later replay of a pre-removal artifact (iat <= revoked_at)
@@ -1380,7 +1380,7 @@ export async function handleVerifiedGitHubWebhook(
         // Written under the install-row lock (serialized against a concurrent
         // join/complete) EVEN when the affected-user set is empty.
         await recordInstallationRevocations(tx, orgInstallIds, String(removedGithubUserId));
-        // Resolve the affected Void user for connection/owner severing UNDER the
+        // Resolve the affected Nosam user for connection/owner severing UNDER the
         // lock (post-tombstone) so a redemption that committed while we
         // waited for the install-row lock is now visible and severed. Either
         // member_removed locks first (the tombstone above then blocks the
@@ -1410,8 +1410,8 @@ export async function handleVerifiedGitHubWebhook(
           // (guarded on the user id, so a different bearer is never clobbered).
           await deleteGitHubInstallationMembers(tx, orgInstallIds, removedUser.id);
         }
-        // Void the BROWSER-PROOF-X LISTING memberships across every org install,
-        // keyed by the GitHub id X (NOT a Void user id) so any bearer's X-keyed
+        // Nosam the BROWSER-PROOF-X LISTING memberships across every org install,
+        // keyed by the GitHub id X (NOT a Nosam user id) so any bearer's X-keyed
         // row is removed. A membership's `github_account_id` is the browser proof
         // captured at JOIN, DECOUPLED from the bearer's oauth identity, so it never
         // backs a connection (proven oauth-backed above). This therefore deletes

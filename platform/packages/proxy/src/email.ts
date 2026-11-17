@@ -102,7 +102,7 @@ const MAX_SENDER_LENGTH = 320;
 /**
  * The platform mail domain for this environment. It is configured as the
  * `EMAIL_SENDER_DOMAIN` var and mirrored into deployed user workers as the
- * `__VOID_EMAIL_DOMAIN` plain-text binding so the framework builds its default
+ * `__NOSAM_EMAIL_DOMAIN` plain-text binding so the framework builds its default
  * `from` against the same zone.
  *
  * There is deliberately NO baked-in default. A staging proxy that fell back
@@ -185,7 +185,7 @@ export function sanitizeForLog(value: string, maxLen = 200): string {
 
 /**
  * Cap the caller-supplied log correlation id. The framework sends
- * `req_<base36 time><16 hex>` (`newId('req')` in `void/email`), but a
+ * `req_<base36 time><16 hex>` (`newId('req')` in `nosam/email`), but a
  * hand-built tenant worker can send any string the request body carries,
  * and the only consumer is the `[email-log]` line — one per delivery, so up
  * to `MAX_RECIPIENTS` copies of it per request — in the shared proxy log

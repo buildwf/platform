@@ -4,7 +4,7 @@ import {
   PLATFORM_APP_ACCESS_SETUP_PROOF_PREFIX,
   PLATFORM_APP_ACCESS_TURN_OFF_PROOF_PREFIX,
   type PlatformAppAccessSetup,
-} from '@void/platform';
+} from '@nosam/platform';
 import { sql } from 'drizzle-orm';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import {
@@ -102,8 +102,8 @@ function request(body: unknown, token = 'installer-proof') {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Void-Platform-Probe': token,
-      'X-Void-App-Access-Setup': signature,
+      'X-Nosam-Platform-Probe': token,
+      'X-Nosam-App-Access-Setup': signature,
     },
     body: JSON.stringify(body),
   });
@@ -119,8 +119,8 @@ function turnOffRequest(options: { prefix?: string; token?: string; body?: strin
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Void-Platform-Probe': options.token ?? 'installer-proof',
-      'X-Void-App-Access-Setup': signature,
+      'X-Nosam-Platform-Probe': options.token ?? 'installer-proof',
+      'X-Nosam-App-Access-Setup': signature,
     },
     body,
   });
@@ -357,7 +357,7 @@ describe('installer app access handoff', () => {
     const service = await assertion('installer-api');
     const healthOnly = request(setup());
     healthOnly.headers.set('Cf-Access-Jwt-Assertion', service);
-    healthOnly.headers.delete('X-Void-App-Access-Setup');
+    healthOnly.headers.delete('X-Nosam-App-Access-Setup');
     expect((await app.fetch(healthOnly, bindings())).status).toBe(404);
     const authorized = request(setup());
     authorized.headers.set('Cf-Access-Jwt-Assertion', service);
@@ -370,7 +370,7 @@ describe('installer app access handoff', () => {
     const cf = accessApi();
     await claim();
     const healthOnly = request(setup());
-    healthOnly.headers.delete('X-Void-App-Access-Setup');
+    healthOnly.headers.delete('X-Nosam-App-Access-Setup');
     expect((await app.fetch(healthOnly, bindings())).status).toBe(404);
     const signed = request(setup());
     const changed = new Request(signed, {
@@ -495,7 +495,7 @@ describe('installer app access handoff', () => {
       policyIds: [],
     });
     expect(cf.applications.get(current.wildcardApplication!.id)).toMatchObject({
-      domain: 'void-platform-health.apps.example.test/__void/app-access-management',
+      domain: 'void-platform-health.apps.example.test/__nosam/app-access-management',
       policies: [{ decision: 'deny', include: [{ everyone: {} }] }],
     });
     const owner = await createTestUser(env.db, 'public-owner');

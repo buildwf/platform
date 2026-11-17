@@ -1,4 +1,4 @@
-import { PLATFORM_DISABLED_KEY } from '@void/platform';
+import { PLATFORM_DISABLED_KEY } from '@nosam/platform';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { processPlatformQueue } from '../../src/platform-queue.ts';
 
@@ -107,7 +107,7 @@ describe('platform queue lifecycle', () => {
     },
   );
 
-  it('keeps hosted Void Cloud cron delivery unchanged', async () => {
+  it('keeps hosted Nosam Cloud cron delivery unchanged', async () => {
     const input = batch('cron');
     const bindings = env();
     const handlers = processors();

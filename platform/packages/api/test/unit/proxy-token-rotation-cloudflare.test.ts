@@ -11,14 +11,14 @@ import type { RotationBudget } from '../../src/proxy-token-rotation.ts';
 
 const ACCOUNT = 'acc_test';
 const API_TOKEN = 'cf-token';
-const NAMESPACE = 'void-tenants';
+const NAMESPACE = 'nosam-tenants';
 const SCRIPT = 'user-demo-dep_000000000001';
 const SCRIPT_URL = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/workers/dispatch/namespaces/${NAMESPACE}/scripts/${SCRIPT}`;
 
 const BINDINGS: ReadonlyArray<ScriptBinding> = [
   { name: 'DB', type: 'd1' },
-  { name: '__VOID_PROXY', type: 'service' },
-  { name: '__VOID_PROXY_TOKEN', type: 'plain_text', text: 'old' },
+  { name: '__NOSAM_PROXY', type: 'service' },
+  { name: '__NOSAM_PROXY_TOKEN', type: 'plain_text', text: 'old' },
   { name: 'S', type: 'secret_text' },
 ];
 
@@ -44,8 +44,8 @@ describe('buildProxyTokenBindingsPatch', () => {
   it('inherits every other binding in order and sets the token', () => {
     expect(buildProxyTokenBindingsPatch(BINDINGS, 'new')).toStrictEqual([
       { type: 'inherit', name: 'DB' },
-      { type: 'inherit', name: '__VOID_PROXY' },
-      { type: 'plain_text', name: '__VOID_PROXY_TOKEN', text: 'new' },
+      { type: 'inherit', name: '__NOSAM_PROXY' },
+      { type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: 'new' },
       { type: 'inherit', name: 'S' },
     ]);
   });
@@ -53,10 +53,10 @@ describe('buildProxyTokenBindingsPatch', () => {
   it('throws when the script has no token binding', () => {
     expect(() =>
       buildProxyTokenBindingsPatch(
-        BINDINGS.filter((binding) => binding.name !== '__VOID_PROXY_TOKEN'),
+        BINDINGS.filter((binding) => binding.name !== '__NOSAM_PROXY_TOKEN'),
         'new',
       ),
-    ).toThrow(/__VOID_PROXY_TOKEN/);
+    ).toThrow(/__NOSAM_PROXY_TOKEN/);
   });
 });
 
@@ -74,7 +74,7 @@ describe('createRotationCloudflareClient', () => {
 
   it('sends the settings PATCH as one multipart settings part', async () => {
     const patched: ReadonlyArray<ScriptBinding> = [
-      { name: '__VOID_PROXY_TOKEN', type: 'plain_text', text: 'new' },
+      { name: '__NOSAM_PROXY_TOKEN', type: 'plain_text', text: 'new' },
     ];
     const fetchMock = vi.fn<typeof fetch>(async () => cfSuccess({ bindings: patched }));
     const bindings = buildProxyTokenBindingsPatch(BINDINGS, 'new');

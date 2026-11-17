@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import RiveAnimation from '@components/shared/RiveAnimation.vue';
 import { useData } from 'vitepress';
-import heroAnimation from './assets/animations/640_x_630_vite_to_void_box_vertical_v3.riv';
+import heroAnimation from './assets/animations/640_x_630_vite_to_nosam_box_vertical_v3.riv';
 
 if (typeof document !== 'undefined') {
   const preload = document.createElement('link');
@@ -53,7 +53,7 @@ const { frontmatter } = useData();
       <div
         class="relative px-10 pb-10 md:pt-10 h-full flex flex-col justify-center overflow-clip"
         role="img"
-        aria-label="Animation showing a Vite app becoming a Void app"
+        aria-label="Animation showing a Vite app becoming a Nosam app"
       >
         <RiveAnimation
           :desktop-src="heroAnimation"

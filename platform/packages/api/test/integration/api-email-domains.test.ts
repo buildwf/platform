@@ -440,7 +440,7 @@ describe('project email domain authority', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-void-internal': await hmacSignState(
+            'x-nosam-internal': await hmacSignState(
               `email-lease-v1\n${projectId}\n${signatureDomain}`,
               EMAIL_SIGNING_SECRET,
             ),
@@ -465,7 +465,7 @@ describe('project email domain authority', () => {
     const oversized = await app.fetch(
       new Request('http://localhost/internal/email/domain-credential', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-void-internal': signed },
+        headers: { 'Content-Type': 'application/json', 'x-nosam-internal': signed },
         body: JSON.stringify({
           domain: 'lease.example.com',
           projectId: project.id,
@@ -478,7 +478,7 @@ describe('project email domain authority', () => {
     const malformed = await app.fetch(
       new Request('http://localhost/internal/email/domain-credential', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-void-internal': signed },
+        headers: { 'Content-Type': 'application/json', 'x-nosam-internal': signed },
         body: 'null',
       }),
       runtime(),

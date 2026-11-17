@@ -11,7 +11,7 @@ import { isAdminSuspended } from '../suspension.ts';
 /**
  * Endpoints a scoped (`aud:'deploy'`) token may call. A remote-build deploy
  * token authenticates as the build's billing owner and is minted for one
- * purpose only — running the real `void deploy` CLI against the single project
+ * purpose only — running the real `nosam deploy` CLI against the single project
  * named in `payload.project`. Without this allowlist the token could reach every
  * route mounted under `/projects/*` (delete, secrets PUT, github connect,
  * domains, rollback, cancel), so a leaked
@@ -28,7 +28,7 @@ type DeployAllowEntry = Readonly<{ method: string; segments: ReadonlyArray<strin
 const DEPLOY_TOKEN_ALLOWLIST: ReadonlyArray<DeployAllowEntry> = [];
 
 /**
- * Procedures a scoped deploy token may call: the ones `void deploy` makes. Each checks the token's
+ * Procedures a scoped deploy token may call: the ones `nosam deploy` makes. Each checks the token's
  * project itself (`canOnProject`), because a procedure's project is in its body, not its path.
  */
 const DEPLOY_TOKEN_PROCEDURES: ReadonlySet<string> = new Set([
@@ -279,7 +279,7 @@ export const authMiddleware: MiddlewareHandler<ApiEnv> = async (context, next) =
       context.set('deployCredential', payload.credential);
     }
     // Default-deny: a deploy token may only reach the handful of endpoints the
-    // real `void deploy` flow needs, and only for its own project. The
+    // real `nosam deploy` flow needs, and only for its own project. The
     // deploy.ts cross-project guard remains as defense-in-depth.
     if (!isDeployTokenAllowed(context.req.method, context.req.path, payload.project)) {
       return context.json(

@@ -1,4 +1,4 @@
-import { platformProjectWorkersDevHostname, platformWorkersDevAliasKey } from '@void/platform';
+import { platformProjectWorkersDevHostname, platformWorkersDevAliasKey } from '@nosam/platform';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { ApiEnv } from '../../src/env.ts';
 import { ensureProjectIngress, PROJECT_INGRESS_SOURCE } from '../../src/project-ingress.ts';
@@ -15,7 +15,7 @@ function env() {
   return {
     PLATFORM_APPLICATION: JSON.stringify(application),
     PLATFORM_INSTALLATION_ID: workersDev.installationId,
-    DISPATCH_WORKER_NAME: 'void-team-dispatch',
+    DISPATCH_WORKER_NAME: 'nosam-team-dispatch',
     CF_ACCOUNT_ID: 'account',
     CF_API_TOKEN: 'test-token',
     ROUTING: { put: vi.fn() },
@@ -100,13 +100,13 @@ describe('project workers.dev ingress', () => {
     const forward = vi.fn(async () => response);
     expect(
       await ingress.fetch(request, {
-        VOID_APP_HOSTNAME: hostname,
+        NOSAM_APP_HOSTNAME: hostname,
         PLATFORM_DISPATCH: { fetch: forward },
       }),
     ).toBe(response);
     expect(forward).toHaveBeenCalledWith(request);
     const denied = await ingress.fetch(new Request('https://other.test.workers.dev/'), {
-      VOID_APP_HOSTNAME: hostname,
+      NOSAM_APP_HOSTNAME: hostname,
       PLATFORM_DISPATCH: { fetch: forward },
     });
     expect(denied.status).toBe(404);
@@ -116,7 +116,7 @@ describe('project workers.dev ingress', () => {
     expect(
       await ingress.fetch(
         new Request(`https://${hostname}/socket`, { headers: { Upgrade: 'websocket' } }),
-        { VOID_APP_HOSTNAME: hostname, PLATFORM_DISPATCH: { fetch: forward } },
+        { NOSAM_APP_HOSTNAME: hostname, PLATFORM_DISPATCH: { fetch: forward } },
       ),
     ).toBe(upgraded);
   });

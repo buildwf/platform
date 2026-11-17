@@ -62,7 +62,7 @@ export function DeploymentManifestCard({
         </TableBody>
       </Table>
       <Collapsible
-        className="void-admin-disclosure"
+        className="nosam-admin-disclosure"
         trigger="Raw JSON"
         chevronPosition="start"
         defaultIsOpen={false}

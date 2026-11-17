@@ -1,5 +1,5 @@
-import { sql } from 'void/db';
-import { sqliteTable, integer, text } from 'void/schema-d1';
+import { sql } from 'nosam/db';
+import { sqliteTable, integer, text } from 'nosam/schema-d1';
 
 export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),

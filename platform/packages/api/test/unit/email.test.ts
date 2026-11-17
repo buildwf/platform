@@ -56,10 +56,10 @@ describe('sendErrorAlertEmail', () => {
 
     // `requests` is the only view that can show edge-generated / static 5xx,
     // which never reach a worker and so never produce log rows.
-    expect(sent[0].text).toContain('void project requests --status 5xx --range 2h');
-    expect(sent[0].html).toContain('void project requests --status 5xx --range 2h');
-    expect(sent[0].text).toContain('void project logs --level error --range 2h');
-    expect(sent[0].html).toContain('void project logs --level error --range 2h');
+    expect(sent[0].text).toContain('nosam project requests --status 5xx --range 2h');
+    expect(sent[0].html).toContain('nosam project requests --status 5xx --range 2h');
+    expect(sent[0].text).toContain('nosam project logs --level error --range 2h');
+    expect(sent[0].html).toContain('nosam project logs --level error --range 2h');
   });
 
   it('anchors the suggested range at send time, not at the last error', async () => {
@@ -103,7 +103,7 @@ describe('sendErrorAlertEmail', () => {
     await sendErrorAlertEmail(binding, 'u@example.com', 'recappi', 5, null, Date.now());
     const msg = sent[0];
     expect(msg.html).toContain('recently');
-    expect(msg.html).toContain('void project requests --status 5xx --range');
+    expect(msg.html).toContain('nosam project requests --status 5xx --range');
     expect(msg.text).toContain('recently');
   });
 
@@ -136,12 +136,12 @@ describe('platform email identity', () => {
       expect(msg.from).toBe(identity.EMAIL_FROM);
       expect(msg.html).toContain('Example &lt;Platform&gt;');
       expect(msg.html).not.toContain('Example <Platform>');
-      expect(msg.text).toContain("void connect 'api.example.com'");
-      expect(msg.html + msg.text).not.toContain('void auth login');
-      expect(msg.html + msg.text).not.toContain('void deploy');
+      expect(msg.text).toContain("nosam connect 'api.example.com'");
+      expect(msg.html + msg.text).not.toContain('nosam auth login');
+      expect(msg.html + msg.text).not.toContain('nosam deploy');
       expect(msg.html).toContain('https://api.example.com/invite');
       expect(msg.html + msg.text).not.toMatch(
-        /void\.cloud|discord|private beta|source|early-access/i,
+        /nosam\.cloud|discord|private beta|source|early-access/i,
       );
     }
     expect(sent[1].html).toContain('&lt;new-member&gt;');
@@ -160,8 +160,8 @@ describe('platform email identity', () => {
       },
     );
 
-    expect(sent[0].html + sent[0].text).toContain("void connect 'api.example.com'");
-    expect(sent[0].html + sent[0].text).toContain('void project team accept pinv_a1b2c3d4e5f6');
+    expect(sent[0].html + sent[0].text).toContain("nosam connect 'api.example.com'");
+    expect(sent[0].html + sent[0].text).toContain('nosam project team accept pinv_a1b2c3d4e5f6');
     expect(sent[0].html + sent[0].text).toContain(
       'https://api.example.com/invite?project-invitation=pinv_a1b2c3d4e5f6',
     );
@@ -176,7 +176,7 @@ describe('platform email identity', () => {
     for (const msg of sent) {
       expect(msg.from).toBe(identity.EMAIL_FROM);
       expect(msg.html).toContain('Example &lt;Platform&gt;');
-      expect(msg.text).toContain("void connect 'api.example.com'");
+      expect(msg.text).toContain("nosam connect 'api.example.com'");
       expect(msg.html + msg.text).not.toContain('void.cloud');
       expect(msg.html).not.toContain('View Project');
     }
@@ -223,9 +223,9 @@ describe('platform email identity', () => {
       },
       'member@example.com',
     );
-    expect(sent[0].subject).toBe("You're invited to Void Platform");
-    expect(sent[0].html + sent[0].text).not.toContain('Void Cloud');
-    expect(sent[0].text).toContain("void connect 'api.example.com'");
+    expect(sent[0].subject).toBe("You're invited to Nosam Platform");
+    expect(sent[0].html + sent[0].text).not.toContain('Nosam Cloud');
+    expect(sent[0].text).toContain("nosam connect 'api.example.com'");
   });
 
   describe('default sender', () => {
@@ -267,7 +267,7 @@ describe('platform email identity', () => {
       expect(sent.map(({ from }) => from)).toEqual([
         defaultSender,
         identity.EMAIL_FROM,
-        'Void <noreply@void.cloud>',
+        'Nosam <noreply@void.cloud>',
       ]);
     });
 
@@ -283,11 +283,11 @@ describe('platform email identity', () => {
     });
   });
 
-  it('preserves the Void Cloud sender only for its hosted deployment', async () => {
+  it('preserves the Nosam Cloud sender only for its hosted deployment', async () => {
     const { binding, sent } = mockBinding();
     await sendInvitationEmail(binding, 'member@example.com');
-    expect(sent[0].from).toBe('Void <noreply@void.cloud>');
-    expect(sent[0].subject).toBe("You're invited to Void Cloud");
-    expect(sent[0].text).toContain("void connect 'api.void.cloud'");
+    expect(sent[0].from).toBe('Nosam <noreply@void.cloud>');
+    expect(sent[0].subject).toBe("You're invited to Nosam Cloud");
+    expect(sent[0].text).toContain("nosam connect 'void-nosam-api.buildwithfriends.workers.dev'");
   });
 });

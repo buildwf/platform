@@ -5,7 +5,7 @@ import {
   type PlanLimits,
   type PlatformPlanCatalog,
   type PlatformPlanDefinition,
-} from '@void/platform/plans';
+} from '@nosam/platform/plans';
 import { count, sql } from 'drizzle-orm';
 import type { DbOrTx } from './db.ts';
 import { OperatorError } from './operator/common.ts';
@@ -36,8 +36,8 @@ export async function lockPlanCatalog(
 ): Promise<void> {
   await tx.execute(
     mode === 'shared'
-      ? sql`SELECT pg_advisory_xact_lock_shared(hashtextextended('void:platform:plans', 0))`
-      : sql`SELECT pg_advisory_xact_lock(hashtextextended('void:platform:plans', 0))`,
+      ? sql`SELECT pg_advisory_xact_lock_shared(hashtextextended('nosam:platform:plans', 0))`
+      : sql`SELECT pg_advisory_xact_lock(hashtextextended('nosam:platform:plans', 0))`,
   );
 }
 

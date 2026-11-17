@@ -1,4 +1,4 @@
-import { planWebSocketMigrations } from '@void/deploy-core';
+import { planWebSocketMigrations } from '@nosam/deploy-core';
 import {
   type DeployManifest,
   type LiveMigrationMeta,
@@ -131,7 +131,7 @@ export function buildSandboxUploadBindings(
   return [
     {
       type: 'service',
-      name: '__VOID_SANDBOX',
+      name: '__NOSAM_SANDBOX',
       service: controllerWorkerName,
     },
   ];

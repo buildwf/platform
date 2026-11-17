@@ -153,7 +153,7 @@ function plane(down = 0) {
       font-size="48"
       font-weight="700"
       font-family="Inter, sans-serif"
-      >Void.</text
+      >Nosam.</text
     >
   </g>
 </template>

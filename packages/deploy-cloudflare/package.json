@@ -1,7 +1,7 @@
 {
-  "name": "@void/deploy-cloudflare",
+  "name": "@nosam/deploy-cloudflare",
   "version": "1.9.1",
-  "description": "Cloudflare deployment primitives for Void runtimes and deployment adapters.",
+  "description": "Cloudflare deployment primitives for Nosam runtimes and deployment adapters.",
   "homepage": "https://void.cloud",
   "bugs": {
     "url": "https://github.com/voidzero-dev/void/issues"
@@ -31,7 +31,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@void/deploy-core": "workspace:*",
+    "@nosam/deploy-core": "workspace:*",
     "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {
