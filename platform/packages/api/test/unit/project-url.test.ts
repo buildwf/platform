@@ -4,7 +4,7 @@ import { projectUrl, projectWithUrl } from '../../src/project-url.ts';
 const project = { id: 'proj_123456abcdef', slug: 'kitchen-sink' };
 describe('canonical application URLs', () => {
   it('preserves existing platform URL and response behavior', () => {
-    expect(projectUrl(project, {} as never)).toBe('https://kitchen-sink.void.app');
+    expect(projectUrl(project, {} as never)).toBe('https://kitchen-sink.buildwf.dev');
     expect(projectWithUrl(project, {} as never)).toBe(project);
     expect(projectUrl(project, { SITE_DOMAIN: 'custom.example.com' } as never)).toBe(
       'https://kitchen-sink.custom.example.com',
