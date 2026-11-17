@@ -147,7 +147,7 @@ describe('platform onboarding pages', () => {
     async (path) => {
       const response = await app.fetch(
         new Request(`https://api.example.com${path}`, {
-          headers: { Host: 'void-nosam-api.buildwithfriends.workers.dev', 'X-Forwarded-Host': 'void-nosam-api.buildwithfriends.workers.dev' },
+          headers: { Host: 'nosam.buildwithfriends.dev', 'X-Forwarded-Host': 'nosam.buildwithfriends.dev' },
         }),
         env,
       );
@@ -161,7 +161,7 @@ describe('platform onboarding pages', () => {
     },
   );
 
-  it.each(['https://void-nosam-api.buildwithfriends.workers.dev', 'https://api.staging.void.cloud'])(
+  it.each(['https://nosam.buildwithfriends.dev', 'https://api.staging.void.cloud'])(
     'preserves the hosted name at %s',
     async (origin) => {
       const response = await app.fetch(new Request(`${origin}/signup-restricted`), env);

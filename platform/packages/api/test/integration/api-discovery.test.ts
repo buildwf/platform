@@ -16,16 +16,16 @@ afterAll(async () => {
 describe('GET /.well-known/nosam-platform', () => {
   it('describes existing Nosam Cloud without exposing resource ids or credentials', async () => {
     const response = await app.fetch(
-      new Request('https://void-nosam-api.buildwithfriends.workers.dev/.well-known/nosam-platform'),
+      new Request('https://nosam.buildwithfriends.dev/.well-known/nosam-platform'),
       env,
     );
     expect(response.status).toBe(200);
     const document = await response.json<Record<string, unknown>>();
     expect(document).toMatchObject({
-      apiUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
-      applicationDomain: 'void.app',
+      apiUrl: 'https://nosam.buildwithfriends.dev',
+      applicationDomain: 'buildwf.dev',
       displayName: 'Nosam Cloud',
-      proxyUrl: 'https://proxy.void.cloud',
+      proxyUrl: 'https://void-nosam-proxy.buildwithfriends.workers.dev',
       schemaVersion: 1,
       usageProtocolVersion: 2,
     });
@@ -98,7 +98,7 @@ describe('GET /.well-known/nosam-platform', () => {
     await env.ROUTING.put(PLATFORM_DISABLED_KEY, 'disabled');
     try {
       const response = await app.fetch(
-        new Request('https://void-nosam-api.buildwithfriends.workers.dev/.well-known/nosam-platform', {
+        new Request('https://nosam.buildwithfriends.dev/.well-known/nosam-platform', {
           headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
         }),
         {
@@ -118,7 +118,7 @@ describe('GET /.well-known/nosam-platform', () => {
     await env.ROUTING.put(PLATFORM_DISABLED_KEY, 'disabled');
     try {
       const response = await app.fetch(
-        new Request('https://void-nosam-api.buildwithfriends.workers.dev/.well-known/nosam-platform', {
+        new Request('https://nosam.buildwithfriends.dev/.well-known/nosam-platform', {
           headers: { 'X-Health-Check': 'nosam-admin' },
         }),
         {

@@ -18,7 +18,7 @@ export function getPlatformDisplayName(
     return 'Nosam Platform';
   }
   const apiUrl = getPlatformApiUrl(bindings, requestUrl);
-  return ['https://void-nosam-api.buildwithfriends.workers.dev', 'https://api.staging.void.cloud'].includes(apiUrl)
+  return ['https://nosam.buildwithfriends.dev', 'https://api.staging.void.cloud'].includes(apiUrl)
     ? 'Nosam Cloud'
     : 'Nosam Platform';
 }
@@ -39,7 +39,7 @@ export function getPlatformApiUrl(env: PlatformIdentityEnv, requestUrl?: string)
     configuredUrl ||
       (env.PLATFORM_ENV === 'staging'
         ? 'https://api.staging.void.cloud'
-        : 'https://void-nosam-api.buildwithfriends.workers.dev'),
+        : 'https://nosam.buildwithfriends.dev'),
   );
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
     throw new Error('The platform API URL must be an HTTP(S) URL without credentials.');

@@ -73,7 +73,7 @@ describe('staging kitchen-sink fixture env', () => {
 
   it('rejects a non-staging API before even listing projects', async () => {
     const { client } = fixture();
-    client.apiUrl = 'https://void-nosam-api.buildwithfriends.workers.dev';
+    client.apiUrl = 'https://nosam.buildwithfriends.dev';
     await expect(initializeStagingEnv(client, async () => {})).rejects.toThrow(
       'requires the staging API',
     );

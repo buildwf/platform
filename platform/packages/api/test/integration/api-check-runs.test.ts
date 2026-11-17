@@ -591,7 +591,7 @@ describe('BuildManager check-run lifecycle — finalize terminal sites', () => {
     expect(patches[0].body).toMatchObject({
       status: 'completed',
       conclusion: 'success',
-      details_url: 'https://my-app.void.app',
+      details_url: 'https://my-app.buildwf.dev',
     });
   });
 
@@ -654,7 +654,7 @@ describe('BuildManager check-run lifecycle — finalize terminal sites', () => {
     // env (no SITE_DOMAIN) → prod fallback.
     expect(patches[0].body).toMatchObject({
       conclusion: 'cancelled',
-      details_url: 'https://my-app.void.app',
+      details_url: 'https://my-app.buildwf.dev',
     });
     const output = patches[0].body?.output as { summary?: string };
     expect(output.summary).toBe('project disconnected');
@@ -1399,24 +1399,24 @@ describe('BuildManager check-run lifecycle — details_url is env-aware (SITE_DO
   // The check-run details_url links to the project's public traffic URL. Staging and
   // production serve on different base domains, so the link must follow the
   // per-environment SITE_DOMAIN binding (the same source the deploy-URL output uses),
-  // not a hardcoded `.void.app`.
-  it('staging SITE_DOMAIN → create + finalize link to {slug}.staging.void.app', async () => {
+  // not a hardcoded `.buildwf.dev`.
+  it('staging SITE_DOMAIN → create + finalize link to {slug}.staging.buildwf.dev', async () => {
     const { posts, patches } = installFetch();
     const ctx = makeStubCtx();
     const env = makeEnv();
-    env.SITE_DOMAIN = 'staging.void.app';
+    env.SITE_DOMAIN = 'staging.buildwf.dev';
     const m = makeManager(ctx, env);
 
     await m.startBuild(makeConfig());
     expect(posts).toHaveLength(1);
-    expect(posts[0].body).toMatchObject({ details_url: 'https://my-app.staging.void.app' });
+    expect(posts[0].body).toMatchObject({ details_url: 'https://my-app.staging.buildwf.dev' });
 
     await m.onStop({ exitCode: 0, reason: 'exit' });
     expect(patches).toHaveLength(1);
-    expect(patches[0].body).toMatchObject({ details_url: 'https://my-app.staging.void.app' });
+    expect(patches[0].body).toMatchObject({ details_url: 'https://my-app.staging.buildwf.dev' });
   });
 
-  it('unset SITE_DOMAIN → falls back to the production {slug}.void.app', async () => {
+  it('unset SITE_DOMAIN → falls back to the production {slug}.buildwf.dev', async () => {
     const { posts } = installFetch();
     const ctx = makeStubCtx();
     const env = makeEnv(); // SITE_DOMAIN unset
@@ -1424,7 +1424,7 @@ describe('BuildManager check-run lifecycle — details_url is env-aware (SITE_DO
 
     await m.startBuild(makeConfig());
     expect(posts).toHaveLength(1);
-    expect(posts[0].body).toMatchObject({ details_url: 'https://my-app.void.app' });
+    expect(posts[0].body).toMatchObject({ details_url: 'https://my-app.buildwf.dev' });
   });
 
   // The status→conclusion helper (`finalizeCheckRunToStatus`) is a SEPARATE detailsUrl
@@ -1438,7 +1438,7 @@ describe('BuildManager check-run lifecycle — details_url is env-aware (SITE_DO
     const { posts, patches } = installFetch();
     const ctx = makeStubCtx();
     const env = makeEnv();
-    env.SITE_DOMAIN = 'staging.void.app';
+    env.SITE_DOMAIN = 'staging.buildwf.dev';
     const m = makeManager(ctx, env);
 
     await m.startBuild(makeConfig());
@@ -1450,7 +1450,7 @@ describe('BuildManager check-run lifecycle — details_url is env-aware (SITE_DO
     expect(patches[0].body).toMatchObject({
       status: 'completed',
       conclusion: 'cancelled',
-      details_url: 'https://my-app.staging.void.app',
+      details_url: 'https://my-app.staging.buildwf.dev',
     });
   });
 });

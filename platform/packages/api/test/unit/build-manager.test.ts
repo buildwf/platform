@@ -668,7 +668,7 @@ describe('BuildManager.startBuild', () => {
     expect(envVars.NOSAM_TOKEN).toBe('deploy-token');
     expect(envVars.SOURCE_TOKEN).toBe('install-token');
     expect(envVars.SOURCE_TARBALL_URL).toBe('https://api.github.com/repos/owner/repo/tarball/sha1');
-    expect(envVars.NOSAM_API_URL).toBe('https://void-nosam-api.buildwithfriends.workers.dev');
+    expect(envVars.NOSAM_API_URL).toBe('https://nosam.buildwithfriends.dev');
     // The fallback Nosam CLI version is PINNED (never `latest`) so a moving npm
     // dist-tag can't change deploy behavior with no repo diff.
     expect(envVars.NOSAM_CLI_VERSION).toBeDefined();
@@ -741,7 +741,7 @@ describe('BuildManager.startBuild', () => {
     expect(envVars.NOSAM_PROXY_URL).toBe('https://proxy.staging.void.cloud');
   });
 
-  it('does NOT forward CF Access creds on production builds (void-nosam-api.buildwithfriends.workers.dev is not Access-gated)', async () => {
+  it('does NOT forward CF Access creds on production builds (nosam.buildwithfriends.dev is not Access-gated)', async () => {
     const ctx = makeStubCtx();
     const env = makeEnv();
     // Production env, but the secrets happen to be set: they must NOT leak in.
@@ -5381,7 +5381,7 @@ describe('renderCapturedLog (terminal-visible text for the check run)', () => {
 
   it('strips OSC sequences (window title / hyperlink) under both BEL and ST terminators', async () => {
     expect(await renderCapturedLog(`${ESC}]0;building\x07done`)).toBe('done');
-    expect(await renderCapturedLog(`${ESC}]8;;https://void.app${ESC}\\link`)).toBe('link');
+    expect(await renderCapturedLog(`${ESC}]8;;https://buildwf.dev${ESC}\\link`)).toBe('link');
   });
 
   // Expectations for the string-control cases below are ground truth from
@@ -6253,7 +6253,7 @@ describe('build-agent sanitizeChildEnv (env scrub)', () => {
     CF_ACCESS_CLIENT_ID: 'svc-id.access',
     CF_ACCESS_CLIENT_SECRET: 'svc-secret',
     NOSAM_ACCESS_CREDENTIALS: '{"https://proxy.example.com":{"CF_ACCESS_TOKEN":"private"}}',
-    NOSAM_API_URL: 'https://void-nosam-api.buildwithfriends.workers.dev',
+    NOSAM_API_URL: 'https://nosam.buildwithfriends.dev',
     NOSAM_PROJECT: 'my-app',
   };
 
@@ -6318,7 +6318,7 @@ describe('build-agent sanitizeChildEnv (env scrub)', () => {
 
   it('keeps non-secret deploy + system vars the build legitimately needs', () => {
     const child = sanitizeChildEnv(fullEnv);
-    expect(child.NOSAM_API_URL).toBe('https://void-nosam-api.buildwithfriends.workers.dev');
+    expect(child.NOSAM_API_URL).toBe('https://nosam.buildwithfriends.dev');
     expect(child.NOSAM_PROJECT).toBe('my-app');
     expect(child.PATH).toBe('/usr/bin');
     expect(child.HOME).toBe('/root');
@@ -6406,7 +6406,7 @@ describe('build-agent parent-process secret scrub', () => {
     };
     process.env.NOSAM_TOKEN = 'deploy-jwt';
     process.env.SOURCE_TOKEN = 'ghs_secret';
-    process.env.NOSAM_API_URL = 'https://void-nosam-api.buildwithfriends.workers.dev';
+    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
     process.env.NOSAM_PROJECT = 'my-app';
     try {
       const seen: Array<{ cmd: string; env: NodeJS.ProcessEnv | undefined }> = [];
@@ -6492,7 +6492,7 @@ describe('build-agent nonInteractiveEnv (CI-safe child output)', () => {
     };
     process.env.NOSAM_TOKEN = 'deploy-jwt';
     process.env.SOURCE_TOKEN = 'ghs_secret';
-    process.env.NOSAM_API_URL = 'https://void-nosam-api.buildwithfriends.workers.dev';
+    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
     process.env.NOSAM_PROJECT = 'my-app';
     try {
       const seen: Array<{ cmd: string; env: NodeJS.ProcessEnv | undefined }> = [];
@@ -6570,7 +6570,7 @@ describe('build-agent non-root child isolation', () => {
     };
     process.env.NOSAM_TOKEN = 'deploy-jwt';
     process.env.SOURCE_TOKEN = 'ghs_secret';
-    process.env.NOSAM_API_URL = 'https://void-nosam-api.buildwithfriends.workers.dev';
+    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
     process.env.NOSAM_PROJECT = 'my-app';
     try {
       const seen: Array<{ cmd: string; env: NodeJS.ProcessEnv | undefined }> = [];
@@ -6617,7 +6617,7 @@ describe('build-agent non-root child isolation', () => {
     };
     process.env.NOSAM_TOKEN = 'deploy-jwt';
     process.env.SOURCE_TOKEN = 'ghs_secret';
-    process.env.NOSAM_API_URL = 'https://void-nosam-api.buildwithfriends.workers.dev';
+    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
     process.env.NOSAM_PROJECT = 'my-app';
     try {
       const order: Array<string> = [];
@@ -6665,7 +6665,7 @@ describe('build-agent non-root child isolation', () => {
       NOSAM_PROJECT: process.env.NOSAM_PROJECT,
     };
     process.env.NOSAM_TOKEN = 'deploy-jwt';
-    process.env.NOSAM_API_URL = 'https://void-nosam-api.buildwithfriends.workers.dev';
+    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
     process.env.NOSAM_PROJECT = 'my-app';
     try {
       const order: Array<string> = [];
@@ -6710,7 +6710,7 @@ describe('build-agent non-root child isolation', () => {
       NOSAM_PROJECT: process.env.NOSAM_PROJECT,
     };
     process.env.NOSAM_TOKEN = 'deploy-jwt';
-    process.env.NOSAM_API_URL = 'https://void-nosam-api.buildwithfriends.workers.dev';
+    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
     process.env.NOSAM_PROJECT = 'my-app';
     try {
       const reap = vi.fn(async () => {});
@@ -6780,7 +6780,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
       savedEnv[key] = process.env[key];
     }
     process.env.NOSAM_TOKEN = 'deploy-jwt';
-    process.env.NOSAM_API_URL = 'https://void-nosam-api.buildwithfriends.workers.dev';
+    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
     process.env.NOSAM_PROJECT = 'my-app';
   });
 
@@ -6839,11 +6839,11 @@ describe('build-agent lifecycle (container must always exit)', () => {
         '--yes',
         'nosam',
         'connect',
-        'https://void-nosam-api.buildwithfriends.workers.dev',
+        'https://nosam.buildwithfriends.dev',
         '--no-login',
       ]);
       expect(calls[1]?.[2]?.env?.NOSAM_TOKEN).toBeUndefined();
-      expect(calls[1]?.[2]?.env?.NOSAM_ACCESS_ORIGIN).toBe('https://void-nosam-api.buildwithfriends.workers.dev');
+      expect(calls[1]?.[2]?.env?.NOSAM_ACCESS_ORIGIN).toBe('https://nosam.buildwithfriends.dev');
       expect(calls.some(([, args]) => args.includes('deploy'))).toBe(connectExit === 0);
     },
   );
@@ -6868,7 +6868,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
     expect(install?.[2]?.env?.NOSAM_ACCESS_CREDENTIALS).toBeUndefined();
     expect(connect?.[2]?.env?.NOSAM_ACCESS_CREDENTIALS).toBeUndefined();
     expect(JSON.parse(deploy?.[2]?.env?.NOSAM_ACCESS_CREDENTIALS ?? 'null')).toEqual({
-      'https://void-nosam-api.buildwithfriends.workers.dev': {
+      'https://nosam.buildwithfriends.dev': {
         CF_ACCESS_CLIENT_ID: 'service-id',
         CF_ACCESS_CLIENT_SECRET: 'service-secret',
       },
@@ -7157,7 +7157,7 @@ describe('build-agent GET /logs serves post-child-close lines', () => {
       savedEnv[key] = process.env[key];
     }
     process.env.NOSAM_TOKEN = 'deploy-jwt';
-    process.env.NOSAM_API_URL = 'https://void-nosam-api.buildwithfriends.workers.dev';
+    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
     process.env.NOSAM_PROJECT = 'my-app';
   });
 
@@ -7389,7 +7389,7 @@ describe('build-agent install + deploy resolution', () => {
       savedEnv[key] = process.env[key];
     }
     process.env.NOSAM_TOKEN = 'deploy-jwt';
-    process.env.NOSAM_API_URL = 'https://void-nosam-api.buildwithfriends.workers.dev';
+    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
     process.env.NOSAM_PROJECT = 'my-app';
     resetWorkDir();
   });
@@ -7895,7 +7895,7 @@ describe('build-agent pipeStream line splitting + tail cap', () => {
         'dist/client/index.html  0.57 kB',
         '  at build (build.ts:10:2)',
         'Uploading 1/2\r\x1b[2K✓ Uploaded 2/2',
-        '╭─ https://example.void.app ─╮',
+        '╭─ https://example.buildwf.dev ─╮',
         '│  2 static assets          │',
         '╰───────────────────────────╯',
         '✓ Successfully deployed!',

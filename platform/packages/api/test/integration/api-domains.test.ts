@@ -137,7 +137,7 @@ describe('POST /projects/:id/domains', () => {
     expect(body.id).toMatch(/^dom_/);
     expect(body.hostname).toBe('app.example.com');
     expect(body.status).toBe('pending');
-    expect(body.cname_target).toBe('cname.void.app');
+    expect(body.cname_target).toBe('cname.buildwf.dev');
     expect(body.ownership_verification?.name).toBe('_cf-custom-hostname.app.example.com');
     // Under HTTP-DCV there are no `_acme-challenge` records; the route still
     // surfaces an (empty) array.
@@ -568,18 +568,18 @@ describe('POST /projects/:id/domains', () => {
     expect(rows[0].cf_hostname_id).toBe('ch-race-created');
   });
 
-  it('rejects void.app subdomains', async () => {
+  it('rejects buildwf.dev subdomains', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'reject-vc');
     mockCfApi();
 
     const res = await app.fetch(
-      rpcRequest('domains.add', user.jwt, { projectId: project.id, hostname: 'bad.void.app' }),
+      rpcRequest('domains.add', user.jwt, { projectId: project.id, hostname: 'bad.buildwf.dev' }),
       env,
     );
 
     expect(res.status).toBe(400);
-    expect(rpcError(await res.json())).toBe('cannot use void.app subdomains');
+    expect(rpcError(await res.json())).toBe('cannot use buildwf.dev subdomains');
   });
 
   it('uses the installation domain for the CNAME target and reserved suffix', async () => {
@@ -889,7 +889,7 @@ describe('GET /projects/:id/domains/:domainId', () => {
     };
     expect(body.hostname).toBe('status.example.com');
     expect(body.status).toBe('pending');
-    expect(body.cname_target).toBe('cname.void.app');
+    expect(body.cname_target).toBe('cname.buildwf.dev');
     expect(body.ssl_status).toBe('pending_validation');
     expect(body.ownership_verification?.name).toBe('_cf-custom-hostname.status.example.com');
     expect(body.ssl_validation_records).toBeDefined();
@@ -1077,7 +1077,7 @@ describe('GET /projects/:id/domains/:domainId', () => {
     // `status: active` AND `ssl.status: active`, an outstanding
     // `ownership_verification` means the `_cf-custom-hostname` TXT is not yet
     // proven. The anti-hijack lever is the OWNERSHIP gate — a wildcard CNAME
-    // (`*.victim → cname.void.app`) cannot forge the per-host ownership TXT, so
+    // (`*.victim → cname.buildwf.dev`) cannot forge the per-host ownership TXT, so
     // the gate MUST refuse to route while `ownership_verification` is present,
     // even should CF ever flip `status` early.
     const user = await createTestUser(env.db);
@@ -2306,7 +2306,7 @@ describe('scheduled() — cron-driven auto-activation reconciliation', () => {
 
   it('hourly tier re-triggers HTTP DCV via PATCH for a pending, ungated, http-method domain', async () => {
     // Nosam's add-first flow creates the CF hostname with ssl.method:'http'
-    // BEFORE the user points their CNAME at cname.void.app. CF requires a PATCH
+    // BEFORE the user points their CNAME at cname.buildwf.dev. CF requires a PATCH
     // to complete HTTP validation once the domain is pointing at the Managed
     // CNAME — a GET alone never re-triggers DCV and the hostname can stay
     // pending forever (or get CF-deleted after 7 days). The re-trigger is gated

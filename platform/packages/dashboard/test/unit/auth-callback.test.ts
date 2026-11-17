@@ -244,7 +244,7 @@ describe('localhost token bypass', () => {
         },
         redirect: 'manual',
       },
-      { API_URL: 'https://void-nosam-api.buildwithfriends.workers.dev' },
+      { API_URL: 'https://nosam.buildwithfriends.dev' },
     );
 
     expect(res.status).toBe(302);

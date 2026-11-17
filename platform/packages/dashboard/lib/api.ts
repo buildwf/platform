@@ -12,7 +12,7 @@ export type ApiResponse = Pick<
 /** The signed in user, as `me.get` returns it. */
 export type CurrentUser = OutputOf<NonNullable<PlatformRegistry['~procedures']>['me.get']>;
 
-const API_URL = 'https://void-nosam-api.buildwithfriends.workers.dev';
+const API_URL = 'https://nosam.buildwithfriends.dev';
 const DEFAULT_API_TIMEOUT_MS = 10_000;
 
 export function getPublicApiUrl(context: Context): string {

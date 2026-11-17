@@ -1694,7 +1694,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
       const nosamApiUrl =
         this.env.PLATFORM_ENV === 'staging'
           ? 'https://api.staging.void.cloud'
-          : 'https://void-nosam-api.buildwithfriends.workers.dev';
+          : 'https://nosam.buildwithfriends.dev';
 
       // Staging API hosts sit behind CF Access; the `nosam deploy` child can't do
       // the interactive `cloudflared` flow (no TTY/binary in the container), so

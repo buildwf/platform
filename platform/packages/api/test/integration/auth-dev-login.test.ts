@@ -126,7 +126,7 @@ describe('GET /auth/dev-login', () => {
   it('returns 400 when redirect is not localhost', async () => {
     for (const redirect of [
       'https://evil.example.com/',
-      'https://dash.void.cloud/auth/callback',
+      'https://nosam.buildwithfriends.dev/auth/callback',
       'https://dash.staging.void.cloud/auth/callback',
     ]) {
       const res = await app.fetch(
@@ -181,7 +181,7 @@ describe('GET /auth/dev-login', () => {
 
 describe('GET /auth/login redirect isolation', () => {
   it('rejects the hosted dashboard for self-hosted APIs without a configured dashboard', async () => {
-    const redirect = encodeURIComponent('https://dash.void.cloud/auth/callback');
+    const redirect = encodeURIComponent('https://nosam.buildwithfriends.dev/auth/callback');
     const res = await app.fetch(new Request(`http://localhost/auth/login?redirect=${redirect}`), {
       ...env,
       PLATFORM_INSTALLATION_ID: 'example-a1b2c3d4',
@@ -194,7 +194,7 @@ describe('GET /auth/login redirect isolation', () => {
   });
 
   it('preserves the hosted dashboard default for Nosam Cloud', async () => {
-    const redirect = encodeURIComponent('https://dash.void.cloud/auth/callback');
+    const redirect = encodeURIComponent('https://nosam.buildwithfriends.dev/auth/callback');
     const res = await app.fetch(
       new Request(`http://localhost/auth/login?redirect=${redirect}&provider=github`),
       env,

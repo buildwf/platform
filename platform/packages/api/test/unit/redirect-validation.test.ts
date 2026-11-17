@@ -14,8 +14,8 @@ describe('isAllowedRedirect', () => {
   });
 
   it('allows exact dashboard origin', () => {
-    expect(isAllowedRedirect('https://dash.void.cloud/callback')).toBe(true);
-    expect(isAllowedRedirect('https://dash.void.cloud/login?next=/projects')).toBe(true);
+    expect(isAllowedRedirect('https://nosam.buildwithfriends.dev/callback')).toBe(true);
+    expect(isAllowedRedirect('https://nosam.buildwithfriends.dev/login?next=/projects')).toBe(true);
   });
 
   it('allows custom dashboard URL (staging)', () => {
@@ -26,7 +26,7 @@ describe('isAllowedRedirect', () => {
 
   it('does not inherit the hosted dashboard in a self-hosted installation', () => {
     expect(
-      isAllowedRedirect('https://dash.void.cloud/auth/callback', undefined, 'example-a1b2c3d4'),
+      isAllowedRedirect('https://nosam.buildwithfriends.dev/auth/callback', undefined, 'example-a1b2c3d4'),
     ).toBe(false);
     expect(
       isAllowedRedirect(
@@ -58,7 +58,7 @@ describe('isAllowedRedirect', () => {
 
   // Subdomain attack vectors
   it('rejects subdomain prefix attack', () => {
-    expect(isAllowedRedirect('https://dash.void.cloud.attacker.com/steal')).toBe(false);
+    expect(isAllowedRedirect('https://nosam.buildwithfriends.dev.attacker.com/steal')).toBe(false);
   });
 
   it('rejects evil subdomain of dashboard', () => {

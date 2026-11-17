@@ -288,6 +288,6 @@ describe('platform email identity', () => {
     await sendInvitationEmail(binding, 'member@example.com');
     expect(sent[0].from).toBe('Nosam <noreply@void.cloud>');
     expect(sent[0].subject).toBe("You're invited to Nosam Cloud");
-    expect(sent[0].text).toContain("nosam connect 'void-nosam-api.buildwithfriends.workers.dev'");
+    expect(sent[0].text).toContain("nosam connect 'nosam.buildwithfriends.dev'");
   });
 });

@@ -368,7 +368,7 @@ const app = new Hono<ApiEnv>()
     return context.json(
       createPlatformDiscoveryDocument({
         apiUrl: new URL(context.req.url).origin,
-        applicationDomain: context.env.SITE_DOMAIN ?? 'void.app',
+        applicationDomain: context.env.SITE_DOMAIN ?? 'buildwf.dev',
         ...(context.env.PLATFORM_APPLICATION
           ? { applicationRouting: readPlatformApplication(context.env) }
           : {}),
@@ -394,7 +394,7 @@ const app = new Hono<ApiEnv>()
           context.env.PROXY_URL ??
           (context.env.PLATFORM_ENV === 'staging'
             ? 'https://proxy.staging.void.cloud'
-            : 'https://proxy.void.cloud'),
+            : 'https://void-nosam-proxy.buildwithfriends.workers.dev'),
         usageProtocolVersion: USAGE_PROTOCOL_VERSION,
       }),
     );

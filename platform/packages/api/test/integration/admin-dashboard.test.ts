@@ -2490,7 +2490,7 @@ describe('GET /admin/projects', () => {
     expect(projectLink).toContain('target="_blank"');
     expect(projectLink).toContain('rel="noopener noreferrer"');
     expect(projectLink).toContain('<svg');
-    expect(projectLink?.replace(/<[^>]+>/g, '')).toContain('my-proj.void.app');
+    expect(projectLink?.replace(/<[^>]+>/g, '')).toContain('my-proj.buildwf.dev');
     expect(projectLink?.replace(/<[^>]+>/g, '')).not.toContain('https://');
   });
 
@@ -3584,7 +3584,7 @@ describe('GET /admin/deployments/:id/logs', () => {
               outcome: 'exception',
               logData: '[{"level":"error","message":"late failure"}]',
               exceptionData: '[{"name":"Error","message":"late failure"}]',
-              url: 'https://logs-proj.void.app/',
+              url: 'https://logs-proj.buildwf.dev/',
               method: 'GET',
               statusCode: '500',
               ts: oldRequestStart,
