@@ -1,16 +1,16 @@
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vite-plus/test';
 
-// This repository is Product: it takes an app as input and doesn't know which app it is. The app we build on it
-// is one of those apps, so its name has no place in product code, tests, docs or package manifests. The labels
-// and the reasons are in the labels doc in that app's repository.
+// This repository is part of the product: it takes an app as input and doesn't know which app it is. The app we build on it
+// is one of those apps, so its name has no place in product code, tests, docs or package manifests. The reasons
+// are in docs/scopes.md in that app's repository.
 //
 // The name is built from two parts so that this file passes its own check.
 const appName = ['ded', 'worc'].join('');
 
 // A deliberate mention goes here with its reason. A row that matches no file fails, so the list stays current.
 const allowed: Array<{ file: string; reason: string }> = [
-  { file: 'AGENTS.md', reason: 'Explains the two labels to agents, and one of them carries the name.' },
+  { file: 'AGENTS.md', reason: 'Explains the product and our own setup to agents, and names the app.' },
 ];
 
 function filesThatNameTheApp(): Array<string> {
