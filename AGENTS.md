@@ -126,3 +126,14 @@ targets and the shared browser fixtures.
 - **D1 does not allow `PRAGMA foreign_keys=OFF`** — D1 enforces `foreign_keys=ON` always. Drizzle-generated migrations that do table rebuilds (e.g. adding NOT NULL to an existing column) use `PRAGMA foreign_keys=OFF/ON`, which silently fails on D1. Hand-edit these to `PRAGMA defer_foreign_keys=on/off` instead, which defers FK checks to the end of the current transaction.
 - **Vite config plugins option accepts array of plugins by default** - there is no need to spread plugins that export an array of plugins.
 - **Solid `createComponent()` evaluates immediately** — unlike React's JSX (which creates lazy descriptors), Solid's `createComponent(Fn, props)` calls `Fn` right away. Context providers must wrap the _evaluation_ of child components, not the evaluated result. Build layout chains inside provider `children` getters, not before wrapping in providers.
+
+## Writing for people
+
+Zack's preference (2026-11-17) for text that people read: pages, docs, pull request descriptions, replies, and prompts for other agents.
+
+- Use plain STE100 English with contractions.
+- Leave out AI jargon and cheesy or inspirational phrasing.
+- Stay away from rules, laws and absolutes, such as "every", "always", "never" and "the four rules". Zack calls this a common AI trap. Describe how things tend to work.
+- Keep it high level and friendly, with enough technical detail to hold a reader.
+
+This is about tone in writing. It doesn't loosen the working constraints in this file.
