@@ -43,7 +43,7 @@ describe('proxy-held credentials', () => {
       projectId: project.id,
       provider: 'github',
       token: 'ghp_plain',
-      repositories: ['buildwf/dedworc'],
+      repositories: ['acme/widgets'],
     });
     expect(set.status).toBe(200);
     const row = await getProjectCredential(env.db, project.id, 'github');
@@ -51,7 +51,7 @@ describe('proxy-held credentials', () => {
 
     const list = await call('credentials.list', user.jwt, { projectId: project.id });
     const text = JSON.stringify(rpcData(await list.json()));
-    expect(text).toContain('buildwf/dedworc');
+    expect(text).toContain('acme/widgets');
     expect(text).not.toContain('ghp_plain');
     expect(text).not.toContain(row!.ciphertext);
 

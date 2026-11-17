@@ -137,3 +137,11 @@ Zack's preference (2026-11-17) for text that people read: pages, docs, pull requ
 - Keep it high level and friendly, with enough technical detail to hold a reader.
 
 This is about tone in writing. It doesn't loosen the working constraints in this file.
+
+## Product and dedworc-only
+
+This repository is Product. It's what people get for the apps they build, so it takes an app as input and doesn't know which app it is. dedworc is one of those apps. Work that exists only to support our own building of dedworc is labelled dedworc-only and lives in the dedworc repository.
+
+The direction goes one way: dedworc uses Product, and Product doesn't use, import or name anything dedworc-only. `packages/nosam/test/unit/product-names.test.ts` checks this by failing when a tracked file here contains the app's name. A deliberate mention, such as this section, goes in the test's `allowed` list with a reason.
+
+The labels, the direction and the checks are described in `docs/scopes.md` in the dedworc repository (https://github.com/buildwf/dedworc/blob/main/docs/scopes.md). The page for people is https://claude.ai/artifact/B6rVb55NfCuUenLokzrp6c.
