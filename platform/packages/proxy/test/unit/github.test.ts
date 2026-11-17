@@ -46,7 +46,7 @@ function post(body: unknown): Request {
   });
 }
 
-const stored = () => Response.json({ token: 'ghp_secret', repositories: ['buildwf/dedworc'] });
+const stored = () => Response.json({ token: 'ghp_secret', repositories: ['acme/widgets'] });
 
 describe('POST /github/request', () => {
   let aiToken: string;
@@ -70,7 +70,7 @@ describe('POST /github/request', () => {
         projectId: PROJECT,
         aiToken,
         method: 'POST',
-        path: '/repos/buildwf/dedworc/pulls',
+        path: '/repos/acme/widgets/pulls',
         body: { title: 'x', head: 'a', base: 'main' },
       }),
       env,
@@ -78,7 +78,7 @@ describe('POST /github/request', () => {
     expect(res.status).toBe(201);
     expect(await res.text()).not.toContain('ghp_secret');
     const [url, init] = upstream.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe('https://api.github.com/repos/buildwf/dedworc/pulls');
+    expect(url).toBe('https://api.github.com/repos/acme/widgets/pulls');
     expect((init.headers as Record<string, string>).authorization).toBe('Bearer ghp_secret');
   });
 
@@ -94,7 +94,7 @@ describe('POST /github/request', () => {
 
   it.each([
     '/user',
-    '/repos/buildwf/dedworc/../../user',
+    '/repos/acme/widgets/../../user',
     '/repos//x/y',
     'https://evil.test/repos/a/b',
   ])('refuses path %s', async (path) => {
@@ -109,7 +109,7 @@ describe('POST /github/request', () => {
 
   it('answers 404 when no credential is stored', async () => {
     const res = await worker.fetch(
-      post({ projectId: PROJECT, aiToken, path: '/repos/buildwf/dedworc/pulls' }),
+      post({ projectId: PROJECT, aiToken, path: '/repos/acme/widgets/pulls' }),
       createEnv(null),
     );
     expect(res.status).toBe(404);
@@ -117,7 +117,7 @@ describe('POST /github/request', () => {
 
   it('rejects an invalid project token', async () => {
     const res = await worker.fetch(
-      post({ projectId: PROJECT, aiToken: 'bad', path: '/repos/buildwf/dedworc/pulls' }),
+      post({ projectId: PROJECT, aiToken: 'bad', path: '/repos/acme/widgets/pulls' }),
       createEnv(stored()),
     );
     expect(res.status).toBe(403);
