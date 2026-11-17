@@ -27,7 +27,7 @@ describe('Cloudflare static deployment', () => {
         redirectRules: [{ source: '/old', destination: '/new', status: 301 }],
       }),
     ).toBe(
-      `import { createStaticEdgeHandler } from "@void/edge";\n` +
+      `import { createStaticEdgeHandler } from "@nosam/edge";\n` +
         `export default createStaticEdgeHandler({"redirectRules":[{"source":"/old","destination":"/new","status":301}]});\n`,
     );
   });
@@ -40,7 +40,7 @@ describe('Cloudflare static deployment', () => {
   });
 
   it('updates target fields, detaches worker-only configuration, and preserves migration history', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-static-config-'));
+    const root = mkdtempSync(join(tmpdir(), 'nosam-static-config-'));
     const configPath = join(root, 'wrangler.jsonc');
     mkdirSync(join(root, 'dist'));
     writeFileSync(
@@ -65,7 +65,7 @@ describe('Cloudflare static deployment', () => {
       configPath,
       name: 'my-site',
       accountId: 'account-id',
-      main: '.void/deploy/cloudflare/edge.mjs',
+      main: '.nosam/deploy/cloudflare/edge.mjs',
       assetsDirectory: 'dist',
       compatibilityDate: '2026-09-11',
       assetConfig: { not_found_handling: 'single-page-application' as const },
@@ -79,7 +79,7 @@ describe('Cloudflare static deployment', () => {
     expect(parsed).toMatchObject({
       name: 'my-site',
       account_id: 'account-id',
-      main: '.void/deploy/cloudflare/edge.mjs',
+      main: '.nosam/deploy/cloudflare/edge.mjs',
       compatibility_date: '2026-09-11',
       no_bundle: false,
       migrations: [{ tag: 'v1', new_sqlite_classes: ['Room'] }],
@@ -100,7 +100,7 @@ describe('Cloudflare static deployment', () => {
   });
 
   it('writes authored html_handling instead of the default fallback', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-static-html-handling-'));
+    const root = mkdtempSync(join(tmpdir(), 'nosam-static-html-handling-'));
     const configPath = join(root, 'wrangler.jsonc');
     writeFileSync(configPath, '{}\n');
 
@@ -120,7 +120,7 @@ describe('Cloudflare static deployment', () => {
   });
 
   it('writes the given run_worker_first and falls back to true', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-static-run-worker-first-'));
+    const root = mkdtempSync(join(tmpdir(), 'nosam-static-run-worker-first-'));
     const configPath = join(root, 'wrangler.jsonc');
     writeFileSync(configPath, '{}\n');
     const input = {
@@ -134,10 +134,10 @@ describe('Cloudflare static deployment', () => {
 
     writeCloudflareStaticDeployConfig({
       ...input,
-      assetConfig: { not_found_handling: '404-page', run_worker_first: ['/__void', '/__void/*'] },
+      assetConfig: { not_found_handling: '404-page', run_worker_first: ['/__nosam', '/__nosam/*'] },
     });
     expect(parseRootWranglerConfig(configPath).assets).toMatchObject({
-      run_worker_first: ['/__void', '/__void/*'],
+      run_worker_first: ['/__nosam', '/__nosam/*'],
     });
 
     writeCloudflareStaticDeployConfig({
@@ -148,7 +148,7 @@ describe('Cloudflare static deployment', () => {
   });
 
   it('rejects duplicate keys before an edit can silently target the wrong member', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-static-duplicate-'));
+    const root = mkdtempSync(join(tmpdir(), 'nosam-static-duplicate-'));
     const configPath = join(root, 'wrangler.jsonc');
     writeFileSync(configPath, '{"main":"first.mjs","main":"last.mjs"}\n');
 
@@ -167,7 +167,7 @@ describe('Cloudflare static deployment', () => {
   });
 
   it('preserves a UTF-8 BOM and fails closed rather than dropping nested comments', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-static-comments-'));
+    const root = mkdtempSync(join(tmpdir(), 'nosam-static-comments-'));
     const configPath = join(root, 'wrangler.jsonc');
     const input = {
       configPath,
@@ -189,9 +189,9 @@ describe('Cloudflare static deployment', () => {
   });
 
   it('stages assets without routing files that the thin Worker already consumed', () => {
-    const root = mkdtempSync(join(tmpdir(), 'void-static-assets-'));
+    const root = mkdtempSync(join(tmpdir(), 'nosam-static-assets-'));
     const sourceDirectory = join(root, 'public');
-    const destinationDirectory = join(root, '.void/deploy/cloudflare/assets');
+    const destinationDirectory = join(root, '.nosam/deploy/cloudflare/assets');
     mkdirSync(join(sourceDirectory, 'nested'), { recursive: true });
     writeFileSync(join(sourceDirectory, 'index.html'), '<h1>Home</h1>');
     writeFileSync(join(sourceDirectory, '_headers'), '/*\n  X-Test: yes\n');

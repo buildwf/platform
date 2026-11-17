@@ -313,15 +313,15 @@ async function postThroughIngressOperation(
       body: new TextEncoder().encode(options?.proofBody ?? body),
     }));
   const response = await app.fetch(
-    new Request('https://void-api.internal/internal/github-webhook', {
+    new Request('https://nosam-api.internal/internal/github-webhook', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-GitHub-Event': event,
         'X-GitHub-Delivery': deliveryId,
         'X-Hub-Signature-256': options?.signature ?? (await sign(WEBHOOK_SECRET, body)),
-        'X-Void-GitHub-Ingress-Timestamp': String(timestampSeconds),
-        'X-Void-GitHub-Ingress-Proof': proof,
+        'X-Nosam-GitHub-Ingress-Timestamp': String(timestampSeconds),
+        'X-Nosam-GitHub-Ingress-Proof': proof,
       },
       body: bodyBytes,
     }),

@@ -13,7 +13,7 @@ vp test
 
 Import `it`, `expect`, and other test APIs from `vite-plus/test`. If you chose Vite instead of Vite+, install `vitest` as a dev dependency and use `vitest` for both the imports and command.
 
-Vitest uses your `vite.config.ts`. Imports such as `void/*` and `@schema` work without extra test configuration.
+Vitest uses your `vite.config.ts`. Imports such as `nosam/*` and `@schema` work without extra test configuration.
 
 Put tests in `tests/` or beside the code they test in `src/`. Keep them out of [convention directories](../reference/structure.md) such as `routes/`, where Nosam would treat them as app routes.
 
@@ -25,7 +25,7 @@ For example, this function counts visits in KV:
 
 ```ts
 // src/visits.ts
-import { kv } from 'void/kv';
+import { kv } from 'nosam/kv';
 
 export async function countVisit(): Promise<number> {
   const visits = ((await kv.get<number>('visits')) ?? 0) + 1;
@@ -41,7 +41,7 @@ Replace KV with an in-memory map in the test:
 import { expect, it, vi } from 'vite-plus/test';
 import { countVisit } from './visits';
 
-vi.mock('void/kv', () => {
+vi.mock('nosam/kv', () => {
   const values = new Map<string, unknown>();
   return {
     kv: {
@@ -61,4 +61,4 @@ it('counts visits', async () => {
 
 ## Email {#email}
 
-`void/email/testing` captures sent and received email in tests. See [Testing](./email/sending.md#testing) in Sending Email and [Testing inbound handlers](./email/receiving.md#testing-inbound-handlers) in Receiving Email.
+`nosam/email/testing` captures sent and received email in tests. See [Testing](./email/sending.md#testing) in Sending Email and [Testing inbound handlers](./email/receiving.md#testing-inbound-handlers) in Receiving Email.

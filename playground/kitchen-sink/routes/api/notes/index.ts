@@ -1,6 +1,6 @@
 import { insertNoteSchema, notes } from '@schema';
-import { defineHandler } from 'void';
-import { db, desc } from 'void/db';
+import { defineHandler } from 'nosam';
+import { db, desc } from 'nosam/db';
 
 export const GET = defineHandler(() => db.select().from(notes).orderBy(desc(notes.id)));
 

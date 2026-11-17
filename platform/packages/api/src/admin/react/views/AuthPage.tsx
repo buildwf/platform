@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 
-import { browserPageLogo, browserPageStyles } from '@void/platform/browser-page';
+import { browserPageLogo, browserPageStyles } from '@nosam/platform/browser-page';
 import type { ReactNode } from 'react';
 
 export function AuthPage({
@@ -11,15 +11,15 @@ export function AuthPage({
   children: ReactNode;
 }) {
   return (
-    <main className="void-auth-page">
+    <main className="nosam-auth-page">
       <style>{browserPageStyles}</style>
-      <div className="void-auth-container">
-        <div className="void-auth-brand">
-          <span className="void-auth-logo" dangerouslySetInnerHTML={{ __html: browserPageLogo }} />
-          <span className="void-auth-divider" aria-hidden="true" />
+      <div className="nosam-auth-container">
+        <div className="nosam-auth-brand">
+          <span className="nosam-auth-logo" dangerouslySetInnerHTML={{ __html: browserPageLogo }} />
+          <span className="nosam-auth-divider" aria-hidden="true" />
           <span>{platformName}</span>
         </div>
-        <section className="void-auth-card" aria-labelledby="void-auth-title">
+        <section className="nosam-auth-card" aria-labelledby="nosam-auth-title">
           {children}
         </section>
       </div>

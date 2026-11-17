@@ -20,7 +20,7 @@ Use Hono's built-in middleware in your global middleware files or per-route:
 ```ts
 // middleware/01.cors.ts
 import { cors } from 'hono/cors';
-import { defineMiddleware } from 'void';
+import { defineMiddleware } from 'nosam';
 
 export default defineMiddleware(cors({ origin: 'https://example.com' }));
 ```
@@ -28,7 +28,7 @@ export default defineMiddleware(cors({ origin: 'https://example.com' }));
 ```ts
 // routes/api/products.ts (per-route cache)
 import { cache } from 'hono/cache';
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 import { listProducts } from '../../lib/products';
 
 export const GET = defineHandler(
@@ -44,7 +44,7 @@ export const GET = defineHandler(
 ```ts
 // routes/api/webhooks/stripe.ts (per-route usage)
 import { bearerAuth } from 'hono/bearer-auth';
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 
 export const POST = defineHandler(bearerAuth({ token: 'webhook-secret' }), async (c) => {
   const body = await c.req.json();
@@ -59,7 +59,7 @@ Hono's context helpers are available on `c` in every handler:
 ```ts
 // routes/api/download.ts
 import { stream } from 'hono/streaming';
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 
 export const GET = defineHandler((c) => {
   return stream(c, async (stream) => {
@@ -71,7 +71,7 @@ export const GET = defineHandler((c) => {
 
 ```ts
 // routes/api/data.ts
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 
 export const GET = defineHandler((c) => {
   c.header('X-Custom', 'value');
@@ -87,7 +87,7 @@ Any `hono/*` or `@hono/*` package works. Install the package in your app, then u
 ```ts
 // middleware/01.rate-limit.ts
 import { rateLimiter } from 'hono-rate-limiter';
-import { defineMiddleware } from 'void';
+import { defineMiddleware } from 'nosam';
 
 export default defineMiddleware(rateLimiter({ windowMs: 60_000, limit: 100 }));
 ```
@@ -112,8 +112,8 @@ Return `c.redirect()` from a handler to redirect. From a shared helper, throw an
 ```ts
 // lib/require-page-user.ts
 import { HTTPException } from 'hono/http-exception';
-import type { CloudContext } from 'void';
-import { getUser } from 'void/auth';
+import type { CloudContext } from 'nosam';
+import { getUser } from 'nosam/auth';
 
 export function requirePageUser(c: CloudContext) {
   const user = getUser();

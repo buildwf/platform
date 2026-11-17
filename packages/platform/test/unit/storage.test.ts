@@ -53,11 +53,11 @@ it('validates and retains the runtime storage location capability', () => {
     },
     database: {
       journalSha256: digest,
-      lineage: 'void',
+      lineage: 'nosam',
       migrations: [],
       protocolVersion: 1,
       rollbackSafeFrom: [],
-      schemaDigest: platformDatabaseSchemaDigest('void', []),
+      schemaDigest: platformDatabaseSchemaDigest('nosam', []),
     },
     platformVersion: '1.0.0',
     schemaVersion: 2,

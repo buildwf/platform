@@ -1,33 +1,33 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { isVoidSecretOnlyDraft, isWranglerSecretOnlyDraft } from '../../src/secret-draft.ts';
-import { apiSecretDraftVersion, voidSecretDraftVersion } from '../secret-draft-fixture.ts';
+import { isNosamSecretOnlyDraft, isWranglerSecretOnlyDraft } from '../../src/secret-draft.ts';
+import { apiSecretDraftVersion, nosamSecretDraftVersion } from '../secret-draft-fixture.ts';
 
 describe('immutable SDK secret draft proof', () => {
   it('recognizes the placeholder that the secret transport deploys in one request', () => {
     const draft = apiSecretDraftVersion();
-    expect(isVoidSecretOnlyDraft(draft)).toBe(true);
-    expect(isVoidSecretOnlyDraft({ ...draft, source: 'cf_cli' })).toBe(false);
-    expect(isVoidSecretOnlyDraft({ ...draft, source: 'dash' })).toBe(false);
+    expect(isNosamSecretOnlyDraft(draft)).toBe(true);
+    expect(isNosamSecretOnlyDraft({ ...draft, source: 'cf_cli' })).toBe(false);
+    expect(isNosamSecretOnlyDraft({ ...draft, source: 'dash' })).toBe(false);
     expect(
-      isVoidSecretOnlyDraft({
+      isNosamSecretOnlyDraft({
         ...draft,
         annotations: { ...draft.annotations, 'workers/tag': 'release' },
       }),
     ).toBe(false);
     expect(
-      isVoidSecretOnlyDraft({
+      isNosamSecretOnlyDraft({
         ...draft,
         annotations: { 'workers/triggered_by': 'create_version_api' },
       }),
     ).toBe(false);
-    expect(isVoidSecretOnlyDraft({ ...draft, bindings: [], env: {} })).toBe(false);
+    expect(isNosamSecretOnlyDraft({ ...draft, bindings: [], env: {} })).toBe(false);
   });
 
   it('recognizes the actual cf placeholder without treating its compatibility date as proof', () => {
-    const draft = voidSecretDraftVersion();
+    const draft = nosamSecretDraftVersion();
     expect(isWranglerSecretOnlyDraft(draft)).toBe(false);
-    expect(isVoidSecretOnlyDraft(draft)).toBe(true);
-    expect(isVoidSecretOnlyDraft({ ...draft, modules: undefined })).toBe(false);
+    expect(isNosamSecretOnlyDraft(draft)).toBe(true);
+    expect(isNosamSecretOnlyDraft({ ...draft, modules: undefined })).toBe(false);
   });
 
   it.each([
@@ -49,7 +49,7 @@ describe('immutable SDK secret draft proof', () => {
       'another module',
       {
         modules: [
-          ...voidSecretDraftVersion().modules,
+          ...nosamSecretDraftVersion().modules,
           { name: 'data.txt', content_type: 'text/plain', content_base64: '' },
         ],
       },
@@ -66,7 +66,7 @@ describe('immutable SDK secret draft proof', () => {
       'a non-secret resource',
       {
         bindings: [
-          ...voidSecretDraftVersion().bindings,
+          ...nosamSecretDraftVersion().bindings,
           { name: 'KV', type: 'kv_namespace', namespace_id: 'foreign' },
         ],
       },
@@ -75,7 +75,7 @@ describe('immutable SDK secret draft proof', () => {
     ['a secret value', { bindings: [{ name: 'TOKEN', type: 'secret_text', text: 'private' }] }],
     [
       'duplicate bindings',
-      { bindings: [...voidSecretDraftVersion().bindings, ...voidSecretDraftVersion().bindings] },
+      { bindings: [...nosamSecretDraftVersion().bindings, ...nosamSecretDraftVersion().bindings] },
     ],
     [
       'a contradictory env',
@@ -88,13 +88,13 @@ describe('immutable SDK secret draft proof', () => {
       { resources: { bindings: [{ name: 'OTHER', type: 'secret_text' }] } },
     ],
   ])('refuses %s', (_name, patch) => {
-    expect(isVoidSecretOnlyDraft({ ...voidSecretDraftVersion(), ...patch })).toBe(false);
+    expect(isNosamSecretOnlyDraft({ ...nosamSecretDraftVersion(), ...patch })).toBe(false);
   });
 
   it('accepts only the adapter compatibility binding view, independent of object key order', () => {
     expect(
-      isVoidSecretOnlyDraft({
-        ...voidSecretDraftVersion(),
+      isNosamSecretOnlyDraft({
+        ...nosamSecretDraftVersion(),
         resources: { bindings: [{ type: 'secret_text', name: 'TOKEN' }] },
       }),
     ).toBe(true);

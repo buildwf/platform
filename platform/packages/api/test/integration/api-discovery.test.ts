@@ -1,4 +1,4 @@
-import { PLATFORM_DISABLED_KEY } from '@void/platform';
+import { PLATFORM_DISABLED_KEY } from '@nosam/platform';
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
 import app from '../../src/index.ts';
 import { setupEnv, teardownEnv, type TestEnv } from './helpers.ts';
@@ -13,16 +13,16 @@ afterAll(async () => {
   await teardownEnv();
 });
 
-describe('GET /.well-known/void-platform', () => {
+describe('GET /.well-known/nosam-platform', () => {
   it('describes existing Nosam Cloud without exposing resource ids or credentials', async () => {
     const response = await app.fetch(
-      new Request('https://api.void.cloud/.well-known/void-platform'),
+      new Request('https://void-nosam-api.buildwithfriends.workers.dev/.well-known/nosam-platform'),
       env,
     );
     expect(response.status).toBe(200);
     const document = await response.json<Record<string, unknown>>();
     expect(document).toMatchObject({
-      apiUrl: 'https://api.void.cloud',
+      apiUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
       applicationDomain: 'void.app',
       displayName: 'Nosam Cloud',
       proxyUrl: 'https://proxy.void.cloud',
@@ -53,7 +53,7 @@ describe('GET /.well-known/void-platform', () => {
       SITE_DOMAIN: 'apps.example.com',
     };
     const response = await app.fetch(
-      new Request('https://platform.example.com/.well-known/void-platform'),
+      new Request('https://platform.example.com/.well-known/nosam-platform'),
       selfHostedEnv,
     );
     expect(await response.json()).toMatchObject({
@@ -98,8 +98,8 @@ describe('GET /.well-known/void-platform', () => {
     await env.ROUTING.put(PLATFORM_DISABLED_KEY, 'disabled');
     try {
       const response = await app.fetch(
-        new Request('https://api.void.cloud/.well-known/void-platform', {
-          headers: { 'X-Void-Platform-Probe': 'probe-token' },
+        new Request('https://void-nosam-api.buildwithfriends.workers.dev/.well-known/nosam-platform', {
+          headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
         }),
         {
           ...env,
@@ -118,8 +118,8 @@ describe('GET /.well-known/void-platform', () => {
     await env.ROUTING.put(PLATFORM_DISABLED_KEY, 'disabled');
     try {
       const response = await app.fetch(
-        new Request('https://api.void.cloud/.well-known/void-platform', {
-          headers: { 'X-Health-Check': 'void-admin' },
+        new Request('https://void-nosam-api.buildwithfriends.workers.dev/.well-known/nosam-platform', {
+          headers: { 'X-Health-Check': 'nosam-admin' },
         }),
         {
           ...env,

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   buildMigrationPlanBundle,
   classifyMigration,
-} from '../../../../../packages/void/src/migrations/plan.ts';
+} from '../../../../../packages/nosam/src/migrations/plan.ts';
 import {
   classifyServerMigrationPlan,
   validateSubmittedExecutionPlans,
@@ -23,9 +23,9 @@ const fixtures = [
   },
   {
     name: '003.sql',
-    sql: '-- void:allow-unsplit-multi-statement\nCREATE TABLE a (id TEXT); CREATE TABLE b (id TEXT);',
-    sqlHash: 'sha256:2b8fac3e3208cb082e4125f8bb25a5777bc2016d226fabf2fee804d26e38ddb4',
-    planHash: 'sha256:fe9d62021d54d6ecd2daa8e7064cea05356f2eefedda13f61250c08d0cb3a60e',
+    sql: '-- nosam:allow-unsplit-multi-statement\nCREATE TABLE a (id TEXT); CREATE TABLE b (id TEXT);',
+    sqlHash: 'sha256:0c6d260cc468edd8a43b9c87fe4d94abfc73733349ad1ac5271855e8fb9b8af6',
+    planHash: 'sha256:676278f7949e5b4ae3093ea9dcf157be72f0681b5121f1287bf3d33be9c1e1e1',
   },
 ];
 

@@ -7,7 +7,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from 'react';
-import { auth, fetch as voidFetch } from 'void/client';
+import { auth, fetch as nosamFetch } from 'nosam/client';
 
 const sections: Record<string, () => ReactNode> = {
   '/': Home,
@@ -121,7 +121,7 @@ function Db() {
 
   async function add(event: FormEvent) {
     event.preventDefault();
-    await voidFetch('/api/notes', { method: 'POST', body: { title, body } });
+    await nosamFetch('/api/notes', { method: 'POST', body: { title, body } });
     setTitle('');
     setBody('');
     reload();
@@ -145,7 +145,7 @@ function Db() {
               <td>
                 <button
                   onClick={() =>
-                    voidFetch('/api/notes/:id', {
+                    nosamFetch('/api/notes/:id', {
                       method: 'DELETE',
                       params: { id: String(note.id) },
                     }).then(reload)
@@ -161,7 +161,7 @@ function Db() {
     </div>
   );
 }
-const listNotes = () => voidFetch('/api/notes');
+const listNotes = () => nosamFetch('/api/notes');
 
 function Kv() {
   const lookup = new URLSearchParams(location.search).get('lookup');

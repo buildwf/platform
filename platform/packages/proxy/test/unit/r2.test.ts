@@ -203,7 +203,7 @@ describe('R2 proxy endpoints', () => {
       );
       expect(response.status).toBe(501);
       expect(dispatchFetch).toHaveBeenCalledWith(
-        'https://worker/__void/r2/put-conditional',
+        'https://worker/__nosam/r2/put-conditional',
         expect.anything(),
       );
       expect(fetchMock).not.toHaveBeenCalled();

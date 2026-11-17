@@ -16,11 +16,11 @@ The shell types each command once. Deploy output opens with the resolved project
 
 When updating transcripts, compare wording and phases to:
 
-- `packages/void/src/cli/deploy-cloudflare.ts` (`runCloudflareDeploy`), `deploy-cloudflare-helpers.ts` (`activateCloudflareVersionWithProgress`), and `deploy-cloudflare-publish.ts` (the final note).
+- `packages/nosam/src/cli/deploy-cloudflare.ts` (`runCloudflareDeploy`), `deploy-cloudflare-helpers.ts` (`activateCloudflareVersionWithProgress`), and `deploy-cloudflare-publish.ts` (the final note).
 - `packages/deploy-cloudflare/src/version.ts`: native upload, readiness, and activation progress.
-- `packages/void/src/cli/platform-lifecycle.ts`: install prompts and completion.
-- `packages/void/src/cli/platform-installer.ts`: progress messages.
-- `packages/void/src/cli/logs.ts` and `rollback.ts`: request formatting and rollback prompts.
+- `packages/nosam/src/cli/platform-lifecycle.ts`: install prompts and completion.
+- `packages/nosam/src/cli/platform-installer.ts`: progress messages.
+- `packages/nosam/src/cli/logs.ts` and `rollback.ts`: request formatting and rollback prompts.
 - `@voidzero-dev/vite-plus-prompts`: the shared Vite+ glyphs, spinner, colors, and boxes.
 
 Keep transient spinner updates on the same line ID and remove prompt options after selection. Do not invent resource guarantees or hide required credentials in the surrounding explanatory copy. The deploy sample targets Cloudflare directly; installation and recovery demonstrate the Orange Cloud Nosam platform.

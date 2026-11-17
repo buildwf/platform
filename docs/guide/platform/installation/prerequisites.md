@@ -32,7 +32,7 @@ You can also let Nosam create the zone during installation. Setting it up now le
 
 ### If Cloudflare rejects Analytics Engine
 
-The platform stores request metrics and logs in Analytics Engine. If installation stops with "You need to enable Analytics Engine" (code 10089), open the Analytics Engine dashboard link in the error and select **Enable** for that account. Activation is available on Workers Free; this error does not require a Workers plan upgrade or a replacement API token. Then run the printed `void platform install --resume` command.
+The platform stores request metrics and logs in Analytics Engine. If installation stops with "You need to enable Analytics Engine" (code 10089), open the Analytics Engine dashboard link in the error and select **Enable** for that account. Activation is available on Workers Free; this error does not require a Workers plan upgrade or a replacement API token. Then run the printed `nosam platform install --resume` command.
 
 If your account's dashboard has no **Enable** action, create a disposable Hello World Worker, add an Analytics Engine binding under **Settings** > **Bindings**, and deploy it once from the dashboard. Then resume installation. Use a separate Worker for this step; leave the platform's own Workers unchanged.
 
@@ -41,11 +41,11 @@ If your account's dashboard has no **Enable** action, create a disposable Hello 
 With Node.js 24.22+ or 26.12+, install the CLI:
 
 ```sh
-pnpm add --global void
-void platform install --plan
+pnpm add --global nosam
+nosam platform install --plan
 ```
 
-Sign in to Cloudflare when prompted, then choose an installation name and account. `--plan` previews the resources without changing them or requiring runtime secrets. Completed plans save your choices locally. Run `void platform install` again to select a saved plan; Nosam checks the current Cloudflare state before asking you to apply it.
+Sign in to Cloudflare when prompted, then choose an installation name and account. `--plan` previews the resources without changing them or requiring runtime secrets. Completed plans save your choices locally. Run `nosam platform install` again to select a saved plan; Nosam checks the current Cloudflare state before asking you to apply it.
 
 For a domain installation, use these answers. Testing mode skips the application domain, zone, and catch-all questions:
 
@@ -58,15 +58,15 @@ For a domain installation, use these answers. Testing mode skips the application
 | Optional custom API hostname             | Leave empty to use `workers.dev`                    |
 | Dedicate all unmatched traffic to Nosam? | Yes only if this whole zone belongs to the platform |
 
-Choose an unused installation name in your account. For example, `team` creates resources such as `void-team-api` and `void-team-proxy`.
+Choose an unused installation name in your account. For example, `team` creates resources such as `nosam-team-api` and `nosam-team-proxy`.
 
 The preview lists the credentials you will need. Review [Credentials](/guide/platform/installation/credentials), then run the install command printed at the end. The guided installation provides setup links and the login callback when needed.
 
 You can select either path directly:
 
 ```sh
-void platform install --application-domain example.app --plan
-void platform install --workers-dev --plan
+nosam platform install --application-domain example.app --plan
+nosam platform install --workers-dev --plan
 ```
 
 `--workers-dev` cannot be combined with `--application-domain`, `--zone`, or `--dedicated-zone`.
@@ -88,7 +88,7 @@ Use any PostgreSQL provider that accepts connections from your computer and Clou
 
 When sizing your database, include the connection pools for every platform installation and application sharing that server. Adjust each Hyperdrive's [origin connection limit](https://developers.cloudflare.com/hyperdrive/configuration/tune-connection-pool/) to fit the server's capacity, leaving room for migrations, administration, provider-reserved connections, and temporary bursts.
 
-Once installation claims the database, continue using that same database for resume and maintenance commands. If installation stops because it cannot use the database, for example because the database is not empty, set `VOID_PLATFORM_DATABASE_URL` to another database's URL before you resume. Uninstall never deletes external PostgreSQL.
+Once installation claims the database, continue using that same database for resume and maintenance commands. If installation stops because it cannot use the database, for example because the database is not empty, set `NOSAM_PLATFORM_DATABASE_URL` to another database's URL before you resume. Uninstall never deletes external PostgreSQL.
 
 ### Use a provider CLI
 
@@ -115,14 +115,14 @@ pscale size cluster list --org <organization> --engine postgresql --region <regi
 Create a dedicated Postgres database with your chosen cluster size, then create a role with permission to create and migrate Nosam's tables:
 
 ```sh
-pscale database create void-platform \
+pscale database create nosam-platform \
   --org <organization> \
   --engine postgresql \
   --region <region> \
   --cluster-size <cluster-size> \
   --wait
 
-pscale role create void-platform main void_owner \
+pscale role create nosam-platform main nosam_owner \
   --org <organization> \
   --inherited-roles postgres
 ```
@@ -145,9 +145,9 @@ neon login
 Create a dedicated project, database, and owner role. Replace `<region-id>` with one of Neon's [supported regions](https://neon.com/docs/cli/projects#create), such as `aws-us-east-2`:
 
 ```sh
-neon projects create --name void-platform \
-  --database void_platform \
-  --role void_owner \
+neon projects create --name nosam-platform \
+  --database nosam_platform \
+  --role nosam_owner \
   --region-id <region-id>
 ```
 
@@ -155,8 +155,8 @@ Use the project ID from the output to retrieve a direct primary connection URL w
 
 ```sh
 neon connection-string --project-id <project-id> \
-  --database-name void_platform \
-  --role-name void_owner \
+  --database-name nosam_platform \
+  --role-name nosam_owner \
   --endpoint-type read_write \
   --ssl verify-full
 ```

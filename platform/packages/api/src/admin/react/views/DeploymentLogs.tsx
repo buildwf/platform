@@ -2,7 +2,7 @@
 
 import { Button } from '@astryxdesign/core/Button';
 import { Selector } from '@astryxdesign/core/Selector';
-import { isRecord } from '@void/deploy-core';
+import { isRecord } from '@nosam/deploy-core';
 import { useCallback, useEffect, useState } from 'react';
 import { useFateClient, useView, type ViewRef } from 'react-fate';
 import {
@@ -263,7 +263,7 @@ export function DeploymentLogs({
   return (
     <SectionStack>
       <h2>Runtime Logs</h2>
-      <div className="void-admin-inline-form">
+      <div className="nosam-admin-inline-form">
         <Selector
           id="log-since"
           label="Time"

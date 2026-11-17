@@ -1,5 +1,5 @@
 {
-  "extends": "./.void/tsconfig.json",
+  "extends": "./.nosam/tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
     "module": "NodeNext",
@@ -8,7 +8,7 @@
     "noUnusedLocals": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["void/env"],
+    "types": ["nosam/env"],
     "allowImportingTsExtensions": true
   },
   "include": ["routes", "db"]

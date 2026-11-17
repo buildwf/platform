@@ -1,5 +1,5 @@
-import { defineHandler } from 'void';
-import { kv } from 'void/kv';
+import { defineHandler } from 'nosam';
+import { kv } from 'nosam/kv';
 
 export const GET = defineHandler(async (c) => {
   const lookupKey = c.req.query('lookup');

@@ -15,26 +15,26 @@ The SDK's features are optional and composable. Start with a plain React SPA and
 Use Node.js 24.22+ or 26.12+. In an empty directory, run:
 
 ```sh
-npm install -D void
-npx void init
+npm install -D nosam
+npx nosam init
 npm run dev
 ```
 
 Vite+ is the default toolchain; setup installs it for you and keeps your existing package-manager configuration. Choose a starter, then select Cloudflare to deploy to your account:
 
 ```sh
-npx void deploy
+npx nosam deploy
 ```
 
 Nosam builds the app, provisions resources, applies database migrations, and prints your deployed URL. Follow the Quickstart for your first app or to add Nosam to an existing Vite project.
 
-To deploy to a team platform, run `npx void connect <url>` first, then use the same deploy command. See Install a Nosam Platform to host one in your Cloudflare account or customize its open-source runtime.
+To deploy to a team platform, run `npx nosam connect <url>` first, then use the same deploy command. See Install a Nosam Platform to host one in your Cloudflare account or customize its open-source runtime.
 
 ## Documentation
 
-Read the Nosam documentation online or use the Markdown guides and references in `node_modules/void/docs/`, included with the `void` package.
+Read the Nosam documentation online or use the Markdown guides and references in `node_modules/nosam/docs/`, included with the `nosam` package.
 
-`void init` adds a minimal `AGENTS.md` in new projects and asks before changing instructions in existing projects. It also links bundled skills for detected coding agents.
+`nosam init` adds a minimal `AGENTS.md` in new projects and asks before changing instructions in existing projects. It also links bundled skills for detected coding agents.
 
 - Server routes and app types
 - Database and type safety

@@ -1,7 +1,7 @@
 import { appendFileSync, readdirSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-const UNAVAILABLE_VOID_VERSIONS = new Set([
+const UNAVAILABLE_NOSAM_VERSIONS = new Set([
   '0.0.1',
   '0.1.0',
   '0.1.2',
@@ -31,10 +31,10 @@ export function releasePolicy(
     );
   }
   const version = match[1];
-  if (UNAVAILABLE_VOID_VERSIONS.has(version)) {
-    throw new Error(`void@${version} was previously unpublished and cannot be reused.`);
+  if (UNAVAILABLE_NOSAM_VERSIONS.has(version)) {
+    throw new Error(`nosam@${version} was previously unpublished and cannot be reused.`);
   }
-  if (!packages.some((pkg) => pkg.name === 'void')) {
+  if (!packages.some((pkg) => pkg.name === 'nosam')) {
     throw new Error('The release must include the public void package.');
   }
   for (const pkg of packages) {

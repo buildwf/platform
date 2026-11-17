@@ -17,7 +17,7 @@ import {
   type CloudflareTriggerConfig,
 } from '../../src/index.ts';
 import { operationFixture } from '../operation-fixture.ts';
-import { apiSecretDraftVersion, voidSecretDraftVersion } from '../secret-draft-fixture.ts';
+import { apiSecretDraftVersion, nosamSecretDraftVersion } from '../secret-draft-fixture.ts';
 
 const CURRENT = '11111111-1111-4111-8111-111111111111';
 const NEXT = '22222222-2222-4222-8222-222222222222';
@@ -59,7 +59,7 @@ function readConfigArg(args: Array<string>): Record<string, unknown> {
 }
 
 function sdkDraftActivation(
-  source: Record<string, unknown> = voidSecretDraftVersion(),
+  source: Record<string, unknown> = nosamSecretDraftVersion(),
   listed: Record<string, unknown> = { annotations: { 'workers/triggered_by': 'secret' } },
 ) {
   const events: Array<string> = [];
@@ -151,7 +151,7 @@ function sdkDraftActivation(
   const fetcher = vi.fn(async (url: string | URL | Request) => {
     if (published) {
       expect(triggers).toBe(true);
-      expect(String(url)).toBe('https://app.example.workers.dev/__void/ready');
+      expect(String(url)).toBe('https://app.example.workers.dev/__nosam/ready');
     }
     events.push('ready');
     return Response.json({ ready: true, versionId: NEXT });
@@ -325,9 +325,9 @@ const TRIGGER_FAILURE: CloudflareCommandResult = {
 /** Placeholder Nosam's secret transport deploys before a Worker exists: no bindings yet. */
 function voidZeroBindingPlaceholder(): Record<string, unknown> {
   return {
-    ...voidSecretDraftVersion(),
+    ...nosamSecretDraftVersion(),
     number: 1,
-    annotations: { 'workers/message': 'void:secret-draft', 'workers/triggered_by': 'deployment' },
+    annotations: { 'workers/message': 'nosam:secret-draft', 'workers/triggered_by': 'deployment' },
     bindings: [],
     env: {},
   };
@@ -440,7 +440,7 @@ function recoveryActivation(setup: {
   };
 }
 
-const VOID_SCHEMA_2_PREVIOUS = {
+const NOSAM_SCHEMA_2_PREVIOUS = {
   id: CURRENT,
   number: 1,
   annotations: {
@@ -669,7 +669,7 @@ describe('Cloudflare version activation', () => {
 
   it('publishes an exact private SDK draft once, proving secrets and callbacks before readiness', async () => {
     const fixture = sdkDraftActivation({
-      ...voidSecretDraftVersion(),
+      ...nosamSecretDraftVersion(),
       number: undefined,
       compatibility_date: undefined,
       usage_model: undefined,
@@ -704,7 +704,7 @@ describe('Cloudflare version activation', () => {
     expect(fixture.fetcher).toHaveBeenCalledOnce();
   });
 
-  // A draft Worker from `void secret put` has workers.dev disabled, so its first
+  // A draft Worker from `nosam secret put` has workers.dev disabled, so its first
   // publish reports a version id without a URL (issue #573).
   function urlLessDraftPublish(
     fixture: ReturnType<typeof sdkDraftActivation>,
@@ -809,7 +809,7 @@ describe('Cloudflare version activation', () => {
       workersDevSubdomain: 'example.fed',
     });
     expect(probes).toEqual([
-      { url: 'https://app.example.fed.workers.dev/__void/ready', secret: 'synthetic-secret' },
+      { url: 'https://app.example.fed.workers.dev/__nosam/ready', secret: 'synthetic-secret' },
     ]);
   });
 
@@ -937,7 +937,7 @@ describe('Cloudflare version activation', () => {
     const activation = activateCloudflareVersion(fixture.options);
     await entered.promise;
     fixture.changeOwner();
-    release.resolve(voidSecretDraftVersion());
+    release.resolve(nosamSecretDraftVersion());
     expect(await activation).toMatchObject({
       ok: false,
       reason: 'deployment-changed',
@@ -960,7 +960,7 @@ describe('Cloudflare version activation', () => {
         { version_id: CURRENT, percentage: 100 },
         { version_id: CONCURRENT, percentage: 0 },
       ]);
-      return voidSecretDraftVersion();
+      return nosamSecretDraftVersion();
     });
     expect(await activateCloudflareVersion(fixture.options)).toMatchObject({
       ok: false,
@@ -1093,10 +1093,10 @@ describe('Cloudflare version activation', () => {
 
   it('retains preview-first activation for a secret-triggered real app', async () => {
     const fixture = sdkDraftActivation({
-      ...voidSecretDraftVersion(),
+      ...nosamSecretDraftVersion(),
       modules: [
         {
-          ...voidSecretDraftVersion().modules[0],
+          ...nosamSecretDraftVersion().modules[0],
           content_base64: Buffer.from(
             'export default { fetch() { return new Response("real app"); } };',
           ).toString('base64'),
@@ -1299,7 +1299,7 @@ describe('Cloudflare version activation', () => {
   );
 
   it('links an existing version without publishing routes or Worker settings', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'void-link-version-'));
+    const directory = mkdtempSync(join(tmpdir(), 'nosam-link-version-'));
     const configPath = join(directory, 'wrangler.json');
     writeFileSync(
       configPath,
@@ -1478,7 +1478,7 @@ describe('Cloudflare version activation', () => {
 
   it('does not inherit any remote secret from a failed candidate newer than production', async () => {
     const failed = '44444444-4444-4444-8444-444444444444';
-    const directory = mkdtempSync(join(tmpdir(), 'void-active-secret-inheritance-'));
+    const directory = mkdtempSync(join(tmpdir(), 'nosam-active-secret-inheritance-'));
     const configPath = join(directory, 'wrangler.json');
     writeFileSync(configPath, JSON.stringify({ name: 'my-worker' }));
     try {
@@ -1823,7 +1823,7 @@ describe('Cloudflare version activation', () => {
   });
 
   it('snapshots and restores effective workers.dev and preview URL defaults', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'void-version-defaults-'));
+    const directory = mkdtempSync(join(tmpdir(), 'nosam-version-defaults-'));
     const configPath = join(directory, 'wrangler.json');
     try {
       writeFileSync(
@@ -1872,7 +1872,7 @@ describe('Cloudflare version activation', () => {
   });
 
   it('does not infer whole-trigger preservation for an ordinary empty config', () => {
-    const directory = mkdtempSync(join(tmpdir(), 'void-version-empty-source-'));
+    const directory = mkdtempSync(join(tmpdir(), 'nosam-version-empty-source-'));
     const generatedPath = join(directory, 'generated.json');
     const sourcePath = join(directory, 'wrangler.json');
     try {
@@ -2048,7 +2048,7 @@ describe('Cloudflare version activation', () => {
   });
 
   it('preserves Wrangler route-aware traffic defaults', () => {
-    const directory = mkdtempSync(join(tmpdir(), 'void-version-route-defaults-'));
+    const directory = mkdtempSync(join(tmpdir(), 'nosam-version-route-defaults-'));
     const configPath = join(directory, 'wrangler.json');
     try {
       writeFileSync(
@@ -2169,11 +2169,11 @@ describe('Cloudflare version activation', () => {
     expect(normalizeWorkersDevSubdomain('My-Team.fed.workers.dev')).toBe('my-team.fed');
     expect(
       extractWorkersDevSubdomain(
-        'https://void-ready-abc-my-worker.developer-platform-experience.workers.dev/path',
+        'https://nosam-ready-abc-my-worker.developer-platform-experience.workers.dev/path',
       ),
     ).toBe('developer-platform-experience');
     expect(
-      extractWorkersDevSubdomain('https://void-ready-abc-my-worker.my-team.fed.workers.dev/path'),
+      extractWorkersDevSubdomain('https://nosam-ready-abc-my-worker.my-team.fed.workers.dev/path'),
     ).toBe('my-team.fed');
     expect(extractWorkersDevSubdomain('https://example.com')).toBeUndefined();
     expect(extractWorkersDevSubdomain('https://worker.my-team.other.workers.dev')).toBeUndefined();
@@ -2186,7 +2186,7 @@ describe('Cloudflare version activation', () => {
       migrations: ['0001_init.sql', '0002_users.sql'],
     });
     expect(parseCloudflareVersionMessage('manual deploy')).toBeNull();
-    expect(parseCloudflareVersionMessage('void:{bad')).toBeNull();
+    expect(parseCloudflareVersionMessage('nosam:{bad')).toBeNull();
   });
 
   it('preserves trigger snapshots when applied migration history is unknown', () => {
@@ -2204,7 +2204,7 @@ describe('Cloudflare version activation', () => {
     ).toMatchObject({ contentHash: digest });
     expect(
       parseCloudflareVersionMessage(
-        `void:${JSON.stringify({ schema: 2, migrations: [], triggerConfig: triggers, contentHash: 'bad' })}`,
+        `nosam:${JSON.stringify({ schema: 2, migrations: [], triggerConfig: triggers, contentHash: 'bad' })}`,
       ),
     ).not.toHaveProperty('contentHash');
   });
@@ -2214,7 +2214,7 @@ describe('Cloudflare version activation', () => {
   // snapshot's addresses verbatim — and carry NOTHING when the snapshot has none, because an
   // absent key skips the plan while `[]` deletes every rule the Worker owns.
   it('snapshots explicit observability and restores it without borrowing local settings', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'void-version-observability-'));
+    const directory = mkdtempSync(join(tmpdir(), 'nosam-version-observability-'));
     const configPath = join(directory, 'wrangler.json');
     const sourcePath = join(directory, 'source.json');
     const observability = {
@@ -2262,7 +2262,7 @@ describe('Cloudflare version activation', () => {
       expect(applied).toBeUndefined();
       expect(
         parseCloudflareVersionMessage(
-          `void:${JSON.stringify({ schema: 2, migrations: [], triggerConfig: { ...snapshot, observability: null } })}`,
+          `nosam:${JSON.stringify({ schema: 2, migrations: [], triggerConfig: { ...snapshot, observability: null } })}`,
         ),
       ).toBeNull();
     } finally {
@@ -2273,7 +2273,7 @@ describe('Cloudflare version activation', () => {
   it.each([false, true])(
     'carries explicit Logpush through the version snapshot and trigger config: %s',
     async (logpush) => {
-      const directory = mkdtempSync(join(tmpdir(), 'void-version-logpush-'));
+      const directory = mkdtempSync(join(tmpdir(), 'nosam-version-logpush-'));
       const configPath = join(directory, 'wrangler.json');
       const sourcePath = join(directory, 'source.json');
       try {
@@ -2310,7 +2310,7 @@ describe('Cloudflare version activation', () => {
         expect(applied).toBeUndefined();
         expect(
           parseCloudflareVersionMessage(
-            `void:${JSON.stringify({ schema: 2, migrations: [], triggerConfig: { ...snapshot, logpush: 'false' } })}`,
+            `nosam:${JSON.stringify({ schema: 2, migrations: [], triggerConfig: { ...snapshot, logpush: 'false' } })}`,
           ),
         ).toBeNull();
       } finally {
@@ -2320,7 +2320,7 @@ describe('Cloudflare version activation', () => {
   );
 
   it('carries Email Routing addresses through the trigger snapshot and the trigger config', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'void-version-addresses-'));
+    const directory = mkdtempSync(join(tmpdir(), 'nosam-version-addresses-'));
     const configPath = join(directory, 'wrangler.json');
     const applied = async (
       triggerConfig: Parameters<typeof deployCloudflareVersionTriggers>[0]['triggerConfig'],
@@ -2387,7 +2387,7 @@ describe('Cloudflare version activation', () => {
       expect(readCloudflareTriggerConfig(configPath)).not.toHaveProperty('addresses');
       expect(
         parseCloudflareVersionMessage(
-          `void:${JSON.stringify({ schema: 2, migrations: [], triggerConfig: { ...without, addresses: 'support@mail.acme.com' } })}`,
+          `nosam:${JSON.stringify({ schema: 2, migrations: [], triggerConfig: { ...without, addresses: 'support@mail.acme.com' } })}`,
         ),
       ).toBeNull();
     } finally {
@@ -2405,7 +2405,7 @@ describe('Cloudflare version activation', () => {
       verifyUploader: () => true,
       workerName: 'my-worker',
       configPath: '/app/wrangler.jsonc',
-      assetsDirectoryOverride: '/app/.void/deploy/cloudflare/assets',
+      assetsDirectoryOverride: '/app/.nosam/deploy/cloudflare/assets',
       message: encodeCloudflareVersionMessage(['0001_init.sql']),
       fetch: fetcher,
       sleep: async () => {},
@@ -2432,7 +2432,7 @@ describe('Cloudflare version activation', () => {
       'Updating routes and triggers...',
     ]);
     expect(fetcher).toHaveBeenCalledWith(
-      'https://ready.example.workers.dev/__void/ready',
+      'https://ready.example.workers.dev/__nosam/ready',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(runWrangler.mock.calls.map(([args]) => args.slice(0, 2))).toEqual([
@@ -2445,13 +2445,13 @@ describe('Cloudflare version activation', () => {
       ['deployments', 'status'],
     ]);
     expect(runWrangler.mock.calls[1]![0]).toContain('--assets');
-    expect(runWrangler.mock.calls[1]![0]).toContain('/app/.void/deploy/cloudflare/assets');
+    expect(runWrangler.mock.calls[1]![0]).toContain('/app/.nosam/deploy/cloudflare/assets');
     expect(runWrangler.mock.calls[3]![0]).toContain(`${NEXT}@100`);
     expect(runWrangler.mock.calls[5]![0]).toEqual([
       'triggers',
       'deploy',
       '-c',
-      expect.stringContaining('void-version-triggers-'),
+      expect.stringContaining('nosam-version-triggers-'),
       '--env=',
       '--name',
       'my-worker',
@@ -2805,7 +2805,7 @@ describe('Cloudflare version activation', () => {
   it('sends Access service-token headers only to the matching Workers preview host', async () => {
     const runWrangler = runner({
       upload: ok(
-        `Worker Version ID: ${NEXT}\nVersion Preview Alias URL: https://void-ready-abc-my-worker.developer-platform-experience.workers.dev`,
+        `Worker Version ID: ${NEXT}\nVersion Preview Alias URL: https://nosam-ready-abc-my-worker.developer-platform-experience.workers.dev`,
       ),
     });
     const fetcher = vi.fn(async () => Response.json({ ready: true }));
@@ -2826,7 +2826,7 @@ describe('Cloudflare version activation', () => {
     ).resolves.toMatchObject({ ok: true });
 
     expect(fetcher).toHaveBeenCalledWith(
-      'https://void-ready-abc-my-worker.developer-platform-experience.workers.dev/__void/ready',
+      'https://nosam-ready-abc-my-worker.developer-platform-experience.workers.dev/__nosam/ready',
       expect.objectContaining({
         headers: expect.objectContaining({
           'CF-Access-Client-Id': 'service-id',
@@ -2863,7 +2863,7 @@ describe('Cloudflare version activation', () => {
   it('falls back from an Access-blocked preview alias to the stable Worker hostname', async () => {
     const runWrangler = runner({
       upload: ok(
-        `Worker Version ID: ${NEXT}\nVersion Preview Alias URL: https://void-ready-abc-my-worker.developer-platform-experience.workers.dev`,
+        `Worker Version ID: ${NEXT}\nVersion Preview Alias URL: https://nosam-ready-abc-my-worker.developer-platform-experience.workers.dev`,
       ),
     });
     const fetcher = vi
@@ -2887,7 +2887,7 @@ describe('Cloudflare version activation', () => {
     });
     expect(fetcher).toHaveBeenCalledTimes(2);
     expect(fetcher).toHaveBeenLastCalledWith(
-      'https://my-worker.developer-platform-experience.workers.dev/__void/ready',
+      'https://my-worker.developer-platform-experience.workers.dev/__nosam/ready',
       expect.objectContaining({
         headers: expect.objectContaining({
           'Cloudflare-Workers-Version-Overrides': `my-worker="${NEXT}"`,
@@ -2937,7 +2937,7 @@ describe('Cloudflare version activation', () => {
       }),
     ).resolves.toMatchObject({ ok: true, versionId: NEXT });
     expect(fetcher).toHaveBeenCalledWith(
-      'https://my-worker.developer-platform-experience.workers.dev/__void/ready',
+      'https://my-worker.developer-platform-experience.workers.dev/__nosam/ready',
       expect.objectContaining({
         headers: expect.objectContaining({
           'cf-access-token': 'short-lived-user-jwt',
@@ -2950,7 +2950,7 @@ describe('Cloudflare version activation', () => {
   it('restores the prior deployment when Access blocks both readiness hostnames', async () => {
     const runWrangler = runner({
       upload: ok(
-        `Worker Version ID: ${NEXT}\nVersion Preview Alias URL: https://void-ready-abc-my-worker.developer-platform-experience.workers.dev`,
+        `Worker Version ID: ${NEXT}\nVersion Preview Alias URL: https://nosam-ready-abc-my-worker.developer-platform-experience.workers.dev`,
       ),
     });
     const fetcher = vi.fn(async () => new Response('error code: 1050', { status: 403 }));
@@ -2982,7 +2982,7 @@ describe('Cloudflare version activation', () => {
     const runWrangler = runner({
       status: { stdout: '', stderr: 'The Worker first has no deployments.', status: 1 },
       upload: ok(
-        `Worker Version ID: ${NEXT}\nVersion Preview Alias URL: https://void-ready-abc-first.developer-platform-experience.workers.dev`,
+        `Worker Version ID: ${NEXT}\nVersion Preview Alias URL: https://nosam-ready-abc-first.developer-platform-experience.workers.dev`,
       ),
     });
 
@@ -3267,7 +3267,7 @@ describe('Cloudflare version activation', () => {
     expect(deployCalls[0]![0]).toEqual(expect.arrayContaining([`${CURRENT}@100`, `${NEXT}@0`]));
     expect(deployCalls[1]![0]).toContain(`${NEXT}@100`);
     expect(fetcher).toHaveBeenCalledWith(
-      'https://my-worker.developer-platform-experience.workers.dev/__void/ready',
+      'https://my-worker.developer-platform-experience.workers.dev/__nosam/ready',
       expect.objectContaining({
         headers: expect.objectContaining({
           'Cloudflare-Workers-Version-Overrides': `my-worker="${NEXT}"`,
@@ -3325,7 +3325,7 @@ describe('Cloudflare version activation', () => {
       }
       if (args[0] === 'versions' && args[1] === 'upload') {
         return ok(
-          `Worker Version ID: ${NEXT}\nVersion Preview Alias URL: https://void-ready-abc-my-worker.developer-platform-experience.workers.dev`,
+          `Worker Version ID: ${NEXT}\nVersion Preview Alias URL: https://nosam-ready-abc-my-worker.developer-platform-experience.workers.dev`,
         );
       }
       throw new Error(`Unexpected command: ${args.join(' ')}`);
@@ -3585,8 +3585,8 @@ describe('Cloudflare version activation', () => {
             time += milliseconds;
           },
           fetch: async (url, options) => {
-            expect(url).toBe('https://app.example.com/__void/ready');
-            expect(options?.headers).toEqual({ 'user-agent': 'void-deploy-readiness/1' });
+            expect(url).toBe('https://app.example.com/__nosam/ready');
+            expect(options?.headers).toEqual({ 'user-agent': 'nosam-deploy-readiness/1' });
             probes++;
             time += 2_000;
             if (becomesReady && probes > 30) {
@@ -3603,7 +3603,7 @@ describe('Cloudflare version activation', () => {
           expect(result).toMatchObject({
             ok: false,
             reason: atomic ? 'atomic-readiness-failed' : 'bootstrap-readiness-failed',
-            diagnostic: expect.stringContaining('retry `void deploy --platform cloudflare`'),
+            diagnostic: expect.stringContaining('retry `nosam deploy --platform cloudflare`'),
           });
         }
         expect(time).toBeLessThanOrEqual(timeout + 2_000);
@@ -3911,7 +3911,7 @@ describe('Cloudflare version activation', () => {
     expect(result).toMatchObject({ ok: true, versionId: NEXT });
     expect(fetcher).toHaveBeenCalledTimes(2);
     for (const [url, init] of fetcher.mock.calls as unknown as Array<[string, RequestInit]>) {
-      expect(url).toBe('https://app.example.com/__void/ready');
+      expect(url).toBe('https://app.example.com/__nosam/ready');
       expect(init.headers).not.toHaveProperty('CF-Access-Client-Secret');
       expect(init.headers).toHaveProperty(
         'Cloudflare-Workers-Version-Overrides',
@@ -3971,7 +3971,7 @@ describe('Cloudflare version activation', () => {
       requirePreviewForReadiness: true,
       message: encodeCloudflareVersionMessage([]),
       fetch: async (value) => {
-        expect(value).toBe(`${url}/__void/ready`);
+        expect(value).toBe(`${url}/__nosam/ready`);
         return Response.json({ ready: true });
       },
     });
@@ -4001,10 +4001,10 @@ describe('Cloudflare version activation', () => {
       }),
     ).resolves.toMatchObject({ ok: true, previewUrl: 'https://app.example.com' });
     expect(fetcher).toHaveBeenCalledWith(
-      'https://app.example.com/__void/ready',
+      'https://app.example.com/__nosam/ready',
       expect.objectContaining({
         headers: {
-          'user-agent': 'void-deploy-readiness/1',
+          'user-agent': 'nosam-deploy-readiness/1',
           'Cloudflare-Workers-Version-Overrides': `private-app="${NEXT}"`,
         },
       }),
@@ -4085,10 +4085,10 @@ describe('Cloudflare version activation', () => {
           }),
         ).resolves.toMatchObject({ ok: true, previewUrl: 'https://app.example.com' });
         expect(fetcher).toHaveBeenCalledWith(
-          'https://app.example.com/__void/ready',
+          'https://app.example.com/__nosam/ready',
           expect.objectContaining({
             headers: {
-              'user-agent': 'void-deploy-readiness/1',
+              'user-agent': 'nosam-deploy-readiness/1',
               ...accessHeaders,
               'Cloudflare-Workers-Version-Overrides': `private-app="${NEXT}"`,
             },
@@ -4102,7 +4102,7 @@ describe('Cloudflare version activation', () => {
       ['another origin', 'https://other.example.com'],
       ['another port', 'https://app.example.com:8443'],
       ['an http origin', 'http://app.example.com'],
-      ['a path', 'https://app.example.com/__void'],
+      ['a path', 'https://app.example.com/__nosam'],
       ['a query', 'https://app.example.com/?token=1'],
       ['credentials', 'https://user:pass@app.example.com'],
       ['a bare hostname', 'app.example.com'],
@@ -4130,7 +4130,7 @@ describe('Cloudflare version activation', () => {
         });
         expect(fetcher).toHaveBeenCalledTimes(1);
         const [url, init] = probeCalls(fetcher)[0]!;
-        expect(url).toBe('https://app.example.com/__void/ready');
+        expect(url).toBe('https://app.example.com/__nosam/ready');
         expect(init.headers).not.toHaveProperty('CF-Access-Client-Secret');
       },
     );
@@ -4155,7 +4155,7 @@ describe('Cloudflare version activation', () => {
     });
 
     it('sends Access headers when a denied preview alias falls back to the opted-in custom route', async () => {
-      const alias = 'https://void-ready-abc-private-app.developer-platform-experience.workers.dev';
+      const alias = 'https://nosam-ready-abc-private-app.developer-platform-experience.workers.dev';
       const runWrangler = runner({
         upload: ok(`Worker Version ID: ${NEXT}\nVersion Preview Alias URL: ${alias}`),
       });
@@ -4186,7 +4186,7 @@ describe('Cloudflare version activation', () => {
       ).resolves.toMatchObject({ ok: true, previewUrl: 'https://app.example.com' });
       expect(fetcher).toHaveBeenCalledTimes(2);
       expect(fetcher).toHaveBeenLastCalledWith(
-        'https://app.example.com/__void/ready',
+        'https://app.example.com/__nosam/ready',
         expect.objectContaining({
           headers: expect.objectContaining({
             ...accessHeaders,
@@ -4219,7 +4219,7 @@ describe('Cloudflare version activation', () => {
           }),
         ).resolves.toMatchObject({ ok: true, previewUrl: 'https://bootstrap.example.com' });
         const [url, init] = probeCalls(fetcher)[0]!;
-        expect(url).toBe('https://bootstrap.example.com/__void/ready');
+        expect(url).toBe('https://bootstrap.example.com/__nosam/ready');
         expect(init.headers).toMatchObject(accessHeaders);
       },
     );
@@ -4257,7 +4257,7 @@ describe('Cloudflare version activation', () => {
           customRouteReadinessOrigin: 'https://bootstrap.example.com',
         });
         const [url, init] = probeCalls(fetcher)[0]!;
-        expect(url).toBe('https://bootstrap.example.com/__void/ready');
+        expect(url).toBe('https://bootstrap.example.com/__nosam/ready');
         expect(init.headers).not.toHaveProperty('CF-Access-Client-Secret');
       },
     );
@@ -4317,7 +4317,7 @@ describe('Cloudflare version activation', () => {
       previousVersionId: null,
     });
     expect(fetcher).toHaveBeenCalledWith(
-      'https://bootstrap.example.com/__void/ready',
+      'https://bootstrap.example.com/__nosam/ready',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });
@@ -4455,7 +4455,7 @@ describe('Cloudflare version activation', () => {
         verifyUploader: () => true,
         workerName: 'first',
         configPath: '/app/wrangler.jsonc',
-        assetsDirectoryOverride: '/app/.void/deploy/cloudflare/assets',
+        assetsDirectoryOverride: '/app/.nosam/deploy/cloudflare/assets',
         message: encodeCloudflareVersionMessage(['0001_init.sql']),
         candidateSecrets: { API_TOKEN: 'first-secret' },
         fetch: fetcher,
@@ -4480,12 +4480,12 @@ describe('Cloudflare version activation', () => {
     ]);
     const deployArgs = runWrangler.mock.calls.find(([args]) => args[0] === 'deploy')![0];
     expect(deployArgs).toContain('--assets');
-    expect(deployArgs).toContain('/app/.void/deploy/cloudflare/assets');
+    expect(deployArgs).toContain('/app/.nosam/deploy/cloudflare/assets');
     expect(secretPayloads).toEqual([{ API_TOKEN: 'first-secret' }, { API_TOKEN: 'first-secret' }]);
     expect(new Set(secretPaths).size).toBe(1);
     expect(secretPaths.every((path) => !existsSync(path))).toBe(true);
     expect(fetcher).toHaveBeenCalledWith(
-      'https://first.example.workers.dev/__void/ready',
+      'https://first.example.workers.dev/__nosam/ready',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });
@@ -4832,12 +4832,12 @@ describe('Cloudflare version activation', () => {
           }),
         ),
       );
-      const root = mkdtempSync(join(tmpdir(), 'void-secret-lifecycle-retry-'));
+      const root = mkdtempSync(join(tmpdir(), 'nosam-secret-lifecycle-retry-'));
       const configPath = join(root, 'wrangler.jsonc');
       writeFileSync(
         configPath,
         JSON.stringify({
-          migrations: [{ tag: 'live-v1', new_sqlite_classes: ['VoidLiveStreamDurableObject'] }],
+          migrations: [{ tag: 'live-v1', new_sqlite_classes: ['NosamLiveStreamDurableObject'] }],
         }),
       );
       const readMigrationTag = vi.fn(async () => null);
@@ -4978,7 +4978,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
 
   it('switches back to a Nosam version with a trigger snapshot and replays its triggers', async () => {
     const fixture = recoveryActivation({
-      previous: VOID_SCHEMA_2_PREVIOUS,
+      previous: NOSAM_SCHEMA_2_PREVIOUS,
       triggers: [TRIGGER_FAILURE],
     });
     const result = await activateCloudflareVersion(fixture.options);
@@ -5012,7 +5012,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
         id: CURRENT,
         number: 1,
         annotations: {
-          'workers/message': 'void:secret-draft',
+          'workers/message': 'nosam:secret-draft',
           'workers/triggered_by': 'deployment',
         },
       },
@@ -5025,7 +5025,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
         id: CURRENT,
         number: 1,
         annotations: {
-          'workers/message': 'void:secret-draft',
+          'workers/message': 'nosam:secret-draft',
           'workers/triggered_by': 'deployment',
         },
       },
@@ -5062,7 +5062,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
       {
         kind: 'Nosam placeholder marker',
         annotations: {
-          'workers/message': 'void:secret-draft',
+          'workers/message': 'nosam:secret-draft',
           'workers/triggered_by': 'deployment',
         },
       },
@@ -5106,7 +5106,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
 
   it('keeps an atomic publish live when its triggers fail', async () => {
     const fixture = recoveryActivation({
-      previous: VOID_SCHEMA_2_PREVIOUS,
+      previous: NOSAM_SCHEMA_2_PREVIOUS,
       triggers: [TRIGGER_FAILURE],
       atomic: true,
     });
@@ -5123,7 +5123,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
 
   it('reports this deploy live when the switch back is refused', async () => {
     const fixture = recoveryActivation({
-      previous: VOID_SCHEMA_2_PREVIOUS,
+      previous: NOSAM_SCHEMA_2_PREVIOUS,
       triggers: [TRIGGER_FAILURE],
       deploys: [ok(), { stdout: '', stderr: 'Cloudflare refused the deployment.', status: 1 }],
     });
@@ -5141,7 +5141,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
 
   it('reads the owner again when the switch back was applied but its command was killed', async () => {
     const fixture = recoveryActivation({
-      previous: VOID_SCHEMA_2_PREVIOUS,
+      previous: NOSAM_SCHEMA_2_PREVIOUS,
       triggers: [TRIGGER_FAILURE],
       deploys: [ok(), { stdout: '', stderr: '', status: 1, signal: 'SIGTERM', applied: true }],
     });
@@ -5158,7 +5158,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
 
   it('reads the owner again after a forced switch back fails', async () => {
     const fixture = recoveryActivation({
-      previous: VOID_SCHEMA_2_PREVIOUS,
+      previous: NOSAM_SCHEMA_2_PREVIOUS,
       triggers: [TRIGGER_FAILURE],
       deploys: [
         ok(),
@@ -5179,7 +5179,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
 
   it('reports the previous version live when the uploader changes after the switch back', async () => {
     const fixture = recoveryActivation({
-      previous: VOID_SCHEMA_2_PREVIOUS,
+      previous: NOSAM_SCHEMA_2_PREVIOUS,
       triggers: [TRIGGER_FAILURE],
       verifyUploaderAfterRestore: false,
     });
@@ -5197,7 +5197,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
 
   it('reports the previous version live without its triggers when the replay fails', async () => {
     const fixture = recoveryActivation({
-      previous: VOID_SCHEMA_2_PREVIOUS,
+      previous: NOSAM_SCHEMA_2_PREVIOUS,
       triggers: [TRIGGER_FAILURE, TRIGGER_FAILURE],
     });
     const result = await activateCloudflareVersion(fixture.options);
@@ -5214,7 +5214,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
 
   it('reports an unknown owner when status cannot be read after the trigger failure', async () => {
     const fixture = recoveryActivation({
-      previous: VOID_SCHEMA_2_PREVIOUS,
+      previous: NOSAM_SCHEMA_2_PREVIOUS,
       triggers: [TRIGGER_FAILURE],
       statusFailsAfter: 'first-trigger-failure',
     });
@@ -5233,7 +5233,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
 
   it('reports an unknown owner and trigger state when status fails during the replay', async () => {
     const fixture = recoveryActivation({
-      previous: VOID_SCHEMA_2_PREVIOUS,
+      previous: NOSAM_SCHEMA_2_PREVIOUS,
       triggers: [TRIGGER_FAILURE],
       statusFailsAfter: 'restore',
     });

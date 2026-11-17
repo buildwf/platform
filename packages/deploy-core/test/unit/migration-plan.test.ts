@@ -37,7 +37,7 @@ describe('SQL migration classification', () => {
       allowLegacy: false,
     });
     expect(
-      classifySqlMigration('-- void:allow-unsplit-multi-statement\nSELECT 1; SELECT 2;'),
+      classifySqlMigration('-- nosam:allow-unsplit-multi-statement\nSELECT 1; SELECT 2;'),
     ).toEqual({
       kind: 'legacy-unsplit-multi-statement',
       stability: 'legacy',

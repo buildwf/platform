@@ -77,7 +77,7 @@ function makeBatch(events: ReadonlyArray<unknown>, timestamps?: ReadonlyArray<nu
   }));
   const calls = { retryAll: 0, ackAll: 0 };
   return {
-    queue: 'void-usage-events',
+    queue: 'nosam-usage-events',
     messages,
     retryAll: () => {
       calls.retryAll++;

@@ -1,4 +1,4 @@
-import type { AssetConfig, HeaderRule, RedirectRule } from '@void/deploy-core';
+import type { AssetConfig, HeaderRule, RedirectRule } from '@nosam/deploy-core';
 import { applyHeaderRules } from './headers.ts';
 import { redirectToHttps } from './https.ts';
 import { applyRoutingRules, mergeQueryIntoLocation } from './routing-rules.ts';
@@ -17,7 +17,7 @@ export type StaticEdgeConfig = Readonly<{
   versionMetadataBinding?: string;
   /**
    * @deprecated Ignored. Cloudflare applies asset handling from the Worker's
-   * `assets` config (`not_found_handling`, `html_handling`), which `void deploy`
+   * `assets` config (`not_found_handling`, `html_handling`), which `nosam deploy`
    * writes. Removed in the next major version.
    */
   assetConfig?: AssetConfig;
@@ -40,7 +40,7 @@ export function createStaticEdgeHandler(config: StaticEdgeConfig): StaticEdgeHan
   return {
     async fetch(request, env): Promise<Response> {
       const originalUrl = new URL(request.url);
-      if (request.method === 'GET' && originalUrl.pathname === '/__void/ready') {
+      if (request.method === 'GET' && originalUrl.pathname === '/__nosam/ready') {
         if (!config.versionMetadataBinding) {
           return Response.json({ ready: true });
         }
@@ -115,6 +115,6 @@ function rewriteUrl(url: URL, destination: string): URL {
 
 function rewriteRequest(request: Request, url: URL, originalUrl: string): Request {
   const rewritten = new Request(url.toString(), request);
-  rewritten.headers.set('X-Void-Original-URL', originalUrl);
+  rewritten.headers.set('X-Nosam-Original-URL', originalUrl);
   return rewritten;
 }

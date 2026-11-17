@@ -1,6 +1,6 @@
-import { defineHandler } from 'void';
-import { kv } from 'void/kv';
-import { storage } from 'void/storage';
+import { defineHandler } from 'nosam';
+import { kv } from 'nosam/kv';
+import { storage } from 'nosam/storage';
 
 const D1_TABLES_TO_CLEAR = [
   'notes',

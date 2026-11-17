@@ -66,7 +66,7 @@ export function SystemStatusCard({ checkNames }: { checkNames: ReadonlyArray<str
         <LastCheckedTime checkedAt={health?.checkedAt} unavailable={status === 'unavailable'} />
       }
     >
-      <ul id="health-checks" className="void-admin-health-checks" aria-label="Service health">
+      <ul id="health-checks" className="nosam-admin-health-checks" aria-label="Service health">
         {checkNames.map((name) => {
           const label = serviceLabels[name] ?? name;
           const check = status === 'ready' ? checksByName.get(name) : undefined;
@@ -96,12 +96,12 @@ export function SystemStatusCard({ checkNames }: { checkNames: ReadonlyArray<str
           return (
             <li
               key={name}
-              className="void-admin-health-check"
+              className="nosam-admin-health-check"
               data-state={state}
               aria-label={`${label}: ${description}`}
               title={`${label}: ${description}${latency}`}
             >
-              <span className="void-admin-health-indicator" aria-hidden="true">
+              <span className="nosam-admin-health-indicator" aria-hidden="true">
                 {state === 'healthy' ? (
                   <Check size={16} />
                 ) : state === 'error' ? (
@@ -111,9 +111,9 @@ export function SystemStatusCard({ checkNames }: { checkNames: ReadonlyArray<str
                 ) : null}
               </span>
               <Tooltip content={detail} isEnabled={!!detail} hasHoverIndication={false}>
-                <span className="void-admin-health-service" tabIndex={detail ? 0 : undefined}>
-                  <span className="void-admin-health-label">{label}</span>
-                  {detail && <span className="void-admin-health-detail">{detail}</span>}
+                <span className="nosam-admin-health-service" tabIndex={detail ? 0 : undefined}>
+                  <span className="nosam-admin-health-label">{label}</span>
+                  {detail && <span className="nosam-admin-health-detail">{detail}</span>}
                 </span>
               </Tooltip>
             </li>

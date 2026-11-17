@@ -17,13 +17,13 @@ The backend is optional. Files in `routes/` define [server routes](./server-rout
 
 ## Resources from your code
 
-Import `db` from `void/db` to query your database. Nosam provides a local database during development and provisions one when you deploy. Imports also enable resources such as [KV](./kv.md), [object storage](./storage.md), and [queues](./queues.md). Use configuration when you need to connect existing resources.
+Import `db` from `nosam/db` to query your database. Nosam provides a local database during development and provisions one when you deploy. Imports also enable resources such as [KV](./kv.md), [object storage](./storage.md), and [queues](./queues.md). Use configuration when you need to connect existing resources.
 
 Your Drizzle schema defines database types. Handlers infer response types, and typed fetch checks their callers. Changing a field shows you which parts of the app need to change.
 
 ## From local development to production
 
-Vite runs your app locally with Cloudflare's runtime. `void deploy` builds it, provisions resources, applies database migrations, and publishes it. [Environment variables](./env-vars.md) use a schema, local values, and production secrets.
+Vite runs your app locally with Cloudflare's runtime. `nosam deploy` builds it, provisions resources, applies database migrations, and publishes it. [Environment variables](./env-vars.md) use a schema, local values, and production secrets.
 
 Deploy to [your own Cloudflare account](./deployment.md#deploy-to-cloudflare), or connect to a [Nosam platform](./self-hosted-platform.md) run by your team. Both use the same application APIs. A platform adds shared access, deployment history, and administration.
 

@@ -11,17 +11,17 @@ Nosam automatically detects which Cloudflare resources your project uses by scan
 
 | Binding          | Type                       | Detected by import                                                                              | Detected by env access                                                         |
 | ---------------- | -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `DB`             | `D1Database`               | `import { db } from "void/db"`                                                                  | `env.DB` or `c.env.DB`                                                         |
-| `KV`             | `KVNamespace`              | `import { kv } from "void/kv"`                                                                  | `env.KV` or `c.env.KV`                                                         |
-| `STORAGE`        | `R2Bucket`                 | `import { storage } from "void/storage"`                                                        | `env.STORAGE` or `c.env.STORAGE`                                               |
-| `AI`             | `Ai`                       | `import { ai } from "void/ai"`                                                                  | `env.AI` or `c.env.AI`                                                         |
-| `SANDBOX`        | Managed Sandbox capability | `import { getSandbox } from "void/sandbox"`                                                     | `getSandbox()`; native Cloudflare also exposes `env.SANDBOX` / `c.env.SANDBOX` |
-| Auth             | none                       | `import { ... } from "void/auth"` or `import { auth } from "void/client"` / `void/client/react` | none                                                                           |
-| `QUEUE_*`        | `Queue`                    | `import { queues } from "void/queues"`                                                          | `env.QUEUE_*`                                                                  |
-| `VOID_LIVE`      | `DurableObjectNamespace`   | `import { defineLiveStream } from "void/live"`                                                  | n/a                                                                            |
+| `DB`             | `D1Database`               | `import { db } from "nosam/db"`                                                                  | `env.DB` or `c.env.DB`                                                         |
+| `KV`             | `KVNamespace`              | `import { kv } from "nosam/kv"`                                                                  | `env.KV` or `c.env.KV`                                                         |
+| `STORAGE`        | `R2Bucket`                 | `import { storage } from "nosam/storage"`                                                        | `env.STORAGE` or `c.env.STORAGE`                                               |
+| `AI`             | `Ai`                       | `import { ai } from "nosam/ai"`                                                                  | `env.AI` or `c.env.AI`                                                         |
+| `SANDBOX`        | Managed Sandbox capability | `import { getSandbox } from "nosam/sandbox"`                                                     | `getSandbox()`; native Cloudflare also exposes `env.SANDBOX` / `c.env.SANDBOX` |
+| Auth             | none                       | `import { ... } from "nosam/auth"` or `import { auth } from "nosam/client"` / `nosam/client/react` | none                                                                           |
+| `QUEUE_*`        | `Queue`                    | `import { queues } from "nosam/queues"`                                                          | `env.QUEUE_*`                                                                  |
+| `NOSAM_LIVE`      | `DurableObjectNamespace`   | `import { defineLiveStream } from "nosam/live"`                                                  | n/a                                                                            |
 | filename-derived | `DurableObjectNamespace`   | A default-exported `defineDurableState()` module in `durable-objects/`                          | n/a                                                                            |
 
-Auth detection also triggers when importing the `auth` specifier from `void/client` or a framework-specific client subpath such as `void/client/react` (but not when importing only `fetch`).
+Auth detection also triggers when importing the `auth` specifier from `nosam/client` or a framework-specific client subpath such as `nosam/client/react` (but not when importing only `fetch`).
 
 Static bracket access such as `c.env['KV']` and destructured properties such as
 `const { DB, KV: cache } = c.env` are also detected. For keys chosen at runtime,

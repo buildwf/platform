@@ -1,4 +1,4 @@
-import { platformProjectHostname, readPlatformApplication } from '@void/platform';
+import { platformProjectHostname, readPlatformApplication } from '@nosam/platform';
 import { sql as drizzleSql } from 'drizzle-orm';
 import { type Context } from 'hono';
 import { deleteDispatchScript } from '../cf-api.ts';
@@ -453,7 +453,7 @@ export async function recoverFailedDeployment(input: {
       force: true,
     }).catch(() => {});
     input.currentStatus = 'live';
-    await updateProjectType(context.get('db'), projectId, failedManifest.type ?? 'void').catch(
+    await updateProjectType(context.get('db'), projectId, failedManifest.type ?? 'nosam').catch(
       () => {},
     );
     await setActiveDeployment(context.get('db'), projectId, failedDeployment.id).catch(() => {});

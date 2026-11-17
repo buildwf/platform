@@ -1,7 +1,7 @@
-import type { RedirectRule } from '@void/deploy-core';
+import type { RedirectRule } from '@nosam/deploy-core';
 import { compilePattern, matchPatternCaptures, substituteParams } from './pattern.ts';
 
-export type { RedirectRule } from '@void/deploy-core';
+export type { RedirectRule } from '@nosam/deploy-core';
 
 export type RoutingRuleResult =
   | { type: 'redirect'; destination: string; status: number }

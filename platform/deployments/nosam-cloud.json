@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "displayName": "Nosam Cloud",
+  "installationSlug": "cloud",
+  "application": {
+    "baseDomain": "void.app",
+    "zoneName": "void.app",
+    "dedicatedZone": true
+  },
+  "controlPlane": {
+    "apiHostname": "api.void.cloud",
+    "dashboardHostname": "dash.void.cloud",
+    "proxyHostname": "proxy.void.cloud"
+  },
+  "authentication": {
+    "providers": ["github", "google"]
+  },
+  "capabilities": {
+    "ai": true,
+    "customDomains": true,
+    "email": true,
+    "githubActions": true,
+    "githubOAuth": true,
+    "googleOAuth": true,
+    "managedBuilds": true,
+    "sandbox": true
+  },
+  "resources": {
+    "aiGateway": "nosam",
+    "apiWorker": "nosam-api",
+    "assetsBucket": "nosam-static-assets-overflow",
+    "cronQueue": "nosam-cron-fires",
+    "dashboardWorker": "nosam-dashboard",
+    "dispatchNamespace": "nosam-users",
+    "dispatchWorker": "nosam-dispatch",
+    "hyperdrive": "nosam-api",
+    "isrCacheKv": "nosam-isr-cache",
+    "legacyAssetsKv": "nosam-static-assets",
+    "logsDataset": "nosam_logs",
+    "proxyWorker": "nosam-proxy",
+    "requestsDataset": "nosam_requests",
+    "routingKv": "nosam-routing",
+    "tailWorker": "nosam-tail",
+    "usageQueue": "nosam-usage-events"
+  }
+}

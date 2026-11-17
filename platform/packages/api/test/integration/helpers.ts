@@ -510,7 +510,7 @@ export async function setupEnv(options: SetupEnvOptions = {}): Promise<TestEnv> 
   const staticAssets = new MemoryKVNamespace();
   const staticAssetsR2 = new MemoryR2Bucket();
 
-  const databaseUrl = process.env.VOID_TEST_DATABASE_URL;
+  const databaseUrl = process.env.NOSAM_TEST_DATABASE_URL;
   const queryCapture: QueryCapture = { active: false, queries: [] };
   const logger = {
     logQuery(query: string) {
@@ -554,13 +554,13 @@ export async function setupEnv(options: SetupEnvOptions = {}): Promise<TestEnv> 
     PROJECT_SECRET_ACTIVE_KEY_VERSION,
     R2_ACCESS_KEY_ID: 'test-r2-access-key-id',
     R2_SECRET_ACCESS_KEY: 'test-r2-secret-access-key',
-    R2_STATIC_ASSETS_BUCKET: 'void-static-assets-overflow-test',
+    R2_STATIC_ASSETS_BUCKET: 'nosam-static-assets-overflow-test',
     GITHUB_CLIENT_ID: 'test-github-client-id',
     GITHUB_CLIENT_SECRET: 'test-github-client-secret',
     GOOGLE_CLIENT_ID: 'test-google-client-id',
     GOOGLE_CLIENT_SECRET: 'test-google-client-secret',
-    REQUESTS_DATASET: 'void_requests',
-    TAIL_SERVICE_NAME: 'void-tail',
+    REQUESTS_DATASET: 'nosam_requests',
+    TAIL_SERVICE_NAME: 'nosam-tail',
     USAGE_COUNTER: createMockDoNamespace(),
     CRON_SCHEDULER: createMockDoNamespace(),
     ERROR_ALERT_MONITOR: createMockDoNamespace(),
@@ -1415,7 +1415,7 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
       return cfSuccess(script.bindings);
     }
     return cfSuccess([
-      { type: 'plain_text', name: '__VOID_PROXY_TOKEN', text: 'mock-proxy-token' },
+      { type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: 'mock-proxy-token' },
     ]);
   };
 
@@ -1985,13 +1985,13 @@ export function withLegacyDeploy<
       return fetchApp(request, ...rest);
     }
     const headers = new Headers({ 'Content-Type': 'application/json' });
-    for (const name of ['authorization', 'x-void-cli-version', 'user-agent']) {
+    for (const name of ['authorization', 'x-nosam-cli-version', 'user-agent']) {
       const value = request.headers.get(name);
       if (value) {
         headers.set(name, value);
       }
     }
-    const key = request.headers.get('x-void-deploy-idempotency-key');
+    const key = request.headers.get('x-nosam-deploy-idempotency-key');
     const text = await request.text();
     const res = await fetchApp(
       new Request('http://localhost/rpc/deploy.finalize', {
@@ -2089,7 +2089,7 @@ export function withLegacyDeploy<
       status: 200,
       headers: {
         'content-type': 'application/x-ndjson',
-        ...(body.data.deploymentId ? { 'x-void-deployment-id': body.data.deploymentId } : {}),
+        ...(body.data.deploymentId ? { 'x-nosam-deployment-id': body.data.deploymentId } : {}),
       },
     });
   };

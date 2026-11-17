@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import RiveAnimation from '@components/shared/RiveAnimation.vue';
 import frameworksAnimation from './assets/animations/640_x_320_vite_frameworks_diamond.riv';
-import connectorsAnimation from './assets/animations/640_x_320_void_connectors.riv';
+import connectorsAnimation from './assets/animations/640_x_320_nosam_connectors.riv';
 import StackAndShip from './game/StackAndShip.vue';
 
 defineProps<{

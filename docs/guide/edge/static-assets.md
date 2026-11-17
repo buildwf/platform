@@ -32,7 +32,7 @@ If `build.assetsDir` is set to `""`, meaning hashed files live at the root, the 
 
 ### Native Cloudflare deployments
 
-For Nosam apps, `void deploy --platform cloudflare` gives generated JavaScript bundles with content fingerprints immutable caching. Files copied from `public/` and custom build outputs with stable filenames keep normal revalidation, even when they live in the assets directory. CSS and other assets keep Cloudflare's default or your configured `Cache-Control`.
+For Nosam apps, `nosam deploy --platform cloudflare` gives generated JavaScript bundles with content fingerprints immutable caching. Files copied from `public/` and custom build outputs with stable filenames keep normal revalidation, even when they live in the assets directory. CSS and other assets keep Cloudflare's default or your configured `Cache-Control`.
 
 Use [Custom Headers](./headers) to choose a cache policy for other files. Apply immutable caching only to URLs that change whenever their content changes.
 
@@ -78,7 +78,7 @@ Nosam serves static files directly unless application code needs to handle the r
 SPAs serve `index.html` for unmatched HTML navigation so client-side routing works. For a static site with a `404.html` page, set [`routing.notFound`](../../reference/config.md#routing-notfound):
 
 ```ts
-import { defineConfig } from 'void/config';
+import { defineConfig } from 'nosam/config';
 
 export default defineConfig({
   routing: { notFound: '404-page' },
@@ -87,7 +87,7 @@ export default defineConfig({
 
 Choose `single-page-application`, `404-page`, or `none`. These settings preserve which requests reach middleware and API handlers. Intentional API `404` responses keep their status and body.
 
-To run server code before serving an asset, set [`run_worker_first`](https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first) under `cloudflare.assets` in `void.config.ts`. Setting it to `true` runs the Worker on every request and counts toward Worker request usage.
+To run server code before serving an asset, set [`run_worker_first`](https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first) under `cloudflare.assets` in `nosam.config.ts`. Setting it to `true` runs the Worker on every request and counts toward Worker request usage.
 
 ## API routes
 

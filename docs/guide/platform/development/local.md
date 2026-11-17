@@ -10,22 +10,22 @@ outline: deep
 Clone your fork and install the workspace dependencies with Vite+:
 
 ```sh
-git clone https://github.com/your-org/void.git
+git clone https://github.com/your-org/nosam.git
 cd void
 vp install
-vpr install:void-dev
-void-dev --help
+vpr install:nosam-dev
+nosam-dev --help
 ```
 
 Use the Node.js version recorded in `.node-version`.
 
-`install:void-dev` builds the CLI, shared packages, and platform runtime, then makes this checkout's built CLI globally available as `void-dev`. Public packages export their built files, so run `vp run build:core` after later source changes to refresh the alias. The installer refuses to replace an unrelated global command. Remove only this checkout's alias with `vpr uninstall:void-dev`. The commands on these development pages run from the repository root.
+`install:nosam-dev` builds the CLI, shared packages, and platform runtime, then makes this checkout's built CLI globally available as `nosam-dev`. Public packages export their built files, so run `vp run build:core` after later source changes to refresh the alias. The installer refuses to replace an unrelated global command. Remove only this checkout's alias with `vpr uninstall:nosam-dev`. The commands on these development pages run from the repository root.
 
 ## Finding the Implementation
 
 | Directory                                            | Purpose                                                              |
 | ---------------------------------------------------- | -------------------------------------------------------------------- |
-| `packages/void`                                      | Framework, application runtime, and CLI                              |
+| `packages/nosam`                                      | Framework, application runtime, and CLI                              |
 | `packages/platform`                                  | Installer contracts, packaged Workers, and platform migrations       |
 | `packages/deploy-core`, `packages/deploy-cloudflare` | Shared deployment contracts and Cloudflare upload code               |
 | `platform/packages/api`                              | Users, projects, deployments, provisioning, and administrator API/UI |
@@ -35,7 +35,7 @@ Use the Node.js version recorded in `.node-version`.
 | `platform/packages/tail`                             | Runtime log ingestion                                                |
 | `platform/packages/dashboard`                        | Dashboard source and local UI components in `ui/`                    |
 
-The `@voidcloud/*` names identify workspace implementation packages. Their `private: true` flags prevent publishing those packages to npm. Deployable core Workers are bundled into the public `@void/platform` package.
+The `@nosamcloud/*` names identify workspace implementation packages. Their `private: true` flags prevent publishing those packages to npm. Deployable core Workers are bundled into the public `@nosam/platform` package.
 
 The core installer creates the API, dispatch, proxy, tail, and email gateway Workers. The dashboard and managed GitHub build services are available in the source tree but are not included in that installation. Adding an optional service requires its infrastructure, bindings, authentication, and capability configuration together.
 
@@ -44,8 +44,8 @@ The core installer creates the API, dispatch, proxy, tail, and email gateway Wor
 Start a local PostgreSQL server and make `psql` and `pg_isready` available on your path. Then create the development database, apply its migrations, and seed an administrator:
 
 ```sh
-vp run --filter @voidcloud/api setup --admin-email dev@example.com
-vp run --filter @voidcloud/api dev:admin
+vp run --filter @nosamcloud/api setup --admin-email dev@example.com
+vp run --filter @nosamcloud/api dev:admin
 ```
 
 The command disables the optional build containers, so basic API and admin work
@@ -63,7 +63,7 @@ The API's development bypass lets you work on the browser admin UI without setti
 The dashboard is a separate source app. After API setup, start it in another terminal:
 
 ```sh
-vp run --filter @voidcloud/dashboard dev
+vp run --filter @nosamcloud/dashboard dev
 ```
 
 Setup points the dashboard's local `.env` at the API you started:
@@ -117,6 +117,6 @@ vp test run
 vp run build:docs
 ```
 
-Platform integration tests use their local test database by default. To test against PostgreSQL, set `VOID_TEST_DATABASE_URL` to a disposable database: these tests clear tables between cases.
+Platform integration tests use their local test database by default. To test against PostgreSQL, set `NOSAM_TEST_DATABASE_URL` to a disposable database: these tests clear tables between cases.
 
 To exercise a deployed application, deploy a disposable copy of `playground/kitchen-sink` and pass its URL as `SMOKE_URL` to the smoke test described in `platform/scripts/kitchen-sink-smoke-test.md`. That test creates and removes application data.

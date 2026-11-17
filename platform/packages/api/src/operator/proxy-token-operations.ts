@@ -109,7 +109,7 @@ async function bulkPreview(db: Db, all: boolean) {
 }
 
 /**
- * `void platform system rotate-proxy-tokens`. An apply needs `project` or
+ * `nosam platform system rotate-proxy-tokens`. An apply needs `project` or
  * `all` (every project); a preview without either shows the progress of
  * every rotation. A preview reads the database only and never returns a
  * token. An apply requests the rotations and advances them within a bounded

@@ -1,4 +1,4 @@
-import { PLATFORM_HEALTH_HOSTNAME_LABEL } from '@void/platform';
+import { PLATFORM_HEALTH_HOSTNAME_LABEL } from '@nosam/platform';
 import { EMAIL_RESERVED_SLUGS } from './reserved-slugs.ts';
 
 /**

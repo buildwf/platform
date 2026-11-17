@@ -1,4 +1,4 @@
-import { defineMiddleware } from 'void';
+import { defineMiddleware } from 'nosam';
 
 // No dashboard page is meant to be framed. Only HTML is touched, so redirects,
 // WebSocket upgrades and other responses pass through unchanged.

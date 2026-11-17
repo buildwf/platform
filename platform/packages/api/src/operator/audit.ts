@@ -1,4 +1,4 @@
-import { PLAN_EDITABLE_LIMIT_KEYS } from '@void/platform/plans';
+import { PLAN_EDITABLE_LIMIT_KEYS } from '@nosam/platform/plans';
 import { count, desc, eq } from 'drizzle-orm';
 import { Hono, type Context, type MiddlewareHandler } from 'hono';
 import { isAiLoggingMode } from '../ai-logging-policy.ts';
@@ -391,7 +391,7 @@ async function completeAudit(
     console.error('[operator] audit completion failed', id, error);
     pending = true;
     if (!response) {
-      context.header('X-Void-Audit-Status', 'pending');
+      context.header('X-Nosam-Audit-Status', 'pending');
     }
   }
   if (response) {
@@ -399,9 +399,9 @@ async function completeAudit(
     // audit metadata is applied consistently without changing their body or
     // status.
     const headers = new Headers(response.headers);
-    headers.set('X-Void-Audit-Id', id);
+    headers.set('X-Nosam-Audit-Id', id);
     if (pending) {
-      headers.set('X-Void-Audit-Status', 'pending');
+      headers.set('X-Nosam-Audit-Status', 'pending');
     }
     return new Response(response.body, {
       status: response.status,
@@ -409,7 +409,7 @@ async function completeAudit(
       headers,
     });
   } else {
-    context.header('X-Void-Audit-Id', id);
+    context.header('X-Nosam-Audit-Id', id);
   }
 }
 

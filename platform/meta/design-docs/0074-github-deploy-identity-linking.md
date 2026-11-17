@@ -7,8 +7,8 @@ created: 2026-06-23
 # GitHub identity linking and shared organization installations
 
 Deploy-on-GitHub uses a GitHub identity independent of the provider used to
-sign in to Nosam. An authenticated user can run `void github link` to attach a
-GitHub account to their existing Nosam account. `void github install` starts that
+sign in to Nosam. An authenticated user can run `nosam github link` to attach a
+GitHub account to their existing Nosam account. `nosam github install` starts that
 flow automatically when the identity is missing. Linking does not rely on email
 equality and does not create another Nosam user.
 
@@ -48,11 +48,11 @@ self-hosted installer does not set up GitHub builds.
 ## Shared organization installations
 
 An organization has one GitHub App installation, and multiple Nosam users can
-connect their own projects through it. `void github join` uses a fresh GitHub
+connect their own projects through it. `nosam github join` uses a fresh GitHub
 user-OAuth proof to discover installations visible to the caller. The platform
 caches that visibility in `github_installation_members` with an expiry. The
 cache does not contain a GitHub token or authorize repository access. The CLI
-can join automatically during an interactive `void github connect`.
+can join automatically during an interactive `nosam github connect`.
 
 Every organization repository connection, including one made by the person who
 installed the App, requires a separate browser proof that the connecting GitHub

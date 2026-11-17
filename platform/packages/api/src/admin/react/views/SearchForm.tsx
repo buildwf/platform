@@ -69,7 +69,7 @@ export function SearchForm({
   );
 
   return (
-    <form method="get" action={action} className="void-admin-search">
+    <form method="get" action={action} className="nosam-admin-search">
       <input type="hidden" name="search" value={value} />
       <SearchTypeahead
         key={initialValue ?? ''}

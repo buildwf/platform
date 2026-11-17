@@ -1,7 +1,7 @@
 import { minLength, pick, pipe } from 'valibot';
-import { sql } from 'void/db';
-import { createInsertSchema, createSelectSchema } from 'void/drizzle-valibot';
-import { sqliteTable, integer, text } from 'void/schema-d1';
+import { sql } from 'nosam/db';
+import { createInsertSchema, createSelectSchema } from 'nosam/drizzle-valibot';
+import { sqliteTable, integer, text } from 'nosam/schema-d1';
 
 export const notes = sqliteTable('notes', {
   id: integer('id').primaryKey({ autoIncrement: true }),

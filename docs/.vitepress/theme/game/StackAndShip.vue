@@ -41,7 +41,7 @@ const originY = computed(
     (top.value.x + top.value.width / 2 + top.value.z + top.value.depth / 2) * 0.36,
 );
 const visibleTiles = computed(() => game.value.tiles.slice(-20));
-const STORAGE_KEY = 'void:stack-and-ship:best';
+const STORAGE_KEY = 'nosam:stack-and-ship:best';
 let frame = 0;
 let lastFrame = 0;
 let droppedAt = -Infinity;

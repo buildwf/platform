@@ -173,7 +173,7 @@ describe('project Zero Trust reconciliation', () => {
     });
     const existing = {
       id: 'installer-health',
-      name: 'void-installation-health-dispatch-nonce',
+      name: 'nosam-installation-health-dispatch-nonce',
       aud: 'installer-audience',
       type: 'self_hosted',
       domain: 'void-platform-health.apps.example.com/health',
@@ -513,7 +513,7 @@ describe('project Zero Trust reconciliation', () => {
     await configurePlatformZeroTrust(bindings, env.db, PROTECTED_CONFIGURATION);
     expect((await readZeroTrustConfigurationStrict(env.db))!.healthApplication).toBeNull();
     expect([...cloudflare.applications.values()].map((application) => application.domain)).toEqual([
-      'void-123456abcdef-*.test-account.workers.dev',
+      'nosam-123456abcdef-*.test-account.workers.dev',
     ]);
   });
 
@@ -633,7 +633,7 @@ describe('project Zero Trust reconciliation', () => {
       [...cloudflare.applications.values()].find((application) =>
         String(application.domain).startsWith('*.'),
       )?.name,
-    ).toMatch(/^void-installation-test-[a-f0-9]{16}-[a-f0-9]{32}-project-zero-trust$/);
+    ).toMatch(/^nosam-installation-test-[a-f0-9]{16}-[a-f0-9]{32}-project-zero-trust$/);
 
     await setProjectZeroTrustProtection(bindings, env.db, protectedProject.id, true);
     expect(await getProjectZeroTrustState(env.db, protectedProject.id)).toMatchObject({
@@ -762,7 +762,7 @@ describe('project Zero Trust reconciliation', () => {
       effective_protected: false,
       status: 'reconciling',
       bypass_application_id: 'app-cleanup',
-      bypass_application_name: 'void-installation-public-cleanup',
+      bypass_application_name: 'nosam-installation-public-cleanup',
     });
 
     await expect(

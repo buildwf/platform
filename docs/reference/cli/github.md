@@ -7,55 +7,55 @@ outline: deep
 
 Deploy-on-GitHub works from **any** Nosam login — Google, GitHub, or other SSO. The first time you connect GitHub, Nosam links your GitHub identity to your current account (a one-time step, independent of how you logged in); it never creates a second account.
 
-Project-scoped `github` and `build` commands resolve the project in the same order as deploy: the `[project]` argument or `--project`, then `VOID_PROJECT`, then the linked project (`.void/project.json`).
+Project-scoped `github` and `build` commands resolve the project in the same order as deploy: the `[project]` argument or `--project`, then `NOSAM_PROJECT`, then the linked project (`.nosam/project.json`).
 
-## `void github link` {#void-github-link}
+## `nosam github link` {#nosam-github-link}
 
 ```
-void github link
+nosam github link
 ```
 
-Link your signed-in Nosam account to GitHub through your browser. `void github install` does this automatically when needed.
+Link your signed-in Nosam account to GitHub through your browser. `nosam github install` does this automatically when needed.
 
 ::: warning Existing GitHub sign-in
 A GitHub identity can belong to only one Nosam account. If it is already linked elsewhere, sign in to that Nosam account or authorize a different GitHub identity.
 :::
 
-## `void github install` {#void-github-install}
+## `nosam github install` {#nosam-github-install}
 
 ```
-void github install
+nosam github install
 ```
 
-Open the GitHub App install page in your browser. If your account has no linked GitHub identity yet, `void github install` first runs the GitHub link automatically (browser authorize), then continues. After installing, run `void github connect` to link a repository to your project.
+Open the GitHub App install page in your browser. If your account has no linked GitHub identity yet, `nosam github install` first runs the GitHub link automatically (browser authorize), then continues. After installing, run `nosam github connect` to link a repository to your project.
 
-## `void github installations` {#void-github-installations}
+## `nosam github installations` {#nosam-github-installations}
 
 ```
-void github installations
+nosam github installations
 ```
 
 List all GitHub App installations linked to your account. Each entry includes the `[id: <installation_id>]` needed for `--installation` in non-interactive use.
 
-## `void github join` {#void-github-join}
+## `nosam github join` {#nosam-github-join}
 
 ```
-void github join
+nosam github join
 ```
 
-Join an existing organization installation through your browser. `void github connect` can do this automatically in an interactive terminal. Run `join` locally before non-interactive setup when needed.
+Join an existing organization installation through your browser. `nosam github connect` can do this automatically in an interactive terminal. Run `join` locally before non-interactive setup when needed.
 
-Requires a signed-in Nosam account and organization-installation sharing enabled by your platform. Use `void github installations` to find the installation ID.
+Requires a signed-in Nosam account and organization-installation sharing enabled by your platform. Use `nosam github installations` to find the installation ID.
 
-## `void github connect` {#void-github-connect}
+## `nosam github connect` {#nosam-github-connect}
 
 ```
-void github connect [project] [options]
+nosam github connect [project] [options]
 ```
 
 Connect a GitHub repository to a Nosam project for automatic deploys. On every push to the configured branch, Nosam builds and deploys your project automatically.
 
-The CLI opens your browser when it needs GitHub authorization. If no installation is available, run `void github install`.
+The CLI opens your browser when it needs GitHub authorization. If no installation is available, run `nosam github install`.
 
 **Options**
 
@@ -66,7 +66,7 @@ The CLI opens your browser when it needs GitHub authorization. If no installatio
 | `--repo <owner/repo>` | Repository full name — required unless the installation grants exactly one repo   |
 | `--branch <name>`     | Branch to deploy from — **required in non-interactive mode**                      |
 | `--executor <type>`   | Build executor: `container` (default) or `github_actions`                         |
-| `--workflow <path>`   | Authorized deploy workflow file — defaults to `.github/workflows/void-deploy.yml` |
+| `--workflow <path>`   | Authorized deploy workflow file — defaults to `.github/workflows/nosam-deploy.yml` |
 
 Choose `container` for platform builds or `github_actions` for a deployment workflow. The CLI prompts for the executor and, for GitHub Actions, the workflow file. Pass the corresponding flags to skip those prompts.
 
@@ -75,7 +75,7 @@ The workflow must be a `.yml` or `.yaml` file under `.github/workflows/`. Only t
 For CI, supply the project and branch, plus the installation and repository when they cannot be selected automatically. Organization connections require repository authorization in a local browser first.
 
 ```
-void github connect my-app \
+nosam github connect my-app \
   --installation 42 \
   --repo owner/my-app \
   --branch main
@@ -83,12 +83,12 @@ void github connect my-app \
 
 You can connect only repositories your GitHub account can access.
 
-A project has one GitHub connection. Running `void github connect` on a project that is already connected fails. To connect a different repository, run `void github disconnect` first.
+A project has one GitHub connection. Running `nosam github connect` on a project that is already connected fails. To connect a different repository, run `nosam github disconnect` first.
 
-## `void github update` {#void-github-update}
+## `nosam github update` {#nosam-github-update}
 
 ```
-void github update [project] [options]
+nosam github update [project] [options]
 ```
 
 Change the branch, executor, or workflow for an existing connection. To change the repository, disconnect and reconnect.
@@ -105,13 +105,13 @@ Change the branch, executor, or workflow for an existing connection. To change t
 The CLI prompts for new settings using the current values as defaults. In CI, pass at least one of `--branch`, `--executor`, or `--workflow`.
 
 ```
-void github update my-app --executor github_actions
+nosam github update my-app --executor github_actions
 ```
 
-## `void github status` {#void-github-status}
+## `nosam github status` {#nosam-github-status}
 
 ```
-void github status [project]
+nosam github status [project]
 ```
 
 Show the connected repository, branch, executor, and workflow. Container builds do not use the workflow file.
@@ -123,16 +123,16 @@ Show the connected repository, branch, executor, and workflow. Container builds 
 | `--project <name>` | Project name (alias for the positional argument) |
 
 ```
-void github status my-app
+nosam github status my-app
 ```
 
-## `void github disconnect` {#void-github-disconnect}
+## `nosam github disconnect` {#nosam-github-disconnect}
 
 ```
-void github disconnect [project]
+nosam github disconnect [project]
 ```
 
-Disconnect a project from its GitHub repository, stopping automatic deploys. Any in-flight builds for the project are cancelled before the connection is removed. If the project has no connection, it reports that and exits successfully. To point a project at a different repository, disconnect first, then run `void github connect`.
+Disconnect a project from its GitHub repository, stopping automatic deploys. Any in-flight builds for the project are cancelled before the connection is removed. If the project has no connection, it reports that and exits successfully. To point a project at a different repository, disconnect first, then run `nosam github connect`.
 
 You are asked to confirm before anything is removed. Pass `--yes` to skip the prompt; `--yes` is **required** in a non-interactive shell (CI), where there is no prompt to answer.
 
@@ -144,17 +144,17 @@ You are asked to confirm before anything is removed. Pass `--yes` to skip the pr
 | `--yes`            | Skip the confirmation prompt (required in non-interactive shells) |
 
 ```
-void github disconnect my-app --yes
+nosam github disconnect my-app --yes
 ```
 
 ## Build {#build}
 
 Inspect Deploy-on-GitHub builds.
 
-### `void build logs` {#void-build-logs}
+### `nosam build logs` {#nosam-build-logs}
 
 ```
-void build logs [build] [--follow] [--output <file>] [--project <slug>]
+nosam build logs [build] [--follow] [--output <file>] [--project <slug>]
 ```
 
 Stream, tail, or download the build logs for a **container** build. With no
@@ -175,7 +175,7 @@ Following waits for the platform to confirm the final log tail. If the platform 
 Examples:
 
 ```
-void build logs                     # print the latest build's logs
-void build logs -f                  # follow the latest build until it finishes
-void build logs bld_123 -o build.log  # download a specific build's logs
+nosam build logs                     # print the latest build's logs
+nosam build logs -f                  # follow the latest build until it finishes
+nosam build logs bld_123 -o build.log  # download a specific build's logs
 ```

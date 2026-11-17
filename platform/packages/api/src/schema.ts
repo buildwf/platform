@@ -3,7 +3,7 @@ import type {
   PlatformAdmissionPolicy,
   PlatformLoginConfiguration,
   PlatformLoginKind,
-} from '@void/platform';
+} from '@nosam/platform';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -393,7 +393,7 @@ export const projects = pgTable(
     preview_client_id: text('preview_client_id').references(() => oauthClients.id),
     preview_workspace_id: text('preview_workspace_id'),
     preview_expires_at: timestamp('preview_expires_at', { mode: 'string', withTimezone: true }),
-    type: text('mode').notNull().default('void').$type<'void' | 'spa' | 'static'>(),
+    type: text('mode').notNull().default('nosam').$type<'nosam' | 'spa' | 'static'>(),
     active_deployment_id: text('active_deployment_id'),
     websocket_version: integer('websocket_version').notNull().default(0),
     // Highest proxy token generation issued for this project. 0 = legacy token.
@@ -1374,10 +1374,10 @@ export const githubConnections = pgTable(
       .$type<'container' | 'github_actions'>(),
     // The `.github/workflows/*.yml` file the GitHub Actions OIDC exchange binds
     // the deploy token to (see `routes/auth-oidc.ts`). Configurable by members
-    // with project settings access; defaults to the file `void init --github`
+    // with project settings access; defaults to the file `nosam init --github`
     // scaffolds. Only the authenticated connect/update routes write this —
     // never the webhook or the OIDC path — so it stays a trusted server-side pin.
-    workflow_path: text('workflow_path').notNull().default('.github/workflows/void-deploy.yml'),
+    workflow_path: text('workflow_path').notNull().default('.github/workflows/nosam-deploy.yml'),
     created_at: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
     updated_at: timestamp('updated_at', { mode: 'string' }).notNull().defaultNow(),
   },
@@ -1528,7 +1528,7 @@ export const githubWebhookRedeliveries = pgTable(
 // ---------------------------------------------------------------------------
 // builds — server-side build runs (one per push that triggers a build).
 //
-// A build runs the real `void deploy` CLI in a build environment (CF Container
+// A build runs the real `nosam deploy` CLI in a build environment (CF Container
 // or GitHub Actions runner) and produces a `deployment_id` once the deploy
 // endpoint accepts the manifest. `executor` records which backend ran it;
 // `status` tracks the build lifecycle independent of the deployment's status.

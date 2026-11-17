@@ -1,8 +1,8 @@
 import { startTransition, useEffect, useEffectEvent, useRef, useState } from 'react';
-import type { WebSocketRouteMap } from 'void/routes';
-import { connect, type VoidSocket } from 'void/ws';
+import type { WebSocketRouteMap } from 'nosam/routes';
+import { connect, type NosamSocket } from 'nosam/ws';
 
-type NotificationSocket = VoidSocket<'/ws/notifications'>;
+type NotificationSocket = NosamSocket<'/ws/notifications'>;
 type NotificationClientEvent = WebSocketRouteMap['/ws/notifications']['client'];
 type NotificationServerEvent = WebSocketRouteMap['/ws/notifications']['server'];
 

@@ -16,7 +16,7 @@ The framework, CLI, and platform share one workspace:
 
 | Directory                                            | Responsibility                                                  |
 | ---------------------------------------------------- | --------------------------------------------------------------- |
-| `packages/void`                                      | Vite plugin, application runtime, and `void` CLI                |
+| `packages/nosam`                                      | Vite plugin, application runtime, and `nosam` CLI                |
 | `packages/platform`                                  | Installation contracts and packaged core Worker bundles         |
 | `packages/deploy-core`, `packages/deploy-cloudflare` | Deployment contracts and Cloudflare upload primitives           |
 | `packages/edge`, `packages/isr`                      | Shared routing and ISR behavior                                 |
@@ -28,9 +28,9 @@ The framework, CLI, and platform share one workspace:
 | `platform/packages/dashboard`                        | User dashboard and its local UI components, styles and assets   |
 
 The installer consumes integrity-checked runtime artifacts from
-[`@void/platform`](../../packages/platform/README.md). It generates resource
+[`@nosam/platform`](../../packages/platform/README.md). It generates resource
 names, bindings and hostnames for the selected installation. A fork can build
-that same runtime from its own source and supply it to `void platform upgrade`.
+that same runtime from its own source and supply it to `nosam platform upgrade`.
 
 The user dashboard and integrations such as managed GitHub builds remain in
 the repository, but are not included in the core installation. Their presence
@@ -42,9 +42,9 @@ platform's discovery document advertises its capabilities.
 ```text
 Developer                       Installed platform
 ---------                       ------------------
-void connect <url>       ------> Discovery document
-void auth login         ------> API + enabled login provider
-void deploy             ------> API
+nosam connect <url>       ------> Discovery document
+nosam auth login         ------> API + enabled login provider
+nosam deploy             ------> API
                                  | validate manifest and provision resources
                                  | upload worker and assets; run migrations
                                  | publish active routing record
@@ -57,7 +57,7 @@ Browser ---------------------> Dispatch
 Application worker ----------> Proxy (AI, remote bindings, revalidation)
 Inbound email ---------------> Email gateway -> API route check -> Application worker
 Application tail events -----> Tail -> Analytics Engine -> API log queries
-void platform user list ------> Administrator API
+nosam platform user list ------> Administrator API
 ```
 
 The API stages deployments before changing the active routing record. Worker

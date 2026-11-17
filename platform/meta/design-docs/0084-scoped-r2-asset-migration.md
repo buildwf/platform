@@ -16,18 +16,18 @@ Cloudflare's Worker asset upload and the dispatch fallback mirror remain.
 
 Persisted entries carry `store: 'r2', scope: 'project'` only after scoped
 verification. Older `store: 'r2'` metadata alone cannot bypass scoped inventory.
-The reserved `/.void-deploy/` cachebuster is provider metadata, not a mirrored
+The reserved `/.nosam-deploy/` cachebuster is provider metadata, not a mirrored
 serving asset, and is excluded from migration.
 
 ## Migration
 
-`void platform system asset-migrations` inventories active deployment pointers,
+`nosam platform system asset-migrations` inventories active deployment pointers,
 retained rollback targets, and stored Worker bundles. It includes active targets
 regardless of their historical status. The paginated result reports metadata
 requiring migration and invalid persisted or serving manifests; it does not
 replace reading and verifying asset bodies.
 
-`void platform deployment migrate-assets <id>` previews and applies bounded
+`nosam platform deployment migrate-assets <id>` previews and applies bounded
 pages of eight unique hashes and a 32 MiB body budget. A larger R2 object
 is processed alone using streams. The CLI confirms
 once, pins each page to its fresh preview, and accepts a successful page's cursor

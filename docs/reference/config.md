@@ -1,5 +1,5 @@
 ---
-description: 'Configure routing, inference, resources, and deployment in void.config.ts.'
+description: 'Configure routing, inference, resources, and deployment in nosam.config.ts.'
 outline: deep
 ---
 
@@ -7,13 +7,13 @@ outline: deep
 
 ## Config File Format
 
-Use `void.config.ts` to configure your app. For a guided introduction, start with [What is Nosam?](../guide/).
+Use `nosam.config.ts` to configure your app. For a guided introduction, start with [What is Nosam?](../guide/).
 
-Put `void.config.ts` at the project root and import `defineConfig` from `void/config`. All fields are optional. `void init`, `void deploy`, and `void migrate` can convert older Nosam and Cloudflare JSON config files, saving backups under `.void/config-migration/`. Commit `void.config.ts` and `void.lock.json` when Nosam creates the lock; it records resource IDs and migration history.
+Put `nosam.config.ts` at the project root and import `defineConfig` from `nosam/config`. All fields are optional. `nosam init`, `nosam deploy`, and `nosam migrate` can convert older Nosam and Cloudflare JSON config files, saving backups under `.nosam/config-migration/`. Commit `nosam.config.ts` and `nosam.lock.json` when Nosam creates the lock; it records resource IDs and migration history.
 
 ```ts
-// void.config.ts
-import { defineConfig } from 'void/config';
+// nosam.config.ts
+import { defineConfig } from 'nosam/config';
 
 export default defineConfig({
   sourceDir: 'src',
@@ -42,7 +42,7 @@ export default defineConfig({
 
 TypeScript provides editor completion and checks. Nosam validates the config again when it runs, including values computed at runtime.
 
-Use relative imports or package names inside `void.config.ts`. TypeScript path aliases such as `@/lib/theme` are not supported.
+Use relative imports or package names inside `nosam.config.ts`. TypeScript path aliases such as `@/lib/theme` are not supported.
 
 The shorter JSON fragments below show individual fields to place inside `defineConfig({ ... })`.
 
@@ -60,7 +60,7 @@ When set, those conventions move under the configured directory:
 { "sourceDir": "src" }
 ```
 
-With that config, Nosam reads `src/routes`, `src/db/schema.ts`, `src/db/migrations`, `src/auth.ts`, and `src/env.ts`. Project files such as `void.config.ts`, `vite.config.ts`, `package.json`, `tsconfig.json`, `public/`, and the local-only `.env` stay at the project root. Nosam does not scan both locations; if source conventions exist in both places during dev/build, remove one copy so the active source tree is unambiguous.
+With that config, Nosam reads `src/routes`, `src/db/schema.ts`, `src/db/migrations`, `src/auth.ts`, and `src/env.ts`. Project files such as `nosam.config.ts`, `vite.config.ts`, `package.json`, `tsconfig.json`, `public/`, and the local-only `.env` stay at the project root. Nosam does not scan both locations; if source conventions exist in both places during dev/build, remove one copy so the active source tree is unambiguous.
 
 ### `ai`
 
@@ -153,14 +153,14 @@ Use an object to also set how Drizzle names columns declared without a name:
 | Key       | Values                                  | Description                                                                                                                                                                         |
 | --------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dialect` | `"sqlite"` (default), `"pg"`, `"mysql"` | Database backend. `"sqlite"` is D1                                                                                                                                                  |
-| `casing`  | `"snake_case"`, `"camelCase"`           | [Drizzle casing](https://orm.drizzle.team/docs/sql-schema-declaration#camel-and-snake-casing) for `void/db` queries and `void db` commands. Omit to use each key as its column name |
+| `casing`  | `"snake_case"`, `"camelCase"`           | [Drizzle casing](https://orm.drizzle.team/docs/sql-schema-declaration#camel-and-snake-casing) for `nosam/db` queries and `nosam db` commands. Omit to use each key as its column name |
 
 When using an external database:
 
 - Add `DATABASE_URL` to `.env` for local development
-- Import schema helpers from `void/schema-pg` or `void/schema-mysql`
-- `void/db` connects via Hyperdrive in production, direct connection locally
-- `void gen model` generates dialect-appropriate table and column builders
+- Import schema helpers from `nosam/schema-pg` or `nosam/schema-mysql`
+- `nosam/db` connects via Hyperdrive in production, direct connection locally
+- `nosam gen model` generates dialect-appropriate table and column builders
 
 ### `email`
 
@@ -192,19 +192,19 @@ Use a deployed Nosam project's D1, KV, and R2 resources during local development
 
 **Requirements:**
 
-- Must be logged in (`void account login`)
-- Must have a linked project (`void project link`)
+- Must be logged in (`nosam account login`)
+- Must have a linked project (`nosam project link`)
 - Only affects D1 (`DB`), KV (`KV`), and R2 (`STORAGE`) bindings
 
-You can also enable remote mode via the `VOID_REMOTE=1` environment variable without modifying `void.config.ts`:
+You can also enable remote mode via the `NOSAM_REMOTE=1` environment variable without modifying `nosam.config.ts`:
 
 ```bash
-VOID_REMOTE=1 pnpm dev
+NOSAM_REMOTE=1 pnpm dev
 ```
 
 ### `sandbox`
 
-Enable and configure Cloudflare Sandboxes. Importing from `void/sandbox` enables this automatically.
+Enable and configure Cloudflare Sandboxes. Importing from `nosam/sandbox` enables this automatically.
 
 ```json
 {
@@ -229,7 +229,7 @@ Enable and configure Cloudflare Sandboxes. Importing from `void/sandbox` enables
 
 Supported sizes are `lite` and `standard-1` through `standard-4`. Native deploys build Dockerfiles with Docker; registry images must be digest-pinned references from the Cloudflare managed registry. Custom images must include the matching Sandbox SDK helper. For a local Dockerfile, supply `platformImage` when deploying to a managed platform. See [Sandboxes](../guide/sandboxes.md) for image setup and runtime examples.
 
-Set `durableObject` to a file name in `durable-objects/` (for example `"bot"`) to attach the container image to that class instead of Nosam's `SandboxV1`. The class must use `this.ctx.container`; its binding and class come from the file, so `binding` and `className` must be omitted. It needs a native Cloudflare deploy: managed platforms run containers in their own controller, so use `getSandbox` from `void/sandbox` there.
+Set `durableObject` to a file name in `durable-objects/` (for example `"bot"`) to attach the container image to that class instead of Nosam's `SandboxV1`. The class must use `this.ctx.container`; its binding and class come from the file, so `binding` and `className` must be omitted. It needs a native Cloudflare deploy: managed platforms run containers in their own controller, so use `getSandbox` from `nosam/sandbox` there.
 
 Sandbox requires [Workers Paid](https://dash.cloudflare.com/?to=/:account/workers/plans) and Containers access. Managed runtime tokens need Account / Containers: Edit and Account / Cloudchamber: Edit. See [Sandbox deployment](../guide/sandboxes.md#deployment).
 
@@ -247,7 +247,7 @@ The project setting overrides the platform's default. Without either, Cloudflare
 
 ### `worker`
 
-Cloudflare Workers settings, including the `compatibility_date` pinned by `void init`. Put binding arrays such as `d1_databases`, `kv_namespaces`, and `r2_buckets` in [`cloudflare`](#cloudflare).
+Cloudflare Workers settings, including the `compatibility_date` pinned by `nosam init`. Put binding arrays such as `d1_databases`, `kv_namespaces`, and `r2_buckets` in [`cloudflare`](#cloudflare).
 
 | Field                 | Type       | Description                            |
 | --------------------- | ---------- | -------------------------------------- |
@@ -268,11 +268,11 @@ Cloudflare Workers settings, including the `compatibility_date` pinned by `void 
 }
 ```
 
-`worker.vars` values must be strings. Root `.env` values override them during local development only. Production builds do not load `.env`, and reject any `worker.vars` name declared as a server key in `env.ts`. Use `void secret put` for production server values.
+`worker.vars` values must be strings. Root `.env` values override them during local development only. Production builds do not load `.env`, and reject any `worker.vars` name declared as a server key in `env.ts`. Use `nosam secret put` for production server values.
 
 Managed deployments include `worker.vars` as plain-text bindings. A remote secret with the same name takes precedence. To use the configured variable instead, remove that remote secret and deploy again. Secret deletion changes the running Worker immediately, so plan this migration during a maintenance window.
 
-`worker.limits.cpu_ms` sets the CPU time limit per request, from 1 to 300000 ms. On a Nosam platform, deploy fails if the limit exceeds the account plan; lower it in `void.config.ts` before retrying. Rollback instead caps the old limit at the current plan ceiling. On direct deploys, [Cloudflare enforces the value](https://developers.cloudflare.com/workers/platform/limits/#cpu-time): Workers Free allows up to 10 ms and Workers Paid up to 300000 ms per request.
+`worker.limits.cpu_ms` sets the CPU time limit per request, from 1 to 300000 ms. On a Nosam platform, deploy fails if the limit exceeds the account plan; lower it in `nosam.config.ts` before retrying. Rollback instead caps the old limit at the current plan ceiling. On direct deploys, [Cloudflare enforces the value](https://developers.cloudflare.com/workers/platform/limits/#cpu-time): Workers Free allows up to 10 ms and Workers Paid up to 300000 ms per request.
 
 ```json
 {
@@ -286,7 +286,7 @@ Managed deployments include `worker.vars` as plain-text bindings. A remote secre
 
 ### `cloudflare`
 
-The complete Cloudflare Worker configuration for direct Cloudflare builds and deployment. Put custom bindings, `name`, `account_id`, routes, services, vars, migrations, and any other Cloudflare fields here. Nosam passes these fields through to the generated Cloudflare build configuration. Settings you edit here take precedence over values Nosam previously recorded in `void.lock.json`.
+The complete Cloudflare Worker configuration for direct Cloudflare builds and deployment. Put custom bindings, `name`, `account_id`, routes, services, vars, migrations, and any other Cloudflare fields here. Nosam passes these fields through to the generated Cloudflare build configuration. Settings you edit here take precedence over values Nosam previously recorded in `nosam.lock.json`.
 
 ```ts
 // Inside defineConfig({ ... })
@@ -297,11 +297,11 @@ cloudflare: {
 },
 ```
 
-Nosam writes a generated Cloudflare config for its tooling and records provisioned resource IDs and append-only migration history in `void.lock.json`. Commit the lock when it changes. Root `wrangler.jsonc` and `wrangler.json` are migrated on `void init` or `void deploy`; Nosam keeps backup copies under `.void/config-migration/`.
+Nosam writes a generated Cloudflare config for its tooling and records provisioned resource IDs and append-only migration history in `nosam.lock.json`. Commit the lock when it changes. Root `wrangler.jsonc` and `wrangler.json` are migrated on `nosam init` or `nosam deploy`; Nosam keeps backup copies under `.nosam/config-migration/`.
 
-Bindings declared here are typed on `c.env` after `void prepare` or starting a dev server or build. See [Custom Binding Types](../guide/type-safety.md#custom-binding-types) for an example and RPC type overrides.
+Bindings declared here are typed on `c.env` after `nosam prepare` or starting a dev server or build. See [Custom Binding Types](../guide/type-safety.md#custom-binding-types) for an example and RPC type overrides.
 
-If you need to remove a value that Nosam previously generated, remove it from the `resolved` object in `void.lock.json`. Nosam refreshes the generated Cloudflare file on the next command. Put ongoing custom settings in `cloudflare` in `void.config.ts`.
+If you need to remove a value that Nosam previously generated, remove it from the `resolved` object in `nosam.lock.json`. Nosam refreshes the generated Cloudflare file on the next command. Put ongoing custom settings in `cloudflare` in `nosam.config.ts`.
 
 ### `deploy.cloudflare.mode`
 
@@ -312,7 +312,7 @@ Direct Cloudflare deploys use `staged` by default: Nosam checks the new Worker b
 deploy: { cloudflare: { mode: 'atomic' } },
 ```
 
-This choice applies to subsequent `void deploy` runs. Atomic deployment sends traffic to the new Worker before Nosam checks readiness; a Durable Object class migration cannot be rolled back across its migration boundary. Use `--atomic` for a single deployment instead. `deploy` is a Nosam setting and is not passed to Cloudflare's Worker config.
+This choice applies to subsequent `nosam deploy` runs. Atomic deployment sends traffic to the new Worker before Nosam checks readiness; a Durable Object class migration cannot be rolled back across its migration boundary. Use `--atomic` for a single deployment instead. `deploy` is a Nosam setting and is not passed to Cloudflare's Worker config.
 
 ### `routing`
 
@@ -338,7 +338,7 @@ routing: {
 }
 ```
 
-The default is `false`; `void init` enables it for new apps. See [Checked URL strings](../guide/type-safety#checked-url-strings) for accepted URLs and casts for values you validate at runtime.
+The default is `false`; `nosam init` enables it for new apps. See [Checked URL strings](../guide/type-safety#checked-url-strings) for accepted URLs and casts for values you validate at runtime.
 
 #### `routing.headers`
 
@@ -437,13 +437,13 @@ Each binding accepts `true` (use default name), `false` (disable), or a string (
 | `ai`      | `AI`            | `Ai`          | `"ai": "MY_AI"`          |
 | `email`   | —               | —             | Boolean only             |
 
-Custom binding names work with `void/db`, `void/kv`, and `void/storage` during development and deployment. Custom AI names also work with `void/ai` on direct Cloudflare deploys; managed Workers AI uses the platform's proxy.
+Custom binding names work with `nosam/db`, `nosam/kv`, and `nosam/storage` during development and deployment. Custom AI names also work with `nosam/ai` on direct Cloudflare deploys; managed Workers AI uses the platform's proxy.
 
-`email` is a boolean feature switch. Set it to `true` to enable [email](../guide/email.md) and the local email inbox without an import from `void/email`, or `false` to disable them. On a Nosam platform, sending uses the platform proxy. Direct Cloudflare setup records a `SEND_EMAIL` binding in `void.lock.json`; see [`email.from`](#email).
+`email` is a boolean feature switch. Set it to `true` to enable [email](../guide/email.md) and the local email inbox without an import from `nosam/email`, or `false` to disable them. On a Nosam platform, sending uses the platform proxy. Direct Cloudflare setup records a `SEND_EMAIL` binding in `nosam.lock.json`; see [`email.from`](#email).
 
 #### `inference.build`
 
-Override the build command. Useful for static apps with custom build scripts. If omitted, the CLI uses the detected default build command for the current app type. It applies to every app type, including `"void"` (where the default is `vite build`).
+Override the build command. Useful for static apps with custom build scripts. If omitted, the CLI uses the detected default build command for the current app type. It applies to every app type, including `"nosam"` (where the default is `vite build`).
 
 ```json
 { "inference": { "build": "vitepress build" } }
@@ -469,7 +469,7 @@ Override which directories are scanned for [binding inference](./resource-infere
 
 App type. If omitted, auto-detected on first deploy. See [Supported App Types](../guide/app-types.md).
 
-- `"void"`: React SPA assets plus a Worker for API routes, middleware, and jobs
+- `"nosam"`: React SPA assets plus a Worker for API routes, middleware, and jobs
 - `"static"`: fully rendered HTML files from VitePress, plain HTML, or external tools. Non-matching paths return `404.html` or a 404 response.
 - `"spa"`: static output with SPA fallback. Non-file paths fall back to `index.html` with a `200` status so client-side routing works out of the box.
 

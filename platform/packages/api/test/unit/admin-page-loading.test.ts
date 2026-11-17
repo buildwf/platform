@@ -26,7 +26,7 @@ it('loads only requested views and skips them for page-protocol responses', asyn
   const app = new Hono<ApiEnv>().get('/admin/', (context) =>
     renderAdminPage(context, 'dashboard', 'Dashboard', { platformName: 'Test' }),
   );
-  const response = await app.request('/admin/', { headers: { 'X-VoidPages': 'true' } });
+  const response = await app.request('/admin/', { headers: { 'X-NosamPages': 'true' } });
 
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({

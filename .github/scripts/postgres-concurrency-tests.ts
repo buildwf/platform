@@ -25,7 +25,7 @@ function usesPostgresEnvironment(node: unknown): boolean {
     return false;
   }
   if (
-    memberName(node) === 'VOID_TEST_DATABASE_URL' &&
+    memberName(node) === 'NOSAM_TEST_DATABASE_URL' &&
     isRecord(node.object) &&
     memberName(node.object) === 'env' &&
     isRecord(node.object.object) &&

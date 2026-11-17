@@ -3,7 +3,7 @@ import {
   deployArtifactDigest,
   validateManifestShape,
   type DeployArtifact,
-} from '@void/deploy-core';
+} from '@nosam/deploy-core';
 import { and, count, eq, gt, sql } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import { getCookie } from 'hono/cookie';
@@ -25,7 +25,7 @@ import { initializeNewProjectZeroTrust } from '../zero-trust/project.ts';
 
 const app = new Hono<ApiEnv>();
 const expiry = (seconds: number) => new Date(Date.now() + seconds * 1000).toISOString();
-const cookieName = '__Host-void-preview';
+const cookieName = '__Host-nosam-preview';
 
 async function permittedGrant(context: Context<ApiEnv>) {
   const result = await oauthBearer(
@@ -269,7 +269,7 @@ export async function launchPreview({ db, env, grant }: PreviewScope, id: string
     expires_at: expiry(60),
   });
   const url = new URL(projectUrl(project, env));
-  url.searchParams.set('__void_preview', ticket);
+  url.searchParams.set('__nosam_preview', ticket);
   return { url: url.href };
 }
 
@@ -289,7 +289,7 @@ app.post('/previews/:id/launch', async (context) =>
 );
 
 app.all('/preview-serve/:id', async (context) => {
-  const original = context.req.header('X-Void-Preview-URL');
+  const original = context.req.header('X-Nosam-Preview-URL');
   if (!original || !context.env.PREVIEW_DISPATCH) {
     throw new OAuthError('access_denied', 'Preview unavailable.', 404);
   }
@@ -302,7 +302,7 @@ app.all('/preview-serve/:id', async (context) => {
   ) {
     throw new OAuthError('access_denied', 'Preview unavailable.', 404);
   }
-  const ticket = url.searchParams.get('__void_preview');
+  const ticket = url.searchParams.get('__nosam_preview');
   if (ticket && context.req.method === 'GET') {
     const [receipt] = await context
       .get('db')
@@ -368,7 +368,7 @@ app.all('/preview-serve/:id', async (context) => {
       key === 'cookie' ||
       key === 'authorization' ||
       key.startsWith('cf-access-') ||
-      key.startsWith('x-void-')
+      key.startsWith('x-nosam-')
     ) {
       headers.delete(key);
     }

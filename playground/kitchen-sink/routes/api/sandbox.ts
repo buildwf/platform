@@ -1,10 +1,10 @@
-import { defineHandler } from 'void';
-import { UsageLimit } from 'void/limits';
-import { getSandbox, type SandboxClient } from 'void/sandbox';
+import { defineHandler } from 'nosam';
+import { UsageLimit } from 'nosam/limits';
+import { getSandbox, type SandboxClient } from 'nosam/sandbox';
 import { sampleRequests } from '../../lib/sandbox-demo.ts';
 
 const MAX_CODE_LENGTH = 8_000;
-const WORKDIR = '/workspace/void-kitchen-sink-code-lab';
+const WORKDIR = '/workspace/nosam-kitchen-sink-code-lab';
 
 const RUNNER = `import { readFile, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";

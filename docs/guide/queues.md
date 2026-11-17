@@ -11,13 +11,13 @@ Use queues to process work asynchronously, such as sending emails or handling up
 
 Create a consumer in `queues/`. TypeScript and JavaScript files are supported (`.ts`, `.mts`, `.js`, `.mjs`). Its path determines the queue name: `queues/emails.ts` creates `emails`, and `queues/order/notifications.ts` creates `order-notifications`. Each queue must have a unique name.
 
-The resulting name must follow Cloudflare's queue naming rules: 1–63 characters, only letters, digits, and `-`, beginning and ending with a letter or digit. On `void deploy --platform cloudflare`, the Cloudflare queue also carries the Worker name, so the limit applies to that full name; see [Cloudflare queue names](#cloudflare-queue-names).
+The resulting name must follow Cloudflare's queue naming rules: 1–63 characters, only letters, digits, and `-`, beginning and ending with a letter or digit. On `nosam deploy --platform cloudflare`, the Cloudflare queue also carries the Worker name, so the limit applies to that full name; see [Cloudflare queue names](#cloudflare-queue-names).
 
 Export a default handler wrapped with [`defineQueue<T>`](../reference/api/handlers.md#definequeue-t-handler). `T` defines the message body for both the consumer and calls to `send()`:
 
 ```ts
 // queues/emails.ts
-import { defineQueue } from 'void';
+import { defineQueue } from 'nosam';
 
 interface Message {
   to: string;
@@ -36,12 +36,12 @@ Files or directories starting with `_` are ignored.
 
 ## Sending messages
 
-Import the typed `queues` proxy from `void/queues` to send messages. Each queue is available as a property matching its name, with full type safety from the consumer's `defineQueue<T>` generic.
+Import the typed `queues` proxy from `nosam/queues` to send messages. Each queue is available as a property matching its name, with full type safety from the consumer's `defineQueue<T>` generic.
 
 ```ts
 // routes/api/orders.ts
-import { defineHandler } from 'void';
-import { queues } from 'void/queues';
+import { defineHandler } from 'nosam';
+import { queues } from 'nosam/queues';
 
 export const POST = defineHandler(async (c) => {
   const order = await c.req.json();
@@ -87,7 +87,7 @@ Export named constants to configure how Cloudflare delivers batches to your cons
 
 ```ts
 // queues/emails.ts
-import { defineQueue } from 'void';
+import { defineQueue } from 'nosam';
 
 interface Message {
   to: string;
@@ -121,7 +121,7 @@ Nosam provisions queues and connects their producers and consumers when you depl
 
 ### Cloudflare queue names
 
-With `void deploy --platform cloudflare`, queue names include the Worker name: `queues/jobs.ts` in `app-staging` creates `app-staging-jobs`. Underscores in the Worker name become hyphens. Your app uses `queues.jobs.send()` in every environment.
+With `nosam deploy --platform cloudflare`, queue names include the Worker name: `queues/jobs.ts` in `app-staging` creates `app-staging-jobs`. Underscores in the Worker name become hyphens. Your app uses `queues.jobs.send()` in every environment.
 
 Keep the full name within 63 characters and unique within the account. Each Cloudflare queue supports one consumer; Nosam reports naming or consumer conflicts during deploy.
 
@@ -134,7 +134,7 @@ In native Nosam apps, sending a message through a queue binding automatically in
 You can also manually dispatch a batch by POSTing to the dev endpoint Nosam exposes:
 
 ```
-POST /__void/queue
+POST /__nosam/queue
 Content-Type: application/json
 { "queue": "<queue-name>", "messages": [{ "id": "1", "timestamp": <unix_ms>, "body": <any>, "attempts": 1 }] }
 ```
@@ -142,8 +142,8 @@ Content-Type: application/json
 The endpoint requires a local dev trigger token. Nosam prints a paste-ready curl command with the current token when the dev server starts.
 
 ```bash
-curl -X POST http://localhost:5173/__void/queue \
+curl -X POST http://localhost:5173/__nosam/queue \
   -H "Content-Type: application/json" \
-  -H "x-void-dev-trigger: <printed-token>" \
+  -H "x-nosam-dev-trigger: <printed-token>" \
   -d '{"queue":"my-queue","messages":[{"id":"1","timestamp":'"$(date +%s000)"',"body":{"hello":"world"},"attempts":1}]}'
 ```

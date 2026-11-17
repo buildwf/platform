@@ -1,5 +1,5 @@
 {
-  "name": "void-proxy",
+  "name": "nosam-proxy",
   "main": "src/index.ts",
   "compatibility_date": "2026-02-12",
   "compatibility_flags": ["nodejs_compat"],
@@ -13,13 +13,13 @@
   "services": [
     {
       "binding": "API",
-      "service": "void-api",
+      "service": "nosam-api",
     },
   ],
   "dispatch_namespaces": [
     {
       "binding": "DISPATCH",
-      "namespace": "void-users",
+      "namespace": "nosam-users",
     },
   ],
   // Account-level send_email binding. No allowed_destination_addresses or
@@ -32,7 +32,7 @@
   "send_email": [{ "name": "SEND_EMAIL" }],
   // Platform mail zone for this environment. Read by src/email.ts and
   // src/email-router.ts; mirrored to deployed user workers as the
-  // __VOID_EMAIL_DOMAIN binding. Never defaulted in code.
+  // __NOSAM_EMAIL_DOMAIN binding. Never defaulted in code.
   "vars": { "EMAIL_SENDER_DOMAIN": "mail.void.cloud" },
   // Encrypted Worker secrets: JWT_SECRET, EMAIL_SIGNING_SECRET, CF_ACCOUNT_ID, CF_API_TOKEN
   "observability": {
@@ -44,7 +44,7 @@
   "routes": [{ "pattern": "proxy.void.cloud", "custom_domain": true }],
   "env": {
     "production": {
-      "name": "void-proxy",
+      "name": "nosam-proxy",
       "secrets": { "required": ["EMAIL_SIGNING_SECRET"] },
       "ai": { "binding": "AI" },
       "kv_namespaces": [
@@ -56,13 +56,13 @@
       "services": [
         {
           "binding": "API",
-          "service": "void-api",
+          "service": "nosam-api",
         },
       ],
       "dispatch_namespaces": [
         {
           "binding": "DISPATCH",
-          "namespace": "void-users",
+          "namespace": "nosam-users",
         },
       ],
       "send_email": [{ "name": "SEND_EMAIL" }],
@@ -70,7 +70,7 @@
       "routes": [{ "pattern": "proxy.void.cloud", "custom_domain": true }],
     },
     "staging": {
-      "name": "void-proxy-staging",
+      "name": "nosam-proxy-staging",
       "secrets": { "required": ["EMAIL_SIGNING_SECRET"] },
       "ai": { "binding": "AI" },
       "kv_namespaces": [
@@ -82,13 +82,13 @@
       "services": [
         {
           "binding": "API",
-          "service": "void-api-staging",
+          "service": "nosam-api-staging",
         },
       ],
       "dispatch_namespaces": [
         {
           "binding": "DISPATCH",
-          "namespace": "void-users-staging",
+          "namespace": "nosam-users-staging",
         },
       ],
       "send_email": [{ "name": "SEND_EMAIL" }],

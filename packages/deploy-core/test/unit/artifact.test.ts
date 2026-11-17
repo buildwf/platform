@@ -9,7 +9,7 @@ import {
 describe('deployment artifacts', () => {
   const manifest: DeployManifest = {
     version: 3,
-    type: 'void',
+    type: 'nosam',
     bindings: { kv: ['CACHE'] },
     assetConfig: { not_found_handling: 'none' },
   };

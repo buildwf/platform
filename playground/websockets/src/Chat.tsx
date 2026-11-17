@@ -1,8 +1,8 @@
 import { startTransition, useEffect, useEffectEvent, useRef, useState } from 'react';
-import type { WebSocketRouteMap } from 'void/routes';
-import { connect, type VoidSocket } from 'void/ws';
+import type { WebSocketRouteMap } from 'nosam/routes';
+import { connect, type NosamSocket } from 'nosam/ws';
 
-type ChatSocket = VoidSocket<'/ws/chat/:room'>;
+type ChatSocket = NosamSocket<'/ws/chat/:room'>;
 type ChatClientEvent = WebSocketRouteMap['/ws/chat/:room']['client'];
 type ChatServerEvent = WebSocketRouteMap['/ws/chat/:room']['server'];
 

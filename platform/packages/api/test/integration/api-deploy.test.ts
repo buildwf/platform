@@ -1,4 +1,4 @@
-import { createDefaultPlanCatalog } from '@void/platform/plans';
+import { createDefaultPlanCatalog } from '@nosam/platform/plans';
 import { desc, eq, sql } from 'drizzle-orm';
 import {
   describe,
@@ -83,8 +83,8 @@ function sqliteMigrationCapabilities(): Response {
     ...SQLITE_MIGRATIONS,
     destructiveValidation: 'passed',
     endpoints: {
-      app: '/__void/migrate/app',
-      reconcile: '/__void/migrate/app/attempt/:attemptId',
+      app: '/__nosam/migrate/app',
+      reconcile: '/__nosam/migrate/app/attempt/:attemptId',
     },
   });
 }
@@ -814,7 +814,7 @@ describe('POST /projects/:id/deploy', () => {
       workerName: expect.stringMatching(/^user-routed-app-dpl_/),
       projectId: project.id,
       userId: user.id,
-      type: 'void',
+      type: 'nosam',
       version: expect.stringMatching(/^dpl_/),
       limits: { cpuMs: 10, subRequests: 50 },
     });
@@ -840,10 +840,10 @@ describe('POST /projects/:id/deploy', () => {
         identityProviderIds: ['idp-1'],
         policyIds: ['policy-1'],
         credential: { ciphertext: 'unused', iv: 'unused', keyVersion: 'v1' },
-        wildcardApplicationName: 'void-test-projects',
+        wildcardApplicationName: 'nosam-test-projects',
         wildcardApplication: {
           id: 'access-wildcard',
-          name: 'void-test-projects',
+          name: 'nosam-test-projects',
           audience,
           destinations: ['*.void.app'],
         },
@@ -900,8 +900,8 @@ describe('POST /projects/:id/deploy', () => {
   );
 
   it.each([
-    { notFoundHandling: 'single-page-application', type: 'void' },
-    { notFoundHandling: '404-page', type: 'void' },
+    { notFoundHandling: 'single-page-application', type: 'nosam' },
+    { notFoundHandling: '404-page', type: 'nosam' },
   ])(
     'rolls back a retained $type Worker with $notFoundHandling assets without storing R2 bundles',
     async ({ notFoundHandling, type }) => {
@@ -986,7 +986,7 @@ describe('POST /projects/:id/deploy', () => {
       workerName: expect.stringMatching(/^user-ssr-app-dpl_/),
       projectId: project.id,
       userId: user.id,
-      type: 'void',
+      type: 'nosam',
       ssr: true,
       version: expect.stringMatching(/^dpl_/),
       limits: { cpuMs: 10, subRequests: 50 },
@@ -1011,7 +1011,7 @@ describe('POST /projects/:id/deploy', () => {
     const uploadUrl =
       typeof uploadCall![0] === 'string' ? uploadCall![0] : uploadCall![0].toString();
     expect(uploadUrl).toContain(
-      `/accounts/${CF_ACCOUNT_ID}/workers/dispatch/namespaces/void-users/scripts/user-worker-app-dpl_`,
+      `/accounts/${CF_ACCOUNT_ID}/workers/dispatch/namespaces/nosam-users/scripts/user-worker-app-dpl_`,
     );
   });
 
@@ -1452,7 +1452,7 @@ describe('POST /projects/:id/deploy', () => {
     expect(createD1Call).toBeUndefined();
   });
 
-  it.each(['void'])(
+  it.each(['nosam'])(
     'skips app and auth SQL for a %s deployment, then migrates on a normal deploy',
     async (type) => {
       const user = await createTestUser(env.db);
@@ -1465,21 +1465,21 @@ describe('POST /projects/:id/deploy', () => {
           fetch: async (request: Request) => {
             const path = new URL(request.url).pathname;
             calls.push(path);
-            if (path === '/__void/ready') {
+            if (path === '/__nosam/ready') {
               return Response.json({ ready: true });
             }
-            if (path === '/__void/migrate/capabilities') {
+            if (path === '/__nosam/migrate/capabilities') {
               return Response.json({
                 ...SQLITE_MIGRATIONS,
                 destructiveValidation: 'passed',
                 endpoints: {
-                  app: '/__void/migrate/app',
-                  auth: '/__void/migrate/auth',
-                  reconcile: '/__void/migrate/app/attempt/:attemptId',
+                  app: '/__nosam/migrate/app',
+                  auth: '/__nosam/migrate/auth',
+                  reconcile: '/__nosam/migrate/app/attempt/:attemptId',
                 },
               });
             }
-            if (path === '/__void/migrate/auth') {
+            if (path === '/__nosam/migrate/auth') {
               return Response.json({ ok: true, protocolVersion: 2 });
             }
             return Response.json({
@@ -1509,7 +1509,7 @@ describe('POST /projects/:id/deploy', () => {
               manifest: {
                 version: 3,
                 type,
-                auth: type === 'void',
+                auth: type === 'nosam',
                 bindings: { d1: ['DB'] },
                 migrations: SQLITE_MIGRATIONS,
                 ...(skip ? { migrationMode: 'skip' } : {}),
@@ -1522,7 +1522,7 @@ describe('POST /projects/:id/deploy', () => {
           const done = requireEvent<DoneEvent>(events, 'done');
           expect(done.migrations).toBe(skip ? undefined : 1);
           if (skip) {
-            expect(calls).toEqual(['/__void/ready']);
+            expect(calls).toEqual(['/__nosam/ready']);
             expect(
               events.some((event) => isDeployEvent(event) && event.event === 'migration_start'),
             ).toBe(false);
@@ -1536,8 +1536,8 @@ describe('POST /projects/:id/deploy', () => {
                 .where(eq(projectMigrations.project_id, project.id)),
             ).toEqual([]);
           } else {
-            expect(calls).toContain('/__void/migrate/app');
-            expect(calls).toContain('/__void/migrate/auth');
+            expect(calls).toContain('/__nosam/migrate/app');
+            expect(calls).toContain('/__nosam/migrate/auth');
           }
         }
       } finally {
@@ -1566,10 +1566,10 @@ describe('POST /projects/:id/deploy', () => {
       get: () => ({
         fetch: async (req: Request) => {
           const url = new URL(req.url);
-          if (url.pathname === '/__void/migrate/capabilities') {
+          if (url.pathname === '/__nosam/migrate/capabilities') {
             return sqliteMigrationCapabilities();
           }
-          if (url.pathname === '/__void/ready') {
+          if (url.pathname === '/__nosam/ready') {
             return Response.json({ ready: true });
           }
           return Response.json({
@@ -1648,7 +1648,7 @@ describe('POST /projects/:id/deploy', () => {
       workerName: expect.stringMatching(/^user-domain-deploy-dpl_/),
       projectId: project.id,
       userId: user.id,
-      type: 'void',
+      type: 'nosam',
       version: expect.stringMatching(/^dpl_/),
       limits: { cpuMs: 10, subRequests: 50 },
     });
@@ -1789,7 +1789,7 @@ describe('POST /projects/:id/deploy', () => {
       const project = await createTestProject(env.db, user.id, 'bad-module-name');
       const res = await app.fetch(
         await buildDeployRequest(env, project.id, user.jwt, {
-          manifest: { version: 3, bindings: {}, type: 'void', ...manifest },
+          manifest: { version: 3, bindings: {}, type: 'nosam', ...manifest },
           workers,
         }),
         env,
@@ -2095,8 +2095,8 @@ describe('POST /projects/:id/deploy', () => {
     await res.text();
 
     // Verify queue routing KV entry (key uses deterministic queue name).
-    // proxyToken must be present so void-dispatch can authenticate the relay
-    // against the user worker's framework-generated /__void/queue endpoint.
+    // proxyToken must be present so nosam-dispatch can authenticate the relay
+    // against the user worker's framework-generated /__nosam/queue endpoint.
     const expectedQueueName = `${project.id}-emails`.toLowerCase().replaceAll('_', '-');
     const queueRouting = (await env.ROUTING.get(`queue:${expectedQueueName}`, 'json')) as {
       workerName: string;
@@ -2143,7 +2143,7 @@ describe('POST /projects/:id/deploy', () => {
     };
     expect(metadata.bindings).toContainEqual({
       type: 'plain_text',
-      name: '__VOID_PROXY_TOKEN',
+      name: '__NOSAM_PROXY_TOKEN',
       text: expected,
     });
 
@@ -3442,17 +3442,17 @@ describe('POST /projects/:id/deploy', () => {
         get: () => ({
           fetch: async (req: Request) => {
             const url = new URL(req.url);
-            if (url.pathname === '/__void/migrate/capabilities') {
+            if (url.pathname === '/__nosam/migrate/capabilities') {
               return sqliteMigrationCapabilities();
             }
-            if (url.pathname === '/__void/ready') {
+            if (url.pathname === '/__nosam/ready') {
               readyCalls++;
               if (readyCalls <= 3) {
                 return new Response('Assets have already been uploaded.');
               }
               return Response.json({ ready: true });
             }
-            // /__void/migrate/app
+            // /__nosam/migrate/app
             migrateCalls++;
             return Response.json({
               ok: true,
@@ -3505,10 +3505,10 @@ describe('POST /projects/:id/deploy', () => {
         get: () => ({
           fetch: async (req: Request) => {
             const url = new URL(req.url);
-            if (url.pathname === '/__void/migrate/capabilities') {
+            if (url.pathname === '/__nosam/migrate/capabilities') {
               return sqliteMigrationCapabilities();
             }
-            if (url.pathname === '/__void/ready') {
+            if (url.pathname === '/__nosam/ready') {
               await env.db
                 .update(projectMembers)
                 .set({ role: 'reader' })
@@ -3560,10 +3560,10 @@ describe('POST /projects/:id/deploy', () => {
         get: () => ({
           fetch: async (req: Request) => {
             const url = new URL(req.url);
-            if (url.pathname === '/__void/migrate/capabilities') {
+            if (url.pathname === '/__nosam/migrate/capabilities') {
               return sqliteMigrationCapabilities();
             }
-            if (url.pathname === '/__void/ready') {
+            if (url.pathname === '/__nosam/ready') {
               return Response.json({ ready: true });
             }
             return Response.json({ ok: true });
@@ -3611,16 +3611,16 @@ describe('POST /projects/:id/deploy', () => {
             fetch: async (req: Request) => {
               const url = new URL(req.url);
               calls.push(`${req.method} ${url.pathname}`);
-              if (url.pathname === '/__void/ready') {
+              if (url.pathname === '/__nosam/ready') {
                 return Response.json({ ready: true });
               }
-              if (url.pathname === '/__void/migrate/capabilities') {
+              if (url.pathname === '/__nosam/migrate/capabilities') {
                 return Response.json({
                   protocolVersion: 2,
                   endpoints: {
-                    app: '/__void/migrate/app',
-                    auth: '/__void/migrate/auth',
-                    reconcile: '/__void/migrate/app/attempt/:attemptId',
+                    app: '/__nosam/migrate/app',
+                    auth: '/__nosam/migrate/auth',
+                    reconcile: '/__nosam/migrate/app/attempt/:attemptId',
                   },
                   dialect: 'sqlite',
                   classifierVersion: 1,
@@ -3629,7 +3629,7 @@ describe('POST /projects/:id/deploy', () => {
                   destructiveValidation: 'passed',
                 });
               }
-              if (url.pathname === '/__void/migrate/app') {
+              if (url.pathname === '/__nosam/migrate/app') {
                 return Response.json({
                   ok: true,
                   protocolVersion: 2,
@@ -3648,7 +3648,7 @@ describe('POST /projects/:id/deploy', () => {
                   ],
                 });
               }
-              if (url.pathname === '/__void/migrate/auth') {
+              if (url.pathname === '/__nosam/migrate/auth') {
                 return Response.json({ ok: true, protocolVersion: 2 });
               }
               return new Response('unexpected', { status: 500 });
@@ -3679,10 +3679,10 @@ describe('POST /projects/:id/deploy', () => {
           expect(res.status).toBe(200);
           const events = parseDeployStream(await res.text());
           expect(events.at(-1)).toMatchObject({ event: 'done' });
-          expect(calls).toContain('GET /__void/migrate/capabilities');
-          expect(calls).toContain('POST /__void/migrate/app');
-          expect(calls).toContain('POST /__void/migrate/auth');
-          expect(calls).not.toContain('POST /__void/migrate');
+          expect(calls).toContain('GET /__nosam/migrate/capabilities');
+          expect(calls).toContain('POST /__nosam/migrate/app');
+          expect(calls).toContain('POST /__nosam/migrate/auth');
+          expect(calls).not.toContain('POST /__nosam/migrate');
         } finally {
           env.DISPATCH = originalDispatch;
         }
@@ -3701,16 +3701,16 @@ describe('POST /projects/:id/deploy', () => {
         get: () => ({
           fetch: async (req: Request) => {
             const url = new URL(req.url);
-            if (url.pathname === '/__void/ready') {
+            if (url.pathname === '/__nosam/ready') {
               return Response.json({ ready: true });
             }
-            if (url.pathname === '/__void/migrate/capabilities') {
+            if (url.pathname === '/__nosam/migrate/capabilities') {
               return Response.json({
                 protocolVersion: 2,
                 endpoints: {
-                  app: '/__void/migrate/app',
-                  auth: '/__void/migrate/auth',
-                  reconcile: '/__void/migrate/app/attempt/:attemptId',
+                  app: '/__nosam/migrate/app',
+                  auth: '/__nosam/migrate/auth',
+                  reconcile: '/__nosam/migrate/app/attempt/:attemptId',
                 },
                 dialect: 'sqlite',
                 classifierVersion: 1,
@@ -3719,7 +3719,7 @@ describe('POST /projects/:id/deploy', () => {
                 destructiveValidation: 'passed',
               });
             }
-            if (url.pathname === '/__void/migrate/app') {
+            if (url.pathname === '/__nosam/migrate/app') {
               return Response.json({
                 ok: true,
                 protocolVersion: 2,
@@ -3738,7 +3738,7 @@ describe('POST /projects/:id/deploy', () => {
                 ],
               });
             }
-            if (url.pathname === '/__void/migrate/auth') {
+            if (url.pathname === '/__nosam/migrate/auth') {
               return Response.json({ ok: false, error: 'auth schema rejected' }, { status: 500 });
             }
             return new Response('unexpected', { status: 500 });
@@ -3808,10 +3808,10 @@ describe('POST /projects/:id/deploy', () => {
             fetch: async (request: Request) => {
               const url = new URL(request.url);
               calls.push(request.method + ' ' + url.pathname);
-              if (url.pathname === '/__void/ready') {
+              if (url.pathname === '/__nosam/ready') {
                 return Response.json({ ready: true });
               }
-              if (url.pathname === '/__void/migrate') {
+              if (url.pathname === '/__nosam/migrate') {
                 return Response.json({
                   ok: true,
                   migrations: [{ name: '001_create_table.sql', applied: true, durationMs: 2 }],
@@ -3833,7 +3833,7 @@ describe('POST /projects/:id/deploy', () => {
             event: 'done',
             migrations: 1,
           });
-          expect(calls).toEqual(['GET /__void/ready', 'POST /__void/migrate']);
+          expect(calls).toEqual(['GET /__nosam/ready', 'POST /__nosam/migrate']);
           const rows = await env.db
             .select({ name: projectMigrations.name })
             .from(projectMigrations)
@@ -3857,17 +3857,17 @@ describe('POST /projects/:id/deploy', () => {
         get: () => ({
           fetch: async (req: Request) => {
             const url = new URL(req.url);
-            if (url.pathname === '/__void/ready') {
+            if (url.pathname === '/__nosam/ready') {
               return Response.json({ ready: true });
             }
-            if (url.pathname === '/__void/migrate/capabilities') {
+            if (url.pathname === '/__nosam/migrate/capabilities') {
               // worker build reports a different classifierVersion than the manifest (2 vs 1)
               return Response.json({
                 protocolVersion: 2,
                 endpoints: {
-                  app: '/__void/migrate/app',
-                  auth: '/__void/migrate/auth',
-                  reconcile: '/__void/migrate/app/attempt/:attemptId',
+                  app: '/__nosam/migrate/app',
+                  auth: '/__nosam/migrate/auth',
+                  reconcile: '/__nosam/migrate/app/attempt/:attemptId',
                 },
                 dialect: 'sqlite',
                 classifierVersion: 2,
@@ -3925,10 +3925,10 @@ describe('POST /projects/:id/deploy', () => {
         get: () => ({
           fetch: async (req: Request) => {
             const url = new URL(req.url);
-            if (url.pathname === '/__void/ready') {
+            if (url.pathname === '/__nosam/ready') {
               return Response.json({ ready: true });
             }
-            if (url.pathname === '/__void/migrate/capabilities') {
+            if (url.pathname === '/__nosam/migrate/capabilities') {
               // worker rejects the probe with a rich error body and a non-2xx status
               return Response.json(
                 {
@@ -3988,7 +3988,7 @@ describe('POST /projects/:id/deploy', () => {
         env.DISPATCH = {
           get: () => ({
             fetch: async (request: Request) => {
-              if (new URL(request.url).pathname === '/__void/ready') {
+              if (new URL(request.url).pathname === '/__nosam/ready') {
                 return new Response(body, { status });
               }
               migrateCalls++;
@@ -4032,7 +4032,7 @@ describe('POST /projects/:id/deploy', () => {
           get: () => ({
             fetch: async (req: Request) => {
               const url = new URL(req.url);
-              if (url.pathname === '/__void/ready') {
+              if (url.pathname === '/__nosam/ready') {
                 return new Response('Assets have already been uploaded.');
               }
               migrateCalls++;
@@ -4728,7 +4728,7 @@ describe('POST /projects/:id/deploy (static)', () => {
       .where(eq(deployments.id, source.id));
     await env.db
       .update(projects)
-      .set({ active_deployment_id: source.id, type: 'void' })
+      .set({ active_deployment_id: source.id, type: 'nosam' })
       .where(eq(projects.id, project.id));
     await env.ROUTING.put(
       project.slug,
@@ -4796,13 +4796,13 @@ describe('POST /projects/:id/deploy (static)', () => {
       .update(deployments)
       .set({
         retained: true,
-        manifest: JSON.stringify({ version: 3, type: 'void', bindings: {} }),
+        manifest: JSON.stringify({ version: 3, type: 'nosam', bindings: {} }),
         asset_hashes: JSON.stringify({ '/index.html': { hash, size: 100 } }),
       })
       .where(eq(deployments.id, source.id));
     await env.db
       .update(projects)
-      .set({ active_deployment_id: source.id, type: 'void' })
+      .set({ active_deployment_id: source.id, type: 'nosam' })
       .where(eq(projects.id, project.id));
     await env.ROUTING.put(
       project.slug,
@@ -4959,13 +4959,13 @@ describe('POST /projects/:id/deploy (static)', () => {
       id: workerDeploymentId,
       project_id: project.id,
       status: 'live',
-      manifest: JSON.stringify({ version: 4, type: 'void', bindings: {} }),
+      manifest: JSON.stringify({ version: 4, type: 'nosam', bindings: {} }),
       retained: true,
       deployed_at: sql`now()`,
     });
     await env.db
       .update(projects)
-      .set({ active_deployment_id: workerDeploymentId, type: 'void' })
+      .set({ active_deployment_id: workerDeploymentId, type: 'nosam' })
       .where(eq(projects.id, project.id));
     const fetchMock = mockCfApi();
 
@@ -5000,7 +5000,7 @@ describe('POST /projects/:id/deploy (static)', () => {
         id: `dpl_static_retained_${index.toString().padStart(3, '0')}`,
         project_id: project.id,
         status: 'live' as const,
-        manifest: JSON.stringify({ version: 4, type: 'void', bindings: {} }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam', bindings: {} }),
         asset_hashes:
           index === 0
             ? JSON.stringify({
@@ -5021,7 +5021,7 @@ describe('POST /projects/:id/deploy (static)', () => {
     );
     await env.db
       .update(projects)
-      .set({ active_deployment_id: rollbackTarget.id, type: 'void' })
+      .set({ active_deployment_id: rollbackTarget.id, type: 'nosam' })
       .where(eq(projects.id, project.id));
 
     // Model rollback after cutover commits, before the retention inventory.
@@ -5034,7 +5034,7 @@ describe('POST /projects/:id/deploy (static)', () => {
         rolledBack = true;
         await env.db
           .update(projects)
-          .set({ active_deployment_id: rollbackTarget.id, type: 'void' })
+          .set({ active_deployment_id: rollbackTarget.id, type: 'nosam' })
           .where(eq(projects.id, project.id));
       }
     });
@@ -5079,11 +5079,11 @@ describe('ambiguous go-live commit outcomes', () => {
     const source = await createTestDeployment(env.db, project.id, 'live');
     await env.db
       .update(deployments)
-      .set({ retained: true, manifest: JSON.stringify({ version: 3, type: 'void', bindings: {} }) })
+      .set({ retained: true, manifest: JSON.stringify({ version: 3, type: 'nosam', bindings: {} }) })
       .where(eq(deployments.id, source.id));
     await env.db
       .update(projects)
-      .set({ active_deployment_id: source.id, type: 'void' })
+      .set({ active_deployment_id: source.id, type: 'nosam' })
       .where(eq(projects.id, project.id));
     const abandoned = await createTestDeployment(env.db, project.id, 'pending');
     await env.db
@@ -5277,7 +5277,7 @@ describe('ambiguous go-live commit outcomes', () => {
       .where(eq(deployments.id, abandoned.id));
     await env.db
       .update(projects)
-      .set({ active_deployment_id: null, type: 'void' })
+      .set({ active_deployment_id: null, type: 'nosam' })
       .where(eq(projects.id, project.id));
     await env.ROUTING.put(
       `cutover-intent:${abandoned.id}`,
@@ -5886,10 +5886,10 @@ describe('asset_hashes storage', () => {
       get: () => ({
         fetch: async (req: Request) => {
           const url = new URL(req.url);
-          if (url.pathname === '/__void/migrate/capabilities') {
+          if (url.pathname === '/__nosam/migrate/capabilities') {
             return sqliteMigrationCapabilities();
           }
-          if (url.pathname === '/__void/ready') {
+          if (url.pathname === '/__nosam/ready') {
             return Response.json({ ready: true });
           }
           return Response.json({
@@ -6270,7 +6270,7 @@ describe('POST /projects/:id/deploy/preflight', () => {
       expect((await getProject(env.db, project.id))?.active_deployment_id).not.toBeNull();
       expect(capturedHeaders).toHaveLength(1);
       expect(capturedHeaders[0]?.get('User-Agent')).toBe(
-        `void-platform/0.27.0 void-installation/${installationId ?? 'hosted-production'}`,
+        `nosam-platform/0.27.0 nosam-installation/${installationId ?? 'hosted-production'}`,
       );
       expect(capturedHeaders[0]?.get('Authorization')).toBe(`Bearer ${env.CF_API_TOKEN}`);
     },
@@ -6324,7 +6324,7 @@ describe('POST /projects/:id/deploy/preflight', () => {
     }
     expect(capturedMetadata).toBeDefined();
     expect(capturedMetadata!.observability).toEqual({ enabled: false });
-    expect(capturedMetadata!.tail_consumers).toEqual([{ service: 'void-tail' }]);
+    expect(capturedMetadata!.tail_consumers).toEqual([{ service: 'nosam-tail' }]);
   });
 
   it('includes explicit tail_consumers metadata in worker upload', async () => {
@@ -6345,7 +6345,7 @@ describe('POST /projects/:id/deploy/preflight', () => {
     expect(res.status).toBe(200);
     await res.text();
     expect(capturedMetadata).toBeDefined();
-    expect(capturedMetadata!.tail_consumers).toEqual([{ service: 'void-tail' }]);
+    expect(capturedMetadata!.tail_consumers).toEqual([{ service: 'nosam-tail' }]);
   });
 
   it('uses TAIL_SERVICE_NAME env override in worker upload tail_consumers', async () => {
@@ -6363,7 +6363,7 @@ describe('POST /projects/:id/deploy/preflight', () => {
     });
 
     const originalTailServiceName = env.TAIL_SERVICE_NAME;
-    env.TAIL_SERVICE_NAME = 'void-tail-staging';
+    env.TAIL_SERVICE_NAME = 'nosam-tail-staging';
     try {
       const res = await app.fetch(await buildDeployRequest(env, project.id, user.jwt), env);
       expect(res.status).toBe(200);
@@ -6372,7 +6372,7 @@ describe('POST /projects/:id/deploy/preflight', () => {
       env.TAIL_SERVICE_NAME = originalTailServiceName;
     }
     expect(capturedMetadata).toBeDefined();
-    expect(capturedMetadata!.tail_consumers).toEqual([{ service: 'void-tail-staging' }]);
+    expect(capturedMetadata!.tail_consumers).toEqual([{ service: 'nosam-tail-staging' }]);
   });
 
   it('serializes new websocket durable objects as SQLite class migrations', async () => {
@@ -6568,7 +6568,7 @@ describe('POST /projects/:id/deploy/preflight', () => {
 
     it('reuses scoped R2 assets when converting a current static deployment to WfP', async () => {
       const user = await createTestUser(env.db);
-      const project = await createTestProject(env.db, user.id, 'static-to-void');
+      const project = await createTestProject(env.db, user.id, 'static-to-nosam');
 
       // 1. Do an initial static deploy
       mockCfApi();

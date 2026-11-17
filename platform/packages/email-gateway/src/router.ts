@@ -1,6 +1,6 @@
 /** Inbound email actions after the gateway resolves an authoritative route. */
 
-import { isReservedEmailSlug } from '@voidcloud/api/reserved-slugs';
+import { isReservedEmailSlug } from '@nosamcloud/api/reserved-slugs';
 import { EmailMessage } from 'cloudflare:email';
 import { validate as isValidEmailSyntax } from 'email-validator';
 import {
@@ -100,7 +100,7 @@ interface EmailEnvelope {
 /** Shared with the dedicated gateway. */
 export type { EmailEnvelope };
 
-/** Mirrors `void/email`'s EmailAction. */
+/** Mirrors `nosam/email`'s EmailAction. */
 type EmailAction =
   | { type: 'reject'; reason: string }
   | { type: 'forward'; to: string; headers?: Record<string, string> }
@@ -250,7 +250,7 @@ export async function routeInbound(
   authoritative: AuthoritativeEmailRoute,
 ): Promise<void> {
   // The sender domain labels bounces, but is not needed to route inbound mail.
-  const label = readSenderDomain(env) ?? 'void email';
+  const label = readSenderDomain(env) ?? 'nosam email';
 
   const to = String(message.to ?? '').toLowerCase();
   const local = to.split('@')[0] ?? '';

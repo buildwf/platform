@@ -1,7 +1,7 @@
 {
-  "name": "void-dispatch",
+  "name": "nosam-dispatch",
   "main": "src/index.ts",
-  "services": [{ "binding": "PREVIEW_API", "service": "void-api" }],
+  "services": [{ "binding": "PREVIEW_API", "service": "nosam-api" }],
   "compatibility_date": "2026-02-12",
   "routes": [
     { "pattern": "*.void.app/*", "zone_name": "void.app" },
@@ -16,7 +16,7 @@
   "dispatch_namespaces": [
     {
       "binding": "DISPATCH",
-      "namespace": "void-users",
+      "namespace": "nosam-users",
     },
   ],
   "kv_namespaces": [
@@ -32,43 +32,43 @@
   "r2_buckets": [
     {
       "binding": "STATIC_ASSETS_R2",
-      "bucket_name": "void-static-assets-overflow",
+      "bucket_name": "nosam-static-assets-overflow",
     },
   ],
   "analytics_engine_datasets": [
     {
       "binding": "ANALYTICS",
-      "dataset": "void_requests",
+      "dataset": "nosam_requests",
     },
     {
       "binding": "LOGS",
-      "dataset": "void_logs",
+      "dataset": "nosam_logs",
     },
   ],
   "queues": {
     "producers": [
       {
         "binding": "USAGE_QUEUE",
-        "queue": "void-usage-events",
+        "queue": "nosam-usage-events",
       },
     ],
   },
-  "tail_consumers": [{ "service": "void-tail" }],
+  "tail_consumers": [{ "service": "nosam-tail" }],
   "env": {
     "production": {
-      "services": [{ "binding": "PREVIEW_API", "service": "void-api" }],
-      "name": "void-dispatch",
+      "services": [{ "binding": "PREVIEW_API", "service": "nosam-api" }],
+      "name": "nosam-dispatch",
       "routes": [
         { "pattern": "*.void.app/*", "zone_name": "void.app" },
         { "pattern": "*.void.app", "zone_name": "void.app" },
         { "pattern": "*/*", "zone_name": "void.app" },
         { "pattern": "*", "zone_name": "void.app" },
       ],
-      "tail_consumers": [{ "service": "void-tail" }],
+      "tail_consumers": [{ "service": "nosam-tail" }],
       "dispatch_namespaces": [
         {
           "binding": "DISPATCH",
-          "namespace": "void-users",
+          "namespace": "nosam-users",
         },
       ],
       "kv_namespaces": [
@@ -84,31 +84,31 @@
       "r2_buckets": [
         {
           "binding": "STATIC_ASSETS_R2",
-          "bucket_name": "void-static-assets-overflow",
+          "bucket_name": "nosam-static-assets-overflow",
         },
       ],
       "analytics_engine_datasets": [
         {
           "binding": "ANALYTICS",
-          "dataset": "void_requests",
+          "dataset": "nosam_requests",
         },
         {
           "binding": "LOGS",
-          "dataset": "void_logs",
+          "dataset": "nosam_logs",
         },
       ],
       "queues": {
         "producers": [
           {
             "binding": "USAGE_QUEUE",
-            "queue": "void-usage-events",
+            "queue": "nosam-usage-events",
           },
         ],
       },
     },
     "staging": {
-      "services": [{ "binding": "PREVIEW_API", "service": "void-api-staging" }],
-      "name": "void-dispatch-staging",
+      "services": [{ "binding": "PREVIEW_API", "service": "nosam-api-staging" }],
+      "name": "nosam-dispatch-staging",
       "routes": [
         {
           "pattern": "*.staging.void.app/*",
@@ -116,14 +116,14 @@
         },
         { "pattern": "*.staging.void.app", "zone_name": "void.app" },
       ],
-      "tail_consumers": [{ "service": "void-tail-staging" }],
+      "tail_consumers": [{ "service": "nosam-tail-staging" }],
       "vars": {
         "BASE_HOSTNAME": "staging.void.app",
       },
       "dispatch_namespaces": [
         {
           "binding": "DISPATCH",
-          "namespace": "void-users-staging",
+          "namespace": "nosam-users-staging",
         },
       ],
       "kv_namespaces": [
@@ -139,24 +139,24 @@
       "r2_buckets": [
         {
           "binding": "STATIC_ASSETS_R2",
-          "bucket_name": "void-static-assets-overflow-staging",
+          "bucket_name": "nosam-static-assets-overflow-staging",
         },
       ],
       "analytics_engine_datasets": [
         {
           "binding": "ANALYTICS",
-          "dataset": "void_requests_staging",
+          "dataset": "nosam_requests_staging",
         },
         {
           "binding": "LOGS",
-          "dataset": "void_logs_staging",
+          "dataset": "nosam_logs_staging",
         },
       ],
       "queues": {
         "producers": [
           {
             "binding": "USAGE_QUEUE",
-            "queue": "void-usage-events-staging",
+            "queue": "nosam-usage-events-staging",
           },
         ],
       },

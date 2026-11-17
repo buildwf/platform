@@ -355,19 +355,19 @@ with role `owner`, but owner mutations return 409.
 
 ### CLI
 
-Add a `void project team` group:
+Add a `nosam project team` group:
 
 ```text
-void project team list [--project <slug>]
-void project team invite <email> --role <role> [--project <slug>]
-void project team invitations [--project <slug>]
-void project team role <user-id> <role> [--project <slug>]
-void project team remove <user-id> [--project <slug>]
-void project team revoke <invitation-id> [--project <slug>]
-void project team leave [--project <slug>]
-void project team pending
-void project team accept <invitation-id>
-void project team decline <invitation-id>
+nosam project team list [--project <slug>]
+nosam project team invite <email> --role <role> [--project <slug>]
+nosam project team invitations [--project <slug>]
+nosam project team role <user-id> <role> [--project <slug>]
+nosam project team remove <user-id> [--project <slug>]
+nosam project team revoke <invitation-id> [--project <slug>]
+nosam project team leave [--project <slug>]
+nosam project team pending
+nosam project team accept <invitation-id>
+nosam project team decline <invitation-id>
 ```
 
 The existing project selector and saved project link identify the project when
@@ -397,7 +397,7 @@ interfaces:
 POST /operator/v1/projects/:id/owner
 { "userId": "user_...", "dryRun": true | false }
 
-void platform project owner <project-id> <user-id> [--plan | --yes]
+nosam platform project owner <project-id> <user-id> [--plan | --yes]
 ```
 
 The dry run reports current and new owner, both plans and suspension states,

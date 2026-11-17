@@ -3,7 +3,7 @@ import {
   readPlatformApplication,
   platformHealthHostname,
   type PlatformApplication,
-} from '@void/platform';
+} from '@nosam/platform';
 import type { Db } from '../db.ts';
 import type { ApiEnv } from '../env.ts';
 import { getPlatformSetting, setPlatformSetting } from '../platform-settings.ts';
@@ -191,7 +191,7 @@ export function assertExistingProjectsChoice(
   }
   if (current?.enabled && input.existingProjects !== undefined) {
     throw new ZeroTrustUnavailableError(
-      'Zero Trust is already enabled, so existing projects keep their protection. Omit the existing-projects choice, and change individual projects with `void platform zero-trust project-protect` or `project-public`.',
+      'Zero Trust is already enabled, so existing projects keep their protection. Omit the existing-projects choice, and change individual projects with `nosam platform zero-trust project-protect` or `project-public`.',
     );
   }
 }

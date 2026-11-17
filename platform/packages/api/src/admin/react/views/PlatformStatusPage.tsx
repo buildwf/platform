@@ -2,7 +2,7 @@
 
 import { Button } from '@astryxdesign/core/Button';
 import { Heading } from '@astryxdesign/core/Text';
-import type { PlatformLifecycleOperation } from '@void/platform';
+import type { PlatformLifecycleOperation } from '@nosam/platform';
 import { Activity, Check, Clock, Minus, Pause, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { PlatformStatusSnapshot } from '../../platform-status.ts';
@@ -147,8 +147,8 @@ export function PlatformStatusPage({
 
   return (
     <Layout platformName={platformName} username={username} title="Platform status">
-      <PageStack className="void-platform-status">
-        <div className="void-platform-status-heading">
+      <PageStack className="nosam-platform-status">
+        <div className="nosam-platform-status-heading">
           <SectionStack as="div">
             <Heading level={1}>Platform status</Heading>
             <p>Follow upgrade and rollback progress. This page is read-only during maintenance.</p>
@@ -179,14 +179,14 @@ export function PlatformStatusPage({
             />
           }
         >
-          <ul className="void-platform-status-summary" aria-label="Installation and traffic">
+          <ul className="nosam-platform-status-summary" aria-label="Installation and traffic">
             {(operation || failed) && (
               <li data-state={connection !== 'current' ? 'unavailable' : lifecycleState}>
-                <span className="void-admin-health-indicator" aria-hidden="true">
+                <span className="nosam-admin-health-indicator" aria-hidden="true">
                   <LifecycleIcon size={16} />
                 </span>
                 <span>
-                  <span className="void-platform-status-summary-label">
+                  <span className="nosam-platform-status-summary-label">
                     {operation ? ACTION_LABELS[operation.action] : 'Installation'}
                   </span>
                   <strong>{phaseLabel}</strong>
@@ -202,11 +202,11 @@ export function PlatformStatusPage({
                     : 'healthy'
               }
             >
-              <span className="void-admin-health-indicator" aria-hidden="true">
+              <span className="nosam-admin-health-indicator" aria-hidden="true">
                 <TrafficIcon size={16} />
               </span>
               <span>
-                <span className="void-platform-status-summary-label">Application traffic</span>
+                <span className="nosam-platform-status-summary-label">Application traffic</span>
                 <strong>
                   {trafficLabel}
                   {current && connection !== 'current' ? ' (last confirmed)' : ''}
@@ -216,7 +216,7 @@ export function PlatformStatusPage({
           </ul>
 
           <div
-            className="void-platform-status-notice"
+            className="nosam-platform-status-notice"
             data-state={connection}
             role="status"
             aria-live="polite"
@@ -242,7 +242,7 @@ export function PlatformStatusPage({
             )}
           </div>
 
-          <div className="void-platform-status-grid">
+          <div className="nosam-platform-status-grid">
             {current?.checkpoint && (
               <SectionStack aria-labelledby="platform-operation-heading">
                 <Heading level={3} id="platform-operation-heading">
@@ -250,7 +250,7 @@ export function PlatformStatusPage({
                 </Heading>
                 {operation ? (
                   <>
-                    <p className="void-platform-status-version">
+                    <p className="nosam-platform-status-version">
                       {operation.fromVersion ?? 'New installation'} <span aria-label="to">→</span>{' '}
                       {operation.toVersion}
                     </p>
@@ -301,7 +301,7 @@ export function PlatformStatusPage({
 
           {needsAttention && (
             <SectionStack
-              className="void-platform-status-recovery"
+              className="nosam-platform-status-recovery"
               aria-labelledby="platform-recovery-heading"
             >
               <Heading level={3} id="platform-recovery-heading">

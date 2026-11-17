@@ -1,5 +1,5 @@
-import { defineMiddleware } from 'void';
-import { getUser, requireAuth } from 'void/auth';
+import { defineMiddleware } from 'nosam';
+import { getUser, requireAuth } from 'nosam/auth';
 import { requirePageUser } from '../src/require-page-user.ts';
 
 export default defineMiddleware(async (c, next) => {

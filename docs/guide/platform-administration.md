@@ -5,7 +5,7 @@ outline: deep
 
 # Platform Administration
 
-`void platform` lets you manage the people and apps on a Nosam platform from your terminal. You can give teammates access, inspect their projects, follow deployment logs, and check the platform's health.
+`nosam platform` lets you manage the people and apps on a Nosam platform from your terminal. You can give teammates access, inspect their projects, follow deployment logs, and check the platform's health.
 
 The operator commands for users, projects, deployments, and system status require an administrator account. Connection and installation lifecycle commands use their own authentication. If you're setting up a platform for the first time, start with [Install a Nosam Platform](/guide/self-hosted-platform).
 

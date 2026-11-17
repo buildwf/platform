@@ -9,9 +9,9 @@ import './styles.css';
 import DocFooter from './DocFooter.vue';
 import FileTree from './FileTree.vue';
 import RoutesFileTree from './RoutesFileTree.vue';
-import logoDark from './void-dark.svg';
-import logoLight from './void-light.svg';
-import VoidAppFileTree from './VoidAppFileTree.vue';
+import logoDark from './nosam-dark.svg';
+import logoLight from './nosam-light.svg';
+import NosamAppFileTree from './NosamAppFileTree.vue';
 import voidzeroLogoDark from './voidzero-logo-dark.svg';
 import voidzeroLogoLight from './voidzero-logo-light.svg';
 
@@ -64,7 +64,7 @@ export default {
   enhanceApp({ app }) {
     app.component('FileTree', FileTree);
     app.component('RoutesFileTree', RoutesFileTree);
-    app.component('VoidAppFileTree', VoidAppFileTree);
+    app.component('NosamAppFileTree', NosamAppFileTree);
     app.provide(themeContextKey, {
       logoDark,
       logoLight,

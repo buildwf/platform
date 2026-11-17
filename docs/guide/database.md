@@ -34,13 +34,13 @@ const dbFileItems = [
 
 # Database
 
-Define your tables in TypeScript, then query them with `db` from `void/db`. Nosam includes [Drizzle ORM](https://orm.drizzle.team) and configures the connection, so you can use the same schema and query workflow with D1, PostgreSQL, or MySQL.
+Define your tables in TypeScript, then query them with `db` from `nosam/db`. Nosam includes [Drizzle ORM](https://orm.drizzle.team) and configures the connection, so you can use the same schema and query workflow with D1, PostgreSQL, or MySQL.
 
 <FileTree :items="dbFileItems" default-expanded />
 
 ## Choosing a Dialect
 
-Choose a database during `void init`, or set `database` in `void.config.ts`:
+Choose a database during `nosam init`, or set `database` in `nosam.config.ts`:
 
 |            | [D1 (SQLite)](./database/d1) | [PostgreSQL](./database/postgresql) | [MySQL](./database/mysql) |
 | ---------- | ---------------------------- | ----------------------------------- | ------------------------- |
@@ -52,14 +52,14 @@ A Nosam platform keeps Hyperdrive query caching off for your database connection
 
 ## Schema Definition
 
-Define your tables in `db/schema.ts` using column helpers from `void/schema-d1`, `void/schema-pg`, or `void/schema-mysql`.
+Define your tables in `db/schema.ts` using column helpers from `nosam/schema-d1`, `nosam/schema-pg`, or `nosam/schema-mysql`.
 
 ::: code-group
 
 ```ts [SQLite (D1)]
 // db/schema.ts
-import { sql } from 'void/db';
-import { sqliteTable, text, integer } from 'void/schema-d1';
+import { sql } from 'nosam/db';
+import { sqliteTable, text, integer } from 'nosam/schema-d1';
 
 export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -74,7 +74,7 @@ export const users = sqliteTable('users', {
 
 ```ts [PostgreSQL]
 // db/schema.ts
-import { pgTable, serial, text, timestamp } from 'void/schema-pg';
+import { pgTable, serial, text, timestamp } from 'nosam/schema-pg';
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -87,7 +87,7 @@ export const users = pgTable('users', {
 
 ```ts [MySQL]
 // db/schema.ts
-import { int, mysqlTable, text, timestamp } from 'void/schema-mysql';
+import { int, mysqlTable, text, timestamp } from 'nosam/schema-mysql';
 
 export const users = mysqlTable('users', {
   id: int('id').autoincrement().primaryKey(),
@@ -99,7 +99,7 @@ export const users = mysqlTable('users', {
 
 :::
 
-The schema helpers are included in `void`. You can write tables yourself or generate a starting point with `void gen model`.
+The schema helpers are included in `nosam`. You can write tables yourself or generate a starting point with `nosam gen model`.
 
 You can also split your schema across multiple files under `db/schema/` and re-export from a barrel file:
 
@@ -117,11 +117,11 @@ export * from "./schema/posts";
 
 ### Column casing
 
-By default, a column declared without a name, such as `createdAt: timestamp()`, uses its key as the column name. Set `database.casing` to `'snake_case'` to store these columns as `created_at` instead. It applies to `void/db` queries and to `void db` commands such as `generate`, `push`, and `seed`. Columns with an explicit name, such as `text('created_at')`, keep that name.
+By default, a column declared without a name, such as `createdAt: timestamp()`, uses its key as the column name. Set `database.casing` to `'snake_case'` to store these columns as `created_at` instead. It applies to `nosam/db` queries and to `nosam db` commands such as `generate`, `push`, and `seed`. Columns with an explicit name, such as `text('created_at')`, keep that name.
 
 ```ts
-// void.config.ts
-import { defineConfig } from 'void/config';
+// nosam.config.ts
+import { defineConfig } from 'nosam/config';
 
 export default defineConfig({
   database: { dialect: 'pg', casing: 'snake_case' },
@@ -130,7 +130,7 @@ export default defineConfig({
 
 ```ts
 // db/schema.ts
-import { pgTable, serial, text, timestamp } from 'void/schema-pg';
+import { pgTable, serial, text, timestamp } from 'nosam/schema-pg';
 
 export const posts = pgTable('posts', {
   id: serial().primaryKey(),
@@ -139,15 +139,15 @@ export const posts = pgTable('posts', {
 });
 ```
 
-Omit `dialect` for D1. If your database already has tables, run `void db generate` after you change `casing` and review the migration before you apply it.
+Omit `dialect` for D1. If your database already has tables, run `nosam db generate` after you change `casing` and review the migration before you apply it.
 
 ## Querying
 
-Nosam re-exports all common [Drizzle query operators](https://orm.drizzle.team/docs/select) from `void/db` so you don't need to install `drizzle-orm` separately. Import `db` from `void/db` and your tables from `@schema`:
+Nosam re-exports all common [Drizzle query operators](https://orm.drizzle.team/docs/select) from `nosam/db` so you don't need to install `drizzle-orm` separately. Import `db` from `nosam/db` and your tables from `@schema`:
 
 ```ts
 import { users } from '@schema';
-import { db } from 'void/db';
+import { db } from 'nosam/db';
 ```
 
 ::: info What is `@schema`?
@@ -164,7 +164,7 @@ const allUsers = await db.select().from(users);
 
 ```ts
 import { users } from '@schema';
-import { db, eq, and, or } from 'void/db';
+import { db, eq, and, or } from 'nosam/db';
 
 // Single condition
 const user = await db.select().from(users).where(eq(users.id, 1));
@@ -230,7 +230,7 @@ const names = await db.select({ name: users.name, email: users.email }).from(use
 
 ```ts
 import { users } from '@schema';
-import { db, desc } from 'void/db';
+import { db, desc } from 'nosam/db';
 
 const page = await db.select().from(users).orderBy(desc(users.createdAt)).limit(10).offset(20);
 ```
@@ -239,7 +239,7 @@ const page = await db.select().from(users).orderBy(desc(users.createdAt)).limit(
 
 ```ts
 import { users, posts } from '@schema';
-import { db, eq } from 'void/db';
+import { db, eq } from 'nosam/db';
 
 const results = await db
   .select({
@@ -263,7 +263,7 @@ const usersWithPosts = await db.query.users.findMany({
 
 ## Seeding
 
-Use `void db seed` to reset your local database, re-apply migrations, and then run a seed file.
+Use `nosam db seed` to reset your local database, re-apply migrations, and then run a seed file.
 
 Use `db/seed.ts` for a programmatic seed or `db/seed.sql` for SQL. JavaScript and `.mts` / `.mjs` files also work. If more than one seed file exists, choose one with `--file <path>`.
 
@@ -273,7 +273,7 @@ Use `db/seed.ts` when you want to generate seed data in code. Export a default f
 
 ```ts
 // db/seed.ts
-import { defineSeed } from 'void/seed';
+import { defineSeed } from 'nosam/seed';
 
 export default defineSeed<typeof import('./schema')>(async ({ db, schema }) => {
   const rows = Array.from({ length: 100 }, (_, i) => ({
@@ -300,13 +300,13 @@ INSERT INTO messages (text) VALUES ('Hello from SQL');
 
 ## Schema-Derived Validators
 
-Derive request validators from your tables with `void/drizzle-zod`, `void/drizzle-valibot`, or `void/drizzle-arktype`. Add the validator after your table definition:
+Derive request validators from your tables with `nosam/drizzle-zod`, `nosam/drizzle-valibot`, or `nosam/drizzle-arktype`. Add the validator after your table definition:
 
 ::: code-group
 
 ```ts [Zod]
 // db/schema.ts
-import { createInsertSchema } from 'void/drizzle-zod';
+import { createInsertSchema } from 'nosam/drizzle-zod';
 
 export const insertUserSchema = createInsertSchema(users, {
   name: (schema) => schema.min(1),
@@ -317,7 +317,7 @@ export const insertUserSchema = createInsertSchema(users, {
 ```ts [Valibot]
 // db/schema.ts
 import { pipe, minLength, email } from 'valibot';
-import { createInsertSchema } from 'void/drizzle-valibot';
+import { createInsertSchema } from 'nosam/drizzle-valibot';
 
 export const insertUserSchema = createInsertSchema(users, {
   name: (schema) => pipe(schema, minLength(1)),
@@ -328,7 +328,7 @@ export const insertUserSchema = createInsertSchema(users, {
 ```ts [ArkType]
 // db/schema.ts
 import { type } from 'arktype';
-import { createInsertSchema } from 'void/drizzle-arktype';
+import { createInsertSchema } from 'nosam/drizzle-arktype';
 
 export const insertUserSchema = createInsertSchema(users, {
   name: type('string > 0'),
@@ -345,8 +345,8 @@ Use the derived schema in your route handlers with [`withValidator()`](./server-
 ```ts
 // routes/api/users/index.ts
 import { users, insertUserSchema } from '@schema';
-import { defineHandler } from 'void';
-import { db } from 'void/db';
+import { defineHandler } from 'nosam';
+import { db } from 'nosam/db';
 
 export const POST = defineHandler.withValidator({
   body: insertUserSchema,
@@ -378,11 +378,11 @@ npm install arktype
 
 | Command            | Purpose                                              |
 | ------------------ | ---------------------------------------------------- |
-| `void db push`     | Apply schema changes locally without migration files |
-| `void db generate` | Generate SQL migrations                              |
-| `void db migrate`  | Apply pending migrations locally                     |
-| `void db status`   | Check schema drift and pending migrations            |
-| `void db seed`     | Reset the local database and run a seed file         |
+| `nosam db push`     | Apply schema changes locally without migration files |
+| `nosam db generate` | Generate SQL migrations                              |
+| `nosam db migrate`  | Apply pending migrations locally                     |
+| `nosam db status`   | Check schema drift and pending migrations            |
+| `nosam db seed`     | Reset the local database and run a seed file         |
 
 See the [CLI reference](../reference/cli/database.md#database) for connection setup, SQL execution, Studio, exports, and other commands.
 
@@ -391,7 +391,7 @@ See the [CLI reference](../reference/cli/database.md#database) for connection se
 To use Nosam with a PostgreSQL database that Drizzle has already migrated, record its applied migrations before your first deployment:
 
 1. Back up the database and pause deployments. Try the procedure on a restored copy first.
-2. Set `database: 'pg'` in `void.config.ts`. Keep your existing schema, SQL filenames, and `db/migrations/meta/` directory. Do not regenerate or rename migrations during adoption.
+2. Set `database: 'pg'` in `nosam.config.ts`. Keep your existing schema, SQL filenames, and `db/migrations/meta/` directory. Do not regenerate or rename migrations during adoption.
 3. Read Drizzle's migration history. The default table is `drizzle.__drizzle_migrations`; use your configured schema and table if different.
 
    ```sql
@@ -400,9 +400,9 @@ To use Nosam with a PostgreSQL database that Drizzle has already migrated, recor
 
    Match each row's `created_at` to `when` in `meta/_journal.json`, and its `hash` to the SQL file's SHA-256. Resolve any differences before continuing.
 
-4. Save this as `adopt-void.sql`. Replace the example filenames with **only the migrations you verified as applied**, including `.sql`. Leave pending migrations out.
+4. Save this as `adopt-nosam.sql`. Replace the example filenames with **only the migrations you verified as applied**, including `.sql`. Leave pending migrations out.
 
-   ```sql [adopt-void.sql]
+   ```sql [adopt-nosam.sql]
    BEGIN;
    CREATE TABLE IF NOT EXISTS _void_migrations (
      name TEXT PRIMARY KEY,
@@ -417,31 +417,31 @@ To use Nosam with a PostgreSQL database that Drizzle has already migrated, recor
    ```
 
 5. Run the file with your PostgreSQL client, stopping on errors. Use the database and search path Nosam will use. This records the filenames without running their SQL or changing Drizzle's history.
-6. Connect Nosam to the database and run `void db status`. Only new migrations should be pending. For direct Cloudflare deployments, set `DATABASE_URL` in the shell or CI environment that runs `void deploy`.
+6. Connect Nosam to the database and run `nosam db status`. Only new migrations should be pending. For direct Cloudflare deployments, set `DATABASE_URL` in the shell or CI environment that runs `nosam deploy`.
 
 Repeat these steps for each database; development and production may have different migration histories. Keep Drizzle's history table, and use Nosam for future migrations.
 
 ## Hand-written migrations {#hand-written-migrations}
 
-Deploy compares your Drizzle schema with the snapshots in `db/migrations/meta/`. If you have SQL migrations without this metadata, running `void db generate` would create another migration for the same tables.
+Deploy compares your Drizzle schema with the snapshots in `db/migrations/meta/`. If you have SQL migrations without this metadata, running `nosam db generate` would create another migration for the same tables.
 
 To keep an existing migration history:
 
 1. Make your Drizzle schema match the tables your SQL migrations create.
-2. In a scratch copy of the project, remove `db/migrations/` and run `void db generate`.
+2. In a scratch copy of the project, remove `db/migrations/` and run `nosam db generate`.
 3. Copy the generated `meta/` folder into your original migration directory. In `_journal.json`, replace `entries` with an entry for each existing SQL file in order. Use consecutive `idx` values starting at `0`, the file name without `.sql` as `tag`, increasing timestamps as `when`, and the generated entry's `version`. Set `breakpoints` to whether the file uses `--> statement-breakpoint` lines.
 4. Rename the generated snapshot to `<prefix>_snapshot.json`, where `<prefix>` is the part of the last migration tag before its first `_`. For `001_create_users.sql`, use `001_snapshot.json`.
 
-Review and commit the metadata, then run `void deploy` again. If no database has applied the SQL yet, you can instead replace it with migrations from `void db generate`.
+Review and commit the metadata, then run `nosam deploy` again. If no database has applied the SQL yet, you can instead replace it with migrations from `nosam db generate`.
 
 For D1 migrations containing triggers, and MySQL migrations containing triggers, procedures, functions or events, add a `--> statement-breakpoint` line after each complete SQL statement, including the trigger's closing `END;`. Keep the trigger body together.
 
 ## Scaffolding
 
-The `void gen model` command generates dialect-appropriate `sqliteTable`, `pgTable`, or `mysqlTable` definitions.
+The `nosam gen model` command generates dialect-appropriate `sqliteTable`, `pgTable`, or `mysqlTable` definitions.
 
 ```bash
-void gen model posts title:string body:text published:boolean
+nosam gen model posts title:string body:text published:boolean
 ```
 
 This creates:

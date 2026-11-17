@@ -138,12 +138,12 @@ export async function initializePackedProject(
           'npm',
           'exec',
           '--yes',
-          `--package=create-void@${version}`,
+          `--package=create-nosam@${version}`,
           '--',
-          'create-void',
+          'create-nosam',
           basename(root),
         ]
-      : ['pnpm', 'dlx', `create-void@${version}`, basename(root)];
+      : ['pnpm', 'dlx', `create-nosam@${version}`, basename(root)];
   await runPty(argv, {
     cwd: dirname(root),
     env,

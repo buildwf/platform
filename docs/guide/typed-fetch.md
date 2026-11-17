@@ -5,12 +5,12 @@ outline: deep
 
 # Typed Fetch
 
-Import `fetch` from `void/client` for route autocomplete, checked request bodies, and inferred response types.
+Import `fetch` from `nosam/client` for route autocomplete, checked request bodies, and inferred response types.
 
 ## Basic Usage
 
 ```ts
-import { fetch } from 'void/client';
+import { fetch } from 'nosam/client';
 
 // GET: return type inferred from your handler
 const users = await fetch('/api/users');
@@ -64,7 +64,7 @@ const data = await fetch('/api/search', {
 Non-2xx responses throw a `FetchError`:
 
 ```ts
-import { fetch, FetchError } from 'void/client';
+import { fetch, FetchError } from 'nosam/client';
 
 try {
   await fetch('/api/users/[id]', { params: { id: '999' } });

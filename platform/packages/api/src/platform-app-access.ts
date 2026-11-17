@@ -5,7 +5,7 @@ import {
   PLATFORM_DISABLED_KEY,
   PLATFORM_DISABLED_VALUE,
   type PlatformAppAccessSetup,
-} from '@void/platform';
+} from '@nosam/platform';
 import { sql } from 'drizzle-orm';
 import type { Context } from 'hono';
 import type { Db } from './db.ts';
@@ -181,14 +181,14 @@ async function verifyAppAccessProof(
   const token = context.env.PLATFORM_HEALTH_PROBE_TOKEN;
   if (
     !token ||
-    context.req.header('X-Void-Platform-Probe') !== token ||
+    context.req.header('X-Nosam-Platform-Probe') !== token ||
     !context.env.PLATFORM_INSTALLATION_ID ||
     !context.env.PLATFORM_APP_ACCESS
   ) {
     return null;
   }
   const setupKey = context.env.PLATFORM_APP_ACCESS_SETUP_TOKEN;
-  const signature = context.req.header('X-Void-App-Access-Setup') ?? '';
+  const signature = context.req.header('X-Nosam-App-Access-Setup') ?? '';
   if (!setupKey || setupKey.length < 32 || !/^[A-Za-z0-9_-]{43}$/.test(signature)) {
     return null;
   }
@@ -267,7 +267,7 @@ export async function platformAppAccess(context: Context<ApiEnv>): Promise<Respo
  * Uninstall handoff for an installation whose first administrator never signed
  * in. It turns off the project Zero Trust the installer enabled, using the
  * same authority that turned it on. Without a user there are no projects, and
- * no administrator who could run `void platform zero-trust disable`.
+ * no administrator who could run `nosam platform zero-trust disable`.
  */
 export async function platformAppAccessTurnOff(context: Context<ApiEnv>): Promise<Response> {
   const body = await verifyAppAccessProof(context, PLATFORM_APP_ACCESS_TURN_OFF_PROOF_PREFIX);
@@ -290,7 +290,7 @@ export async function platformAppAccessTurnOff(context: Context<ApiEnv>): Promis
       return context.json(
         {
           error:
-            'A platform user exists. An administrator turns off Zero Trust with `void platform zero-trust disable`.',
+            'A platform user exists. An administrator turns off Zero Trust with `nosam platform zero-trust disable`.',
           code: 'users_exist',
         },
         409,

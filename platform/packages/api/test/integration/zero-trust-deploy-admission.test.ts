@@ -68,10 +68,10 @@ async function seedReconcilingProtection(projectId: string): Promise<void> {
       identityProviderIds: ['idp-1'],
       policyIds: ['policy-1'],
       credential: { ciphertext: 'unused', iv: 'unused', keyVersion: 'v1' },
-      wildcardApplicationName: 'void-test-projects',
+      wildcardApplicationName: 'nosam-test-projects',
       wildcardApplication: {
         id: 'access-wildcard',
-        name: 'void-test-projects',
+        name: 'nosam-test-projects',
         audience: 'access-audience',
         destinations: ['*.void.app'],
       },
@@ -123,7 +123,7 @@ describe('Zero Trust deploy admission and recovery', () => {
     expect(await response.json()).toEqual({
       event: 'error',
       error: 'zero trust not ready',
-      message: expect.stringContaining('void project zero-trust reconcile'),
+      message: expect.stringContaining('nosam project zero-trust reconcile'),
     });
     expect(fetch).not.toHaveBeenCalled();
     expect(
@@ -154,7 +154,7 @@ describe('Zero Trust deploy admission and recovery', () => {
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
       error: 'zero trust not ready',
-      message: expect.stringContaining('void project zero-trust reconcile'),
+      message: expect.stringContaining('nosam project zero-trust reconcile'),
     });
   });
 

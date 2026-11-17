@@ -9,7 +9,7 @@ export function ProjectOwnerTransferSection({ projectId }: { projectId: string }
   const [selected, setSelected] = useState<AdminUserSuggestion | null>(null);
 
   return (
-    <SectionStack id="owner-transfer" className="void-admin-owner-transfer">
+    <SectionStack id="owner-transfer" className="nosam-admin-owner-transfer">
       <h2>Transfer Ownership</h2>
       <p>
         Transfer this project to an existing Nosam Platform user. You will review the ownership,
@@ -17,7 +17,7 @@ export function ProjectOwnerTransferSection({ projectId }: { projectId: string }
       </p>
       <SectionStack
         as="form"
-        className="void-admin-owner-transfer-form"
+        className="nosam-admin-owner-transfer-form"
         method="post"
         action={`/admin/projects/${projectId}/owner/preview`}
       >

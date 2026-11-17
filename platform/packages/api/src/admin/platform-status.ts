@@ -2,7 +2,7 @@ import {
   parsePlatformInstallationManifest,
   type InstallationStatus,
   type PlatformLifecycleOperation,
-} from '@void/platform';
+} from '@nosam/platform';
 import { sql } from 'drizzle-orm';
 import type { Context } from 'hono';
 import type { ApiEnv } from '../env.ts';

@@ -7,12 +7,12 @@ import { test } from 'node:test';
 import { inspectPackage } from './packed-registry.mjs';
 
 function createPackage(t, overrides = {}, includeLicense = true) {
-  const root = mkdtempSync(join(tmpdir(), 'void-packed-metadata-'));
+  const root = mkdtempSync(join(tmpdir(), 'nosam-packed-metadata-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const directory = join(root, 'package');
   mkdirSync(directory);
   const manifest = {
-    name: '@void/test',
+    name: '@nosam/test',
     version: '0.0.0',
     description: 'A Nosam test package.',
     license: 'MIT',
@@ -33,7 +33,7 @@ function createPackage(t, overrides = {}, includeLicense = true) {
 
 test('accepts complete metadata and license in a real package tarball', (t) => {
   const inspected = inspectPackage(createPackage(t));
-  assert.equal(inspected.manifest.name, '@void/test');
+  assert.equal(inspected.manifest.name, '@nosam/test');
   assert.match(inspected.integrity, /^sha512-/);
 });
 

@@ -7,9 +7,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 const root = join(import.meta.dirname, '..', '..', '..', '..', '..');
 // Reuse the core SDK's declared Miniflare test dependency.
-const require = createRequire(join(root, 'packages/void/package.json'));
+const require = createRequire(join(root, 'packages/nosam/package.json'));
 const { Miniflare, convertV4MiniflareOptions } = await import(require.resolve('miniflare'));
-const temporary = mkdtempSync(join(tmpdir(), 'void-controller-rpc-'));
+const temporary = mkdtempSync(join(tmpdir(), 'nosam-controller-rpc-'));
 let runtime: { dispatchFetch(url: string): Promise<Response>; dispose(): Promise<void> };
 
 describe('managed Sandbox idle expiry through actual Workers RPC', () => {
@@ -40,7 +40,7 @@ export class Native extends SandboxController {
     },
   };
   constructor(ctx, env) {
-    super(ctx, { ...env, __VOID_SANDBOX_CONTROL: {
+    super(ctx, { ...env, __NOSAM_SANDBOX_CONTROL: {
       reserve: async () => ({ ok: true }), started: async () => ({ ok: true }),
       heartbeat: async () => ({ ok: true }), stopped: async () => {},
     } });
@@ -58,7 +58,7 @@ export default class extends SandboxService {
     writeFileSync(
       join(temporary, 'application.ts'),
       `
-import { getSandbox } from ${JSON.stringify(join(root, 'packages/void/src/runtime/sandbox.ts'))};
+import { getSandbox } from ${JSON.stringify(join(root, 'packages/nosam/src/runtime/sandbox.ts'))};
 export default { async fetch(request, env) {
   const id = new URL(request.url).pathname.slice(1);
   const sandbox = await getSandbox(id, { inactivityTimeoutMs: 50 });
@@ -66,8 +66,8 @@ export default { async fetch(request, env) {
   const waiting = id === 'waiting' ? process.exitCode : undefined;
   // Keep the same RPC session and its unconsumed stdout capability open.
   await new Promise(resolve => setTimeout(resolve, 150));
-  const running = await env.__VOID_SANDBOX.check(id);
-  if (waiting) { await env.__VOID_SANDBOX.complete(id); await waiting; }
+  const running = await env.__NOSAM_SANDBOX.check(id);
+  if (waiting) { await env.__NOSAM_SANDBOX.complete(id); await waiting; }
   return Response.json({ running, pid: process.pid });
 } };
 `,
@@ -78,7 +78,7 @@ export default { async fetch(request, env) {
         logLevel: 'silent',
         resolve: {
           alias: {
-            'void/_sandbox-container': join(root, 'packages/void/src/runtime/sandbox-container.ts'),
+            'nosam/_sandbox-container': join(root, 'packages/nosam/src/runtime/sandbox-container.ts'),
           },
         },
         ssr: { noExternal: true },
@@ -114,7 +114,7 @@ export default { async fetch(request, env) {
             modulesRoot: temporary,
             scriptPath: join(temporary, 'application.mjs'),
             routes: ['*/*'],
-            serviceBindings: { __VOID_SANDBOX: 'controller' },
+            serviceBindings: { __NOSAM_SANDBOX: 'controller' },
           },
         ],
       }),

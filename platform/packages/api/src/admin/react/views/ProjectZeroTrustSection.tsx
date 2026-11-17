@@ -65,9 +65,9 @@ export function ProjectZeroTrustSection({
 }) {
   const { state } = zeroTrust;
   return (
-    <SectionStack id="zero-trust" className="void-admin-project-zero-trust">
+    <SectionStack id="zero-trust" className="nosam-admin-project-zero-trust">
       <h2>Zero Trust</h2>
-      <div className="void-admin-project-zero-trust-state">
+      <div className="nosam-admin-project-zero-trust-state">
         <span>Platform: {platformLabel(zeroTrust)}</span>
         {(state !== null || zeroTrust.enabled) && (
           <>
@@ -92,7 +92,7 @@ export function ProjectZeroTrustSection({
         <Banner status="error" title="Last error" description={state.last_error} />
       )}
       {zeroTrust.available ? (
-        <div className="void-admin-team-actions">
+        <div className="nosam-admin-team-actions">
           <form
             method="post"
             action={`/admin/projects/${projectId}/zero-trust`}

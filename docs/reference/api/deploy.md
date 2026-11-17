@@ -4,25 +4,25 @@ description: 'Prepare a built app, SPA, or static site for a managed platform de
 
 # Deployment artifacts
 
-Use `void/deploy` from Node.js to prepare a built Nosam app, SPA, or static site for a managed platform deployment without platform credentials.
+Use `nosam/deploy` from Node.js to prepare a built Nosam app, SPA, or static site for a managed platform deployment without platform credentials.
 
 Build the app in managed mode inside its isolated environment:
 
 ```sh
-VOID_DEPLOY_BUILD=1 VOID_DEPLOY_PROJECT_ID=artifact npm run build
+NOSAM_DEPLOY_BUILD=1 NOSAM_DEPLOY_PROJECT_ID=artifact npm run build
 ```
 
 These values select a platform-compatible build. The target project is selected during publish approval.
 
 ```ts
-import { prepareDeployArtifact } from 'void/deploy';
+import { prepareDeployArtifact } from 'nosam/deploy';
 
 const { artifact, assets } = await prepareDeployArtifact('/path/to/app');
 ```
 
-`artifact` contains the deployment manifest, asset metadata, and any Worker modules. `assets` maps asset URL paths to base64 bytes. SPAs and static sites use the same output directory and routing configuration as `void deploy`. Keep the prepared result unchanged while requesting [publish approval](/guide/platform/administration/connected-apps).
+`artifact` contains the deployment manifest, asset metadata, and any Worker modules. `assets` maps asset URL paths to base64 bytes. SPAs and static sites use the same output directory and routing configuration as `nosam deploy`. Keep the prepared result unchanged while requesting [publish approval](/guide/platform/administration/connected-apps).
 
-Use this API for built Cloudflare Worker apps, SPAs, and static sites. For remote data, Sandbox, or Live resources, use `void deploy`.
+Use this API for built Cloudflare Worker apps, SPAs, and static sites. For remote data, Sandbox, or Live resources, use `nosam deploy`.
 
 Run preparation inside the same isolated environment as the app build. App configuration and build plugins execute project code; keep platform credentials on the publishing server.
 
@@ -35,7 +35,7 @@ Run preparation inside the same isolated environment as the app build. App confi
 Use `prepareCfBuildOutput` to prepare an existing Worker build for Cloudflare publication:
 
 ```ts
-import { prepareCfBuildOutput } from 'void/deploy';
+import { prepareCfBuildOutput } from 'nosam/deploy';
 
 const prepared = await prepareCfBuildOutput('/path/to/app/dist/server', {
   projectRoot: '/path/to/app',

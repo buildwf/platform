@@ -1,6 +1,6 @@
-import { defineHandler } from 'void';
-import { ai } from 'void/ai';
-import { UsageLimit } from 'void/limits';
+import { defineHandler } from 'nosam';
+import { ai } from 'nosam/ai';
+import { UsageLimit } from 'nosam/limits';
 
 function textInputForModel(model: string, prompt: string) {
   if (model.startsWith('google/')) {

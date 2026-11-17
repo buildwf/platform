@@ -5,4 +5,4 @@ export {
   matchPatternCaptures,
   substituteParams,
   type CompiledPattern,
-} from '@void/edge';
+} from '@nosam/edge';

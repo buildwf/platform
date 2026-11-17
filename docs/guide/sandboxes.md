@@ -14,8 +14,8 @@ Cloudflare deployments require [Workers Paid](https://dash.cloudflare.com/?to=/:
 ## Run a command
 
 ```ts
-import { defineHandler } from 'void';
-import { getSandbox } from 'void/sandbox';
+import { defineHandler } from 'nosam';
+import { getSandbox } from 'nosam/sandbox';
 
 export const POST = defineHandler(async (c) => {
   const sandbox = await getSandbox('default');
@@ -27,14 +27,14 @@ export const POST = defineHandler(async (c) => {
 });
 ```
 
-Importing from `void/sandbox` enables the required resources. Local development, direct Cloudflare deployments, and team platforms share the same runtime API.
+Importing from `nosam/sandbox` enables the required resources. Local development, direct Cloudflare deployments, and team platforms share the same runtime API.
 
 ## Runtime API
 
 `getSandbox(id, options)` resolves a Sandbox without starting it. The first command, file operation, or port request starts the container. IDs contain 1–63 characters and are lowercased by default; pass `normalizeId: false` to preserve case.
 
 ```ts
-import { getSandbox } from 'void/sandbox';
+import { getSandbox } from 'nosam/sandbox';
 
 const sandbox = await getSandbox(`user-${user.id}`, {
   inactivityTimeoutMs: 10 * 60 * 1000,
@@ -65,14 +65,14 @@ For code that runs on both deployment targets, use `getSandbox()`. Direct access
 
 ## Usage limits
 
-Sandbox limits reject with `SandboxLimitError`, which extends `UsageLimit` from `void/limits`. The error includes `resource: 'sandbox'` and a `reason` of `concurrency` or `runtime_budget`. Nosam route handlers and Pages actions automatically send a structured HTTP 429 when the error is left uncaught.
+Sandbox limits reject with `SandboxLimitError`, which extends `UsageLimit` from `nosam/limits`. The error includes `resource: 'sandbox'` and a `reason` of `concurrency` or `runtime_budget`. Nosam route handlers and Pages actions automatically send a structured HTTP 429 when the error is left uncaught.
 
 Use `instanceof UsageLimit` to optionally handle both AI and Sandbox limits, or `instanceof SandboxLimitError` for Sandbox-specific handling:
 
 ```ts
-import { defineHandler } from 'void';
-import { UsageLimit } from 'void/limits';
-import { getSandbox } from 'void/sandbox';
+import { defineHandler } from 'nosam';
+import { UsageLimit } from 'nosam/limits';
+import { getSandbox } from 'nosam/sandbox';
 
 export const POST = defineHandler(async (c) => {
   const sandbox = await getSandbox('default');
@@ -102,10 +102,10 @@ Files, running processes, and listening servers last only as long as the contain
 
 The default environment provides Node.js 26 on Debian Trixie. Managed platform deploys use Cloudflare's managed Node.js image.
 
-Use `void.config.ts` when you need a custom image or container size:
+Use `nosam.config.ts` when you need a custom image or container size:
 
 ```ts
-import { defineConfig } from 'void/config';
+import { defineConfig } from 'nosam/config';
 
 export default defineConfig({
   sandbox: {
@@ -131,4 +131,4 @@ For a managed platform, push your custom image to that platform account's Cloudf
 
 ## Deployment
 
-`void deploy --platform cloudflare` builds native images and deploys the Sandbox alongside the application. `void deploy` on a connected Nosam Platform applies the platform's Sandbox concurrency and runtime limits.
+`nosam deploy --platform cloudflare` builds native images and deploys the Sandbox alongside the application. `nosam deploy` on a connected Nosam Platform applies the platform's Sandbox concurrency and runtime limits.

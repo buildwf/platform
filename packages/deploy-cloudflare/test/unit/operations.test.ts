@@ -132,7 +132,7 @@ async function recover(
   { failure, preserveTriggers }: (typeof recoveries)[number],
   rollback?: Parameters<typeof setup>[2],
 ) {
-  const directory = mkdtempSync(join(tmpdir(), 'void-rollback-checks-'));
+  const directory = mkdtempSync(join(tmpdir(), 'nosam-rollback-checks-'));
   const configPath = join(directory, 'wrangler.json');
   writeFileSync(configPath, JSON.stringify({ name: 'site' }));
   try {

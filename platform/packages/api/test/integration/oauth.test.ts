@@ -1,4 +1,4 @@
-import { createDeployArtifact } from '@void/deploy-core';
+import { createDeployArtifact } from '@nosam/deploy-core';
 import { eq, isNull } from 'drizzle-orm';
 import {
   beforeAll,
@@ -89,13 +89,13 @@ async function authorize(extra: Record<string, string> = {}) {
     ...extra,
   });
   const response = await request('/oauth/authorize?' + params, {
-    headers: { Cookie: 'void_oauth_user=' + user.jwt },
+    headers: { Cookie: 'nosam_oauth_user=' + user.jwt },
   });
   const html = await adminHtml(response);
   return {
     response,
     html,
-    cookie: cookies(response) + '; void_oauth_user=' + user.jwt,
+    cookie: cookies(response) + '; nosam_oauth_user=' + user.jwt,
     id: html.match(/name="request" value="([^"]+)"/)?.[1],
   };
 }
@@ -180,10 +180,10 @@ async function publishApproval(profile: string, slug: string, prepared = artifac
   expect(pending.status).toBe(201);
   const { request_id: id } = (await pending.json()) as { request_id: string };
   const opened = await request('/oauth/authorize?request=' + id, {
-    headers: { Cookie: 'void_oauth_user=' + user.jwt },
+    headers: { Cookie: 'nosam_oauth_user=' + user.jwt },
   });
   expect(opened.status).toBe(200);
-  return { id, cookie: cookies(opened) + '; void_oauth_user=' + user.jwt };
+  return { id, cookie: cookies(opened) + '; nosam_oauth_user=' + user.jwt };
 }
 beforeAll(async () => {
   env = await setupEnv();
@@ -487,18 +487,18 @@ describe('registered OAuth applications', () => {
       },
     } as Fetcher;
     const serve = '/oauth/preview-serve/' + preview.project_id;
-    expect((await request(serve, { headers: { 'X-Void-Preview-URL': preview.url } })).status).toBe(
+    expect((await request(serve, { headers: { 'X-Nosam-Preview-URL': preview.url } })).status).toBe(
       401,
     );
-    const opened = await request(serve, { headers: { 'X-Void-Preview-URL': url } });
+    const opened = await request(serve, { headers: { 'X-Nosam-Preview-URL': url } });
     expect(opened.status).toBe(303);
     expect(opened.headers.get('Location')).toBe(preview.url + '/');
-    expect((await request(serve, { headers: { 'X-Void-Preview-URL': url } })).status).toBe(401);
+    expect((await request(serve, { headers: { 'X-Nosam-Preview-URL': url } })).status).toBe(401);
     const cookie = cookies(opened);
     const response = await request(serve, {
       headers: {
         Cookie: cookie,
-        'X-Void-Preview-URL': preview.url + '/hello',
+        'X-Nosam-Preview-URL': preview.url + '/hello',
         Authorization: 'Bearer do-not-forward',
         'CF-Access-Client-Secret': 'private',
       },
@@ -519,7 +519,7 @@ describe('registered OAuth applications', () => {
           method: 'POST',
           headers: {
             Cookie: cookie,
-            'X-Void-Preview-URL': preview.url,
+            'X-Nosam-Preview-URL': preview.url,
             Origin: 'https://other-preview.example.com',
           },
           body: 'write',
@@ -529,13 +529,13 @@ describe('registered OAuth applications', () => {
     expect(
       (
         await request(serve, {
-          headers: { Cookie: cookie, 'X-Void-Preview-URL': 'https://other-preview.example.com/' },
+          headers: { Cookie: cookie, 'X-Nosam-Preview-URL': 'https://other-preview.example.com/' },
         })
       ).status,
     ).toBe(404);
     await disableOAuthClient(env.db, registration.client.id);
     expect(
-      (await request(serve, { headers: { Cookie: cookie, 'X-Void-Preview-URL': preview.url } }))
+      (await request(serve, { headers: { Cookie: cookie, 'X-Nosam-Preview-URL': preview.url } }))
         .status,
     ).toBe(401);
     delete (env as unknown as ApiEnv['Bindings']).PREVIEW_DISPATCH;
@@ -567,7 +567,7 @@ describe('registered OAuth applications', () => {
       headers: {
         Authorization: 'Bearer ' + issued.access_token,
         'Content-Type': 'application/json',
-        'x-void-deploy-idempotency-key': issued.approval_id,
+        'x-nosam-deploy-idempotency-key': issued.approval_id,
       },
       body: JSON.stringify({ ...artifact, source: 'connected-app', commit: 'head' }),
     };
@@ -667,7 +667,7 @@ describe('registered OAuth applications', () => {
     mockCfApi();
     const result = await request('/projects/' + project.id + '/deploy', {
       method: 'POST',
-      headers: { ...headers, 'x-void-deploy-idempotency-key': flow.id },
+      headers: { ...headers, 'x-nosam-deploy-idempotency-key': flow.id },
       body: JSON.stringify(prepared),
     });
     expect(await readAllEvents(result)).toContainEqual(
@@ -684,7 +684,7 @@ describe('registered OAuth applications', () => {
       headers: {
         Authorization: 'Bearer ' + renewed.access_token,
         'Content-Type': 'application/json',
-        'x-void-deploy-idempotency-key': retry.id,
+        'x-nosam-deploy-idempotency-key': retry.id,
       },
       body: JSON.stringify(prepared),
     });
@@ -744,7 +744,7 @@ describe('registered OAuth applications', () => {
         headers: {
           Authorization: 'Bearer ' + access,
           'Content-Type': 'application/json',
-          'x-void-deploy-idempotency-key': approvalId,
+          'x-nosam-deploy-idempotency-key': approvalId,
         },
         body: JSON.stringify(artifact),
       });
@@ -776,7 +776,7 @@ describe('registered OAuth applications', () => {
     const cf = mockCfApi();
     const deploy = await request('/projects/' + project.id + '/deploy', {
       method: 'POST',
-      headers: { ...headers, 'x-void-deploy-idempotency-key': flow.id },
+      headers: { ...headers, 'x-nosam-deploy-idempotency-key': flow.id },
       body: JSON.stringify({
         ...prepared,
         workerInput: { id: crypto.randomUUID(), modules: [module] },
@@ -798,7 +798,7 @@ describe('registered OAuth applications', () => {
       Origin: origin,
       Cookie: 'admin_token=' + admin.adminJwt,
       'Content-Type': 'application/x-www-form-urlencoded',
-      'X-VoidPages': 'true',
+      'X-NosamPages': 'true',
     };
     expect(
       (
@@ -895,7 +895,7 @@ describe('registered OAuth applications', () => {
     expect(target.searchParams.has('token')).toBe(false);
     const signedIn = await app.fetch(new Request(target, { headers: { Cookie: proof } }), env, ctx);
     expect(signedIn.status).toBe(302);
-    expect(signedIn.headers.get('Set-Cookie')).toContain('void_oauth_user=');
+    expect(signedIn.headers.get('Set-Cookie')).toContain('nosam_oauth_user=');
     expect(signedIn.headers.get('Set-Cookie')).toContain('HttpOnly');
     const consent = await request('/oauth/authorize?request=' + requestId, {
       headers: { Cookie: proof + '; ' + cookies(signedIn) },
@@ -952,7 +952,7 @@ describe('registered OAuth applications', () => {
   });
   it('requires the browser proof and Nosam origin for consent and honors cancellation', async () => {
     const flow = await authorize();
-    expect((await approve(flow.id!, 'void_oauth_user=' + user.jwt)).status).toBe(403);
+    expect((await approve(flow.id!, 'nosam_oauth_user=' + user.jwt)).status).toBe(403);
     const csrf = await request('/oauth/approve', {
       method: 'POST',
       headers: {
@@ -1065,7 +1065,7 @@ describe('registered OAuth applications', () => {
     const [grant] = await env.db.select().from(oauthGrants);
     expect(grant!.revoked_at).not.toBeNull();
   });
-  it.runIf(Boolean(process.env.VOID_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
     'lets exactly one of many concurrent PostgreSQL redemptions rotate the token',
     async () => {
       const { token } = await connect();
@@ -1129,7 +1129,7 @@ describe('registered OAuth applications', () => {
     await env.db.update(oauthGrants).set({ expires_at: longAgo });
     const connections = async () =>
       (
-        await request('/oauth/connections', { headers: { Cookie: 'void_oauth_user=' + user.jwt } })
+        await request('/oauth/connections', { headers: { Cookie: 'nosam_oauth_user=' + user.jwt } })
       ).text();
     const [grant] = await env.db.select().from(oauthGrants);
     expect(await connections()).toContain(grant!.id);
@@ -1315,7 +1315,7 @@ describe('registered OAuth applications', () => {
       headers: {
         ...headers,
         'Content-Type': 'application/json',
-        'x-void-deploy-idempotency-key': flow.id,
+        'x-nosam-deploy-idempotency-key': flow.id,
       },
       body: JSON.stringify({ ...artifact, workerFiles: { 'index.js': btoa('changed') } }),
     });
@@ -1339,7 +1339,7 @@ describe('registered OAuth applications', () => {
       headers: {
         Authorization: 'Bearer ' + access,
         'Content-Type': 'application/json',
-        'x-void-deploy-idempotency-key': flow.id,
+        'x-nosam-deploy-idempotency-key': flow.id,
       },
       body: JSON.stringify({ ...artifact, source: 'connected-app', commit: 'checkpoint-123' }),
     };

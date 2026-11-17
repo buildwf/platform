@@ -16,7 +16,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   existsSync.mockReturnValue(true);
   spawnSync.mockReturnValue({ status: 0, error: undefined });
-  vi.stubEnv('VOID_API_URL', '');
+  vi.stubEnv('NOSAM_API_URL', '');
   process.argv = [process.execPath, '/health.ts'];
   process.exitCode = undefined;
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -36,7 +36,7 @@ describe('platform health script', () => {
     expect(spawnSync).toHaveBeenCalledWith(
       process.execPath,
       [
-        expect.stringContaining('/packages/void/dist/cli/cli.mjs'),
+        expect.stringContaining('/packages/nosam/dist/cli/cli.mjs'),
         'platform',
         'system',
         'health',
@@ -68,7 +68,7 @@ describe('platform health script', () => {
 
   it('refuses conflicting destinations before invoking the CLI', async () => {
     process.argv.push('--staging');
-    vi.stubEnv('VOID_API_URL', 'https://platform.example.com');
+    vi.stubEnv('NOSAM_API_URL', 'https://platform.example.com');
     await import('../scripts/health.ts');
     expect(spawnSync).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);

@@ -17,5 +17,5 @@ The app uses Nosam's auth and local D1; dev creates the auth tables automaticall
 ## Tests
 
 ```sh
-vp test run packages/void/test/integration/server-auth-errors.test.ts
+vp test run packages/nosam/test/integration/server-auth-errors.test.ts
 ```

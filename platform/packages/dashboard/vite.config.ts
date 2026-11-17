@@ -1,12 +1,12 @@
 import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite-plus';
-import { voidPlugin } from 'void';
+import { nosamPlugin } from 'nosam';
 
 export default defineConfig({
   plugins: [
     react(),
-    voidPlugin({
+    nosamPlugin({
       persistTo: resolve(__dirname, '../api/.wrangler/state'),
     }),
   ],

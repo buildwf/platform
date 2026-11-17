@@ -275,7 +275,7 @@ describe('POST /email/send — custom sender domain', () => {
       projectId: 'proj_000000000001',
     });
     const leaseHeaders = new Headers(leaseInit.headers);
-    expect(leaseHeaders.get('x-void-internal')).toBe(
+    expect(leaseHeaders.get('x-nosam-internal')).toBe(
       await signHmac(`email-lease-v1\nproj_000000000001\n${CUSTOM_DOMAIN}`, EMAIL_SIGNING_SECRET),
     );
 

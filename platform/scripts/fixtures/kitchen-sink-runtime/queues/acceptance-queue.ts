@@ -1,4 +1,4 @@
-import { defineQueue } from 'void';
+import { defineQueue } from 'nosam';
 import {
   queueCases,
   queueResultKey,

@@ -3,7 +3,7 @@
 
 /.github/ @voidzero-dev/void
 # Script folders at any depth: the publish and deploy jobs run package build
-# scripts such as packages/void/scripts/ and packages/platform/scripts/.
+# scripts such as packages/nosam/scripts/ and packages/platform/scripts/.
 scripts/ @voidzero-dev/void
 /pnpm-workspace.yaml @voidzero-dev/void
 /pnpm-lock.yaml @voidzero-dev/void

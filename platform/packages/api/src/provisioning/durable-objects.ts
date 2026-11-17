@@ -38,9 +38,9 @@ type Snapshot = {
   files: Array<{ name: string; contentType: string; sha256: string }>;
 };
 type Credential = Awaited<ReturnType<typeof encryptPlatformCredential>>;
-const OWNER = '__VOID_DURABLE_OWNER';
-const RELEASE = '__VOID_DURABLE_DEPLOYMENT';
-const ENTRY = '__void_durable_entry.js';
+const OWNER = '__NOSAM_DURABLE_OWNER';
+const RELEASE = '__NOSAM_DURABLE_DEPLOYMENT';
+const ENTRY = '__nosam_durable_entry.js';
 
 function namespace(env: Pick<Env, 'DISPATCH_NAMESPACE'>): string {
   return env.DISPATCH_NAMESPACE ?? DEFAULT_DISPATCH_NAMESPACE;
@@ -57,7 +57,7 @@ export async function durableObjectWorkerName(
   className: string,
 ): Promise<string> {
   const digest = await hash(new TextEncoder().encode(className).buffer);
-  return `void-do-${projectId}-${digest.slice(0, 16)}`;
+  return `nosam-do-${projectId}-${digest.slice(0, 16)}`;
 }
 
 function url(env: Env, worker: string): string {
@@ -391,7 +391,7 @@ export async function storeDurableObjectSnapshot(
   for (const [path, asset] of Object.entries(
     (metadata.assetManifest as Record<string, AssetManifestEntry>) ?? {},
   )) {
-    if (!path.startsWith('/.void-deploy/')) {
+    if (!path.startsWith('/.nosam-deploy/')) {
       continue;
     }
     const bytes = assetsByHash.get(asset.hash)?.bytes;
@@ -499,7 +499,7 @@ async function restoreObject(
     const customClasses = snapshot.metadata.customClasses as Record<string, string>;
     const appBindings = await readBindings(env, snapshot.metadata.appWorker as string);
     const proxyToken = appBindings?.find(
-      (value) => value.name === '__VOID_PROXY_TOKEN' && value.type === 'plain_text',
+      (value) => value.name === '__NOSAM_PROXY_TOKEN' && value.type === 'plain_text',
     );
     if (typeof proxyToken?.text !== 'string') {
       throw new Error('Application proxy token is missing.');
@@ -507,7 +507,7 @@ async function restoreObject(
     const bindings: Array<Binding> = [];
     for (const binding of snapshot.metadata.bindings) {
       if (binding.type !== 'durable_object_namespace') {
-        bindings.push(binding.name === '__VOID_PROXY_TOKEN' ? proxyToken : binding);
+        bindings.push(binding.name === '__NOSAM_PROXY_TOKEN' ? proxyToken : binding);
         continue;
       }
       if (customClasses[binding.name] === resource.binding_name) {
@@ -594,7 +594,7 @@ async function restoreObject(
         observability: projectObservability(env),
         ...(assets ? { assets } : {}),
         main_module: ENTRY,
-        tags: [`void-project:${snapshot.metadata.logProject}`, `void-deployment:${deploymentId}`],
+        tags: [`nosam-project:${snapshot.metadata.logProject}`, `nosam-deployment:${deploymentId}`],
         bindings: [
           ...bindings,
           { type: 'plain_text', name: OWNER, text: marker(env, projectId, resource.binding_name) },

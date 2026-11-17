@@ -2,7 +2,7 @@ import {
   deriveProxyInternalAuth,
   PROXY_INTERNAL_AUTH_HEADER,
   ProxyTokenStateError,
-} from '@voidcloud/api/proxy-token';
+} from '@nosamcloud/api/proxy-token';
 import { tenantSendToken } from './proxy-token.ts';
 import type { Env } from './types.ts';
 
@@ -64,9 +64,9 @@ function isGeneration(value: unknown): value is number {
 
 /**
  * Dispatch a binding operation to the user's deployed worker via Workers for Platforms.
- * The user worker handles it via native D1/KV/R2 bindings at the `/__void/*` route.
+ * The user worker handles it via native D1/KV/R2 bindings at the `/__nosam/*` route.
  *
- * Returns the Response if successful, or null if the worker doesn't support /__void
+ * Returns the Response if successful, or null if the worker doesn't support /__nosam
  * (404 = old deploy without the handler → caller should fall back to REST API).
  */
 export async function dispatchToWorker(
@@ -110,18 +110,18 @@ export async function dispatchToWorker(
 
   try {
     // Sent exactly once. The Worker's own middleware runs before its
-    // `/__void/*` handler checks the token, so a rejected request is not free
+    // `/__nosam/*` handler checks the token, so a rejected request is not free
     // to replay.
-    const res = await worker.fetch(`https://worker/__void${path}`, {
+    const res = await worker.fetch(`https://worker/__nosam${path}`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-void-internal': token,
+        'x-nosam-internal': token,
       },
       body: JSON.stringify(body),
     });
 
-    // 404 means old deploy without /__void handler → fall back
+    // 404 means old deploy without /__nosam handler → fall back
     if (res.status === 404) {
       return null;
     }

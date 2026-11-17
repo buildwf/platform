@@ -5,7 +5,7 @@ import {
   BUILD_INSTANCE_FREE,
   BUILD_INSTANCE_LARGE,
   type BuildInstanceType,
-} from '@void/platform/plans';
+} from '@nosam/platform/plans';
 export const PLAN_LIMITS: Record<string, PlanLimits> = BUILTIN_PLAN_LIMITS;
 export { BUILD_INSTANCE_FREE, BUILD_INSTANCE_LARGE };
 export type { PlanId, PlanLimits, BuildInstanceType };

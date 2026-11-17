@@ -77,7 +77,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await clearTables(env.db);
-  env.REQUESTS_DATASET = 'void_requests';
+  env.REQUESTS_DATASET = 'nosam_requests';
 });
 
 afterEach(() => {
@@ -384,7 +384,7 @@ describe('auth middleware', () => {
       const html = visibleMarkup(await adminHtml(response));
       const checks = html.split('id="health-checks"')[1]?.split('</ul>')[0];
       expect(checks).toBeDefined();
-      expect(checks?.match(/class="void-admin-health-check"/g)).toHaveLength(names.length);
+      expect(checks?.match(/class="nosam-admin-health-check"/g)).toHaveLength(names.length);
       const labels: Record<string, string> = {
         api: 'API',
         proxy: 'Proxy',
@@ -405,18 +405,18 @@ describe('auth middleware', () => {
     const admin = await createTestUser(env.db, 'react-admin', 'github', undefined, 'free', 'admin');
     const htmlResponse = await req('/admin/', admin.adminJwt);
     const html = await adminHtml(htmlResponse);
-    expect(html).toContain('id="void-admin-page"');
-    expect(html).toContain('<div id="void-admin-root">');
+    expect(html).toContain('id="nosam-admin-page"');
+    expect(html).toContain('<div id="nosam-admin-root">');
     expect(html).toContain('src="/admin/client.js"');
     expect(html).toContain('href="/admin/style.css"');
     expect(html).toContain('class="astryx-app-shell');
     expect(htmlResponse.headers.get('Cache-Control')).toBe('private, no-store');
 
     const navigation = await req('/admin/users', admin.adminJwt, {
-      headers: { 'X-VoidPages': 'true' },
+      headers: { 'X-NosamPages': 'true' },
     });
-    expect(navigation.headers.get('X-VoidPages')).toBe('true');
-    expect(navigation.headers.get('Vary')).toBe('X-VoidPages');
+    expect(navigation.headers.get('X-NosamPages')).toBe('true');
+    expect(navigation.headers.get('Vary')).toBe('X-NosamPages');
     expect(navigation.headers.get('Cache-Control')).toBe('private, no-store');
     expect(((await navigation.json()) as { component: string }).component).toBe('users');
   });
@@ -614,7 +614,7 @@ describe('auth middleware', () => {
         await page.locator('#health-status[data-state="error"]').waitFor();
         expect(await geometry()).toEqual(loading);
         const failedService = page
-          .locator('.void-admin-health-service')
+          .locator('.nosam-admin-health-service')
           .filter({ hasText: detail });
         await failedService.focus();
         await page.getByRole('tooltip').filter({ hasText: detail }).waitFor();
@@ -820,7 +820,7 @@ const configuringZeroTrust = {
 };
 
 function pageSnapshot(html: string): string {
-  const match = /<script type="application\/json" id="void-admin-page">([\s\S]*?)<\/script>/.exec(
+  const match = /<script type="application\/json" id="nosam-admin-page">([\s\S]*?)<\/script>/.exec(
     html,
   );
   expect(match).not.toBeNull();
@@ -1021,10 +1021,10 @@ describe('admin Zero Trust', () => {
   test('serves page-object navigation and a navigation link', async () => {
     const admin = await createTestUser(env.db, 'zt-nav', 'github', undefined, 'free', 'admin');
     const navigation = await req('/admin/zero-trust', admin.adminJwt, {
-      headers: { 'X-VoidPages': 'true' },
+      headers: { 'X-NosamPages': 'true' },
     });
     expect(navigation.status).toBe(200);
-    expect(navigation.headers.get('X-VoidPages')).toBe('true');
+    expect(navigation.headers.get('X-NosamPages')).toBe('true');
     expect(navigation.headers.get('Cache-Control')).toBe('no-store');
     expect(navigation.headers.get('Referrer-Policy')).toBe('strict-origin');
     const pageObject = (await navigation.json()) as { component: string; shared: object };
@@ -1055,7 +1055,7 @@ describe('admin Zero Trust', () => {
       await adminHtml(await req(`/admin/projects/${project.id}`, admin.adminJwt)),
     );
     expect(projectPage).toContain('AI Gateway logging');
-    // Same wording as `void platform project show`.
+    // Same wording as `nosam platform project show`.
     expect(projectPage).toContain(
       'off (set on project; plan &quot;free&quot; default: metadata) — pending (expected by ',
     );
@@ -1354,12 +1354,12 @@ describe('GET /admin/ (dashboard)', () => {
           await page.locator('[data-hydrated="true"]').waitFor();
           if (path === '/admin/users' || path === '/admin/deployments') {
             const heading = (await page.getByRole('heading', { level: 1 }).boundingBox())!;
-            const search = (await page.locator('.void-admin-search').boundingBox())!;
+            const search = (await page.locator('.nosam-admin-search').boundingBox())!;
             expect(search.y - (heading.y + heading.height)).toBeCloseTo(16, 0);
           }
           if (width === 1280 && path === '/admin/') {
             const link = page
-              .locator('.void-admin-projects-table .void-admin-resource-link')
+              .locator('.nosam-admin-projects-table .nosam-admin-resource-link')
               .first();
             await link.scrollIntoViewIfNeeded();
             await link.hover();
@@ -1404,7 +1404,7 @@ describe('GET /admin/ (dashboard)', () => {
               .getByRole('heading', { name: 'Zero Trust' })
               .boundingBox())!;
             const state = (await zeroTrust
-              .locator('.void-admin-project-zero-trust-state')
+              .locator('.nosam-admin-project-zero-trust-state')
               .boundingBox())!;
             expect(state.y - (heading.y + heading.height)).toBeCloseTo(16, 0);
             const configure = (await zeroTrust
@@ -1416,7 +1416,7 @@ describe('GET /admin/ (dashboard)', () => {
               .boundingBox())!;
             expect(teamHeading.y - (configure.y + configure.height)).toBeCloseTo(32, 0);
             expect(configure.width).toBeLessThan((await zeroTrust.boundingBox())!.width);
-            const teamTables = page.locator('.void-admin-team-table-scroll');
+            const teamTables = page.locator('.nosam-admin-team-table-scroll');
             expect(await teamTables.count()).toBe(2);
             for (const teamTable of await teamTables.all()) {
               const rows = await teamTable.evaluate((container) => {
@@ -1431,7 +1431,7 @@ describe('GET /admin/ (dashboard)', () => {
           }
           const isUsers = path === '/admin/users';
           const table = page.locator(
-            isUsers ? '.void-admin-users-table' : '.void-admin-deployments-table',
+            isUsers ? '.nosam-admin-users-table' : '.nosam-admin-deployments-table',
           );
           const row = table.getByRole('row').filter({
             has: page.getByRole('link', { name: isUsers ? admin.login : failed.id, exact: true }),
@@ -1481,7 +1481,7 @@ describe('GET /admin/ (dashboard)', () => {
             ).toBe(true);
             continue;
           }
-          const message = row.locator('.void-admin-deployment-error-message');
+          const message = row.locator('.nosam-admin-deployment-error-message');
           expect(await message.textContent()).toBe(error);
           expect((await message.boundingBox())!.height).toBeLessThan(30);
           if (width === 1280 && path === '/admin/') {
@@ -1515,10 +1515,10 @@ describe('GET /admin/ (dashboard)', () => {
           emailEnabled = enabled;
           await page.goto(`http://localhost${path}`);
           await page.locator('[data-hydrated="true"]').waitFor({ timeout: 5000 });
-          const cards = page.locator('.void-admin-card');
+          const cards = page.locator('.nosam-admin-card');
           expect(await cards.count()).toBeGreaterThan(0);
           const gaps = await page
-            .locator('.void-admin-content > .void-admin-stack')
+            .locator('.nosam-admin-content > .nosam-admin-stack')
             .evaluate((stack) => {
               const sections = Array.from(stack.children).filter(
                 (section) => section.getBoundingClientRect().height > 0,
@@ -1536,7 +1536,7 @@ describe('GET /admin/ (dashboard)', () => {
             expect(gap).toBeCloseTo(32, 0);
           }
           const contentGaps = await cards
-            .locator('.void-admin-card-content')
+            .locator('.nosam-admin-card-content')
             .evaluateAll((stacks) =>
               stacks.flatMap((stack) => {
                 const elements = Array.from(stack.children).filter(
@@ -1626,7 +1626,7 @@ describe('GET /admin/ (dashboard)', () => {
             const invite = page.getByRole('region', { name: 'Invite people', exact: true });
             for (const [label, value] of [
               ['Platform invitation page', 'http://localhost/invite'],
-              ['Nosam CLI connection command', "void connect 'localhost'"],
+              ['Nosam CLI connection command', "nosam connect 'localhost'"],
             ]) {
               const field = invite.getByRole('group', { name: label, exact: true });
               const input = field.getByRole('textbox', { name: label, exact: true });
@@ -1762,11 +1762,11 @@ describe('GET /admin/ (dashboard)', () => {
       'free',
       'admin',
     );
-    env.REQUESTS_DATASET = 'void_requests_staging';
+    env.REQUESTS_DATASET = 'nosam_requests_staging';
 
     const fetchMock = mockCfApi({
       analyticsQuery: (_url, init) => {
-        expect(init?.body).toContain('FROM void_requests_staging');
+        expect(init?.body).toContain('FROM nosam_requests_staging');
         return Response.json({ data: [] });
       },
     });
@@ -2484,7 +2484,7 @@ describe('GET /admin/projects', () => {
     const html = await adminHtml(res);
     expect(html).toContain('my-proj');
     const projectLink = visibleMarkup(html).match(
-      /<a\b[^>]*href="https:\/\/my-proj\.void\.app"[^>]*>[\s\S]*?<\/a>/,
+      /<a\b[^>]*href="https:\/\/my-proj\.nosam\.app"[^>]*>[\s\S]*?<\/a>/,
     )?.[0];
     expect(projectLink).toBeDefined();
     expect(projectLink).toContain('target="_blank"');
@@ -3005,7 +3005,7 @@ describe('GET /admin/deployments/:id', () => {
         await page.goto(`http://localhost/admin/deployments/${id}`);
         await page.locator('[data-hydrated="true"]').waitFor();
         const card = page
-          .locator('.void-admin-card')
+          .locator('.nosam-admin-card')
           .filter({ has: page.getByRole('heading', { name: 'Manifest', exact: true }) });
         const heading = (await card
           .getByRole('heading', { name: 'Manifest', exact: true })
@@ -3041,7 +3041,7 @@ describe('GET /admin/deployments/:id', () => {
         await page.emulateMedia({ colorScheme: 'dark' });
         await page.waitForFunction(() => {
           const token = Array.from(
-            document.querySelectorAll('.void-admin-code-block code span'),
+            document.querySelectorAll('.nosam-admin-code-block code span'),
           ).find((span) => span.textContent === '"CACHE"');
           return token && getComputedStyle(token).color === 'rgb(82, 206, 129)';
         });
@@ -3443,7 +3443,7 @@ describe('POST /admin/projects/:id/owner', () => {
 
     expect(response.status).toBe(302);
     expect(response.headers.get('Location')).toBe(`/admin/projects/${project.id}`);
-    expect(response.headers.get('X-Void-Audit-Id')).toBeTruthy();
+    expect(response.headers.get('X-Nosam-Audit-Id')).toBeTruthy();
     expect(
       (await env.db.select().from(projects).where(eq(projects.id, project.id)))[0],
     ).toMatchObject({ user_id: target.id });
@@ -3744,7 +3744,7 @@ describe('GET /admin/deployments/:id (logs section)', () => {
     expect(
       JSON.parse(
         html.match(
-          /<script type="application\/json" id="void-admin-page">([\s\S]*?)<\/script>/,
+          /<script type="application\/json" id="nosam-admin-page">([\s\S]*?)<\/script>/,
         )![1]!,
       ),
     ).toMatchObject({ component: 'deploymentDetail' });
@@ -3785,7 +3785,7 @@ describe('GET /admin/signup-control', () => {
     expect(visibleMarkup(html)).toContain('>Access</h1>');
     expect(visibleMarkup(html)).toContain('Signup is open to anyone with an enabled login');
     expect(html).toContain('Share these details manually');
-    expect(html).toContain("void connect 'localhost'");
+    expect(html).toContain("nosam connect 'localhost'");
     expect(html).toContain('Email not enabled');
   });
 

@@ -9,14 +9,14 @@ async function productionBaseline(options: {
   if (options.configuredSha) {
     if (options.configuredSha.length !== 40 || !/^[0-9a-f]{40}$/i.test(options.configuredSha)) {
       throw new Error(
-        'VOID_PLATFORM_PRODUCTION_REF must be the immutable 40-character SHA of the deployed runtime.',
+        'NOSAM_PLATFORM_PRODUCTION_REF must be the immutable 40-character SHA of the deployed runtime.',
       );
     }
     return options.configuredSha.toLowerCase();
   }
   if (!/^[\w.-]+\/[\w.-]+$/.test(options.repository) || !options.token) {
     throw new Error(
-      'Provide a GitHub repository and read token, or set VOID_PLATFORM_PRODUCTION_REF to the deployed SHA.',
+      'Provide a GitHub repository and read token, or set NOSAM_PLATFORM_PRODUCTION_REF to the deployed SHA.',
     );
   }
   const signal = AbortSignal.timeout(60_000);
@@ -63,7 +63,7 @@ async function productionBaseline(options: {
     }
   }
   throw new Error(
-    'No successful production deployment was found. Set VOID_PLATFORM_PRODUCTION_REF to the immutable deployed SHA before running the compatibility check.',
+    'No successful production deployment was found. Set NOSAM_PLATFORM_PRODUCTION_REF to the immutable deployed SHA before running the compatibility check.',
   );
 }
 

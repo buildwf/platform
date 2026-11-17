@@ -51,7 +51,7 @@ async function admit(caller: Caller, request: Request): Promise<Refusal | null> 
   // should see that more specific answer, not an upgrade notice.
   const outdated = cliVersionProblem(
     request.headers.get('content-type'),
-    request.headers.get('x-void-cli-version'),
+    request.headers.get('x-nosam-cli-version'),
   );
   if (outdated) return { code: 'CLI_OUTDATED', message: outdated.message };
   try {

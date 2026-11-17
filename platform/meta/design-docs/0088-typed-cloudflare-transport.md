@@ -10,7 +10,7 @@ created: 2026-10-02
 
 App deployment and platform installation keep their existing orchestration.
 Provider requests use the discriminated `CloudflareOperation` contract in
-`@void/deploy-cloudflare`. Public targets are fields; secrets and Hyperdrive
+`@nosam/deploy-cloudflare`. Public targets are fields; secrets and Hyperdrive
 connection strings use stdin or private temporary files. Results carry provider
 data, codes, errors and process provenance. Diagnostics remain human text.
 
@@ -27,5 +27,5 @@ pagination, ownership checks, absent-resource confirmation and fail-closed
 malformed responses. Cancellation, process-group termination and lock quarantine
 still dominate buffered provider results. Preserve uploader hashes and artifact
 verification, active-secret lineage, cutover, trigger publication and rollback.
-The matching platform payload stays bundled with `void`. Public CLI syntax,
+The matching platform payload stays bundled with `nosam`. Public CLI syntax,
 authentication destinations and Workers Free defaults are unchanged.

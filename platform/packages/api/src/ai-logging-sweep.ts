@@ -1,4 +1,4 @@
-import type { BuiltinPlanId, PlatformPlanCatalog } from '@void/platform/plans';
+import type { BuiltinPlanId, PlatformPlanCatalog } from '@nosam/platform/plans';
 import { and, eq, inArray, isNotNull, notInArray, or, type SQL } from 'drizzle-orm';
 import {
   PLAN_AI_LOGGING_PAGE_SIZE,

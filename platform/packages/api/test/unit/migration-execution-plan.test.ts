@@ -1,4 +1,4 @@
-import { canonicalJson } from '@void/deploy-core';
+import { canonicalJson } from '@nosam/deploy-core';
 import { describe, expect, it } from 'vite-plus/test';
 import {
   classifyServerMigrationPlan,

@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite-plus';
-import { voidPlugin } from 'void';
+import { nosamPlugin } from 'nosam';
 
 export default defineConfig({
-  plugins: [voidPlugin()],
+  plugins: [nosamPlugin()],
 });

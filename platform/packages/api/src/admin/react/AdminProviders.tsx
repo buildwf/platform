@@ -21,7 +21,7 @@ type AdminShared = {
 export function AdminUiProviders({ children }: { children: ReactNode }) {
   return (
     <Theme theme={neutralTheme}>
-      <div className="void-admin-toast-provider">
+      <div className="nosam-admin-toast-provider">
         <LayerProvider toast={{ position: 'topEnd', maxVisible: 3 }}>
           <LinkProvider component={Link}>{children}</LinkProvider>
         </LayerProvider>

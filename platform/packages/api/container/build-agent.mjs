@@ -6,8 +6,8 @@
  * Runs inside the Cloudflare Container managed by the BuildManager Durable
  * Object (packages/api/src/build-manager.ts). It is intentionally THIN: it does
  * not re-implement deploy packaging. It downloads the pushed source, installs
- * the repo's dependencies, and runs the REAL `void deploy` CLI, which performs
- * all build + upload work using the short-lived scoped VOID_TOKEN.
+ * the repo's dependencies, and runs the REAL `nosam deploy` CLI, which performs
+ * all build + upload work using the short-lived scoped NOSAM_TOKEN.
  *
  * Contract with the DO (env vars the DO injects at start()):
  *   BUILD_ID            build row id (logging only)
@@ -15,15 +15,15 @@
  *   PROJECT_SLUG        project slug
  *   SOURCE_TARBALL_URL  GitHub source tarball (codeload) URL
  *   SOURCE_TOKEN        GitHub installation token (Bearer) to fetch the tarball
- *   VOID_TOKEN          project-scoped deploy JWT (consumed by `void deploy`).
+ *   NOSAM_TOKEN          project-scoped deploy JWT (consumed by `nosam deploy`).
  *                       Scrubbed from the install + any untrusted child env and
- *                       re-injected ONLY for the trusted `void deploy` spawn.
- *   VOID_API_URL        https://api.void.cloud (or staging)
- *   VOID_PROXY_URL      Explicit platform resource proxy
- *   VOID_PROJECT        project slug passed to `void deploy --project`
+ *                       re-injected ONLY for the trusted `nosam deploy` spawn.
+ *   NOSAM_API_URL        https://void-nosam-api.buildwithfriends.workers.dev (or staging)
+ *   NOSAM_PROXY_URL      Explicit platform resource proxy
+ *   NOSAM_PROJECT        project slug passed to `nosam deploy --project`
  *   CF_ACCESS_CLIENT_ID     staging CF Access service-token id (staging builds
- *   CF_ACCESS_CLIENT_SECRET only). Like VOID_TOKEN: scrubbed from untrusted
- *                       children and re-injected ONLY for the `void deploy` spawn
+ *   CF_ACCESS_CLIENT_SECRET only). Like NOSAM_TOKEN: scrubbed from untrusted
+ *                       children and re-injected ONLY for the `nosam deploy` spawn
  *                       so it can pass CF Access on the staging API host.
  *   DO_LOG_URL          full URL of the DO's log sink, e.g. https://manager/logs
  *   AGENT_TOKEN         per-build secret presented on this agent's DO control
@@ -52,7 +52,7 @@ import { argv } from 'node:process';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { pathToFileURL } from 'node:url';
-import voidPackageJson from '../../../../packages/void/package.json' with { type: 'json' };
+import nosamPackageJson from '../../../../packages/nosam/package.json' with { type: 'json' };
 
 // --- constants ---------------------------------------------------------------
 
@@ -62,16 +62,16 @@ const PORT = 4000;
 // wiping one absolute path under each other is a race, not a flake. The container
 // never sets this: production is always `/tmp/build/src` (pinned by the
 // `childSpawnOptions` cwd assertion in build-manager.test.ts).
-const WORK_DIR = process.env.VOID_BUILD_WORK_DIR ?? '/tmp/build/src';
+const WORK_DIR = process.env.NOSAM_BUILD_WORK_DIR ?? '/tmp/build/src';
 const LOG_FLUSH_MS = 500;
 // Hard timeout on each best-effort DO POST. Without it a hung DO connection would
 // stall the single-flight log flush forever (logging would silently stop for the
 // rest of the build); with it the flush retries on the next tick. Also bounds how
 // long the final drain at exit can block before the container terminates.
 const DO_POST_TIMEOUT_MS = 10000;
-// BuildManager injects VOID_CLI_VERSION. If absent, use the release manifest
+// BuildManager injects NOSAM_CLI_VERSION. If absent, use the release manifest
 // copied into this image, never a mutable npm dist-tag or the untrusted app's manifest.
-export const DEFAULT_VOID_CLI_VERSION = voidPackageJson.version;
+export const DEFAULT_NOSAM_CLI_VERSION = nosamPackageJson.version;
 
 // --- source-download bounds --------------------------------------------------
 //
@@ -118,7 +118,7 @@ export const EXTRACT_KILL_GRACE_MS = 5000;
 // --- non-root build isolation ------------------------------------------------
 
 /**
- * uid/gid the untrusted build children (dependency install + `void deploy`) run
+ * uid/gid the untrusted build children (dependency install + `nosam deploy`) run
  * under. The agent itself stays root so it can setuid-spawn them; dropping the
  * children to a non-root uid means their `/proc/<ppid>/environ` read of the root
  * agent is denied by the kernel (cross-uid), closing the secret-recovery vector
@@ -153,7 +153,7 @@ export function builderCacheEnv() {
  * CLIs take their CI-safe rendering path. Merged into both untrusted children.
  *
  * A build container IS a CI environment, but nothing here set `CI`, so
- * `void deploy` took its interactive branch: `@clack/prompts`' spinner redraws
+ * `nosam deploy` took its interactive branch: `@clack/prompts`' spinner redraws
  * one line in place with `ESC[1G ESC[J` (cursor-to-column-1 + erase) and NO
  * newline. `chunkToLines` splits on CR/LF only, so every frame the spinner ever
  * drew arrived glued into a SINGLE captured line — unreadable in the live tail
@@ -189,14 +189,14 @@ export function childSpawnOptions() {
 }
 
 /**
- * Pinned fallback version used when the repo has no local `void` to run via npx.
- * Reads VOID_CLI_VERSION (injected by BuildManager) at call time, falling back
+ * Pinned fallback version used when the repo has no local `nosam` to run via npx.
+ * Reads NOSAM_CLI_VERSION (injected by BuildManager) at call time, falling back
  * to the baked-in default. Never `latest` — a moving dist-tag must not change
  * deploy behavior with no repo diff.
  * @returns {string}
  */
-function voidFallbackVersion() {
-  return process.env.VOID_CLI_VERSION || DEFAULT_VOID_CLI_VERSION;
+function nosamFallbackVersion() {
+  return process.env.NOSAM_CLI_VERSION || DEFAULT_NOSAM_CLI_VERSION;
 }
 
 // --- mutable build state -----------------------------------------------------
@@ -852,7 +852,7 @@ function sleepMs(ms) {
  * at all: `logBuffer` and this HTTP server die with the process, and the DO's own
  * `container.running` guard early-outs before it ever fetches. So EVERY line
  * produced between the last successful poll and container exit was lost —
- * including `void deploy exited with code N` and, worse, the compiler/deploy error
+ * including `nosam deploy exited with code N` and, worse, the compiler/deploy error
  * that immediately preceded a failure. The DO cannot fix this alone; the agent has
  * to keep the door open until the puller has caught up.
  *
@@ -969,7 +969,7 @@ export async function finishBuildLogging(server, drainOptions) {
   // Drain barrier BEFORE the server closes: the DO PULLs logs from this server on
   // a ~1s cadence and can no longer reach it once the container is gone, so
   // everything recorded since its last poll — the failing build's actual error
-  // output and the final `void deploy exited with code N` — would be lost.
+  // output and the final `nosam deploy exited with code N` — would be lost.
   // Bounded by idle + absolute deadlines so an absent/dead DO can't pin the slot.
   await waitForLogDrain(drainOptions);
   // Close the control server unconditionally: its open listening socket would
@@ -1530,7 +1530,7 @@ async function downloadSourceAttempt(args) {
       headers: {
         authorization: `Bearer ${sourceToken}`,
         // GitHub codeload follows a redirect from api.github.com; UA keeps it happy.
-        'user-agent': 'void-build-agent',
+        'user-agent': 'nosam-build-agent',
         accept: 'application/vnd.github+json',
       },
       redirect: 'follow',
@@ -1763,11 +1763,11 @@ function resolveInstall() {
  * and resolve with its exit code. Honors the cancel flag (SIGTERM).
  *
  * `opts.env` MUST be supplied for any step that runs untrusted repo code (the
- * package-manager install and `void deploy`, whose lifecycle scripts the repo
+ * package-manager install and `nosam deploy`, whose lifecycle scripts the repo
  * controls). Use `sanitizeChildEnv(...)` to strip the control-plane + credential
- * secrets (DO_LOG_URL, SOURCE_TOKEN, AGENT_TOKEN, VOID_TOKEN) so a malicious
+ * secrets (DO_LOG_URL, SOURCE_TOKEN, AGENT_TOKEN, NOSAM_TOKEN) so a malicious
  * postinstall can't reach/authenticate to the DO endpoints or steal the deploy
- * token. The deploy step re-injects VOID_TOKEN via the `extra` overrides.
+ * token. The deploy step re-injects NOSAM_TOKEN via the `extra` overrides.
  * @param {string} cmd
  * @param {Array<string>} args
  * @param {{ env?: NodeJS.ProcessEnv }} [opts]
@@ -1852,7 +1852,7 @@ export function parseProcStatusUid(statusText) {
  * close by reparenting to the pid-1 agent, and runs as the SAME BUILDER_UID as
  * the upcoming deploy child. Same-uid `/proc/<pid>/environ` reads are permitted
  * by the kernel, so such a leftover could read the deploy child's environ — which
- * carries the re-injected `VOID_TOKEN` and the staging CF Access pair. The
+ * carries the re-injected `NOSAM_TOKEN` and the staging CF Access pair. The
  * existing root-vs-builder uid boundary only denies a child reading the ROOT
  * agent's `/proc`; it does NOT cover this sibling-to-sibling vector.
  *
@@ -1864,8 +1864,8 @@ export function parseProcStatusUid(statusText) {
  * the deploy window. The kernel-enforced complete fix is per-phase UID separation
  * (a distinct uid for the deploy child), deferred because deploy and install
  * share one `node_modules`/work-tree. Crucially the residual is bounded by — and
- * dominated by — the already-accepted trust-split limitation: `void deploy` runs
- * the project's own (untrusted) build in-process, so that code holds VOID_TOKEN
+ * dominated by — the already-accepted trust-split limitation: `nosam deploy` runs
+ * the project's own (untrusted) build in-process, so that code holds NOSAM_TOKEN
  * directly regardless of this sweep. The reap narrows the surface; it does not,
  * and cannot here, eliminate it.
  *
@@ -1924,15 +1924,15 @@ function killBuilderProcesses() {
  * Control-plane + credential env vars that must NEVER reach untrusted repo
  * child processes by default. `DO_LOG_URL` is the DO endpoint origin;
  * `SOURCE_TOKEN` is the GitHub installation token; `AGENT_TOKEN` authenticates
- * control POSTs; `VOID_TOKEN` is the live project-scoped deploy JWT. A repo's
+ * control POSTs; `NOSAM_TOKEN` is the live project-scoped deploy JWT. A repo's
  * lifecycle scripts (postinstall etc.) running with these in `process.env`
  * could forge build status, scrape the source token, hit the DO directly, or
  * exfiltrate the deploy token / publish artifacts to the scoped project within
  * the token TTL. `CF_ACCESS_CLIENT_ID`/`CF_ACCESS_CLIENT_SECRET` are the shared
  * staging CF Access service token (present only on staging builds) — a leaked
  * pair would let untrusted code reach every Access-gated staging host, so they
- * are scrubbed too. `VOID_TOKEN` and the CF Access pair are the secrets the
- * trusted `void deploy` invocation legitimately needs, so the deploy spawn
+ * are scrubbed too. `NOSAM_TOKEN` and the CF Access pair are the secrets the
+ * trusted `nosam deploy` invocation legitimately needs, so the deploy spawn
  * re-injects them via the `extra` overrides — the install (and every other
  * untrusted) child never sees them.
  * @type {ReadonlyArray<string>}
@@ -1941,10 +1941,10 @@ export const SCRUBBED_ENV_VARS = [
   'DO_LOG_URL',
   'SOURCE_TOKEN',
   'AGENT_TOKEN',
-  'VOID_TOKEN',
+  'NOSAM_TOKEN',
   'CF_ACCESS_CLIENT_ID',
   'CF_ACCESS_CLIENT_SECRET',
-  'VOID_ACCESS_CREDENTIALS',
+  'NOSAM_ACCESS_CREDENTIALS',
 ];
 
 /**
@@ -1994,18 +1994,18 @@ function redactUrl(raw) {
 // --- main ---------------------------------------------------------------------
 
 /** Resolve the CLI when deploying the Nosam source repository or a fork. */
-export function resolveSourceVoidCli(root = WORK_DIR) {
-  const packageRoot = `${root}/packages/void`;
+export function resolveSourceNosamCli(root = WORK_DIR) {
+  const packageRoot = `${root}/packages/nosam`;
   let manifest;
   try {
     manifest = JSON.parse(readFileSync(`${packageRoot}/package.json`, 'utf8'));
   } catch {
     return null;
   }
-  if (manifest.name !== 'void' || typeof manifest.bin?.void !== 'string') {
+  if (manifest.name !== 'nosam' || typeof manifest.bin?.nosam !== 'string') {
     return null;
   }
-  const cli = `${packageRoot}/${manifest.bin.void}`;
+  const cli = `${packageRoot}/${manifest.bin.nosam}`;
   if (!existsSync(cli)) {
     throw new Error(
       'The workspace Nosam CLI is not built. Run build:core during dependency installation.',
@@ -2030,8 +2030,8 @@ export function resolveSourceVoidCli(root = WORK_DIR) {
  *   resolveInstall?: () => { manager: string, cmd: string, args: Array<string> },
  *   runChild?: (cmd: string, args: Array<string>, opts?: { env?: NodeJS.ProcessEnv }) => Promise<number>,
  *   reportStatus?: (status: string) => Promise<void>,
- *   hasLocalVoid?: () => boolean,
- *   resolveSourceVoidCli?: () => string | null,
+ *   hasLocalNosam?: () => boolean,
+ *   resolveSourceNosamCli?: () => string | null,
  *   chownWorkDir?: () => Promise<void>,
  * }} [deps]
  * @returns {Promise<number>}
@@ -2047,35 +2047,35 @@ export async function runBuild(deps = {}) {
   // `node_modules` tree, so the deploy must run THROUGH the package manager
   // (`corepack yarn ...`) to activate the PnP runtime rather than bare npx.
   // `pnpPresent` only selects the RUNNER below — it must NOT be conflated with
-  // "void is locally resolvable": a PnP repo that does not declare `void` still
-  // needs the `yarn dlx void@<ver>` fetch fallback, so the local-void signal is
+  // "void is locally resolvable": a PnP repo that does not declare `nosam` still
+  // needs the `yarn dlx nosam@<ver>` fetch fallback, so the local-nosam signal is
   // an actual dependency check, not the mere presence of `.pnp.cjs`.
   //
   // Assigned AFTER the install step (below): a Yarn Berry PnP repo may not commit
   // `.pnp.cjs` and instead GENERATE it during `yarn install`, so a pre-install (or
   // pre-download) check would read `false` and silently route it down the bare-
-  // `npx` path (which can't resolve PnP-managed deps during `void deploy`).
-  // `hasLocalVoid` and the runner selection both read it lazily (after install),
+  // `npx` path (which can't resolve PnP-managed deps during `nosam deploy`).
+  // `hasLocalNosam` and the runner selection both read it lazily (after install),
   // so a reassignable `let` is correct.
   let pnpPresent = false;
-  // Whether the repo DECLARES `void` as a dependency — the accurate "is void
-  // locally resolvable" signal under PnP, where `node_modules/.bin/void` never
+  // Whether the repo DECLARES `nosam` as a dependency — the accurate "is void
+  // locally resolvable" signal under PnP, where `node_modules/.bin/nosam` never
   // exists. Falls back to `false` on any read/parse error (→ fetch the CLI).
-  const repoDeclaresVoid = () => {
+  const repoDeclaresNosam = () => {
     try {
       const pkg = JSON.parse(readFileSync(`${WORK_DIR}/package.json`, 'utf8'));
-      return Boolean(pkg.dependencies?.void || pkg.devDependencies?.void);
+      return Boolean(pkg.dependencies?.nosam || pkg.devDependencies?.nosam);
     } catch {
       return false;
     }
   };
-  const hasLocalVoid =
-    deps.hasLocalVoid ??
-    (() => existsSync(`${WORK_DIR}/node_modules/.bin/void`) || (pnpPresent && repoDeclaresVoid()));
+  const hasLocalNosam =
+    deps.hasLocalNosam ??
+    (() => existsSync(`${WORK_DIR}/node_modules/.bin/nosam`) || (pnpPresent && repoDeclaresNosam()));
 
   try {
     // Capture the deploy token into a local, then drop it from the parent's heap
-    // env. Only the trusted `void deploy` child legitimately needs it, and it is
+    // env. Only the trusted `nosam deploy` child legitimately needs it, and it is
     // re-injected there via the `extra` overrides below. Deleting it from
     // `process.env` is defense-in-depth for the spawn-inheritance path only:
     // `sanitizeChildEnv` already strips it from every untrusted child's COPY, so
@@ -2084,23 +2084,23 @@ export async function runBuild(deps = {}) {
     // This delete does NOT scrub `/proc/self/environ` (`unsetenv()` mutates only
     // the heap `environ`), but the install child runs as the non-root BUILDER_UID,
     // so its cross-uid read of the root agent's `/proc/<ppid>/environ` is
-    // denied. NOTE: VOID_TOKEN is RE-INJECTED into the deploy child's OWN env
-    // below, so the untrusted `vite build` run inside `void deploy` can still read
+    // denied. NOTE: NOSAM_TOKEN is RE-INJECTED into the deploy child's OWN env
+    // below, so the untrusted `vite build` run inside `nosam deploy` can still read
     // it from its own `/proc/self/environ` — that is the separate CLI
     // trust-split escalation, not addressed by the uid boundary.
-    const voidToken = requireEnv('VOID_TOKEN');
-    delete process.env.VOID_TOKEN;
+    const nosamToken = requireEnv('NOSAM_TOKEN');
+    delete process.env.NOSAM_TOKEN;
     // Staging CF Access service token (set only on staging builds). Capture +
-    // drop from the parent heap exactly like VOID_TOKEN; re-injected only into
-    // the trusted deploy child below so `void deploy` can authenticate past CF
+    // drop from the parent heap exactly like NOSAM_TOKEN; re-injected only into
+    // the trusted deploy child below so `nosam deploy` can authenticate past CF
     // Access on `api.staging.void.cloud`. Absent on production/dev builds.
     const cfAccessClientId = process.env.CF_ACCESS_CLIENT_ID;
     const cfAccessClientSecret = process.env.CF_ACCESS_CLIENT_SECRET;
     delete process.env.CF_ACCESS_CLIENT_ID;
     delete process.env.CF_ACCESS_CLIENT_SECRET;
-    const apiUrl = requireEnv('VOID_API_URL');
-    const proxyUrl = process.env.VOID_PROXY_URL;
-    const project = requireEnv('VOID_PROJECT');
+    const apiUrl = requireEnv('NOSAM_API_URL');
+    const proxyUrl = process.env.NOSAM_PROXY_URL;
+    const project = requireEnv('NOSAM_PROJECT');
 
     if (cancelled) {
       throw new Error('build cancelled before start');
@@ -2128,7 +2128,7 @@ export async function runBuild(deps = {}) {
 
     // 2. Install dependencies. Repo lifecycle scripts (postinstall etc.) run
     //    here with a scrubbed env — no DO_LOG_URL/SOURCE_TOKEN/AGENT_TOKEN and
-    //    no VOID_TOKEN — so they can't forge build status, exfiltrate the source
+    //    no NOSAM_TOKEN — so they can't forge build status, exfiltrate the source
     //    token, or steal the deploy token.
     const installPlan = install();
     agentLog(`detected package manager: ${installPlan.manager}`);
@@ -2147,7 +2147,7 @@ export async function runBuild(deps = {}) {
     }
 
     // Install is done and its children have closed. Before spawning the trusted
-    // deploy child — which carries the re-injected VOID_TOKEN + CF Access pair in
+    // deploy child — which carries the re-injected NOSAM_TOKEN + CF Access pair in
     // its env — best-effort reap any BUILDER_UID process a dependency lifecycle
     // script daemonized during install. Left alive it would be a same-uid sibling
     // of the deploy child and could read its /proc/<pid>/environ (the uid boundary
@@ -2159,7 +2159,7 @@ export async function runBuild(deps = {}) {
     // Detect Yarn PnP now that install has run: a Berry PnP repo may GENERATE
     // `.pnp.cjs` during `yarn install` rather than committing it. This drives the
     // deploy RUNNER selection (`corepack yarn ...` vs bare `npx`) and the PnP
-    // branch of hasLocalVoid below — both read pnpPresent post-install.
+    // branch of hasLocalNosam below — both read pnpPresent post-install.
     pnpPresent = existsSync(`${WORK_DIR}/.pnp.cjs`);
 
     // 3. Tell the DO we're past install and into the deploy phase.
@@ -2168,17 +2168,17 @@ export async function runBuild(deps = {}) {
     // 4. Run the REAL deploy via the built CLI in Nosam source checkouts or the
     //    repo-local CLI in consumer projects. `npx` resolves the
     //    version pinned in the repo's package.json (installed in step 2); if
-    //    the repo has no local `void`, npx fetches the pinned fallback. The
+    //    the repo has no local `nosam`, npx fetches the pinned fallback. The
     //    --no-install guard is intentionally omitted so the fallback path works.
     //    The deploy child is the ONE trusted step that needs the deploy token,
-    //    so VOID_TOKEN is RE-INJECTED here on top of the scrubbed base env (it
+    //    so NOSAM_TOKEN is RE-INJECTED here on top of the scrubbed base env (it
     //    is in SCRUBBED_ENV_VARS, so it is absent from the install + any other
     //    untrusted child). The staging CF Access service token
-    //    (CF_ACCESS_CLIENT_ID/SECRET) is re-injected the same way so `void deploy`
+    //    (CF_ACCESS_CLIENT_ID/SECRET) is re-injected the same way so `nosam deploy`
     //    can authenticate past CF Access on the staging API host (undefined off
-    //    staging → dropped by sanitizeChildEnv). VOID_API_URL / VOID_PROJECT are
+    //    staging → dropped by sanitizeChildEnv). NOSAM_API_URL / NOSAM_PROJECT are
     //    not secrets and pass through normally. DO_LOG_URL/SOURCE_TOKEN/AGENT_TOKEN
-    //    stay scrubbed — `void deploy` runs repo build code and has no business
+    //    stay scrubbed — `nosam deploy` runs repo build code and has no business
     //    reaching the DO control plane.
     //
     //    Exposure boundary of the re-injected secrets: the framework CLI deletes
@@ -2186,19 +2186,19 @@ export async function runBuild(deps = {}) {
     //    client captures the Access headers and BEFORE it spawns the repo's
     //    `vite build`, so untrusted build code does NOT inherit the pair. What
     //    remains is the same-uid /proc/<deploy-pid>/environ residue (initial-env
-    //    block; heap deletes don't scrub it) plus VOID_TOKEN itself, which the
+    //    block; heap deletes don't scrub it) plus NOSAM_TOKEN itself, which the
     //    CLI's build child still inherits — both are the CLI trust-split
     //    escalation (build and upload share one process), a pending owner design
     //    decision, NOT addressable from this agent.
-    const sourceCli = (deps.resolveSourceVoidCli ?? resolveSourceVoidCli)();
-    const localVoid = hasLocalVoid();
-    const fallbackVersion = voidFallbackVersion();
-    // Yarn Berry PnP repos have no `node_modules`, so a bare `npx void deploy`
+    const sourceCli = (deps.resolveSourceNosamCli ?? resolveSourceNosamCli)();
+    const localNosam = hasLocalNosam();
+    const fallbackVersion = nosamFallbackVersion();
+    // Yarn Berry PnP repos have no `node_modules`, so a bare `npx nosam deploy`
     // would run void OUTSIDE the PnP runtime and the `execSync` build children it
     // spawns (vite build etc.) couldn't resolve the repo's deps. Run the deploy
     // THROUGH the package manager (`corepack yarn ...`) so PnP is active and the
-    // build children inherit it: `yarn void deploy` when void resolves in the PnP
-    // graph (hasLocalVoid is true under PnP), else `yarn dlx void@<ver> deploy`.
+    // build children inherit it: `yarn nosam deploy` when void resolves in the PnP
+    // graph (hasLocalNosam is true under PnP), else `yarn dlx nosam@<ver> deploy`.
     // The non-PnP path is unchanged (bare npx).
     /** @type {string} */
     let deployCmd;
@@ -2210,19 +2210,19 @@ export async function runBuild(deps = {}) {
       agentLog('using the built workspace Nosam CLI');
     } else if (pnpPresent) {
       deployCmd = 'corepack';
-      deployArgs = localVoid
-        ? ['yarn', 'void', 'deploy', '--project', project]
-        : ['yarn', 'dlx', `void@${fallbackVersion}`, 'deploy', '--project', project];
-      if (!localVoid) {
-        agentLog(`PnP repo; falling back to yarn dlx void@${fallbackVersion}`);
+      deployArgs = localNosam
+        ? ['yarn', 'nosam', 'deploy', '--project', project]
+        : ['yarn', 'dlx', `nosam@${fallbackVersion}`, 'deploy', '--project', project];
+      if (!localNosam) {
+        agentLog(`PnP repo; falling back to yarn dlx nosam@${fallbackVersion}`);
       }
     } else {
       deployCmd = 'npx';
-      deployArgs = localVoid
-        ? ['--yes', 'void', 'deploy', '--project', project]
-        : ['--yes', `void@${fallbackVersion}`, 'deploy', '--project', project];
-      if (!localVoid) {
-        agentLog(`no local void CLI found; falling back to npx void@${fallbackVersion}`);
+      deployArgs = localNosam
+        ? ['--yes', 'nosam', 'deploy', '--project', project]
+        : ['--yes', `nosam@${fallbackVersion}`, 'deploy', '--project', project];
+      if (!localNosam) {
+        agentLog(`no local void CLI found; falling back to npx nosam@${fallbackVersion}`);
       }
     }
     // Register the explicitly selected platform in this fresh build environment.
@@ -2238,11 +2238,11 @@ export async function runBuild(deps = {}) {
         ...builderCacheEnv(),
         CF_ACCESS_CLIENT_ID: cfAccessClientId,
         CF_ACCESS_CLIENT_SECRET: cfAccessClientSecret,
-        VOID_ACCESS_ORIGIN: apiUrl,
+        NOSAM_ACCESS_ORIGIN: apiUrl,
       }),
     });
     if (connectCode !== 0) {
-      agentLog(`void connect exited with code ${connectCode}`);
+      agentLog(`nosam connect exited with code ${connectCode}`);
       return connectCode;
     }
     // The API and resource proxy are independently protected origins. Scope
@@ -2265,16 +2265,16 @@ export async function runBuild(deps = {}) {
       env: sanitizeChildEnv(process.env, {
         ...nonInteractiveEnv(),
         ...builderCacheEnv(),
-        VOID_TOKEN: voidToken,
-        VOID_ACCESS_ORIGIN: apiUrl,
-        VOID_ACCESS_CREDENTIALS: accessCredentials,
+        NOSAM_TOKEN: nosamToken,
+        NOSAM_ACCESS_ORIGIN: apiUrl,
+        NOSAM_ACCESS_CREDENTIALS: accessCredentials,
         // Re-inject the staging CF Access service token (undefined off staging,
-        // which sanitizeChildEnv drops) so `void deploy` can pass CF Access.
+        // which sanitizeChildEnv drops) so `nosam deploy` can pass CF Access.
         CF_ACCESS_CLIENT_ID: cfAccessClientId,
         CF_ACCESS_CLIENT_SECRET: cfAccessClientSecret,
       }),
     });
-    agentLog(`void deploy exited with code ${deployCode}`);
+    agentLog(`nosam deploy exited with code ${deployCode}`);
     return deployCode;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

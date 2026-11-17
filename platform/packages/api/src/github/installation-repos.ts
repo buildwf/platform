@@ -52,7 +52,7 @@ export async function listInstallationRepositories(
         headers: {
           Accept: 'application/vnd.github+json',
           Authorization: `Bearer ${token}`,
-          'User-Agent': 'void-api',
+          'User-Agent': 'nosam-api',
           'X-GitHub-Api-Version': GITHUB_API_VERSION,
         },
       },

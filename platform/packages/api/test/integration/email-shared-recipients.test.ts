@@ -140,7 +140,7 @@ describe('shared inbound allocation', () => {
     for (const manifest of [
       { version: 3, type: 'static', bindings: {} },
       // Outbound SDK use does not emit the inbound protocol declaration.
-      { version: 3, type: 'void', bindings: {}, workerMain: 'worker.js' },
+      { version: 3, type: 'nosam', bindings: {}, workerMain: 'worker.js' },
     ]) {
       await env.db
         .update(deployments)

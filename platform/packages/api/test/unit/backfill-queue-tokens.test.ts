@@ -43,7 +43,7 @@ function createMockKV(initial: Record<string, string> = {}) {
 const JWT_SECRET = 'test-jwt-secret';
 const ACCOUNT = 'acc_test';
 const TOKEN = 'token_test';
-const NAMESPACE = 'void-users';
+const NAMESPACE = 'nosam-users';
 
 type FetchTokenOptions = {
   fetchToken?: (workerName: string) => Promise<ProxyTokenLookup>;

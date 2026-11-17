@@ -154,7 +154,7 @@ export type RotationRunSummary = {
   retryAfterSeconds: number | null;
 };
 
-const PROXY_TOKEN_BINDING = '__VOID_PROXY_TOKEN';
+const PROXY_TOKEN_BINDING = '__NOSAM_PROXY_TOKEN';
 const CLAIM_LEASE = sql`interval '15 minutes'`;
 const BUSY_RETRY_SECONDS = 120;
 
@@ -671,7 +671,7 @@ async function patchNext(tx: DbOrTx, ctx: StepContext, locked: LockedStep): Prom
       if (
         !native.some(
           (binding) =>
-            binding.name === '__VOID_DURABLE_DEPLOYMENT' && binding.text === row.deploymentId,
+            binding.name === '__NOSAM_DURABLE_DEPLOYMENT' && binding.text === row.deploymentId,
         )
       ) {
         throw new Error('Active custom Durable Object release differs.');
@@ -1048,7 +1048,7 @@ export function proxyTokenRotationStuckWarning(projectId: string): string {
     "Replacing this project's platform credentials keeps failing. Until it finishes, older " +
     'credentials still work, including any a removed member may still hold. The platform keeps ' +
     'retrying. If this warning stays, ask your platform administrator to run ' +
-    `\`void platform system rotate-proxy-tokens --plan --project ${projectId}\`.`
+    `\`nosam platform system rotate-proxy-tokens --plan --project ${projectId}\`.`
   );
 }
 

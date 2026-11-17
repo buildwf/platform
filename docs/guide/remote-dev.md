@@ -13,12 +13,12 @@ Calls such as `db.select()` and `env.KV.get()` use the deployed resources withou
 
 Before enabling remote mode, you need:
 
-1. Connect to your team's platform with `void connect <url>`. It signs you in when needed.
-2. Link a project with `void project link`. Deploy it at least once so its resources exist.
+1. Connect to your team's platform with `nosam connect <url>`. It signs you in when needed.
+2. Link a project with `nosam project link`. Deploy it at least once so its resources exist.
 
 ## Enabling Remote Mode
 
-### In `void.config.ts` (persistent)
+### In `nosam.config.ts` (persistent)
 
 ```json
 {
@@ -29,10 +29,10 @@ Before enabling remote mode, you need:
 ### Via environment variable (one-off)
 
 ```bash
-VOID_REMOTE=1 vite dev
+NOSAM_REMOTE=1 vite dev
 ```
 
-`VOID_REMOTE=0` disables remote mode even if `void.config.ts` has `"remote": true`.
+`NOSAM_REMOTE=0` disables remote mode even if `nosam.config.ts` has `"remote": true`.
 
 ## Supported Bindings
 

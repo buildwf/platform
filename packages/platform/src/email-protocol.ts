@@ -1,6 +1,6 @@
 /** Worker-safe wire contract shared by the platform gateway and tenant entry. */
 export const EMAIL_PROTOCOL_VERSION = 1;
-export const EMAIL_RECEIPT_PATH = '/__void/email/receipt/v1';
+export const EMAIL_RECEIPT_PATH = '/__nosam/email/receipt/v1';
 export const EMAIL_MAX_ACTIONS: number = 100;
 export const EMAIL_MAX_METADATA_BYTES: number = 8 * 1024;
 export const EMAIL_MAX_RESPONSE_BYTES: number = 8 * 1024 * 1024;

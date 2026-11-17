@@ -36,7 +36,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build API build container
-        run: docker build --pull --tag void-api-build-container:ci --file platform/packages/api/container/Dockerfile .
+        run: docker build --pull --tag nosam-api-build-container:ci --file platform/packages/api/container/Dockerfile .
 
   lint-build-check:
     runs-on: ${{ github.repository == 'voidzero-dev/void' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }}
@@ -55,7 +55,7 @@ jobs:
       - run: vp run build
       - run: vp run --filter './platform/packages/**' build
       # After the builds: the type-aware platform lint reads the dashboard's generated
-      # `.void/tsconfig.json`, which only exists once the dashboard has been built.
+      # `.nosam/tsconfig.json`, which only exists once the dashboard has been built.
       - run: vp run lint:platform
       # Platform packages only. The framework and the playgrounds are typechecked by ci.yml, and
       # the playground typechecks need the playground builds, which this job does not run.
@@ -96,9 +96,9 @@ jobs:
     permissions:
       contents: read
     env:
-      POSTGRES_USER: void_ci
-      POSTGRES_PASSWORD: void_ci_pass
-      POSTGRES_DB: void_schema_compat
+      POSTGRES_USER: nosam_ci
+      POSTGRES_PASSWORD: nosam_ci_pass
+      POSTGRES_DB: nosam_schema_compat
       COMPAT_DATABASE_URL: postgresql://void_ci:void_ci_pass@localhost:5432/void_schema_compat
       TZ: UTC
     services:
@@ -126,7 +126,7 @@ jobs:
       - run: vp run build
       - run: vp run --filter './platform/packages/**' build
       - name: Create the candidate PostgreSQL schema
-        run: vp run --filter @voidcloud/api migrate
+        run: vp run --filter @nosamcloud/api migrate
         env:
           DATABASE_URL: ${{ env.COMPAT_DATABASE_URL }}
       - name: Run candidate PostgreSQL concurrency tests
@@ -137,18 +137,18 @@ jobs:
   schema-compat:
     if: >-
       ${{ inputs.require-schema-compat || (github.event_name == 'pull_request'
-      && (github.repository == 'voidzero-dev/void' || vars.VOID_PLATFORM_PRODUCTION_REF != '')) }}
+      && (github.repository == 'voidzero-dev/void' || vars.NOSAM_PLATFORM_PRODUCTION_REF != '')) }}
     runs-on: ${{ github.repository == 'voidzero-dev/void' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }}
     timeout-minutes: 20
     permissions:
       contents: read
       deployments: read
     env:
-      PRODUCTION_REF: ${{ vars.VOID_PLATFORM_PRODUCTION_REF }}
-      PRODUCTION_ENVIRONMENT: ${{ vars.VOID_PLATFORM_PRODUCTION_ENV || 'Prod' }}
-      POSTGRES_USER: void_ci
-      POSTGRES_PASSWORD: void_ci_pass
-      POSTGRES_DB: void_schema_compat
+      PRODUCTION_REF: ${{ vars.NOSAM_PLATFORM_PRODUCTION_REF }}
+      PRODUCTION_ENVIRONMENT: ${{ vars.NOSAM_PLATFORM_PRODUCTION_ENV || 'Prod' }}
+      POSTGRES_USER: nosam_ci
+      POSTGRES_PASSWORD: nosam_ci_pass
+      POSTGRES_DB: nosam_schema_compat
       COMPAT_DATABASE_URL: postgresql://void_ci:void_ci_pass@localhost:5432/void_schema_compat
       TZ: UTC
     services:
@@ -179,8 +179,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           node .github/scripts/production-baseline.ts
-          cp .github/scripts/schema-fixture.mjs "$RUNNER_TEMP/void-schema-fixture.mjs"
-          cp .github/scripts/schema-compat-tests.ts "$RUNNER_TEMP/void-schema-compat-tests.ts"
+          cp .github/scripts/schema-fixture.mjs "$RUNNER_TEMP/nosam-schema-fixture.mjs"
+          cp .github/scripts/schema-compat-tests.ts "$RUNNER_TEMP/nosam-schema-compat-tests.ts"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ steps.baseline.outputs.sha }}
@@ -193,8 +193,8 @@ jobs:
           node-version-file: .node-version
       - name: Create and populate the previous schema
         run: |
-          vp run --filter @voidcloud/api migrate
-          node "$RUNNER_TEMP/void-schema-fixture.mjs" seed
+          vp run --filter @nosamcloud/api migrate
+          node "$RUNNER_TEMP/nosam-schema-fixture.mjs" seed
         env:
           DATABASE_URL: ${{ env.COMPAT_DATABASE_URL }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -207,8 +207,8 @@ jobs:
           node-version-file: .node-version
       - name: Upgrade the populated database and verify preserved data
         run: |
-          vp run --filter @voidcloud/api migrate
-          node "$RUNNER_TEMP/void-schema-fixture.mjs" verify
+          vp run --filter @nosamcloud/api migrate
+          node "$RUNNER_TEMP/nosam-schema-fixture.mjs" verify
         env:
           DATABASE_URL: ${{ env.COMPAT_DATABASE_URL }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -229,6 +229,6 @@ jobs:
         run: |
           vp run build
           vp run --filter './platform/packages/**' build
-          node "$RUNNER_TEMP/void-schema-compat-tests.ts"
+          node "$RUNNER_TEMP/nosam-schema-compat-tests.ts"
         env:
           COMPAT_DATABASE_URL: ${{ env.COMPAT_DATABASE_URL }}

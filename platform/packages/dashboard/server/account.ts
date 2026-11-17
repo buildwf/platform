@@ -1,4 +1,4 @@
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 import { fetchApi, getApiErrorMessage, readApiJson } from '../lib/api.ts';
 import { dashboardRequestOrigin } from '../lib/origin.ts';
 import { discoveryDisplayName } from '../lib/platform-title.ts';
@@ -12,7 +12,7 @@ export type Props = {
 };
 export const loader = defineHandler<Props>(async (context) => {
   try {
-    const response = await fetchApi(context, '/.well-known/void-platform');
+    const response = await fetchApi(context, '/.well-known/nosam-platform');
     if (!response.ok) {
       throw new Error('Login methods unavailable');
     }

@@ -2,9 +2,9 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import spawn from 'cross-spawn';
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
-import { analyzeApplicationSync } from '../../../../packages/void/src/application-analysis.ts';
-import { readConfig } from '../../../../packages/void/src/config.ts';
-import { hasEmailHandlers } from '../../../../packages/void/src/router/email.ts';
+import { analyzeApplicationSync } from '../../../../packages/nosam/src/application-analysis.ts';
+import { readConfig } from '../../../../packages/nosam/src/config.ts';
+import { hasEmailHandlers } from '../../../../packages/nosam/src/router/email.ts';
 import { prepareKitchenSinkPlatformFixture } from '../../../scripts/kitchen-sink-platform-fixture.ts';
 
 // The CLI manifest builder runs in Node; keep its Node types out of the API's Worker context.
@@ -14,13 +14,13 @@ function readDeployManifest(root: string) {
     [
       '--input-type=module',
       '-e',
-      `import { analyzeApplicationSync } from './packages/void/src/application-analysis.ts';
-import { buildVoidManifest } from './packages/void/src/cli/package.ts';
-import { readConfig } from './packages/void/src/config.ts';
-import { hasEmailHandlers } from './packages/void/src/router/email.ts';
+      `import { analyzeApplicationSync } from './packages/nosam/src/application-analysis.ts';
+import { buildNosamManifest } from './packages/nosam/src/cli/package.ts';
+import { readConfig } from './packages/nosam/src/config.ts';
+import { hasEmailHandlers } from './packages/nosam/src/router/email.ts';
 const root = process.argv[1];
 const application = analyzeApplicationSync(root, { config: readConfig(root), environment: 'prod' });
-console.log(JSON.stringify(buildVoidManifest({
+console.log(JSON.stringify(buildNosamManifest({
   bindings: application.bindings,
   hasEmailHandlers: hasEmailHandlers(application.email),
 })));`,
@@ -67,7 +67,7 @@ describe('hosted kitchen-sink smoke fixture', () => {
     try {
       writeFileSync(
         resolve(senderFixture.root, 'routes/api/sender.ts'),
-        `import { sendEmail } from 'void/email';
+        `import { sendEmail } from 'nosam/email';
 export const POST = () => sendEmail({ to: 'test@example.com', subject: 'Test', text: 'Test' });`,
       );
       const application = analyzeApplicationSync(senderFixture.root, {
@@ -198,7 +198,7 @@ export const POST = () => sendEmail({ to: 'test@example.com', subject: 'Test', t
           encoding: 'utf8',
           timeout: 120_000,
           maxBuffer: 10 * 1024 * 1024,
-          env: { ...process.env, VOID_DEPLOY_PROJECT_ID: 'runtime-acceptance' },
+          env: { ...process.env, NOSAM_DEPLOY_PROJECT_ID: 'runtime-acceptance' },
         });
         expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
       }

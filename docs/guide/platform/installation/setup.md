@@ -10,7 +10,7 @@ Press Enter to accept a suggested zone or display name, or type to replace it. E
 For workers.dev testing, start the interactive install and choose your login method below:
 
 ```sh
-void platform install --workers-dev
+nosam platform install --workers-dev
 ```
 
 Nosam asks for a management API token when it needs to create a zone, add wildcard DNS, or configure Access. Follow the token-creation link and paste the token into the masked prompt. For an existing domain, change **All Domains** to **Specified Domains** and select your zone.
@@ -26,19 +26,19 @@ printf 'Cloudflare management API token: '
 read -rs CLOUDFLARE_API_TOKEN
 printf '\n'
 export CLOUDFLARE_API_TOKEN
-void platform install
+nosam platform install
 ```
 
 In PowerShell:
 
 ```powershell
 $env:CLOUDFLARE_API_TOKEN = [System.Net.NetworkCredential]::new('', (Read-Host 'Cloudflare management API token' -AsSecureString)).Password
-void platform install
+nosam platform install
 ```
 
 :::
 
-After reviewing `--plan`, run `void platform install` and select your saved plan, or run the command printed under **Next, run this command to install the platform**. Both carry your choices into installation and check the current Cloudflare state. Review the refreshed plan. At **Apply this plan?**, **Yes** is selected; press Enter to continue to the credential prompts, or choose **No** to stop. Nosam opens the relevant setup pages and provides fallback links in the terminal. It reuses values you have already supplied.
+After reviewing `--plan`, run `nosam platform install` and select your saved plan, or run the command printed under **Next, run this command to install the platform**. Both carry your choices into installation and check the current Cloudflare state. Review the refreshed plan. At **Apply this plan?**, **Yes** is selected; press Enter to continue to the credential prompts, or choose **No** to stop. Nosam opens the relevant setup pages and provides fallback links in the terminal. It reuses values you have already supplied.
 
 Saved plans contain your installation choices, including paths to any authentication configuration or custom runtime. They contain no secrets or approval to install. Declining the plan or cancelling management-token setup keeps those choices for your next attempt.
 
@@ -78,7 +78,7 @@ that purpose, or guides you to create a dedicated token. Public apps without
 Default-Deny need no ongoing Access-management credential.
 
 For scripts, use `--app-access public|platform|custom`. Supply
-`VOID_PLATFORM_APP_ACCESS_TOKEN` when app rules are needed, or add an `appAccess`
+`NOSAM_PLATFORM_APP_ACCESS_TOKEN` when app rules are needed, or add an `appAccess`
 section to your `--auth-config` file:
 
 ```json
@@ -98,12 +98,12 @@ explicit app-management token; it never silently retains an installer-only token
 
 ## Choose what runtime logs record {#runtime-logs}
 
-By default, runtime logs include request URLs, console output, and exception messages. Project owners read them with `void project logs`; administrators use `void platform deployment logs`. Logs stay in your Cloudflare account, in Workers Logs and the platform's log history.
+By default, runtime logs include request URLs, console output, and exception messages. Project owners read them with `nosam project logs`; administrators use `nosam platform deployment logs`. Logs stay in your Cloudflare account, in Workers Logs and the platform's log history.
 
 If your apps can put personal data in URLs, logs, or error messages, install with minimal runtime logs:
 
 ```sh
-void platform install --runtime-logs minimal
+nosam platform install --runtime-logs minimal
 ```
 
 With minimal runtime logs:
@@ -119,12 +119,12 @@ The setting covers the whole platform. To change it later, see [Change runtime l
 Set a preferred location for new project R2 buckets:
 
 ```sh
-void platform install --storage-location apac
+nosam platform install --storage-location apac
 ```
 
 Supported hints are `apac`, `eeur`, `enam`, `weur`, `wnam`, and `oc`. The default is automatic placement by Cloudflare. Projects can override the default with [`storage.locationHint`](/reference/config#storage-locationhint).
 
-To change the default later, use `void platform upgrade <id> --storage-location weur`. Use `--storage-location automatic` to clear it; omitting the flag keeps the current setting. Changes affect only newly created project buckets, not existing buckets or the platform's own asset bucket. Location hints are [best effort](https://developers.cloudflare.com/r2/reference/data-location/), not data residency guarantees.
+To change the default later, use `nosam platform upgrade <id> --storage-location weur`. Use `--storage-location automatic` to clear it; omitting the flag keeps the current setting. Changes affect only newly created project buckets, not existing buckets or the platform's own asset bucket. Location hints are [best effort](https://developers.cloudflare.com/r2/reference/data-location/), not data residency guarantees.
 
 ## Finish login configuration
 
@@ -216,7 +216,7 @@ these permissions. Nosam checks Access reads before provisioning and reuses that
 management token during Access setup, so you do not need a second API token.
 For applications in another account, provide a token scoped to that identity
 account when asked. Scripts can supply an explicit override through
-`VOID_PLATFORM_ACCESS_SETUP_TOKEN`. The platform's runtime token does not need
+`NOSAM_PLATFORM_ACCESS_SETUP_TOKEN`. The platform's runtime token does not need
 Access management permissions. See Cloudflare's
 [Access API](https://developers.cloudflare.com/api/resources/zero_trust/subresources/access/subresources/applications/)
 and [service-token permissions](https://developers.cloudflare.com/api/resources/zero_trust/subresources/access/subresources/service_tokens/methods/create/).
@@ -284,17 +284,17 @@ In PowerShell, use `Remove-Item Env:CLOUDFLARE_API_TOKEN`. Keep the saved token 
 If Nosam created a zone, it stops in `waiting-for-dns` and prints nameservers. Set those at your registrar, wait for the zone to become active, then resume using the installation ID printed by Nosam:
 
 ```sh
-void platform install --resume --name <installation-id>
+nosam platform install --resume --name <installation-id>
 ```
 
-Resume reuses the saved management token and asks for one if it is missing or rejected by Cloudflare. You can override it through `CLOUDFLARE_API_TOKEN`. When using a source build, also pass the same `--runtime` directory. Resume uses the saved checkpoint and original secrets; do not start a second installation or generate replacement keys. If setup stopped before a checkpoint was saved, rerun `void platform install` and select your saved plan, or rerun the original command.
+Resume reuses the saved management token and asks for one if it is missing or rejected by Cloudflare. You can override it through `CLOUDFLARE_API_TOKEN`. When using a source build, also pass the same `--runtime` directory. Resume uses the saved checkpoint and original secrets; do not start a second installation or generate replacement keys. If setup stopped before a checkpoint was saved, rerun `nosam platform install` and select your saved plan, or rerun the original command.
 
-You can also rerun `void platform install` and choose **Continue setup** for an unfinished installation. For non-interactive recovery, use `--resume --name <id>`. Manage completed platforms with `platform status`, `repair`, or `upgrade`.
+You can also rerun `nosam platform install` and choose **Continue setup** for an unfinished installation. For non-interactive recovery, use `--resume --name <id>`. Manage completed platforms with `platform status`, `repair`, or `upgrade`.
 
 Resume restores your selected Hyperdrive. If that selection is missing from the saved checkpoint, add `--hyperdrive <existing-id>` when resuming, using the same configuration you originally selected.
 
 If Cloudflare rejects a saved runtime token, Nosam opens the token page and asks for a replacement. For a missing [email permission](/guide/platform/installation/credentials#enable-email), update the existing token's permissions and resume. If you supplied a token through an environment variable, update that variable.
 
-To replace a revoked runtime token, set `VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN` to its replacement and resume. Nosam saves it and updates any platform Workers deployed by the interrupted run.
+To replace a revoked runtime token, set `NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN` to its replacement and resume. Nosam saves it and updates any platform Workers deployed by the interrupted run.
 
 :::

@@ -1,4 +1,4 @@
-import { deriveProxyInternalAuth } from '@voidcloud/api/proxy-token';
+import { deriveProxyInternalAuth } from '@nosamcloud/api/proxy-token';
 import { describe, it, expect, vi, beforeEach } from 'vite-plus/test';
 import { hmacSign } from '../../src/hmac.ts';
 import {
@@ -70,10 +70,10 @@ describe('resolveResource', () => {
 
     const [, init] = (api.fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
     const headers = (init as RequestInit).headers as Record<string, string>;
-    expect(headers['x-void-proxy-internal']).toBe(
+    expect(headers['x-nosam-proxy-internal']).toBe(
       await deriveProxyInternalAuth(JWT_SECRET, 'resolve-resource', 'proj_000000000001'),
     );
-    expect(headers['x-void-internal']).toBeUndefined();
+    expect(headers['x-nosam-internal']).toBeUndefined();
   });
 });
 
@@ -97,13 +97,13 @@ describe('verifyProjectDeployAccess', () => {
       proxyOrigin: 'https://proxy.example.com',
     });
     const headers = (init as RequestInit).headers as Record<string, string>;
-    expect(headers['x-void-internal']).toBe(
+    expect(headers['x-nosam-internal']).toBe(
       await hmacSign(
         'void-proxy-owner-v2\nproj_000000000001\nhttps://proxy.example.com',
         JWT_SECRET,
       ),
     );
-    expect(headers['x-void-proxy-internal']).toBeUndefined();
+    expect(headers['x-nosam-proxy-internal']).toBeUndefined();
 
     const missing = { fetch: vi.fn() } as unknown as Fetcher;
     await expect(

@@ -22,7 +22,7 @@ import { setGetProjectOverride } from './setup.ts';
 // the deployment row, while clearTables deletes deployments before projects:
 // opposite orders, so the two transactions deadlock. PGlite has one connection,
 // so only a real PostgreSQL database can show this.
-const postgres = it.runIf(Boolean(process.env.VOID_TEST_DATABASE_URL));
+const postgres = it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL));
 const HASH = (n: number) => n.toString(16).padStart(32, '0');
 
 let env: TestEnv;

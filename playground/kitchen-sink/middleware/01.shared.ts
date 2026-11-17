@@ -1,6 +1,6 @@
-import { defineMiddleware } from 'void';
+import { defineMiddleware } from 'nosam';
 
-declare module 'void' {
+declare module 'nosam' {
   interface CloudContextVariables {
     shared: { appName: string };
   }

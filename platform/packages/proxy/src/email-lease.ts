@@ -64,7 +64,7 @@ export async function leaseEmailDomainCredential(
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'x-void-internal': token,
+          'x-nosam-internal': token,
         },
         body: JSON.stringify({ domain, projectId }),
         signal: controller.signal,

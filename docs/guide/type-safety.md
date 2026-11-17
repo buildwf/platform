@@ -14,7 +14,7 @@ Nosam infers types from your database schema and route handlers. When you change
 1. **Database types** come from your [Drizzle schema](./database.md#schema-definition). Column types are known at compile time.
 2. **Route handlers:** return types and validator schemas become the generated `RouteMap`, which the [typed fetch](./typed-fetch) client consumes.
 
-All generated types live in `.void/` and update automatically when source files or schema change.
+All generated types live in `.nosam/` and update automatically when source files or schema change.
 
 ## Database → Handler → Client
 
@@ -52,7 +52,7 @@ The Drizzle schema defines database columns, runtime validation, handler input t
 To build the URL of an API route, pass its route pattern and parameters to `routeUrl()`:
 
 ```ts
-import { routeUrl } from 'void/routes';
+import { routeUrl } from 'nosam/routes';
 
 const url = routeUrl('/api/users/[id]', {
   params: { id: 42 },
@@ -70,7 +70,7 @@ The same bracket patterns work with typed `fetch()` and WebSocket `connect()`.
 Pass the returned string to `fetch()`, an `<a>`, or `c.redirect()`. For `c.redirect()` and `c.rewrite()`, you can pass a destination object directly:
 
 ```ts
-import type { RouteDestination } from 'void/routes';
+import type { RouteDestination } from 'nosam/routes';
 
 const user = {
   pathname: '/api/users/[id]',
@@ -97,11 +97,11 @@ routeUrl('/files/[...]', { params: { '*': 'docs/get started' } });
 
 ### Checked URL strings
 
-Enable [`routing.typedRoutes`](../reference/config.md#routing-typedroutes) to catch misspelled URLs in redirects, rewrites, and stream clients. Apps created with `void init` already have it enabled. For an existing app:
+Enable [`routing.typedRoutes`](../reference/config.md#routing-typedroutes) to catch misspelled URLs in redirects, rewrites, and stream clients. Apps created with `nosam init` already have it enabled. For an existing app:
 
 ```ts
-// void.config.ts
-import { defineConfig } from 'void/config';
+// nosam.config.ts
+import { defineConfig } from 'nosam/config';
 
 export default defineConfig({
   routing: { typedRoutes: true },
@@ -125,7 +125,7 @@ The [SSE](./sse.md#client) and [live stream](./live.md#subscribe-from-the-browse
 `c.redirect()` also accepts a `URL` or destination object. For a URL from a provider SDK, your CMS, or `public/`, use `as Href` to skip the type check:
 
 ```ts
-import { routeUrl, type Href } from 'void/routes';
+import { routeUrl, type Href } from 'nosam/routes';
 
 declare const id: string;
 declare const dynamic: string;
@@ -140,7 +140,7 @@ c.redirect(dynamic as Href);
 
 Cast only URLs you trust. Validate request values such as `?redirectTo=` before redirecting; see [`c.redirect()`](../reference/api/rewrites.md#c-rewrite-destination) for an example.
 
-`void/routes` exports two types for these strings:
+`nosam/routes` exports two types for these strings:
 
 - `RouteUrl`: the URL of one of your routes. `routeUrl()` returns it, and `c.rewrite()` accepts it.
 - `Href`: anything `c.redirect()` can point to: a `RouteUrl`, a same-page query or hash, or an external URL.
@@ -148,13 +148,13 @@ Cast only URLs you trust. Validate request values such as `?redirectTo=` before 
 Use these types for URLs you check at runtime:
 
 ```ts
-import type { Href, RouteUrl } from 'void/routes';
+import type { Href, RouteUrl } from 'nosam/routes';
 
 c.rewrite(post.path as RouteUrl);
 c.redirect(user.website as Href);
 ```
 
-The dev server keeps route types up to date. After changing `routing.typedRoutes`, restart it or run `void prepare`. For CI and standalone typechecking, follow [Setup](#setup). See the [API reference](../reference/api/types.md#void-routes) for the URL helper and route types.
+The dev server keeps route types up to date. After changing `routing.typedRoutes`, restart it or run `nosam prepare`. For CI and standalone typechecking, follow [Setup](#setup). See the [API reference](../reference/api/types.md#nosam-routes) for the URL helper and route types.
 
 ## What Gets Checked
 
@@ -190,7 +190,7 @@ Middleware and handlers share typed data through Hono's context variables. Augme
 
 ```ts
 // middleware/01.auth.ts
-declare module 'void' {
+declare module 'nosam' {
   interface CloudContextVariables {
     requestId: string;
   }
@@ -206,11 +206,11 @@ Now `c.get("requestId")` returns `string` everywhere, with no assertion needed. 
 
 ## Custom Binding Types
 
-For native Cloudflare deployments, declare a binding in `void.config.ts` to give `c.env` its type. For example, add a [rate limiter](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/):
+For native Cloudflare deployments, declare a binding in `nosam.config.ts` to give `c.env` its type. For example, add a [rate limiter](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/):
 
 ```ts
-// void.config.ts
-import { defineConfig } from 'void/config';
+// nosam.config.ts
+import { defineConfig } from 'nosam/config';
 
 export default defineConfig({
   cloudflare: {
@@ -221,10 +221,10 @@ export default defineConfig({
 });
 ```
 
-Run `void prepare`, or start the dev server, to use the binding without a type assertion:
+Run `nosam prepare`, or start the dev server, to use the binding without a type assertion:
 
 ```ts
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 
 export const GET = defineHandler(async (c) => {
   const { success } = await c.env.MY_RATE_LIMITER.limit({ key: 'example' });
@@ -235,9 +235,9 @@ export const GET = defineHandler(async (c) => {
 Service bindings use `Fetcher`, Durable Objects use `DurableObjectNamespace`, and other bindings use their standard Cloudflare types. For RPC methods or other specialized types, augment `CloudBindings` in a file included by your tsconfig:
 
 ```ts
-import type {} from 'void';
+import type {} from 'nosam';
 
-declare module 'void' {
+declare module 'nosam' {
   interface CloudBindings {
     AUTH: Fetcher & { check(): Promise<boolean> };
   }
@@ -252,19 +252,19 @@ Extend the generated tsconfig in your project:
 
 ```json
 {
-  "extends": "./.void/tsconfig.json",
+  "extends": "./.nosam/tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "bundler",
     "strict": true,
     "jsx": "react-jsx",
-    "types": ["void/env"]
+    "types": ["nosam/env"]
   },
   "include": ["src", "routes", "middleware", "crons", "queues"]
 }
 ```
 
-If you already have a TypeScript config, run `void init --tsconfig` to add Nosam types while preserving your settings.
+If you already have a TypeScript config, run `nosam init --tsconfig` to add Nosam types while preserving your settings.
 
-Run `void prepare` in CI or after a fresh clone, or let `vite dev` / `vite build` generate the `.void/` files during normal app workflows.
+Run `nosam prepare` in CI or after a fresh clone, or let `vite dev` / `vite build` generate the `.nosam/` files during normal app workflows.

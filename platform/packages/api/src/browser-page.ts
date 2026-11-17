@@ -3,7 +3,7 @@ import {
   browserPageLead,
   browserPageStatus,
   renderBrowserPage,
-} from '@void/platform/browser-page';
+} from '@nosam/platform/browser-page';
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { ApiEnv } from './env.ts';
@@ -57,12 +57,12 @@ export function platformBrowserError(
     }
   }
   const action = returnUrl
-    ? '<a class="void-auth-button void-auth-button-primary" href="' +
+    ? '<a class="nosam-auth-button nosam-auth-button-primary" href="' +
       escapeBrowserHtml(returnUrl) +
       '">Start a new sign-in</a>'
     : '';
   const details = (extra.details ?? [])
-    .map((detail) => '<p class="void-auth-note">' + escapeBrowserHtml(detail) + '</p>')
+    .map((detail) => '<p class="nosam-auth-note">' + escapeBrowserHtml(detail) + '</p>')
     .join('');
   const command = extra.command
     ? '<pre><code>' + escapeBrowserHtml(extra.command) + '</code></pre>'

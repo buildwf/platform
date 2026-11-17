@@ -89,7 +89,7 @@ export function attachServingStoreMetadata(
   const persisted: Record<string, AssetManifestEntry> = {};
   const missing: Array<string> = [];
   for (const [path, entry] of Object.entries(assetManifest)) {
-    if (path.startsWith('/.void-deploy/')) {
+    if (path.startsWith('/.nosam-deploy/')) {
       persisted[path] = entry;
       continue;
     }
@@ -119,7 +119,7 @@ function reconstructPersistedServingManifest(
   const servingManifest: Record<string, string> = {};
   const invalid: Array<string> = [];
   for (const [path, entry] of Object.entries(assetManifest)) {
-    if (path.startsWith('/.void-deploy/')) {
+    if (path.startsWith('/.nosam-deploy/')) {
       continue;
     }
     const store = inferPersistedAssetStore(entry, deployManifest);

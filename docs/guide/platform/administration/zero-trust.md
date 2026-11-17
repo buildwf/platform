@@ -9,7 +9,7 @@ Project Zero Trust puts Cloudflare Access in front of the hostnames of projects 
 
 This is separate from the Access login and protection for the platform API. Projects deployed directly to Cloudflare are not affected.
 
-Choose app access during `void platform install`, or configure it later using this page. The installer reuses the platform policy or helps you select separate company rules, and finishes setup before opening traffic.
+Choose app access during `nosam platform install`, or configure it later using this page. The installer reuses the platform policy or helps you select separate company rules, and finishes setup before opening traffic.
 
 If you choose public apps in an account with Default-Deny, Nosam manages scoped
 public rules instead. New projects and custom domains remain public automatically.
@@ -21,7 +21,7 @@ choose to protect apps. To renew their token in Admin, leave the policy fields b
 
 - A Cloudflare Zero Trust organization in the account that hosts the platform, with the identity providers and reusable Access policies you want to use. Select at least one Allow policy that matches people by identity. Nosam rejects Bypass and Service Auth policies, and rules that allow Everyone or any service token.
 - A Cloudflare API token for that account with **Access: Apps and Policies Write** and **Access: Organizations, Identity Providers, and Groups Read**. Nosam keeps it separate from the platform runtime token, stores it encrypted, and never shows it again.
-- Free Access applications in the account. Cloudflare's default limit is 500 per account. Count the applications you already manage outside Nosam, then add the ones Nosam needs, as described in [Access Applications Nosam Creates](#access-applications-void-creates).
+- Free Access applications in the account. Cloudflare's default limit is 500 per account. Count the applications you already manage outside Nosam, then add the ones Nosam needs, as described in [Access Applications Nosam Creates](#access-applications-nosam-creates).
 - Platform API, proxy, and email gateway hostnames outside the project application domain. Configuration is rejected when project protection would cover one of them. Any other hostname under the project application domain also asks for sign-in, except the `/health` path of `void-platform-health.<your domain>`, which Nosam keeps open for its health checks and never serves from a project. New projects cannot use that name. A project that already uses it keeps every other path, protected or public like any other project.
 
 ## Enable Zero Trust
@@ -29,7 +29,7 @@ choose to protect apps. To renew their token in Admin, leave the policy fields b
 Open **Zero Trust** in the administrator UI, or use the operator CLI:
 
 ```sh
-printf '%s' "$ACCESS_API_TOKEN" | void platform zero-trust configure \
+printf '%s' "$ACCESS_API_TOKEN" | nosam platform zero-trust configure \
   --identity-providers <id[,id...]> \
   --policies <id[,id...]> \
   --existing-projects public \
@@ -47,8 +47,8 @@ To change the identity providers, policies, token, or new-project default later,
 ## Check Status
 
 ```sh
-void platform zero-trust status
-void platform zero-trust status --check
+nosam platform zero-trust status
+nosam platform zero-trust status --check
 ```
 
 `status` shows the saved settings, the current operation, and how many projects are protected, public, or waiting. `--check` also compares the settings with Cloudflare Access. In the administrator UI, use **Check with Cloudflare**.
@@ -58,27 +58,27 @@ void platform zero-trust status --check
 Project owners and project administrators can protect a project or make it public. Readers can see its state.
 
 ```sh
-void project zero-trust status
-void project zero-trust protect
-void project zero-trust public
-void project zero-trust reconcile
+nosam project zero-trust status
+nosam project zero-trust protect
+nosam project zero-trust public
+nosam project zero-trust reconcile
 ```
 
 `status` also tells you whether protection can be changed right now. Making a project public does not change the default for new projects.
 
-Installation administrators can do the same from the project page in the administrator UI or with `void platform zero-trust project-status|project-protect|project-public|project-reconcile <project-id>`.
+Installation administrators can do the same from the project page in the administrator UI or with `nosam platform zero-trust project-status|project-protect|project-public|project-reconcile <project-id>`.
 
-Deploys and rollbacks wait until a project's protection change is finished. If one is refused, run `void project zero-trust status` to see why; the owner or a project administrator can run `void project zero-trust reconcile` before you try again. A protected project can have up to 100 custom domains.
+Deploys and rollbacks wait until a project's protection change is finished. If one is refused, run `nosam project zero-trust status` to see why; the owner or a project administrator can run `nosam project zero-trust reconcile` before you try again. A protected project can have up to 100 custom domains.
 
 ## Disable Zero Trust
 
 ```sh
-void platform zero-trust disable
+nosam platform zero-trust disable
 ```
 
-This removes the Access applications Nosam created and makes all projects public. On large installations it runs in steps; run it again, or check `void platform zero-trust status`, until Zero Trust shows as disabled with no operation running.
+This removes the Access applications Nosam created and makes all projects public. On large installations it runs in steps; run it again, or check `nosam platform zero-trust status`, until Zero Trust shows as disabled with no operation running.
 
-Disable Zero Trust and wait for its applications to be removed before [uninstalling the platform](/guide/platform/installation/uninstall). If project deletion stopped partway, retry `void project delete` for that project.
+Disable Zero Trust and wait for its applications to be removed before [uninstalling the platform](/guide/platform/installation/uninstall). If project deletion stopped partway, retry `nosam project delete` for that project.
 
 ## How Protection Works
 
@@ -118,7 +118,7 @@ Project protection requires a person’s identity. Webhooks, CI jobs, uptime che
 
 If a project must accept such requests:
 
-- make the project public with `void project zero-trust public` and check callers in your own code, or
+- make the project public with `nosam project zero-trust public` and check callers in your own code, or
 - move the endpoints that machines call into a separate project, and make only that project public.
 
 ### Access Applications Nosam Creates
@@ -151,19 +151,19 @@ The first application is the shared company policy or the public-app management 
 
 #### Recognizing Nosam's Applications
 
-Run `void platform zero-trust status` for the shared and health-check applications, or `void platform zero-trust project-status <project-id>` for a project's applications. These commands show their exact names and IDs.
+Run `nosam platform zero-trust status` for the shared and health-check applications, or `nosam platform zero-trust project-status <project-id>` for a project's applications. These commands show their exact names and IDs.
 
 ### Editing Applications in the Dashboard
 
-Manage Nosam’s applications through `void platform zero-trust configure` and the project commands. Editing or deleting them in Cloudflare can block access until you reconcile. Dashboard edits may be replaced the next time Nosam updates an application.
+Manage Nosam’s applications through `nosam platform zero-trust configure` and the project commands. Editing or deleting them in Cloudflare can block access until you reconcile. Dashboard edits may be replaced the next time Nosam updates an application.
 
 You can edit a selected reusable policy’s rules in Cloudflare. Changes affect every project using that policy. Keep an identity-based Allow policy without Everyone or service tokens, then check it with:
 
 ```sh
-void platform zero-trust status --check
+nosam platform zero-trust status --check
 ```
 
-- `drifted: true`: run `void platform zero-trust reconcile`.
+- `drifted: true`: run `nosam platform zero-trust reconcile`.
 - `present: false`: check the token, application, identity providers, and policies, then reconcile.
 
 This checks the shared and health-check applications. For a public exception or custom-domain application, use the project's reconcile command.
@@ -172,9 +172,9 @@ This checks the shared and health-check applications. For a public exception or 
 
 | Command                                                   | Scope                                 | Who can run it                           |
 | --------------------------------------------------------- | ------------------------------------- | ---------------------------------------- |
-| `void platform zero-trust reconcile`                      | Platform and all projects             | Installation administrators              |
-| `void platform zero-trust project-reconcile <project-id>` | One project                           | Installation administrators              |
-| `void project zero-trust reconcile`                       | Linked project, or `--project <slug>` | Project owner and project administrators |
+| `nosam platform zero-trust reconcile`                      | Platform and all projects             | Installation administrators              |
+| `nosam platform zero-trust project-reconcile <project-id>` | One project                           | Installation administrators              |
+| `nosam project zero-trust reconcile`                       | Linked project, or `--project <slug>` | Project owner and project administrators |
 
 Project reconciliation requires platform status `ready`. Otherwise, reconcile the platform first.
 
@@ -184,9 +184,9 @@ If an application was renamed, restore its recorded name before reconciling. Rem
 
 Protection changes can temporarily return a 403. If a step fails, a protected project stays protected or refuses visitors until the change finishes.
 
-Protecting or making a project public usually finishes before the command returns. If it is still running or reports an error, inspect `void project zero-trust status`, fix the reported cause, and run `void project zero-trust reconcile`.
+Protecting or making a project public usually finishes before the command returns. If it is still running or reports an error, inspect `nosam project zero-trust status`, fix the reported cause, and run `nosam project zero-trust reconcile`.
 
-Platform-wide changes run in steps. During initial setup, custom domains stay public until Nosam reaches their project. During disable, hostnames can become public at different times. Follow progress with `void platform zero-trust status`.
+Platform-wide changes run in steps. During initial setup, custom domains stay public until Nosam reaches their project. During disable, hostnames can become public at different times. Follow progress with `nosam platform zero-trust status`.
 
 A new custom domain becomes reachable only after its project’s protection is ready.
 
@@ -196,10 +196,10 @@ Requests carrying an Access token bypass the [static asset edge cache](/guide/ed
 
 ## Recovery
 
-- **Status stays `configuring` or `disabling`.** Large changes run in steps. Scheduled maintenance continues them within a few minutes, or run `void platform zero-trust reconcile`.
-- **Status shows an error.** Fix the cause shown, such as token permissions or the application limit, then run `void platform zero-trust reconcile`. Otherwise Nosam retries every hour.
-- **One project shows an error.** The rest of the change still finishes. Nosam retries the project every hour, or its owner or a project administrator can run `void project zero-trust reconcile`. Until then, a project that was already protected stays protected, and a project being newly protected is never more open than before.
-- **Adding a domain stays pending because of a project.** Nosam publishes the new domain only after every project is ready for it. Platform status shows an error that names the projects it could not update. Check each one with `void platform zero-trust project-status <project-id>`, fix the cause, then run `void platform zero-trust reconcile` or rerun the domain command. Nosam also retries every hour. Your `workers.dev` URLs keep working meanwhile.
-- **A new project could not be set up.** Creating the project still succeeds with a warning. Nosam retries every hour, or run `void project zero-trust reconcile`.
-- **The saved API token expired or was revoked.** Run `void platform zero-trust configure --token-stdin` with a replacement token and the same identity providers, policies, and `--protect-new-projects` choice. Omit `--existing-projects`. Nosam continues the unfinished change, including an unfinished disable. Finish it before changing other settings.
-- **A selected identity provider or policy was deleted.** Run `void platform zero-trust disable` to stop the unfinished setup and remove its applications. This makes projects public. Then configure Zero Trust again with the new selections.
+- **Status stays `configuring` or `disabling`.** Large changes run in steps. Scheduled maintenance continues them within a few minutes, or run `nosam platform zero-trust reconcile`.
+- **Status shows an error.** Fix the cause shown, such as token permissions or the application limit, then run `nosam platform zero-trust reconcile`. Otherwise Nosam retries every hour.
+- **One project shows an error.** The rest of the change still finishes. Nosam retries the project every hour, or its owner or a project administrator can run `nosam project zero-trust reconcile`. Until then, a project that was already protected stays protected, and a project being newly protected is never more open than before.
+- **Adding a domain stays pending because of a project.** Nosam publishes the new domain only after every project is ready for it. Platform status shows an error that names the projects it could not update. Check each one with `nosam platform zero-trust project-status <project-id>`, fix the cause, then run `nosam platform zero-trust reconcile` or rerun the domain command. Nosam also retries every hour. Your `workers.dev` URLs keep working meanwhile.
+- **A new project could not be set up.** Creating the project still succeeds with a warning. Nosam retries every hour, or run `nosam project zero-trust reconcile`.
+- **The saved API token expired or was revoked.** Run `nosam platform zero-trust configure --token-stdin` with a replacement token and the same identity providers, policies, and `--protect-new-projects` choice. Omit `--existing-projects`. Nosam continues the unfinished change, including an unfinished disable. Finish it before changing other settings.
+- **A selected identity provider or policy was deleted.** Run `nosam platform zero-trust disable` to stop the unfinished setup and remove its applications. This makes projects public. Then configure Zero Trust again with the new selections.

@@ -330,7 +330,7 @@ describe('buildRoutingJson', () => {
 
   it('omits pages when the manifest has none', () => {
     const parsed = JSON.parse(
-      buildRoutingJson({ ...base, manifest: { type: 'void' } as unknown as DeployManifest }),
+      buildRoutingJson({ ...base, manifest: { type: 'nosam' } as unknown as DeployManifest }),
     );
     expect(parsed.pages).toBeUndefined();
   });
@@ -338,14 +338,14 @@ describe('buildRoutingJson', () => {
   it('omits pathRevalidate when the manifest has none or it is empty', () => {
     expect(
       JSON.parse(
-        buildRoutingJson({ ...base, manifest: { type: 'void' } as unknown as DeployManifest }),
+        buildRoutingJson({ ...base, manifest: { type: 'nosam' } as unknown as DeployManifest }),
       ).pathRevalidate,
     ).toBeUndefined();
     expect(
       JSON.parse(
         buildRoutingJson({
           ...base,
-          manifest: { type: 'void', pathRevalidate: {} } as unknown as DeployManifest,
+          manifest: { type: 'nosam', pathRevalidate: {} } as unknown as DeployManifest,
         }),
       ).pathRevalidate,
     ).toBeUndefined();

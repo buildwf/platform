@@ -1,7 +1,7 @@
 /** A concrete destination that can execute a Nosam deployment. */
-export type DeployTarget = 'cloudflare' | 'void';
+export type DeployTarget = 'cloudflare' | 'nosam';
 
-export type DeployAppType = 'void' | 'spa' | 'static';
+export type DeployAppType = 'nosam' | 'spa' | 'static';
 
 /**
  * @deprecated Nosam does not read deploy target capabilities. Removed in the

@@ -1,4 +1,4 @@
-import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from '@void/platform';
+import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from '@nosam/platform';
 import { type CronFireMessage, processCronFiresBatch } from './cron-fires-queue.ts';
 import { processDeploymentBatch } from './deployment-execution.ts';
 import type { ApiEnv } from './env.ts';
@@ -21,13 +21,13 @@ export async function processPlatformQueue(
   env: ApiEnv['Bindings'],
   processors: PlatformQueueProcessors = defaultProcessors,
 ): Promise<void> {
-  if (batch.queue === (env.DEPLOYMENTS_QUEUE_NAME ?? 'void-deployments')) {
+  if (batch.queue === (env.DEPLOYMENTS_QUEUE_NAME ?? 'nosam-deployments')) {
     // Admitted operations drain through maintenance; the database lifecycle
     // checkpoint closes new admission before a downgrade waits for this Queue.
     await (processors.deployments ?? processDeploymentBatch)(batch, env);
     return;
   }
-  const cronQueue = env.CRON_FIRES_QUEUE_NAME ?? 'void-cron-fires';
+  const cronQueue = env.CRON_FIRES_QUEUE_NAME ?? 'nosam-cron-fires';
   if (batch.queue !== cronQueue) {
     // Usage is durable accounting data. It must drain even while application
     // traffic is disabled, and deliberately performs no lifecycle-gate read.

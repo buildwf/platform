@@ -13,7 +13,7 @@ const SECRET = 'test-platform-secret';
  * pass against code that ignored the var entirely.
  */
 const MAIL_DOMAIN = 'mail.voidcloud.dev';
-const GATEWAY_ORIGIN = 'https://void-email-gateway-staging.voidzer0.workers.dev';
+const GATEWAY_ORIGIN = 'https://nosam-email-gateway-staging.voidzer0.workers.dev';
 
 const DAY = 24 * 60 * 60;
 

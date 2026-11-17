@@ -20,7 +20,7 @@ Example:
 
 ```ts
 // crons/hourly-heartbeat.ts
-import { defineScheduled } from 'void';
+import { defineScheduled } from 'nosam';
 
 export const cron = '0 * * * *';
 
@@ -35,7 +35,7 @@ A single job file can export an array of cron expressions:
 
 ```ts
 // crons/cleanup.ts
-import { defineScheduled } from 'void';
+import { defineScheduled } from 'nosam';
 
 export const cron = ['0 * * * *', '30 * * * *'];
 
@@ -55,7 +55,7 @@ Jobs sharing a cron expression each run once per invocation. Nosam waits for all
 Schedules don't fire automatically in local development. Test a job by sending a request to Nosam's development endpoint:
 
 ```
-POST /__void/scheduled
+POST /__nosam/scheduled
 Content-Type: application/json
 { "cron": "<expression>", "scheduledTime": <unix_ms> }
 ```
@@ -65,9 +65,9 @@ Set `cron` to an expression exported by your job. A successful call returns `{ "
 The endpoint requires a local dev trigger token. Nosam prints a paste-ready curl command with the current token when the dev server starts.
 
 ```bash
-curl -X POST http://localhost:5173/__void/scheduled \
+curl -X POST http://localhost:5173/__nosam/scheduled \
   -H "Content-Type: application/json" \
-  -H "x-void-dev-trigger: <printed-token>" \
+  -H "x-nosam-dev-trigger: <printed-token>" \
   -d '{"cron":"0 * * * *","scheduledTime":'"$(date +%s000)"'}'
 ```
 

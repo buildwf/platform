@@ -91,7 +91,7 @@ export async function githubWebhookIngressFetch(
   let response: Response;
   try {
     response = await env.API.fetch(
-      new Request('https://void-api.internal/internal/github-webhook', {
+      new Request('https://nosam-api.internal/internal/github-webhook', {
         method: 'POST',
         headers,
         body: raw.slice().buffer,

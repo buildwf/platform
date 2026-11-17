@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
 import { isDeepStrictEqual } from 'node:util';
-import { canonicalJson, isRecord } from '@void/deploy-core';
+import { canonicalJson, isRecord } from '@nosam/deploy-core';
 import { join } from 'pathslash';
 import { parseRootWranglerConfig } from './config.ts';
 import { cloudflareCommandDiagnostic } from './diagnostics.ts';
@@ -16,11 +16,11 @@ import {
 } from './execute.ts';
 import type { CloudflareUploadResult } from './operations.ts';
 import {
-  isVoidSecretDraftHeader,
-  isVoidSecretOnlyDraft,
+  isNosamSecretDraftHeader,
+  isNosamSecretOnlyDraft,
   isWranglerSecretOnlyDraft,
-  VOID_SECRET_DRAFT_MESSAGE,
-  VOID_SECRET_DRAFT_SOURCE,
+  NOSAM_SECRET_DRAFT_MESSAGE,
+  NOSAM_SECRET_DRAFT_SOURCE,
 } from './secret-draft.ts';
 
 const DURABLE_MIGRATION_VERSION_ERROR = 10211;
@@ -190,18 +190,18 @@ export function encodeCloudflareVersionMessage(
   const metadata: CloudflareVersionMetadata = triggerConfig
     ? { schema: 2, migrations, triggerConfig, ...(contentHash ? { contentHash } : {}) }
     : { schema: 1, migrations };
-  return `void:${JSON.stringify(metadata)}`;
+  return `nosam:${JSON.stringify(metadata)}`;
 }
 
 /** Read migration state written by {@link encodeCloudflareVersionMessage}. */
 export function parseCloudflareVersionMessage(
   message: string | null | undefined,
 ): CloudflareVersionMetadata | null {
-  if (!message?.startsWith('void:')) {
+  if (!message?.startsWith('nosam:')) {
     return null;
   }
   try {
-    const value = JSON.parse(message.slice(5)) as {
+    const value = JSON.parse(message.slice(6)) as {
       schema?: unknown;
       migrations?: unknown;
       triggerConfig?: unknown;
@@ -299,7 +299,7 @@ export async function deployCloudflareVersionTriggers(options: {
     ),
     options.manageRoutes,
   );
-  const directory = mkdtempSync(join(tmpdir(), 'void-version-triggers-'));
+  const directory = mkdtempSync(join(tmpdir(), 'nosam-version-triggers-'));
   const configPath = join(directory, 'wrangler.json');
   try {
     writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
@@ -601,7 +601,7 @@ function hasCustomDomains(routes: ReadonlyArray<unknown> | undefined): boolean {
   return routes?.some((route) => isRecord(route) && route.custom_domain === true) === true;
 }
 
-/** Select a configured HTTPS route that is guaranteed to cover /__void/ready. */
+/** Select a configured HTTPS route that is guaranteed to cover /__nosam/ready. */
 function customRouteReadinessUrl(routes: ReadonlyArray<unknown>): string | undefined {
   for (const route of routes) {
     const record = isRecord(route) ? route : undefined;
@@ -902,7 +902,7 @@ export async function activateCloudflareVersion(
     return activateCloudflareVersionWithSecretsFile(options);
   }
 
-  const directory = mkdtempSync(join(tmpdir(), 'void-version-secrets-'));
+  const directory = mkdtempSync(join(tmpdir(), 'nosam-version-secrets-'));
   const path = join(directory, 'secrets.json');
   try {
     writeFileSync(path, `${JSON.stringify(Object.fromEntries(candidateSecrets))}\n`, {
@@ -1059,7 +1059,7 @@ async function activateCloudflareVersionWithSecretsFile(
     return previousVersion?.isSecretOnlyDraft === true;
   }
   // Recovery only: true when the previous version is an empty Worker that must never get traffic
-  // back. Unlike `isVoidSecretOnlyDraft`, this also accepts Nosam's zero-binding placeholder, which
+  // back. Unlike `isNosamSecretOnlyDraft`, this also accepts Nosam's zero-binding placeholder, which
   // the bootstrap path must not treat as first-deployment proof.
   async function previousIsRestorePlaceholder(): Promise<boolean | null> {
     if (!previousVersionId) {
@@ -1071,10 +1071,10 @@ async function activateCloudflareVersionWithSecretsFile(
     if (!previousVersion || previousVersion.draftUnknown) {
       return null;
     }
-    if (previousVersion.message !== VOID_SECRET_DRAFT_MESSAGE) {
+    if (previousVersion.message !== NOSAM_SECRET_DRAFT_MESSAGE) {
       return false;
     }
-    return await isVoidSecretDraftPlaceholderVersion(options, previousVersionId);
+    return await isNosamSecretDraftPlaceholderVersion(options, previousVersionId);
   }
   const previousMetadata = desiredMetadata?.schema === 2 ? previousVersion?.metadata : null;
   const continuesOpaqueTriggerPreservation =
@@ -1138,19 +1138,19 @@ async function activateCloudflareVersionWithSecretsFile(
     options.queueConsumerCleanup,
   );
 
-  const alias = `void-ready-${Date.now().toString(36)}`;
-  const bootstrapVoidDraft =
+  const alias = `nosam-ready-${Date.now().toString(36)}`;
+  const bootstrapNosamDraft =
     !options.preserveTriggers &&
     !options.requirePreviewForReadiness &&
-    previousVersion?.isVoidSecretOnlyDraft === true;
-  if (previous.versionId !== null && (options.atomic || bootstrapVoidDraft)) {
+    previousVersion?.isNosamSecretOnlyDraft === true;
+  if (previous.versionId !== null && (options.atomic || bootstrapNosamDraft)) {
     // The exact private cf placeholder has no serving preview. Publish its first
     // application once through the bootstrap path, pinning its active secrets
     // just as for an explicitly atomic release.
-    if (bootstrapVoidDraft && !activeSecretsPinned && !options.pinActiveSecrets) {
+    if (bootstrapNosamDraft && !activeSecretsPinned && !options.pinActiveSecrets) {
       return { ok: false, reason: 'inheritance-source-unavailable' };
     }
-    if (bootstrapVoidDraft || (!activeSecretsPinned && options.pinActiveSecrets)) {
+    if (bootstrapNosamDraft || (!activeSecretsPinned && options.pinActiveSecrets)) {
       let activeSecrets: Awaited<ReturnType<typeof readCloudflareVersionSecretBindings>>;
       try {
         activeSecrets = await readCloudflareVersionSecretBindings(options, previous.versionId);
@@ -1161,12 +1161,12 @@ async function activateCloudflareVersionWithSecretsFile(
         return { ok: false, reason: 'inheritance-source-unavailable' };
       }
       if (
-        bootstrapVoidDraft &&
+        bootstrapNosamDraft &&
         (activeSecrets.length === 0 ||
           activeSecrets.some((secret) => secret.type !== 'secret_text') ||
           !arraysEqual(
             activeSecrets.map((secret) => secret.name).sort(),
-            [...previousVersion!.voidDraftSecretNames!].sort(),
+            [...previousVersion!.nosamDraftSecretNames!].sort(),
           ) ||
           (activeSecretsPinned &&
             !isDeepStrictEqual(
@@ -1453,7 +1453,7 @@ async function activateCloudflareVersionWithSecretsFile(
       readinessUsesCustomRoute && !isTrustedReadinessOrigin(url, trustedReadinessOrigin);
     const probe = (url: string) =>
       probeReadiness(
-        `${url.replace(/\/$/, '')}/__void/ready`,
+        `${url.replace(/\/$/, '')}/__nosam/ready`,
         options.workerName,
         withholdsCustomRouteHeaders(url) ? undefined : options.readinessHeaders,
         authenticatedWorkersDevSubdomain,
@@ -1818,7 +1818,7 @@ async function restorePreviousVersionAndTriggers(
       triggersRestored: 'no',
     };
   }
-  // Traffic attachments can change between uploads (for example `void domain
+  // Traffic attachments can change between uploads (for example `nosam domain
   // add`), so the caller passes the snapshot captured before this deployment,
   // not the older immutable version annotation. Cleanup-only queue names are
   // deliberately not part of this target snapshot.
@@ -1868,8 +1868,8 @@ type CloudflareVersionInspection = Readonly<{
   metadata: CloudflareVersionMetadata | null;
   message: string | null;
   isSecretOnlyDraft: boolean;
-  isVoidSecretOnlyDraft: boolean;
-  voidDraftSecretNames: ReadonlyArray<string> | null;
+  isNosamSecretOnlyDraft: boolean;
+  nosamDraftSecretNames: ReadonlyArray<string> | null;
   // A Wrangler `secret put` version whose resources could not be read, so it may still be an
   // empty draft. Recovery must not offer traffic back to it.
   draftUnknown: boolean;
@@ -1913,7 +1913,7 @@ async function readCloudflareVersionInspection(
       if (
         ((annotations?.['workers/triggered_by'] === 'secret' &&
           Object.keys(annotations).length === 1) ||
-          isVoidSecretDraftHeader(entry)) &&
+          isNosamSecretDraftHeader(entry)) &&
         !isWranglerSecretOnlyDraft(entry)
       ) {
         draftUnknown = true;
@@ -1935,13 +1935,13 @@ async function readCloudflareVersionInspection(
           }
         }
       }
-      const isVoidDraft = isVoidSecretOnlyDraft(draft);
+      const isNosamDraft = isNosamSecretOnlyDraft(draft);
       return {
         metadata: typeof message === 'string' ? parseCloudflareVersionMessage(message) : null,
         message: typeof message === 'string' ? message : null,
-        isSecretOnlyDraft: isWranglerSecretOnlyDraft(draft) || isVoidDraft,
-        isVoidSecretOnlyDraft: isVoidDraft,
-        voidDraftSecretNames: isVoidDraft
+        isSecretOnlyDraft: isWranglerSecretOnlyDraft(draft) || isNosamDraft,
+        isNosamSecretOnlyDraft: isNosamDraft,
+        nosamDraftSecretNames: isNosamDraft
           ? (draft.bindings as Array<{ name: string }>).map((binding) => binding.name)
           : null,
         draftUnknown,
@@ -1956,10 +1956,10 @@ async function readCloudflareVersionInspection(
 /**
  * Recovery-only proof that a version is Nosam's secret placeholder: its marker plus the exact
  * placeholder source, with no binding other than secrets. It may have zero bindings, so it is
- * deliberately not `isVoidSecretOnlyDraft`, which bootstrap uses as first-deployment proof.
+ * deliberately not `isNosamSecretOnlyDraft`, which bootstrap uses as first-deployment proof.
  * Returns null when the version could not be read.
  */
-async function isVoidSecretDraftPlaceholderVersion(
+async function isNosamSecretDraftPlaceholderVersion(
   options: Pick<
     Parameters<typeof activateCloudflareVersion>[0],
     'configPath' | 'runWrangler' | 'workerName'
@@ -1986,7 +1986,7 @@ async function isVoidSecretDraftPlaceholderVersion(
       !isRecord(entry) ||
       entry.id !== versionId ||
       !isRecord(entry.annotations) ||
-      entry.annotations['workers/message'] !== VOID_SECRET_DRAFT_MESSAGE ||
+      entry.annotations['workers/message'] !== NOSAM_SECRET_DRAFT_MESSAGE ||
       !Array.isArray(entry.modules) ||
       entry.modules.length !== 1 ||
       !Array.isArray(entry.bindings)
@@ -1997,7 +1997,7 @@ async function isVoidSecretDraftPlaceholderVersion(
     return (
       isRecord(module) &&
       module.name === entry.main_module &&
-      module.content_base64 === Buffer.from(VOID_SECRET_DRAFT_SOURCE).toString('base64') &&
+      module.content_base64 === Buffer.from(NOSAM_SECRET_DRAFT_SOURCE).toString('base64') &&
       entry.bindings.every((binding) => isRecord(binding) && binding.type === 'secret_text')
     );
   } catch {
@@ -2418,7 +2418,7 @@ async function bootstrapFirstDeployment(
     !previewSubdomain && !isTrustedReadinessOrigin(previewUrl, trustedReadinessOrigin);
   options.onProgress?.('Waiting for the Worker to become ready...');
   const ready = await probeReadiness(
-    `${previewUrl.replace(/\/$/, '')}/__void/ready`,
+    `${previewUrl.replace(/\/$/, '')}/__nosam/ready`,
     options.workerName,
     withholdsCustomRouteHeaders ? undefined : options.readinessHeaders,
     previewSubdomain,
@@ -2453,7 +2453,7 @@ async function bootstrapFirstDeployment(
       ...(ready === 'failed' && usesCustomDomain
         ? {
             diagnostic:
-              'The Custom Domain may still be propagating DNS or its TLS certificate. Check the configured domain in Cloudflare, then retry `void deploy --platform cloudflare` once its /__void/ready endpoint is reachable.',
+              'The Custom Domain may still be propagating DNS or its TLS certificate. Check the configured domain in Cloudflare, then retry `nosam deploy --platform cloudflare` once its /__nosam/ready endpoint is reachable.',
           }
         : {}),
     };
@@ -2753,7 +2753,7 @@ async function probeReadiness(
     try {
       response = await fetcher(url, {
         headers: {
-          'user-agent': 'void-deploy-readiness/1',
+          'user-agent': 'nosam-deploy-readiness/1',
           ...headers,
           ...(versionOverride
             ? {
@@ -2943,7 +2943,7 @@ export async function deployCloudflareVersionTraffic(options: {
   bypassDeploymentChecks?: boolean;
 }): Promise<CloudflareCommandResult> {
   const config = pickWranglerTriggerContext(parseRootWranglerConfig(options.configPath));
-  const directory = mkdtempSync(join(tmpdir(), 'void-version-traffic-'));
+  const directory = mkdtempSync(join(tmpdir(), 'nosam-version-traffic-'));
   const path = join(directory, 'wrangler.json');
   try {
     writeFileSync(path, JSON.stringify(config), { mode: 0o600 });

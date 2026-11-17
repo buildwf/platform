@@ -29,7 +29,7 @@ import type { TerminatedBuild } from '../db/builds.ts';
 import type { ApiEnv } from '../env.ts';
 import { cancelContainerBuildDos } from '../github/cancel-builds.ts';
 import {
-  VOID_BUILD_CHECK_RUN_NAME,
+  NOSAM_BUILD_CHECK_RUN_NAME,
   completeCheckRun,
   preservedCheckRunConclusion,
   type CheckRunConclusion,
@@ -1055,7 +1055,7 @@ export async function handleVerifiedGitHubWebhook(
       // GitHub only delivers `rerequested` for runs OUR App created, but the App
       // may publish more check names later; match ours explicitly so a future run
       // can't accidentally trigger a deploy.
-      if (data.check_run?.name !== VOID_BUILD_CHECK_RUN_NAME) {
+      if (data.check_run?.name !== NOSAM_BUILD_CHECK_RUN_NAME) {
         return context.json({ ok: true, ignored: 'check_run is not the Nosam build' });
       }
       const runId = data.check_run?.id;

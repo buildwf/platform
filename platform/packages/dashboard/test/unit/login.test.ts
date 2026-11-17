@@ -57,7 +57,7 @@ describe('dashboard login discovery', () => {
     expect(redirect.origin).toBe('http://localhost:5173');
     expect(redirect.searchParams.get('state')).toBeTruthy();
     expect(response.headers.getSetCookie()).toEqual(
-      expect.arrayContaining([expect.stringContaining('void_auth_pkce=')]),
+      expect.arrayContaining([expect.stringContaining('nosam_auth_pkce=')]),
     );
   });
   it('does not classify localhost-prefixed public hosts as loopback', async () => {

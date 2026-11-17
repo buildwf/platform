@@ -17,7 +17,7 @@ Nosam can provision the Hyperdrive configuration from your connection string. Di
 
 ### 1. Set the database
 
-Add to your `void.config.ts`:
+Add to your `nosam.config.ts`:
 
 ```json
 {
@@ -37,7 +37,7 @@ This connects directly to your Postgres database during local Vite development.
 
 ### 3. Deploy
 
-For a Nosam platform, deploy prompts for the connection string if needed. You can also set it with `void db set-url`. For direct Cloudflare deploys, export the production `DATABASE_URL` in your shell.
+For a Nosam platform, deploy prompts for the connection string if needed. You can also set it with `nosam db set-url`. For direct Cloudflare deploys, export the production `DATABASE_URL` in your shell.
 
 Nosam provisions Hyperdrive without saving the connection string in project config. Both `postgres://` and `postgresql://` URLs are supported, including provider query strings such as `?sslmode=require`.
 
@@ -45,11 +45,11 @@ The Hyperdrive that Nosam creates connects with TLS in Cloudflare's default `req
 
 ## Schema Definition
 
-Import schema helpers from `void/schema-pg`:
+Import schema helpers from `nosam/schema-pg`:
 
 ```ts
 // db/schema.ts
-import { pgTable, serial, text, timestamp, boolean } from 'void/schema-pg';
+import { pgTable, serial, text, timestamp, boolean } from 'nosam/schema-pg';
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -62,7 +62,7 @@ export const users = pgTable('users', {
 });
 ```
 
-`void gen model` generates PostgreSQL-appropriate code when `database` is set to `"pg"`.
+`nosam gen model` generates PostgreSQL-appropriate code when `database` is set to `"pg"`.
 
 ## Migrations
 
@@ -70,25 +70,25 @@ The migration workflow is the same as D1:
 
 ```bash
 # Generate migration files from schema changes
-void db generate
+nosam db generate
 
 # Apply pending migrations locally
-void db migrate
+nosam db migrate
 
 # Check migration status
-void db status
+nosam db status
 ```
 
 The main difference is that PostgreSQL supports **transactional DDL**. Each migration is wrapped in `BEGIN` and `COMMIT`, so a failure rolls back the whole migration instead of leaving the database half-updated.
 
-`void deploy` applies pending migrations before making the new version live. See [Deployment](../deployment.md).
+`nosam deploy` applies pending migrations before making the new version live. See [Deployment](../deployment.md).
 
 ## Updating the Connection String
 
 To update a linked Nosam project's connection, for example after moving the database to another host:
 
 ```bash
-void db set-url
+nosam db set-url
 ```
 
 This prompts for the new connection string and updates the Hyperdrive configuration.

@@ -57,7 +57,7 @@ import { authMiddleware } from '../middleware/auth.ts';
 import { users } from '../schema.ts';
 import { isSignupAllowed, getAllowlist } from '../signup-allowlist.ts';
 
-const DEFAULT_REDIRECT_URI = 'https://api.void.cloud/auth/callback';
+const DEFAULT_REDIRECT_URI = 'https://void-nosam-api.buildwithfriends.workers.dev/auth/callback';
 const DASHBOARD_AUTH_CODE_TTL_SECONDS = 5 * 60;
 const CLI_AUTH_CODE_TTL_SECONDS = 5 * 60;
 

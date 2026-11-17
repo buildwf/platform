@@ -4,7 +4,7 @@ import {
   platformProtectionProofMessage,
   validatePlatformAdmissionPolicy,
   type PlatformAccessProtection,
-} from '@void/platform';
+} from '@nosam/platform';
 import { eq, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../db.ts';
 import {

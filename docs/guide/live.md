@@ -5,9 +5,9 @@ outline: deep
 
 # Live Event Streams
 
-`void/live` lets a browser subscribe to several topics over one SSE connection. Publish an event from a route, scheduled job, or queue consumer, and Nosam delivers it to connected subscribers using Durable Objects.
+`nosam/live` lets a browser subscribe to several topics over one SSE connection. Publish an event from a route, scheduled job, or queue consumer, and Nosam delivers it to connected subscribers using Durable Objects.
 
-For example, a page can subscribe to updates for a post and its comments, then change those subscriptions as the user navigates. If a single request produces the whole stream, such as an AI response, [`void/sse`](./sse.md) is enough.
+For example, a page can subscribe to updates for a post and its comments, then change those subscriptions as the user navigates. If a single request produces the whole stream, such as an AI response, [`nosam/sse`](./sse.md) is enough.
 
 ## Define A Stream
 
@@ -15,7 +15,7 @@ Define a stream in a server-only module:
 
 ```ts
 // src/live.ts
-import { defineLiveStream } from 'void/live';
+import { defineLiveStream } from 'nosam/live';
 
 export const live = defineLiveStream({
   id: 'app',
@@ -25,13 +25,13 @@ export const live = defineLiveStream({
 
 This example accepts visitors who are not signed in. Without `onSubscribe`, any connection can subscribe to any topic, so read [Authorization](#authorization) before you publish private data.
 
-Nosam enables live streams when a [scanned file](../reference/resource-inference.md#scanned-directories) imports `void/live`, so keep this module in `src/` or another scanned directory. To keep it in an unscanned directory such as `lib/`, add that directory to [`inference.scanDirs`](../reference/resource-inference.md#custom-scan-directories) and list the default directories you still use, because `scanDirs` replaces them.
+Nosam enables live streams when a [scanned file](../reference/resource-inference.md#scanned-directories) imports `nosam/live`, so keep this module in `src/` or another scanned directory. To keep it in an unscanned directory such as `lib/`, add that directory to [`inference.scanDirs`](../reference/resource-inference.md#custom-scan-directories) and list the default directories you still use, because `scanDirs` replaces them.
 
 Expose it from a normal route:
 
 ```ts
 // routes/live.ts
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 import { live } from '../src/live';
 
 export const GET = defineHandler((c) => live.connect(c));
@@ -43,10 +43,10 @@ operations for that connection.
 
 ## Subscribe From The Browser
 
-Use the browser helper from `void/live/client`:
+Use the browser helper from `nosam/live/client`:
 
 ```ts
-import { connectLiveStream } from 'void/live/client';
+import { connectLiveStream } from 'nosam/live/client';
 
 const stream = connectLiveStream('/live', {
   withCredentials: true,
@@ -78,7 +78,7 @@ stream.close();
 
 Subscription IDs are scoped to a connection. Reusing an ID replaces its subscription. After reconnecting, the helper restores active subscriptions and sends their latest `eventId` as `lastEventId`.
 
-With [`routing.typedRoutes`](../reference/config.md#routing-typedroutes), TypeScript checks the URL against your routes. External `http://` and `https://` URLs also work. For a URL you validate at runtime, use `as RouteUrl` from `void/routes` to skip the type check.
+With [`routing.typedRoutes`](../reference/config.md#routing-typedroutes), TypeScript checks the URL against your routes. External `http://` and `https://` URLs also work. For a URL you validate at runtime, use `as RouteUrl` from `nosam/routes` to skip the type check.
 
 ## Publish
 
@@ -151,7 +151,7 @@ export const live = defineLiveStream({
 
 ## Limits
 
-`void/live` is designed for small and medium fanout. By default, a stream allows:
+`nosam/live` is designed for small and medium fanout. By default, a stream allows:
 
 - `256` active subscriptions per browser connection
 - `256` active subscriptions per topic

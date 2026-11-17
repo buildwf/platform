@@ -7,10 +7,10 @@ outline: deep
 
 A rewrite serves a route at a different URL without changing the browser's address. For example, `/docs` can serve `/en/docs`. Use a [redirect](./redirects) when the browser should move to the destination instead.
 
-Define rewrites in [`void.config.ts`](../../reference/config):
+Define rewrites in [`nosam.config.ts`](../../reference/config):
 
 ```ts
-import { defineConfig } from 'void/config';
+import { defineConfig } from 'nosam/config';
 
 export default defineConfig({
   routing: {
@@ -37,7 +37,7 @@ A request to `/docs/getting-started` serves `/en/docs/getting-started`. Other lo
 Use `c.rewrite()` when the destination depends on the request, such as a locale chosen from a cookie:
 
 ```ts
-import { defineMiddleware } from 'void';
+import { defineMiddleware } from 'nosam';
 
 export default defineMiddleware(async (c, next) => {
   if (c.req.path.match(/^\/(en|ja)(\/|$)/)) return next();
@@ -57,18 +57,18 @@ Keep access checks on any destination that needs them.
 
 A destination without `?` preserves the incoming query string. `c.rewrite('/search')` keeps `?q=...`, while `c.rewrite('/search?q=all')` replaces it.
 
-Your editor suggests known routes through [`RewriteDestination`](../../reference/api/rewrites.md#rewritedestination). Enable [`routing.typedRoutes`](../../reference/config.md#routing-typedroutes) to reject strings that don't match a route. For a path you build at runtime, import `RouteUrl` from `void/routes` and use a cast, such as ``c.rewrite(`/en${c.req.path}` as RouteUrl)``.
+Your editor suggests known routes through [`RewriteDestination`](../../reference/api/rewrites.md#rewritedestination). Enable [`routing.typedRoutes`](../../reference/config.md#routing-typedroutes) to reject strings that don't match a route. For a path you build at runtime, import `RouteUrl` from `nosam/routes` and use a cast, such as ``c.rewrite(`/en${c.req.path}` as RouteUrl)``.
 
 ### Runtime rewrites cannot reach static assets
 
-`c.rewrite()` targets application routes. To serve an asset such as `/hero.png` at another URL, use `routing.rewrites` or a `_redirects` rule instead. A middleware rewrite to a recognized asset extension throws `VoidAssetRewriteError`.
+`c.rewrite()` targets application routes. To serve an asset such as `/hero.png` at another URL, use `routing.rewrites` or a `_redirects` rule instead. A middleware rewrite to a recognized asset extension throws `NosamAssetRewriteError`.
 
 ## Original URL access
 
 `c.originalUrl()` returns the URL requested before a static or middleware rewrite, or `null` when no rewrite occurred. Use it for canonical links or locale detection:
 
 ```ts
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 
 export default defineHandler((c) => {
   const original = c.originalUrl();
@@ -81,7 +81,7 @@ export default defineHandler((c) => {
 `routing.fallbacks` uses the same patterns as rewrites, but applies only when no asset or route matches:
 
 ```ts
-import { defineConfig } from 'void/config';
+import { defineConfig } from 'nosam/config';
 
 export default defineConfig({
   routing: {
@@ -106,14 +106,14 @@ You can also place rules in Vite's `publicDir`, which defaults to `public/`:
 /docs/*    /en/docs/:splat  200!
 ```
 
-The file can include [3xx redirects](./redirects) too. Rules in `void.config.ts` take precedence over file rules; within each group, the first match wins.
+The file can include [3xx redirects](./redirects) too. Rules in `nosam.config.ts` take precedence over file rules; within each group, the first match wins.
 
-## Debugging with `X-Void-Routing`
+## Debugging with `X-Nosam-Routing`
 
-During development, inspect the `X-Void-Routing` response header in your browser's Network tab. It shows the matching rule and where it was declared:
+During development, inspect the `X-Nosam-Routing` response header in your browser's Network tab. It shows the matching rule and where it was declared:
 
 ```text
-X-Void-Routing: rewrite[/docs/*] -> /en/docs/:splat (void.config.ts#routing.rewrites)
-X-Void-Routing: c.rewrite -> /new-path (middleware)
-X-Void-Routing: pass-through
+X-Nosam-Routing: rewrite[/docs/*] -> /en/docs/:splat (nosam.config.ts#routing.rewrites)
+X-Nosam-Routing: c.rewrite -> /new-path (middleware)
+X-Nosam-Routing: pass-through
 ```

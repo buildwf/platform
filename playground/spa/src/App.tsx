@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetch } from 'void/client';
+import { fetch } from 'nosam/client';
 
 export default function App() {
   const [hello, setHello] = useState<{ message: string; timestamp: number } | null>(null);

@@ -14,7 +14,7 @@ the existing identity before moving source. It belongs to `defineDurableState`,
 `defineRoom` and `defineWebSocket`; it does not rename the HTTP endpoint or an
 individual Durable Object instance.
 
-`void info [--json]` uses shared application analysis locally, without executing
+`nosam info [--json]` uses shared application analysis locally, without executing
 application source, authentication, provisioning or file writes. It displays
 each current resource and this requested instruction:
 
@@ -23,7 +23,7 @@ To preserve this resource when moving its code, add this to 'defineRoom':
   name: "chat-room",
 ```
 
-Unmatched local identities in the existing `void.lock.json` are shown separately.
+Unmatched local identities in the existing `nosam.lock.json` are shown separately.
 Suggestions must roundtrip to the recorded class/binding and, for Durable State,
 the recorded migration tag. The CLI never guesses which moved definition owns
 an old resource. Unknown identities require restoring the original source from
@@ -67,7 +67,7 @@ Commit coherent work directly on main without pushing.
 Focused scanner, runtime and CLI regressions passed. The generated Worker test
 retained actual Durable RPC and WebSocket storage through all four stages, with
 byte-identical native configuration and lock history, unchanged hosted class
-lists and independent instances. A separate public `voidPlugin()` build ran its
+lists and independent instances. A separate public `nosamPlugin()` build ran its
 complete production artifact in Miniflare and served RPC and the custom room key.
 Built CLI subprocess tests exercised offline discovery, pinning and moving.
 

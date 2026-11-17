@@ -5,12 +5,12 @@ import {
   createPlatformInstallationManifest,
   PLATFORM_DISABLED_KEY,
   type PlatformInstallationManifest,
-} from '@void/platform';
+} from '@nosam/platform';
 import {
   getPlatformRuntimeDirectory,
   PLATFORM_ADMIN_CLIENT_ASSET_PATH,
   PLATFORM_ADMIN_STYLE_ASSET_PATH,
-} from '@void/platform/installer';
+} from '@nosam/platform/installer';
 import { eq, sql } from 'drizzle-orm';
 import { chromium } from 'playwright';
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vite-plus/test';
@@ -286,7 +286,7 @@ it.each([390, 1280])(
       await page.goto('http://localhost/admin/status');
       await page.getByText('Showing the last confirmed snapshot', { exact: false }).waitFor();
       const summary = page.getByRole('list', { name: 'Installation and traffic' });
-      const card = page.locator('.void-admin-status-card');
+      const card = page.locator('.nosam-admin-status-card');
       expect(await card.count()).toBe(1);
       expect(await card.getAttribute('data-state')).toBe('unavailable');
       expect(await summary.getByText('Waiting for Sandbox drain', { exact: true }).count()).toBe(1);

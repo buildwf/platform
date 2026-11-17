@@ -1,6 +1,6 @@
 import { HTTPException } from 'hono/http-exception';
-import type { CloudContext } from 'void';
-import { getUser } from 'void/auth';
+import type { CloudContext } from 'nosam';
+import { getUser } from 'nosam/auth';
 
 export function requirePageUser(c: CloudContext, status: 302 | 303 = 302) {
   const user = getUser();

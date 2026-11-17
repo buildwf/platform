@@ -16,7 +16,7 @@ export type PlatformApplicationProject = Readonly<{ id: string; slug: string }>;
 /** Minimal public-origin adapter; request policy remains in the service-bound dispatcher. */
 export const PLATFORM_PROJECT_INGRESS_SOURCE: string = `export default {
   fetch(request, env) {
-    if (new URL(request.url).hostname !== env.VOID_APP_HOSTNAME) {
+    if (new URL(request.url).hostname !== env.NOSAM_APP_HOSTNAME) {
       return new Response('Not Found', {status: 404});
     }
     return env.PLATFORM_DISPATCH.fetch(request);
@@ -46,7 +46,7 @@ export function platformWorkersDevAliasKey(hostname: string): string {
   return `workers-dev:${hostname}`;
 }
 
-export const PLATFORM_APPLICATION_KEY = '__void/platform/application/v1';
+export const PLATFORM_APPLICATION_KEY = '__nosam/platform/application/v1';
 
 export async function resolvePlatformApplicationEnvironment<
   T extends {
@@ -83,7 +83,7 @@ export async function resolvePlatformApplicationEnvironment<
 export function platformProjectIngressPrefix(
   workersDev: NonNullable<PlatformApplication['workersDev']>,
 ): string {
-  return `void-${workersDev.installationId.slice(-12)}-`;
+  return `nosam-${workersDev.installationId.slice(-12)}-`;
 }
 
 export function platformProjectIngressName(

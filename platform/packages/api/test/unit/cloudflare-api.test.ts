@@ -18,7 +18,7 @@ import {
 const ACCOUNT = 'acc_test';
 const TOKEN = 'token_test';
 const QUEUE_ID = 'queue-uuid';
-const SCRIPT = 'void-dispatch';
+const SCRIPT = 'nosam-dispatch';
 
 describe('R2 bucket creation', () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -483,30 +483,30 @@ describe('getDispatchWorkerProxyToken', () => {
     vi.unstubAllGlobals();
   });
 
-  it('returns {kind:"found", token} for the __VOID_PROXY_TOKEN binding baked into the worker', async () => {
+  it('returns {kind:"found", token} for the __NOSAM_PROXY_TOKEN binding baked into the worker', async () => {
     fetchMock.mockResolvedValueOnce(
       cfSuccess([
         { type: 'plain_text', name: '__PROJECT_ID', text: 'proj_a' },
-        { type: 'plain_text', name: '__VOID_PROXY_TOKEN', text: 'baked-token-value' },
+        { type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: 'baked-token-value' },
         { type: 'queue', name: 'QUEUE_EMAILS', queue_name: 'proj_a-emails' },
       ]),
     );
 
-    const result = await getDispatchWorkerProxyToken(ACCOUNT, TOKEN, 'void-users', 'user-a-dpl_1');
+    const result = await getDispatchWorkerProxyToken(ACCOUNT, TOKEN, 'nosam-users', 'user-a-dpl_1');
 
     expect(result).toEqual({ kind: 'found', token: 'baked-token-value' });
     const call = fetchMock.mock.calls[0];
     expect(String(call[0])).toMatch(
-      /\/workers\/dispatch\/namespaces\/void-users\/scripts\/user-a-dpl_1\/bindings$/,
+      /\/workers\/dispatch\/namespaces\/nosam-users\/scripts\/user-a-dpl_1\/bindings$/,
     );
   });
 
-  it('returns {kind:"missing"} when bindings list has no __VOID_PROXY_TOKEN', async () => {
+  it('returns {kind:"missing"} when bindings list has no __NOSAM_PROXY_TOKEN', async () => {
     fetchMock.mockResolvedValueOnce(
       cfSuccess([{ type: 'plain_text', name: '__PROJECT_ID', text: 'proj_a' }]),
     );
 
-    const result = await getDispatchWorkerProxyToken(ACCOUNT, TOKEN, 'void-users', 'user-a-dpl_1');
+    const result = await getDispatchWorkerProxyToken(ACCOUNT, TOKEN, 'nosam-users', 'user-a-dpl_1');
 
     expect(result).toEqual({ kind: 'missing' });
   });
@@ -514,7 +514,7 @@ describe('getDispatchWorkerProxyToken', () => {
   it('returns {kind:"error"} with the underlying Error on CF API failure (rate limit / auth / network)', async () => {
     fetchMock.mockResolvedValueOnce(cfError('rate limited'));
 
-    const result = await getDispatchWorkerProxyToken(ACCOUNT, TOKEN, 'void-users', 'user-missing');
+    const result = await getDispatchWorkerProxyToken(ACCOUNT, TOKEN, 'nosam-users', 'user-missing');
 
     expect(result.kind).toBe('error');
     if (result.kind === 'error') {
@@ -526,7 +526,7 @@ describe('getDispatchWorkerProxyToken', () => {
   it('returns {kind:"error"} when fetch itself throws (network failure)', async () => {
     fetchMock.mockRejectedValueOnce(new Error('ECONNRESET'));
 
-    const result = await getDispatchWorkerProxyToken(ACCOUNT, TOKEN, 'void-users', 'user-net-fail');
+    const result = await getDispatchWorkerProxyToken(ACCOUNT, TOKEN, 'nosam-users', 'user-net-fail');
 
     expect(result.kind).toBe('error');
     if (result.kind === 'error') {

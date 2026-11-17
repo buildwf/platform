@@ -18,7 +18,7 @@ const EMAIL_SETUP_GUIDE = 'https://void.cloud/guide/platform/installation/creden
 
 function EmailSettingsHeader() {
   return (
-    <SectionStack as="header" className="void-admin-email-intro">
+    <SectionStack as="header" className="nosam-admin-email-intro">
       <Heading level={1}>Email</Heading>
       <p>
         Manage email settings for the platform. Each project’s email page contains its usage,
@@ -37,7 +37,7 @@ export function EmailSettingsPage({
   if (emailEnabled === false) {
     return (
       <Layout platformName={platformName} title="Email" username={username}>
-        <PageStack className="void-admin-email-settings">
+        <PageStack className="nosam-admin-email-settings">
           <EmailSettingsHeader />
           <AdminCard title="Enable email">
             <p>Email is not enabled on this platform.</p>
@@ -69,7 +69,7 @@ function EnabledEmailSettingsPage({ path, platformName, username }: AdminPagePro
   const [domainManagement, setDomainManagement] = useState(management);
   return (
     <Layout platformName={platformName} title="Email" username={username}>
-      <PageStack className="void-admin-email-settings">
+      <PageStack className="nosam-admin-email-settings">
         <EmailSettingsHeader />
         <AdminCard title="Recipient policy">
           <p>
@@ -86,7 +86,7 @@ function EnabledEmailSettingsPage({ path, platformName, username }: AdminPagePro
             as="form"
             method="post"
             action="/admin/email/policy"
-            className="void-admin-email-choice-form"
+            className="nosam-admin-email-choice-form"
           >
             <RadioList
               label="Recipient policy"
@@ -134,7 +134,7 @@ function EnabledEmailSettingsPage({ path, platformName, username }: AdminPagePro
             as="form"
             method="post"
             action="/admin/email/settings"
-            className="void-admin-email-choice-form"
+            className="nosam-admin-email-choice-form"
           >
             <RadioList
               label="Domain management"
@@ -147,12 +147,12 @@ function EnabledEmailSettingsPage({ path, platformName, username }: AdminPagePro
               <RadioListItem
                 value="self-serve"
                 label="self-serve"
-                description="Project owners grant a Cloudflare credential from void email domain add."
+                description="Project owners grant a Cloudflare credential from nosam email domain add."
               />
               <RadioListItem
                 value="admin"
                 label="admin"
-                description="Administrators add domains; void email domain add prints the administrator's command instead."
+                description="Administrators add domains; nosam email domain add prints the administrator's command instead."
               />
             </RadioList>
             <Button type="submit" label="Save" />

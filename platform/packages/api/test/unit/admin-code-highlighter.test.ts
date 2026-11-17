@@ -34,7 +34,7 @@ describe('admin code highlighting', () => {
   });
 
   test('highlights CLI snippets and preserves whitespace and placeholders', () => {
-    const code = 'void platform config auth protection enable --installation <id>\n\n';
+    const code = 'nosam platform config auth protection enable --installation <id>\n\n';
     const lines = highlightCode(code, 'shellscript');
     expect(lines.map((line) => line.map((token) => token.content).join('')).join('\n')).toBe(code);
     expect(new Set(lines.flat().map((token) => token.style.color)).size).toBeGreaterThan(1);

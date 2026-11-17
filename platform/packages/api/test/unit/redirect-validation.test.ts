@@ -38,7 +38,7 @@ describe('isAllowedRedirect', () => {
   });
 
   it('admits only the configured self-hosted dashboard origin including its port', () => {
-    const dashboard = 'https://void-e2e-dashboard.readwise.dev:8443';
+    const dashboard = 'https://nosam-e2e-dashboard.readwise.dev:8443';
     expect(
       isAllowedRedirect(
         `${dashboard}/auth/callback?login_nonce=real-browser-nonce`,
@@ -47,10 +47,10 @@ describe('isAllowedRedirect', () => {
       ),
     ).toBe(true);
     for (const callback of [
-      'https://void-e2e-dashboard.readwise.dev/auth/callback',
-      'https://void-e2e-dashboard.readwise.dev.attacker.example:8443/auth/callback',
+      'https://nosam-e2e-dashboard.readwise.dev/auth/callback',
+      'https://nosam-e2e-dashboard.readwise.dev.attacker.example:8443/auth/callback',
       'https://other.readwise.dev:8443/auth/callback',
-      'http://void-e2e-dashboard.readwise.dev:8443/auth/callback',
+      'http://nosam-e2e-dashboard.readwise.dev:8443/auth/callback',
     ]) {
       expect(isAllowedRedirect(callback, dashboard, 'isolated-installation')).toBe(false);
     }

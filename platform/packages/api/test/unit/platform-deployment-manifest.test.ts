@@ -3,30 +3,30 @@ import {
   createPlatformDeploymentManifest,
   createPlatformResourceNames,
   parsePlatformDeploymentManifest,
-} from '@void/platform';
+} from '@nosam/platform';
 import { describe, expect, it } from 'vite-plus/test';
 
 describe('platform deployment manifest', () => {
   it('creates isolated resource names', () => {
     expect(createPlatformResourceNames('Developer Platform Experience')).toEqual({
-      aiGateway: 'void-developer-platform-experience',
-      apiWorker: 'void-developer-platform-experience-api',
-      assetsBucket: 'void-developer-platform-experience-assets',
-      cronQueue: 'void-developer-platform-experience-cron-fires',
-      deploymentQueue: 'void-developer-platform-experience-deployments',
-      dashboardWorker: 'void-developer-platform-experience-dashboard',
-      dispatchNamespace: 'void-developer-platform-experience-users',
-      dispatchWorker: 'void-developer-platform-experience-dispatch',
-      emailGatewayWorker: 'void-developer-platform-experience-email-gateway',
-      hyperdrive: 'void-developer-platform-experience-database',
-      isrCacheKv: 'void-developer-platform-experience-isr-cache',
-      legacyAssetsKv: 'void-developer-platform-experience-legacy-assets',
-      logsDataset: 'void_developer_platform_experience_logs',
-      proxyWorker: 'void-developer-platform-experience-proxy',
-      requestsDataset: 'void_developer_platform_experience_requests',
-      routingKv: 'void-developer-platform-experience-routing',
-      tailWorker: 'void-developer-platform-experience-tail',
-      usageQueue: 'void-developer-platform-experience-usage-events',
+      aiGateway: 'nosam-developer-platform-experience',
+      apiWorker: 'nosam-developer-platform-experience-api',
+      assetsBucket: 'nosam-developer-platform-experience-assets',
+      cronQueue: 'nosam-developer-platform-experience-cron-fires',
+      deploymentQueue: 'nosam-developer-platform-experience-deployments',
+      dashboardWorker: 'nosam-developer-platform-experience-dashboard',
+      dispatchNamespace: 'nosam-developer-platform-experience-users',
+      dispatchWorker: 'nosam-developer-platform-experience-dispatch',
+      emailGatewayWorker: 'nosam-developer-platform-experience-email-gateway',
+      hyperdrive: 'nosam-developer-platform-experience-database',
+      isrCacheKv: 'nosam-developer-platform-experience-isr-cache',
+      legacyAssetsKv: 'nosam-developer-platform-experience-legacy-assets',
+      logsDataset: 'nosam_developer_platform_experience_logs',
+      proxyWorker: 'nosam-developer-platform-experience-proxy',
+      requestsDataset: 'nosam_developer_platform_experience_requests',
+      routingKv: 'nosam-developer-platform-experience-routing',
+      tailWorker: 'nosam-developer-platform-experience-tail',
+      usageQueue: 'nosam-developer-platform-experience-usage-events',
     });
   });
 

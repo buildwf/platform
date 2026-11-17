@@ -13,7 +13,7 @@ describe('internal email action request bounds', () => {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
-            'x-void-internal': await hmacSignState(raw, signingKey),
+            'x-nosam-internal': await hmacSignState(raw, signingKey),
           },
           body: raw,
         },
@@ -36,7 +36,7 @@ describe('internal email action request bounds', () => {
       });
       const request = new Request('https://api/internal/email/actions/admit', {
         method: 'POST',
-        headers: { 'x-void-internal': 'present' },
+        headers: { 'x-nosam-internal': 'present' },
         body,
         duplex: 'half',
       } as RequestInit);

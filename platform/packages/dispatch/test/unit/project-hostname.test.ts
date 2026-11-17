@@ -3,7 +3,7 @@ import {
   platformWorkersDevAliasKey,
   PLATFORM_APPLICATION_KEY,
   resolvePlatformApplicationEnvironment,
-} from '@void/platform';
+} from '@nosam/platform';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { Env } from '../../src/env.ts';
 import app from '../../src/index.ts';
@@ -50,7 +50,7 @@ describe('workers.dev routing', () => {
     );
     const authorize = vi.fn(async (req: Request) => {
       expect(req.url).toBe('https://preview.invalid/oauth/preview-serve/' + project.id);
-      expect(req.headers.get('X-Void-Preview-URL')).toBe('https://' + privateHost + '/');
+      expect(req.headers.get('X-Nosam-Preview-URL')).toBe('https://' + privateHost + '/');
       expect(req.headers.has('Authorization')).toBe(false);
       return new Response('authorization required', { status: 401 });
     });
@@ -61,7 +61,7 @@ describe('workers.dev routing', () => {
           new Request('https://' + privateHost, {
             headers: {
               Authorization: 'spoofed',
-              'X-Void-Preview-URL': 'https://spoofed.example.com',
+              'X-Nosam-Preview-URL': 'https://spoofed.example.com',
             },
           }),
           env,

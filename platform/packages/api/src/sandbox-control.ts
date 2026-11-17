@@ -1,4 +1,4 @@
-import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from '@void/platform';
+import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from '@nosam/platform';
 import { WorkerEntrypoint } from 'cloudflare:workers';
 import { and, eq, sql } from 'drizzle-orm';
 import { getPlatformCapabilities } from './capabilities.ts';

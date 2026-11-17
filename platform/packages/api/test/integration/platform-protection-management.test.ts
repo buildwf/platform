@@ -1,4 +1,4 @@
-import { platformProtectionProofMessage } from '@void/platform';
+import { platformProtectionProofMessage } from '@nosam/platform';
 import { eq, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
 import { importLegacyAuthentication, readAuthSettings } from '../../src/auth/configuration.ts';

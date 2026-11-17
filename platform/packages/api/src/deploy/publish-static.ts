@@ -164,7 +164,7 @@ export async function publishStaticDeployment(input: {
     input.cutoverProtected = true;
     input.currentStatus = 'cutover';
   }
-  const dispatchWorkerName = context.env.DISPATCH_WORKER_NAME ?? 'void-dispatch';
+  const dispatchWorkerName = context.env.DISPATCH_WORKER_NAME ?? 'nosam-dispatch';
   const projectResources = await getProjectResources(context.get('db'), projectId);
   await withProjectCutoverFence(deployment.id, async () => {
     for (const previousQueue of previousManifest?.queues ?? []) {

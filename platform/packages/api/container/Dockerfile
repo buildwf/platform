@@ -8,7 +8,7 @@
 #
 # Env vars injected by the DO at start():
 #   BUILD_ID, PROJECT_ID, PROJECT_SLUG, SOURCE_TARBALL_URL, SOURCE_TOKEN,
-#   VOID_TOKEN, VOID_API_URL, VOID_PROJECT, DO_LOG_URL, AGENT_TOKEN
+#   NOSAM_TOKEN, NOSAM_API_URL, NOSAM_PROJECT, DO_LOG_URL, AGENT_TOKEN
 FROM node:26.12.1-slim
 
 # node:26.12.1-slim ships `tar` + `gzip` but is otherwise minimal. We add:
@@ -88,10 +88,10 @@ RUN COREPACK_HOME=/home/builder/.cache/node/corepack \
 # Build from the repository root. The root .dockerignore limits the context to
 # these files. Keep their relative layout so Node can import the release manifest
 # without node_modules or a generated version file. Both remain root-owned.
-COPY packages/void/package.json /opt/void/packages/void/package.json
-COPY platform/packages/api/container/build-agent.mjs /opt/void/platform/packages/api/container/build-agent.mjs
+COPY packages/nosam/package.json /opt/nosam/packages/nosam/package.json
+COPY platform/packages/api/container/build-agent.mjs /opt/nosam/platform/packages/api/container/build-agent.mjs
 
 # Health-check / control port the DO talks to (GET / health, POST /cancel).
 EXPOSE 4000
 
-CMD ["node", "/opt/void/platform/packages/api/container/build-agent.mjs"]
+CMD ["node", "/opt/nosam/platform/packages/api/container/build-agent.mjs"]

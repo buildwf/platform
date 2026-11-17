@@ -1,4 +1,4 @@
-import { defineHandler } from 'void';
+import { defineHandler } from 'nosam';
 
 export const GET = defineHandler((c) =>
   Object.entries(c.env)

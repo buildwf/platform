@@ -230,7 +230,7 @@ describe('project access', () => {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
-            'x-void-internal': internalAuth,
+            'x-nosam-internal': internalAuth,
           },
           body: JSON.stringify({ userId, proxyOrigin }),
         }),

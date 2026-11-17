@@ -7,8 +7,8 @@ export const GITHUB_WEBHOOK_INGRESS_FUTURE_SKEW_SECONDS = 30;
 export const GITHUB_EVENT_HEADER = 'X-GitHub-Event';
 export const GITHUB_DELIVERY_HEADER = 'X-GitHub-Delivery';
 export const GITHUB_SIGNATURE_HEADER = 'X-Hub-Signature-256';
-export const INGRESS_TIMESTAMP_HEADER = 'X-Void-GitHub-Ingress-Timestamp';
-export const INGRESS_PROOF_HEADER = 'X-Void-GitHub-Ingress-Proof';
+export const INGRESS_TIMESTAMP_HEADER = 'X-Nosam-GitHub-Ingress-Timestamp';
+export const INGRESS_PROOF_HEADER = 'X-Nosam-GitHub-Ingress-Proof';
 
 const EVENT_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
 const DELIVERY_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;

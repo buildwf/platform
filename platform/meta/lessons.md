@@ -14,8 +14,8 @@
   features. Distinguish implemented code from shipped behavior and verified
   release status. Read package scripts before documenting their scope.
 - Keep the bundled matching platform payload when it supports the existing installation workflow. Propose a packaging split only with a concrete user or maintenance benefit.
-- Trace existing contracts before proposing replacements. `void.config.ts`
-  already owns authored configuration and `void.lock.json` owns generated
+- Trace existing contracts before proposing replacements. `nosam.config.ts`
+  already owns authored configuration and `nosam.lock.json` owns generated
   resource state; prioritize a replacement only after demonstrating its payoff.
 - Keep inferred persistent resource identities as the default. Offer discovery
   and optional explicit names before source moves; preserve existing instance
@@ -24,7 +24,7 @@
 - Introduce one idea, show a small example, then explain its behavior, following
   [Fate's guides](https://fate.technology/guide/requests). Put implementation
   details in maintainer docs and keep command references easy to scan.
-- User installation guides describe the published CLI. Keep `void-dev`, checkout
+- User installation guides describe the published CLI. Keep `nosam-dev`, checkout
   builds, and source-release workflows in contributor guidance; keep Nosam Cloud
   maintenance in repository runbooks. Do not turn a one-off development failure
   into a prerequisite for every user.
@@ -33,7 +33,7 @@
 - `vp run <script> -- <args>` forwards the literal `--`. For Wrangler that
   hides `--env`: use `vp run --filter <pkg> deploy --env production|staging`.
   Production deploys must select `--env production` explicitly.
-- There is no separate `void-platform` repo: the platform was merged into
+- There is no separate `nosam-platform` repo: the platform was merged into
   the unified `voidzero-dev/void` repo. Framework code is `packages/`,
   platform code is `platform/packages/`, platform meta is `platform/meta/`.
   Do not reason about submodule pointers or a sibling platform checkout.
@@ -52,7 +52,7 @@
 
 ## Email and routing
 
-- Route platform email on the preserved wire recipient `__voidPlatformTo`;
+- Route platform email on the preserved wire recipient `__nosamPlatformTo`;
   strip its project prefix exactly once for the handler-facing message.
 - Match addresses case-insensitively without lowercasing captured parameters.
 - Check the zone's `support_subaddress` setting; it is not implied by a
@@ -64,7 +64,7 @@
 
 ## Framework and schema
 
-- Config changes update `packages/void/schema.json`,
+- Config changes update `packages/nosam/schema.json`,
   `docs/reference/config.md`, types, validation and affected examples together.
 - Preserve CLI namespaces and prefer conventions over configuration. Runtime
   APIs belong at package roots; Vite plugin factories use `/plugin` subpaths.
@@ -76,7 +76,7 @@
 - Use the appropriate Drizzle validator adapter and the `@schema` alias.
   SQLite PRAGMA arguments use bare names or single-quoted identifiers.
 - Keep schema changes compatible while old Workers can run. Renames, drops
-  and type changes require staged rollout. Use `VOID_TEST_DATABASE_URL`
+  and type changes require staged rollout. Use `NOSAM_TEST_DATABASE_URL`
   for real PostgreSQL checks; preserve integration-file serialization.
 
 ## Cloudflare and deployment
@@ -166,7 +166,7 @@
 - Render the expected system-health check slots before polling and keep their
   status details on one line so asynchronous updates do not shift dashboard content.
 - Cloudflare Tail sees top-level logs and uncaught throws. Log caught errors
-  explicitly; `void project logs --filter` filters message text and
+  explicitly; `nosam project logs --filter` filters message text and
   `--level` filters severity.
 - Test the dashboard against a local API or an explicitly selected
   installation. Put local Worker vars in its `.dev.vars` or local config.

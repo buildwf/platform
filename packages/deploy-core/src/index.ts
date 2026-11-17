@@ -272,7 +272,7 @@ export type DeployManifest = {
   schedules?: Array<ScheduleMeta>;
   queues?: Array<QueueMeta>;
   ssr?: boolean;
-  type?: 'void' | 'spa' | 'static';
+  type?: 'nosam' | 'spa' | 'static';
   /** @deprecated Legacy v1 static deployment discriminator. */
   static?: 'spa' | 'ssg';
   assetConfig?: AssetConfig;

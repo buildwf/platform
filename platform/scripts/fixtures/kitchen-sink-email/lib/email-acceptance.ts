@@ -1,5 +1,5 @@
-import { defineEmail, parseEmail, replyEmail } from 'void/email';
-import { kv } from 'void/kv';
+import { defineEmail, parseEmail, replyEmail } from 'nosam/email';
+import { kv } from 'nosam/kv';
 
 export function acceptEmail(route: string) {
   return defineEmail(async (message, _env, _ctx, info) => {
@@ -27,9 +27,9 @@ export function acceptEmail(route: string) {
       await replyEmail(message, { text: `Nosam email acceptance reply: ${subject}` });
     }
     if (subject.startsWith('FORWARD ')) {
-      const destination = parsed.headers.find(({ key }) => key === 'x-void-e2e-forward')?.value;
+      const destination = parsed.headers.find(({ key }) => key === 'x-nosam-e2e-forward')?.value;
       if (!destination) {
-        message.setReject('x-void-e2e-forward is required for this test');
+        message.setReject('x-nosam-e2e-forward is required for this test');
         return;
       }
       await message.forward(destination);

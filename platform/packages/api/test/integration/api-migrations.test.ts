@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { canonicalJson } from '@void/deploy-core';
+import { canonicalJson } from '@nosam/deploy-core';
 import { eq } from 'drizzle-orm';
 import {
   describe,
@@ -103,7 +103,7 @@ type D1MockState = {
    * Defaults to `true` when `trackingRows` is pre-populated (the test is
    * simulating an existing project) and `false` otherwise.
    */
-  voidTableExists: boolean;
+  nosamTableExists: boolean;
   /**
    * When `true`, the mock tracks identical application CREATE TABLE strings
    * across calls and returns "already exists" on the second+ occurrence.
@@ -121,14 +121,14 @@ function createD1State(init: Partial<D1MockState> = {}): D1MockState {
     legacyRows: init.legacyRows ? new Map(init.legacyRows) : undefined,
     failingSqlPatterns: init.failingSqlPatterns ?? [],
     queries: [],
-    voidTableExists: init.voidTableExists ?? trackingRows.size > 0,
+    nosamTableExists: init.nosamTableExists ?? trackingRows.size > 0,
     simulateDuplicateCreate: init.simulateDuplicateCreate,
     _seenCreateSql: init.simulateDuplicateCreate ? new Set() : undefined,
   };
 }
 
 function makeQueryD1(state: D1MockState) {
-  const noVoidTable = () => cfError('no such table: _void_migrations', 400);
+  const noNosamTable = () => cfError('no such table: _void_migrations', 400);
 
   return (_url: string, init?: RequestInit): Response => {
     const parsed = init?.body ? JSON.parse(String(init.body)) : {};
@@ -148,7 +148,7 @@ function makeQueryD1(state: D1MockState) {
 
     // CREATE tracking table — always succeeds and flips the table-exists bit.
     if (/CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+_void_migrations/i.test(sql)) {
-      state.voidTableExists = true;
+      state.nosamTableExists = true;
       return cfSuccess([{ results: [] }]);
     }
 
@@ -162,8 +162,8 @@ function makeQueryD1(state: D1MockState) {
     // production code ever issues this before the CREATE, the mock surfaces
     // a "no such table" error exactly like real D1 would.
     if (/INSERT\s+OR\s+IGNORE\s+INTO\s+_void_migrations[\s\S]*FROM\s+_migrations/i.test(sql)) {
-      if (!state.voidTableExists) {
-        return noVoidTable();
+      if (!state.nosamTableExists) {
+        return noNosamTable();
       }
       if (state.legacyRows) {
         for (const [name, appliedAt] of state.legacyRows) {
@@ -183,8 +183,8 @@ function makeQueryD1(state: D1MockState) {
 
     // SELECT name FROM _void_migrations (runRemoteMigrations applied set)
     if (/SELECT\s+name\s+FROM\s+_void_migrations\s*$/i.test(sql.trim())) {
-      if (!state.voidTableExists) {
-        return noVoidTable();
+      if (!state.nosamTableExists) {
+        return noNosamTable();
       }
       const results = Array.from(state.trackingRows.keys()).map((name) => ({ name }));
       return cfSuccess([{ results }]);
@@ -195,8 +195,8 @@ function makeQueryD1(state: D1MockState) {
     // tracking row that landed between the loser's preflight and its failing
     // SQL is correctly observed.
     if (/SELECT\s+name\s+FROM\s+_void_migrations\s+WHERE\s+name\s*=\s*\?/i.test(sql)) {
-      if (!state.voidTableExists) {
-        return noVoidTable();
+      if (!state.nosamTableExists) {
+        return noNosamTable();
       }
       const name = Array.isArray(params) ? (params[0] as string | undefined) : undefined;
       const found = name !== undefined && state.trackingRows.has(name) ? [{ name }] : [];
@@ -205,8 +205,8 @@ function makeQueryD1(state: D1MockState) {
 
     // SELECT name, applied_at FROM _void_migrations (GET endpoint)
     if (/SELECT\s+name,\s*applied_at\s+FROM\s+_void_migrations/i.test(sql)) {
-      if (!state.voidTableExists) {
-        return noVoidTable();
+      if (!state.nosamTableExists) {
+        return noNosamTable();
       }
       const results = Array.from(state.trackingRows.entries()).map(([name, applied_at]) => ({
         name,
@@ -229,8 +229,8 @@ function makeQueryD1(state: D1MockState) {
 
     // UPDATE rename
     if (/UPDATE\s+_void_migrations\s+SET\s+name\s*=\s*\?\s+WHERE\s+name\s*=\s*\?/i.test(sql)) {
-      if (!state.voidTableExists) {
-        return noVoidTable();
+      if (!state.nosamTableExists) {
+        return noNosamTable();
       }
       let changes = 0;
       if (Array.isArray(params) && typeof params[0] === 'string' && typeof params[1] === 'string') {
@@ -253,8 +253,8 @@ function makeQueryD1(state: D1MockState) {
         sql,
       )
     ) {
-      if (!state.voidTableExists) {
-        return noVoidTable();
+      if (!state.nosamTableExists) {
+        return noNosamTable();
       }
       const results: Array<{ name: string }> = [];
       if (Array.isArray(params)) {
@@ -274,8 +274,8 @@ function makeQueryD1(state: D1MockState) {
         sql,
       );
     if (tracking) {
-      if (!state.voidTableExists) {
-        return noVoidTable();
+      if (!state.nosamTableExists) {
+        return noNosamTable();
       }
       const name = tracking[1].replaceAll("''", "'");
       if (state.trackingRows.has(name)) {
@@ -1007,7 +1007,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     //   5. SELECT name FROM _void_migrations (applied set)
     // Any reordering that moves an INSERT / UPDATE / SELECT on
     // _void_migrations before the CREATE would have been caught by the
-    // mock's `voidTableExists` gating, but pinning the order here gives
+    // mock's `nosamTableExists` gating, but pinning the order here gives
     // the whole upgrade a single assertion to regress on.
     const upgradeSteps = state.queries
       .map((q) => q.sql)
@@ -1062,11 +1062,11 @@ describe('POST /projects/:id/migrations/apply', () => {
     // Legacy table was dropped; all three rows in the current table.
     expect(state.legacyRows).toBeUndefined();
     expect(state.trackingRows.size).toBe(3);
-    // Overlap: void-side timestamp preserved (INSERT OR IGNORE does NOT overwrite).
+    // Overlap: nosam-side timestamp preserved (INSERT OR IGNORE does NOT overwrite).
     expect(state.trackingRows.get('001_init.sql')).toBe('2025-06-01T00:00:00Z');
-    // Non-overlap: void-side row untouched.
+    // Non-overlap: nosam-side row untouched.
     expect(state.trackingRows.get('002_alter.sql')).toBe('2025-06-02T00:00:00Z');
-    // Missing-from-void row was copied verbatim, including its applied_at.
+    // Missing-from-nosam row was copied verbatim, including its applied_at.
     expect(state.trackingRows.get('003_index.sql')).toBe('2024-02-02T00:00:00Z');
   });
 
@@ -1159,7 +1159,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     const body = (await res.json()) as { ok: boolean; error: string };
     expect(body.ok).toBe(false);
     expect(body.error).toContain('001_drop.sql');
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     // Destructive was blocked before any DDL was issued to D1
     const appSql = state.queries.find((q) => /DROP\s+TABLE\s+users/i.test(q.sql));
     expect(appSql).toBeUndefined();
@@ -1167,8 +1167,8 @@ describe('POST /projects/:id/migrations/apply', () => {
 
   it('blocks a destructive migration with a malformed pragma (missing space after --)', async () => {
     // Production uses `sql.includes(DESTRUCTIVE_PRAGMA)` with the exact
-    // literal `-- void:allow-destructive`. A pragma like
-    // `--void:allow-destructive` (no space after `--`) is not a valid
+    // literal `-- nosam:allow-destructive`. A pragma like
+    // `--nosam:allow-destructive` (no space after `--`) is not a valid
     // SQL comment in sqlite and must not unlock the destructive path —
     // pin that so anyone who loosens the matcher trips this test.
     const user = await createTestUser(env.db);
@@ -1185,7 +1185,7 @@ describe('POST /projects/:id/migrations/apply', () => {
           migrations: [
             {
               name: '001_drop.sql',
-              sql: '--void:allow-destructive\nDROP TABLE users',
+              sql: '--nosam:allow-destructive\nDROP TABLE users',
             },
           ],
         }),
@@ -1204,7 +1204,7 @@ describe('POST /projects/:id/migrations/apply', () => {
 
   it('blocks a destructive migration whose pragma is hidden in a string literal (not a real comment)', async () => {
     // Attack: the pragma appears inside a string literal, not as a SQL
-    // comment. A raw `sql.includes('-- void:allow-destructive')` check
+    // comment. A raw `sql.includes('-- nosam:allow-destructive')` check
     // authorizes the request even though the literal is just data, not a
     // directive. The route tokenizes strings/comments and only honors the
     // pragma when it's a real comment.
@@ -1223,7 +1223,7 @@ describe('POST /projects/:id/migrations/apply', () => {
             {
               name: '001_sneaky.sql',
               sql:
-                "INSERT INTO notes(txt) VALUES('-- void:allow-destructive');\n" +
+                "INSERT INTO notes(txt) VALUES('-- nosam:allow-destructive');\n" +
                 'DROP TABLE users;',
             },
           ],
@@ -1235,7 +1235,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     const body = (await res.json()) as { ok: boolean; error: string };
     expect(body.ok).toBe(false);
     expect(body.error).toContain('001_sneaky.sql');
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     // Nothing reached D1 — the destructive guard short-circuited
     const droppedReached = state.queries.find((q) => /DROP\s+TABLE\s+users/i.test(q.sql));
     expect(droppedReached).toBeUndefined();
@@ -1258,7 +1258,7 @@ describe('POST /projects/:id/migrations/apply', () => {
           migrations: [
             {
               name: '001_ident.sql',
-              sql: 'CREATE TABLE "-- void:allow-destructive" (id TEXT);\nDROP TABLE users;',
+              sql: 'CREATE TABLE "-- nosam:allow-destructive" (id TEXT);\nDROP TABLE users;',
             },
           ],
         }),
@@ -1306,7 +1306,7 @@ describe('POST /projects/:id/migrations/apply', () => {
   });
 
   it('blocks a destructive migration with an upper-case pragma variant', async () => {
-    // The pragma match is exact casing — "-- VOID:ALLOW-DESTRUCTIVE"
+    // The pragma match is exact casing — "-- NOSAM:ALLOW-DESTRUCTIVE"
     // must stay blocked even though the intent is obvious. This pins
     // the matcher so it can't silently be replaced with a case-
     // insensitive `toLowerCase().includes(...)`.
@@ -1324,7 +1324,7 @@ describe('POST /projects/:id/migrations/apply', () => {
           migrations: [
             {
               name: '001_drop.sql',
-              sql: '-- VOID:ALLOW-DESTRUCTIVE\nDROP TABLE users',
+              sql: '-- NOSAM:ALLOW-DESTRUCTIVE\nDROP TABLE users',
             },
           ],
         }),
@@ -1351,7 +1351,7 @@ describe('POST /projects/:id/migrations/apply', () => {
           migrations: [
             {
               name: '001_drop.sql',
-              sql: '-- void:allow-destructive\nDROP TABLE legacy_users',
+              sql: '-- nosam:allow-destructive\nDROP TABLE legacy_users',
             },
           ],
         }),
@@ -1465,7 +1465,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     );
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     // The DDL must not have been dispatched — the guard short-circuits.
     expect(state.queries.find((q) => /DROP\s+VIEW/i.test(q.sql))).toBeUndefined();
   });
@@ -1497,14 +1497,14 @@ describe('POST /projects/:id/migrations/apply', () => {
     );
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /RENAME/i.test(q.sql))).toBeUndefined();
   });
 
   it('blocks destructive SQL whose pragma is documentation inside a block comment', async () => {
-    // Only a standalone `-- void:allow-destructive` line-comment
+    // Only a standalone `-- nosam:allow-destructive` line-comment
     // directive authorizes. A docstring like
-    //   /* See -- void:allow-destructive for usage */
+    //   /* See -- nosam:allow-destructive for usage */
     // is documentation, not authorization.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'pragma-in-block');
@@ -1521,7 +1521,7 @@ describe('POST /projects/:id/migrations/apply', () => {
             {
               name: '001_drop.sql',
               sql:
-                '/* docs: use -- void:allow-destructive to permit table drops */\n' +
+                '/* docs: use -- nosam:allow-destructive to permit table drops */\n' +
                 'DROP TABLE users',
             },
           ],
@@ -1531,15 +1531,15 @@ describe('POST /projects/:id/migrations/apply', () => {
     );
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /DROP\s+TABLE\s+users/i.test(q.sql))).toBeUndefined();
   });
 
   it('blocks destructive SQL whose pragma is part of a longer line comment', async () => {
     // A line comment that mentions the pragma but is not standalone — e.g.
-    //   -- TODO: maybe add void:allow-destructive here?
+    //   -- TODO: maybe add nosam:allow-destructive here?
     // — must NOT authorize. Only a line comment whose trimmed content is
-    // exactly `-- void:allow-destructive` counts.
+    // exactly `-- nosam:allow-destructive` counts.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'pragma-in-line-doc');
     await insertD1Resource(env.db, project.id);
@@ -1554,7 +1554,7 @@ describe('POST /projects/:id/migrations/apply', () => {
           migrations: [
             {
               name: '001_drop.sql',
-              sql: '-- TODO: maybe add -- void:allow-destructive here?\n' + 'DROP TABLE users',
+              sql: '-- TODO: maybe add -- nosam:allow-destructive here?\n' + 'DROP TABLE users',
             },
           ],
         }),
@@ -1563,7 +1563,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     );
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /DROP\s+TABLE\s+users/i.test(q.sql))).toBeUndefined();
   });
 
@@ -1590,7 +1590,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     );
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     // The DDL must not have been dispatched — the guard short-circuits before
     // any application SQL hits the mock.
     expect(state.queries.find((q) => /DROP[\s\S]*TABLE/i.test(q.sql))).toBeUndefined();
@@ -1623,16 +1623,16 @@ describe('POST /projects/:id/migrations/apply', () => {
     );
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /RENAME/i.test(q.sql))).toBeUndefined();
   });
 
   it('blocks destructive SQL with a trailing pragma on the same line', async () => {
     // The standalone-pragma rule must verify the `--` starts its line.
     // Otherwise a migration like:
-    //   CREATE TABLE t (id TEXT); -- void:allow-destructive
+    //   CREATE TABLE t (id TEXT); -- nosam:allow-destructive
     //   DROP TABLE users
-    // would extract `-- void:allow-destructive` from the trailing comment
+    // would extract `-- nosam:allow-destructive` from the trailing comment
     // on line 1 and authorize the DROP TABLE on line 2.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'trailing-pragma');
@@ -1648,7 +1648,7 @@ describe('POST /projects/:id/migrations/apply', () => {
           migrations: [
             {
               name: '001_drop.sql',
-              sql: 'CREATE TABLE t (id TEXT); -- void:allow-destructive\nDROP TABLE users',
+              sql: 'CREATE TABLE t (id TEXT); -- nosam:allow-destructive\nDROP TABLE users',
             },
           ],
         }),
@@ -1657,7 +1657,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     );
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /DROP\s+TABLE\s+users/i.test(q.sql))).toBeUndefined();
   });
 
@@ -1678,7 +1678,7 @@ describe('POST /projects/:id/migrations/apply', () => {
           migrations: [
             {
               name: '001_drop.sql',
-              sql: '-- void:allow-destructive\nDROP TABLE users',
+              sql: '-- nosam:allow-destructive\nDROP TABLE users',
             },
           ],
         }),
@@ -1751,7 +1751,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     );
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /RENAME\s+COLUMN/i.test(q.sql))).toBeUndefined();
   });
 
@@ -1781,7 +1781,7 @@ describe('POST /projects/:id/migrations/apply', () => {
       env,
     );
     expect(res.status).toBe(400);
-    expect(((await res.json()) as { error: string }).error).toContain('void:allow-destructive');
+    expect(((await res.json()) as { error: string }).error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /RENAME/i.test(q.sql))).toBeUndefined();
   });
 
@@ -1801,7 +1801,7 @@ describe('POST /projects/:id/migrations/apply', () => {
           migrations: [
             {
               name: '001_rename.sql',
-              sql: '-- void:allow-destructive\nALTER TABLE users RENAME old_col TO new_col',
+              sql: '-- nosam:allow-destructive\nALTER TABLE users RENAME old_col TO new_col',
             },
           ],
         }),
@@ -1837,7 +1837,7 @@ describe('POST /projects/:id/migrations/apply', () => {
       env,
     );
     expect(res.status).toBe(400);
-    expect(((await res.json()) as { error: string }).error).toContain('void:allow-destructive');
+    expect(((await res.json()) as { error: string }).error).toContain('nosam:allow-destructive');
   });
 
   it('blocks legacy ALTER TABLE RENAME with bracketed identifiers', async () => {
@@ -1862,7 +1862,7 @@ describe('POST /projects/:id/migrations/apply', () => {
       env,
     );
     expect(res.status).toBe(400);
-    expect(((await res.json()) as { error: string }).error).toContain('void:allow-destructive');
+    expect(((await res.json()) as { error: string }).error).toContain('nosam:allow-destructive');
   });
 
   it('does NOT block ALTER TABLE ADD COLUMN rename TEXT under the widened regex', async () => {
@@ -1945,7 +1945,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     );
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /RENAME\s+TO/i.test(q.sql))).toBeUndefined();
   });
 
@@ -1976,7 +1976,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     );
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /RENAME\s+COLUMN/i.test(q.sql))).toBeUndefined();
   });
 
@@ -2007,7 +2007,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     );
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /RENAME\s+TO/i.test(q.sql))).toBeUndefined();
   });
 
@@ -2101,7 +2101,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect(body.error).toContain('001_delete.sql');
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /DELETE\s+FROM\s+users/i.test(q.sql))).toBeUndefined();
   });
 
@@ -2127,7 +2127,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect(body.error).toContain('001_update.sql');
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /UPDATE\s+users\s+SET/i.test(q.sql))).toBeUndefined();
   });
 
@@ -2154,7 +2154,7 @@ describe('POST /projects/:id/migrations/apply', () => {
       env,
     );
     expect(res.status).toBe(400);
-    expect(((await res.json()) as { error: string }).error).toContain('void:allow-destructive');
+    expect(((await res.json()) as { error: string }).error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /DELETE\s+FROM\s+users/i.test(q.sql))).toBeUndefined();
   });
 
@@ -2181,7 +2181,7 @@ describe('POST /projects/:id/migrations/apply', () => {
       env,
     );
     expect(res.status).toBe(400);
-    expect(((await res.json()) as { error: string }).error).toContain('void:allow-destructive');
+    expect(((await res.json()) as { error: string }).error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /UPDATE\s+users\s+SET/i.test(q.sql))).toBeUndefined();
   });
 
@@ -2213,7 +2213,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect(body.error).toContain('001_replace.sql');
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /INSERT\s+OR\s+REPLACE\s+INTO/i.test(q.sql))).toBeUndefined();
   });
 
@@ -2246,7 +2246,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect(body.error).toContain('001_trigger.sql');
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /DELETE\s+FROM\s+old_logs/i.test(q.sql))).toBeUndefined();
   });
 
@@ -2278,7 +2278,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect(body.error).toContain('001_temp_trigger.sql');
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /UPDATE\s+x\s+SET/i.test(q.sql))).toBeUndefined();
   });
 
@@ -2311,7 +2311,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect(body.error).toContain('001_trigger_drop.sql');
-    expect(body.error).toContain('void:allow-destructive');
+    expect(body.error).toContain('nosam:allow-destructive');
     expect(state.queries.find((q) => /DROP\s+TABLE\s+legacy/i.test(q.sql))).toBeUndefined();
   });
 
@@ -2480,7 +2480,7 @@ describe('POST /projects/:id/migrations/apply', () => {
 
   it('allows unbounded DELETE when the pragma is present', async () => {
     // When the caller acknowledges the mass-delete with the standalone
-    // `-- void:allow-destructive` pragma, the guard lets the migration
+    // `-- nosam:allow-destructive` pragma, the guard lets the migration
     // run end-to-end, exactly as it does for destructive DDL.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'r25f3-delete-ok');
@@ -2496,7 +2496,7 @@ describe('POST /projects/:id/migrations/apply', () => {
           migrations: [
             {
               name: '001_delete.sql',
-              sql: '-- void:allow-destructive\nDELETE FROM users',
+              sql: '-- nosam:allow-destructive\nDELETE FROM users',
             },
           ],
         }),
@@ -4353,7 +4353,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['001_init.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, oldActive.id));
 
@@ -4363,7 +4363,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['001_init.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, target.id));
 
@@ -4451,7 +4451,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, oldActive.id));
 
@@ -4461,7 +4461,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, target.id));
 
@@ -4546,7 +4546,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql', 'm2.sql', 'm3.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depA.id));
     const depB = await createTestDeployment(env.db, project.id, 'failed');
@@ -4555,7 +4555,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql', 'm2.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depB.id));
     const depC = await createTestDeployment(env.db, project.id, 'failed');
@@ -4564,7 +4564,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depC.id));
 
@@ -4728,7 +4728,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql', 'm2.sql', 'm3.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depA.id));
     const depB = await createTestDeployment(env.db, project.id, 'failed');
@@ -4737,7 +4737,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql', 'm2.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depB.id));
 
@@ -4841,7 +4841,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .update(deployments)
       .set({
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, current.id));
     const target = await createTestDeployment(env.db, project.id, 'failed');
@@ -4849,7 +4849,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .update(deployments)
       .set({
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, target.id));
     const previousRouting = JSON.stringify({
@@ -4942,12 +4942,12 @@ describe('POST /projects/:id/migrations/rename', () => {
     const current = await createTestDeployment(env.db, project.id, 'live');
     await env.db
       .update(deployments)
-      .set({ retained: true, manifest: JSON.stringify({ version: 4, type: 'void' }) })
+      .set({ retained: true, manifest: JSON.stringify({ version: 4, type: 'nosam' }) })
       .where(eq(deployments.id, current.id));
     const target = await createTestDeployment(env.db, project.id, 'failed');
     await env.db
       .update(deployments)
-      .set({ retained: true, manifest: JSON.stringify({ version: 4, type: 'void' }) })
+      .set({ retained: true, manifest: JSON.stringify({ version: 4, type: 'nosam' }) })
       .where(eq(deployments.id, target.id));
     await env.ROUTING.put(
       project.slug,
@@ -5018,12 +5018,12 @@ describe('POST /projects/:id/migrations/rename', () => {
     const current = await createTestDeployment(env.db, project.id, 'live');
     await env.db
       .update(deployments)
-      .set({ retained: true, manifest: JSON.stringify({ version: 4, type: 'void' }) })
+      .set({ retained: true, manifest: JSON.stringify({ version: 4, type: 'nosam' }) })
       .where(eq(deployments.id, current.id));
     const target = await createTestDeployment(env.db, project.id, 'failed');
     await env.db
       .update(deployments)
-      .set({ retained: true, manifest: JSON.stringify({ version: 4, type: 'void' }) })
+      .set({ retained: true, manifest: JSON.stringify({ version: 4, type: 'nosam' }) })
       .where(eq(deployments.id, target.id));
     await env.db
       .update(projects)
@@ -5091,12 +5091,12 @@ describe('POST /projects/:id/migrations/rename', () => {
     const current = await createTestDeployment(env.db, project.id, 'live');
     await env.db
       .update(deployments)
-      .set({ retained: true, manifest: JSON.stringify({ version: 4, type: 'void' }) })
+      .set({ retained: true, manifest: JSON.stringify({ version: 4, type: 'nosam' }) })
       .where(eq(deployments.id, current.id));
     const target = await createTestDeployment(env.db, project.id, 'failed');
     await env.db
       .update(deployments)
-      .set({ retained: true, manifest: JSON.stringify({ version: 4, type: 'void' }) })
+      .set({ retained: true, manifest: JSON.stringify({ version: 4, type: 'nosam' }) })
       .where(eq(deployments.id, target.id));
 
     // Model the result of an earlier rollback whose COMMIT outcome was
@@ -5217,7 +5217,7 @@ describe('POST /projects/:id/migrations/rename', () => {
         retained: true,
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [
             { name: 'q1', bindingName: 'Q1' },
             { name: 'q2', bindingName: 'Q2' },
@@ -5233,7 +5233,7 @@ describe('POST /projects/:id/migrations/rename', () => {
         retained: true,
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [
             { name: 'q2', bindingName: 'Q2' },
             { name: 'q3', bindingName: 'Q3' },
@@ -5318,7 +5318,7 @@ describe('POST /projects/:id/migrations/rename', () => {
         retained: true,
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           schedules: [{ name: 'a-cron', cron: '*/5 * * * *' }],
         }),
       })
@@ -5329,7 +5329,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depB.id));
 
@@ -5420,7 +5420,7 @@ describe('POST /projects/:id/migrations/rename', () => {
         retained: true,
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [{ name: 'q1', bindingName: 'Q1' }],
         }),
       })
@@ -5437,7 +5437,7 @@ describe('POST /projects/:id/migrations/rename', () => {
         retained: true,
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [{ name: 'q2', bindingName: 'Q2' }],
         }),
       })
@@ -5451,7 +5451,7 @@ describe('POST /projects/:id/migrations/rename', () => {
         retained: true,
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [{ name: 'q3', bindingName: 'Q3' }],
         }),
       })
@@ -5528,7 +5528,7 @@ describe('POST /projects/:id/migrations/rename', () => {
         retained: true,
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [{ name: 'q1', bindingName: 'Q1' }],
         }),
       })
@@ -5541,7 +5541,7 @@ describe('POST /projects/:id/migrations/rename', () => {
         retained: true,
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [{ name: 'q5', bindingName: 'Q5' }],
         }),
       })
@@ -5558,7 +5558,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [{ name: 'q4', bindingName: 'Q4' }],
         }),
       })
@@ -5645,7 +5645,7 @@ describe('POST /projects/:id/migrations/rename', () => {
         retained: true,
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [{ name: 'q1', bindingName: 'Q1' }],
         }),
       })
@@ -5660,7 +5660,7 @@ describe('POST /projects/:id/migrations/rename', () => {
         retained: true,
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [{ name: 'q2', bindingName: 'Q2' }],
         }),
       })
@@ -5676,7 +5676,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [{ name: 'q3', bindingName: 'Q3' }],
         }),
       })
@@ -5740,7 +5740,7 @@ describe('POST /projects/:id/migrations/rename', () => {
         retained: true,
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [{ name: 'q1', bindingName: 'Q1' }],
         }),
       })
@@ -5754,7 +5754,7 @@ describe('POST /projects/:id/migrations/rename', () => {
         retained: true,
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [{ name: 'q2', bindingName: 'Q2' }],
         }),
       })
@@ -5769,7 +5769,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [{ name: 'q4', bindingName: 'Q4' }],
         }),
       })
@@ -5823,7 +5823,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depA.id));
     const depB = await createTestDeployment(env.db, project.id, 'failed');
@@ -5832,7 +5832,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depB.id));
 
@@ -5879,7 +5879,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depA.id));
     const depB = await createTestDeployment(env.db, project.id, 'failed');
@@ -5888,7 +5888,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depB.id));
 
@@ -5931,7 +5931,7 @@ describe('POST /projects/:id/migrations/rename', () => {
     // point. When `diff.length > 0` and the caller did not echo the exact
     // server-computed diff via `allowDestructive`, reject with 400 BEFORE
     // flipping pg or writing any external state. Matches the
-    // `void:allow-destructive` opt-in required by /migrations/apply.
+    // `nosam:allow-destructive` opt-in required by /migrations/apply.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'r25f1-destructive');
     await insertD1Resource(env.db, project.id);
@@ -5958,7 +5958,7 @@ describe('POST /projects/:id/migrations/rename', () => {
         retained: true,
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [{ name: 'work-queue' }],
         }),
       })
@@ -5969,7 +5969,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depB.id));
 
@@ -6051,7 +6051,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql', 'm2.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depA.id));
     const depB = await createTestDeployment(env.db, project.id, 'failed');
@@ -6060,7 +6060,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depB.id));
 
@@ -6114,7 +6114,7 @@ describe('POST /projects/:id/migrations/rename', () => {
         retained: true,
         manifest: JSON.stringify({
           version: 4,
-          type: 'void',
+          type: 'nosam',
           queues: [{ name: 'work-queue' }],
         }),
       })
@@ -6125,7 +6125,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify(['m1.sql']),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depB.id));
 
@@ -6205,7 +6205,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify([safeName, exoticName]),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depA.id));
     const depB = await createTestDeployment(env.db, project.id, 'failed');
@@ -6214,7 +6214,7 @@ describe('POST /projects/:id/migrations/rename', () => {
       .set({
         applied_migrations: JSON.stringify([safeName]),
         retained: true,
-        manifest: JSON.stringify({ version: 4, type: 'void' }),
+        manifest: JSON.stringify({ version: 4, type: 'nosam' }),
       })
       .where(eq(deployments.id, depB.id));
 

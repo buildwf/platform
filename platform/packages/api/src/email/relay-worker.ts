@@ -9,7 +9,7 @@
  * into an account it does not own — it is never bundled into the api
  * worker itself.
  *
- * `void email domain sync` redeploys at the current RELAY_VERSION. Secret
+ * `nosam email domain sync` redeploys at the current RELAY_VERSION. Secret
  * rotation is a separate durable operation proven against the deployed
  * Worker before promotion. The Worker name stays stable for its zone.
  */
@@ -23,11 +23,11 @@ export const RELAY_COMPATIBILITY_DATE = '2026-09-01';
 // The binding names the upload declares (plain-text vars + one secret) and
 // the source reads. Pinned to RELAY_SOURCE by the unit tests — the two
 // must move together or the deployed relay reads undefined bindings.
-export const RELAY_SECRET_BINDING = 'VOID_RELAY_SECRET';
-export const RELAY_GATEWAY_ORIGIN_BINDING = 'VOID_EMAIL_GATEWAY_ORIGIN';
-export const RELAY_ACCOUNT_BINDING = 'VOID_EMAIL_ACCOUNT';
-export const RELAY_ZONE_BINDING = 'VOID_EMAIL_ZONE';
-export const RELAY_INGRESS_BINDING = 'VOID_EMAIL_INGRESS';
+export const RELAY_SECRET_BINDING = 'NOSAM_RELAY_SECRET';
+export const RELAY_GATEWAY_ORIGIN_BINDING = 'NOSAM_EMAIL_GATEWAY_ORIGIN';
+export const RELAY_ACCOUNT_BINDING = 'NOSAM_EMAIL_ACCOUNT';
+export const RELAY_ZONE_BINDING = 'NOSAM_EMAIL_ZONE';
+export const RELAY_INGRESS_BINDING = 'NOSAM_EMAIL_INGRESS';
 
 /**
  * Module-syntax Worker source. POST /email/ingress on the configured gateway
@@ -49,15 +49,15 @@ export const RELAY_INGRESS_BINDING = 'VOID_EMAIL_INGRESS';
 export const RELAY_SOURCE = `export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (request.method !== 'POST' || url.pathname !== '/__void/email/probe') return new Response(null, { status: 404 });
-    const challenge = request.headers.get('X-Void-Probe-Challenge') ?? '';
-    const generation = request.headers.get('X-Void-Probe-Generation') ?? '';
+    if (request.method !== 'POST' || url.pathname !== '/__nosam/email/probe') return new Response(null, { status: 404 });
+    const challenge = request.headers.get('X-Nosam-Probe-Challenge') ?? '';
+    const generation = request.headers.get('X-Nosam-Probe-Generation') ?? '';
     if (!/^[a-f0-9]{64}$/.test(challenge) || !/^[1-9][0-9]{0,9}$/.test(generation)) return new Response(null, { status: 400 });
-    const payload = ['email-relay-proof-v1', env.VOID_EMAIL_ACCOUNT, env.VOID_EMAIL_ZONE, env.VOID_EMAIL_INGRESS, generation, challenge].join('\\n');
-    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.VOID_RELAY_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const payload = ['email-relay-proof-v1', env.NOSAM_EMAIL_ACCOUNT, env.NOSAM_EMAIL_ZONE, env.NOSAM_EMAIL_INGRESS, generation, challenge].join('\\n');
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.NOSAM_RELAY_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
     const signature = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload)));
     const proof = Array.from(signature, byte => byte.toString(16).padStart(2, '0')).join('');
-    return Response.json({ accountId: env.VOID_EMAIL_ACCOUNT, zoneId: env.VOID_EMAIL_ZONE, ingressName: env.VOID_EMAIL_INGRESS, generation: Number(generation), challenge, proof }, { headers: { 'Cache-Control': 'no-store' } });
+    return Response.json({ accountId: env.NOSAM_EMAIL_ACCOUNT, zoneId: env.NOSAM_EMAIL_ZONE, ingressName: env.NOSAM_EMAIL_INGRESS, generation: Number(generation), challenge, proof }, { headers: { 'Cache-Control': 'no-store' } });
   },
   async email(message, env, ctx) {
     const requestId = crypto.randomUUID();
@@ -82,16 +82,16 @@ export const RELAY_SOURCE = `export default {
         }),
       ]).finally(() => clearTimeout(timer));
     };
-    const relay = beforeDeadline(() => fetch(env.VOID_EMAIL_GATEWAY_ORIGIN + '/email/ingress', {
+    const relay = beforeDeadline(() => fetch(env.NOSAM_EMAIL_GATEWAY_ORIGIN + '/email/ingress', {
       method: 'POST',
       headers: {
-        Authorization: 'Bearer ' + env.VOID_RELAY_SECRET,
-        'X-Void-Email-Account': env.VOID_EMAIL_ACCOUNT,
-        'X-Void-Email-Zone': env.VOID_EMAIL_ZONE,
-        'X-Void-Email-Ingress': env.VOID_EMAIL_INGRESS,
-        'X-Void-Email-Request-Id': requestId,
-        'X-Void-Email-From': message.from,
-        'X-Void-Email-To': message.to,
+        Authorization: 'Bearer ' + env.NOSAM_RELAY_SECRET,
+        'X-Nosam-Email-Account': env.NOSAM_EMAIL_ACCOUNT,
+        'X-Nosam-Email-Zone': env.NOSAM_EMAIL_ZONE,
+        'X-Nosam-Email-Ingress': env.NOSAM_EMAIL_INGRESS,
+        'X-Nosam-Email-Request-Id': requestId,
+        'X-Nosam-Email-From': message.from,
+        'X-Nosam-Email-To': message.to,
       },
       body: readable,
       signal: controller.signal,

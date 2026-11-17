@@ -8,14 +8,14 @@ it('attributes self-hosted uploads to their installation and runtime version', (
       PLATFORM_INSTALLATION_ID: 'installation-one',
       PLATFORM_ENV: 'production',
     }),
-  ).toBe('void-platform/0.27.0 void-installation/installation-one');
+  ).toBe('nosam-platform/0.27.0 nosam-installation/installation-one');
 });
 
 it.each([undefined, 'production', 'staging'])(
   'keeps hosted %s uploads distinct from self-hosted installations',
   (PLATFORM_ENV) => {
     expect(platformAppUploadUserAgent({ PLATFORM_ENV })).toBe(
-      `void-platform/hosted void-installation/hosted-${PLATFORM_ENV || 'production'}`,
+      `nosam-platform/hosted nosam-installation/hosted-${PLATFORM_ENV || 'production'}`,
     );
   },
 );
@@ -26,5 +26,5 @@ it('encodes custom runtime versions and installation IDs as single header tokens
       PLATFORM_VERSION: 'custom build\r\n',
       PLATFORM_INSTALLATION_ID: 'installation / one',
     }),
-  ).toBe('void-platform/custom%20build%0D%0A void-installation/installation%20%2F%20one');
+  ).toBe('nosam-platform/custom%20build%0D%0A nosam-installation/installation%20%2F%20one');
 });

@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { defineWebSocket, type WebSocketConnection } from 'void/ws';
+import { defineWebSocket, type WebSocketConnection } from 'nosam/ws';
 
 const NotificationClientMessage = v.variant('type', [
   v.object({
@@ -65,12 +65,12 @@ type NotificationState = {
 
 declare global {
   interface ImportMeta {
-    readonly env: { readonly VITE_VOID_NOTIFICATION_STREAM_DELAY_MS?: string };
+    readonly env: { readonly VITE_NOSAM_NOTIFICATION_STREAM_DELAY_MS?: string };
   }
 }
 
 const configuredStreamDelay = Number(
-  import.meta.env.VITE_VOID_NOTIFICATION_STREAM_DELAY_MS ?? '1000',
+  import.meta.env.VITE_NOSAM_NOTIFICATION_STREAM_DELAY_MS ?? '1000',
 );
 const STREAM_DELAY_MS = Number.isFinite(configuredStreamDelay) ? configuredStreamDelay : 1000;
 

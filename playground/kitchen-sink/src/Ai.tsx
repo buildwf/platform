@@ -108,7 +108,7 @@ export default function AiPage() {
             }
             try {
               const parsed = JSON.parse(data);
-              if (event === 'void:error' || event === 'void:limit') {
+              if (event === 'nosam:error' || event === 'nosam:limit') {
                 setError(
                   typeof parsed.message === 'string'
                     ? parsed.message
@@ -136,7 +136,7 @@ export default function AiPage() {
     <div>
       <h1>AI</h1>
       <p>
-        AI inference via <code>void/ai</code>.
+        AI inference via <code>nosam/ai</code>.
       </p>
 
       <h2>Model</h2>

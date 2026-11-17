@@ -62,7 +62,7 @@ jobs:
       contents: read
       id-token: write
     env:
-      VOID_PLATFORM_SOURCE_REVISION: ${{ github.sha }}
+      NOSAM_PLATFORM_SOURCE_REVISION: ${{ github.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

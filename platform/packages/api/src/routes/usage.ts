@@ -45,7 +45,7 @@ export async function getProjectUsage(
       queryProjectAiUsage(
         env.CF_ACCOUNT_ID,
         env.CF_API_TOKEN,
-        env.AI_GATEWAY_ID ?? 'void',
+        env.AI_GATEWAY_ID ?? 'nosam',
         env.JWT_SECRET,
         projectId,
         since,
@@ -112,7 +112,7 @@ export async function getAccountUsage(
       sumAiUsageForWindows(
         env.CF_ACCOUNT_ID,
         env.CF_API_TOKEN,
-        env.AI_GATEWAY_ID ?? 'void',
+        env.AI_GATEWAY_ID ?? 'nosam',
         env.JWT_SECRET,
         projectWindows.map(({ project, intervals }) => ({ projectId: project.id, intervals })),
       ),
@@ -182,7 +182,7 @@ function getRequestsDataset(env: { REQUESTS_DATASET?: string; PLATFORM_ENV?: str
   if (env.REQUESTS_DATASET) {
     return env.REQUESTS_DATASET;
   }
-  return env.PLATFORM_ENV === 'staging' ? 'void_requests_staging' : 'void_requests';
+  return env.PLATFORM_ENV === 'staging' ? 'nosam_requests_staging' : 'nosam_requests';
 }
 
 export function queryAnalyticsEngine(accountId: string, apiToken: string, query: string) {

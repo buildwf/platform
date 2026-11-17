@@ -75,7 +75,7 @@ export async function migrateDeploymentWorker(input: {
     await assertDeploymentCanProceed(context.get('db'), deployment.id, projectId);
     emit({ event: 'worker_readiness' });
 
-    const proxyToken = workerBindings.find((b) => b.name === '__VOID_PROXY_TOKEN')?.text ?? '';
+    const proxyToken = workerBindings.find((b) => b.name === '__NOSAM_PROXY_TOKEN')?.text ?? '';
     const lockProjectForDeploy = async (tx: Db): Promise<void> => {
       await tx.execute(drizzleSql`SELECT id FROM projects WHERE id = ${projectId} FOR UPDATE`);
       await requireActiveDeployAccess(tx, projectId, actor.id);
@@ -90,7 +90,7 @@ export async function migrateDeploymentWorker(input: {
           try {
             const userWorker = context.env.DISPATCH.get(workerName);
             const readyResponse = await userWorker.fetch(
-              new Request('https://internal/__void/ready', {
+              new Request('https://internal/__nosam/ready', {
                 signal: AbortSignal.timeout(10_000),
               }),
             );
@@ -251,9 +251,9 @@ export async function migrateDeploymentWorker(input: {
             const maxAttempts = CF_MIGRATION_RETRY.maxRetries + 1;
             const userWorker = context.env.DISPATCH.get(workerName);
             const migrateResponse = await userWorker.fetch(
-              new Request('https://internal/__void/migrate', {
+              new Request('https://internal/__nosam/migrate', {
                 method: 'POST',
-                headers: { 'x-void-internal': proxyToken },
+                headers: { 'x-nosam-internal': proxyToken },
                 signal: AbortSignal.timeout(300_000),
               }),
             );

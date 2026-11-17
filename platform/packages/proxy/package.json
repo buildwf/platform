@@ -1,5 +1,5 @@
 {
-  "name": "@voidcloud/proxy",
+  "name": "@nosamcloud/proxy",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,10 +8,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@void/deploy-core": "workspace:*",
-    "@void/edge": "workspace:*",
-    "@void/platform": "workspace:*",
-    "@voidcloud/api": "workspace:*",
+    "@nosam/deploy-core": "workspace:*",
+    "@nosam/edge": "workspace:*",
+    "@nosam/platform": "workspace:*",
+    "@nosamcloud/api": "workspace:*",
     "email-validator": "^2.0.4",
     "hono": "catalog:platform"
   },

@@ -49,12 +49,12 @@ type OutdatedBody = {
  * The gate answers only requests that are otherwise authorized for the target project.
  */
 describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
-  it('rejects old X-Void-CLI-Version header on deploy.finalize', async () => {
+  it('rejects old X-Nosam-CLI-Version header on deploy.finalize', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'finalize-old-app');
 
     const request = rpcRequest('deploy.finalize', user.jwt, { projectId: project.id, body: {} });
-    request.headers.set('X-Void-CLI-Version', '0.6.0');
+    request.headers.set('X-Nosam-CLI-Version', '0.6.0');
     const res = await app.fetch(request, env);
 
     expect(res.status).toBe(426);
@@ -63,7 +63,7 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
     expect(body.error.message).toContain(MIN_CLI_VERSION);
   });
 
-  it('rejects old X-Void-CLI-Version header on POST /deploy/upload-urls', async () => {
+  it('rejects old X-Nosam-CLI-Version header on POST /deploy/upload-urls', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'old-app');
 
@@ -73,7 +73,7 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
-          'X-Void-CLI-Version': '0.6.0',
+          'X-Nosam-CLI-Version': '0.6.0',
         },
         body: JSON.stringify({ projectId: project.id, assets: [] }),
       }),
@@ -86,7 +86,7 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
     expect(body.error.message).toContain(MIN_CLI_VERSION);
   });
 
-  it('rejects old X-Void-CLI-Version header on POST /deploy/preflight', async () => {
+  it('rejects old X-Nosam-CLI-Version header on POST /deploy/preflight', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'pf-app');
 
@@ -96,7 +96,7 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
-          'X-Void-CLI-Version': '0.5.99',
+          'X-Nosam-CLI-Version': '0.5.99',
         },
         body: JSON.stringify({ projectId: project.id, assetManifest: {} }),
       }),
@@ -108,7 +108,7 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
     expect(body.error.code).toBe('CLI_OUTDATED');
   });
 
-  it('rejects unparseable X-Void-CLI-Version (fail closed)', async () => {
+  it('rejects unparseable X-Nosam-CLI-Version (fail closed)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'fail-closed-app');
 
@@ -118,7 +118,7 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
-          'X-Void-CLI-Version': 'garbage',
+          'X-Nosam-CLI-Version': 'garbage',
         },
         body: JSON.stringify({ projectId: project.id, assets: [] }),
       }),
@@ -139,7 +139,7 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${user.jwt}`,
-          'X-Void-CLI-Version': '0.0.1',
+          'X-Nosam-CLI-Version': '0.0.1',
         },
       }),
       env,
@@ -158,7 +158,7 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
-          'X-Void-CLI-Version': MIN_CLI_VERSION,
+          'X-Nosam-CLI-Version': MIN_CLI_VERSION,
         },
         body: JSON.stringify({ projectId: project.id, assets: [] }),
       }),
@@ -187,7 +187,7 @@ describe('cliVersionGate — defers to project authorization', () => {
       projectId: 'proj_nonexistent',
       body: {},
     });
-    request.headers.set('X-Void-CLI-Version', '0.6.0');
+    request.headers.set('X-Nosam-CLI-Version', '0.6.0');
     const res = await app.fetch(request, env);
 
     expect(res.status).toBe(403);
@@ -206,7 +206,7 @@ describe('cliVersionGate — defers to project authorization', () => {
         headers: {
           Authorization: `Bearer ${bob.jwt}`,
           'Content-Type': 'application/json',
-          'X-Void-CLI-Version': '0.0.1',
+          'X-Nosam-CLI-Version': '0.0.1',
         },
         body: JSON.stringify({ projectId: aliceProject.id, assets: [] }),
       }),
@@ -222,7 +222,7 @@ describe('cliVersionGate — defers to project authorization', () => {
     await env.db.update(projects).set({ status: 'deleting' }).where(eq(projects.id, project.id));
 
     const request = rpcRequest('deploy.finalize', user.jwt, { projectId: project.id, body: {} });
-    request.headers.set('X-Void-CLI-Version', '0.6.0');
+    request.headers.set('X-Nosam-CLI-Version', '0.6.0');
     const res = await app.fetch(request, env);
 
     expect(res.status).toBe(410);
@@ -242,7 +242,7 @@ describe('cliVersionGate — defers to project authorization', () => {
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
-          'X-Void-CLI-Version': '0.0.1',
+          'X-Nosam-CLI-Version': '0.0.1',
         },
         body: JSON.stringify({ projectId: project.id, assetManifest: {} }),
       }),
@@ -304,7 +304,7 @@ describe('cliVersionGate — defers to project authorization', () => {
           headers: {
             Authorization: `Bearer ${user.jwt}`,
             'Content-Type': 'application/json',
-            'X-Void-CLI-Version': MIN_CLI_VERSION,
+            'X-Nosam-CLI-Version': MIN_CLI_VERSION,
           },
           body: JSON.stringify({ projectId: project.id, assets: [] }),
         }),

@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 
 // Minimal client router for the admin SPA. The server sends an HTML shell with the page object
-// embedded; navigations fetch the next page object as JSON from the same URL (`X-VoidPages: true`).
+// embedded; navigations fetch the next page object as JSON from the same URL (`X-NosamPages: true`).
 // TODO(eeao): replace the page-object JSON endpoints with eeao procedures, then delete this
 // header protocol and fetch data per view.
 
@@ -54,7 +54,7 @@ export function useShared<T>(): T {
 
 export function useRouter() {
   const { page, visit } = useSpa();
-  return { path: new URL(page.url, 'https://void.invalid').pathname, visit };
+  return { path: new URL(page.url, 'https://nosam.invalid').pathname, visit };
 }
 
 export function useNavigation() {
@@ -107,14 +107,14 @@ export const Link = forwardRef<
 
 /** Reads the page object the server embedded in the shell. */
 export function readEmbeddedPage(): PageObject {
-  const element = document.getElementById('void-admin-page');
+  const element = document.getElementById('nosam-admin-page');
   return JSON.parse(element?.textContent ?? '{}') as PageObject;
 }
 
 async function fetchPage(href: string): Promise<{ page: PageObject; url: string } | null> {
   const response = await fetch(href, {
     credentials: 'same-origin',
-    headers: { 'X-VoidPages': 'true', Accept: 'application/json' },
+    headers: { 'X-NosamPages': 'true', Accept: 'application/json' },
   });
   if (!response.headers.get('Content-Type')?.includes('application/json')) {
     return null;
@@ -148,7 +148,7 @@ function PageBody({ components, page }: { components: Record<string, Loader>; pa
   useEffect(() => {
     // Set once the page itself has rendered (after any data it suspends on); browser tests wait
     // for it before interacting.
-    document.getElementById('void-admin-root')?.setAttribute('data-hydrated', 'true');
+    document.getElementById('nosam-admin-root')?.setAttribute('data-hydrated', 'true');
   }, []);
   return <Page {...page.props} />;
 }
@@ -254,6 +254,6 @@ export function startAdminSpa(options: {
     (id) => loadComponent(options.components, id),
   );
   void Promise.allSettled(firstCode).then(() =>
-    createRoot(document.getElementById('void-admin-root')!).render(<App />),
+    createRoot(document.getElementById('nosam-admin-root')!).render(<App />),
   );
 }

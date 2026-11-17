@@ -15,7 +15,7 @@ export function Pagination({
     return <></>;
   }
   return (
-    <nav aria-label="Pagination" className="void-admin-pagination">
+    <nav aria-label="Pagination" className="nosam-admin-pagination">
       {page > 1 ? (
         <Button href={`${baseUrl}?page=${page - 1}`} label="Previous" variant="secondary" />
       ) : (

@@ -67,7 +67,7 @@ describe('checkCliVersionOrRespond', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-void-cli-version': MIN_CLI_VERSION,
+        'x-nosam-cli-version': MIN_CLI_VERSION,
       },
       body: '{}',
     });
@@ -79,7 +79,7 @@ describe('checkCliVersionOrRespond', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-void-cli-version': '99.0.0',
+        'x-nosam-cli-version': '99.0.0',
       },
       body: '{}',
     });
@@ -91,7 +91,7 @@ describe('checkCliVersionOrRespond', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-void-cli-version': '0.6.0',
+        'x-nosam-cli-version': '0.6.0',
       },
       body: '{}',
     });
@@ -101,7 +101,7 @@ describe('checkCliVersionOrRespond', () => {
     expect(body.minVersion).toBe(MIN_CLI_VERSION);
     expect(body.clientVersion).toBe('0.6.0');
     expect(body.message).toMatch(/below the minimum/i);
-    expect(body.message).toMatch(/npm i -g void@latest/);
+    expect(body.message).toMatch(/npm i -g nosam@latest/);
   });
 
   it('rejects multipart bodies with 426 (regardless of header)', async () => {
@@ -142,7 +142,7 @@ describe('checkCliVersionOrRespond', () => {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
-            'x-void-cli-version': badVersion,
+            'x-nosam-cli-version': badVersion,
           },
           body: '{}',
         });
@@ -160,7 +160,7 @@ describe('checkCliVersionOrRespond', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-void-cli-version': '0.7.0-rc.1',
+        'x-nosam-cli-version': '0.7.0-rc.1',
       },
       body: '{}',
     });

@@ -222,7 +222,7 @@ async function fixture(
       JSON.stringify(
         Object.fromEntries(
           entries
-            .filter(({ path }) => !path.startsWith('/.void-deploy/'))
+            .filter(({ path }) => !path.startsWith('/.nosam-deploy/'))
             .map(({ path, hash, store, size }) => [
               path,
               store === 'r2' || (!store && size >= KV_THRESHOLD) ? `!${hash}` : hash,
@@ -621,7 +621,7 @@ describe('operator deployment asset migration', () => {
 
   test('skips deployment cache-busters and permits an idempotent all-R2 rerun', async () => {
     const entry = asset('/index.html', 'Already current', 'r2');
-    const buster = asset('/.void-deploy/marker.txt', 'Worker upload cache-buster');
+    const buster = asset('/.nosam-deploy/marker.txt', 'Worker upload cache-buster');
     const { project, deployment } = await fixture([entry, buster], { manifestVersion: 2 });
     await env.STATIC_ASSETS_R2.put(`assets/${project.id}/${entry.hash}`, entry.bytes);
     const put = vi.spyOn(env.STATIC_ASSETS_R2, 'put');
@@ -899,7 +899,7 @@ describe('operator asset migration inventory', () => {
 
   test('reports unverified R2 placement, ignores cache-busters, and clears the migration count only after verification', async () => {
     const entry = asset('/index.html', 'Old R2 app', 'r2');
-    const buster = asset('/.void-deploy/marker.txt', 'CF cache-buster');
+    const buster = asset('/.nosam-deploy/marker.txt', 'CF cache-buster');
     const { project, deployment } = await fixture([entry, buster]);
     await env.STATIC_ASSETS_R2.put(`assets/${entry.hash}`, entry.bytes);
     const get = vi.spyOn(env.STATIC_ASSETS_R2, 'get');

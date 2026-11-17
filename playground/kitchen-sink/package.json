@@ -6,7 +6,7 @@
     "build": "vp build",
     "dev": "vp dev",
     "preview": "vp preview",
-    "remote": "VOID_REMOTE=1 vp dev",
+    "remote": "NOSAM_REMOTE=1 vp dev",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -22,6 +22,6 @@
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plus": "catalog:",
-    "void": "workspace:*"
+    "nosam": "workspace:*"
   }
 }

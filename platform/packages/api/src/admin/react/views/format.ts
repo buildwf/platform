@@ -40,7 +40,7 @@ export function formatDateTime(iso: string, tz?: string) {
   // text until the next React render without treating that tick as a mismatch.
   return createElement(
     'span',
-    { className: 'void-admin-date-time', suppressHydrationWarning: true },
+    { className: 'nosam-admin-date-time', suppressHydrationWarning: true },
     `${formatted} (${ago})`,
   );
 }
@@ -107,7 +107,7 @@ const aiLoggingStates: Record<string, (status: AiLoggingStatusDisplay) => string
 
 /**
  * `metadata (from plan "pro") — applied`. Keep the wording in step with `project show`
- * (`aiLoggingStatusLine` in packages/void/src/cli/operator-ai-logging.ts).
+ * (`aiLoggingStatusLine` in packages/nosam/src/cli/operator-ai-logging.ts).
  */
 export function formatAiLoggingStatus(status: AiLoggingStatusDisplay | null): string {
   if (!status) {

@@ -74,7 +74,7 @@ async function call<T>(
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-void-internal': proof,
+        'x-nosam-internal': proof,
       },
       body: raw,
       signal: controller.signal,
@@ -153,7 +153,7 @@ export function completeRelayedReceipt(
 }
 
 /** Only generated, transport-irrelevant MIME fields are normalized. Body text stays byte-sensitive. */
-export function canonicalizeVoidMime(raw: Uint8Array): Uint8Array {
+export function canonicalizeNosamMime(raw: Uint8Array): Uint8Array {
   if (findCrlfCrlf(raw) === -1) {
     return raw;
   }
@@ -207,11 +207,11 @@ export function canonicalizeVoidMime(raw: Uint8Array): Uint8Array {
           afterHeader = headerEnd === raw.byteLength ? raw.byteLength : headerEnd + 2;
         }
         const normalized = line.replace(
-          /boundary="(=_void_(?:mixed|alternative|related)_[A-Za-z0-9_-]+)"/g,
+          /boundary="(=_nosam_(?:mixed|alternative|related)_[A-Za-z0-9_-]+)"/g,
           (_, token: string) => {
             let marker = boundaries.get(token);
             if (!marker) {
-              marker = `<void-boundary-${boundaries.size}>`;
+              marker = `<nosam-boundary-${boundaries.size}>`;
               boundaries.set(token, marker);
             }
             return `boundary="${marker}"`;
@@ -342,7 +342,7 @@ export async function emailPayloadDigest(
   recipients: Array<string>,
   raw: Uint8Array,
 ): Promise<string> {
-  const canonical = canonicalizeVoidMime(raw);
+  const canonical = canonicalizeNosamMime(raw);
   const prefix = encoder.encode(
     JSON.stringify({
       kind,

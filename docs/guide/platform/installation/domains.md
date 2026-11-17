@@ -10,8 +10,8 @@ outline: deep
 When your domain is ready, run:
 
 ```sh
-void platform domain set example.app --plan
-void platform domain set example.app
+nosam platform domain set example.app --plan
+nosam platform domain set example.app
 ```
 
 The command selects your installed platform (or offers a picker), finds or creates its zone, sets up DNS and routing, and verifies HTTPS before publishing the new application URLs. Set the management token as described in [installation setup](/guide/platform/installation/setup) when creating DNS or a zone. Grant the existing runtime token **Cache Purge: Purge** on the new zone; Nosam checks that permission through the running platform without asking you to paste its token again.
@@ -20,7 +20,7 @@ If nameservers, certificates, or project Zero Trust protection are pending, foll
 
 Use `--installation <id>` to select an installation explicitly, `--zone example.com` for an app domain such as `apps.example.com`, or `--dedicated-zone` for catch-all routing on a dedicated zone. Nested domains still need the wildcard certificate described below. This command adds the first domain; replacing an existing application domain is not currently supported. It uses the installed runtime and does not require `--runtime` or an app redeploy.
 
-Choose an application domain whose wildcard leaves existing Worker Custom Domains reachable. Existing more-specific routes covering all requests can preserve those hostnames. If Nosam reports a conflict, choose another application domain; for a new installation, you can start with `void platform install --workers-dev` and add a suitable domain later.
+Choose an application domain whose wildcard leaves existing Worker Custom Domains reachable. Existing more-specific routes covering all requests can preserve those hostnames. If Nosam reports a conflict, choose another application domain; for a new installation, you can start with `nosam platform install --workers-dev` and add a suitable domain later.
 
 Browser login sessions are specific to each origin. Apps using their own OAuth providers may need to register their new callback URLs. Nosam's built-in auth uses the request origin automatically unless the app overrides that configuration.
 
@@ -47,7 +47,7 @@ Pass `--control-plane-domain platform.example.net` during installation. The host
 An app at `my-app.apps.example.com` needs a certificate for `*.apps.example.com`. Universal SSL for `example.com` only covers first-level hostnames. Configure an active wildcard certificate with [Advanced Certificate Manager](https://developers.cloudflare.com/ssl/edge-certificates/advanced-certificate-manager/), a paid add-on, or use an existing custom wildcard certificate before installation:
 
 ```sh
-void platform install --application-domain apps.example.com --zone example.com --plan
+nosam platform install --application-domain apps.example.com --zone example.com --plan
 ```
 
 The management token needs **SSL and Certificates: Read** (or Edit) on that zone for the certificate check. Nosam does not order certificates or enable paid products automatically. Leave `--dedicated-zone` off: that flag is only for installations whose application domain is the entire zone and adds catch-all routes for otherwise unmatched traffic.
@@ -59,8 +59,8 @@ The management token needs **SSL and Certificates: Read** (or Edit) on that zone
 Projects can serve their own domains, such as `www.example.com`, through Cloudflare for SaaS custom hostnames. This needs a dedicated application zone. Turn it on when installing, or later with an upgrade:
 
 ```sh
-void platform install --application-domain example.app --zone example.app --dedicated-zone --custom-domains
-void platform upgrade <installation-id> --custom-domains
+nosam platform install --application-domain example.app --zone example.app --dedicated-zone --custom-domains
+nosam platform upgrade <installation-id> --custom-domains
 ```
 
 The runtime token needs **SSL and Certificates: Edit** on the application zone. Nosam includes it in the runtime token's creation link and checks it before deploying; a token created before custom domains were on needs it added. Before adding the first domain, set up Cloudflare for SaaS on that zone once:
@@ -68,7 +68,7 @@ The runtime token needs **SSL and Certificates: Edit** on the application zone. 
 1. Create a proxied DNS record for `cname.<application domain>`, for example an `AAAA` record pointing to `100::`.
 2. Open **SSL/TLS > Custom Hostnames**, enable Cloudflare for SaaS, and set `cname.<application domain>` as the fallback origin.
 
-A project owner then runs `void domain add <hostname>`. Nosam prints the CNAME target, `cname.<application domain>`, and the TXT records that prove ownership. Once the records resolve and the certificate is issued, the dedicated zone's catch-all routes send the hostname to the project.
+A project owner then runs `nosam domain add <hostname>`. Nosam prints the CNAME target, `cname.<application domain>`, and the TXT records that prove ownership. Once the records resolve and the certificate is issued, the dedicated zone's catch-all routes send the hostname to the project.
 
 ## Optional Dashboard
 
@@ -79,8 +79,8 @@ installation with `--dashboard-url https://dash.example.com`.
 For an existing installation, preview and apply the configuration with:
 
 ```sh
-void platform repair <installation-id> --dashboard-url https://dash.example.com --plan
-void platform repair <installation-id> --dashboard-url https://dash.example.com --yes
+nosam platform repair <installation-id> --dashboard-url https://dash.example.com --plan
+nosam platform repair <installation-id> --dashboard-url https://dash.example.com --yes
 ```
 
 The origin must contain no credentials, path, query, or fragment. Nosam saves it
@@ -103,7 +103,7 @@ the configured origin is outside the active coverage.
 
 ## Cloudflare footprint
 
-New platform resources use deterministic `void-<installation-name>-<role>` names where Cloudflare allows them, such as `void-team-api`. Choose an unused installation name in the account; Nosam stops on an unowned name conflict instead of replacing that resource. Existing installations keep their recorded names, including older names with suffixes.
+New platform resources use deterministic `void-<installation-name>-<role>` names where Cloudflare allows them, such as `nosam-team-api`. Choose an unused installation name in the account; Nosam stops on an unowned name conflict instead of replacing that resource. Existing installations keep their recorded names, including older names with suffixes.
 
 | Resource                                  |                                 Count | Purpose                                                                                       |
 | ----------------------------------------- | ------------------------------------: | --------------------------------------------------------------------------------------------- |

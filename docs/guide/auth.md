@@ -15,14 +15,14 @@ Nosam configures [Better Auth](https://www.better-auth.com/) for your app, inclu
 
 ### 1. Enable auth
 
-Import `auth` from `void/client` to enable email/password auth automatically. Use [configuration](#config) to add social providers.
+Import `auth` from `nosam/client` to enable email/password auth automatically. Use [configuration](#config) to add social providers.
 
 ### 2. Sign up and sign in
 
-Use the preconfigured auth client from `void/client`:
+Use the preconfigured auth client from `nosam/client`:
 
 ```tsx
-import { auth } from 'void/client';
+import { auth } from 'nosam/client';
 
 // sign up
 await auth.signUp.email({
@@ -44,8 +44,8 @@ Call `requireAuth` in a route handler or action to get the signed-in user or rej
 
 ```ts
 // routes/api/profile.ts
-import { defineHandler } from 'void';
-import { requireAuth } from 'void/auth';
+import { defineHandler } from 'nosam';
+import { requireAuth } from 'nosam/auth';
 
 export const GET = defineHandler((c) => {
   const user = requireAuth(c);
@@ -57,8 +57,8 @@ Pass `throwRedirect` to send unauthenticated visitors to your login page instead
 
 ```ts
 // routes/account/export.ts
-import { defineHandler } from 'void';
-import { requireAuth } from 'void/auth';
+import { defineHandler } from 'nosam';
+import { requireAuth } from 'nosam/auth';
 
 export const GET = defineHandler((c) => {
   const user = requireAuth(c, {
@@ -82,9 +82,9 @@ await auth.signOut();
 
 Auth turns on automatically when you:
 
-- import anything from `void/auth`
-- import `auth` from `void/client`
-- add `auth` to `void.config.ts`
+- import anything from `nosam/auth`
+- import `auth` from `nosam/client`
+- add `auth` to `nosam.config.ts`
 - add a root-level `auth.ts` file
 
 Email/password is enabled by default. To add social providers:
@@ -110,14 +110,14 @@ For example, `github` uses:
 
 The `auth` client uses [Better Auth's client API](https://www.better-auth.com/docs/concepts/client) at `/api/auth`. Nosam selects the client for your framework automatically.
 
-For a custom client, import `createAuthClient` from `void/client`.
+For a custom client, import `createAuthClient` from `nosam/client`.
 
 ## Server Usage
 
-`void/auth` provides the server-side helpers:
+`nosam/auth` provides the server-side helpers:
 
 ```ts
-import { getSession, getUser, requireAuth } from 'void/auth';
+import { getSession, getUser, requireAuth } from 'nosam/auth';
 ```
 
 - `getUser()` returns the current `AuthUser | null`
@@ -128,7 +128,7 @@ import { getSession, getUser, requireAuth } from 'void/auth';
 
 Cookies set by `getAuth(c).api` calls are sent with the response, so the browser picks up changes such as a renamed user or a sign-out on its next request. An endpoint that signs someone in, like `signUpEmail`, signs the current browser in as that user; to create accounts for other people, use the admin plugin's `createUser`. `getUser()` and `getSession()` still return the user from the start of the request, so redirect after an action that changes the signed-in user to render the new data.
 
-Import `AuthUser` and `AuthSession` from `void/auth` for type annotations. They include the fields your Better Auth plugins and `user.additionalFields` add, such as `role` from `admin()`. See their fields in the [API reference](../reference/api/auth.md#authuser).
+Import `AuthUser` and `AuthSession` from `nosam/auth` for type annotations. They include the fields your Better Auth plugins and `user.additionalFields` add, such as `role` from `admin()`. See their fields in the [API reference](../reference/api/auth.md#authuser).
 
 ## Querying Authentication Tables
 
@@ -140,19 +140,19 @@ Add an alias to your root `tsconfig.json`:
 {
   "compilerOptions": {
     "paths": {
-      "@auth-schema": ["./.void/better-auth-schema.ts"]
+      "@auth-schema": ["./.nosam/better-auth-schema.ts"]
     }
   }
 }
 ```
 
-Keep your other path aliases, including any you use from `.void/tsconfig.json`, such as `@schema`.
+Keep your other path aliases, including any you use from `.nosam/tsconfig.json`, such as `@schema`.
 
 You can now query users with Drizzle:
 
 ```ts
 import { userTable } from '@auth-schema';
-import { db, desc } from 'void/db';
+import { db, desc } from 'nosam/db';
 
 export function listUsers() {
   return db.select().from(userTable).orderBy(desc(userTable.createdAt));
@@ -163,7 +163,7 @@ To associate a post with its author, reference `userTable.id`:
 
 ```ts
 import { userTable } from '@auth-schema';
-import { sqliteTable, text } from 'void/schema-d1';
+import { sqliteTable, text } from 'nosam/schema-d1';
 
 export const postTable = sqliteTable('post', {
   id: text('id').primaryKey(),
@@ -173,9 +173,9 @@ export const postTable = sqliteTable('post', {
 });
 ```
 
-This example uses D1 and the default text IDs. For PostgreSQL or MySQL, use `void/schema-pg` or `void/schema-mysql`. With `advanced.database.generateId: 'serial'`, use an integer foreign key.
+This example uses D1 and the default text IDs. For PostgreSQL or MySQL, use `nosam/schema-pg` or `nosam/schema-mysql`. With `advanced.database.generateId: 'serial'`, use an integer foreign key.
 
-Nosam regenerates `.void/better-auth-schema.ts`. Configure authentication in `auth.ts` rather than editing the generated file.
+Nosam regenerates `.nosam/better-auth-schema.ts`. Configure authentication in `auth.ts` rather than editing the generated file.
 
 ## Behavior
 
@@ -189,7 +189,7 @@ Static files from your build and `public/` keep their own cache policy for signe
 
 `POST`, `PUT`, `PATCH` and `DELETE` requests and WebSocket connections from another origin don't use the signed-in session unless that origin is in `trustedOrigins`. If a separate frontend calls your app, add its origin there (see [Customization](#customization)). If your routes use their own cookies, check the request `Origin` yourself, for example with Hono's [`csrf()`](https://hono.dev/docs/middleware/builtin/csrf) middleware.
 
-Deployed apps on Cloudflare limit auth requests per client IP with Better Auth's defaults, for example 3 sign-in attempts per 10 seconds. Each Worker instance keeps its own count. Change or turn off the limits with `rateLimit` in `auth.ts`. To share one count across instances, set `rateLimit: { storage: 'database' }`, then run `void db generate` for a direct Cloudflare deploy.
+Deployed apps on Cloudflare limit auth requests per client IP with Better Auth's defaults, for example 3 sign-in attempts per 10 seconds. Each Worker instance keeps its own count. Change or turn off the limits with `rateLimit` in `auth.ts`. To share one count across instances, set `rateLimit: { storage: 'database' }`, then run `nosam db generate` for a direct Cloudflare deploy.
 
 ### Proxies and end-to-end tests
 
@@ -201,7 +201,7 @@ All requests from one IP share one count. Two common setups reach the limits:
 Don't read the client IP from `x-forwarded-for` instead: any client can send that header. Give the trusted caller a secret header, and skip the limits only for requests that carry it:
 
 ```ts
-import { defineAuth } from 'void/auth';
+import { defineAuth } from 'nosam/auth';
 
 export default defineAuth(({ defaults, env }) => ({
   ...defaults,
@@ -216,7 +216,7 @@ export default defineAuth(({ defaults, env }) => ({
 }));
 ```
 
-`'/**'` matches every auth endpoint. Returning `false` skips the limit, and returning `rule` keeps the default limit for everyone else. Declare `AUTH_TRUSTED_KEY: string().optional()` in `env.ts` and set it with `void secret put AUTH_TRUSTED_KEY` (see [Environment variables](./env-vars.md#production-server-values)).
+`'/**'` matches every auth endpoint. Returning `false` skips the limit, and returning `rule` keeps the default limit for everyone else. Declare `AUTH_TRUSTED_KEY: string().optional()` in `env.ts` and set it with `nosam secret put AUTH_TRUSTED_KEY` (see [Environment variables](./env-vars.md#production-server-values)).
 
 Your app no longer limits requests that carry the key, so:
 
@@ -228,7 +228,7 @@ Your app no longer limits requests that carry the key, so:
 For advanced configuration, create `auth.ts` at the project root and export `defineAuth(...)`:
 
 ```ts
-import { defineAuth } from 'void/auth';
+import { defineAuth } from 'nosam/auth';
 
 export default defineAuth(({ defaults }) => ({
   ...defaults,
@@ -238,7 +238,7 @@ export default defineAuth(({ defaults }) => ({
 
 `defaults` already includes Nosam's conventions. Extend it explicitly instead of expecting a deep merge.
 
-In `auth.ts`, load helpers that import `@auth-schema` inside the hook that uses them, with `await import('./server/users')`. This lets `void prepare` generate the authentication schema on a fresh clone. The same applies when a helper imports your app's database schema and that schema references authentication tables.
+In `auth.ts`, load helpers that import `@auth-schema` inside the hook that uses them, with `await import('./server/users')`. This lets `nosam prepare` generate the authentication schema on a fresh clone. The same applies when a helper imports your app's database schema and that schema references authentication tables.
 
 For the full set of available options, see the official [Better Auth options reference](https://www.better-auth.com/docs/reference/options).
 
@@ -249,7 +249,7 @@ Auth tables live alongside your app's tables. During local development, Nosam cr
 Nosam platforms create auth tables automatically. For a direct Cloudflare deploy, include them in your checked-in migrations:
 
 ```sh
-void db generate
+nosam db generate
 ```
 
 Review and commit the SQL before deploying. Nosam includes your auth configuration and plugin tables; you don't need to duplicate them in `db/schema.ts` or run the Better Auth CLI.

@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Hono } from 'hono';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import type { CloudEnv } from 'void/handler';
+import type { CloudEnv } from 'nosam/handler';
 import { prepareKitchenSinkPlatformFixture } from '../../../../scripts/kitchen-sink-platform-fixture.ts';
 
 const mocks = vi.hoisted(() => ({
@@ -14,13 +14,13 @@ const mocks = vi.hoisted(() => ({
   aiRun: vi.fn(),
   aiStream: vi.fn(),
 }));
-vi.mock('void', async () => import('void/handler'));
-vi.mock('void/env', () => ({ env: mocks.env }));
-vi.mock('void/email', () => ({ sendEmail: mocks.sendEmail }));
-vi.mock('void/kv', () => ({ kv: { get: mocks.kvGet } }));
-vi.mock('void/queues', () => ({ queues: { 'acceptance-queue': { send: mocks.queueSend } } }));
-vi.mock('void/ai', () => ({ ai: { run: mocks.aiRun, stream: mocks.aiStream } }));
-vi.mock('void/sandbox', () => ({
+vi.mock('nosam', async () => import('nosam/handler'));
+vi.mock('nosam/env', () => ({ env: mocks.env }));
+vi.mock('nosam/email', () => ({ sendEmail: mocks.sendEmail }));
+vi.mock('nosam/kv', () => ({ kv: { get: mocks.kvGet } }));
+vi.mock('nosam/queues', () => ({ queues: { 'acceptance-queue': { send: mocks.queueSend } } }));
+vi.mock('nosam/ai', () => ({ ai: { run: mocks.aiRun, stream: mocks.aiStream } }));
+vi.mock('nosam/sandbox', () => ({
   getSandbox: mocks.getSandbox,
   SandboxLimitError: class extends Error {},
 }));
@@ -29,8 +29,8 @@ let fixture: ReturnType<typeof prepareKitchenSinkPlatformFixture>;
 let app: Hono<CloudEnv>;
 beforeAll(async () => {
   fixture = prepareKitchenSinkPlatformFixture({ email: true, sandbox: true, runtime: true });
-  // These handler tests use mocked bindings before `void init` has generated
-  // .void/tsconfig.json. The separate fixture build test checks generated types.
+  // These handler tests use mocked bindings before `nosam init` has generated
+  // .nosam/tsconfig.json. The separate fixture build test checks generated types.
   writeFileSync(join(fixture.root, 'tsconfig.json'), '{}');
   const email = await import(join(fixture.root, 'routes/api/acceptance/email.ts'));
   const sandbox = await import(join(fixture.root, 'routes/api/acceptance/sandbox.ts'));
@@ -94,7 +94,7 @@ describe('acceptance auth with a configured secret', () => {
     mocks.env.SECRET_KEY = 'configured-secret';
     const response = await app.request('/email', {
       method: 'POST',
-      headers: { 'x-void-e2e-token': 'wrong-token' },
+      headers: { 'x-nosam-e2e-token': 'wrong-token' },
     });
     expect(response.status).toBe(401);
     expect(mocks.sendEmail).not.toHaveBeenCalled();
@@ -106,7 +106,7 @@ describe('acceptance auth with a configured secret', () => {
     const message = { to: 'test@example.com', subject: 'test', text: 'acceptance' };
     const response = await app.request('/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-void-e2e-token': 'configured-secret' },
+      headers: { 'Content-Type': 'application/json', 'x-nosam-e2e-token': 'configured-secret' },
       body: JSON.stringify(message),
     });
     expect(response.status).toBe(200);
@@ -117,7 +117,7 @@ describe('acceptance auth with a configured secret', () => {
     mocks.env.SECRET_KEY = 'configured-secret';
     const response = await app.request('/queue', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-void-e2e-token': 'configured-secret' },
+      headers: { 'Content-Type': 'application/json', 'x-nosam-e2e-token': 'configured-secret' },
       body: JSON.stringify({ run: 'stale/arbitrary' }),
     });
     expect(response.status).toBe(400);
@@ -129,7 +129,7 @@ describe('acceptance auth with a configured secret', () => {
     mocks.aiRun.mockResolvedValue({ response: 'Hello' });
     const response = await app.request('/runtime', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-void-e2e-token': 'configured-secret' },
+      headers: { 'Content-Type': 'application/json', 'x-nosam-e2e-token': 'configured-secret' },
       body: JSON.stringify({ action: 'ai', model: 'arbitrary', max_tokens: 10000 }),
     });
     expect(response.status).toBe(200);

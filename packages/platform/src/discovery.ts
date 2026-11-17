@@ -67,7 +67,7 @@ type PlatformDiscoveryInput = Omit<
 };
 
 /**
- * Builds the document a platform serves at `/.well-known/void-platform`.
+ * Builds the document a platform serves at `/.well-known/nosam-platform`.
  * Every platform built from this source accepts direct Worker uploads.
  */
 export function createPlatformDiscoveryDocument(

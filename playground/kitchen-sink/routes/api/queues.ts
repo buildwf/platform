@@ -1,7 +1,7 @@
 import { queueResults } from '@schema';
-import { defineHandler } from 'void';
-import { db, desc, eq } from 'void/db';
-import { queues } from 'void/queues';
+import { defineHandler } from 'nosam';
+import { db, desc, eq } from 'nosam/db';
+import { queues } from 'nosam/queues';
 
 export const GET = defineHandler(() =>
   db.select().from(queueResults).orderBy(desc(queueResults.id)).limit(50),

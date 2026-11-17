@@ -1,12 +1,12 @@
 node_modules
 dist
-.void
+.nosam
 .vite-cloud
 *.tsbuildinfo
 .DS_Store
 .wrangler
 .cloudflare
-.void-wrangler.jsonc
+.nosam-wrangler.jsonc
 .env
 .claude
 plan.md

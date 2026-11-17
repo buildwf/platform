@@ -20,11 +20,11 @@ const routing = {
   teamDomain,
   audiences: [
     { hostname: '*.apps.example.com', audience: 'wildcard-aud' },
-    { hostname: 'void-123456abcdef-*.my-account.workers.dev', audience: 'workers-dev-aud' },
+    { hostname: 'nosam-123456abcdef-*.my-account.workers.dev', audience: 'workers-dev-aud' },
     { hostname: 'custom.example.net', audience: 'custom-aud' },
     { hostname: 'custom.apps.example.com', audience: 'custom-aud' },
     {
-      hostname: 'void-123456abcdef-custom-123456abcdef.my-account.workers.dev',
+      hostname: 'nosam-123456abcdef-custom-123456abcdef.my-account.workers.dev',
       audience: 'custom-aud',
     },
   ],
@@ -50,7 +50,7 @@ describe('project Access verification', () => {
     expect(resolveAccessAudience('custom.apps.example.com', routing)).toBe('custom-aud');
     expect(
       resolveAccessAudience(
-        'void-123456abcdef-custom-123456abcdef.my-account.workers.dev',
+        'nosam-123456abcdef-custom-123456abcdef.my-account.workers.dev',
         routing,
       ),
     ).toBe('custom-aud');
@@ -61,36 +61,36 @@ describe('project Access verification', () => {
 
   it('matches the installation project prefix case-insensitively', () => {
     expect(
-      resolveAccessAudience('void-123456abcdef-blog-789abc.my-account.workers.dev', routing),
+      resolveAccessAudience('nosam-123456abcdef-blog-789abc.my-account.workers.dev', routing),
     ).toBe('workers-dev-aud');
     expect(
-      resolveAccessAudience('VOID-123456ABCDEF-BLOG-789ABC.MY-ACCOUNT.WORKERS.DEV', routing),
+      resolveAccessAudience('NOSAM-123456ABCDEF-BLOG-789ABC.MY-ACCOUNT.WORKERS.DEV', routing),
     ).toBe('workers-dev-aud');
   });
 
   it.each([
-    'void-team-api.my-account.workers.dev',
-    'void-team-proxy.my-account.workers.dev',
+    'nosam-team-api.my-account.workers.dev',
+    'nosam-team-proxy.my-account.workers.dev',
     'unrelated-worker.my-account.workers.dev',
-    'void-fedcba654321-blog-789abc.my-account.workers.dev',
-    'void-123456abcdefother-blog-789abc.my-account.workers.dev',
-    'other-void-123456abcdef-blog-789abc.my-account.workers.dev',
-    'nested.void-123456abcdef-blog-789abc.my-account.workers.dev',
-    'void-123456abcdef-blog.nested.my-account.workers.dev',
-    'void-123456abcdef-blog-789abc.other-account.workers.dev',
-    'void-123456abcdef-blog-789abc.my-account.workers.dev.attacker.test',
+    'nosam-fedcba654321-blog-789abc.my-account.workers.dev',
+    'nosam-123456abcdefother-blog-789abc.my-account.workers.dev',
+    'other-nosam-123456abcdef-blog-789abc.my-account.workers.dev',
+    'nested.nosam-123456abcdef-blog-789abc.my-account.workers.dev',
+    'nosam-123456abcdef-blog.nested.my-account.workers.dev',
+    'nosam-123456abcdef-blog-789abc.other-account.workers.dev',
+    'nosam-123456abcdef-blog-789abc.my-account.workers.dev.attacker.test',
     'my-account.workers.dev',
   ])('excludes hosts outside the project wildcard: %s', (hostname) => {
     expect(resolveAccessAudience(hostname, routing)).toBeNull();
   });
 
   it.each([
-    'void-*-*.my-account.workers.dev',
-    'void-*.nested.*.workers.dev',
+    'nosam-*-*.my-account.workers.dev',
+    'nosam-*.nested.*.workers.dev',
     'void.*.my-account.workers.dev',
   ])('does not accept unsupported wildcard patterns: %s', (hostname) => {
     expect(
-      resolveAccessAudience('void-123456abcdef-blog.my-account.workers.dev', {
+      resolveAccessAudience('nosam-123456abcdef-blog.my-account.workers.dev', {
         teamDomain,
         audiences: [{ hostname, audience: 'invalid-aud' }],
       }),
@@ -100,7 +100,7 @@ describe('project Access verification', () => {
   it('verifies the scoped workers.dev audience', async () => {
     const request = vi.fn(async () => Response.json({ keys: [jwk] }));
     const verifier = new ProjectAccessVerifier(request as typeof fetch);
-    const hostname = 'void-123456abcdef-blog-789abc.my-account.workers.dev';
+    const hostname = 'nosam-123456abcdef-blog-789abc.my-account.workers.dev';
 
     await expect(
       verifier.verify(hostname, await assertion('workers-dev-aud'), routing),

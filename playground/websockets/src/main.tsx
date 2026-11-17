@@ -36,7 +36,7 @@ function HomePage() {
     <div>
       <h1>WebSocket Playground</h1>
       <p>
-        Two focused demos for the <code>void/ws</code> surface.
+        Two focused demos for the <code>nosam/ws</code> surface.
       </p>
       <ul>
         {highlights.map((item) => (

@@ -1,6 +1,6 @@
 node_modules
 dist
-.void
+.nosam
 *.tsbuildinfo
 .DS_Store
 .wrangler

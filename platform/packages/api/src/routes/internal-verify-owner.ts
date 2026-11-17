@@ -25,7 +25,7 @@ const app = new Hono<ApiEnv>();
 app.post('/:projectId', async (context) => {
   const projectId = context.req.param('projectId');
 
-  const token = context.req.header('x-void-internal');
+  const token = context.req.header('x-nosam-internal');
   if (!token) {
     return context.json({ error: 'missing internal auth' }, 401);
   }

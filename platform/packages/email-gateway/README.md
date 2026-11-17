@@ -1,7 +1,7 @@
-# @voidcloud/email-gateway
+# @nosamcloud/email-gateway
 
 The platform's dedicated inbound email Worker. Its source is packaged with the
-core Workers in `@void/platform`; the installer deploys it and enables platform
+core Workers in `@nosam/platform`; the installer deploys it and enables platform
 email when the shared sender domain and mail zone are configured. See the
 [installation credentials](../../../docs/guide/platform/installation/credentials.md)
 for those inputs.
@@ -17,7 +17,7 @@ The API keeps durable receipt and operation records; the proxy handles outbound
 mail. `GET /health` exposes the gateway protocol version, and destination
 confirmation links pass through the gateway to the API.
 
-For a self-hosted installation, use `void platform install` or `upgrade` rather
+For a self-hosted installation, use `nosam platform install` or `upgrade` rather
 than deploying this package on its own. The repository's Wrangler configuration
 and deployment scripts target Nosam Cloud production and staging. Their rollout
 order and required bindings and secrets are described in the

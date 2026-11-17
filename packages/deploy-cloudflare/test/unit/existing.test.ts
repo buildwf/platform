@@ -15,7 +15,7 @@ import {
 } from '../../src/existing.ts';
 import type { CloudflareOperation } from '../../src/operations.ts';
 import { operationFixture } from '../operation-fixture.ts';
-import { apiSecretDraftVersion, voidSecretDraftVersion } from '../secret-draft-fixture.ts';
+import { apiSecretDraftVersion, nosamSecretDraftVersion } from '../secret-draft-fixture.ts';
 
 const worker: ExistingCloudflareWorker = {
   versionId: 'original',
@@ -37,7 +37,7 @@ async function withMigrationsConfig(
   migrations: Array<Record<string, unknown>>,
   run: (configPath: string) => Promise<void>,
 ): Promise<void> {
-  const root = mkdtempSync(join(tmpdir(), 'void-do-lifecycle-'));
+  const root = mkdtempSync(join(tmpdir(), 'nosam-do-lifecycle-'));
   try {
     const configPath = join(root, 'wrangler.jsonc');
     writeFileSync(configPath, JSON.stringify({ migrations }));
@@ -70,7 +70,7 @@ it('preserves an existing authored version metadata binding without permitting a
   expect(() =>
     assertExistingCloudflareConfig(existing, {
       ...authored,
-      version_metadata: { binding: '__VOID_VERSION_METADATA' },
+      version_metadata: { binding: '__NOSAM_VERSION_METADATA' },
     }),
   ).toThrow('cannot add or replace');
   expect(() => assertCloudflareBindingsPreserved(worker, existing)).toThrow('preserve');
@@ -400,7 +400,7 @@ describe('existing Worker preservation', () => {
     'verifies immutable SDK secret-draft proof before its first DO migration: %s',
     async (scenario) => {
       const source =
-        scenario === 'api-placeholder' ? apiSecretDraftVersion() : voidSecretDraftVersion();
+        scenario === 'api-placeholder' ? apiSecretDraftVersion() : nosamSecretDraftVersion();
       if (scenario === 'real-code') {
         source.modules[0]!.content_base64 = Buffer.from(
           'export default { fetch() { return new Response("app"); } };',

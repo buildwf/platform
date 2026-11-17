@@ -3,18 +3,18 @@
   "type": "module",
   "scripts": {
     "build": "vp run --filter './packages/**' build",
-    "build:core": "vp run build:eeao && vp run --filter ./packages/deploy-core --filter ./packages/deploy-cloudflare --filter ./packages/edge --filter ./packages/platform --filter ./packages/void build",
+    "build:core": "vp run build:eeao && vp run --filter ./packages/deploy-core --filter ./packages/deploy-cloudflare --filter ./packages/edge --filter ./packages/platform --filter ./packages/nosam build",
     "build:docs": "vp run --filter ./docs build",
     "build:eeao": "npm ci --prefix eeaao/typescript --no-audit --no-fund --ignore-scripts && npm run build --prefix eeaao/typescript",
     "build:platform": "vp run --filter './platform/packages/**' build",
     "check": "vp run --filter './**' --filter '!./playground-local/**' --parallel --concurrency-limit=4 typecheck",
     "check:platform": "vp run --filter './platform/**' --parallel typecheck",
     "check:sdk": "vp run --filter './packages/**' --parallel typecheck",
-    "deploy:docs": "vp run build:core && node packages/void/dist/cli/cli.mjs deploy",
+    "deploy:docs": "vp run build:core && node packages/nosam/dist/cli/cli.mjs deploy",
     "dev:docs": "vp run --filter ./docs dev",
-    "dev:platform": "vp run --filter @voidcloud/platform dev",
+    "dev:platform": "vp run --filter @nosamcloud/platform dev",
     "fmt": "vp fmt --write .",
-    "install:void-dev": "vp run build:core && node scripts/void-dev-link.mjs install",
+    "install:nosam-dev": "vp run build:core && node scripts/nosam-dev-link.mjs install",
     "lint": "vp lint",
     "prepare": "vp config && vp run build:core",
     "test": "node test/affected.mjs",
@@ -23,7 +23,7 @@
     "test:platform": "vp test run --project 'platform-*'",
     "test:profile": "vp test run --reporter=default --experimental.importDurations.print --experimental.importDurations.limit=20",
     "test:unit": "vp test run --project unit --project unit-pglite --project cli-unit",
-    "uninstall:void-dev": "node scripts/void-dev-link.mjs uninstall"
+    "uninstall:nosam-dev": "node scripts/nosam-dev-link.mjs uninstall"
   },
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",

@@ -1,5 +1,5 @@
 {
-  "name": "@voidcloud/email-gateway",
+  "name": "@nosamcloud/email-gateway",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,9 +8,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@void/platform": "workspace:*",
-    "@voidcloud/api": "workspace:*",
-    "@voidcloud/proxy": "workspace:*",
+    "@nosam/platform": "workspace:*",
+    "@nosamcloud/api": "workspace:*",
+    "@nosamcloud/proxy": "workspace:*",
     "email-validator": "^2.0.4"
   },
   "devDependencies": {

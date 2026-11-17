@@ -5,17 +5,17 @@ outline: deep
 
 # Platform Management {#platform-management}
 
-Nosam-managed projects deploy to an explicitly selected platform. Join one with [`void connect`](./auth.md#connect). Connections are stored per API origin, and credentials are scoped to that origin.
+Nosam-managed projects deploy to an explicitly selected platform. Join one with [`nosam connect`](./auth.md#connect). Connections are stored per API origin, and credentials are scoped to that origin.
 
 ## Connection commands {#connection-commands}
 
 ```sh
-void platform list
-void platform use [id]
-void platform status [id]
+nosam platform list
+nosam platform use [id]
+nosam platform status [id]
 ```
 
-`list` shows the currently selected platform first, followed by other saved platforms. For a platform with local installation records, its installation slug appears beside its name, such as `Cloudflare Nosam (cloudflare)`. Select it with `void platform use cloudflare`. For a connected platform without a local installation slug, use its printed API URL.
+`list` shows the currently selected platform first, followed by other saved platforms. For a platform with local installation records, its installation slug appears beside its name, such as `Cloudflare Nosam (cloudflare)`. Select it with `nosam platform use cloudflare`. For a connected platform without a local installation slug, use its printed API URL.
 
 `use` and `status` accept an installation slug, display name, saved ID, or API URL. If a slug or name matches several platforms, use the API URL to choose one. They auto-select the only configured platform; with multiple platforms they show a picker interactively and require an explicit selector in non-interactive use. A project with a recorded platform URL keeps using that platform when the global default changes.
 
@@ -26,41 +26,41 @@ checkpoint and exits with an error; it does not confirm current availability.
 
 ## Operator commands {#operator-commands}
 
-Use `void platform` to administer the users and apps on your selected platform. Start with the [Platform Administration guide](../../guide/platform-administration.md) for signing in, giving people access, and investigating deployments.
+Use `nosam platform` to administer the users and apps on your selected platform. Start with the [Platform Administration guide](../../guide/platform-administration.md) for signing in, giving people access, and investigating deployments.
 
-Every command below accepts `--connection <slug-or-url>` to select a registered platform and `--json` for structured output. Display names and saved IDs also work. Without `--connection`, Nosam uses `VOID_API_URL` if set, then the active platform connection. Application project files do not change this selection.
+Every command below accepts `--connection <slug-or-url>` to select a registered platform and `--json` for structured output. Display names and saved IDs also work. Without `--connection`, Nosam uses `NOSAM_API_URL` if set, then the active platform connection. Application project files do not change this selection.
 
 ### Making Changes {#making-changes}
 
 Commands that change users, projects, signup access, invitations, or Workers show a preview before asking for confirmation:
 
 ```sh
-void platform user plan <user-id> pro --plan
-void platform user plan <user-id> pro --yes
+nosam platform user plan <user-id> pro --plan
+nosam platform user plan <user-id> pro --yes
 ```
 
 `--plan` validates the change and prints its effect without applying it. `--yes` applies the change without prompting, which is required in scripts. Use one or the other; they cannot be combined. These flags also apply to deployment cancellation and maintenance commands, but not to authentication commands.
 
 Each preview and apply request allows five minutes. Set `--timeout <seconds>` to an integer from 1 to 3600 to change that limit. Read requests and individual log polls allow 30 seconds.
 
-Nosam does not automatically retry changes. If a request loses its connection or times out, inspect the affected objects and `void platform system events` before repeating it. Partial results describe the work that completed and exit with a nonzero status.
+Nosam does not automatically retry changes. If a request loses its connection or times out, inspect the affected objects and `nosam platform system events` before repeating it. Partial results describe the work that completed and exit with a nonzero status.
 
 ### Authentication {#operator-authentication}
 
 Sign in, inspect your session, or sign out:
 
 ```sh
-void platform auth login [--provider <connection-id>] [--token-stdin]
-void platform auth status
-void platform auth logout
-void platform auth token [--token-stdin]
+nosam platform auth login [--provider <connection-id>] [--token-stdin]
+nosam platform auth status
+nosam platform auth logout
+nosam platform auth token [--token-stdin]
 ```
 
 Browser login offers the platform's enabled methods; `--provider <connection-id>` selects one. Login saves a one-hour administrator session in your system keychain. Logout revokes that session and removes its local credential.
 
 `auth token` prints your current operator token. With `--token-stdin`, it exchanges a full administrator API login session from standard input for a new operator token. `auth login --token-stdin` saves the exchanged token to the keychain instead of printing it.
 
-For automation, supply `VOID_OPERATOR_TOKEN` with an explicit `VOID_API_URL` or `--connection`. Operator tokens are stored separately from application deployment credentials. The API checks your current administrator access on every request. See [Using Scripts](../../guide/platform/administration/operations.md#using-scripts) for an example.
+For automation, supply `NOSAM_OPERATOR_TOKEN` with an explicit `NOSAM_API_URL` or `--connection`. Operator tokens are stored separately from application deployment credentials. The API checks your current administrator access on every request. See [Using Scripts](../../guide/platform/administration/operations.md#using-scripts) for an example.
 
 ## Pagination and JSON {#pagination-and-json}
 

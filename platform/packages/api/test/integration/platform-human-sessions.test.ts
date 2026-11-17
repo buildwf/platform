@@ -134,7 +134,7 @@ describe('platform human session revocation', () => {
       app.fetch(
         new Request(`http://localhost/internal/verify-owner/${project.id}`, {
           method: 'POST',
-          headers: { 'X-Void-Internal': internalToken, 'Content-Type': 'application/json' },
+          headers: { 'X-Nosam-Internal': internalToken, 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: admin.id, jwt, proxyOrigin }),
         }),
         env,

@@ -29,14 +29,14 @@ export type DeployIntent = Readonly<{
  * This function performs no I/O and does not mutate the manifest.
  */
 export function createDeployIntent(manifest: DeployManifest): DeployIntent {
-  const appType = manifest.type ?? 'void';
+  const appType = manifest.type ?? 'nosam';
   const webSockets = (manifest.websocket?.classes.length ?? 0) > 0;
   const live = manifest.live !== undefined;
   const sandbox = manifest.sandbox !== undefined;
 
   return {
     appType,
-    hasWorker: appType === 'void',
+    hasWorker: appType === 'nosam',
     manifest,
     resourcePlan: createDeployResourcePlan(manifest),
     features: {

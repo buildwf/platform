@@ -1,10 +1,10 @@
 import { deleteCookie, getCookie } from 'hono/cookie';
-import { defineMiddleware } from 'void';
+import { defineMiddleware } from 'nosam';
 import { getCurrentUser, type CurrentUser } from '../lib/api.ts';
 
 export type DashboardUser = CurrentUser;
 
-declare module 'void' {
+declare module 'nosam' {
   interface CloudContextVariables {
     token: string;
     dashboardUser: DashboardUser;
@@ -35,7 +35,7 @@ export default defineMiddleware(async (context, next) => {
     path.startsWith('/api/')
       ? context.json({ error: 'Sign in required' }, 401)
       : context.redirect('/login');
-  const token = getCookie(context, 'void_token');
+  const token = getCookie(context, 'nosam_token');
   if (!token) {
     return signIn();
   }
@@ -43,7 +43,7 @@ export default defineMiddleware(async (context, next) => {
   context.set('token', token);
   const user = await getCurrentUser(context);
   if (!user) {
-    deleteCookie(context, 'void_token', { path: '/' });
+    deleteCookie(context, 'nosam_token', { path: '/' });
     return signIn();
   }
 

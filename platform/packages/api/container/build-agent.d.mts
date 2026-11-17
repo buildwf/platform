@@ -18,8 +18,8 @@ export function builderCacheEnv(): Record<string, string>;
 /** `CI=true` for every build child, so interactive CLIs render CI-safe (non-animated) output. */
 export function nonInteractiveEnv(): Record<string, string>;
 
-/** Fallback `void` CLI version when BuildManager injects no `VOID_CLI_VERSION`. */
-export const DEFAULT_VOID_CLI_VERSION: string;
+/** Fallback `nosam` CLI version when BuildManager injects no `NOSAM_CLI_VERSION`. */
+export const DEFAULT_NOSAM_CLI_VERSION: string;
 
 /**
  * Bounds on the source download. `SOURCE_STALL_TIMEOUT_MS` is the guard that does
@@ -239,12 +239,12 @@ export interface RunBuildDeps {
     opts?: { env?: Record<string, string | undefined> },
   ) => Promise<number>;
   reportStatus?: (status: string) => Promise<void>;
-  hasLocalVoid?: () => boolean;
-  resolveSourceVoidCli?: () => string | null;
+  hasLocalNosam?: () => boolean;
+  resolveSourceNosamCli?: () => string | null;
   chownWorkDir?: () => Promise<void>;
   killBuilderProcesses?: () => Promise<void>;
 }
 
 /** Runs the build pipeline and always resolves to a process exit code. */
 export function runBuild(deps?: RunBuildDeps): Promise<number>;
-export function resolveSourceVoidCli(root?: string): string | null;
+export function resolveSourceNosamCli(root?: string): string | null;

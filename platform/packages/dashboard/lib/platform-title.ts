@@ -4,5 +4,5 @@ export function discoveryDisplayName(document: { displayName?: unknown }): strin
 }
 
 export function platformPageTitle(page: string, platformName: string): string {
-  return `${page} · ${platformName}${/\bvoid\b/i.test(platformName) ? '' : ' · Nosam'}`;
+  return `${page} · ${platformName}${/\bnosam\b/i.test(platformName) ? '' : ' · Nosam'}`;
 }

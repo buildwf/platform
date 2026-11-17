@@ -29,7 +29,7 @@ const { frontmatter } = useData();
         class="section-label-link"
         aria-label="Self-host Nosam Platform guide"
       >
-        <img src="/void-platform-dark.svg" alt="" class="section-label" />
+        <img src="/nosam-platform-dark.svg" alt="" class="section-label" />
       </a>
       <h2 id="full-stack-heading" class="text-primary text-2xl md:text-[2.5rem]">
         Deploy with your Security Built-In
@@ -48,7 +48,7 @@ const { frontmatter } = useData();
     aria-labelledby="features-heading"
   >
     <a href="/guide/" class="section-label-link" aria-label="Nosam SDK guide">
-      <img src="/void-sdk.svg" alt="" class="section-label section-label--sdk" />
+      <img src="/nosam-sdk.svg" alt="" class="section-label section-label--sdk" />
     </a>
     <h2 id="features-heading" class="text-white">Turn Vite Apps Full-Stack</h2>
     <p class="max-w-md text-white/70 text-balance sm:text-pretty">

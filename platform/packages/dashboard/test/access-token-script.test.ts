@@ -9,7 +9,7 @@ const jwt = `header.${Buffer.from(JSON.stringify({ exp: 4_102_444_800 })).toStri
 let root: string;
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'void-dashboard-access-test-'));
+  root = mkdtempSync(join(tmpdir(), 'nosam-dashboard-access-test-'));
   writeFileSync(
     join(root, 'cloudflared'),
     `#!${process.execPath}\nrequire('node:fs').writeFileSync('probe.json', JSON.stringify(process.argv.slice(2)));\nconsole.log(${JSON.stringify(jwt)});\n`,

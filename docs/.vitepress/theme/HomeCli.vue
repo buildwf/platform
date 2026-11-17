@@ -113,7 +113,7 @@ onBeforeUnmount(() => {
   <section id="cli" class="cli-section" data-theme="dark" aria-labelledby="cli-heading">
     <div class="wrapper border-t border-nickel cli-heading">
       <a href="/reference/cli" class="cli-wordmark" aria-label="Nosam CLI reference">
-        <img src="/void-cli.svg" alt="" width="536" height="113" />
+        <img src="/nosam-cli.svg" alt="" width="536" height="113" />
       </a>
       <h2 id="cli-heading" class="text-white">Deploy with One Command</h2>
       <p>

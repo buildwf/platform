@@ -1,11 +1,11 @@
 ---
-description: 'Set custom response headers from void.config.ts. Match URL patterns to header names and values.'
+description: 'Set custom response headers from nosam.config.ts. Match URL patterns to header names and values.'
 outline: deep
 ---
 
 # Custom Headers
 
-Define custom response headers in [`void.config.ts`](../../reference/config) using the `routing.headers` field. Keys are URL patterns, values are arrays of `"Name: value"` strings.
+Define custom response headers in [`nosam.config.ts`](../../reference/config) using the `routing.headers` field. Keys are URL patterns, values are arrays of `"Name: value"` strings.
 
 ```json
 {
@@ -40,7 +40,7 @@ On a [Nosam platform](../deployment.md#deploy-to-a-team-platform), set cookies i
 
 These limits apply on all of your app's hostnames, including custom domains, to protect cookies for other apps on the shared domain. Your app's own cookie headers can still affect those apps, so scope cookies carefully. See [Domains and Resources](../platform/installation/domains.md#adding-a-domain).
 
-During local development and with `void deploy --platform cloudflare`, header rules apply both headers as written.
+During local development and with `nosam deploy --platform cloudflare`, header rules apply both headers as written.
 
 ## `_headers` files
 

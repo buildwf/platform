@@ -15,9 +15,9 @@ const items = [
   { name: "email/", description: "Inbound email handlers", link: "#email" },
   { name: "durable-objects/", description: "Durable State modules", link: "#durable-objects" },
   { name: "public/", description: "Static assets (served as-is)", link: "#public" },
-  { name: ".void/", description: "Auto-generated (gitignored)", link: "#void" },
-  { name: "vite.config.ts", description: "Vite config with voidPlugin()", link: "#config-files" },
-  { name: "void.config.ts", description: "Nosam project config (optional)", link: "#config-files" },
+  { name: ".nosam/", description: "Auto-generated (gitignored)", link: "#void" },
+  { name: "vite.config.ts", description: "Vite config with nosamPlugin()", link: "#config-files" },
+  { name: "nosam.config.ts", description: "Nosam project config (optional)", link: "#config-files" },
   { name: ".env", description: "Local environment values", link: "#config-files" },
   { name: "env.ts", description: "Environment schema", link: "#config-files" },
   { name: "package.json" },
@@ -95,7 +95,7 @@ Each file default-exports a `defineMiddleware()` handler. Use middleware to set 
 - `db/schema/`: optional. Split tables into separate files and re-export them from `db/schema.ts`
 - `db/migrations/`: generated SQL migration files, applied in order on deploy
 
-Generate schema with `void gen model` or write it by hand. Generate migrations with `void db generate`.
+Generate schema with `nosam gen model` or write it by hand. Generate migrations with `nosam db generate`.
 
 ## `crons/`
 
@@ -121,17 +121,17 @@ The React single-page app. `index.html` loads `src/main.tsx`, which renders the 
 
 Static assets served as-is at the root path. Files here are not processed by Vite.
 
-## `.void/`
+## `.nosam/`
 
-Generated types and local development state (gitignored). Run `void prepare` to create the types, or let `vite dev` and `vite build` update them.
+Generated types and local development state (gitignored). Run `nosam prepare` to create the types, or let `vite dev` and `vite build` update them.
 
 ## Config Files
 
 | File             | Purpose                                                                                                                                                   |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vite.config.ts` | Vite configuration. Must include `voidPlugin()`.                                                                                                          |
-| `void.config.ts` | Optional Nosam config for [routing](/reference/config#routing), [inference](/reference/config#inference), and [worker settings](/reference/config#worker) |
-| `tsconfig.json`  | TypeScript config. Extend `.void/tsconfig.json` for auto-generated types; run `void init --tsconfig` when an existing config already uses `extends`.      |
+| `vite.config.ts` | Vite configuration. Must include `nosamPlugin()`.                                                                                                          |
+| `nosam.config.ts` | Optional Nosam config for [routing](/reference/config#routing), [inference](/reference/config#inference), and [worker settings](/reference/config#worker) |
+| `tsconfig.json`  | TypeScript config. Extend `.nosam/tsconfig.json` for auto-generated types; run `nosam init --tsconfig` when an existing config already uses `extends`.      |
 | `.env`           | Local development values only (gitignored; never deployed)                                                                                                |
 | `env.ts`         | Checked-in env names, types, defaults, and requiredness                                                                                                   |
 

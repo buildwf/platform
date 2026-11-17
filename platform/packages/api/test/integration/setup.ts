@@ -29,7 +29,7 @@ afterEach(async () => {
         return;
       }
       // A receipt stream only polls the database; cancelling stops it.
-      if (response.headers.has('x-void-deployment-id')) {
+      if (response.headers.has('x-nosam-deployment-id')) {
         await response.body.cancel().catch(() => {});
         return;
       }

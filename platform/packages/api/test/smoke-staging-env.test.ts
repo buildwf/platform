@@ -73,7 +73,7 @@ describe('staging kitchen-sink fixture env', () => {
 
   it('rejects a non-staging API before even listing projects', async () => {
     const { client } = fixture();
-    client.apiUrl = 'https://api.void.cloud';
+    client.apiUrl = 'https://void-nosam-api.buildwithfriends.workers.dev';
     await expect(initializeStagingEnv(client, async () => {})).rejects.toThrow(
       'requires the staging API',
     );
@@ -222,11 +222,11 @@ describe('staging kitchen-sink fixture env', () => {
           timeout: 10_000,
           env: {
             ...process.env,
-            VOID_API_URL: 'https://api.staging.void.cloud',
-            VOID_TOKEN: 'fake-token',
+            NOSAM_API_URL: 'https://api.staging.void.cloud',
+            NOSAM_TOKEN: 'fake-token',
             // Scope fixture credentials so no personal Access session is consulted.
-            VOID_ACCESS_ORIGIN: 'https://api.staging.void.cloud',
-            VOID_ACCESS_CREDENTIALS: '',
+            NOSAM_ACCESS_ORIGIN: 'https://api.staging.void.cloud',
+            NOSAM_ACCESS_CREDENTIALS: '',
             CF_ACCESS_CLIENT_ID: 'fake-access-id',
             CF_ACCESS_CLIENT_SECRET: 'fake-access-secret',
           },

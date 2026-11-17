@@ -803,7 +803,7 @@ export async function failStaleActiveContainerBuilds(
  * Per-project latest-wins supersede: after the idempotent same-run reuse check,
  * a NEWER run for the same project+branch (a DIFFERENT `run_id`) supersedes
  * older active Actions builds — marking them terminal so they free the owner's
- * concurrency slot and can't race `void deploy` for the project (the GitHub
+ * concurrency slot and can't race `nosam deploy` for the project (the GitHub
  * Actions executor has no per-project active-build serialization like the
  * container scheduler's `claimBuildForStartWithinLimit`).
  */
@@ -977,7 +977,7 @@ export async function createGithubActionsBuildWithinLimit(
     // (run_id, attempt) row, and this row's INSERT happens AFTER this UPDATE, so
     // the current attempt can't self-cancel. Marking them terminal frees the
     // owner's concurrency slot and revokes their deploy token so they can't race
-    // `void deploy` for the project — without this, a still-ACTIVE attempt-1
+    // `nosam deploy` for the project — without this, a still-ACTIVE attempt-1
     // (whose completion webhook was missed) would survive until the stale-build reaper.
     // (The scaffolded workflow's `concurrency: cancel-in-progress` cancels the
     // older RUN on GitHub's side; this is the server-side backstop.)
