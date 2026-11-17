@@ -18,7 +18,7 @@
  *   NOSAM_TOKEN          project-scoped deploy JWT (consumed by `nosam deploy`).
  *                       Scrubbed from the install + any untrusted child env and
  *                       re-injected ONLY for the trusted `nosam deploy` spawn.
- *   NOSAM_API_URL        https://void-nosam-api.buildwithfriends.workers.dev (or staging)
+ *   NOSAM_API_URL        https://nosam.buildwithfriends.dev (or staging)
  *   NOSAM_PROXY_URL      Explicit platform resource proxy
  *   NOSAM_PROJECT        project slug passed to `nosam deploy --project`
  *   CF_ACCESS_CLIENT_ID     staging CF Access service-token id (staging builds

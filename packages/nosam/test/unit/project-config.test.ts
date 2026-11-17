@@ -177,7 +177,7 @@ describe('project config', () => {
     expect(getProxyUrl(root)).toBe('https://proxy.example.test');
   });
 
-  it.each(['https://attacker.example', 'https://void-nosam-api.buildwithfriends.workers.dev'])(
+  it.each(['https://attacker.example', 'https://nosam.buildwithfriends.dev'])(
     'requires a registered connection for %s',
     (platformUrl) => {
       const root = makeRoot();

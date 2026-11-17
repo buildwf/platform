@@ -655,7 +655,7 @@ beforeEach(() => {
   process.env.NOSAM_PLATFORM_REGISTRY_DIR = platformRegistryDirectory;
   savePlatformConnection({
     accountId: null,
-    apiUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
+    apiUrl: 'https://nosam.buildwithfriends.dev',
     applicationDomain: 'void.app',
     displayName: 'Nosam Cloud',
     installationId: null,
@@ -667,12 +667,12 @@ beforeEach(() => {
   );
   mockSpawnSuccess();
   mockGetToken.mockReturnValue(null);
-  mockGetApiUrl.mockReturnValue('https://void-nosam-api.buildwithfriends.workers.dev');
+  mockGetApiUrl.mockReturnValue('https://nosam.buildwithfriends.dev');
   mockRunLogin.mockResolvedValue('token_123');
   mockListProjects.mockResolvedValue([]);
   mockCreateProject.mockResolvedValue({ id: 'proj_123', slug: 'my-app' });
   mockDiscoverPlatform.mockResolvedValue({
-    apiUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
+    apiUrl: 'https://nosam.buildwithfriends.dev',
     applicationDomain: 'void.app',
     authenticationProviders: ['github', 'google'],
     capabilities: {
@@ -1740,7 +1740,7 @@ describe('isScaffoldableEmptyProject', () => {
       expect(yaml).toContain('id-token: write');
       expect(yaml).toContain('contents: read');
       expect(yaml).toContain('NOSAM_PROJECT: ${{ vars.NOSAM_PROJECT }}');
-      expect(yaml).toContain("NOSAM_API_URL: ${{ vars.NOSAM_API_URL || 'https://void-nosam-api.buildwithfriends.workers.dev' }}");
+      expect(yaml).toContain("NOSAM_API_URL: ${{ vars.NOSAM_API_URL || 'https://nosam.buildwithfriends.dev' }}");
       expect(yaml).toContain('npx nosam deploy --platform nosam --project "$NOSAM_PROJECT"');
       expect(yaml.match(/deploy --platform nosam --project "\$NOSAM_PROJECT"/g)).toHaveLength(1);
       expect(yaml).toContain('concurrency:');
@@ -1829,7 +1829,7 @@ describe('isScaffoldableEmptyProject', () => {
       expect(JSON.parse(readFileSync(join(root, '.nosam', 'project.json'), 'utf-8'))).toEqual({
         applicationDomain: 'void.app',
         platform: 'nosam',
-        platformUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
+        platformUrl: 'https://nosam.buildwithfriends.dev',
         proxyUrl: 'https://proxy.void.cloud',
         projectId: 'proj_789',
         slug: 'linked-app',
@@ -2773,17 +2773,17 @@ export default config;
         message: 'Log in now and link or create a Nosam project?',
       });
       expect(mockRunLogin).toHaveBeenCalledWith(
-        'https://void-nosam-api.buildwithfriends.workers.dev',
+        'https://nosam.buildwithfriends.dev',
         'github',
         expect.any(Function),
       );
-      expect(mockSaveToken).toHaveBeenCalledWith('token_123', 'https://void-nosam-api.buildwithfriends.workers.dev');
+      expect(mockSaveToken).toHaveBeenCalledWith('token_123', 'https://nosam.buildwithfriends.dev');
       expect(mockListProjects).toHaveBeenCalledOnce();
       expect(mockCreateProject).toHaveBeenCalledWith('my-live-app');
       expect(JSON.parse(readFileSync(join(root, '.nosam', 'project.json'), 'utf-8'))).toEqual({
         applicationDomain: 'void.app',
         platform: 'nosam',
-        platformUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
+        platformUrl: 'https://nosam.buildwithfriends.dev',
         proxyUrl: 'https://proxy.void.cloud',
         projectId: 'proj_live',
         slug: 'my-live-app',
@@ -2857,7 +2857,7 @@ export default config;
       expect(JSON.parse(readFileSync(join(root, '.nosam', 'project.json'), 'utf-8'))).toEqual({
         applicationDomain: 'void.app',
         platform: 'nosam',
-        platformUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
+        platformUrl: 'https://nosam.buildwithfriends.dev',
         proxyUrl: 'https://proxy.void.cloud',
         projectId: 'proj_456',
         slug: 'existing-app',

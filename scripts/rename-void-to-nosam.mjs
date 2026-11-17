@@ -21,7 +21,7 @@ const SKIP_PATHS = [/^LICENSE/, /^UPSTREAM$/, /^scripts\/rename-void-to-nosam\.m
 // Text left alone: masked before the rules run and restored after.
 const PROTECTED = [
   /void_shared_email_recipient_teardown_guard|Database: void_platform/g, // names in historic migrations and pinned origin fixtures
-  /void-nosam-api\.buildwithfriends\.workers\.dev/g, // the nosam installation's API host (also the replacement for api.void.cloud)
+  /nosam\.buildwithfriends\.dev(?=\b)/g, // the nosam installation's API host (also the replacement for api.void.cloud)
   /\['nosam-', 'void-'\]|startsWith\(`void-\$\{next\.id\}-`\)/g, // legacy resource prefix, accepted for installations made before the rename
   /(?<!x-)void-(?:proxy-token|proxy-internal|ai-usage|access:|shared-)/g, // HKDF/HMAC/hash domain strings and derived ids: live tokens and recipients depend on them
   /void-durable-/g, // Durable Object migration tags are recorded on deployed Workers
@@ -39,7 +39,7 @@ const PROTECTED = [
   /voidcloud\.dev/g,
 ];
 
-const NOSAM_API_HOST = 'void-nosam-api.buildwithfriends.workers.dev';
+const NOSAM_API_HOST = 'nosam.buildwithfriends.dev';
 const CMDS =
   'platform|deploy|project|db|email|connect|github|secret|account|init|gen|cloudflare|domain|dev|prepare|env|info|build|auth|migrate|help|context|login|logout|whoami|pull|push|logs|rollback|storage|queue|cron|kv|sandbox|ai|live|app|link|unlink|open|version|upgrade|doctor|skills|rpc|test|typecheck|lint|check|start|preview|install';
 const CODE_FILE = /\.(m?[jt]sx?|cts|mts|vue|svelte)$/;

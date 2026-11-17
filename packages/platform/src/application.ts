@@ -26,7 +26,7 @@ export const PLATFORM_PROJECT_INGRESS_SOURCE: string = `export default {
 export function readPlatformApplication(
   env: Readonly<{ PLATFORM_APPLICATION?: string; SITE_DOMAIN?: string; BASE_HOSTNAME?: string }>,
 ): PlatformApplication {
-  const baseDomain = env.SITE_DOMAIN ?? env.BASE_HOSTNAME ?? 'void.app';
+  const baseDomain = env.SITE_DOMAIN ?? env.BASE_HOSTNAME ?? 'buildwf.dev';
   if (!env.PLATFORM_APPLICATION) {
     return { baseDomain, zoneName: baseDomain, dedicatedZone: false };
   }

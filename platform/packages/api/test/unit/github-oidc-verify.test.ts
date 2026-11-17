@@ -4,7 +4,7 @@ import { verifyGithubOidcToken } from '../../src/github/oidc-verify.ts';
 
 const ISSUER = 'https://token.actions.githubusercontent.com';
 const JWKS_URL = `${ISSUER}/.well-known/jwks`;
-const AUDIENCE = 'https://void-nosam-api.buildwithfriends.workers.dev';
+const AUDIENCE = 'https://nosam.buildwithfriends.dev';
 const KID = 'test-key-1';
 
 let privateKey: CryptoKey;

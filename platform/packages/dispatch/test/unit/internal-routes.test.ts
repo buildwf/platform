@@ -122,7 +122,7 @@ describe('HTTPS redirects', () => {
   it.each([
     ['oxc.rs', 'GET'],
     ['rolldown.rs', 'HEAD'],
-    ['my-app.void.app', 'POST'],
+    ['my-app.buildwf.dev', 'POST'],
   ])(
     'redirects HTTP %s requests with method %s before worker dispatch',
     async (hostname, method) => {
@@ -168,7 +168,7 @@ describe('HTTPS redirects', () => {
 
   it('preserves HTTP installer health probes while public traffic is disabled', async () => {
     const response = await app.fetch(
-      new Request('http://test.void.app/health', {
+      new Request('http://test.buildwf.dev/health', {
         headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
       }),
       createEnv(true, true, 'probe-token'),
@@ -180,7 +180,7 @@ describe('HTTPS redirects', () => {
 
   it('preserves the legacy HTTP admin health probe', async () => {
     const response = await app.fetch(
-      new Request('http://test.void.app/health', {
+      new Request('http://test.buildwf.dev/health', {
         headers: { 'X-Health-Check': 'nosam-admin' },
       }),
       createHttpsEnv(true),
@@ -194,7 +194,7 @@ describe('HTTPS redirects', () => {
 describe('internal route blocking', () => {
   it('rejects every request while the platform is disabled', async () => {
     const response = await app.fetch(
-      new Request('https://my-app.void.app/normal-path'),
+      new Request('https://my-app.buildwf.dev/normal-path'),
       createEnv(true, true),
       createCtx(),
     );
@@ -206,7 +206,7 @@ describe('internal route blocking', () => {
     'fails closed in %s even when routing KV is missing the disabled value',
     async (trafficState) => {
       const response = await app.fetch(
-        new Request('https://my-app.void.app/normal-path'),
+        new Request('https://my-app.buildwf.dev/normal-path'),
         createEnv(false, true, undefined, trafficState),
         createCtx(),
       );
@@ -216,7 +216,7 @@ describe('internal route blocking', () => {
 
   it('admits the installer health check during sandbox drain maintenance', async () => {
     const response = await app.fetch(
-      new Request('https://my-app.void.app/health', {
+      new Request('https://my-app.buildwf.dev/health', {
         headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
       }),
       createEnv(false, true, 'probe-token', 'sandbox-drain'),
@@ -228,7 +228,7 @@ describe('internal route blocking', () => {
 
   it('admits installer health checks while public traffic is disabled', async () => {
     const response = await app.fetch(
-      new Request('https://my-app.void.app/health', {
+      new Request('https://my-app.buildwf.dev/health', {
         headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
       }),
       createEnv(true, true, 'probe-token'),
@@ -240,7 +240,7 @@ describe('internal route blocking', () => {
 
   it('rejects the legacy public installer header while disabled', async () => {
     const response = await app.fetch(
-      new Request('https://my-app.void.app/health', {
+      new Request('https://my-app.buildwf.dev/health', {
         headers: { 'X-Health-Check': 'nosam-admin' },
       }),
       createEnv(true, true, 'probe-token'),
@@ -251,7 +251,7 @@ describe('internal route blocking', () => {
 
   it('preserves the legacy Nosam Cloud admin health probe', async () => {
     const response = await app.fetch(
-      new Request('https://test.void.app/health', {
+      new Request('https://test.buildwf.dev/health', {
         headers: { 'X-Health-Check': 'nosam-admin' },
       }),
       createEnv(),
@@ -264,7 +264,7 @@ describe('internal route blocking', () => {
   it('does not add a lifecycle routing read for hosted Nosam Cloud', async () => {
     const env = createEnv();
     const response = await app.fetch(
-      new Request('https://my-app.void.app/normal-path'),
+      new Request('https://my-app.buildwf.dev/normal-path'),
       env,
       createCtx(),
     );
@@ -274,7 +274,7 @@ describe('internal route blocking', () => {
 
   it('blocks POST /__nosam/migrate with 404', async () => {
     const response = await app.fetch(
-      new Request('https://my-app.void.app/__nosam/migrate', { method: 'POST' }),
+      new Request('https://my-app.buildwf.dev/__nosam/migrate', { method: 'POST' }),
       createEnv(),
       createCtx(),
     );
@@ -283,7 +283,7 @@ describe('internal route blocking', () => {
 
   it('blocks GET /__nosam/ready with 404', async () => {
     const response = await app.fetch(
-      new Request('https://my-app.void.app/__nosam/ready', { method: 'GET' }),
+      new Request('https://my-app.buildwf.dev/__nosam/ready', { method: 'GET' }),
       createEnv(),
       createCtx(),
     );
@@ -292,7 +292,7 @@ describe('internal route blocking', () => {
 
   it('blocks /__nosam/scheduled with 404', async () => {
     const response = await app.fetch(
-      new Request('https://my-app.void.app/__nosam/scheduled', { method: 'POST' }),
+      new Request('https://my-app.buildwf.dev/__nosam/scheduled', { method: 'POST' }),
       createEnv(),
       createCtx(),
     );
@@ -301,7 +301,7 @@ describe('internal route blocking', () => {
 
   it('blocks /__nosam/queue with 404', async () => {
     const response = await app.fetch(
-      new Request('https://my-app.void.app/__nosam/queue', { method: 'POST' }),
+      new Request('https://my-app.buildwf.dev/__nosam/queue', { method: 'POST' }),
       createEnv(),
       createCtx(),
     );
@@ -312,7 +312,7 @@ describe('internal route blocking', () => {
   // TODO: remove these blocks once all deployed workers use /__nosam/* paths. See #88
   it('blocks /__scheduled (legacy compat) with 404', async () => {
     const response = await app.fetch(
-      new Request('https://my-app.void.app/__scheduled', { method: 'POST' }),
+      new Request('https://my-app.buildwf.dev/__scheduled', { method: 'POST' }),
       createEnv(),
       createCtx(),
     );
@@ -321,7 +321,7 @@ describe('internal route blocking', () => {
 
   it('blocks /__queue (legacy compat) with 404', async () => {
     const response = await app.fetch(
-      new Request('https://my-app.void.app/__queue', { method: 'POST' }),
+      new Request('https://my-app.buildwf.dev/__queue', { method: 'POST' }),
       createEnv(),
       createCtx(),
     );
@@ -331,7 +331,7 @@ describe('internal route blocking', () => {
   it('does not block /__nuxt_content paths (framework assets)', async () => {
     const env = createEnv();
     const response = await app.fetch(
-      new Request('https://my-app.void.app/__nuxt_content/articles/query'),
+      new Request('https://my-app.buildwf.dev/__nuxt_content/articles/query'),
       env,
       createCtx(),
     );
@@ -342,7 +342,7 @@ describe('internal route blocking', () => {
   it('does not block /__og-image__ paths (framework assets)', async () => {
     const env = createEnv();
     const response = await app.fetch(
-      new Request('https://my-app.void.app/__og-image__/static/og.png'),
+      new Request('https://my-app.buildwf.dev/__og-image__/static/og.png'),
       env,
       createCtx(),
     );
@@ -353,7 +353,7 @@ describe('internal route blocking', () => {
   it('does not block normal paths', async () => {
     const env = createEnv();
     const response = await app.fetch(
-      new Request('https://my-app.void.app/normal-path'),
+      new Request('https://my-app.buildwf.dev/normal-path'),
       env,
       createCtx(),
     );
@@ -366,7 +366,7 @@ describe('internal route blocking', () => {
 // A project created before its slug was reserved may still own the hostname, so
 // dispatch routes every other path there like any other hostname.
 describe('platform health hostname', () => {
-  const healthHost = 'https://void-platform-health.void.app';
+  const healthHost = 'https://void-platform-health.buildwf.dev';
 
   function createHealthHostEnv(route: Record<string, unknown> | null): Env {
     const env = createEnv(false, true, 'probe-token');
@@ -419,7 +419,7 @@ describe('platform health hostname', () => {
   it('routes the health path on every other hostname', async () => {
     const env = createEnv(false, true, 'probe-token');
     const response = await app.fetch(
-      new Request('https://my-app.void.app/health'),
+      new Request('https://my-app.buildwf.dev/health'),
       env,
       createCtx(),
     );
@@ -433,7 +433,7 @@ describe('platform health hostname', () => {
       projectId: 'proj_1',
       zeroTrust: {
         teamDomain: 'https://company.cloudflareaccess.com',
-        audiences: [{ hostname: '*.void.app', audience: 'project-audience' }],
+        audiences: [{ hostname: '*.buildwf.dev', audience: 'project-audience' }],
       },
     });
     for (const path of ['/', '/about']) {

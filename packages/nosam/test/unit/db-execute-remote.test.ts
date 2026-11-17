@@ -25,7 +25,7 @@ vi.mock('../../src/cli/project', () => ({
 
 vi.mock('../../src/cli/client', () => ({
   PlatformClient: class {
-    apiUrl = 'https://void-nosam-api.buildwithfriends.workers.dev';
+    apiUrl = 'https://nosam.buildwithfriends.dev';
     getResources() {
       return mockGetResources();
     }
@@ -172,7 +172,7 @@ describe('nosam db execute --remote (D1)', () => {
     vi.stubEnv(
       'NOSAM_ACCESS_CREDENTIALS',
       JSON.stringify({
-        'https://void-nosam-api.buildwithfriends.workers.dev': {
+        'https://nosam.buildwithfriends.dev': {
           CF_ACCESS_CLIENT_ID: 'api-id',
           CF_ACCESS_CLIENT_SECRET: 'api-secret',
         },

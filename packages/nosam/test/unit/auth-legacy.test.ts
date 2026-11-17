@@ -108,7 +108,7 @@ describe('retired unscoped credentials', () => {
   );
 
   it.each([
-    { account: 'token', apiUrl: 'https://void-nosam-api.buildwithfriends.workers.dev' },
+    { account: 'token', apiUrl: 'https://nosam.buildwithfriends.dev' },
     { account: 'stagingToken', apiUrl: 'https://api.staging.void.cloud' },
     { account: 'token', apiUrl: 'https://legacy-platform.example.test' },
   ])('ignores the old file credential and $apiUrl selection', async ({ account, apiUrl }) => {
@@ -136,7 +136,7 @@ describe('retired unscoped credentials', () => {
     await connect(apiUrl);
     const { platformCredentialAccount } = await import('../../src/cli/platform-registry.ts');
     const account = `dev.nosam.cli:${platformCredentialAccount(apiUrl)}`;
-    const productionAccount = `dev.nosam.cli:${platformCredentialAccount('https://void-nosam-api.buildwithfriends.workers.dev')}`;
+    const productionAccount = `dev.nosam.cli:${platformCredentialAccount('https://nosam.buildwithfriends.dev')}`;
     state.passwords.set(account, 'current-token');
     state.passwords.set(productionAccount, 'production-token');
     state.passwords.set('dev.nosam.cli:stagingToken', 'retired-token');
@@ -209,7 +209,7 @@ describe('retired unscoped credentials', () => {
     mkdirSync(configDirectory, { recursive: true });
     writeFileSync(
       join(configDirectory, 'config.json'),
-      JSON.stringify({ api: 'https://void-nosam-api.buildwithfriends.workers.dev', token: 'legacy-token' }),
+      JSON.stringify({ api: 'https://nosam.buildwithfriends.dev', token: 'legacy-token' }),
     );
     const { getAccountCredential, getApiUrl, getSiteDomain } =
       await import('../../src/cli/auth.ts');

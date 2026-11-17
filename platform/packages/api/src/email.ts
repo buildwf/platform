@@ -68,7 +68,7 @@ function emailConfig(env: PlatformEmailEnv) {
   const apiUrl = getPlatformApiUrl(env);
   const hosted =
     !env.PLATFORM_INSTALLATION_ID &&
-    ['https://void-nosam-api.buildwithfriends.workers.dev', 'https://api.staging.void.cloud'].includes(apiUrl);
+    ['https://nosam.buildwithfriends.dev', 'https://api.staging.void.cloud'].includes(apiUrl);
   const name = getPlatformDisplayName(env);
   const from = platformSender(env, hosted, name);
   const dashboardUrl =
@@ -76,7 +76,7 @@ function emailConfig(env: PlatformEmailEnv) {
     (hosted
       ? env.PLATFORM_ENV === 'staging'
         ? 'https://dash.staging.void.cloud'
-        : 'https://dash.void.cloud'
+        : 'https://nosam.buildwithfriends.dev'
       : undefined);
   if (dashboardUrl) {
     const dashboard = new URL(dashboardUrl);

@@ -27,7 +27,7 @@ function createClient() {
   return {
     // `promptAndCreateProject` records the platform identity behind the client's
     // API URL, verified by an explicit connection.
-    apiUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
+    apiUrl: 'https://nosam.buildwithfriends.dev',
     createProject: vi.fn(),
   } as unknown as PlatformClient & {
     createProject: ReturnType<typeof vi.fn>;
@@ -42,7 +42,7 @@ describe('promptAndCreateProject', () => {
     process.env.NOSAM_PLATFORM_REGISTRY_DIR = join(root, 'registry');
     savePlatformConnection({
       accountId: null,
-      apiUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
+      apiUrl: 'https://nosam.buildwithfriends.dev',
       applicationDomain: 'void.app',
       displayName: 'Test platform',
       installationId: null,
@@ -104,7 +104,7 @@ describe('promptAndCreateProject', () => {
       ...config,
       // The platform identity behind the client's API URL, recorded on every new link.
       applicationDomain: 'void.app',
-      platformUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
+      platformUrl: 'https://nosam.buildwithfriends.dev',
       proxyUrl: 'https://proxy.void.cloud',
     });
   });

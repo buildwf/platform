@@ -42,7 +42,7 @@ vi.mock('../../src/cli/auth', () => ({
 vi.mock('../../src/cli/client', () => ({
   PlatformApiError: class extends Error {},
   PlatformClient: class {
-    readonly apiUrl = 'https://void-nosam-api.buildwithfriends.workers.dev';
+    readonly apiUrl = 'https://nosam.buildwithfriends.dev';
 
     listProjects(...args: Array<unknown>) {
       return mockListProjects(...args);
@@ -81,7 +81,7 @@ describe('runLink', () => {
     process.env.NOSAM_PLATFORM_REGISTRY_DIR = join(root, 'registry');
     savePlatformConnection({
       accountId: null,
-      apiUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
+      apiUrl: 'https://nosam.buildwithfriends.dev',
       applicationDomain: 'void.app',
       displayName: 'Nosam Cloud',
       installationId: null,
@@ -120,7 +120,7 @@ describe('runLink', () => {
     expect(JSON.parse(readFileSync(join(root, '.nosam', 'project.json'), 'utf-8'))).toEqual({
       applicationDomain: 'void.app',
       platform: 'nosam',
-      platformUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
+      platformUrl: 'https://nosam.buildwithfriends.dev',
       proxyUrl: 'https://proxy.void.cloud',
       projectId: 'proj_1',
       slug: 'existing-app',

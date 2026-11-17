@@ -34,7 +34,7 @@ vi.mock('@voidzero-dev/vite-plus-prompts', () => ({
 
 function createClient() {
   return {
-    apiUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
+    apiUrl: 'https://nosam.buildwithfriends.dev',
     createProject: vi.fn(),
     listProjectChoices: vi.fn(),
   } as unknown as PlatformClient & {
@@ -51,7 +51,7 @@ describe('promptDeployProjectConfig', () => {
     process.env.NOSAM_PLATFORM_REGISTRY_DIR = join(root, 'registry');
     savePlatformConnection({
       accountId: null,
-      apiUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
+      apiUrl: 'https://nosam.buildwithfriends.dev',
       applicationDomain: 'void.app',
       displayName: 'Nosam Cloud',
       installationId: null,
@@ -135,7 +135,7 @@ describe('promptDeployProjectConfig', () => {
     expect(JSON.parse(readFileSync(join(root, '.nosam', 'project.json'), 'utf-8'))).toEqual({
       applicationDomain: 'void.app',
       platform: 'nosam',
-      platformUrl: 'https://void-nosam-api.buildwithfriends.workers.dev',
+      platformUrl: 'https://nosam.buildwithfriends.dev',
       proxyUrl: 'https://proxy.void.cloud',
       ...config,
     });

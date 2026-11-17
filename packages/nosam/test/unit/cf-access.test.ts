@@ -347,7 +347,7 @@ describe('origin-scoped self-hosted Access login', () => {
 
 describe('ensurePlatformAccessToken defaults', () => {
   it.each([
-    'https://void-nosam-api.buildwithfriends.workers.dev',
+    'https://nosam.buildwithfriends.dev',
     'https://api.staging.void.cloud',
     'https://proxy.staging.void.cloud',
   ])('does not implicitly authenticate a former hosted origin: %s', async (origin) => {

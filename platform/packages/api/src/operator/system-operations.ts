@@ -15,7 +15,7 @@ import { type ApiEnv, isDevBypass } from '../env.ts';
 import { getRequestsDataset, queryTopProjectTraffic } from '../routes/usage.ts';
 
 /** Derive the base cloud domain from the API request hostname.
- *  void-nosam-api.buildwithfriends.workers.dev → void.cloud, api.staging.void.cloud → staging.void.cloud */
+ *  nosam.buildwithfriends.dev → void.cloud, api.staging.void.cloud → staging.void.cloud */
 function cloudDomainFromHost(host: string): string {
   return host.replace(/^api\./, '');
 }
