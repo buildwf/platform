@@ -144,7 +144,7 @@ describe('resolveDeployWranglerCompat', () => {
 });
 
 describe('resolveDeployWorkerMain', () => {
-  it('uses the build output wrangler main for non-framework Void deploys', () => {
+  it('uses the build output wrangler main for non-framework Nosam deploys', () => {
     const root = mkdtempSync(join(tmpdir(), 'void-test-'));
     tempDirs.push(root);
     const buildDir = join(root, 'dist', 'ssr');

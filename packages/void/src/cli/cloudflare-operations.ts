@@ -439,7 +439,7 @@ export async function activateCloudflareExistingVersion(
     const result = await deployCloudflareVersionTraffic({
       ...context,
       percentages: [`${target.id}@100`],
-      message: 'Void rollback preserving existing routes and triggers.',
+      message: 'Nosam rollback preserving existing routes and triggers.',
     });
     if (result.status !== 0 || result.signal || result.error) {
       throw new Error(
@@ -504,17 +504,17 @@ export async function activateCloudflareExistingVersion(
 
   if (triggers.ok) {
     throw new Error(
-      `Cloudflare rollback to ${target.id} was superseded by ${triggers.activeVersionId}; Void restored the active version's triggers. Refresh deployment status before retrying.`,
+      `Cloudflare rollback to ${target.id} was superseded by ${triggers.activeVersionId}; Nosam restored the active version's triggers. Refresh deployment status before retrying.`,
     );
   }
   if (triggers.activeVersionId && triggers.activeVersionId !== target.id) {
     throw new Error(
-      `Cloudflare rollback to ${target.id} was superseded by ${triggers.activeVersionId}, but Void could not restore that version's triggers (${triggers.reason}). Inspect the Worker immediately.`,
+      `Cloudflare rollback to ${target.id} was superseded by ${triggers.activeVersionId}, but Nosam could not restore that version's triggers (${triggers.reason}). Inspect the Worker immediately.`,
     );
   }
   if (!triggers.activeVersionId) {
     throw new Error(
-      `Cloudflare activated ${target.id}, but Void could not verify which version owns production while synchronizing triggers (${triggers.reason}). Inspect the Worker immediately.`,
+      `Cloudflare activated ${target.id}, but Nosam could not verify which version owns production while synchronizing triggers (${triggers.reason}). Inspect the Worker immediately.`,
     );
   }
 
@@ -523,8 +523,8 @@ export async function activateCloudflareExistingVersion(
     const repair = await stabilizeTriggers(target.id, targetTriggerConfig, currentTriggerConfig);
     throw new Error(
       repair.ok
-        ? `Cloudflare rollback to ${target.id} was superseded by ${repair.activeVersionId}; Void restored the active version's triggers. Refresh deployment status before retrying.`
-        : `Cloudflare rollback to ${target.id} was superseded by ${ownerBeforeCompensation ?? 'an unknown version'}, but Void could not restore the active triggers (${repair.reason}). Inspect the Worker immediately.`,
+        ? `Cloudflare rollback to ${target.id} was superseded by ${repair.activeVersionId}; Nosam restored the active version's triggers. Refresh deployment status before retrying.`
+        : `Cloudflare rollback to ${target.id} was superseded by ${ownerBeforeCompensation ?? 'an unknown version'}, but Nosam could not restore the active triggers (${repair.reason}). Inspect the Worker immediately.`,
     );
   }
   let recoveryFailure: string | null = null;
@@ -538,7 +538,7 @@ export async function activateCloudflareExistingVersion(
         versions: [{ versionId: current.id, percentage: 100 }],
         configPath: context.configPath,
         workerName: context.workerName,
-        message: `Void automatic rollback after trigger synchronization failed.`,
+        message: `Nosam automatic rollback after trigger synchronization failed.`,
       },
       { capture: false },
     );
@@ -648,7 +648,7 @@ export async function changeCloudflareDomain(
   return update;
 }
 
-/** Remember the traffic attachment Void just published for later rollback diffs. */
+/** Remember the traffic attachment Nosam just published for later rollback diffs. */
 function recordPublishedTraffic(
   configPath: string,
   config: Readonly<{ workers_dev: boolean; preview_urls: boolean; routes: ReadonlyArray<unknown> }>,
@@ -689,7 +689,7 @@ export function createCloudflareEmptyDomainPublisher(
   };
 }
 
-/** Publish an explicit empty Cron Trigger set through Void's pinned cf transport. */
+/** Publish an explicit empty Cron Trigger set through Nosam's pinned cf transport. */
 export function createCloudflareEmptyCronPublisher(
   context: CloudflareOperationContext,
 ): () => Promise<CloudflareCommandResult> {
@@ -780,12 +780,12 @@ function assertNoOperationConfigOverride(root: string): void {
   const override = findAmbientConfigOverride();
   if (override === 'CLOUDFLARE_ENV') {
     throw new Error(
-      'CLOUDFLARE_ENV is set. Void Cloudflare operations target the top-level config only.',
+      'CLOUDFLARE_ENV is set. Nosam Cloudflare operations target the top-level config only.',
     );
   }
   if (override) {
     throw new Error(
-      'CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH is set. Void Cloudflare operations use the root Wrangler config only.',
+      'CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH is set. Nosam Cloudflare operations use the root Wrangler config only.',
     );
   }
   const file = findWranglerCiOverrideDotenvFile(root);

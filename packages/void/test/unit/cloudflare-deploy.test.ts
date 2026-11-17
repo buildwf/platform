@@ -812,7 +812,7 @@ describe('Cloudflare activation diagnostics', () => {
       [
         'an uninspectable version',
         undefined,
-        `Void could not switch back to the previous version ${P}.`,
+        `Nosam could not switch back to the previous version ${P}.`,
       ],
     ] as const)('keeps this deploy live after %s and offers no rollback', (_label, skip, why) => {
       const message = failure({
@@ -831,7 +831,7 @@ describe('Cloudflare activation diagnostics', () => {
     });
 
     it.each([
-      ['no-trigger-snapshot', 'has no Void trigger snapshot to restore'],
+      ['no-trigger-snapshot', 'has no Nosam trigger snapshot to restore'],
       ['atomic', 'published at 100% directly'],
     ] as const)('offers a rollback to a real previous app kept inactive (%s)', (skip, why) => {
       const message = failure({
@@ -865,7 +865,7 @@ describe('Cloudflare activation diagnostics', () => {
         rollback: 'succeeded',
       });
       expect(message).toContain(
-        `Live now: ${P} (the previous version). Void switched traffic back to it and restored its routes, schedules, queues, and workflows.`,
+        `Live now: ${P} (the previous version). Nosam switched traffic back to it and restored its routes, schedules, queues, and workflows.`,
       );
       expect(message).toContain(reason);
       expect(message).not.toContain('void project rollback');
@@ -959,7 +959,7 @@ const srcEnvPublic = srcFileUrl('runtime', 'env-public.ts');
 const srcEnvHelpers = srcFileUrl('runtime', 'env-helpers.ts');
 
 /**
- * Cloudflare credentials the parent may hold: Wrangler's names, their `CF_*` aliases and Void's
+ * Cloudflare credentials the parent may hold: Wrangler's names, their `CF_*` aliases and Nosam's
  * readiness JWT. Children that run project code must see none of them.
  */
 const WRANGLER_AUTH_VARS = [
@@ -3192,7 +3192,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
     expect(wranglerArgs.at(-1)).toContain(toSlash(stagedAssets));
   });
 
-  it('rejects a bare project with no Void backend files (positive full-Void assertion)', async () => {
+  it('rejects a bare project with no Nosam backend files (positive full-Nosam assertion)', async () => {
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'bare' }),
       'void.json': JSON.stringify({}),
@@ -4240,7 +4240,7 @@ describe('runCloudflareDeploy — D1 migrations_dir gate', () => {
       });
       const expected = sourceDir ? `./${sourceDir}/db/migrations` : './db/migrations';
       expect(await rejectedDeployMessages(root)).toContain(
-        `deploy: D1 binding "DB" sets migrations_dir "drizzle", but Void generates and applies migrations from "${expected}". Set migrations_dir to "${expected}" in ${where}, or remove it and Void will fill it in.`,
+        `deploy: D1 binding "DB" sets migrations_dir "drizzle", but Nosam generates and applies migrations from "${expected}". Set migrations_dir to "${expected}" in ${where}, or remove it and Nosam will fill it in.`,
       );
     },
   );
@@ -4264,7 +4264,7 @@ describe('runCloudflareDeploy — D1 migrations_dir gate', () => {
       'src/routes/index.ts': `export const GET = (c) => c.env.DB.prepare('SELECT 1').first();`,
     });
     expect(await rejectedDeployMessages(root)).toContain(
-      'deploy: D1 binding "DB" sets migrations_dir "./db/migrations", but Void generates and applies migrations from "./src/db/migrations". Set migrations_dir to "./src/db/migrations" in cloudflare.d1_databases of void.config.ts.',
+      'deploy: D1 binding "DB" sets migrations_dir "./db/migrations", but Nosam generates and applies migrations from "./src/db/migrations". Set migrations_dir to "./src/db/migrations" in cloudflare.d1_databases of void.config.ts.',
     );
   });
 
@@ -4304,8 +4304,8 @@ describe('runCloudflareDeploy — D1 migrations_dir gate', () => {
   });
 });
 
-describe('runCloudflareDeploy — full Void app queues', () => {
-  it('lets a full Void app with a queue proceed (queues wire through the build)', async () => {
+describe('runCloudflareDeploy — full Nosam app queues', () => {
+  it('lets a full Nosam app with a queue proceed (queues wire through the build)', async () => {
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'qapp' }),
       'void.json': JSON.stringify({}),
@@ -5011,7 +5011,7 @@ describe('runCloudflareDeploy — wrangler implicit provisioning disabled on dep
 });
 
 // The pass-through assert-set is every registry field minus these exclusions, so a typo here
-// would silently assert a field Void emits.
+// would silently assert a field Nosam emits.
 describe('DEPLOY_PASSTHROUGH_EXCLUDE_FIELDS', () => {
   it('every excluded field is a REAL registry key (no typos)', () => {
     for (const field of DEPLOY_PASSTHROUGH_EXCLUDE_FIELDS) {
@@ -5378,7 +5378,7 @@ describe('verifyGeneratedDeployConfig', () => {
     expect(result.reason).toMatch(/EXTRA_KV/);
   });
 
-  // --- Pass-through bindings (fields Void never emits) and queues ---
+  // --- Pass-through bindings (fields Nosam never emits) and queues ---
 
   it('fails closed when the build injects a services binding absent from the root snapshot', () => {
     // Root had no `services` pre-build; the artifact adds one binding to another same-account
@@ -5548,7 +5548,7 @@ describe('verifyGeneratedDeployConfig', () => {
 
   it('does NOT reject an unknown/future resource field the emitted artifact declares (fail-open)', () => {
     // A field not in the assert-set must never false-positive — a future wrangler resource field
-    // Void does not know about is simply not asserted.
+    // Nosam does not know about is simply not asserted.
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -5894,7 +5894,7 @@ describe('verifyGeneratedDeployConfig', () => {
     expect(result.reason).toMatch(/durable_objects/);
   });
 
-  it('passes Void-style LOCAL durable_objects (`{name, class_name}`, no script_name)', () => {
+  it('passes Nosam-style LOCAL durable_objects (`{name, class_name}`, no script_name)', () => {
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -5932,9 +5932,9 @@ describe('verifyGeneratedDeployConfig', () => {
     expect(result).toEqual({ ok: true });
   });
 
-  // --- AI binding (must be Void's own {binding:'AI'}, the root's, or absent) ---
+  // --- AI binding (must be Nosam's own {binding:'AI'}, the root's, or absent) ---
 
-  it("passes Void's own emitted ai binding {binding:'AI'} with none in root when the source uses AI", () => {
+  it("passes Nosam's own emitted ai binding {binding:'AI'} with none in root when the source uses AI", () => {
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -5969,7 +5969,7 @@ describe('verifyGeneratedDeployConfig', () => {
     expect(result).toEqual({ ok: true });
   });
 
-  it("fails closed when the build injects Void's own {binding:'AI'} but the source does not use AI", () => {
+  it("fails closed when the build injects Nosam's own {binding:'AI'} but the source does not use AI", () => {
     // No root ai + needsAI false: a real build never emits `{binding:'AI'}` here, so an emitted one
     // is a build-injected billable Workers AI binding.
     const root = deployConfigProject({
@@ -6024,7 +6024,7 @@ describe('verifyGeneratedDeployConfig', () => {
     expect(result.reason).toMatch(/ai binding/);
   });
 
-  it('fails closed when the build injects an ai binding that is neither Void’s own nor the root’s', () => {
+  it('fails closed when the build injects an ai binding that is neither Nosam’s own nor the root’s', () => {
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -6248,8 +6248,8 @@ describe('verifyGeneratedDeployConfig', () => {
     }
   });
 
-  it("passes Void's own creation-only migrations (new_sqlite_classes) — never inspected", () => {
-    // Void emits migrations carrying only creation keys; those are never checked against root, so an
+  it("passes Nosam's own creation-only migrations (new_sqlite_classes) — never inspected", () => {
+    // Nosam emits migrations carrying only creation keys; those are never checked against root, so an
     // app whose root declared no `migrations` still deploys cleanly.
     const root = deployConfigProject({
       account_id: 'acc123',
@@ -6319,7 +6319,7 @@ describe('verifyGeneratedDeployConfig', () => {
   };
 
   it('fails closed when the build RETARGETS the sandbox container image', () => {
-    // The Void `Sandbox` DO + migration are legit, but the emitted container's `image` was rewritten
+    // The Nosam `Sandbox` DO + migration are legit, but the emitted container's `image` was rewritten
     // to an attacker image — `wrangler deploy` would roll out the attacker image.
     const root = deployConfigProject({
       account_id: 'acc123',
@@ -7092,8 +7092,8 @@ describe('runCloudflareDeploy — env-schema probe loads lazily', () => {
 
 // ---------------------------------------------------------------------------
 // Framework-class guard: only Class-A framework SSR coheres with
-// this backend (full Void plugin stack + CF Vite plugin). Class B/C get a
-// lighter Void composition that emits no worker artifact here — reject early.
+// this backend (full Nosam plugin stack + CF Vite plugin). Class B/C get a
+// lighter Nosam composition that emits no worker artifact here — reject early.
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
@@ -7428,7 +7428,7 @@ describe('assertMigrationsProduceAuthSchema', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Constraints, not just names. Void ships no auth migration scaffolder, so a
+  // Constraints, not just names. Nosam ships no auth migration scaffolder, so a
   // hand-written `db/schema.ts` + `void db generate` can produce every correct
   // NAME while omitting Drizzle's opt-in `.unique()` / `.references()`.
   // -------------------------------------------------------------------------
@@ -8620,7 +8620,7 @@ describe('checkWranglerMigrationApplySet', () => {
   });
 
   it('rejects when wrangler would apply in a DIFFERENT order (unpadded numeric prefix)', async () => {
-    // `2_*.sql` and `10_*.sql` sort DIFFERENTLY for wrangler (numeric: 2 < 10) than for Void's
+    // `2_*.sql` and `10_*.sql` sort DIFFERENTLY for wrangler (numeric: 2 < 10) than for Nosam's
     // collectMigrations (lexicographic: "10" < "2"). The set is equal but the apply ORDER
     // diverges, so remote D1 would receive them out of the validated order — reject.
     const root = makeProject({
@@ -9104,7 +9104,7 @@ describe('runCloudflareDeploy — wrangler credentials reach only the wrangler r
     expect(buildEnvSeen.VOID_TOKEN).toBeUndefined();
   });
 
-  it('the wrangler runner keeps Wrangler auth but not Void readiness credentials', () => {
+  it('the wrangler runner keeps Wrangler auth but not Nosam readiness credentials', () => {
     stubWranglerCredentials();
     const runnerEnv = deployChildEnv('acc123', 'https://api.cloudflare.com/client/v4');
     for (const name of WRANGLER_AUTH_VARS) {
@@ -10302,7 +10302,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(printed).toContain('email_routing:write + email_sending:write');
     // The checklist goes through `formatCloudflareUserMessage` on this path, which turns a
     // `wrangler …` command into "the underlying Cloudflare operation" — so the guidance must
-    // already be a Void command at the source to survive as guidance.
+    // already be a Nosam command at the source to survive as guidance.
     expect(printed).toContain('run `void cloudflare logout`, then `void cloudflare login`');
     expect(printed).not.toContain('underlying Cloudflare operation');
     expect(printed).toContain('deploying without email');
@@ -10460,7 +10460,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(spawns.some((s) => s.args[0] === 'deploy')).toBe(true);
   });
 
-  it('a hand-written `addresses` array Void did not derive skips the step, array untouched', async () => {
+  it('a hand-written `addresses` array Nosam did not derive skips the step, array untouched', async () => {
     const root = emailProject({ ...PROVISIONED_D1, addresses: ['ceo@acme.com'] });
     const { deps, spawns, confirms, exitCalls } = emailHarness();
     const output = captureOutput();
@@ -10934,7 +10934,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(printed).toContain('outbound  sendEmail() from noreply@mail.acme.com');
   });
 
-  it('a committed `addresses` array Void did not derive stays untouched when routing is off too', async () => {
+  it('a committed `addresses` array Nosam did not derive stays untouched when routing is off too', async () => {
     const root = emailProject({ ...COMMITTED_EMAIL, addresses: ['ceo@acme.com'] });
     const { deps, spawns, confirms, exitCalls } = emailHarness({ isCI: true });
     const output = captureOutput();
@@ -11003,7 +11003,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
 
   it('last inbound handler removed, outbound `void/email` kept: the committed entry is a decision-13 blocker, the array stays, and the trigger snapshot still carries it (the ready-path `null` write is never reached)', async () => {
     // The inbound handler that produced COMMITTED_EMAIL is gone, but `void/email` is still
-    // imported, so the email step runs with an empty derived set. The committed entry is one Void
+    // imported, so the email step runs with an empty derived set. The committed entry is one Nosam
     // did not derive, so the step skips and leaves the array, and the annotation replays it.
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'myapp' }),
@@ -11057,7 +11057,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(readRootConfig(root).addresses).toEqual(['support@mail.acme.com']);
     const printed = output.lines.join('\n');
     expect(printed).toContain(
-      'addresses holds entries Void did not derive (support@mail.acme.com)',
+      'addresses holds entries Nosam did not derive (support@mail.acme.com)',
     );
     expect(printed).not.toContain('addresses removed');
     // The snapshot replays the stale entry: `addresses` reaches wrangler's plan as-is.
@@ -11174,7 +11174,7 @@ describe('readWranglerAuthToken — keeps the helper child failure', () => {
         status: 1,
         stdout: '',
         stderr: [
-          'the Void CLI helper process exited with code 1.',
+          'the Nosam CLI helper process exited with code 1.',
           "SyntaxError: The requested module 'node:http' does not provide an export named 'setGlobalProxyFromEnv'",
           '',
           'Node.js v22.23.4',
@@ -11189,7 +11189,7 @@ describe('readWranglerAuthToken — keeps the helper child failure', () => {
       failure: {
         status: 1,
         stdout: '',
-        stderr: 'the Void CLI helper process returned no session credential.',
+        stderr: 'the Nosam CLI helper process returned no session credential.',
       },
     });
     expect(await read({ ...cleanExit, signal: 'SIGKILL' })).toMatchObject({
@@ -11197,19 +11197,19 @@ describe('readWranglerAuthToken — keeps the helper child failure', () => {
       failure: {
         status: 1,
         signal: 'SIGKILL',
-        stderr: 'the Void CLI helper process was stopped by SIGKILL.',
+        stderr: 'the Nosam CLI helper process was stopped by SIGKILL.',
       },
     });
   });
 });
 
-describe('Void-written credential failure texts', () => {
+describe('Nosam-written credential failure texts', () => {
   it('pass through the shared Cloudflare diagnostic formatter unchanged', () => {
     for (const text of [
-      'Could not get the Cloudflare session credential for the upload: the Void CLI helper process exited with code 1.',
-      'Could not get the Cloudflare session credential for publishing Worker settings: the Void CLI helper process was stopped by SIGKILL.',
-      'Could not get the Cloudflare session credential for the upload: the Void CLI helper process could not run: spawn EACCES.',
-      'Could not get the Cloudflare session credential for the upload: the Void CLI helper process returned no session credential.',
+      'Could not get the Cloudflare session credential for the upload: the Nosam CLI helper process exited with code 1.',
+      'Could not get the Cloudflare session credential for publishing Worker settings: the Nosam CLI helper process was stopped by SIGKILL.',
+      'Could not get the Cloudflare session credential for the upload: the Nosam CLI helper process could not run: spawn EACCES.',
+      'Could not get the Cloudflare session credential for the upload: the Nosam CLI helper process returned no session credential.',
       'Could not get the Cloudflare session credential for the upload: the session uses a Global API Key (CLOUDFLARE_API_KEY), which this step cannot use. Set CLOUDFLARE_API_TOKEN, or unset CLOUDFLARE_API_KEY and run `void cloudflare login`, then retry.',
       'Cloudflare session has no OAuth bearer.',
       'cf auth whoami exited with code 1.',

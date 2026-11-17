@@ -28,7 +28,7 @@ describe('resolveDeploymentPlatform', () => {
     expect(resolveDeploymentPlatform(root, { platform: 'void' })).toBe('void');
   });
 
-  it('retains Void as the fallback for projects initialized by older SDKs', () => {
+  it('retains Nosam as the fallback for projects initialized by older SDKs', () => {
     expect(resolveDeploymentPlatform(makeRoot())).toBe('void');
   });
 

@@ -127,7 +127,7 @@ describe('basicAuth', () => {
     );
   });
 
-  it('skips Void internal endpoints', async () => {
+  it('skips Nosam internal endpoints', async () => {
     const app = createApp({ username: 'guest', password: 'wedding' });
 
     const res = await app.request('http://localhost/__void/migrate', { method: 'POST' });
@@ -136,7 +136,7 @@ describe('basicAuth', () => {
     expect(await res.text()).toBe('ok');
   });
 
-  it('skips Void internal endpoints when the password is empty', async () => {
+  it('skips Nosam internal endpoints when the password is empty', async () => {
     const app = createApp({ username: 'guest', password: '' });
 
     const res = await app.request('http://localhost/__void/migrate', { method: 'POST' });

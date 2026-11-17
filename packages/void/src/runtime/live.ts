@@ -363,7 +363,7 @@ export function defineLiveStream(options: LiveStreamOptions): LiveStream {
         env = getRawRuntimeEnv();
       } catch {
         throw new Error(
-          'live: publish() was called outside a Void server runtime context. Pass an explicit env with stream.withEnv(env).publish(...).',
+          'live: publish() was called outside a Nosam server runtime context. Pass an explicit env with stream.withEnv(env).publish(...).',
         );
       }
       return publishWithEnv(env, topic, data, publishOptions);

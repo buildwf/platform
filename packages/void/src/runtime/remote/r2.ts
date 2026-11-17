@@ -131,13 +131,13 @@ export class ProxyR2Bucket {
     const stored = 'key' in result ? result : undefined;
     if (!stored && conditional) {
       throw new Error(
-        'remote: R2 conditional put requires a compatible Void platform and deployment.',
+        'remote: R2 conditional put requires a compatible Nosam platform and deployment.',
       );
     }
     const missing = missingMetadata(options, stored);
     if (missing.length > 0) {
       throw new Error(
-        `remote: R2 put() stored "${key}" without ${missing.join(', ')}. Remote R2 metadata needs a project deployment with the current Void version. Deploy the project, then put the object again.`,
+        `remote: R2 put() stored "${key}" without ${missing.join(', ')}. Remote R2 metadata needs a project deployment with the current Nosam version. Deploy the project, then put the object again.`,
       );
     }
     if (stored) {
@@ -187,7 +187,7 @@ export class ProxyR2Bucket {
       (options?.delimiter || options?.startAfter || options?.include)
     ) {
       throw new Error(
-        'remote: R2 list() with delimiter, startAfter or include got no answer from a current project deployment. The deployment uses an older Void version, or the platform could not reach it. Retry. If the error continues, deploy the project with the current Void version.',
+        'remote: R2 list() with delimiter, startAfter or include got no answer from a current project deployment. The deployment uses an older Nosam version, or the platform could not reach it. Retry. If the error continues, deploy the project with the current Nosam version.',
       );
     }
 

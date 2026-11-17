@@ -15,9 +15,9 @@ Use this for quick schema iteration while prototyping. Before deploying, generat
 
 Generate SQL migration files from schema changes.
 
-Compares your schema with the last Drizzle snapshot and writes migrations under `db/migrations/`. It includes Void-managed auth tables and configured auth plugins, even without an application schema. Review and commit the generated files before deploying.
+Compares your schema with the last Drizzle snapshot and writes migrations under `db/migrations/`. It includes Nosam-managed auth tables and configured auth plugins, even without an application schema. Review and commit the generated files before deploying.
 
-For SQLite, Void checks that the migration history applies to a fresh database. If generation fails this check, the previous SQL, snapshots, and journal are restored. If an existing migration fails, repair that unapplied migration first: rerunning generation compares snapshots and does not repair existing SQL. This check does not verify that a migration preserves existing data; review table rebuilds and foreign-key actions carefully.
+For SQLite, Nosam checks that the migration history applies to a fresh database. If generation fails this check, the previous SQL, snapshots, and journal are restored. If an existing migration fails, repair that unapplied migration first: rerunning generation compares snapshots and does not repair existing SQL. This check does not verify that a migration preserves existing data; review table rebuilds and foreign-key actions carefully.
 
 ## `void db status` {#void-db-status}
 
@@ -31,7 +31,7 @@ void db reset [--yes]
 
 Reset the development database and re-apply all migrations. D1 resets local data. PostgreSQL clears tables, views, sequences, and custom types from the `public` schema while preserving extensions; dependencies from other schemas must be resolved first. MySQL drops all tables and views. PostgreSQL and MySQL use `DATABASE_URL` from `.env`.
 
-When that `DATABASE_URL` points to a host other than `localhost`, Void names the database and asks before dropping its tables. Pass `--yes` to skip the prompt in scripts and CI; without a terminal, the command stops unless `--yes` is set. If `.env` uses the same URL as your deployment (for example after `void db connect`), reset drops the deployed tables.
+When that `DATABASE_URL` points to a host other than `localhost`, Nosam names the database and asks before dropping its tables. Pass `--yes` to skip the prompt in scripts and CI; without a terminal, the command stops unless `--yes` is set. If `.env` uses the same URL as your deployment (for example after `void db connect`), reset drops the deployed tables.
 
 ## `void db seed` {#void-db-seed}
 
@@ -41,7 +41,7 @@ void db seed [--file <path>] [--yes]
 
 Reset the local database, re-apply all migrations, then execute a seed file. The reset works like `void db reset`, including the prompt and `--yes`.
 
-If `--file` is omitted, Void looks for default seed files in this order: `db/seed.ts`, `db/seed.mts`, `db/seed.js`, `db/seed.mjs`, `db/seed.sql`.
+If `--file` is omitted, Nosam looks for default seed files in this order: `db/seed.ts`, `db/seed.mts`, `db/seed.js`, `db/seed.mjs`, `db/seed.sql`.
 
 If more than one default seed file exists, the CLI stops and asks you to pass `--file <path>`.
 
@@ -59,7 +59,7 @@ Run ad-hoc SQL against the database. Provide SQL inline or from a file. SELECT q
 
 By default, targets the local database. Pass `--remote` to run against the deployed database selected in `.void/project.json`:
 
-- **Void platform D1 projects**: routes the query through the selected platform's registered proxy using your auth token.
+- **Nosam platform D1 projects**: routes the query through the selected platform's registered proxy using your auth token.
 - **Direct Cloudflare D1 projects**: invokes Cloudflare against the pinned D1 binding from `void.config.ts` or `void.lock.json`.
 - **Hosted PostgreSQL and MySQL projects**: fetches the stored connection string from the platform and connects directly.
 - **Direct Cloudflare PostgreSQL and MySQL projects**: uses `DATABASE_URL` from the current shell; Cloudflare cannot return the password from Hyperdrive.
@@ -74,7 +74,7 @@ void db migrate [--remote]
 
 Apply pending migrations to the local database without resetting. Unlike `void db reset`, this preserves existing data and only runs migrations that haven't been applied yet.
 
-Pass `--remote` to apply pending migrations to the saved target. Hosted projects require a Void login and link. Direct Cloudflare D1 projects use the binding's configured migration directory, table, and pattern. The D1 binding must set `migrations_dir`. Direct PostgreSQL and MySQL projects use the shell `DATABASE_URL`.
+Pass `--remote` to apply pending migrations to the saved target. Hosted projects require a Nosam login and link. Direct Cloudflare D1 projects use the binding's configured migration directory, table, and pattern. The D1 binding must set `migrations_dir`. Direct PostgreSQL and MySQL projects use the shell `DATABASE_URL`.
 
 ## `void db studio` {#void-db-studio}
 
@@ -101,7 +101,7 @@ Restore a directly deployed Cloudflare D1 database using [Time Travel](https://d
 
 Time Travel keeps 7 days of history on Workers Free and 30 days on Workers Paid. Reverse older migrations with a new migration.
 
-Restoring discards every write made after the selected point. Void asks for confirmation and prints a command to undo the restore afterward. Pass `--yes` for scripts and CI.
+Restoring discards every write made after the selected point. Nosam asks for confirmation and prints a command to undo the restore afterward. Pass `--yes` for scripts and CI.
 
 To recover from a bad migration:
 
@@ -113,7 +113,7 @@ For a one-off Cloudflare deployment, add `--platform cloudflare` to restore, rol
 
 ## `void db rename-migrations` {#void-db-rename-migrations}
 
-For linked Void platform projects, rename migrations from numeric prefixes (`0001_name.sql`) to timestamps (`20260410161500_name.sql`) and update local and remote migration records. Sign in and run `void project link` first.
+For linked Nosam platform projects, rename migrations from numeric prefixes (`0001_name.sql`) to timestamps (`20260410161500_name.sql`) and update local and remote migration records. Sign in and run `void project link` first.
 
 For direct Cloudflare deployments, keep existing filenames. New migrations use timestamps and run after them.
 
@@ -127,11 +127,11 @@ NEON_API_KEY=... void db connect --provider neon --name my-app
 void db connect --provider @acme/void-db-provider --region region-id
 ```
 
-The command saves `DATABASE_URL` in `.env`. When authenticated with a linked Void project, it also updates the encrypted deployment URL; pass `--local-only` to skip that sync. `neon` is built in. Other adapters are project dependencies or local modules exporting a `DatabaseProviderAdapter` from `void/database-provider`.
+The command saves `DATABASE_URL` in `.env`. When authenticated with a linked Nosam project, it also updates the encrypted deployment URL; pass `--local-only` to skip that sync. `neon` is built in. Other adapters are project dependencies or local modules exporting a `DatabaseProviderAdapter` from `void/database-provider`.
 
 Provider-created credentials are never printed. For direct Cloudflare deploys, configure the same URL as a protected `DATABASE_URL` in the shell or CI environment that runs deploy.
 
-For an existing PostgreSQL database migrated by Drizzle, [adopt its applied migration history](../../guide/database.md#adopt-existing-drizzle) before the first Void deployment.
+For an existing PostgreSQL database migrated by Drizzle, [adopt its applied migration history](../../guide/database.md#adopt-existing-drizzle) before the first Nosam deployment.
 
 ## `void db set-url` {#void-db-set-url}
 

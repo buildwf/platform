@@ -782,7 +782,7 @@ async function resources(): Promise<Result> {
         'bookmark' in operation.target
           ? `--bookmark=${operation.target.bookmark}`
           : `--timestamp=${operation.target.timestamp}`;
-      // Void asks before it restores. cf cannot ask in this non-interactive child, so it would
+      // Nosam asks before it restores. cf cannot ask in this non-interactive child, so it would
       // refuse without --force.
       const called = runCf(['d1', 'time-travel', 'restore', database.id, target, '--force']);
       if (called.status !== 0) {
@@ -1000,7 +1000,7 @@ function workersApiFailure(action: string, response: { status: number; body: Jso
 
 function workerWithoutDeploymentMessage(worker: string): string {
   return [
-    `Cloudflare Worker "${worker}" exists but has no deployment, so Void cannot set its secrets.`,
+    `Cloudflare Worker "${worker}" exists but has no deployment, so Nosam cannot set its secrets.`,
     'If a deploy or secret command is running for this Worker, wait for it to finish and run this command again.',
     `Otherwise, run \`void deploy\` first. If the deploy stops because a required secret is missing, delete the Worker "${worker}" in the Cloudflare dashboard (Workers & Pages) and run this command again.`,
   ].join('\n');

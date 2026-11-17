@@ -37,7 +37,7 @@ function writeTest(root: string, source: string): void {
   writeFileSync(join(root, 'tests/app.test.ts'), source);
 }
 
-describe('vp test in a Void app', () => {
+describe('vp test in a Nosam app', () => {
   let playground: IsolatedPlayground;
 
   beforeAll(() => {

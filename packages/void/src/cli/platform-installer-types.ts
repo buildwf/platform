@@ -303,7 +303,7 @@ export type PlatformInstallerDependencies = Readonly<{
   replanWorkers?: (
     manifest: PlatformInstallationManifest,
   ) => Promise<ReadonlyArray<PlatformInstallPlanAction>>;
-  /** Workers whose changes made outside Void the operator agreed to replace. */
+  /** Workers whose changes made outside Nosam the operator agreed to replace. */
   replaceOutsideChanges?: ReadonlyArray<string>;
   /**
    * Upload a version of each Worker in replaceOutsideChanges, and do not deploy
@@ -387,8 +387,8 @@ export type PlatformWorkerDeploymentOptions = Readonly<{
   /** False uploads a new version even when the active one has identical input. */
   reuseMatchingVersion?: boolean;
   /**
-   * The operator agreed to replace changes made to this Worker outside Void.
-   * Its active version can then lack Void's record of its triggers.
+   * The operator agreed to replace changes made to this Worker outside Nosam.
+   * Its active version can then lack Nosam's record of its triggers.
    */
   replaceOutsideChanges?: boolean;
   runner: typeof runPlatformWrangler;

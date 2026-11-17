@@ -12,7 +12,7 @@ describe('Cloudflare user output', () => {
     );
   });
 
-  it('maps actionable commands to Void and hides implementation details', () => {
+  it('maps actionable commands to Nosam and hides implementation details', () => {
     expect(
       formatCloudflareUserMessage(
         'Wrangler failed. Run `wrangler secret list`, then `wrangler deploy`. The wrangler uploader changed.',

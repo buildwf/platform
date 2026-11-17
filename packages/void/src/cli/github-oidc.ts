@@ -1,5 +1,5 @@
 /**
- * GitHub Actions OIDC → Void deploy-token exchange for `void deploy` without `VOID_TOKEN`.
+ * GitHub Actions OIDC → Nosam deploy-token exchange for `void deploy` without `VOID_TOKEN`.
  *
  * Server contract (platform `POST /auth/github-oidc` handler):
  *   request  { oidcToken: string, project: string }   (project = slug)
@@ -75,7 +75,7 @@ async function requestGithubOidcToken(requestUrl: string, requestToken: string):
   return value;
 }
 
-/** POST the OIDC JWT to the Void API and return the minted deploy token. */
+/** POST the OIDC JWT to the Nosam API and return the minted deploy token. */
 async function exchangeOidcTokenAtApi(
   apiUrl: string,
   project: string,

@@ -1,15 +1,15 @@
 ---
-description: 'Deploy to Cloudflare Workers. Void detects the resources your app uses, creates bindings, and publishes the Worker.'
+description: 'Deploy to Cloudflare Workers. Nosam detects the resources your app uses, creates bindings, and publishes the Worker.'
 outline: deep
 ---
 
 # Cloudflare
 
-Void runs on Cloudflare Workers. It detects the resources your app uses, creates bindings, and deploys to your account.
+Nosam runs on Cloudflare Workers. It detects the resources your app uses, creates bindings, and deploys to your account.
 
 ## Bindings
 
-In Void routes and middleware, use `c.env`:
+In Nosam routes and middleware, use `c.env`:
 
 ```ts
 // routes/api/users.ts
@@ -76,9 +76,9 @@ export default defineConfig({
 });
 ```
 
-Put binding arrays, resource IDs, routes, and service bindings under `cloudflare`. Void preserves your configured bindings and adds missing inferred resources. The `worker` field takes precedence for compatibility settings and variables. See [Configuration](../reference/config.md).
+Put binding arrays, resource IDs, routes, and service bindings under `cloudflare`. Nosam preserves your configured bindings and adds missing inferred resources. The `worker` field takes precedence for compatibility settings and variables. See [Configuration](../reference/config.md).
 
-Commit `void.lock.json` when Void records resource IDs or Durable Object migrations. Keep generated Cloudflare config out of Git.
+Commit `void.lock.json` when Nosam records resource IDs or Durable Object migrations. Keep generated Cloudflare config out of Git.
 
 Declare environment variables in `env.ts`, put local values in `.env`, and set production server values with `void secret put`. See [Environment Variables](../guide/env-vars.md).
 
@@ -90,7 +90,7 @@ Choose Cloudflare during `void init`, then deploy:
 void deploy
 ```
 
-Void opens your browser to sign in and asks which account to use when you have several. If the browser doesn't open, follow the link and confirm the code printed in the terminal.
+Nosam opens your browser to sign in and asks which account to use when you have several. If the browser doesn't open, follow the link and confirm the code printed in the terminal.
 
 To set up deployment later, run `void connect --platform cloudflare`. To select Cloudflare for one deploy, run:
 
@@ -102,29 +102,29 @@ Use `void cloudflare login`, `status`, and `logout` to manage your session.
 
 ### Deploy an existing Worker
 
-For an existing Void app deployed directly to Cloudflare, keep its root `wrangler.jsonc` or `wrangler.json` and run:
+For an existing Nosam app deployed directly to Cloudflare, keep its root `wrangler.jsonc` or `wrangler.json` and run:
 
 ```sh
 void deploy
 ```
 
-If no destination is selected, Void offers to link the existing Worker. Accept to sign in and deploy. Void migrates the configuration to `void.config.ts` and `void.lock.json`, preserving bindings, variables, secrets, routes, and schedules. Commit both files.
+If no destination is selected, Nosam offers to link the existing Worker. Accept to sign in and deploy. Nosam migrates the configuration to `void.config.ts` and `void.lock.json`, preserving bindings, variables, secrets, routes, and schedules. Commit both files.
 
 Keep the first deployment focused on the existing app. Add resources, auth, migrations, or other runtime features after linking. If the Worker has a newer inactive upload, activate or remove it in Cloudflare before retrying.
 
-Readiness checks need either an existing [version metadata binding](https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata/) or access to [Version URLs](https://developers.cloudflare.com/workers/versions-and-deployments/version-urls/). Void stops before activation if neither is available.
+Readiness checks need either an existing [version metadata binding](https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata/) or access to [Version URLs](https://developers.cloudflare.com/workers/versions-and-deployments/version-urls/). Nosam stops before activation if neither is available.
 
 If linking reports a missing binding, use the existing Worker's binding name and resource ID in `cloudflare` and `inference.bindings`. Keep `.void/cloudflare-link.json` when retrying.
 
-Before changing dashboard-managed triggers or visibility later, add the current `routes`, `workers_dev`, and `preview_urls` to your config. Convert `wrangler.toml` to JSON/JSONC before linking. Named environments need separate Void project configs.
+Before changing dashboard-managed triggers or visibility later, add the current `routes`, `workers_dev`, and `preview_urls` to your config. Convert `wrangler.toml` to JSON/JSONC before linking. Named environments need separate Nosam project configs.
 
 ### What happens during deploy
 
-Void creates missing resources, builds the app, checks secrets and migrations, uploads the Worker, verifies readiness, and updates traffic and triggers. Resource IDs are saved in `void.lock.json`.
+Nosam creates missing resources, builds the app, checks secrets and migrations, uploads the Worker, verifies readiness, and updates traffic and triggers. Resource IDs are saved in `void.lock.json`.
 
 A failed build or validation can leave provisioned resources in your account. Run the first deploy from one machine at a time, then commit the lock file before deploying from other machines or CI.
 
-Apps using email need `email.from` in `void.config.ts`. Void reviews the domain's setup before building and asks before changing it. See [Email](../guide/email/domains.md#your-own-cloudflare-account).
+Apps using email need `email.from` in `void.config.ts`. Nosam reviews the domain's setup before building and asks before changing it. See [Email](../guide/email/domains.md#your-own-cloudflare-account).
 
 ### Deploying from CI
 
@@ -132,7 +132,7 @@ Set these CI secrets and variables as needed:
 
 | Name                                             | When needed                                                                                                                                                                               |
 | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`                           | Required. Workers Scripts: Edit, read access to bound resources, and edit access to products Void provisions.                                                                             |
+| `CLOUDFLARE_API_TOKEN`                           | Required. Workers Scripts: Edit, read access to bound resources, and edit access to products Nosam provisions.                                                                            |
 | `CLOUDFLARE_ACCOUNT_ID`                          | When the token can access several accounts.                                                                                                                                               |
 | `DATABASE_URL`                                   | PostgreSQL and MySQL provisioning and migrations.                                                                                                                                         |
 | `CLOUDFLARE_WORKERS_SUBDOMAIN`                   | When workers.dev is enabled and the version has no preview URL. Use `my-team` or `my-team.workers.dev`. An account subdomain does not create a readiness URL when `workers_dev` is false. |
@@ -149,33 +149,33 @@ For local deployment to an Access-protected Worker, you can use a short-lived us
 export CF_ACCESS_TOKEN="$(cloudflared access token --app=https://<worker>.<account>.workers.dev)"
 ```
 
-Void uses Access credentials for readiness checks without saving them. If checks are denied, the deployment fails. A first-deploy bootstrap can already be active behind Access when this happens.
+Nosam uses Access credentials for readiness checks without saving them. If checks are denied, the deployment fails. A first-deploy bootstrap can already be active behind Access when this happens.
 
-By default, Void sends Access credentials only to `workers.dev` URLs. If `workers_dev` is `false`, Void can check readiness through your first route or Custom Domain. To send the credentials there, set `CF_ACCESS_READINESS_ORIGIN` to that hostname's origin:
+By default, Nosam sends Access credentials only to `workers.dev` URLs. If `workers_dev` is `false`, Nosam can check readiness through your first route or Custom Domain. To send the credentials there, set `CF_ACCESS_READINESS_ORIGIN` to that hostname's origin:
 
 ```sh
 export CF_ACCESS_READINESS_ORIGIN="https://app.example.com"
 ```
 
-Set this variable in the shell or CI environment running `void deploy`. Use an exact HTTPS origin for a hostname you control that serves this Worker; Void sends your Access credentials there.
+Set this variable in the shell or CI environment running `void deploy`. Use an exact HTTPS origin for a hostname you control that serves this Worker; Nosam sends your Access credentials there.
 
 ### Databases and secrets
 
-For PostgreSQL and MySQL, supply `DATABASE_URL` to the deploy process. Void uses it for Hyperdrive and migrations without writing it to config. MySQL schema changes can partially apply before an error; see [failed MySQL migrations](../guide/database/mysql.md#failed-migrations).
+For PostgreSQL and MySQL, supply `DATABASE_URL` to the deploy process. Nosam uses it for Hyperdrive and migrations without writing it to config. MySQL schema changes can partially apply before an error; see [failed MySQL migrations](../guide/database/mysql.md#failed-migrations).
 
 Creating Hyperdrive requires an API token with Hyperdrive edit permission. Alternatively, create it in Cloudflare and add its ID to `cloudflare.hyperdrive`; an existing binding works with browser login.
 
 Run `void db generate` and commit migrations before deploying schema changes. This includes Better Auth tables. Custom D1 migration directories, tables, and patterns are supported; deploy stops if the files to apply differ from the validated history.
 
-Set production server values with `void secret put <NAME>`. Void preserves existing remote secrets and creates `BETTER_AUTH_SECRET` when an auth app needs one. Local `.env` values are never deployed.
+Set production server values with `void secret put <NAME>`. Nosam preserves existing remote secrets and creates `BETTER_AUTH_SECRET` when an auth app needs one. Local `.env` values are never deployed.
 
 ### Readiness and rollback
 
-Void checks an uploaded version before sending it traffic. If the Worker has no public URL, because workers.dev is off and no route or Custom Domain is configured, Void activates it without a readiness check.
+Nosam checks an uploaded version before sending it traffic. If the Worker has no public URL, because workers.dev is off and no route or Custom Domain is configured, Nosam activates it without a readiness check.
 
-If readiness or trigger updates fail, Void restores the previous deployment. If trigger updates fail and the previous triggers can't be restored, such as after another tool's deployment or from an empty draft, the new version stays live. The error names the version serving traffic.
+If readiness or trigger updates fail, Nosam restores the previous deployment. If trigger updates fail and the previous triggers can't be restored, such as after another tool's deployment or from an empty draft, the new version stays live. The error names the version serving traffic.
 
-Finish or cancel gradual rollouts in Cloudflare before deploying through Void.
+Finish or cancel gradual rollouts in Cloudflare before deploying through Nosam.
 
 For an existing Durable Object Worker that Cloudflare cannot stage, review the changes and use:
 
@@ -194,15 +194,15 @@ void project status
 void project rollback [version]
 ```
 
-Void restores recorded triggers along with the code. Versions without a complete trigger snapshot keep current routes and schedules. Database recovery is separate: use [`void db restore`](../reference/cli/database.md#void-db-restore) to undo D1 migrations.
+Nosam restores recorded triggers along with the code. Versions without a complete trigger snapshot keep current routes and schedules. Database recovery is separate: use [`void db restore`](../reference/cli/database.md#void-db-restore) to undo D1 migrations.
 
 #### Scope and limitations
 
-Void deploys Void apps (a React SPA with an optional backend), static SPAs, static sites, and supported SSGs.
+Nosam deploys Nosam apps (a React SPA with an optional backend), static SPAs, static sites, and supported SSGs.
 
-- Void apps support Void routing rules for redirects, rewrites, fallbacks, and headers.
+- Nosam apps support Nosam routing rules for redirects, rewrites, fallbacks, and headers.
 - `--skip-build` works for existing static output. Worker apps require a fresh build.
-- Named Cloudflare environments aren't supported. Use a separate Void project config for each target.
+- Named Cloudflare environments aren't supported. Use a separate Nosam project config for each target.
 - Sandbox requires Workers Paid and Docker. See [Sandbox requirements](../guide/sandboxes.md#deployment) for plan and token permissions.
 - Email to arbitrary recipients requires Workers Paid; verified recipients and inbound mail work on Workers Free. See [Email](../guide/email/domains.md#your-own-cloudflare-account).
 

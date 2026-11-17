@@ -64,7 +64,7 @@ export type UntypedFetchOptions = {
 const browserFetch = createRouteFetch((...args) => globalThis.fetch(...args));
 
 /**
- * Typed fetch client for Void API routes.
+ * Typed fetch client for Nosam API routes.
  *
  * Built on ofetch. Supports `method`, `params`, `query`, `body`, `headers`,
  * `signal`, `baseURL`, `retry` and `timeout`, with full route type safety.

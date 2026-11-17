@@ -26,7 +26,7 @@ export async function runAuthLink(root: string, connectionId?: string): Promise<
   const fresh = await client.whoami();
   if (fresh.id !== existing.id) {
     throw new Error(
-      'auth: You signed in to a different Void account. Start again with a login method already linked to your original account.',
+      'auth: You signed in to a different Nosam account. Start again with a login method already linked to your original account.',
     );
   }
   savePlatformToken(freshToken, apiUrl);

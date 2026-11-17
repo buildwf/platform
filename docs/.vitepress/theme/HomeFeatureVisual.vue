@@ -9,8 +9,8 @@ defineProps<{
 }>();
 
 const descriptions = {
-  stack: 'Animated illustration of Void connectors.',
-  frameworks: 'Animated illustration of Void framework integrations.',
+  stack: 'Animated illustration of Nosam connectors.',
+  frameworks: 'Animated illustration of Nosam framework integrations.',
 };
 </script>
 

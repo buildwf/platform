@@ -5,7 +5,7 @@ outline: deep
 
 # Static Assets Caching
 
-Void caches static assets on Cloudflare's edge network. Hashed build files can be reused across deploys, while other files use cache keys tied to the deployment.
+Nosam caches static assets on Cloudflare's edge network. Hashed build files can be reused across deploys, while other files use cache keys tied to the deployment.
 
 ## Hashed assets
 
@@ -17,7 +17,7 @@ Cache-Control: public, max-age=31536000, immutable
 
 Browsers and the edge can cache these files for one year and reuse them across deploys.
 
-If your Vite config customizes `build.assetsDir`, Void automatically detects this and applies the immutable optimization to the configured directory:
+If your Vite config customizes `build.assetsDir`, Nosam automatically detects this and applies the immutable optimization to the configured directory:
 
 ```ts
 // vite.config.ts
@@ -32,7 +32,7 @@ If `build.assetsDir` is set to `""`, meaning hashed files live at the root, the 
 
 ### Native Cloudflare deployments
 
-For Void apps, `void deploy --platform cloudflare` gives generated JavaScript bundles with content fingerprints immutable caching. Files copied from `public/` and custom build outputs with stable filenames keep normal revalidation, even when they live in the assets directory. CSS and other assets keep Cloudflare's default or your configured `Cache-Control`.
+For Nosam apps, `void deploy --platform cloudflare` gives generated JavaScript bundles with content fingerprints immutable caching. Files copied from `public/` and custom build outputs with stable filenames keep normal revalidation, even when they live in the assets directory. CSS and other assets keep Cloudflare's default or your configured `Cache-Control`.
 
 Use [Custom Headers](./headers) to choose a cache policy for other files. Apply immutable caching only to URLs that change whenever their content changes.
 
@@ -49,12 +49,12 @@ Browsers revalidate these files on each request.
 **What gets cached:**
 
 - All `GET` requests for static projects such as SPAs and static sites
-- GET requests with file extensions (`.ico`, `.png`, `.css`, etc.) in Void apps with a Worker
+- GET requests with file extensions (`.ico`, `.png`, `.css`, etc.) in Nosam apps with a Worker
 
 **What does NOT get cached:**
 
 - `/api/*` routes, which always hit the worker
-- Paths without file extensions in Void apps with a Worker
+- Paths without file extensions in Nosam apps with a Worker
 - Non-GET requests
 - Requests carrying `Cookie`, `Authorization`, or `Cf-Access-Jwt-Assertion` credentials
 - Responses other than a complete `200`
@@ -65,7 +65,7 @@ If your worker serves dynamic content at a URL that looks static (e.g., a dynami
 
 ## ETags and 304 Not Modified
 
-Static assets include an `ETag` header. When a browser revalidates an unchanged file, Void returns `304 Not Modified` without downloading it again. No configuration is needed.
+Static assets include an `ETag` header. When a browser revalidates an unchanged file, Nosam returns `304 Not Modified` without downloading it again. No configuration is needed.
 
 ## Custom headers
 
@@ -73,7 +73,7 @@ You can override caching headers or add your own for any static asset path using
 
 ## Navigation and middleware
 
-Void serves static files directly unless application code needs to handle the request first. API requests reach your Worker. Apps with middleware or routes outside `/api` run application code before serving fallback HTML.
+Nosam serves static files directly unless application code needs to handle the request first. API requests reach your Worker. Apps with middleware or routes outside `/api` run application code before serving fallback HTML.
 
 SPAs serve `index.html` for unmatched HTML navigation so client-side routing works. For a static site with a `404.html` page, set [`routing.notFound`](../../reference/config.md#routing-notfound):
 

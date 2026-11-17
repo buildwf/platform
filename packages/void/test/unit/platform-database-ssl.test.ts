@@ -33,7 +33,7 @@ describe('platform PostgreSQL SSL mode', () => {
   it.each(['postgres:', 'postgresql:'])(
     'makes require explicit for %s without losing connection options',
     (protocol) => {
-      const original = `${protocol}//owner:p%40ss%2Bword@db.example.com:5432/platform?sslmode=require&channel_binding=require&application_name=Void%20Platform&sslrootcert=%2Ftmp%2Froot.pem`;
+      const original = `${protocol}//owner:p%40ss%2Bword@db.example.com:5432/platform?sslmode=require&channel_binding=require&application_name=Nosam%20Platform&sslrootcert=%2Ftmp%2Froot.pem`;
       const actual = new URL(platformDatabaseClientUrl(original));
       const expected = new URL(original);
       expect(actual.searchParams.get('sslmode')).toBe('verify-full');

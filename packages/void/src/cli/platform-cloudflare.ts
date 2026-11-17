@@ -273,7 +273,7 @@ export async function verifyPlatformRuntimeTokenEmailPermissions(
     const denied = `Cloudflare denied: ${missing.join(', ')} (HTTP ${denial.status}).`;
     throw new PlatformRuntimeTokenEmailPermissionError(
       input.savedToken
-        ? `platform: The runtime API token saved on this machine cannot use platform email. ${denied} Void checked this token because VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN is not set. If the platform uses a different runtime token, set VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to that token, and Void checks that token instead. Otherwise, check that the zone permissions of the saved token include the email zone ${input.zoneId}. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Then run the command again.`
+        ? `platform: The runtime API token saved on this machine cannot use platform email. ${denied} Nosam checked this token because VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN is not set. If the platform uses a different runtime token, set VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to that token, and Nosam checks that token instead. Otherwise, check that the zone permissions of the saved token include the email zone ${input.zoneId}. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Then run the command again.`
         : `platform: The runtime API token cannot use platform email. ${denied} Check that the token is valid and that its zone permissions include the email zone ${input.zoneId}. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Or set VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to a valid token that has these permissions. Then run the command again.`,
       tokenNotValid,
       { cause: denial },
@@ -1688,7 +1688,7 @@ export function parsePostgresConnectionString(value: string): {
     }
     // Hyperdrive accepts its verify modes only with an uploaded CA certificate ID, which a
     // connection URL cannot carry. `require` is Hyperdrive's TLS mode that validates the server
-    // certificate against public CAs; Void's own database connections still use the URL's mode.
+    // certificate against public CAs; Nosam's own database connections still use the URL's mode.
     mtls = { sslmode: 'require' };
   }
   return {

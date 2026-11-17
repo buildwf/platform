@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'pathslash';
 
-/** Resolve the top-level build output directory of a Void app. */
+/** Resolve the top-level build output directory of a Nosam app. */
 export function resolveDistDir(root: string): string {
   return join(root, 'dist');
 }

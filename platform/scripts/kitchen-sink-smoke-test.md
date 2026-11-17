@@ -38,7 +38,7 @@ Pass `--email` when preparing the fixture to add inbound handlers and `/api/acce
 - Verify tag precedence with `<slug>+support+ticket-42@<shared-mail-domain>` (`support-ticket`, `params.ticket= ticket-42`) and `<slug>+support+vip@<shared-mail-domain>` (`support-vip`). An unmatched recipient reaches `default`.
 - Subjects beginning with `REPLY ` send a threaded reply. Verify its arrival and `In-Reply-To`/`References`, and inspect `void email logs` for the action outcome.
 - Subjects beginning with `FORWARD ` forward to the verified address in the original message's `x-void-e2e-forward` header. Shared-domain native events support forwarding; customer-zone relayed mail records `UNSUPPORTED_ACTION` without sending. Confirm that recorded distinction.
-- Subjects beginning with `REJECT ` reject with `Void email acceptance reject`. Verify the sender's non-delivery outcome and the platform's inbound log.
+- Subjects beginning with `REJECT ` reject with `Nosam email acceptance reject`. Verify the sender's non-delivery outcome and the platform's inbound log.
 
 Use `void email usage`, `destinations`, and `logs` to compare API outcomes with recorded provider outcomes. Test admin email policy/caps and custom-domain readiness, secret rotation, and removal through the operator UI or CLI. A provider acceptance result alone does not prove mailbox delivery.
 

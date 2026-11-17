@@ -1,11 +1,11 @@
 ---
 name: void-deps-updates
-description: Update direct and transitive dependencies in the Void framework repository while preserving compatibility and measuring the unpacked production install of void plus dependencies. Use for Void dependency upgrades, Cloudflare toolchain alignment, and Vite+ starter updates.
+description: Update direct and transitive dependencies in the Nosam framework repository while preserving compatibility and measuring the unpacked production install of void plus dependencies. Use for Nosam dependency upgrades, Cloudflare toolchain alignment, and Vite+ starter updates.
 ---
 
-# Void dependency updates
+# Nosam dependency updates
 
-Work in the Void maintainer checkout. Read its current `AGENTS.md`, `packages/void/AGENTS.md`, `TESTING.md`, `.node-version`, and catalogs. Follow the requested analysis/update and local/push scope; prefer local main for implementation unless instructed otherwise.
+Work in the Nosam maintainer checkout. Read its current `AGENTS.md`, `packages/void/AGENTS.md`, `TESTING.md`, `.node-version`, and catalogs. Follow the requested analysis/update and local/push scope; prefer local main for implementation unless instructed otherwise.
 
 ## Update
 
@@ -28,7 +28,7 @@ VOID_PACKED_SUITE=full node .github/scripts/packed-consumer.mjs
 VOID_PACKED_TOOLCHAIN=vite-plus node .github/scripts/packed-consumer.mjs
 ```
 
-Repeat the fresh size measurement. Inspect installed runtime paths/versions, not just the workspace lockfile or Void's own tarball. Report file contents in MiB with hardlinks counted once; identify platform, architecture, Node, cohort, and baseline. Keep disk allocation separate. Read [measurement notes](references/measurement.md) for interpretation and a dated example.
+Repeat the fresh size measurement. Inspect installed runtime paths/versions, not just the workspace lockfile or Nosam's own tarball. Report file contents in MiB with hardlinks counted once; identify platform, architecture, Node, cohort, and baseline. Keep disk allocation separate. Read [measurement notes](references/measurement.md) for interpretation and a dated example.
 
 When committing, use `Update deps.` unless the user specifies otherwise. Preserve unrelated work. Push only within the current task's authorization; if CI monitoring is requested, follow the exact pushed revision through relevant checks until green. Report commit, size delta, held-back versions, verification, and publishing status.
 

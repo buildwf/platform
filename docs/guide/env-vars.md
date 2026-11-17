@@ -47,7 +47,7 @@ An unquoted value ends at `#`, which starts a comment. Quote a value that contai
 
 Keep `.env` out of Git. Other dotenv files, including `.env.local`, `.env.production`, `.env.example`, and Wrangler’s `.dev.vars*`, are not supported.
 
-Names starting with `__VOID_` are reserved for Void. Void stops with an error if `.env` or `env.ts` defines one.
+Names starting with `__VOID_` are reserved for Nosam. Nosam stops with an error if `.env` or `env.ts` defines one.
 
 Run the local check at any time:
 
@@ -108,7 +108,7 @@ void env check --remote  # validate build-time client values and remote server n
 void env types           # regenerate .void/env.d.ts
 ```
 
-Invalid-value diagnostics redact the supplied value by default. Set `VOID_ENV_UNMASK=1` only for deliberate local debugging; Void prints a notice when redaction is disabled.
+Invalid-value diagnostics redact the supplied value by default. Set `VOID_ENV_UNMASK=1` only for deliberate local debugging; Nosam prints a notice when redaction is disabled.
 
 ## Imports inside `env.ts`
 

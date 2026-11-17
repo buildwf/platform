@@ -562,19 +562,19 @@ export async function checkWranglerMigrationApplySet(
   );
   if (extra.length > 0 || missing.length > 0 || changed.length > 0) {
     const lines = [
-      `deploy: the migrations wrangler would apply to remote D1 do not match Void's validated set (${absDir}).`,
+      `deploy: the migrations wrangler would apply to remote D1 do not match Nosam's validated set (${absDir}).`,
     ];
     if (extra.length > 0) {
-      lines.push(`  • wrangler would ALSO apply (not validated by Void): ${extra.join(', ')}`);
+      lines.push(`  • wrangler would ALSO apply (not validated by Nosam): ${extra.join(', ')}`);
     }
     if (missing.length > 0) {
-      lines.push(`  • validated by Void but NOT in wrangler's set: ${missing.join(', ')}`);
+      lines.push(`  • validated by Nosam but NOT in wrangler's set: ${missing.join(', ')}`);
     }
     if (changed.length > 0) {
-      lines.push(`  • content differs between Void's copy and wrangler's: ${changed.join(', ')}`);
+      lines.push(`  • content differs between Nosam's copy and wrangler's: ${changed.join(', ')}`);
     }
     lines.push(
-      `Only Void-managed ${displayDir}/*.sql may be applied. Remove stray .sql (e.g. seed.sql) ` +
+      `Only Nosam-managed ${displayDir}/*.sql may be applied. Remove stray .sql (e.g. seed.sql) ` +
         'from migrations_dir, then rerun.',
     );
     return { ok: false, reason: lines.join('\n') };
@@ -587,11 +587,11 @@ export async function checkWranglerMigrationApplySet(
     return {
       ok: false,
       reason: [
-        `deploy: wrangler would apply your migrations in a DIFFERENT order than Void validated (${absDir}).`,
+        `deploy: wrangler would apply your migrations in a DIFFERENT order than Nosam validated (${absDir}).`,
         `  • wrangler (numeric-prefix) order: ${wranglerNames.join(', ')}`,
-        `  • Void's validated order:          ${gatedNames.join(', ')}`,
+        `  • Nosam's validated order:          ${gatedNames.join(', ')}`,
         "This happens when a migration's numeric prefix is not zero-padded (e.g. `2_` vs `10_`),",
-        'so it sorts differently for wrangler (numeric) than for Void (lexicographic) — remote D1',
+        'so it sorts differently for wrangler (numeric) than for Nosam (lexicographic) — remote D1',
         'would receive them out of the validated order. Rename only migrations that are not applied',
         'yet (a renamed applied migration runs again), or give the new file a name that sorts last',
         'in both orders, then rerun.',

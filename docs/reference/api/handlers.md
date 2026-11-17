@@ -100,9 +100,9 @@ function defineMiddleware(handler: MiddlewareHandler<CloudEnv>): MiddlewareHandl
 
 Built-in Basic authentication middleware for temporary site gates and pre-launch protection. Use it from `middleware/` with credentials from `void/env` to protect the whole app, or pass it to `defineHandler()` for a single route.
 
-Void’s reserved `/__void` endpoints use their own authentication and are excluded from Basic auth.
+Nosam’s reserved `/__void` endpoints use their own authentication and are excluded from Basic auth.
 
-When credentials come from `void/env`, wrap the reads in functions so they are resolved per request after Void has bound the runtime env.
+When credentials come from `void/env`, wrap the reads in functions so they are resolved per request after Nosam has bound the runtime env.
 
 If `password` resolves to an empty value, requests fail with a server error instead of passing the gate.
 

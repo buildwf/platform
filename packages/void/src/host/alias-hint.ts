@@ -1,6 +1,6 @@
 /**
  * Detects tsconfig path aliases in module-resolution errors from files that
- * Void loads outside Vite (`env.ts` through Node's `import()`, `void.config.ts`
+ * Nosam loads outside Vite (`env.ts` through Node's `import()`, `void.config.ts`
  * through jiti), neither of which resolves tsconfig `paths`.
  *
  * Node-only (lives under `host/`). Must not be imported from anything

@@ -9,7 +9,7 @@ import { isRecord } from '@void/deploy-core';
 import type { EmailHandlersScan } from '../router/email.ts';
 import { findBindingNameOwner } from './wrangler.ts';
 
-/** The `send_email` binding name Void provisions and the runtime reads. */
+/** The `send_email` binding name Nosam provisions and the runtime reads. */
 export const SEND_EMAIL_BINDING = 'SEND_EMAIL';
 
 /** The root-config `vars` key carrying `void.config.ts` `email.from` into the worker. */
@@ -101,7 +101,7 @@ export function findEmailConfigConflicts(config: Record<string, unknown>): Array
     }
     if (owner !== undefined) {
       conflicts.add(
-        `Cloudflare config already uses ${name} as a ${owner} binding; rename it in void.config.ts (Void writes ${name} into ${field})`,
+        `Cloudflare config already uses ${name} as a ${owner} binding; rename it in void.config.ts (Nosam writes ${name} into ${field})`,
       );
     }
   };
@@ -462,7 +462,7 @@ export interface EmailPreflight {
   sender: { state: 'ready' | 'stale' | 'absent' };
   addressesOwnership: { state: 'absent' | 'mine' | 'foreign'; foreign: Array<string> };
   /**
-   * True when the root `addresses` array (absent, or Void's own) is not the pruned set
+   * True when the root `addresses` array (absent, or Nosam's own) is not the pruned set
    * below — a local, prompt-free rewrite, never account work, so it does not gate `ready`.
    * A stale entry left in place reaches wrangler's plan as a `conflict`.
    */
@@ -681,7 +681,7 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
     pre.zone.state = 'not-found';
   }
 
-  // 3. Public DNS. Foreign MX on the mail domain is the one thing Void never routes over.
+  // 3. Public DNS. Foreign MX on the mail domain is the one thing Nosam never routes over.
   pre.domainMx = await probeMx(inputs.dns, domain);
   pre.apexMx = pre.apex && pre.apex !== domain ? await probeMx(inputs.dns, pre.apex) : pre.domainMx;
   const dmarc = await probeTxt(inputs.dns, `_dmarc.${domain}`);
@@ -796,7 +796,7 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
       if (/^(unlocked|misconfigured)/.test(settings.status)) {
         block(
           'all',
-          `Email Routing on ${apex} is ${settings.status} — fix it in the Cloudflare dashboard; Void never re-locks records you unlocked`,
+          `Email Routing on ${apex} is ${settings.status} — fix it in the Cloudflare dashboard; Nosam never re-locks records you unlocked`,
         );
       }
     } else {
@@ -819,7 +819,7 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
       if (settings.status === 'unlocked') {
         block(
           'all',
-          `Email Routing on ${apex} is ${settings.status} — fix it in the Cloudflare dashboard; Void never re-locks records you unlocked`,
+          `Email Routing on ${apex} is ${settings.status} — fix it in the Cloudflare dashboard; Nosam never re-locks records you unlocked`,
         );
       }
     }
@@ -828,7 +828,7 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
     if (pre.domainMx.state === 'foreign') {
       block(
         'all',
-        `${domain} already receives mail (${pre.domainMx.exchanges.join(', ')}). Void never enables routing over live mail.${
+        `${domain} already receives mail (${pre.domainMx.exchanges.join(', ')}). Nosam never enables routing over live mail.${
           mode === 'apex' ? ` Use something@mail.${apex}.` : ''
         }`,
       );
@@ -932,7 +932,7 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
     const existing = Array.isArray(inputs.existingAddresses)
       ? inputs.existingAddresses.map((a) => (typeof a === 'string' ? a.toLowerCase() : String(a)))
       : ['(not an array)'];
-    // Void records no provenance for entries it wrote earlier, so a leftover from a deleted
+    // Nosam records no provenance for entries it wrote earlier, so a leftover from a deleted
     // handler reads like a hand-written entry: the step is skipped and the array left alone.
     const candidates = new Set(pre.derived.addresses);
     const unknown = existing.filter((a) => !candidates.has(a));
@@ -940,11 +940,11 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
       pre.addressesOwnership = { state: 'foreign', foreign: unknown };
       block(
         'all',
-        `Cloudflare addresses holds entries Void did not derive (${unknown.join(', ')}); remove ${unknown.map((a) => JSON.stringify(a)).join(', ')} from cloudflare.addresses in void.config.ts, or manage addresses by hand and unset email.from — skipping email setup this deploy`,
+        `Cloudflare addresses holds entries Nosam did not derive (${unknown.join(', ')}); remove ${unknown.map((a) => JSON.stringify(a)).join(', ')} from cloudflare.addresses in void.config.ts, or manage addresses by hand and unset email.from — skipping email setup this deploy`,
       );
     } else {
       pre.addressesOwnership = { state: 'mine', foreign: [] };
-      // Void's own array, but not the pruned set: a foreign-routed entry left in place
+      // Nosam's own array, but not the pruned set: a foreign-routed entry left in place
       // (or a worker rename, which makes every rule foreign) reaches wrangler's plan as a
       // `conflict`, and `[]` would plan the deletion of every owned rule.
       const pruned = new Set(pre.addresses);
@@ -959,7 +959,7 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
     senderVar === inputs.from ? 'ready' : senderVar === undefined ? 'absent' : 'stale';
   pre.rulesPending = pre.rules.absent.filter((a) => pre.addresses.includes(a));
 
-  // A sending-scoped blocker is not work Void can act on. A pending sending row with the
+  // A sending-scoped blocker is not work Nosam can act on. A pending sending row with the
   // binding committed is settled too: no read tells Workers Free from "never onboarded", but
   // apply writes `send_email` only on a run that already tried `sending enable`, so the binding
   // records a refused onboarding. `void email setup` offers the retry (`sendingRetryable`).
@@ -1094,7 +1094,7 @@ export function renderEmailChecklist(pre: EmailPreflight): string {
   if (pre.routing.state !== 'ready' && subdomainNeedsApex) {
     warn(
       `enable Email Routing on ${pre.domain}`,
-      `Email Routing is not enabled on ${apex}; Void never enables it on the apex from the subdomain path — ${subdomainDashboardFallback(apex, pre.domain)}`,
+      `Email Routing is not enabled on ${apex}; Nosam never enables it on the apex from the subdomain path — ${subdomainDashboardFallback(apex, pre.domain)}`,
     );
   } else if (pre.routing.state !== 'ready') {
     change(
@@ -1359,7 +1359,7 @@ export async function applyEmailSetup(
       // A subdomain can only be added to a zone that already routes. Calling here could
       // enable the zone itself and lock MX over the apex's live mail, so no call is made.
       lines.push(
-        `  ✘ routing   ${pre.domain}: Email Routing is not enabled on ${apex} — a subdomain can only be added to a zone that already routes; Void never enables routing on the apex from the subdomain path`,
+        `  ✘ routing   ${pre.domain}: Email Routing is not enabled on ${apex} — a subdomain can only be added to a zone that already routes; Nosam never enables routing on the apex from the subdomain path`,
       );
       lines.push(`    ${subdomainDashboardFallback(apex, pre.domain)}`);
     } else {

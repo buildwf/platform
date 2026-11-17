@@ -183,7 +183,7 @@ function getIndexHtml(): string {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Void</title>
+    <title>Nosam</title>
   </head>
   <body>
     <div id="root"></div>
@@ -238,7 +238,7 @@ function getHelloRoute(
 
 export const GET = defineHandler(() => {
   return {
-    message: "Hello from Void",
+    message: "Hello from Nosam",
     framework: "${frameworkLabel}",
     database: "${databaseLabel}",
   };
@@ -283,7 +283,7 @@ export const messages = sqliteTable("messages", {
 function getSeedFile(): string {
   return `import { defineSeed } from "void/seed";
 
-const SAMPLE_MESSAGES = ["Hello from Void"];
+const SAMPLE_MESSAGES = ["Hello from Nosam"];
 
 export default defineSeed<typeof import("./schema")>(async ({ db, schema }) => {
   await db.insert(schema.messages).values(
@@ -314,10 +314,10 @@ function getApp(framework: ScaffoldFramework, starterMode: ScaffoldStarterMode):
     <div class="hero">
       <img class="base" src="/stack.svg" width="170" height="179" alt="" />
       <img class="framework" src="/${framework}.svg" alt="${label} logo" />
-      <img class="void" src="/void.svg" alt="Void logo" />
+      <img class="void" src="/void.svg" alt="Nosam logo" />
     </div>
     <div class="starter-intro">
-      <h1 id="welcome-title">Welcome to Void</h1>
+      <h1 id="welcome-title">Welcome to Nosam</h1>
       <div class="starter-description">
 ${indent(description, 8)}
       </div>
@@ -350,7 +350,7 @@ ${indent(description, 8)}
         <use href="/icons.svg#social-icon"></use>
       </svg>
       <h2>Connect with us</h2>
-      <p>Join the Void community</p>
+      <p>Join the Nosam community</p>
       <ul>
         <li>
           <a href="https://github.com/voidzero-dev/void" target="_blank" rel="noreferrer">

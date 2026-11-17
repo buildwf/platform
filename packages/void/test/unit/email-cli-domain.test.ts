@@ -122,7 +122,7 @@ describe('buildCfApiTokenTemplateUrl', () => {
     expect(url.searchParams.get('accountId')).toBe('*');
     expect(url.searchParams.get('zoneId')).toBe('all');
     // The em dash survives the round trip through percent-encoding.
-    expect(url.searchParams.get('name')).toBe('Void email — acme.com');
+    expect(url.searchParams.get('name')).toBe('Nosam email — acme.com');
   });
 });
 

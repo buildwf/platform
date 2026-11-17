@@ -89,8 +89,8 @@ beforeEach(() => {
   vi.spyOn(PlatformCloudflareClient.prototype, 'listHyperdriveConfigs').mockResolvedValue([]);
   mocks.text.mockImplementation(async ({ defaultValue }) => defaultValue ?? '');
   mocks.select.mockImplementation(async ({ message, options }) =>
-    message === 'How should Void set up Hyperdrive?' ||
-    message === 'Which Hyperdrive should Void use?'
+    message === 'How should Nosam set up Hyperdrive?' ||
+    message === 'Which Hyperdrive should Nosam use?'
       ? options[0].value
       : 'workers-dev',
   );
@@ -139,9 +139,9 @@ describe('interactive platform installation prompts', () => {
       cachingDisabled: true,
     });
     mocks.select.mockImplementation(async ({ message }) =>
-      message === 'How should Void set up Hyperdrive?'
+      message === 'How should Nosam set up Hyperdrive?'
         ? 'existing'
-        : message === 'Which Hyperdrive should Void use?'
+        : message === 'Which Hyperdrive should Nosam use?'
           ? 'terraform-id'
           : 'workers-dev',
     );
@@ -154,15 +154,15 @@ describe('interactive platform installation prompts', () => {
       'Existing Hyperdrive company-managed-postgres',
     ]);
     expect(mocks.select).toHaveBeenCalledWith({
-      message: 'How should Void set up Hyperdrive?',
+      message: 'How should Nosam set up Hyperdrive?',
       options: [
         { value: 'existing', label: 'Use an existing Hyperdrive' },
-        { value: 'create', label: 'Let Void create Hyperdrive', hint: 'recommended' },
+        { value: 'create', label: 'Let Nosam create Hyperdrive', hint: 'recommended' },
         { value: 'setup', label: 'Set up a separately managed Hyperdrive' },
       ],
     });
     expect(mocks.select).toHaveBeenCalledWith({
-      message: 'Which Hyperdrive should Void use?',
+      message: 'Which Hyperdrive should Nosam use?',
       options: [
         { value: 'other-id', label: 'another-database', hint: 'other-id' },
         { value: 'terraform-id', label: 'company-managed-postgres', hint: 'terraform-id' },
@@ -436,14 +436,14 @@ describe('interactive platform installation prompts', () => {
     await runPlatformLifecycleCommand(parsePlatformArgs([...args, '--workers-dev']));
 
     expect(mocks.select).toHaveBeenCalledWith({
-      message: 'How should Void set up Hyperdrive?',
+      message: 'How should Nosam set up Hyperdrive?',
       options: [
         { value: 'existing', label: 'Use an existing Hyperdrive' },
         { value: 'setup', label: 'Set up a separately managed Hyperdrive' },
       ],
     });
     expect(mocks.select).toHaveBeenCalledWith({
-      message: 'Which Hyperdrive should Void use?',
+      message: 'Which Hyperdrive should Nosam use?',
       options: [
         {
           value: 'suggested-id',
@@ -461,9 +461,9 @@ describe('interactive platform installation prompts', () => {
     await runPlatformLifecycleCommand(parsePlatformArgs([...args, '--workers-dev']));
 
     expect(mocks.select).toHaveBeenCalledWith({
-      message: 'How should Void set up Hyperdrive?',
+      message: 'How should Nosam set up Hyperdrive?',
       options: [
-        { value: 'create', label: 'Let Void create Hyperdrive', hint: 'recommended' },
+        { value: 'create', label: 'Let Nosam create Hyperdrive', hint: 'recommended' },
         { value: 'setup', label: 'Set up a separately managed Hyperdrive' },
       ],
     });
@@ -480,7 +480,7 @@ describe('interactive platform installation prompts', () => {
     ]);
     const getConfig = vi.spyOn(PlatformCloudflareClient.prototype, 'getHyperdriveConfig');
     mocks.select.mockImplementation(async ({ message }) =>
-      message === 'Which Hyperdrive should Void use?' ? CANCEL_SYMBOL : 'existing',
+      message === 'Which Hyperdrive should Nosam use?' ? CANCEL_SYMBOL : 'existing',
     );
 
     await expect(
@@ -529,8 +529,8 @@ describe('interactive platform installation prompts', () => {
     expect(mocks.text).toHaveBeenCalledWith(
       expect.objectContaining({
         message: 'Platform display name:',
-        placeholder: 'My Team Void',
-        defaultValue: 'My Team Void',
+        placeholder: 'My Team Nosam',
+        defaultValue: 'My Team Nosam',
       }),
     );
   });
@@ -548,7 +548,7 @@ describe('interactive platform installation prompts', () => {
     expect(domainPrompt).not.toHaveProperty('defaultValue');
     for (const [message, suggestion] of [
       ['Cloudflare zone:', 'apps.example.com'],
-      ['Platform display name:', 'team Void'],
+      ['Platform display name:', 'team Nosam'],
     ]) {
       const prompt = mocks.text.mock.calls.find(([input]) => input.message === message)![0];
       expect(prompt).toMatchObject({ placeholder: suggestion, defaultValue: suggestion });
@@ -556,11 +556,11 @@ describe('interactive platform installation prompts', () => {
       expect(prompt.validate('')).toBeUndefined();
     }
     const apiPrompt = mocks.text.mock.calls.find(([input]) =>
-      input.message.startsWith('Where do you want to host the Void Platform API?'),
+      input.message.startsWith('Where do you want to host the Nosam Platform API?'),
     )![0];
     expect(apiPrompt).toMatchObject({
       message:
-        'Where do you want to host the Void Platform API? Leave empty for a workers.dev fallback.',
+        'Where do you want to host the Nosam Platform API? Leave empty for a workers.dev fallback.',
       placeholder: 'apps.example.com',
     });
     expect(apiPrompt).not.toHaveProperty('initialValue');
@@ -570,7 +570,7 @@ describe('interactive platform installation prompts', () => {
       expect.anything(),
       expect.objectContaining({
         zoneName: 'apps.example.com',
-        displayName: 'team Void',
+        displayName: 'team Nosam',
         controlPlaneDomain: '',
       }),
       null,
@@ -587,7 +587,7 @@ describe('interactive platform installation prompts', () => {
     expect(mocks.text).toHaveBeenCalledWith(
       expect.objectContaining({
         message:
-          'Where do you want to host the Void Platform API? Leave empty for a workers.dev fallback.',
+          'Where do you want to host the Nosam Platform API? Leave empty for a workers.dev fallback.',
         placeholder: 'platform.example.com',
       }),
     );
@@ -605,7 +605,7 @@ describe('interactive platform installation prompts', () => {
       parsePlatformArgs([...args, '--application-domain', 'example.com', '--zone', 'example.com']),
     );
     expect(mocks.confirm).toHaveBeenCalledWith({
-      message: 'Dedicate all unmatched example.com traffic to Void apps?',
+      message: 'Dedicate all unmatched example.com traffic to Nosam apps?',
       initialValue: false,
     });
     expect(mocks.plan).toHaveBeenCalledWith(

@@ -530,7 +530,7 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
     expect(new URL((workerFetch.mock.calls[1]![0] as Request).url).pathname).toBe('/index.html');
   });
 
-  it('does not re-dispatch Void app handler 404s without the generated no-match marker', async () => {
+  it('does not re-dispatch Nosam app handler 404s without the generated no-match marker', async () => {
     const { env, workerFetch } = createWorkerEnv({
       routing: {
         workerName: 'void-worker',
@@ -553,7 +553,7 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
     expect(res.headers.get('X-Void-No-Match')).toBeNull();
   });
 
-  it('re-dispatches Void app generated no-match 404s', async () => {
+  it('re-dispatches Nosam app generated no-match 404s', async () => {
     const { env, workerFetch } = createWorkerEnv({
       routing: {
         workerName: 'void-worker',

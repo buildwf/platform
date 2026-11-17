@@ -1,11 +1,11 @@
 ---
-description: 'Void detects the Cloudflare resources your code uses and provisions the matching bindings. Manual configuration is optional.'
+description: 'Nosam detects the Cloudflare resources your code uses and provisions the matching bindings. Manual configuration is optional.'
 outline: deep
 ---
 
 # Resource Inference
 
-Void automatically detects which Cloudflare resources your project uses by scanning source files at startup. In most cases, there is no manual configuration. Use a resource in code, and Void provisions the matching binding for local development.
+Nosam automatically detects which Cloudflare resources your project uses by scanning source files at startup. In most cases, there is no manual configuration. Use a resource in code, and Nosam provisions the matching binding for local development.
 
 ## Detected Bindings
 
@@ -31,7 +31,7 @@ Durable state is inferred from files in `durable-objects/`. For example, `durabl
 
 ## Scanned Directories
 
-Void apps scan these directories by default. With [`sourceDir`](./config.md#sourcedir) configured, Void scans that source tree instead:
+Nosam apps scan these directories by default. With [`sourceDir`](./config.md#sourcedir) configured, Nosam scans that source tree instead:
 
 | Directory     | Contains               |
 | ------------- | ---------------------- |
@@ -47,7 +47,7 @@ Void apps scan these directories by default. With [`sourceDir`](./config.md#sour
 Regardless of mode, these are always checked:
 
 - **Application source** in `src/` or your configured `sourceDir`, including resource and auth imports
-- **`durable-objects/`**, which is scanned for typed Durable Object state modules in native Void apps
+- **`durable-objects/`**, which is scanned for typed Durable Object state modules in native Nosam apps
 
 ## Custom Scan Directories
 

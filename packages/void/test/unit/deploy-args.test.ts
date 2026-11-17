@@ -140,9 +140,9 @@ describe('parseDeployArgs', () => {
     );
   });
 
-  it('explains that Cloudflare resolves no Void project', () => {
+  it('explains that Cloudflare resolves no Nosam project', () => {
     expect(() => parseDeployArgs(['--platform', 'cloudflare', '--project', 'foo'])).toThrow(
-      /--project is not supported with --platform cloudflare.*no Void project is involved/,
+      /--project is not supported with --platform cloudflare.*no Nosam project is involved/,
     );
   });
 

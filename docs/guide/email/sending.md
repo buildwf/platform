@@ -1,11 +1,11 @@
 ---
-description: 'Send transactional email with sendEmail. Void captures messages in a local inbox during development.'
+description: 'Send transactional email with sendEmail. Nosam captures messages in a local inbox during development.'
 outline: deep
 ---
 
 # Sending Email
 
-Use `sendEmail` to send transactional email. During development, Void captures messages in a local inbox.
+Use `sendEmail` to send transactional email. During development, Nosam captures messages in a local inbox.
 
 ```ts
 import { sendEmail } from 'void/email';
@@ -68,25 +68,25 @@ For mail to arbitrary users, [register your own domain](./domains.md#your-own-do
 
 ## Options {#options}
 
-| Option           | Type                          | Notes                                                                                                           |
-| ---------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `from`           | `string \| { email, name? }`  | Optional. Pinned to the project sender — see below.                                                             |
-| `to`             | `Address \| Address[]`        | Required. One or more recipients.                                                                               |
-| `subject`        | `string`                      | Required. UTF-8 supported (encoded as RFC 2047).                                                                |
-| `text`           | `string`                      | At least one of `text` / `html` is required.                                                                    |
-| `html`           | `string`                      | Sent as `multipart/alternative` if both are provided.                                                           |
-| `replyTo`        | `Address`                     | Optional `Reply-To` header.                                                                                     |
-| `cc`, `bcc`      | `Address \| Address[]`        | Optional. Each recipient is sent its own message envelope.                                                      |
-| `headers`        | `Record<string, string>`      | Custom headers; reserved headers (From, Date, etc.) are ignored.                                                |
-| `threading`      | `{ inReplyTo?, references? }` | Optional. Threads the email under an earlier message. See [Reply later](#reply-later).                          |
-| `attachments`    | `Attachment[]`                | See [Attachments](#attachments).                                                                                |
-| `idempotencyKey` | `string`                      | Optional on the Void Platform: 1–128 printable, non-space ASCII characters. Reuse for retries of the same send. |
+| Option           | Type                          | Notes                                                                                                            |
+| ---------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `from`           | `string \| { email, name? }`  | Optional. Pinned to the project sender — see below.                                                              |
+| `to`             | `Address \| Address[]`        | Required. One or more recipients.                                                                                |
+| `subject`        | `string`                      | Required. UTF-8 supported (encoded as RFC 2047).                                                                 |
+| `text`           | `string`                      | At least one of `text` / `html` is required.                                                                     |
+| `html`           | `string`                      | Sent as `multipart/alternative` if both are provided.                                                            |
+| `replyTo`        | `Address`                     | Optional `Reply-To` header.                                                                                      |
+| `cc`, `bcc`      | `Address \| Address[]`        | Optional. Each recipient is sent its own message envelope.                                                       |
+| `headers`        | `Record<string, string>`      | Custom headers; reserved headers (From, Date, etc.) are ignored.                                                 |
+| `threading`      | `{ inReplyTo?, references? }` | Optional. Threads the email under an earlier message. See [Reply later](#reply-later).                           |
+| `attachments`    | `Attachment[]`                | See [Attachments](#attachments).                                                                                 |
+| `idempotencyKey` | `string`                      | Optional on the Nosam Platform: 1–128 printable, non-space ASCII characters. Reuse for retries of the same send. |
 
 You can send to at most 50 recipients across `to`, `cc`, and `bcc`. Use standard email addresses with ASCII local parts, and punycode for internationalized domains.
 
 `Address` accepts either a string (`"hello@acme.dev"` or `"Name <hello@acme.dev>"`) or an object (`{ email, name? }`). Unicode display names are supported.
 
-On the platform the sender is pinned to your project. `from` must be your project's own platform address — `<project-slug>@<mail-domain>` or `<project-slug>+<tag>@<mail-domain>`, optionally with a display name — or any address on a domain registered with `void email domain add` (see [Your own domain on the platform](./domains.md#your-own-domain-on-the-platform)). For example, if your platform's mail domain is `mail.example.com`, you can use `Acme <acme+noreply@mail.example.com>`. Anything else is rejected with `INVALID_FROM`. Omit `from` and Void fills in `<project-slug>+noreply@<mail-domain>` for you. If the project owner set an [email alias](../../reference/cli/email.md#void-email-alias), `<alias>@<mail-domain>` and `<alias>+<tag>@<mail-domain>` are accepted too; the default stays the slug address.
+On the platform the sender is pinned to your project. `from` must be your project's own platform address — `<project-slug>@<mail-domain>` or `<project-slug>+<tag>@<mail-domain>`, optionally with a display name — or any address on a domain registered with `void email domain add` (see [Your own domain on the platform](./domains.md#your-own-domain-on-the-platform)). For example, if your platform's mail domain is `mail.example.com`, you can use `Acme <acme+noreply@mail.example.com>`. Anything else is rejected with `INVALID_FROM`. Omit `from` and Nosam fills in `<project-slug>+noreply@<mail-domain>` for you. If the project owner set an [email alias](../../reference/cli/email.md#void-email-alias), `<alias>@<mail-domain>` and `<alias>+<tag>@<mail-domain>` are accepted too; the default stays the slug address.
 
 On your own Cloudflare account, `from` defaults to `email.from` from `void.config.ts` and must be on a domain your account can send from; Cloudflare rejects any other sender and `sendEmail` reports it as `INVALID_FROM`.
 
@@ -157,7 +157,7 @@ await sendEmail({
 });
 ```
 
-Void infers `contentType` from the filename if you omit it. An explicit value must be a valid media type. `contentId` names the image referenced by `cid:<id>` in HTML; use an ID such as `logo` or `logo@acme.dev`. The encoded message is limited to 5 MiB and custom headers to 16 KiB. Invalid attachment fields or oversized messages return `MIME_ERROR`.
+Nosam infers `contentType` from the filename if you omit it. An explicit value must be a valid media type. `contentId` names the image referenced by `cid:<id>` in HTML; use an ID such as `logo` or `logo@acme.dev`. The encoded message is limited to 5 MiB and custom headers to 16 KiB. Invalid attachment fields or oversized messages return `MIME_ERROR`.
 
 ## Result and errors {#result-and-errors}
 
@@ -212,7 +212,7 @@ During local development, sends are captured to an in-memory inbox instead of go
 
 Open a message to preview its HTML, inspect attachments, or download it as an `.eml` file.
 
-Every inbox route requires a local access token. Void includes it in the printed inbox URL and browser links. For command-line requests, send it in the `x-void-dev-trigger` header as shown below; requests without it return `401`. The token is stored in `.void/dev-trigger-token`. Treat inbox URLs as credentials, especially when exposing your dev server to a network.
+Every inbox route requires a local access token. Nosam includes it in the printed inbox URL and browser links. For command-line requests, send it in the `x-void-dev-trigger` header as shown below; requests without it return `401`. The token is stored in `.void/dev-trigger-token`. Treat inbox URLs as credentials, especially when exposing your dev server to a network.
 
 ```bash
 # download a message as .eml
@@ -226,7 +226,7 @@ curl -X DELETE http://localhost:5173/__void/inbox \
 
 The inbox keeps the most recent 100 messages through HMR and clears on a full server restart.
 
-The dev inbox works in Void apps. Use `createEmailTestHarness` from `void/email/testing` to capture sends in tests. If a configured inbox cannot be reached, `sendEmail` returns `UPSTREAM_ERROR` without sending.
+The dev inbox works in Nosam apps. Use `createEmailTestHarness` from `void/email/testing` to capture sends in tests. If a configured inbox cannot be reached, `sendEmail` returns `UPSTREAM_ERROR` without sending.
 
 Remove the deprecated `sendInDev` option to use the local inbox. Deploy the app to test real delivery.
 

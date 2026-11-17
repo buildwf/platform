@@ -239,7 +239,7 @@ syncBuiltinESMExports();
 `,
     );
     const versionId = '11111111-1111-4111-8111-111111111111';
-    const message = 'Void automatic rollback after readiness failed.';
+    const message = 'Nosam automatic rollback after readiness failed.';
     const output = await runOperation(
       directory,
       {

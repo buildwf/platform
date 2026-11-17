@@ -4,7 +4,7 @@ description: 'Prepare a built app, SPA, or static site for a managed platform de
 
 # Deployment artifacts
 
-Use `void/deploy` from Node.js to prepare a built Void app, SPA, or static site for a managed platform deployment without platform credentials.
+Use `void/deploy` from Node.js to prepare a built Nosam app, SPA, or static site for a managed platform deployment without platform credentials.
 
 Build the app in managed mode inside its isolated environment:
 
@@ -29,7 +29,7 @@ Run preparation inside the same isolated environment as the app build. App confi
 ## Cloudflare Build Output
 
 ::: warning Experimental
-`prepareCfBuildOutput` follows Cloudflare's draft Build Output format. Its options and the prepared directory can change between Void releases.
+`prepareCfBuildOutput` follows Cloudflare's draft Build Output format. Its options and the prepared directory can change between Nosam releases.
 :::
 
 Use `prepareCfBuildOutput` to prepare an existing Worker build for Cloudflare publication:

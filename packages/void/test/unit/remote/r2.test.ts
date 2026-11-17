@@ -466,7 +466,7 @@ describe('ProxyR2Bucket', () => {
       mockFetch({ objects: [], truncated: false, cursor: null });
 
       await expect(new ProxyR2Bucket(createClient(), 'STORAGE').list(options)).rejects.toThrow(
-        'got no answer from a current project deployment. The deployment uses an older Void version, or the platform could not reach it. Retry.',
+        'got no answer from a current project deployment. The deployment uses an older Nosam version, or the platform could not reach it. Retry.',
       );
     });
 

@@ -32,7 +32,7 @@ export function voidSecretDraftVersion(): Record<string, unknown> & {
   };
 }
 
-/** Sanitized shape of the placeholder that Void's transport uploads and deploys in one request. */
+/** Sanitized shape of the placeholder that Nosam's transport uploads and deploys in one request. */
 export function apiSecretDraftVersion(): ReturnType<typeof voidSecretDraftVersion> {
   return {
     ...voidSecretDraftVersion(),

@@ -68,7 +68,7 @@ the browser admin UI. Another administrator must still have access. Automatic
 usage limits do not remove administrator access and do not count as a manual
 suspension.
 
-When removing another administrator, Void revokes their administrator access
+When removing another administrator, Nosam revokes their administrator access
 before changing application traffic or deleting resources. If cleanup fails,
 access stays revoked and the error describes the partial result. A remaining
 administrator can inspect it and retry cleanup.

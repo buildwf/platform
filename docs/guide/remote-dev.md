@@ -1,11 +1,11 @@
 ---
-description: 'Run local code against a project already deployed to your Void platform, including its database and storage.'
+description: 'Run local code against a project already deployed to your Nosam platform, including its database and storage.'
 outline: deep
 ---
 
 # Remote Development
 
-Void normally uses local D1, KV, and R2 through [Miniflare](https://miniflare.dev/). Remote mode lets you run local code against a project deployed to your Void platform, for example to test with existing data or investigate an issue.
+Nosam normally uses local D1, KV, and R2 through [Miniflare](https://miniflare.dev/). Remote mode lets you run local code against a project deployed to your Nosam platform, for example to test with existing data or investigate an issue.
 
 Calls such as `db.select()` and `env.KV.get()` use the deployed resources without changing your application code. Writes affect real data, so use a staging project when possible.
 

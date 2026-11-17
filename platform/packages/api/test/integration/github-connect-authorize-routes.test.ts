@@ -239,7 +239,7 @@ describe('GET /github/connect-authorize-url', () => {
     expect(state.redirect).toBe(redirect);
     expect(typeof state.exp).toBe('number');
     expect((state.exp as number) > Date.now()).toBe(true);
-    // The crux: state carries NO Void user id (the bind is deferred to redemption).
+    // The crux: state carries NO Nosam user id (the bind is deferred to redemption).
     expect('userId' in state).toBe(false);
   });
 

@@ -284,7 +284,7 @@ export default defineRoom({
   }, 30_000);
 
   it(
-    'carries explicit names through a public Void plugin build into the running Worker',
+    'carries explicit names through a public Nosam plugin build into the running Worker',
     async () => {
       directory = mkdtempSync(join(tmpdir(), 'void-named-resource-plugin-'));
       mkdirSync(join(directory, 'durable-objects'));

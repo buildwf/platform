@@ -17,7 +17,7 @@ import {
  * The platform resolves the asset routing policy out-of-band (`resolveAssetConfig`
  * → `manifest.assetConfig`) and applies it to the uploaded script, so settings the
  * Vite plugin cannot safely write into the built wrangler config — `routing.notFound`
- * for a Class A framework, which needs an `assets` policy Void does not own there —
+ * for a Class A framework, which needs an `assets` policy Nosam does not own there —
  * are still honored on this path. `void:framework-build-wrapper` warns about exactly
  * those when this flag is ABSENT, i.e. on a self-hosted `vite build && wrangler deploy`.
  *
@@ -60,7 +60,7 @@ const DEPLOY_CONFIG_OVERRIDE_ENV_VARS = [
 
 /**
  * The dotenv files wrangler loads into `process.env` (`override: true`) when no
- * `--env` is named (`getDefaultEnvFiles("")`). Void runs its deploy steps through the
+ * `--env` is named (`getDefaultEnvFiles("")`). Nosam runs its deploy steps through the
  * `cf` CLI, not wrangler, but this set is kept for a user who runs `wrangler deploy` on
  * the same config. It also covers the `.env` / `.env.local` files `cf` reads. A repo
  * dotenv here would bring back `WRANGLER_CI_OVERRIDE_NAME` after the child-env scrub
@@ -213,8 +213,8 @@ export function deployChildEnv(
   // ambient value cannot shadow the pin on win32.
   deleteEnvVarCaseAware(env, 'WRANGLER_LOG');
   env.WRANGLER_LOG = 'log';
-  // Void owns the browser OAuth lifecycle. Never allow Wrangler to fall back to
-  // its plaintext credential file while a Void command is using that session.
+  // Nosam owns the browser OAuth lifecycle. Never allow Wrangler to fall back to
+  // its plaintext credential file while a Nosam command is using that session.
   env.CLOUDFLARE_AUTH_USE_KEYRING = 'true';
   return env;
 }

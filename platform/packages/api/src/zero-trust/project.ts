@@ -163,7 +163,7 @@ async function reconcilePublicProjectLocked(
     {
       name: current.bypass_application_name,
       destinations: platformDestinations,
-      policies: bypassPolicy('Void project is public'),
+      policies: bypassPolicy('Nosam project is public'),
     },
     projectApplicationReference(current, 'bypass'),
   );
@@ -180,7 +180,7 @@ async function reconcilePublicProjectLocked(
       {
         name: current.protected_application_name,
         destinations: customDestinations,
-        policies: bypassPolicy('Void project is public'),
+        policies: bypassPolicy('Nosam project is public'),
       },
       projectApplicationReference(current, 'protected'),
     );
@@ -365,7 +365,7 @@ async function ensureProjectBypassLocked(
     {
       name: row.bypass_application_name,
       destinations: destinations.platform,
-      policies: bypassPolicy('Void project is public'),
+      policies: bypassPolicy('Nosam project is public'),
     },
     projectApplicationReference(row, 'bypass'),
   );

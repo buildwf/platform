@@ -1,11 +1,11 @@
 ---
-description: 'Connect GitHub so pushes build and deploy, whichever way you signed in to Void.'
+description: 'Connect GitHub so pushes build and deploy, whichever way you signed in to Nosam.'
 outline: deep
 ---
 
 # GitHub and Builds {#github}
 
-Deploy-on-GitHub works from **any** Void login — Google, GitHub, or other SSO. The first time you connect GitHub, Void links your GitHub identity to your current account (a one-time step, independent of how you logged in); it never creates a second account.
+Deploy-on-GitHub works from **any** Nosam login — Google, GitHub, or other SSO. The first time you connect GitHub, Nosam links your GitHub identity to your current account (a one-time step, independent of how you logged in); it never creates a second account.
 
 Project-scoped `github` and `build` commands resolve the project in the same order as deploy: the `[project]` argument or `--project`, then `VOID_PROJECT`, then the linked project (`.void/project.json`).
 
@@ -15,10 +15,10 @@ Project-scoped `github` and `build` commands resolve the project in the same ord
 void github link
 ```
 
-Link your signed-in Void account to GitHub through your browser. `void github install` does this automatically when needed.
+Link your signed-in Nosam account to GitHub through your browser. `void github install` does this automatically when needed.
 
 ::: warning Existing GitHub sign-in
-A GitHub identity can belong to only one Void account. If it is already linked elsewhere, sign in to that Void account or authorize a different GitHub identity.
+A GitHub identity can belong to only one Nosam account. If it is already linked elsewhere, sign in to that Nosam account or authorize a different GitHub identity.
 :::
 
 ## `void github install` {#void-github-install}
@@ -45,7 +45,7 @@ void github join
 
 Join an existing organization installation through your browser. `void github connect` can do this automatically in an interactive terminal. Run `join` locally before non-interactive setup when needed.
 
-Requires a signed-in Void account and organization-installation sharing enabled by your platform. Use `void github installations` to find the installation ID.
+Requires a signed-in Nosam account and organization-installation sharing enabled by your platform. Use `void github installations` to find the installation ID.
 
 ## `void github connect` {#void-github-connect}
 
@@ -53,7 +53,7 @@ Requires a signed-in Void account and organization-installation sharing enabled 
 void github connect [project] [options]
 ```
 
-Connect a GitHub repository to a Void project for automatic deploys. On every push to the configured branch, Void builds and deploys your project automatically.
+Connect a GitHub repository to a Nosam project for automatic deploys. On every push to the configured branch, Nosam builds and deploys your project automatically.
 
 The CLI opens your browser when it needs GitHub authorization. If no installation is available, run `void github install`.
 

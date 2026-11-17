@@ -1,7 +1,7 @@
 # @voidcloud/dashboard
 
-Optional authentication frontend for a Void platform, built as a React SPA
-with Void server routes. The administrator UI is served by the API Worker.
+Optional authentication frontend for a Nosam platform, built as a React SPA
+with Nosam server routes. The administrator UI is served by the API Worker.
 
 ## Architecture
 
@@ -91,7 +91,7 @@ Replace the copied `cloudflare` configuration with your deployment settings:
 From the repository root, run `vp install` and `vp run build:core`. Configure the
 API’s accepted dashboard origin using the
 [optional dashboard instructions](../../../docs/guide/platform/installation/domains.md#optional-dashboard).
-Then deploy from the copied app directory with the public Void CLI:
+Then deploy from the copied app directory with the public Nosam CLI:
 
 ```sh
 vp exec void deploy --platform cloudflare
@@ -110,7 +110,7 @@ lib/
 ui/
   components/               # Dashboard header and footer
   styles/                   # Design tokens, reset, and shell styles
-  assets/                   # Void logos and bundled social icons
+  assets/                   # Nosam logos and bundled social icons
   fonts/                    # APK Protocol, KH Teka Mono, and Inter
 middleware/
   01.auth.ts                # void_token validation through /me

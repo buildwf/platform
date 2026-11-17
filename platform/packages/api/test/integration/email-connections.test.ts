@@ -3082,7 +3082,7 @@ describe('durable zone email connections', () => {
 });
 
 describe('outbound-only email domains', () => {
-  // Microsoft 365 / Google Workspace keep the apex MX; Void only onboards Email Sending.
+  // Microsoft 365 / Google Workspace keep the apex MX; Nosam only onboards Email Sending.
   const FOREIGN_MX = { 'outbound.example.com': ['brand-example.mail.protection.outlook.com'] };
   const INBOUND_TAGS = [
     'mxLookup',

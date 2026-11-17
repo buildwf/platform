@@ -622,7 +622,7 @@ export function routingPlugin(
                   consumer: 'server' as const,
                   dev: {
                     createEnvironment: (name: string, config: ResolvedConfig) =>
-                      // Void invalidates it on saves; no HMR client to run.
+                      // Nosam invalidates it on saves; no HMR client to run.
                       createRunnableDevEnvironment(name, config, {
                         hot: false,
                         runnerOptions: { hmr: false },
@@ -788,7 +788,7 @@ export function routingPlugin(
     },
 
     hotUpdate() {
-      // Void invalidates this environment itself; Vite's update pass would
+      // Nosam invalidates this environment itself; Vite's update pass would
       // only log a page reload that nothing receives.
       if (this.environment.name === AUTH_CONFIG_ENVIRONMENT) {
         return [];

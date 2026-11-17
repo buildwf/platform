@@ -14,7 +14,7 @@ export function safePositional(value: unknown): value is string {
   );
 }
 
-/** Accept only Cloudflare's hex-segment D1 Time Travel bookmarks; Void prints them as commands to copy. */
+/** Accept only Cloudflare's hex-segment D1 Time Travel bookmarks; Nosam prints them as commands to copy. */
 export function isD1Bookmark(value: unknown): value is string {
   return typeof value === 'string' && /^[0-9a-f]+(?:-[0-9a-f]+)+$/i.test(value);
 }

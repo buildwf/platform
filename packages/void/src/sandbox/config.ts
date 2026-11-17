@@ -20,7 +20,7 @@ export type SandboxInstanceType =
 export type SandboxConfig = {
   /**
    * Name of a `durable-objects/` module whose class owns the container, e.g. `bot` for
-   * `durable-objects/bot.ts`. Void attaches the image to that class instead of generating
+   * `durable-objects/bot.ts`. Nosam attaches the image to that class instead of generating
    * `SandboxV1`. Native Cloudflare deploys only.
    */
   durableObject?: string;
@@ -45,7 +45,7 @@ export type ResolvedSandboxConfig = {
   instanceType?: SandboxInstanceType;
 };
 
-/** True when the container is attached to the app's own Durable Object, not Void's `SandboxV1`. */
+/** True when the container is attached to the app's own Durable Object, not Nosam's `SandboxV1`. */
 export function isSandboxAttached(
   sandbox: Pick<ResolvedSandboxConfig, 'durableObject'> | undefined,
 ): boolean {

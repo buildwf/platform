@@ -23,7 +23,7 @@ export const githubSubcommands: Array<SubcommandDef> = [
     arg: '[project]',
     description: 'Disconnect a project from its GitHub repository',
   },
-  { name: 'link', description: 'Link your GitHub account to Void' },
+  { name: 'link', description: 'Link your GitHub account to Nosam' },
   { name: 'join', description: "Join your organization's shared GitHub App installations" },
 ];
 

@@ -12,7 +12,7 @@ vp run --filter ./playground/server-auth-errors dev
 other modes redirect to `/login` (a returned redirect, a thrown `302` from
 `src/require-page-user.ts`, and `requireAuth` with `throwRedirect`). `POST /api/demo-login` signs
 in as the demo user, creating the account on first use; `GET /api/profile` requires that session.
-The app uses Void's auth and local D1; dev creates the auth tables automatically.
+The app uses Nosam's auth and local D1; dev creates the auth tables automatically.
 
 ## Tests
 

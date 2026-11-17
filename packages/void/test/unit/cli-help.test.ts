@@ -205,7 +205,7 @@ describe('rendered help advertises the flags the parser honours', () => {
     expect(page).not.toContain('--platform');
   });
 
-  // `status` / `setup` read the local project + wrangler session, never a Void project,
+  // `status` / `setup` read the local project + wrangler session, never a Nosam project,
   // so their pages carry `--platform cloudflare` and no `--project`.
   it('shows --platform cloudflare, and no --project, on `email status` and `email setup`', () => {
     for (const sub of ['status', 'setup']) {

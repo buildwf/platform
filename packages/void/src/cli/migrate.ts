@@ -93,7 +93,7 @@ function isOrphanedCompatibilityConfig(
   }
 }
 
-/** Move Void and Cloudflare JSON/JSONC settings into a typed, checked-in project config. */
+/** Move Nosam and Cloudflare JSON/JSONC settings into a typed, checked-in project config. */
 export function migrateLegacyVoidConfig(root: string): boolean {
   const legacyPath = join(root, LEGACY_FILE);
   const wranglerFiles = ['wrangler.jsonc', 'wrangler.json'].filter((name) =>

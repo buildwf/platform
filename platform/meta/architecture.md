@@ -1,12 +1,12 @@
 # Platform architecture
 
-The Void platform runs in an operator's Cloudflare account. Developers connect
+The Nosam platform runs in an operator's Cloudflare account. Developers connect
 the CLI to that installation, sign in, and deploy applications into its Workers
 for Platforms namespace. Each installation owns its resources and its
 PostgreSQL database.
 
 For installation steps and the supported feature set, read
-[Self-host a Void platform](../../docs/guide/self-hosted-platform.md). For
+[Self-host a Nosam platform](../../docs/guide/self-hosted-platform.md). For
 administration commands, read
 [Platform Administration](../../docs/guide/platform-administration.md).
 

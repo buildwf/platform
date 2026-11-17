@@ -227,7 +227,7 @@ export async function promptDeployProjectConfig(
       'Projects with reader access are hidden from deploy selection. Ask a project admin or owner to grant collaborator access to deploy to them.',
     );
   }
-  const action = await promptProjectSetupAction('Set up a Void project for deploy:', {
+  const action = await promptProjectSetupAction('Set up a Nosam project for deploy:', {
     includeLink: deployableProjects.length > 0,
     ...(link ? {} : { link: false }),
   });
@@ -272,11 +272,11 @@ export function resolveStaticBuildCommand(
 }
 
 /**
- * Resolve the build command for a FULL Void app deploy.
+ * Resolve the build command for a FULL Nosam app deploy.
  *
  * `inference.build` wins when set, matching the static
  * path's `resolveStaticBuildCommand`, so an app that needs more than one build
- * step (an SSG that emits the site, then Void's build packaging it via
+ * step (an SSG that emits the site, then Nosam's build packaging it via
  * `publicDir` alongside the worker) can express it.
  *
  * The two returned strings are deliberately different for the FALLBACK: `label`

@@ -219,7 +219,7 @@ function stripSlugFromAddress(address: string, slug: string | undefined): string
 function replyTooLarge(size: number): MimeError {
   return new MimeError(
     'MIME_ERROR',
-    `reply: message size ${size} bytes exceeds Void's sending limit of ${MAX_REPLY_BYTES} bytes.`,
+    `reply: message size ${size} bytes exceeds Nosam's sending limit of ${MAX_REPLY_BYTES} bytes.`,
   );
 }
 
@@ -596,7 +596,7 @@ export function createMessageProxy(
             throw new MimeError(
               'MIME_ERROR',
               'reply: expected { from, to, raw } with raw as a Uint8Array or ReadableStream. ' +
-                'A native EmailMessage cannot be replayed from a Void handler — its body has ' +
+                'A native EmailMessage cannot be replayed from a Nosam handler — its body has ' +
                 'no public accessor. Use replyEmail() from void/email, or pass the MIME bytes as raw.',
             );
           }
@@ -814,7 +814,7 @@ export async function buildReplyMessage(
         throw new Error(
           "replyEmail: 'from' is required when __VOID_PROJECT_SLUG is set " +
             'but __VOID_EMAIL_DOMAIN is not. Set `from` explicitly, or deploy ' +
-            'via Void so the platform-injected __VOID_PROJECT_SLUG and ' +
+            'via Nosam so the platform-injected __VOID_PROJECT_SLUG and ' +
             '__VOID_EMAIL_DOMAIN can default it to <slug>+noreply@<domain>.',
         );
       }

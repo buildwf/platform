@@ -24,7 +24,7 @@ export function parseConnectArgs(args: Array<string>): ConnectArgs {
     throw new Error('connect: --platform must be cloudflare or void.');
   }
   if (platform === 'cloudflare' && (positionals.length > 0 || values['no-login'])) {
-    throw new Error('connect: A URL and --no-login are only supported for Void platforms.');
+    throw new Error('connect: A URL and --no-login are only supported for Nosam platforms.');
   }
   return { url: positionals[0] ?? '', platform, noLogin: values['no-login'] ?? false };
 }

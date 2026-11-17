@@ -146,7 +146,7 @@ describe('platform human session revocation', () => {
     expect((await proxyCheck()).status).toBe(403);
   });
 
-  it('rejects a different employee presenting another employee’s otherwise valid Void session', async () => {
+  it('rejects a different employee presenting another employee’s otherwise valid Nosam session', async () => {
     await env.db.update(platformAuthSettings).set({
       protection: {
         teamDomain: 'https://company.cloudflareaccess.com',

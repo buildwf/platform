@@ -1,7 +1,7 @@
 {
   "name": "@void/deploy-core",
   "version": "1.9.1",
-  "description": "Shared deployment contracts, manifests, and resource plans for Void.",
+  "description": "Shared deployment contracts, manifests, and resource plans for Nosam.",
   "homepage": "https://void.cloud",
   "bugs": {
     "url": "https://github.com/voidzero-dev/void/issues"

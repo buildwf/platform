@@ -51,7 +51,7 @@ import {
   rpcData,
 } from './helpers.ts';
 
-// Hosted Void Cloud does not set PLATFORM_AUTH_DATABASE_UNCACHED. Nothing here may
+// Hosted Nosam Cloud does not set PLATFORM_AUTH_DATABASE_UNCACHED. Nothing here may
 // depend on it.
 let env: TestEnv;
 let token: string;

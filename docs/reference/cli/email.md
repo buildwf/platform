@@ -7,7 +7,7 @@ outline: deep
 
 Inspect email usage and manage the recipients a project is allowed to send to. See [Email](../../guide/email.md) for the runtime API.
 
-Project resolution for email commands follows the same order as deploy (`--project`, `VOID_PROJECT`, linked project). `void email setup` and `void email status --platform cloudflare` are the exception: they act on your own Cloudflare account through your Cloudflare sign-in (`void cloudflare login`) and need no Void project.
+Project resolution for email commands follows the same order as deploy (`--project`, `VOID_PROJECT`, linked project). `void email setup` and `void email status --platform cloudflare` are the exception: they act on your own Cloudflare account through your Cloudflare sign-in (`void cloudflare login`) and need no Nosam project.
 
 ## `void email usage` {#void-email-usage}
 
@@ -39,7 +39,7 @@ List the project's recipient addresses and their state (`verified`, `pending`, o
 void email allow <address> [--project <name>]
 ```
 
-Add one recipient to the project's destination list. Cloudflare emails that address a verification link — the recipient clicks it, with no Void or Cloudflare account required. Then run `void email destinations`: the listing is what records the click, and until it has, a send to that address returns `UNVERIFIED_DESTINATION` for that recipient. If the link did not arrive or has expired, run `void email allow <address>` again while the address is still pending — the CLI re-sends the link, or tells you how to get a fresh one.
+Add one recipient to the project's destination list. Cloudflare emails that address a verification link — the recipient clicks it, with no Nosam or Cloudflare account required. Then run `void email destinations`: the listing is what records the click, and until it has, a send to that address returns `UNVERIFIED_DESTINATION` for that recipient. If the link did not arrive or has expired, run `void email allow <address>` again while the address is still pending — the CLI re-sends the link, or tells you how to get a fresh one.
 
 The project owner's email is added automatically when the project is created, so it skips this step but not the verification: unless Cloudflare already had it verified for an earlier project of yours, click the link it mailed and run `void email destinations`; until then a send to yourself returns `UNVERIFIED_DESTINATION` for that recipient.
 
@@ -64,7 +64,7 @@ As the project owner, run `void email alias acme` to send and receive at `acme@<
 
 An alias is permanent and reserved until the project is deleted. The original slug address keeps working. The CLI asks for confirmation; use `--yes` in scripts and CI.
 
-Before sharing the alias, redeploy with the current Void version so handlers receive the expected `message.to` address. Inbound mail starts when the project's `email/` handlers and recipient rule are ready; run `void email alias` to check.
+Before sharing the alias, redeploy with the current Nosam version so handlers receive the expected `message.to` address. Inbound mail starts when the project's `email/` handlers and recipient rule are ready; run `void email alias` to check.
 
 ## `void email domain` {#void-email-domain}
 
@@ -72,7 +72,7 @@ Before sharing the alias, redeploy with the current Void version so handlers rec
 void email domain <add|status|list|sync|rotate-secret|remove> [<domain>] [--project <name>]
 ```
 
-Send and receive at your own domain on a Cloudflare zone you own, registered to the project. Void platform only — on your own Cloudflare account the mail domain comes from `email.from` instead (see `void email setup`). The walkthrough is [Your own domain on the platform](../../guide/email/domains.md#your-own-domain-on-the-platform).
+Send and receive at your own domain on a Cloudflare zone you own, registered to the project. Nosam platform only — on your own Cloudflare account the mail domain comes from `email.from` instead (see `void email setup`). The walkthrough is [Your own domain on the platform](../../guide/email/domains.md#your-own-domain-on-the-platform).
 
 ### `void email domain add` {#void-email-domain-add}
 
@@ -130,7 +130,7 @@ void email status --platform cloudflare
 
 Check the domain configured in `email.from`: permissions, DNS, routing, sending, handler addresses, and the email binding. Exits unsuccessfully when setup is incomplete. Workers Free setup can be ready with sending limited to verified destinations; run `void email setup --platform cloudflare` after upgrading to Workers Paid.
 
-`void email status` reads only your own Cloudflare account, so `--platform cloudflare` is required. On the Void platform, use `void email usage` and `void email destinations`.
+`void email status` reads only your own Cloudflare account, so `--platform cloudflare` is required. On the Nosam platform, use `void email usage` and `void email destinations`.
 
 ## `void email setup` {#void-email-setup}
 
@@ -140,6 +140,6 @@ void email setup --platform cloudflare
 
 Set up email before deploying from CI. Requires `email.from` in `void.config.ts`, an interactive terminal, and Cloudflare email permissions.
 
-Void shows the planned DNS, routing, plus-addressing, and sending changes and asks before applying them. Commit `void.lock.json`, then run `void deploy --platform cloudflare --require-email` in CI.
+Nosam shows the planned DNS, routing, plus-addressing, and sending changes and asks before applying them. Commit `void.lock.json`, then run `void deploy --platform cloudflare --require-email` in CI.
 
 On Workers Free, inbound mail and sends to verified recipients remain available. Run this command again after upgrading to Workers Paid to enable arbitrary recipients. See [Email setup](../../guide/email/domains.md#your-own-cloudflare-account).

@@ -27,7 +27,7 @@ export async function runProjectCommand(root: string, args: ProjectArgs): Promis
   if (args.subcommand === 'token') {
     if (cloudflare) {
       throw new Error(
-        'project: CI deploy credentials are available only for Void platform projects.',
+        'project: CI deploy credentials are available only for Nosam platform projects.',
       );
     }
     const { runProjectTokenCommand } = await import('./project-token.ts');
@@ -43,7 +43,7 @@ export async function runProjectCommand(root: string, args: ProjectArgs): Promis
       args.action === 'pending' || args.action === 'accept' || args.action === 'decline';
     if (cloudflare && !accountInvitationAction) {
       throw new Error(
-        'project: Teams are available only for projects hosted on a Void platform, not direct Cloudflare deployments.',
+        'project: Teams are available only for projects hosted on a Nosam platform, not direct Cloudflare deployments.',
       );
     }
     const { runProjectTeamCommand } = await import('./project-team.ts');
@@ -52,7 +52,7 @@ export async function runProjectCommand(root: string, args: ProjectArgs): Promis
   if (args.subcommand === 'zero-trust') {
     if (cloudflare) {
       throw new Error(
-        'project: Zero Trust overrides are available only for projects hosted on a Void platform.',
+        'project: Zero Trust overrides are available only for projects hosted on a Nosam platform.',
       );
     }
     if (args.action === '') {
@@ -77,7 +77,7 @@ export async function runProjectCommand(root: string, args: ProjectArgs): Promis
   if (args.subcommand === 'requests') {
     if (cloudflare) {
       throw new Error(
-        'project: Historical request analytics require the Void platform. Use `void project logs` for a live Cloudflare tail.',
+        'project: Historical request analytics require the Nosam platform. Use `void project logs` for a live Cloudflare tail.',
       );
     }
     const { runRequestsCommand } = await import('./requests.ts');

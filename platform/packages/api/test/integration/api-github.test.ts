@@ -1753,7 +1753,7 @@ describe('POST /projects/:id/github — non-owner member connect grant', () => {
   });
 
   // DEPLOY-CLOSE, end-to-end. The deferred-bind hole: V joins a shared
-  // install with X's browser proof (membership github_account_id = X) but V's Void
+  // install with X's browser proof (membership github_account_id = X) but V's Nosam
   // account is NOT oauth-linked to X. A member_removed(X) delivery is driven for
   // REAL here — X has no oauth link, so ONLY the membership-proof-id route
   // catches V, deletes the membership, and stamps a durable tombstone for
@@ -1835,10 +1835,10 @@ describe('POST /projects/:id/github — non-owner member connect grant', () => {
 
   // DEPLOY-CLOSE, end-to-end. The pre-mint hole: a soon-to-be-removed org
   // member pre-mints a join_code + connect_grant carrying their GitHub id X while
-  // still in the org, WITHOUT any Void user / membership / oauth-link. member_removed(X)
+  // still in the org, WITHOUT any Nosam user / membership / oauth-link. member_removed(X)
   // then finds an EMPTY affected set. The tombstone is keyed by X (durable, known
   // from the payload), so the REAL member_removed(X) below records (install, X)
-  // even with nobody to sever. After removal the attacker binds a Void account V,
+  // even with nobody to sever. After removal the attacker binds a Nosam account V,
   // links X, and replays the two PRE-removal artifacts (iat < the tombstone):
   //   (a) /join/complete SKIPS the install (no membership resurrected), AND
   //   (b) even after we FORCE a membership to exist, the connect gate 403s and
@@ -1848,7 +1848,7 @@ describe('POST /projects/:id/github — non-owner member connect grant', () => {
   it('deploy-close: a pre-mint (empty-affected-set) removal tombstones (install, X) and blocks BOTH replay gates', async () => {
     const ORG = '6200';
     const INSTALL = '6200i';
-    const X = '6559999'; // the attacker's GitHub id — NO Void user exists at removal
+    const X = '6559999'; // the attacker's GitHub id — NO Nosam user exists at removal
 
     // The install exists (owned by someone else). X has no oauth link and no
     // membership row → member_removed(X) resolves an EMPTY affected-user set.
@@ -1864,7 +1864,7 @@ describe('POST /projects/:id/github — non-owner member connect grant', () => {
     });
 
     // The attacker pre-mints BOTH artifacts while still in the org (iat = T0). No
-    // Void user/membership/oauth yet — purely stateless HMAC artifacts.
+    // Nosam user/membership/oauth yet — purely stateless HMAC artifacts.
     const T0 = Date.now() - 60_000;
     const challenge = await createCodeChallenge(CONNECT_VERIFIER);
     const joinEncoded = btoa(
@@ -1899,7 +1899,7 @@ describe('POST /projects/:id/github — non-owner member connect grant', () => {
     expect(tombstone).not.toBeNull();
     expect(tombstone!).toBeGreaterThan(T0); // strictly after the pre-mint moment
 
-    // The attacker binds a Void account V and links X (they control it).
+    // The attacker binds a Nosam account V and links X (they control it).
     const v = await createTestUser(env.db, 't19-v', 'google', 'google-t19-v');
     await env.db.insert(oauthAccounts).values({
       id: generateId('oa'),
@@ -3380,7 +3380,7 @@ describe('GET /github/callback', () => {
     expect(res.status).toBe(503);
   });
 
-  // A Void user (A) must not be able to claim — and re-own — an
+  // A Nosam user (A) must not be able to claim — and re-own — an
   // installation that already belongs to another user (B) just by holding a
   // validly-signed state. Here the installation's GitHub account id is forced
   // to equal A's bound account id (a derivation gap / id collision), so the
@@ -3690,7 +3690,7 @@ describe('GET /github/callback', () => {
     expect(members).toHaveLength(0);
   });
 
-  // SECURITY: a Void user (A) who is a real org co-member reaches an
+  // SECURITY: a Nosam user (A) who is a real org co-member reaches an
   // existing organization installation. On the PROVEN user-token path
   // (GET /user/installations lists installation 5000 → authorized:true, and the
   // code-holder id matches the signed state) the backstop GRANTS a cached
@@ -3743,7 +3743,7 @@ describe('GET /github/callback', () => {
   });
 
   // The install-callback membership backstop is Organization-only. A
-  // DIFFERENT Void user (A) reaching an existing PERSONAL (account_type='User')
+  // DIFFERENT Nosam user (A) reaching an existing PERSONAL (account_type='User')
   // install owned by someone else (B), even on the PROVEN user-token path
   // (authResult.authorized), is a non-shareable collision — a personal install has
   // no member_removed revocation path. It must fall through to the conflict 403 and

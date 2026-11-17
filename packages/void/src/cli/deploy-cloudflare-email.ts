@@ -19,7 +19,7 @@ import {
 import { getErrorMessage } from './output.ts';
 import { writeProvisionedWranglerConfig, type ProvisionedWranglerPatch } from './wrangler.ts';
 
-/** Whether the root config carries the `send_email` binding Void writes. */
+/** Whether the root config carries the `send_email` binding Nosam writes. */
 export function hasVoidSendEmailBinding(rootConfig: Record<string, unknown>): boolean {
   return (
     Array.isArray(rootConfig.send_email) &&
@@ -205,7 +205,7 @@ export async function runCloudflareEmailStep(
       map: mapFor(existingAddresses(rootConfig, pre), pre.sending.state === 'ready'),
     };
   }
-  // The exits below leave the account alone and ship whatever the config carries. Void's own
+  // The exits below leave the account alone and ship whatever the config carries. Nosam's own
   // `addresses` array is removed (never `[]`) when routing is off, since its plan would fail
   // (`2062`) after the upload on every deploy.
   const shipsBinding = pre.binding.state === 'present';
@@ -280,7 +280,7 @@ export async function runCloudflareEmailStep(
   };
 }
 
-/** The committed `addresses` entries that are still Void's pruned set (what wrangler keeps). */
+/** The committed `addresses` entries that are still Nosam's pruned set (what wrangler keeps). */
 function existingAddresses(
   rootConfig: Record<string, unknown>,
   pre: EmailPreflight,

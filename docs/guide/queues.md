@@ -77,7 +77,7 @@ export default defineQueue<Message>(async (batch, env) => {
 - `batch.ackAll()`: acknowledge all messages in the batch
 - `batch.retryAll(options?)`: retry all messages in the batch
 
-The first `ack()` or `retry()` call wins for each message. Messages without an explicit decision are acknowledged when the handler succeeds and retried when it throws. Void logs handler errors automatically.
+The first `ack()` or `retry()` call wins for each message. Messages without an explicit decision are acknowledged when the handler succeeds and retried when it throws. Nosam logs handler errors automatically.
 
 The `timestamp` field on each message is a `Date` object.
 
@@ -113,25 +113,25 @@ export default defineQueue<Message>(async (batch, env) => {
 
 Export each option directly from the queue file as a whole number, such as `export const maxRetries = 5`. Computed values and re-exports aren't supported; repeat shared settings in each queue file.
 
-Void-managed queues do not configure a dead-letter queue. Cloudflare permanently
+Nosam-managed queues do not configure a dead-letter queue. Cloudflare permanently
 deletes messages that exhaust their retries without one; see
 [Cloudflare's dead-letter queue guide](https://developers.cloudflare.com/queues/configuration/dead-letter-queues/).
 
-Void provisions queues and connects their producers and consumers when you deploy.
+Nosam provisions queues and connects their producers and consumers when you deploy.
 
 ### Cloudflare queue names
 
 With `void deploy --platform cloudflare`, queue names include the Worker name: `queues/jobs.ts` in `app-staging` creates `app-staging-jobs`. Underscores in the Worker name become hyphens. Your app uses `queues.jobs.send()` in every environment.
 
-Keep the full name within 63 characters and unique within the account. Each Cloudflare queue supports one consumer; Void reports naming or consumer conflicts during deploy.
+Keep the full name within 63 characters and unique within the account. Each Cloudflare queue supports one consumer; Nosam reports naming or consumer conflicts during deploy.
 
 Existing deployments keep their queues and messages. To adopt the new naming, pause producers, drain the old queue, remove its Worker consumer in Cloudflare, and redeploy. Check that the old queue is empty before deleting it.
 
 ## Local development
 
-In native Void apps, sending a message through a queue binding automatically invokes the consumer in Miniflare. Local delivery uses the same handler as production.
+In native Nosam apps, sending a message through a queue binding automatically invokes the consumer in Miniflare. Local delivery uses the same handler as production.
 
-You can also manually dispatch a batch by POSTing to the dev endpoint Void exposes:
+You can also manually dispatch a batch by POSTing to the dev endpoint Nosam exposes:
 
 ```
 POST /__void/queue
@@ -139,7 +139,7 @@ Content-Type: application/json
 { "queue": "<queue-name>", "messages": [{ "id": "1", "timestamp": <unix_ms>, "body": <any>, "attempts": 1 }] }
 ```
 
-The endpoint requires a local dev trigger token. Void prints a paste-ready curl command with the current token when the dev server starts.
+The endpoint requires a local dev trigger token. Nosam prints a paste-ready curl command with the current token when the dev server starts.
 
 ```bash
 curl -X POST http://localhost:5173/__void/queue \

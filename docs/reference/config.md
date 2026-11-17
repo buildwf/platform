@@ -7,9 +7,9 @@ outline: deep
 
 ## Config File Format
 
-Use `void.config.ts` to configure your app. For a guided introduction, start with [What is Void?](../guide/).
+Use `void.config.ts` to configure your app. For a guided introduction, start with [What is Nosam?](../guide/).
 
-Put `void.config.ts` at the project root and import `defineConfig` from `void/config`. All fields are optional. `void init`, `void deploy`, and `void migrate` can convert older Void and Cloudflare JSON config files, saving backups under `.void/config-migration/`. Commit `void.config.ts` and `void.lock.json` when Void creates the lock; it records resource IDs and migration history.
+Put `void.config.ts` at the project root and import `defineConfig` from `void/config`. All fields are optional. `void init`, `void deploy`, and `void migrate` can convert older Nosam and Cloudflare JSON config files, saving backups under `.void/config-migration/`. Commit `void.config.ts` and `void.lock.json` when Nosam creates the lock; it records resource IDs and migration history.
 
 ```ts
 // void.config.ts
@@ -40,7 +40,7 @@ export default defineConfig({
 });
 ```
 
-TypeScript provides editor completion and checks. Void validates the config again when it runs, including values computed at runtime.
+TypeScript provides editor completion and checks. Nosam validates the config again when it runs, including values computed at runtime.
 
 Use relative imports or package names inside `void.config.ts`. TypeScript path aliases such as `@/lib/theme` are not supported.
 
@@ -50,9 +50,9 @@ The shorter JSON fragments below show individual fields to place inside `defineC
 
 ### `sourceDir`
 
-Directory containing Void source conventions, relative to the project root.
+Directory containing Nosam source conventions, relative to the project root.
 
-When omitted, Void uses the existing project-root conventions: `routes/`, `middleware/`, `crons/`, `queues/`, `db/`, `auth.ts`, and `env.ts`.
+When omitted, Nosam uses the existing project-root conventions: `routes/`, `middleware/`, `crons/`, `queues/`, `db/`, `auth.ts`, and `env.ts`.
 
 When set, those conventions move under the configured directory:
 
@@ -60,11 +60,11 @@ When set, those conventions move under the configured directory:
 { "sourceDir": "src" }
 ```
 
-With that config, Void reads `src/routes`, `src/db/schema.ts`, `src/db/migrations`, `src/auth.ts`, and `src/env.ts`. Project files such as `void.config.ts`, `vite.config.ts`, `package.json`, `tsconfig.json`, `public/`, and the local-only `.env` stay at the project root. Void does not scan both locations; if source conventions exist in both places during dev/build, remove one copy so the active source tree is unambiguous.
+With that config, Nosam reads `src/routes`, `src/db/schema.ts`, `src/db/migrations`, `src/auth.ts`, and `src/env.ts`. Project files such as `void.config.ts`, `vite.config.ts`, `package.json`, `tsconfig.json`, `public/`, and the local-only `.env` stay at the project root. Nosam does not scan both locations; if source conventions exist in both places during dev/build, remove one copy so the active source tree is unambiguous.
 
 ### `ai`
 
-Set `ai.gateway` to the Cloudflare AI Gateway used by `ai.provider().fetch()` on your own Cloudflare account. `ai.run()`, `ai.stream()`, and `ai.image()` use the Workers AI binding. On a Void platform, the platform selects the gateway.
+Set `ai.gateway` to the Cloudflare AI Gateway used by `ai.provider().fetch()` on your own Cloudflare account. `ai.run()`, `ai.stream()`, and `ai.image()` use the Workers AI binding. On a Nosam platform, the platform selects the gateway.
 
 ```json
 { "ai": { "gateway": "my-gateway" } }
@@ -76,7 +76,7 @@ See [AI on your Cloudflare account](../integrations/cloudflare.md#ai-self-host).
 
 High-level Better Auth configuration.
 
-Use `auth.providers` to select which built-in auth providers Void should enable by default. Include `"email"` for email/password auth. Social providers read credentials from `AUTH_<PROVIDER>_CLIENT_ID` and `AUTH_<PROVIDER>_CLIENT_SECRET`. `cognito` also needs a domain, region, and user pool ID: set `AUTH_COGNITO_DOMAIN`, `AUTH_COGNITO_REGION`, and `AUTH_COGNITO_USER_POOL_ID`, or set them in `auth.ts`.
+Use `auth.providers` to select which built-in auth providers Nosam should enable by default. Include `"email"` for email/password auth. Social providers read credentials from `AUTH_<PROVIDER>_CLIENT_ID` and `AUTH_<PROVIDER>_CLIENT_SECRET`. `cognito` also needs a domain, region, and user pool ID: set `AUTH_COGNITO_DOMAIN`, `AUTH_COGNITO_REGION`, and `AUTH_COGNITO_USER_POOL_ID`, or set them in `auth.ts`.
 
 ```json
 {
@@ -86,7 +86,7 @@ Use `auth.providers` to select which built-in auth providers Void should enable 
 }
 ```
 
-If `auth` is omitted but auth is active via imports, Void enables email/password only. For provider-specific options, scopes, plugins, or custom OAuth flows, use a root `auth.ts` with `defineAuth(...)`.
+If `auth` is omitted but auth is active via imports, Nosam enables email/password only. For provider-specific options, scopes, plugins, or custom OAuth flows, use a root `auth.ts` with `defineAuth(...)`.
 
 Supported values for `auth.providers`:
 
@@ -136,11 +136,11 @@ Database backend. Omit for D1/SQLite (default). Set to `"pg"` or `"mysql"` for a
 }
 ```
 
-| Value       | Description                                             |
-| ----------- | ------------------------------------------------------- |
-| _(omitted)_ | D1 (SQLite), fully managed by Void with no extra config |
-| `"pg"`      | PostgreSQL via Hyperdrive; bring your own database      |
-| `"mysql"`   | MySQL via Hyperdrive; bring your own database           |
+| Value       | Description                                              |
+| ----------- | -------------------------------------------------------- |
+| _(omitted)_ | D1 (SQLite), fully managed by Nosam with no extra config |
+| `"pg"`      | PostgreSQL via Hyperdrive; bring your own database       |
+| `"mysql"`   | MySQL via Hyperdrive; bring your own database            |
 
 Use an object to also set how Drizzle names columns declared without a name:
 
@@ -178,13 +178,13 @@ Configuration for the [email integration](../guide/email.md).
 | ------ | -------- | -------------------------------------------------------------------------------------------------------------- |
 | `from` | `string` | Default sender for `sendEmail()`: one address, optionally with a display name (`Acme <noreply@mail.acme.com>`) |
 
-During development, `email.from` is the default sender in the local inbox. On a Void platform, use your project's shared sender or registered domain.
+During development, `email.from` is the default sender in the local inbox. On a Nosam platform, use your project's shared sender or registered domain.
 
-For direct Cloudflare deployment, this address selects the mail domain and default sender. Use a zone or subdomain in your account; an existing mail provider's MX records are preserved. Without `email.from`, Void skips automatic setup and preserves authored `cloudflare.send_email` bindings and `cloudflare.addresses`; check their readiness yourself. `--require-email` still refuses deployment when automatic setup cannot be verified. See [Email setup](../guide/email/domains.md#your-own-cloudflare-account).
+For direct Cloudflare deployment, this address selects the mail domain and default sender. Use a zone or subdomain in your account; an existing mail provider's MX records are preserved. Without `email.from`, Nosam skips automatic setup and preserves authored `cloudflare.send_email` bindings and `cloudflare.addresses`; check their readiness yourself. `--require-email` still refuses deployment when automatic setup cannot be verified. See [Email setup](../guide/email/domains.md#your-own-cloudflare-account).
 
 ### `remote`
 
-Use a deployed Void project's D1, KV, and R2 resources during local development. Writes affect real data. See [Remote Development](../guide/remote-dev.md).
+Use a deployed Nosam project's D1, KV, and R2 resources during local development. Writes affect real data. See [Remote Development](../guide/remote-dev.md).
 
 ```json
 { "remote": true }
@@ -229,13 +229,13 @@ Enable and configure Cloudflare Sandboxes. Importing from `void/sandbox` enables
 
 Supported sizes are `lite` and `standard-1` through `standard-4`. Native deploys build Dockerfiles with Docker; registry images must be digest-pinned references from the Cloudflare managed registry. Custom images must include the matching Sandbox SDK helper. For a local Dockerfile, supply `platformImage` when deploying to a managed platform. See [Sandboxes](../guide/sandboxes.md) for image setup and runtime examples.
 
-Set `durableObject` to a file name in `durable-objects/` (for example `"bot"`) to attach the container image to that class instead of Void's `SandboxV1`. The class must use `this.ctx.container`; its binding and class come from the file, so `binding` and `className` must be omitted. It needs a native Cloudflare deploy: managed platforms run containers in their own controller, so use `getSandbox` from `void/sandbox` there.
+Set `durableObject` to a file name in `durable-objects/` (for example `"bot"`) to attach the container image to that class instead of Nosam's `SandboxV1`. The class must use `this.ctx.container`; its binding and class come from the file, so `binding` and `className` must be omitted. It needs a native Cloudflare deploy: managed platforms run containers in their own controller, so use `getSandbox` from `void/sandbox` there.
 
 Sandbox requires [Workers Paid](https://dash.cloudflare.com/?to=/:account/workers/plans) and Containers access. Managed runtime tokens need Account / Containers: Edit and Account / Cloudchamber: Edit. See [Sandbox deployment](../guide/sandboxes.md#deployment).
 
 ### `storage.locationHint`
 
-Choose a preferred region when Void creates your app's R2 bucket, on either a Void platform or a direct Cloudflare deployment:
+Choose a preferred region when Nosam creates your app's R2 bucket, on either a Nosam platform or a direct Cloudflare deployment:
 
 ```json
 { "storage": { "locationHint": "apac" } }
@@ -272,7 +272,7 @@ Cloudflare Workers settings, including the `compatibility_date` pinned by `void 
 
 Managed deployments include `worker.vars` as plain-text bindings. A remote secret with the same name takes precedence. To use the configured variable instead, remove that remote secret and deploy again. Secret deletion changes the running Worker immediately, so plan this migration during a maintenance window.
 
-`worker.limits.cpu_ms` sets the CPU time limit per request, from 1 to 300000 ms. On a Void platform, deploy fails if the limit exceeds the account plan; lower it in `void.config.ts` before retrying. Rollback instead caps the old limit at the current plan ceiling. On direct deploys, [Cloudflare enforces the value](https://developers.cloudflare.com/workers/platform/limits/#cpu-time): Workers Free allows up to 10 ms and Workers Paid up to 300000 ms per request.
+`worker.limits.cpu_ms` sets the CPU time limit per request, from 1 to 300000 ms. On a Nosam platform, deploy fails if the limit exceeds the account plan; lower it in `void.config.ts` before retrying. Rollback instead caps the old limit at the current plan ceiling. On direct deploys, [Cloudflare enforces the value](https://developers.cloudflare.com/workers/platform/limits/#cpu-time): Workers Free allows up to 10 ms and Workers Paid up to 300000 ms per request.
 
 ```json
 {
@@ -286,7 +286,7 @@ Managed deployments include `worker.vars` as plain-text bindings. A remote secre
 
 ### `cloudflare`
 
-The complete Cloudflare Worker configuration for direct Cloudflare builds and deployment. Put custom bindings, `name`, `account_id`, routes, services, vars, migrations, and any other Cloudflare fields here. Void passes these fields through to the generated Cloudflare build configuration. Settings you edit here take precedence over values Void previously recorded in `void.lock.json`.
+The complete Cloudflare Worker configuration for direct Cloudflare builds and deployment. Put custom bindings, `name`, `account_id`, routes, services, vars, migrations, and any other Cloudflare fields here. Nosam passes these fields through to the generated Cloudflare build configuration. Settings you edit here take precedence over values Nosam previously recorded in `void.lock.json`.
 
 ```ts
 // Inside defineConfig({ ... })
@@ -297,22 +297,22 @@ cloudflare: {
 },
 ```
 
-Void writes a generated Cloudflare config for its tooling and records provisioned resource IDs and append-only migration history in `void.lock.json`. Commit the lock when it changes. Root `wrangler.jsonc` and `wrangler.json` are migrated on `void init` or `void deploy`; Void keeps backup copies under `.void/config-migration/`.
+Nosam writes a generated Cloudflare config for its tooling and records provisioned resource IDs and append-only migration history in `void.lock.json`. Commit the lock when it changes. Root `wrangler.jsonc` and `wrangler.json` are migrated on `void init` or `void deploy`; Nosam keeps backup copies under `.void/config-migration/`.
 
 Bindings declared here are typed on `c.env` after `void prepare` or starting a dev server or build. See [Custom Binding Types](../guide/type-safety.md#custom-binding-types) for an example and RPC type overrides.
 
-If you need to remove a value that Void previously generated, remove it from the `resolved` object in `void.lock.json`. Void refreshes the generated Cloudflare file on the next command. Put ongoing custom settings in `cloudflare` in `void.config.ts`.
+If you need to remove a value that Nosam previously generated, remove it from the `resolved` object in `void.lock.json`. Nosam refreshes the generated Cloudflare file on the next command. Put ongoing custom settings in `cloudflare` in `void.config.ts`.
 
 ### `deploy.cloudflare.mode`
 
-Direct Cloudflare deploys use `staged` by default: Void checks the new Worker before sending it production traffic. If Cloudflare cannot stage an existing Durable Object Worker, choose `atomic` after reviewing the pending Worker and database changes:
+Direct Cloudflare deploys use `staged` by default: Nosam checks the new Worker before sending it production traffic. If Cloudflare cannot stage an existing Durable Object Worker, choose `atomic` after reviewing the pending Worker and database changes:
 
 ```ts
 // Inside defineConfig({ ... })
 deploy: { cloudflare: { mode: 'atomic' } },
 ```
 
-This choice applies to subsequent `void deploy` runs. Atomic deployment sends traffic to the new Worker before Void checks readiness; a Durable Object class migration cannot be rolled back across its migration boundary. Use `--atomic` for a single deployment instead. `deploy` is a Void setting and is not passed to Cloudflare's Worker config.
+This choice applies to subsequent `void deploy` runs. Atomic deployment sends traffic to the new Worker before Nosam checks readiness; a Durable Object class migration cannot be rolled back across its migration boundary. Use `--atomic` for a single deployment instead. `deploy` is a Nosam setting and is not passed to Cloudflare's Worker config.
 
 ### `routing`
 
@@ -403,7 +403,7 @@ Fallback rewrites. Same shape as `rewrites`, but rules only fire when no static 
 
 #### `routing.notFound`
 
-Override how the asset layer answers a request that matched no asset and no worker route. One of `"single-page-application"`, `"404-page"`, or `"none"`. If omitted, Void infers it — see [Static Assets](../guide/edge/static-assets.md#navigation-and-middleware).
+Override how the asset layer answers a request that matched no asset and no worker route. One of `"single-page-application"`, `"404-page"`, or `"none"`. If omitted, Nosam infers it — see [Static Assets](../guide/edge/static-assets.md#navigation-and-middleware).
 
 ```json
 {
@@ -417,7 +417,7 @@ Use `"404-page"` for a generated static site with a `404.html`, `"single-page-ap
 
 ### `inference`
 
-Configuration for build-time inference, including how Void detects your app type, bindings, and build process.
+Configuration for build-time inference, including how Nosam detects your app type, bindings, and build process.
 
 #### `inference.bindings`
 
@@ -439,7 +439,7 @@ Each binding accepts `true` (use default name), `false` (disable), or a string (
 
 Custom binding names work with `void/db`, `void/kv`, and `void/storage` during development and deployment. Custom AI names also work with `void/ai` on direct Cloudflare deploys; managed Workers AI uses the platform's proxy.
 
-`email` is a boolean feature switch. Set it to `true` to enable [email](../guide/email.md) and the local email inbox without an import from `void/email`, or `false` to disable them. On a Void platform, sending uses the platform proxy. Direct Cloudflare setup records a `SEND_EMAIL` binding in `void.lock.json`; see [`email.from`](#email).
+`email` is a boolean feature switch. Set it to `true` to enable [email](../guide/email.md) and the local email inbox without an import from `void/email`, or `false` to disable them. On a Nosam platform, sending uses the platform proxy. Direct Cloudflare setup records a `SEND_EMAIL` binding in `void.lock.json`; see [`email.from`](#email).
 
 #### `inference.build`
 
@@ -455,7 +455,7 @@ The command is run through a shell from the project root, with the project's own
 { "inference": { "build": "vitepress build && vite build" } }
 ```
 
-That chain is how a static site generator and a Void backend ship together — see [Adding a backend to a static site](../guide/app-types.md#adding-a-backend-to-a-static-site).
+That chain is how a static site generator and a Nosam backend ship together — see [Adding a backend to a static site](../guide/app-types.md#adding-a-backend-to-a-static-site).
 
 #### `inference.scanDirs`
 

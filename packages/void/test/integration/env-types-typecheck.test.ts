@@ -15,7 +15,7 @@ afterEach(() => {
 });
 
 describe('generated env types in a consumer project', () => {
-  // `wrangler types` declares an assets binding as `ASSETS: Fetcher`, which must merge with Void's.
+  // `wrangler types` declares an assets binding as `ASSETS: Fetcher`, which must merge with Nosam's.
   it.each([
     ['', ''],
     [

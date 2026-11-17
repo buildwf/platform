@@ -19,7 +19,7 @@ export interface SendEmailOptions {
   /**
    * Sender envelope address. Optional. When omitted, `void dev` and
    * `void deploy --platform cloudflare` use `email.from` from void.config.ts,
-   * and a Void platform deploy uses `<project-slug>+noreply@<mail-domain>`.
+   * and a Nosam platform deploy uses `<project-slug>+noreply@<mail-domain>`.
    * Without either, `sendEmail` returns `INVALID_FROM`; it never falls back
    * to a baked-in domain.
    */

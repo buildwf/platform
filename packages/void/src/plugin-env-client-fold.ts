@@ -61,7 +61,7 @@ function pushHit(node: AstMemberExpression, hits: Array<FoldHit>): void {
  *   • Runs only when `this.environment.name === 'client'`. Server / SSR /
  *     worker builds keep the full runtime Proxy (secrets, runtime-injected
  *     vars, HMR remain live).
- *   • Only folds keys that match Void's fixed `VITE_` client prefix. A
+ *   • Only folds keys that match Nosam's fixed `VITE_` client prefix. A
  *     server-only key is never folded (and the env-client-guard plugin
  *     would have errored out earlier anyway).
  *   • Only folds static member access: `env.FOO` and `env["FOO"]`.

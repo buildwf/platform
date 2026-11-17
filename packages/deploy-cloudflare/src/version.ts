@@ -126,31 +126,31 @@ export type CloudflareVersionActivation =
       rollback?: 'not-needed' | 'succeeded' | 'failed' | 'unavailable' | 'unsafe';
       /**
        * Cloudflare refused to restore the previous version because a secret
-       * changed with this deploy, so Void forced it. The previous version runs
+       * changed with this deploy, so Nosam forced it. The previous version runs
        * with its earlier secret values.
        */
       restoredOlderSecrets?: true;
       /**
-       * Version serving 100% of production when this command stopped, or null when Void could
+       * Version serving 100% of production when this command stopped, or null when Nosam could
        * not read it. Set when a concurrent operation superseded this command, on every
        * `triggers-failed` result, and after any automatic traffic restoration that read status.
        */
       activeVersionId?: string | null;
       /**
-       * Set on `triggers-failed`. `yes`: Void re-applied the live version's own trigger snapshot.
-       * `no`: the live version runs with partly updated triggers. `unknown`: Void replayed a
+       * Set on `triggers-failed`. `yes`: Nosam re-applied the live version's own trigger snapshot.
+       * `no`: the live version runs with partly updated triggers. `unknown`: Nosam replayed a
        * snapshot but could not confirm the outcome.
        */
       triggersRestored?: 'yes' | 'no' | 'unknown';
       /**
-       * Set on `triggers-failed` when Void kept this deploy's version live instead of switching
+       * Set on `triggers-failed` when Nosam kept this deploy's version live instead of switching
        * back. `placeholder`: the previous version is an empty placeholder or secret-only draft.
-       * `no-trigger-snapshot`: the previous version has no Void trigger snapshot to replay.
-       * `atomic`: the deploy published without a staged version, so Void does not switch back.
-       * Absent when there was no previous version or Void could not inspect it.
+       * `no-trigger-snapshot`: the previous version has no Nosam trigger snapshot to replay.
+       * `atomic`: the deploy published without a staged version, so Nosam does not switch back.
+       * Absent when there was no previous version or Nosam could not inspect it.
        */
       restoreSkipped?: 'placeholder' | 'no-trigger-snapshot' | 'atomic';
-      /** Whether Void restored the active version's immutable trigger snapshot. */
+      /** Whether Nosam restored the active version's immutable trigger snapshot. */
       triggerRepair?: 'succeeded' | 'failed' | 'unavailable';
       /**
        * Access denied a readiness probe to this custom-route origin. The probe carried no Access
@@ -857,7 +857,7 @@ export type CloudflareVersionActivationOptions = {
   publishEmptyCrons?: () => Promise<CloudflareCommandResult>;
   /** Last successfully published traffic state, newer than immutable version annotations. */
   previousTrafficConfig?: CloudflareTrafficConfig;
-  /** Explicitly Void-owned queue consumers retained for schema-1 cleanup and failed retries. */
+  /** Explicitly Nosam-owned queue consumers retained for schema-1 cleanup and failed retries. */
   queueConsumerCleanup?: ReadonlyArray<string>;
   /**
    * The caller proved that the Worker did not exist before this deploy provisioned its secrets.
@@ -1059,7 +1059,7 @@ async function activateCloudflareVersionWithSecretsFile(
     return previousVersion?.isSecretOnlyDraft === true;
   }
   // Recovery only: true when the previous version is an empty Worker that must never get traffic
-  // back. Unlike `isVoidSecretOnlyDraft`, this also accepts Void's zero-binding placeholder, which
+  // back. Unlike `isVoidSecretOnlyDraft`, this also accepts Nosam's zero-binding placeholder, which
   // the bootstrap path must not treat as first-deployment proof.
   async function previousIsRestorePlaceholder(): Promise<boolean | null> {
     if (!previousVersionId) {
@@ -1712,8 +1712,8 @@ async function activateCloudflareVersionWithSecretsFile(
         triggerRepair: triggerRepairOutcome(repair),
       };
     }
-    // This deploy owns 100%. Switch back only when Void can restore the previous version's
-    // triggers too. An empty placeholder or a version without a Void trigger snapshot stays
+    // This deploy owns 100%. Switch back only when Nosam can restore the previous version's
+    // triggers too. An empty placeholder or a version without a Nosam trigger snapshot stays
     // inactive: moving traffic to it would serve an empty Worker or code with this deploy's
     // partly applied triggers.
     const placeholder = await previousIsRestorePlaceholder();
@@ -1954,7 +1954,7 @@ async function readCloudflareVersionInspection(
 }
 
 /**
- * Recovery-only proof that a version is Void's secret placeholder: its marker plus the exact
+ * Recovery-only proof that a version is Nosam's secret placeholder: its marker plus the exact
  * placeholder source, with no binding other than secrets. It may have zero bindings, so it is
  * deliberately not `isVoidSecretOnlyDraft`, which bootstrap uses as first-deployment proof.
  * Returns null when the version could not be read.
@@ -3008,7 +3008,7 @@ async function restorePreviousVersion(
     deployVersionPercentages(
       { ...options, bypassDeploymentChecks },
       [`${previousVersionId}@100`],
-      `Void automatic rollback after ${cause}.`,
+      `Nosam automatic rollback after ${cause}.`,
     );
   // A restore that did not exit cleanly may still have moved traffic (a killed child, or a lost
   // response after Cloudflare applied it), so read the owner again instead of reusing the
@@ -3020,7 +3020,7 @@ async function restorePreviousVersion(
   const result = await restore(false);
   // Cloudflare refuses to move traffic back to a version older than a secret
   // change (10220). When the failed version made that change, force the
-  // restore, as Wrangler's rollback does. Check again first that Void still
+  // restore, as Wrangler's rollback does. Check again first that Nosam still
   // owns traffic, so a deployment made by someone else is not overwritten.
   if (result.errorCode === CLOUDFLARE_SECRET_CHANGED_ERROR) {
     owner = await readOwner();

@@ -70,7 +70,7 @@ export async function selectCompanyAccessPolicies(
             {
               value: emailDomain,
               label: 'Allow my company’s email domain',
-              hint: 'Void creates this Allow policy for you',
+              hint: 'Nosam creates this Allow policy for you',
             },
           ]
         : []),
@@ -424,7 +424,7 @@ export async function preparePlatformAccessSetup(input: {
             ? 'Access lets employees sign in to the platform with your company login.'
             : 'Access controls who can reach the platform’s UI and APIs.',
         '',
-        'Void can create dedicated Access applications using your company’s existing login providers and policies, or use Access applications your company already manages.',
+        'Nosam can create dedicated Access applications using your company’s existing login providers and policies, or use Access applications your company already manages.',
       ].join('\n'),
       pc.bold('Set up Cloudflare Access'),
     );
@@ -475,7 +475,7 @@ export async function preparePlatformAccessSetup(input: {
     spec = { mode: mode as 'create' | 'existing' };
     if (mode === 'existing') {
       log.info(
-        'Enter the account that owns your company’s Access configuration. This may differ from the account hosting Void.',
+        'Enter the account that owns your company’s Access configuration. This may differ from the account hosting Nosam.',
       );
       spec.accountId = platformPromptAnswer(
         await text({
@@ -484,7 +484,7 @@ export async function preparePlatformAccessSetup(input: {
         }),
       );
       if (input.login) {
-        log.info('Enter the ID of the Access application that provides company sign-in to Void.');
+        log.info('Enter the ID of the Access application that provides company sign-in to Nosam.');
         spec.loginApplicationId = platformPromptAnswer(
           await text({ message: 'Existing Access OIDC application ID:' }),
         );

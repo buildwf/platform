@@ -7,7 +7,7 @@ import { parseDotenvFile } from './dotenv.ts';
 // import from any non-leaf module, otherwise the prerender subprocess's
 // worker bundle acquires unwanted transitive dependencies.
 
-/** Void's single local dotenv file. It is never a production configuration source. */
+/** Nosam's single local dotenv file. It is never a production configuration source. */
 export const LOCAL_ENV_FILE = '.env';
 
 /** The fixed browser-exposure convention supported by `void/env`. */
@@ -42,7 +42,7 @@ export const CLOUDFLARE_DEPLOY_BUILD_ENV = 'VOID_CLOUDFLARE_DEPLOY_BUILD';
 export const CLOUDFLARE_QUEUE_NAMES_BUILD_ENV = 'VOID_CLOUDFLARE_QUEUE_NAMES';
 
 /**
- * Find legacy Vite dotenv variants. Void intentionally supports only `.env`;
+ * Find legacy Vite dotenv variants. Nosam intentionally supports only `.env`;
  * production configuration is project-scoped remote state instead of a file.
  */
 export function findLegacyEnvFiles(root: string): Array<string> {
@@ -98,7 +98,7 @@ export function resolveRemoteMode(configRemote: boolean | undefined): boolean {
 }
 
 /**
- * Names starting with this prefix are reserved for Void. Void sets them
+ * Names starting with this prefix are reserved for Nosam. Nosam sets them
  * itself (proxy credentials, email and AI wiring), so `.env` and `env.ts`
  * must not define them: Wrangler loads `.env` into the dev Worker on its own
  * and writes it over `vars`, so dropping keys from `vars` cannot keep them
@@ -118,14 +118,14 @@ export function findReservedEnvKeys(keys: Iterable<string>): Array<string> {
 export function reservedEnvKeysMessage(source: '.env' | 'env.ts', keys: Array<string>): string {
   const verb = source === '.env' ? 'defines' : 'declares';
   return (
-    `${source} ${verb} names reserved for Void: ${keys.join(', ')}. ` +
-    'Void sets these itself; remove them. To trigger crons or queues locally, use the ' +
+    `${source} ${verb} names reserved for Nosam: ${keys.join(', ')}. ` +
+    'Nosam sets these itself; remove them. To trigger crons or queues locally, use the ' +
     'x-void-dev-trigger header printed at dev start.'
   );
 }
 
 /**
- * Internal env keys reserved for Void runtime use. These are how the Vite
+ * Internal env keys reserved for Nosam runtime use. These are how the Vite
  * plugin and deploy pipeline pass credential/runtime state to workerd. None
  * of them should ever originate from user-authored `.env` files, shell env,
  * or CI config. `.env` and `env.ts` are rejected up front (see
@@ -151,7 +151,7 @@ export type StripInternalEnvKeysResult<T> = {
 };
 
 /**
- * Remove any internal Void env keys from a user-supplied env record. Returns
+ * Remove any internal Nosam env keys from a user-supplied env record. Returns
  * the sanitized record plus the list of keys that were stripped so callers
  * (which live in non-leaf modules) can emit a warning via `voidWarn`.
  *

@@ -11,7 +11,7 @@ export type AssetRoutingInputs = {
   authEnabled?: boolean;
   liveEnabled?: boolean;
   /**
-   * `routing.notFound` from the Void config. Overrides the INFERRED
+   * `routing.notFound` from the Nosam config. Overrides the INFERRED
    * `not_found_handling`. `run_worker_first`, `workerFirst` and
    * `apiWorkerFirst` are untouched, so which layer sees a request first never
    * changes. `workerSpaFallback` DOES follow it — see below.
@@ -74,7 +74,7 @@ export function resolveAssetConfig(inputs: AssetRoutingInputs): AssetConfig {
   return resolveAssetRoutingPolicy(inputs).assetConfig;
 }
 
-// Void's reserved internal namespace (`/__void/ready`, `/__void/migrate/*`,
+// Nosam's reserved internal namespace (`/__void/ready`, `/__void/migrate/*`,
 // etc.). These must reach the worker before CF Static Assets can serve the SPA
 // shell — otherwise `not_found_handling: 'single-page-application'` returns
 // index.html for GET /__void/migrate/capabilities and migration capability

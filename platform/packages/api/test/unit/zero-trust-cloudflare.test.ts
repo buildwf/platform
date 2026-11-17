@@ -78,7 +78,7 @@ describe('ZeroTrustCloudflareClient', () => {
       destinations: [{ type: 'public', uri: healthDestination }],
       // Installer defaults need not match project Access session/IdP settings.
       session_duration: '24h',
-      policies: bypassPolicy('Void platform health check'),
+      policies: bypassPolicy('Nosam platform health check'),
     };
   }
 
@@ -439,7 +439,7 @@ describe('ZeroTrustCloudflareClient', () => {
         destinations: ['*.apps.example.com'],
         policies: reusablePolicyReferences(['policy-1']),
       }),
-    ).rejects.toThrow('exists without a recorded Void creation intent');
+    ).rejects.toThrow('exists without a recorded Nosam creation intent');
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
@@ -566,7 +566,7 @@ describe('ZeroTrustCloudflareClient', () => {
           operation === 'ensure'
             ? client.ensureApplication(spec, created)
             : client.deleteApplication(created.id, spec.name);
-        await expect(result).rejects.toThrow('no longer has its Void-owned name');
+        await expect(result).rejects.toThrow('no longer has its Nosam-owned name');
         expect(fetcher).toHaveBeenCalledTimes(1);
         expect(fetcher.mock.calls[0]![1]?.method).toBeUndefined();
       });
@@ -577,7 +577,7 @@ describe('ZeroTrustCloudflareClient', () => {
         const created = await client.ensureApplication(spec);
         const recorded = applications.get(created.id)!;
         applications.delete(created.id);
-        // Void recreated the application, but the create response was lost.
+        // Nosam recreated the application, but the create response was lost.
         applications.set('replacement-app', {
           ...recorded,
           id: 'replacement-app',
@@ -686,7 +686,7 @@ describe('ZeroTrustCloudflareClient', () => {
     fetcher.mockClear();
 
     await expect(client.ensureApplication(spec)).rejects.toThrow(
-      'without a recorded Void creation intent',
+      'without a recorded Nosam creation intent',
     );
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(applications.size).toBe(2);

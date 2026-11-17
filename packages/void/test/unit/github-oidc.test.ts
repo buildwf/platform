@@ -97,7 +97,7 @@ describe('exchangeGithubOidcForDeployToken', () => {
       `Bearer ${REQUEST_TOKEN}`,
     );
 
-    // 2. POST the JWT to the Void API; body is exactly { oidcToken, project }.
+    // 2. POST the JWT to the Nosam API; body is exactly { oidcToken, project }.
     const [postUrl, postInit] = fetchMock.mock.calls[1] as [string, RequestInit];
     expect(postUrl).toBe(`${apiUrl}/auth/github-oidc`);
     expect(postInit.method).toBe('POST');

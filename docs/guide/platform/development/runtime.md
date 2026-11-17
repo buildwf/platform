@@ -44,7 +44,7 @@ Then run it without `--plan` to apply the upgrade. Source-built runtimes go thro
 The core installer does not deploy the dashboard, GitHub App, build Containers,
 or webhook ingress. Passing a source build with `--runtime` does not provision
 their infrastructure, bindings, credentials, or platform capabilities. The
-repository's hosted deployment scripts target Void Cloud; they are not a
+repository's hosted deployment scripts target Nosam Cloud; they are not a
 general setup procedure for adding these services to a self-hosted platform.
 Use the core CLI deployment workflow unless your fork supplies and maintains
 that optional integration.

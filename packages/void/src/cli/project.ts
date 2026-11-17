@@ -70,7 +70,7 @@ export function readProjectConfig(root: string): ProjectConfig | null {
  * Read the deployment platform selected during `void init`.
  *
  * Linked project files created before the platform field existed implicitly
- * target Void. A metadata-only file has no deployment preference.
+ * target Nosam. A metadata-only file has no deployment preference.
  */
 export function readDeploymentPlatform(root: string): DeploymentPlatform | null {
   const config = readProjectConfigFile(root);
@@ -91,8 +91,8 @@ export function readDeploymentPlatform(root: string): DeploymentPlatform | null 
 }
 
 /**
- * Persist a deployment preference without discarding an existing Void project
- * link. Keeping the link makes switching back to Void non-destructive.
+ * Persist a deployment preference without discarding an existing Nosam project
+ * link. Keeping the link makes switching back to Nosam non-destructive.
  */
 export function writeDeploymentPlatform(root: string, platform: DeploymentPlatform): void {
   const filePath = join(root, PROJECT_FILE);

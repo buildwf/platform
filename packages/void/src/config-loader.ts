@@ -14,7 +14,7 @@ export function getConfigFileName(root: string): string {
   return existsSync(join(root, LEGACY_CONFIG_FILE)) ? LEGACY_CONFIG_FILE : TYPED_CONFIG_FILE;
 }
 
-/** Evaluate a TypeScript config without requiring Void to be installed in the target project. */
+/** Evaluate a TypeScript config without requiring Nosam to be installed in the target project. */
 export function loadTypedVoidConfigFile(path: string): unknown {
   const sourceEntry = fileURLToPath(new URL('./config-entry.ts', import.meta.url));
   const configEntry = existsSync(sourceEntry)

@@ -106,7 +106,7 @@ export function ZeroTrustPage({ path, platformName, username }: AdminPageProps) 
         <SectionStack as="header" className="void-admin-zero-trust-intro">
           <Heading level={1}>Project Zero Trust</Heading>
           <p>
-            Void manages a wildcard Cloudflare Access application for protected projects and
+            Nosam manages a wildcard Cloudflare Access application for protected projects and
             exact-host bypass applications for public exceptions. The Cloudflare API token is
             encrypted and never shown again.
           </p>
@@ -207,7 +207,7 @@ export function ZeroTrustPage({ path, platformName, username }: AdminPageProps) 
             >
               {publicOnly && (
                 <p>
-                  Void manages public app rules for this account. Leave policy fields blank to
+                  Nosam manages public app rules for this account. Leave policy fields blank to
                   replace its token, or enter company identities and policies to configure
                   protection.
                 </p>
@@ -277,7 +277,7 @@ export function ZeroTrustPage({ path, platformName, username }: AdminPageProps) 
                   <form
                     method="post"
                     action={`${HOME}/disable`}
-                    data-confirm="Remove Void-managed Access protection? Apps may become public or be blocked by account-wide Default-Deny."
+                    data-confirm="Remove Nosam-managed Access protection? Apps may become public or be blocked by account-wide Default-Deny."
                   >
                     <Button
                       type="submit"

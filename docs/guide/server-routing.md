@@ -5,7 +5,7 @@ outline: deep
 
 # Server Routing
 
-Create a file in `routes/` to add an endpoint, and export a handler for each HTTP method you want to support. Void uses [Hono](https://hono.dev) for routing and middleware.
+Create a file in `routes/` to add an endpoint, and export a handler for each HTTP method you want to support. Nosam uses [Hono](https://hono.dev) for routing and middleware.
 
 ## Route Files
 
@@ -186,7 +186,7 @@ Validator schemas also power the [typed fetch client](./typed-fetch.md), so `bod
 
 ## Middleware
 
-Void uses Hono middleware. `defineMiddleware()` adds types to the usual `(c, next)` function, and `defineHandler()` also accepts Hono middleware directly.
+Nosam uses Hono middleware. `defineMiddleware()` adds types to the usual `(c, next)` function, and `defineHandler()` also accepts Hono middleware directly.
 
 ```ts
 import { defineMiddleware } from 'void';
@@ -198,7 +198,7 @@ export const addServerTiming = defineMiddleware(async (c, next) => {
 });
 ```
 
-Any `hono/*` built-in middleware, response helpers, or third-party Hono ecosystem packages can be used in Void apps. If you want to import from `hono/*` in your app, make sure to install `hono` in your app first:
+Any `hono/*` built-in middleware, response helpers, or third-party Hono ecosystem packages can be used in Nosam apps. If you want to import from `hono/*` in your app, make sure to install `hono` in your app first:
 
 ```bash
 npm install hono
@@ -228,7 +228,7 @@ export default defineMiddleware(async (c, next) => {
 });
 ```
 
-Use `basicAuth()` for a temporary site gate. Void's reserved `/__void` endpoints remain accessible for deployment and development tooling. Read credentials through callbacks:
+Use `basicAuth()` for a temporary site gate. Nosam's reserved `/__void` endpoints remain accessible for deployment and development tooling. Read credentials through callbacks:
 
 ```ts
 // env.ts

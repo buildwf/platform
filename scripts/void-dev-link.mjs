@@ -36,7 +36,7 @@ export function installVoidDev({ cliPath, globalBin, platform = process.platform
   const cli = resolve(cliPath);
   const cliEntry = readEntry(cli);
   if (!cliEntry?.isFile()) {
-    throw new Error(`The local Void CLI has not been built at ${cli}.`);
+    throw new Error(`The local Nosam CLI has not been built at ${cli}.`);
   }
 
   mkdirSync(globalBin, { recursive: true });
@@ -102,7 +102,9 @@ function linkedTarget(commandPath) {
 }
 
 function occupiedCommandError(commandPath, action = 'Refusing to overwrite it') {
-  return new Error(`${commandPath} already exists and is not this checkout's Void CLI. ${action}.`);
+  return new Error(
+    `${commandPath} already exists and is not this checkout's Nosam CLI. ${action}.`,
+  );
 }
 
 function readEntry(path) {

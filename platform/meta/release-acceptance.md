@@ -6,7 +6,7 @@ mock or local runtime test is not live deployment evidence.
 
 ## Local acceptance
 
-Follow [Testing Void](../../TESTING.md) for builds, typechecking, lint and the
+Follow [Testing Nosam](../../TESTING.md) for builds, typechecking, lint and the
 complete SDK/platform suite. Exercise the full packed-consumer matrix against
 the actual public-package tarballs:
 

@@ -135,7 +135,7 @@ const triggers: CloudflareTriggerConfig = {
   queueConsumers: [],
   workflows: [],
 };
-// Every version that Void deploys has this record of its triggers.
+// Every version that Nosam deploys has this record of its triggers.
 const recordedMessage = encodeCloudflareVersionMessage([], triggers);
 
 /** Cloudflare API answers for a Worker whose active version has the given message. */
@@ -238,12 +238,12 @@ describe('Worker change source', () => {
   });
 });
 
-describe('platform Workers changed outside Void', () => {
+describe('platform Workers changed outside Nosam', () => {
   const sources = new Map<string, string | null>();
   const getWorkerLastDeployedFrom = vi.fn(
     async (_account: string, name: string) => sources.get(name) ?? 'cf_cli',
   );
-  // The message of each Worker's active version. By default, Void deployed it.
+  // The message of each Worker's active version. By default, Nosam deployed it.
   const activeMessages = new Map<string, string | undefined>();
   const readCloudflare = vi.fn(async (path: string): Promise<unknown> => {
     const name = /\/workers\/scripts\/([^/]+)\//.exec(path)?.[1] ?? '';
@@ -290,11 +290,11 @@ describe('platform Workers changed outside Void', () => {
     );
   });
 
-  it('also flags an existing Worker whose active version has no Void record of its triggers', async () => {
-    // A run stopped after the Cloudflare CLI replaced the change, before Void
+  it('also flags an existing Worker whose active version has no Nosam record of its triggers', async () => {
+    // A run stopped after the Cloudflare CLI replaced the change, before Nosam
     // deployed its own version. The marker shows the Cloudflare CLI.
     activeMessages.set(names.proxyWorker, undefined);
-    // Void wrote this older record, which has no triggers. The upgrade refuses it too.
+    // Nosam wrote this older record, which has no triggers. The upgrade refuses it too.
     sources.set(names.tailWorker, null);
     activeMessages.set(names.tailWorker, 'void:{"schema":1,"migrations":[]}');
     // The marker already shows the change, so the version is not read. The
@@ -339,12 +339,12 @@ describe('platform Workers changed outside Void', () => {
     );
   });
 
-  describe('when Void cannot read a Worker', () => {
+  describe('when Nosam cannot read a Worker', () => {
     type Read = 'source' | 'deployments' | 'version';
     const failure = (status: number) => new PlatformCloudflareApiError('Cloudflare error', status);
     const notReadable = (answer: string) =>
-      `platform: Void cannot read the platform Worker ${names.apiWorker} (${answer}), so it cannot find changes made outside Void. No platform Worker changed. This command did not pause application traffic.`;
-    /** Each read takes the next answer of its kind, then the answer of a Worker that Void deployed. */
+      `platform: Nosam cannot read the platform Worker ${names.apiWorker} (${answer}), so it cannot find changes made outside Nosam. No platform Worker changed. This command did not pause application traffic.`;
+    /** Each read takes the next answer of its kind, then the answer of a Worker that Nosam deployed. */
     const find = (answers: Partial<Record<Read, Array<unknown>>>) => {
       const reads: Array<Read> = [];
       const recorded = activeVersionReads(names.apiWorker, recordedMessage);
@@ -408,7 +408,7 @@ describe('platform Workers changed outside Void', () => {
         answers: { deployments: [{ deployments: [{ versions: [{ percentage: 100 }] }] }] },
         reads: ['source', 'deployments'],
         waits: [],
-        message: `platform: Cloudflare returned malformed deployment data for the platform Worker ${names.apiWorker}, so Void cannot find changes made outside Void. No platform Worker changed. This command did not pause application traffic. Run the command again.`,
+        message: `platform: Cloudflare returned malformed deployment data for the platform Worker ${names.apiWorker}, so Nosam cannot find changes made outside Nosam. No platform Worker changed. This command did not pause application traffic. Run the command again.`,
       },
       {
         // The deploy refuses this deployment after it paused traffic.
@@ -443,7 +443,7 @@ describe('platform Workers changed outside Void', () => {
 
       await expect(found.result).rejects.toThrow(message);
       expect(found.reads).toEqual(reads);
-      // Void reads again only after a failure that can pass.
+      // Nosam reads again only after a failure that can pass.
       expect(wait.mock.calls).toEqual(waits);
     });
 
@@ -464,7 +464,7 @@ describe('platform Workers changed outside Void', () => {
       expect(wait).not.toHaveBeenCalled();
     });
 
-    it('keeps a change made outside Void when the deployments read gives 404', async () => {
+    it('keeps a change made outside Nosam when the deployments read gives 404', async () => {
       const found = find({ source: ['dash'], deployments: [failure(404)] });
 
       await expect(found.result).resolves.toEqual([
@@ -491,8 +491,8 @@ describe('platform Workers changed outside Void', () => {
         runtime,
         installation,
       );
-    // The run agreed to replace a change made outside Void on the API Worker.
-    // It made Void's version active and stopped before the cutover finished.
+    // The run agreed to replace a change made outside Nosam on the API Worker.
+    // It made Nosam's version active and stopped before the cutover finished.
     // The marker shows the Cloudflare CLI, and the active version has the record.
     const stopped = (manifest = installationManifest()) =>
       recordWorkerCutoverStage(
@@ -514,7 +514,7 @@ describe('platform Workers changed outside Void', () => {
       earlierMessage = undefined;
     });
 
-    it('flags a Worker when the run restores an earlier version without a Void record', async () => {
+    it('flags a Worker when the run restores an earlier version without a Nosam record', async () => {
       // The installer restores the earlier version first, and then the upgrade
       // would refuse it.
       await expect(find({ manifest: stopped() })).resolves.toEqual([
@@ -584,7 +584,7 @@ describe('platform Workers changed outside Void', () => {
         },
       });
       // While the platform changes to configurable sign-in and already requires
-      // sign-in, the installer keeps Void's version.
+      // sign-in, the installer keeps Nosam's version.
       const required = authentication(true);
       await expect(
         find({ manifest: stopped(), readAuthenticationState: required }),
@@ -623,7 +623,7 @@ describe('platform Workers changed outside Void', () => {
         command: 'void platform upgrade example-a1b2c3d4',
       });
 
-    it('changes nothing when no Worker was changed outside Void', async () => {
+    it('changes nothing when no Worker was changed outside Nosam', async () => {
       await expect(review(true)).resolves.toEqual([]);
       expect(confirm).not.toHaveBeenCalled();
     });
@@ -634,16 +634,16 @@ describe('platform Workers changed outside Void', () => {
       sources.set(names.tailWorker, 'api');
       await expect(review(false)).rejects.toThrow(
         [
-          // An older Void release can have deployed the active version, so
-          // the heading does not say that each Worker was changed outside Void.
+          // An older Nosam release can have deployed the active version, so
+          // the heading does not say that each Worker was changed outside Nosam.
           'platform: These platform Workers need your approval before this command replaces their configuration:',
           `${names.apiWorker}: changed in the Cloudflare dashboard`,
-          `${names.proxyWorker}: has an active version without a Void deployment record`,
+          `${names.proxyWorker}: has an active version without a Nosam deployment record`,
           `${names.tailWorker}: changed in the Cloudflare API`,
           // An earlier run can have paused traffic. This one did not. The
           // lifecycle lock can have changed the database.
           'No platform Worker changed. This command did not pause application traffic.',
-          'This command replaces their configuration with the Void configuration. It can ask for your approval only in a terminal.',
+          'This command replaces their configuration with the Nosam configuration. It can ask for your approval only in a terminal.',
           'Run this command once in a terminal to review them:',
           'void platform upgrade example-a1b2c3d4',
         ].join('\n'),
@@ -697,11 +697,11 @@ describe('platform Workers changed outside Void', () => {
       const shown = String(vi.mocked(note).mock.calls[0]?.[0]);
       expect(shown).toBe(
         [
-          `${names.apiWorker}: has an active version without a Void deployment record`,
+          `${names.apiWorker}: has an active version without a Nosam deployment record`,
           '',
-          'This command replaces the configuration of these Workers with the Void configuration.',
-          'It removes values that Void does not set, for example an EMAIL_FROM that you added.',
-          'It resets values that Void sets, for example AUTH_REDIRECT_URI.',
+          'This command replaces the configuration of these Workers with the Nosam configuration.',
+          'It removes values that Nosam does not set, for example an EMAIL_FROM that you added.',
+          'It resets values that Nosam sets, for example AUTH_REDIRECT_URI.',
         ].join('\n'),
       );
     });
@@ -732,7 +732,7 @@ describe('platform Workers changed outside Void', () => {
       vars: { PLATFORM_OWNERSHIP_MARKER: ownershipMarker },
       workers_dev: true,
     };
-    // The active version of a Worker changed with the Workers API has no Void message.
+    // The active version of a Worker changed with the Workers API has no Nosam message.
     const request = vi.fn(async (path: string): Promise<unknown> => {
       if (path.endsWith('/deployments')) {
         return {
@@ -825,7 +825,7 @@ describe('platform Workers changed outside Void', () => {
       expect(uploads[0]!.operation).toEqual({
         type: 'versions.upload',
         configPath: expect.any(String),
-        message: 'Void: replace changes made outside Void',
+        message: 'Nosam: replace changes made outside Nosam',
         interactive: true,
       });
       expect(runner.mock.calls[0]!.slice(1)).toEqual(['account', expect.any(String), true]);
@@ -909,7 +909,7 @@ describe('installer upload after the operator agrees', () => {
               ],
             };
           case 'versions.view':
-            // A Workers API edit leaves no Void message on the active version.
+            // A Workers API edit leaves no Nosam message on the active version.
             return {
               status: 0,
               stdout: '',
@@ -964,13 +964,13 @@ describe('installer upload after the operator agrees', () => {
     }
   }
 
-  it('refuses an active version without a Void record of its triggers', async () => {
+  it('refuses an active version without a Nosam record of its triggers', async () => {
     const { commands, error } = await deploy(false);
     expect(error?.message).toContain('predates safe trigger snapshots');
     expect(commands).not.toContain('versions.upload');
   });
 
-  it("uses Void's own triggers when the operator agreed to replace the outside changes", async () => {
+  it("uses Nosam's own triggers when the operator agreed to replace the outside changes", async () => {
     const { commands, error } = await deploy(true);
     expect(error?.message).toContain('upload reached');
     expect(commands).toContain('versions.upload');

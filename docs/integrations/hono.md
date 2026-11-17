@@ -1,11 +1,11 @@
 ---
-description: 'Void route handlers run on Hono. Add hono to your app when your code imports from it directly.'
+description: 'Nosam route handlers run on Hono. Add hono to your app when your code imports from it directly.'
 outline: deep
 ---
 
 # Hono
 
-Void handlers run on [Hono](https://hono.dev). Void depends on Hono internally, but if your app imports from `hono/*` directly, add `hono` to your app's dependencies first.
+Nosam handlers run on [Hono](https://hono.dev). Nosam depends on Hono internally, but if your app imports from `hono/*` directly, add `hono` to your app's dependencies first.
 
 ```bash
 npm install hono

@@ -315,7 +315,7 @@ async function withZeroTrustOperationLock(
 function skippedProjectsError(projectIds: ReadonlyArray<string>): string {
   const shown = projectIds.slice(0, 5).join(', ');
   const more = projectIds.length > 5 ? ' and others' : '';
-  return `The new application domain stays unpublished until Zero Trust can update projects ${shown}${more}. See each project's last error with \`void platform zero-trust project-status <project-id>\`, fix the cause, then run \`void platform zero-trust reconcile\`. Void also retries every hour.`;
+  return `The new application domain stays unpublished until Zero Trust can update projects ${shown}${more}. See each project's last error with \`void platform zero-trust project-status <project-id>\`, fix the cause, then run \`void platform zero-trust reconcile\`. Nosam also retries every hour.`;
 }
 
 async function completeConfigureOperation(

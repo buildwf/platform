@@ -5,7 +5,7 @@ outline: deep
 
 # Project Collaboration
 
-A project hosted on a Void platform can have one owner and additional readers, collaborators, and project administrators. Team access is a platform feature; it is not available for projects deployed directly to Cloudflare.
+A project hosted on a Nosam platform can have one owner and additional readers, collaborators, and project administrators. Team access is a platform feature; it is not available for projects deployed directly to Cloudflare.
 
 ## Roles
 

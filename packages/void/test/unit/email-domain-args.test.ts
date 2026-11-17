@@ -88,7 +88,7 @@ describe('parseEmailArgs — domain group', () => {
 
   it('rejects --platform cloudflare on the domain group, accepts --platform void', () => {
     expect(() => parseEmailArgs(['domain', 'add', 'acme.com', '--platform', 'cloudflare'])).toThrow(
-      'email: --platform cloudflare applies to `void email status` and `void email setup` only (`domain` is a Void platform command).',
+      'email: --platform cloudflare applies to `void email status` and `void email setup` only (`domain` is a Nosam platform command).',
     );
     expect(parseEmailArgs(['domain', 'list', '--platform', 'void'])).toMatchObject({
       domainVerb: 'list',

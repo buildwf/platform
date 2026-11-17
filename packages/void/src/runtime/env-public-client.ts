@@ -1,7 +1,7 @@
 /**
  * Client-side variant of `void/env`.
  *
- * Selected via the `browser` export condition. Void exposes only fixed-prefix
+ * Selected via the `browser` export condition. Nosam exposes only fixed-prefix
  * `VITE_*` schema keys to the client bundle. If a server-only key is read
  * here it isn't on `import.meta.env`, so we throw a clear error rather than
  * silently returning `undefined`.
@@ -26,7 +26,7 @@ function readClientKey(key: string): unknown {
   }
   throw new Error(
     `env: Key '${key}' is not exposed to the client. ` +
-      `Void only exposes VITE_* schema keys to browser code. ` +
+      `Nosam only exposes VITE_* schema keys to browser code. ` +
       `Either rename the key in env.ts with that prefix, or move this access to a server module.`,
   );
 }

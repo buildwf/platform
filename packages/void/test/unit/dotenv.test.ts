@@ -77,7 +77,7 @@ describe('parseDotenv — lines Vite and Wrangler both read', () => {
     });
   });
 
-  // The runtimes disagree on these, so Void reads neither.
+  // The runtimes disagree on these, so Nosam reads neither.
   it.each([
     // Wrangler reads K=v; Vite does not read the line.
     ['K: v'],

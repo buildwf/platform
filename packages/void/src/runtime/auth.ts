@@ -17,7 +17,7 @@ export interface VoidAuthTypes {}
 /**
  * Better Auth's inferred `{ user, session }` for an `auth.ts` default export.
  * Used by the generated `.void/auth.d.ts`; it lives here so `better-auth`
- * resolves from Void's own dependencies, not the app's.
+ * resolves from Nosam's own dependencies, not the app's.
  *
  * An `any` default export (an `auth.js` without `allowJs`, or an import that
  * does not resolve) keeps Better Auth's base shapes instead of a user type that
@@ -88,7 +88,7 @@ export function getSession(): AuthState | null {
   return authContext.getStore()?.state ?? null;
 }
 
-/** Returns the instance created by Void's auth middleware for this request. */
+/** Returns the instance created by Nosam's auth middleware for this request. */
 export function getAuth(c: Context): AuthInstance {
   const auth = c.get('__voidAuth') as AuthInstance | undefined;
   if (!auth) {

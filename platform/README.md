@@ -1,7 +1,7 @@
-# Void Platform
+# Nosam Platform
 
-The Void platform runs in your Cloudflare account and lets developers deploy
-applications through the Void CLI. This repository contains its control plane,
+The Nosam platform runs in your Cloudflare account and lets developers deploy
+applications through the Nosam CLI. This repository contains its control plane,
 routing, proxy, log ingestion, and optional dashboard and build services.
 
 The API, dispatch, proxy, tail, and email gateway Workers are packaged into
@@ -10,7 +10,7 @@ runtime can be installed and upgraded with `void platform`. The installer tracks
 resource ownership, applies compatible migrations, and preserves credentials
 across upgrades.
 
-Start with [Self-host a Void Platform](../docs/guide/self-hosted-platform.md) to
+Start with [Self-host a Nosam Platform](../docs/guide/self-hosted-platform.md) to
 install it, [Platform Administration](../docs/guide/platform-administration.md) to
 operate it, or [Platform Development](../docs/guide/platform-development.md) to
 work on a fork. The dashboard and managed builds are optional source components;
@@ -52,7 +52,7 @@ relative to `platform/` unless they begin with `../`.
 
 The workspace `dev` and `build` scripts in `platform/package.json` apply to the
 dashboard. They do not start the API or install a platform. Deployment scripts
-in that file serve the existing Void Cloud deployment; see [operations](#operations).
+in that file serve the existing Nosam Cloud deployment; see [operations](#operations).
 
 ## Operator CLI
 
@@ -89,13 +89,13 @@ commands. `vp run --filter @voidcloud/platform health` forwards to
 `void platform system health`, using the selected connection and operator login.
 Automation supplies `VOID_OPERATOR_TOKEN` and an explicit `VOID_API_URL`.
 
-Void Cloud maintains an existing deployment that predates the installer. Its
+Nosam Cloud maintains an existing deployment that predates the installer. Its
 `platform/package.json` deployment scripts and `platform/deployments/void-cloud.json`
-descriptor belong to that deployment. The [Void Cloud operations note](./meta/operations.md)
+descriptor belong to that deployment. The [Nosam Cloud operations note](./meta/operations.md)
 explains its environments and credentials without storing account-specific
 inventories or personal access assignments in the repository.
 
-The hosted deploy/smoke workflows target the existing Void Cloud deployment.
+The hosted deploy/smoke workflows target the existing Nosam Cloud deployment.
 Forks build their own runtime and use `void platform install` or
 `void platform upgrade --runtime`, as shown in the development guide.
 

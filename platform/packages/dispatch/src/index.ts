@@ -579,7 +579,7 @@ const dispatcher = {
     const timeoutMs = resolveTimeoutMs(env.DISPATCH_TIMEOUT_MS);
     const workerTimeoutMs = resolveTimeoutMs(env.DISPATCH_TIMEOUT_MS, 0);
 
-    // Block Void-internal routes from external HTTP access.
+    // Block Nosam-internal routes from external HTTP access.
     // Only /__void/* is reserved by the platform — other __ prefixes
     // (e.g. /__nuxt_content, /__og-image__) are user/framework assets.
     if (

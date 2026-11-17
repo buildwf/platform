@@ -93,7 +93,7 @@ export default async () => {};`,
       scanQueuesSync(queuesDir);
       expect(log).toHaveBeenCalledOnce();
       expect(log.mock.calls[0][0]).toContain(
-        "queue: 'star.ts' uses `export * from`. Void does not read consumer options through it",
+        "queue: 'star.ts' uses `export * from`. Nosam does not read consumer options through it",
       );
     } finally {
       log.mockRestore();

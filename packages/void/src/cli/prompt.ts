@@ -16,7 +16,7 @@ export type PromptResult = SelectResult | CreateResult;
 export type ProjectSetupAction = 'create' | 'link';
 
 export async function promptProjectSetupAction(
-  message = 'Set up a Void project:',
+  message = 'Set up a Nosam project:',
   options: { includeLink?: boolean; link?: boolean } = {},
 ): Promise<ProjectSetupAction> {
   const result = await select({
@@ -95,7 +95,7 @@ export async function promptProjectSelection(
 
 export async function promptProjectSlug(defaultSlug: string): Promise<string> {
   const result = await text({
-    message: 'Choose a slug for your new Void project:',
+    message: 'Choose a slug for your new Nosam project:',
     placeholder: defaultSlug,
     defaultValue: defaultSlug,
     validate: (value) => validateProjectSlug(value || defaultSlug),

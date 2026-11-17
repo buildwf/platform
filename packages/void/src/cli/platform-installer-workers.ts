@@ -819,7 +819,7 @@ export async function deployPlatformWorker(
           type: 'versions.deploy',
           configPath,
           versions: [{ versionId: uploadedVersionId, percentage: 100 }],
-          message: `Void platform activation ${uploadedVersionId}`,
+          message: `Nosam platform activation ${uploadedVersionId}`,
         },
         accountId,
         directory,
@@ -978,7 +978,7 @@ export async function deployPlatformWorker(
 }
 
 /**
- * Upload a version of a platform Worker that was changed outside Void, and do
+ * Upload a version of a platform Worker that was changed outside Nosam, and do
  * not deploy it. The Cloudflare CLI uses this terminal: it shows what the
  * upload replaces and asks the operator. After the operator agrees, later
  * uploads of this Worker work without a terminal again.
@@ -1025,7 +1025,7 @@ export async function uploadPlatformWorkerForReview(
       {
         type: 'versions.upload',
         configPath,
-        message: 'Void: replace changes made outside Void',
+        message: 'Nosam: replace changes made outside Nosam',
         interactive: true,
       },
       accountId,
@@ -1259,7 +1259,7 @@ export async function restorePlatformWorkerDeployment(input: {
         versionId: version.versionId,
         percentage: version.percentage,
       })),
-      message: `Void platform restoration ${input.restoration.id}`,
+      message: `Nosam platform restoration ${input.restoration.id}`,
     },
     input.accountId,
     input.directory,

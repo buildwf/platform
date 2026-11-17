@@ -519,7 +519,7 @@ export function compileRouteTable(
     // Queue dispatch as a standalone function — called directly by native queue handler
     // and via the authenticated HTTP route. No global mutable state needed.
     // It logs why a batch failed: the native handler throws only "queue: Handler failed.",
-    // the HTTP route returns no handler error, and the Void Cloud relay ignores `error`.
+    // the HTTP route returns no handler error, and the Nosam Cloud relay ignores `error`.
     lines.push('export async function __processQueue(payload, env) {');
     lines.push('  const queueSuffix = payload.queue;');
     lines.push('  const __queueIndex = __resolveQueueIndex(queueSuffix);');
@@ -794,7 +794,7 @@ export function compileRouteTable(
   return lines.join('\n');
 }
 
-/** Asset fallthrough for native Void workers. */
+/** Asset fallthrough for native Nosam workers. */
 function compileAssetFallbackHelper(
   assetsDir = 'assets',
   serveSpaFallback = false,

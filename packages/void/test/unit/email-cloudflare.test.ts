@@ -674,7 +674,7 @@ describe('preflightEmail', () => {
   });
 
   it('flags a committed `addresses` array that is not the pruned set as stale, without losing ready', async () => {
-    // A rule Void created was later re-pointed at a forward: the entry is pruned, and the
+    // A rule Nosam created was later re-pointed at a forward: the entry is pruned, and the
     // committed array still listing it would reach wrangler's plan as a `conflict`.
     const forwarded = routingRules({
       supportDomain: 'mail.acme.com',
@@ -691,7 +691,7 @@ describe('preflightEmail', () => {
     expect(retarget.addresses).toEqual(['support@mail.acme.com']);
     expect(retarget.addressesStale).toBe(true);
 
-    // Worker rename: every rule now belongs to the old name, so nothing is Void's to list.
+    // Worker rename: every rule now belongs to the old name, so nothing is Nosam's to list.
     const renamed = await preflightEmail(
       readyAccount({ workerName: 'acme-mail', existingAddresses: ['support@mail.acme.com'] })
         .inputs,
@@ -741,7 +741,7 @@ describe('preflightEmail', () => {
       {
         scope: 'all',
         message:
-          'Cloudflare config already uses SEND_EMAIL as a Environment Variable binding; rename it in void.config.ts (Void writes SEND_EMAIL into send_email)',
+          'Cloudflare config already uses SEND_EMAIL as a Environment Variable binding; rename it in void.config.ts (Nosam writes SEND_EMAIL into send_email)',
       },
     ]);
   });
@@ -765,7 +765,7 @@ describe('preflightEmail', () => {
       {
         scope: 'all',
         message:
-          'acme.com already receives mail (aspmx.l.google.com, alt1.aspmx.l.google.com). Void never enables routing over live mail. Use something@mail.acme.com.',
+          'acme.com already receives mail (aspmx.l.google.com, alt1.aspmx.l.google.com). Nosam never enables routing over live mail. Use something@mail.acme.com.',
       },
     ]);
     expect(pre.ready).toBe(false);
@@ -792,7 +792,7 @@ describe('preflightEmail', () => {
     expect(pre.rules.absent).toEqual(['support@acme.com', '*@acme.com']);
   });
 
-  it('every session blocker routes Cloudflare login through Void, never through wrangler', async () => {
+  it('every session blocker routes Cloudflare login through Nosam, never through wrangler', async () => {
     // AGENTS.md: user-facing output never asks for a wrangler command. These rows print raw
     // from `void email setup` / `status`, and through `formatCloudflareUserMessage` on the
     // deploy path, where a `wrangler …` command would render as "the underlying Cloudflare
@@ -891,7 +891,7 @@ describe('preflightEmail', () => {
     expect(pre.blockers).toContainEqual({
       scope: 'all',
       message:
-        'Email Routing on acme.com is unlocked — fix it in the Cloudflare dashboard; Void never re-locks records you unlocked',
+        'Email Routing on acme.com is unlocked — fix it in the Cloudflare dashboard; Nosam never re-locks records you unlocked',
     });
   });
 
@@ -934,7 +934,7 @@ describe('preflightEmail', () => {
     expect(pre.blockers).toContainEqual({
       scope: 'all',
       message:
-        'mail.acme.com already receives mail (mx.example.net). Void never enables routing over live mail.',
+        'mail.acme.com already receives mail (mx.example.net). Nosam never enables routing over live mail.',
     });
   });
 
@@ -1022,7 +1022,7 @@ describe('preflightEmail', () => {
     ]);
 
     // A disabled FOREIGN rule is still somebody else's matcher: the row stays `foreign`
-    // and the address is pruned, exactly as when the rule is enabled — Void does not
+    // and the address is pruned, exactly as when the rule is enabled — Nosam does not
     // take over another owner's rule because it is switched off.
     const disabledForeign = routingRules({
       supportDomain: 'mail.acme.com',
@@ -1081,7 +1081,7 @@ describe('preflightEmail', () => {
     expect(preMine.rules.mine).toEqual(['*@acme.com']);
   });
 
-  it('refuses a hand-written `addresses` array holding entries Void did not derive', async () => {
+  it('refuses a hand-written `addresses` array holding entries Nosam did not derive', async () => {
     const { inputs } = transcriptInputs({
       existingAddresses: ['support@mail.acme.com', 'billing@mail.acme.com'],
     });
@@ -1646,7 +1646,7 @@ describe('applyEmailSetup', () => {
     const checklist = renderEmailChecklist(pre);
     expect(checklist).not.toContain('acme.com itself is not touched');
     expect(checklist).toContain(
-      `    ! enable Email Routing on mail.acme.com       Email Routing is not enabled on acme.com; Void never enables it on the apex from the subdomain path — ${subdomainDashboardFallback('acme.com', 'mail.acme.com')}`,
+      `    ! enable Email Routing on mail.acme.com       Email Routing is not enabled on acme.com; Nosam never enables it on the apex from the subdomain path — ${subdomainDashboardFallback('acme.com', 'mail.acme.com')}`,
     );
     calls.length = 0;
     fetchCalls.length = 0;
@@ -1658,7 +1658,7 @@ describe('applyEmailSetup', () => {
     expect(out.inboundReady).toBe(false);
     expect(out.patch.addresses).toBeNull();
     expect(out.lines).toEqual([
-      '  ✘ routing   mail.acme.com: Email Routing is not enabled on acme.com — a subdomain can only be added to a zone that already routes; Void never enables routing on the apex from the subdomain path',
+      '  ✘ routing   mail.acme.com: Email Routing is not enabled on acme.com — a subdomain can only be added to a zone that already routes; Nosam never enables routing on the apex from the subdomain path',
       `    ${subdomainDashboardFallback('acme.com', 'mail.acme.com')}`,
       '  ✘ routing   subaddressing on acme.com: skipped (Email Routing is not enabled on acme.com)',
       '  ✔ sending   mail.acme.com onboarded',
@@ -1857,12 +1857,12 @@ describe('findEmailConfigConflicts', () => {
     expect(
       findEmailConfigConflicts({ kv_namespaces: [{ binding: 'SEND_EMAIL', id: 'x' }] }),
     ).toEqual([
-      'Cloudflare config already uses SEND_EMAIL as a KV Namespace binding; rename it in void.config.ts (Void writes SEND_EMAIL into send_email)',
+      'Cloudflare config already uses SEND_EMAIL as a KV Namespace binding; rename it in void.config.ts (Nosam writes SEND_EMAIL into send_email)',
     ]);
     expect(
       findEmailConfigConflicts({ kv_namespaces: [{ binding: '__VOID_EMAIL_FROM', id: 'x' }] }),
     ).toEqual([
-      'Cloudflare config already uses __VOID_EMAIL_FROM as a KV Namespace binding; rename it in void.config.ts (Void writes __VOID_EMAIL_FROM into vars)',
+      'Cloudflare config already uses __VOID_EMAIL_FROM as a KV Namespace binding; rename it in void.config.ts (Nosam writes __VOID_EMAIL_FROM into vars)',
     ]);
     expect(findEmailConfigConflicts({ send_email: { name: 'SEND_EMAIL' } })).toEqual([
       expect.stringContaining('"send_email"'),

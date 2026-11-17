@@ -160,7 +160,7 @@ describe('runDeploy auth failures', () => {
     ).rejects.toThrow();
 
     expect(intro).not.toHaveBeenCalled();
-    expect(mockInfo).not.toHaveBeenCalledWith('Deployment target: Void');
+    expect(mockInfo).not.toHaveBeenCalledWith('Deployment target: Nosam');
   });
 
   it('does not print a deployment heading for an invalid Cloudflare target', async () => {
@@ -355,7 +355,7 @@ describe('runDeploy GitHub Actions OIDC exchange', () => {
         accountId: null,
         apiUrl: 'https://platform.example.test',
         applicationDomain: 'apps.example.test',
-        displayName: 'Company Void',
+        displayName: 'Company Nosam',
         installationId: null,
         kind: 'connected',
         proxyUrl: 'https://proxy.example.test',

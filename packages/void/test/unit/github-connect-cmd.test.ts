@@ -438,7 +438,7 @@ describe('runConnect — auto-join fallback', () => {
     );
     // The join-command-only copy must not leak into connect:
     expect(errorSpy).not.toHaveBeenCalledWith(
-      'Organization installation sharing is not enabled on this Void instance.',
+      'Organization installation sharing is not enabled on this Nosam instance.',
     );
   });
 
@@ -457,7 +457,7 @@ describe('runConnect — auto-join fallback', () => {
 
     expect(getGithubJoinUrl).not.toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalledWith(
-      'No active GitHub App installation. Run `void github install` first, or `void github join` if your organization already installed the Void GitHub App.',
+      'No active GitHub App installation. Run `void github install` first, or `void github join` if your organization already installed the Nosam GitHub App.',
     );
   });
 

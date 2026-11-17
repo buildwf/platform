@@ -14,7 +14,7 @@ function createPackage(t, overrides = {}, includeLicense = true) {
   const manifest = {
     name: '@void/test',
     version: '0.0.0',
-    description: 'A Void test package.',
+    description: 'A Nosam test package.',
     license: 'MIT',
     homepage: 'https://void.cloud',
     bugs: { url: 'https://github.com/voidzero-dev/void/issues' },

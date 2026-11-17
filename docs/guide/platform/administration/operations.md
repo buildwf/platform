@@ -27,7 +27,7 @@ Changes can take longer when an account owns many resources. Requests that chang
 void platform user delete <user-id> --timeout 600 --plan
 ```
 
-If a request times out or loses its connection, some work may already have finished. Check the affected objects and `system events` before retrying. Void reports partial results when it can and does not automatically repeat the change.
+If a request times out or loses its connection, some work may already have finished. Check the affected objects and `system events` before retrying. Nosam reports partial results when it can and does not automatically repeat the change.
 
 ## Following Logs
 
@@ -95,6 +95,6 @@ void platform system health --json
 unset VOID_OPERATOR_TOKEN
 ```
 
-Disable shell tracing for the exchange and do not write either token to logs or plaintext files. A full API login session expires after 30 days and can be revoked sooner; renew it through the normal authenticated login flow and update the protected CI secret. A job that runs longer than one hour must repeat the exchange while its full API session is still valid. An expired operator token cannot refresh itself, and Void does not issue permanent service tokens for administrator automation.
+Disable shell tracing for the exchange and do not write either token to logs or plaintext files. A full API login session expires after 30 days and can be revoked sooner; renew it through the normal authenticated login flow and update the protected CI secret. A job that runs longer than one hour must repeat the exchange while its full API session is still valid. An expired operator token cannot refresh itself, and Nosam does not issue permanent service tokens for administrator automation.
 
 `auth login --token-stdin` performs the same elevation and saves the one-hour operator token in the system keychain for interactive use. See [operator authentication](../../../reference/cli/platform.md#operator-authentication) for the full command syntax.

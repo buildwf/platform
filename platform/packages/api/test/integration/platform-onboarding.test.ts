@@ -30,7 +30,7 @@ describe('platform onboarding pages', () => {
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     const html = await adminHtml(response);
     expect(html).toContain('<h1 id="void-auth-title">Welcome to &lt;Example Platform&gt;</h1>');
-    expect(html).toContain('<title>Welcome · &lt;Example Platform&gt; · Void</title>');
+    expect(html).toContain('<title>Welcome · &lt;Example Platform&gt; · Nosam</title>');
     expect(html).toContain('npm install -g void');
     expect(html).toContain('void connect &#39;api.example.com&#39;');
     expect(html).toContain('href="/admin/"');
@@ -74,7 +74,7 @@ describe('platform onboarding pages', () => {
     expect(response.status).toBe(200);
     const html = await adminHtml(response);
     expect(html).toContain('&lt;Example Platform&gt;');
-    expect(html).toContain('<title>Get Started · &lt;Example Platform&gt; · Void</title>');
+    expect(html).toContain('<title>Get Started · &lt;Example Platform&gt; · Nosam</title>');
     expect(html).not.toContain('<Example Platform>');
     // `escapeHtml` escapes the quotes too; the browser renders them back.
     expect(html).toContain('void connect &#39;api.example.com&#39;');
@@ -94,7 +94,7 @@ describe('platform onboarding pages', () => {
       { ...env, PLATFORM_INSTALLATION_ID: 'example-installation' },
     );
     const html = await adminHtml(response);
-    expect(html).toContain('Get Started with Void Platform');
+    expect(html).toContain('Get Started with Nosam Platform');
     // `escapeHtml` escapes the quotes too; the browser renders them back.
     expect(html).toContain('void connect &#39;api.example.com&#39;');
     expect(html).not.toContain('attacker.example');
@@ -112,7 +112,7 @@ describe('platform onboarding pages', () => {
 
     expect(response.status).toBe(200);
     const html = await adminHtml(response);
-    expect(html).toContain('<title>Accept Project Invitation · Void Platform</title>');
+    expect(html).toContain('<title>Accept Project Invitation · Nosam Platform</title>');
     expect(html).toContain('void connect &#39;api.example.com&#39;');
     expect(html).toContain('void project team accept pinv_a1b2c3d4e5f6');
     expect(html).toContain('The CLI checks that it is still valid');
@@ -137,7 +137,7 @@ describe('platform onboarding pages', () => {
 
     expect(response.status).toBe(200);
     const html = await adminHtml(response);
-    expect(html).toContain('<title>Get Started · Void Platform</title>');
+    expect(html).toContain('<title>Get Started · Nosam Platform</title>');
     expect(html).not.toContain('void project team accept');
     expect(html).not.toContain('evil.example');
   });
@@ -153,8 +153,8 @@ describe('platform onboarding pages', () => {
       );
       expect(response.status).toBe(200);
       const html = await adminHtml(response);
-      expect(html).toContain('Void Platform');
-      expect(html).not.toContain('Void Cloud');
+      expect(html).toContain('Nosam Platform');
+      expect(html).not.toContain('Nosam Cloud');
       if (path === '/') {
         expect(html).toContain('void connect &#39;api.example.com&#39;');
       }
@@ -166,7 +166,7 @@ describe('platform onboarding pages', () => {
     async (origin) => {
       const response = await app.fetch(new Request(`${origin}/signup-restricted`), env);
       expect(await adminHtml(response)).toContain(
-        'New accounts on Void Cloud require administrator approval.',
+        'New accounts on Nosam Cloud require administrator approval.',
       );
     },
   );

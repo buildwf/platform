@@ -22,7 +22,7 @@ export function createClientStubsPlugin(): Plugin {
         }
       }
       export class SandboxUnavailableError extends Error {
-        constructor(message = 'Managed Sandbox is unavailable on this Void platform.') {
+        constructor(message = 'Managed Sandbox is unavailable on this Nosam platform.') {
           super(message);
           this.name = 'SandboxUnavailableError';
         }

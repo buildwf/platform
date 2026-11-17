@@ -38,7 +38,7 @@ function arrayIdentity(value: unknown): string {
   return JSON.stringify(value) ?? String(value);
 }
 
-/** Keep authored values authoritative while retaining fields produced by Void. */
+/** Keep authored values authoritative while retaining fields produced by Nosam. */
 function mergeConfig(previous: unknown, resolved: unknown, authored: unknown): unknown {
   if (isDeepStrictEqual(previous, authored)) {
     return resolved;
@@ -165,7 +165,7 @@ export function restoreCloudflarePreviewPointer(root: string): boolean {
   return true;
 }
 
-/** Preserve Void's JSONC provenance comments when authored settings change. */
+/** Preserve Nosam's JSONC provenance comments when authored settings change. */
 function provenance(text: string): string {
   const lines = text.match(
     /^\s*\/\/ void:(?:managed-queues|published-traffic):v1:[A-Za-z0-9_-]+\s*$/gm,
@@ -210,7 +210,7 @@ export function materializeCloudflareConfig(root: string): string {
   return path;
 }
 
-/** Record Cloudflare settings written by Void so later builds reproduce them. */
+/** Record Cloudflare settings written by Nosam so later builds reproduce them. */
 export function persistCloudflareConfig(root: string): void {
   if (!existsSync(join(root, TYPED_CONFIG_FILE))) {
     return;

@@ -90,7 +90,7 @@ export default defineConfig({
 });
 ```
 
-Use a fallback for a client-side router or a default-locale catch-all. An intentional `404` from a Void route remains a `404`. For third-party frameworks, fallbacks can also replace the framework's `404` response.
+Use a fallback for a client-side router or a default-locale catch-all. An intentional `404` from a Nosam route remains a `404`. For third-party frameworks, fallbacks can also replace the framework's `404` response.
 
 SPA apps already fall back to `/index.html`. Custom fallback rules run first; unmatched paths still use the SPA shell. You don't need to add `'/*': '/index.html'` yourself.
 

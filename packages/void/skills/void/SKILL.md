@@ -1,26 +1,26 @@
 ---
 name: void
-description: Build Void apps and use the Void CLI by loading the relevant bundled guides and references.
+description: Build Nosam apps and use the Nosam CLI by loading the relevant bundled guides and references.
 ---
 
-# Void
+# Nosam
 
 Read only the guides needed for the user's task. Prefer the app's installed
-documentation at `node_modules/void/docs/` so it matches the app's Void version.
+documentation at `node_modules/void/docs/` so it matches the app's Nosam version.
 All `docs/` paths below are relative to that package's root. When using this
-skill globally without a local Void installation, follow the skill's symlink to
-its real directory and use `../../docs/` in the same Void package. If the skill
-was copied without the package, use the guides at [https://void.cloud](https://void.cloud) instead.
+skill globally without a local Nosam installation, follow the skill's symlink to
+its real directory and use `../../docs/` in the same Nosam package. If the skill
+was copied without the package, use the guides at https://void.cloud instead.
 
-Before running a Void command, find its group in `docs/reference/cli.md`, then
+Before running a Nosam command, find its group in `docs/reference/cli.md`, then
 read the matching page under `docs/reference/cli/` for syntax, options, and
-deployment target. Use Void commands for application and platform
+deployment target. Use Nosam commands for application and platform
 workflows. Mention Wrangler only when the user needs to recognize a literal
 configuration file or environment variable.
 
 Use `void` and `@void/*` in imports, examples, and package manifests. Follow the
-project's existing deployment destination. Void apps are React single-page apps with an
-optional backend in `routes/`; there is no server rendering. Deploying to a Void
+project's existing deployment destination. Nosam apps are React single-page apps with an
+optional backend in `routes/`; there is no server rendering. Deploying to a Nosam
 platform requires an explicit `void connect <url>` first; never infer a platform
 from old examples, tokens, or project IDs.
 
@@ -97,4 +97,4 @@ If the user invokes this skill without a task, inspect the app's local structure
 configuration, and saved deployment destination, give a brief status, and ask
 what they want to work on.
 
-Await AI and Sandbox operations normally. Usage limits reject with `UsageLimit` from `void/limits`; Void routes automatically return HTTP 429. Optionally catch with `instanceof UsageLimit` for a fallback or custom response. See `docs/guide/ai.md` and `docs/guide/sandboxes.md`.
+Await AI and Sandbox operations normally. Usage limits reject with `UsageLimit` from `void/limits`; Nosam routes automatically return HTTP 429. Optionally catch with `instanceof UsageLimit` for a fallback or custom response. See `docs/guide/ai.md` and `docs/guide/sandboxes.md`.

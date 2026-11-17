@@ -42,7 +42,7 @@ async function generate(resolved: Record<string, unknown>, command: 'build' | 's
   const hook = plugins.find((plugin) => plugin.name === 'void:env')?.config;
   const configure = typeof hook === 'function' ? hook : hook?.handler;
   if (!configure) {
-    throw new Error('Void environment hook missing');
+    throw new Error('Nosam environment hook missing');
   }
   (configure as (config: UserConfig, environment: ConfigEnv) => void)(
     {},
@@ -56,7 +56,7 @@ async function generate(resolved: Record<string, unknown>, command: 'build' | 's
   const routingHook = plugins.find((plugin) => plugin.name === 'void:routing')?.buildStart;
   const buildStart = typeof routingHook === 'function' ? routingHook : routingHook?.handler;
   if (!buildStart) {
-    throw new Error('Void routing hook missing');
+    throw new Error('Nosam routing hook missing');
   }
   await (buildStart as () => Promise<void>)();
   return { patch, entry: readFileSync(join(root, '.void/entry.ts'), 'utf8') };

@@ -2407,7 +2407,7 @@ describe('end-to-end: envelope → handler → action queue', () => {
       } as unknown as Parameters<ForwardableEmailMessage['reply']>[0]);
     });
     await expect(dispatchToHandler(makeEnvelope(), handler)).rejects.toThrow(
-      /exceeds Void's sending limit/,
+      /exceeds Nosam's sending limit/,
     );
   });
 
@@ -2433,7 +2433,7 @@ describe('end-to-end: envelope → handler → action queue', () => {
       } as unknown as Parameters<ForwardableEmailMessage['reply']>[0]);
     });
     await expect(dispatchToHandler(makeEnvelope(), handler)).rejects.toThrow(
-      /exceeds Void's sending limit/,
+      /exceeds Nosam's sending limit/,
     );
     expect(cancelled).toBe(true);
     // 5 MiB limit + the chunk that crosses it + the stream's own read-ahead.

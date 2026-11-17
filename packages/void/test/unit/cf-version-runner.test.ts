@@ -759,7 +759,7 @@ it.each(
   (
     [
       [
-        'Void-generated',
+        'Nosam-generated',
         `${GENERATED_ASSET_HEADERS_MARKER}\n/assets/a-12345678.js\n  Cache-Control: public, max-age=31536000, immutable\n`,
       ],
       ['user-authored', authoredAssetHeaders],
@@ -2303,7 +2303,7 @@ it.each([undefined, false, true])(
           return { status: 0, stdout: '', stderr: '' };
         },
       });
-      for (const message of [undefined, 'Void automatic rollback after readiness failed.']) {
+      for (const message of [undefined, 'Nosam automatic rollback after readiness failed.']) {
         const result = await runner(
           {
             type: 'versions.deploy',
@@ -3008,7 +3008,7 @@ describe('session credential failures', () => {
       // version.ts formats the upload failure the same way.
       const diagnostic = cloudflareCommandDiagnostic(upload)!;
       expect(diagnostic).toContain(
-        'Could not get the Cloudflare session credential for the upload: the Void CLI helper process exited with code 7.',
+        'Could not get the Cloudflare session credential for the upload: the Nosam CLI helper process exited with code 7.',
       );
       expect(diagnostic).toContain(
         "SyntaxError: The requested module 'node:http' does not provide an export named 'setGlobalProxyFromEnv'",
@@ -3032,7 +3032,7 @@ describe('session credential failures', () => {
         { capture: true },
       );
       const text =
-        'Could not get the Cloudflare session credential for the upload: the Void CLI helper process could not run: spawn EACCES.';
+        'Could not get the Cloudflare session credential for the upload: the Nosam CLI helper process could not run: spawn EACCES.';
       // version.ts runs the formatter a second time over this result.
       expect(cloudflareCommandDiagnostic(upload)).toBe(text);
       expect(cloudflareCommandDiagnostic({ status: 1, stdout: '', stderr: text })).toBe(text);
@@ -3085,7 +3085,7 @@ describe('session credential failures', () => {
       expect(result).toMatchObject({ status: 1, signal: 'SIGKILL' });
       const diagnostic = cloudflareCommandDiagnostic(result)!;
       expect(diagnostic).toContain(
-        'Could not get the Cloudflare session credential for publishing Worker settings: the Void CLI helper process was stopped by SIGKILL.',
+        'Could not get the Cloudflare session credential for publishing Worker settings: the Nosam CLI helper process was stopped by SIGKILL.',
       );
       expect(diagnostic).toContain('Node.js v22.23.4');
       expect(diagnostic.toLowerCase()).not.toContain('bearer [redacted]');

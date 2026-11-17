@@ -4,7 +4,7 @@ import { assertCleanPlatformWrangler } from '../../src/cli/platform-installer-er
 const UPLOAD_CONFLICT =
   'Aborting the upload operation because of conflicts. To override and upload anyway, remove the `--strict` flag';
 const OUTSIDE_CHANGE_ADVICE =
-  ' This Worker was changed outside Void. Run the same command in a terminal. Void then lists the changes and asks you before it replaces them.';
+  ' This Worker was changed outside Nosam. Run the same command in a terminal. Nosam then lists the changes and asks you before it replaces them.';
 
 // cf 1.0.0-beta.21 and later print upload messages on stderr, earlier releases on stdout.
 it.each(['stdout', 'stderr'] as const)(
@@ -67,7 +67,7 @@ it.each(['stdout', 'stderr'] as const)(
   },
 );
 
-describe('cf upload conflicts that do not show a change outside Void', () => {
+describe('cf upload conflicts that do not show a change outside Nosam', () => {
   const CONFLICT_ADVICE =
     ' It stopped the upload because of a conflict that it could not confirm without a terminal. Fix the conflict, then run the command again.';
   const upload = (warning: ReadonlyArray<string>) =>
@@ -96,14 +96,14 @@ describe('cf upload conflicts that do not show a change outside Void', () => {
   };
   // The Cloudflare CLI stopped, so its sentence about the replacement of the
   // secrets is not true.
-  const SECRET_REPLACEMENT = /This deployment will replace|--strict|Wrangler|outside Void/;
+  const SECRET_REPLACEMENT = /This deployment will replace|--strict|Wrangler|outside Nosam/;
 
   it('names the variables that have the name of a secret on the Worker', () => {
     const output = message([
       '▲  Environment variables `AUTH_REDIRECT_URI` and `DASHBOARD_URL` conflict with existing remote secrets. This deployment will replace these remote secrets with your environment variables.',
     ]);
     expect(output).toBe(
-      'platform: The Cloudflare CLI did not upload void-x-api: the Worker has secrets with the same names as values that Void sets: `AUTH_REDIRECT_URI` and `DASHBOARD_URL`. Delete those secrets from the Worker in the Cloudflare dashboard, then run the command again.',
+      'platform: The Cloudflare CLI did not upload void-x-api: the Worker has secrets with the same names as values that Nosam sets: `AUTH_REDIRECT_URI` and `DASHBOARD_URL`. Delete those secrets from the Worker in the Cloudflare dashboard, then run the command again.',
     );
     expect(output).not.toMatch(SECRET_REPLACEMENT);
   });
@@ -113,7 +113,7 @@ describe('cf upload conflicts that do not show a change outside Void', () => {
       '▲  Binding `ROUTING` conflicts with an existing remote secret. This deployment will replace the remote secret with your binding.',
     ]);
     expect(output).toBe(
-      'platform: The Cloudflare CLI did not upload void-x-api: the Worker has a secret with the same name as a value that Void sets: `ROUTING`. Delete that secret from the Worker in the Cloudflare dashboard, then run the command again.',
+      'platform: The Cloudflare CLI did not upload void-x-api: the Worker has a secret with the same name as a value that Nosam sets: `ROUTING`. Delete that secret from the Worker in the Cloudflare dashboard, then run the command again.',
     );
     expect(output).not.toMatch(SECRET_REPLACEMENT);
   });
@@ -123,7 +123,7 @@ describe('cf upload conflicts that do not show a change outside Void', () => {
       '▲  Configuration values (`AUTH_REDIRECT_URI`, `DASHBOARD_URL`, and `ROUTING`) conflict with existing remote secrets. This deployment will replace these remote secrets with the configuration values.',
     ]);
     expect(output).toBe(
-      'platform: The Cloudflare CLI did not upload void-x-api: the Worker has secrets with the same names as values that Void sets: `AUTH_REDIRECT_URI`, `DASHBOARD_URL`, and `ROUTING`. Delete those secrets from the Worker in the Cloudflare dashboard, then run the command again.',
+      'platform: The Cloudflare CLI did not upload void-x-api: the Worker has secrets with the same names as values that Nosam sets: `AUTH_REDIRECT_URI`, `DASHBOARD_URL`, and `ROUTING`. Delete those secrets from the Worker in the Cloudflare dashboard, then run the command again.',
     );
     expect(output).not.toMatch(SECRET_REPLACEMENT);
   });
@@ -138,7 +138,7 @@ describe('cf upload conflicts that do not show a change outside Void', () => {
     expect(output).toBe(
       'platform: The Cloudflare CLI did not upload void-x-api: The following workflow(s) already exist and belong to different workers: - "void-x-jobs" (currently belongs to "someone-else"). Another Worker owns this workflow. Delete the workflow, or rename it in the configuration of that Worker. Then run the command again.',
     );
-    expect(output).not.toMatch(/outside Void|--strict|Wrangler|reassign/);
+    expect(output).not.toMatch(/outside Nosam|--strict|Wrangler|reassign/);
   });
 
   it('names each workflow that other Workers own', () => {
@@ -160,7 +160,7 @@ describe('cf upload conflicts that do not show a change outside Void', () => {
       `platform: The Cloudflare CLI did not upload void-x-api.${CONFLICT_ADVICE}`,
     );
     expect(() => upload(['▲  Something else needs an answer.'])).not.toThrow(
-      /outside Void|Something else/,
+      /outside Nosam|Something else/,
     );
   });
 });

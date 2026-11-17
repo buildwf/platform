@@ -41,7 +41,7 @@ export function AdminNavigationFallback({ initialPageData }: { initialPageData: 
   const path =
     navigation.location?.pathname ?? new URL(initialPageData.url, 'https://void.invalid').pathname;
   const title = TITLES[matchAdminRoute(path) ?? 'adminError'] ?? 'Admin';
-  const platformName = String(initialPageData.props.platformName ?? 'Void');
+  const platformName = String(initialPageData.props.platformName ?? 'Nosam');
   const username =
     typeof initialPageData.props.username === 'string' ? initialPageData.props.username : undefined;
 

@@ -17,7 +17,7 @@ export type InferredBindings = {
   needsEmail?: boolean;
 };
 
-// SEND_EMAIL is intentionally absent from inferred bindings: Void owns that binding
+// SEND_EMAIL is intentionally absent from inferred bindings: Nosam owns that binding
 // (managed sends go through __VOID_PROXY/email/send; native Cloudflare deploys
 // add SEND_EMAIL themselves), so the `void/email` import (below) is the
 // sole driver of `needsEmail`.

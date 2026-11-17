@@ -40,7 +40,7 @@ export async function runDomainCommand(root: string, args: DomainArgs): Promise<
 async function runCloudflareDomainCommand(root: string, args: DomainArgs): Promise<void> {
   if (args.projectSlug) {
     throw new Error(
-      'domain: --project selects a Void platform project and is not used for direct Cloudflare apps.',
+      'domain: --project selects a Nosam platform project and is not used for direct Cloudflare apps.',
     );
   }
   const { changeCloudflareDomain, listCloudflareDomains } =
@@ -89,7 +89,7 @@ async function runCloudflareDomainCommand(root: string, args: DomainArgs): Promi
   }
   const lines = [
     `Hostname: ${domain.pattern}`,
-    'Status:   configured locally — present in Void Cloudflare config; remote certificate state is managed by Cloudflare.',
+    'Status:   configured locally — present in Nosam Cloudflare config; remote certificate state is managed by Cloudflare.',
   ];
   if (args.verbose) {
     lines.push('', 'Details:', '  Type:        Cloudflare Custom Domain', '  TLS:         managed');

@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vite-plus/test';
 
-// eeao is a separate project (the `eeaao` submodule). Void talks to it only through the
+// eeao is a separate project (the `eeaao` submodule). Nosam talks to it only through the
 // procedures adapter: runtime/procedure.ts, runtime/procedures.ts and the client runtime/rpc.ts. Nothing else in the
 // framework imports an @eeao package, so the framework stays usable and testable without it.
 const src = join(import.meta.dirname, '..', '..', 'src');

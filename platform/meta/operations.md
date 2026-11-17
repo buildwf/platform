@@ -1,8 +1,8 @@
-# Void Cloud Operations
+# Nosam Cloud Operations
 
-This note describes the maintained Void Cloud deployment. A fork runs its own platform through [Self-host a Void Platform](../../docs/guide/self-hosted-platform.md). Use [Platform Administration](../../docs/guide/platform-administration.md) for access control, users, projects, logs, and health checks.
+This note describes the maintained Nosam Cloud deployment. A fork runs its own platform through [Self-host a Nosam Platform](../../docs/guide/self-hosted-platform.md). Use [Platform Administration](../../docs/guide/platform-administration.md) for access control, users, projects, logs, and health checks.
 
-Void Cloud's existing environments predate the installer. Their resources are managed by the checked-in Wrangler configurations and the workflows below. Do not adopt those resources with `void platform install`; the installer manages resources recorded as belonging to a self-hosted installation.
+Nosam Cloud's existing environments predate the installer. Their resources are managed by the checked-in Wrangler configurations and the workflows below. Do not adopt those resources with `void platform install`; the installer manages resources recorded as belonging to a self-hosted installation.
 
 ## Environments
 
@@ -24,7 +24,7 @@ vp run check
 vp test run
 ```
 
-The normal Void Cloud deployment script deploys the proxy first, then the email gateway, then applies PostgreSQL migrations and deploys the API, followed by the tail, dispatch, and dashboard Workers. The email gateway goes first so it can already relay requests from pages the new API serves, such as the email confirmation form. The first email rollout uses the separate order in [Configure the shared mail zone](#configure-the-shared-mail-zone). The API hosts the build scheduler and build-container Durable Objects. The optional dashboard uses the API for authentication and is deployed after the API it depends on.
+The normal Nosam Cloud deployment script deploys the proxy first, then the email gateway, then applies PostgreSQL migrations and deploys the API, followed by the tail, dispatch, and dashboard Workers. The email gateway goes first so it can already relay requests from pages the new API serves, such as the email confirmation form. The first email rollout uses the separate order in [Configure the shared mail zone](#configure-the-shared-mail-zone). The API hosts the build scheduler and build-container Durable Objects. The optional dashboard uses the API for authentication and is deployed after the API it depends on.
 
 The `deploy` and `deploy:staging` scripts in `platform/package.json` target these existing hosted environments. Forks should use `void platform upgrade --runtime` as described in [source deployment](../../docs/guide/platform/development/runtime.md#deploying-source-builds-from-ci).
 
@@ -37,7 +37,7 @@ The `deploy` and `deploy:staging` scripts in `platform/package.json` target thes
 | `platform-deploy-staging.yml` | Staging deployment from `main`                               |
 | `platform-smoke-test.yml`     | Deploy and exercise a disposable kitchen-sink app in staging |
 
-These deployment and smoke-test workflows target Void Cloud, from `prod` for production or `main` for staging, with `VOID_PLATFORM_DEPLOY_ENABLED=true`. They use the `Prod` and `Staging` GitHub environments. Restrict those environments to the same refs and appropriate reviewers, and keep deployment credentials in environment secrets. Forks use their own source-runtime release workflow.
+These deployment and smoke-test workflows target Nosam Cloud, from `prod` for production or `main` for staging, with `VOID_PLATFORM_DEPLOY_ENABLED=true`. They use the `Prod` and `Staging` GitHub environments. Restrict those environments to the same refs and appropriate reviewers, and keep deployment credentials in environment secrets. Forks use their own source-runtime release workflow.
 
 Both deploy workflows serialize deployments without cancelling an active rollout. Advancing `prod` requests a production deployment. A failed or interrupted deployment needs inspection before another rollout, particularly when database migrations already ran.
 
@@ -56,7 +56,7 @@ The release after 1.8.0 moves project AI logging settings to ROUTING KV; see [de
 SELECT count(*) FROM project_ai_logging;
 ```
 
-Expect 0: the 1.8.0 operator route always returned 503 on hosted. If it is not 0, list the rows with `SELECT project_id, mode FROM project_ai_logging ORDER BY project_id;` and, after the API deploy, run `void platform project ai-logging <project-id> <mode> --yes` for each one so the setting is published. Hosted AI works again as soon as the new proxy is live, because a missing key means `inherit`. Also check the `collect_logs` setting of the hosted `void` gateway in Cloudflare: it decides what `inherit` means on Void Cloud.
+Expect 0: the 1.8.0 operator route always returned 503 on hosted. If it is not 0, list the rows with `SELECT project_id, mode FROM project_ai_logging ORDER BY project_id;` and, after the API deploy, run `void platform project ai-logging <project-id> <mode> --yes` for each one so the setting is published. Hosted AI works again as soon as the new proxy is live, because a missing key means `inherit`. Also check the `collect_logs` setting of the hosted `void` gateway in Cloudflare: it decides what `inherit` means on Nosam Cloud.
 
 The production deploy workflow runs these read-only database queries before rolling out any Workers. Inspect its saved-setting count and any rows when monitoring this release. It also reports the gateway's `collect_logs` value when the deployment token has AI Gateway Read permission; otherwise check that setting in Cloudflare.
 
@@ -64,7 +64,7 @@ Never roll the hosted API back to 1.8.x. Its AI logging route returns 503 withou
 
 ## Hosted Worker Maintenance
 
-Void Cloud operators can inspect the platform's six Workers and their versions:
+Nosam Cloud operators can inspect the platform's six Workers and their versions:
 
 ```sh
 void platform worker list
@@ -78,7 +78,7 @@ Each command accepts `--environment production|staging`. By default, it uses the
 
 Choose a version from `worker show` for a single rollback. `rollback-all` selects the previous version of each Worker, shows those versions in its preview, and rolls them back in dependency order. A failure stops the remaining changes and reports which Workers succeeded, failed, or were skipped. Use `worker events <batch-id>` to inspect the result.
 
-These commands are for Void Cloud's Workers. Self-hosted installations use the [platform lifecycle commands](../../docs/guide/platform/installation/maintenance.md#resume-repair-recover-and-upgrade).
+These commands are for Nosam Cloud's Workers. Self-hosted installations use the [platform lifecycle commands](../../docs/guide/platform/installation/maintenance.md#resume-repair-recover-and-upgrade).
 
 ### Proxy token rotation
 
@@ -177,7 +177,7 @@ A dedicated-key cutover has no compatibility bridge to the previous JWT-backed e
 
 The API's scheduled reconciliation creates the shared connection and reserved shared-domain route only when the complete identity is configured. Confirm the resulting operation and inbound readiness before directing traffic to the gateway. Provision routing and Sending independently: a provider permission or plan refusal must remain visible in the corresponding readiness state. Sending to arbitrary recipients requires Cloudflare Email Sending onboarding and its supported plan.
 
-Customer connections deploy one ingress Worker in the customer's account and zone. Shared and custom domain assignments can coexist on one zone. Setup proves the deployed ingress secret and the gateway's acceptance before changing the owned catch-all. Inspect foreign rules and preserve them; never repoint a catch-all simply because its Worker name resembles Void's.
+Customer connections deploy one ingress Worker in the customer's account and zone. Shared and custom domain assignments can coexist on one zone. Setup proves the deployed ingress secret and the gateway's acceptance before changing the owned catch-all. Inspect foreign rules and preserve them; never repoint a catch-all simply because its Worker name resembles Nosam's.
 
 ### Deployment and recovery
 
@@ -208,7 +208,7 @@ Before production enablement, complete the [email acceptance checks](./release-a
 
 ## Staging Access Control
 
-Void Cloud staging protects the API, dashboard, proxy, and app hostnames with Cloudflare Access. Configure user access in the identity provider and use a service-token pair for automation. Access credentials are separate from a Void user or administrator session.
+Nosam Cloud staging protects the API, dashboard, proxy, and app hostnames with Cloudflare Access. Configure user access in the identity provider and use a service-token pair for automation. Access credentials are separate from a Nosam user or administrator session.
 
 The following callbacks must be reachable through their intended browser or machine flow:
 
@@ -219,7 +219,7 @@ The following callbacks must be reachable through their intended browser or mach
 
 Application code validates OAuth state and GitHub OIDC tokens on the API paths. The isolated ingress and API both validate the GitHub webhook signature, and the service-binding hop has its own short-lived proof. Do not add an Everyone or path-bypass policy to the API hostname.
 
-For interactive staging development, install `cloudflared`. The CLI can open the browser sign-in flow for Void Cloud staging and reuse its cached Access session. To sign in manually:
+For interactive staging development, install `cloudflared`. The CLI can open the browser sign-in flow for Nosam Cloud staging and reuse its cached Access session. To sign in manually:
 
 ```sh
 cloudflared access login https://api.staging.void.cloud
@@ -227,7 +227,7 @@ cloudflared access login https://api.staging.void.cloud
 
 Automation uses `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET`. The staging API receives them as `CF_ACCESS_CLIENT_ID_STAGING` and `CF_ACCESS_CLIENT_SECRET_STAGING` so trusted build deployment steps can reach the staging API. Rotate the Access credential, protected-environment secrets, and API Worker secrets together. Update any other automation using the old pair.
 
-These CLI Access helpers recognize Void Cloud staging hosts. They are not a general Access configuration mechanism for a self-hosted platform. The dashboard's source-development helper supports an explicit API origin; see [Platform Development](../../docs/guide/platform-development.md).
+These CLI Access helpers recognize Nosam Cloud staging hosts. They are not a general Access configuration mechanism for a self-hosted platform. The dashboard's source-development helper supports an explicit API origin; see [Platform Development](../../docs/guide/platform-development.md).
 
 ## Health and Smoke Tests
 
@@ -237,13 +237,13 @@ Select the environment explicitly and use an administrator session:
 void platform system health --connection https://api.staging.void.cloud
 ```
 
-`vp run --filter @voidcloud/platform health` runs the same operator health command against the selected connection. It requires a built SDK and `void platform auth login` or `VOID_OPERATOR_TOKEN`. The `health:staging` shortcut explicitly selects Void Cloud staging.
+`vp run --filter @voidcloud/platform health` runs the same operator health command against the selected connection. It requires a built SDK and `void platform auth login` or `VOID_OPERATOR_TOKEN`. The `health:staging` shortcut explicitly selects Nosam Cloud staging.
 
 The [kitchen-sink smoke checklist](../scripts/kitchen-sink-smoke-test.md) works with a disposable deployment on any platform. Its automated script requires `SMOKE_URL` and resets that app's data. The hosted smoke-test workflow provides the staging URL explicitly.
 
 ## Documentation Site
 
-The documentation site deploys from `main` through the Void GitHub App using the
+The documentation site deploys from `main` through the Nosam GitHub App using the
 `container` executor. The root [`void.config.ts`](../../void.config.ts) configures the monorepo
 as a static project that builds `docs` and publishes `docs/.vitepress/dist`.
 There is no documentation deploy workflow or `VOID_TOKEN` repository secret.

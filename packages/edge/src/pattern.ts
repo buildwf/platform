@@ -19,7 +19,7 @@ const MAX_CACHE = 256;
 
 export type CompiledPattern = Readonly<{
   /**
-   * @deprecated Built on first read for older callers; Void does not use it.
+   * @deprecated Built on first read for older callers; Nosam does not use it.
    * It can backtrack and fails past engine size limits. Use `matchPattern` or
    * `matchPatternCaptures`.
    */

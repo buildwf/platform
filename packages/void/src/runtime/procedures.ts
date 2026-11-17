@@ -9,7 +9,7 @@ import {
 import { rpcHandler } from '@eeao/http';
 import type { Hono } from 'hono';
 
-/** The Analytics Engine binding Void adds when an app has procedures. */
+/** The Analytics Engine binding Nosam adds when an app has procedures. */
 export const ANALYTICS_BINDING = 'ANALYTICS';
 export const RPC_BASE_PATH = '/rpc';
 export const MCP_PATH = '/mcp';

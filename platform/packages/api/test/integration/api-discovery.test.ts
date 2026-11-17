@@ -14,7 +14,7 @@ afterAll(async () => {
 });
 
 describe('GET /.well-known/void-platform', () => {
-  it('describes existing Void Cloud without exposing resource ids or credentials', async () => {
+  it('describes existing Nosam Cloud without exposing resource ids or credentials', async () => {
     const response = await app.fetch(
       new Request('https://api.void.cloud/.well-known/void-platform'),
       env,
@@ -24,7 +24,7 @@ describe('GET /.well-known/void-platform', () => {
     expect(document).toMatchObject({
       apiUrl: 'https://api.void.cloud',
       applicationDomain: 'void.app',
-      displayName: 'Void Cloud',
+      displayName: 'Nosam Cloud',
       proxyUrl: 'https://proxy.void.cloud',
       schemaVersion: 1,
       usageProtocolVersion: 2,

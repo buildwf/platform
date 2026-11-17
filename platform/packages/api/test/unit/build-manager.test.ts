@@ -669,7 +669,7 @@ describe('BuildManager.startBuild', () => {
     expect(envVars.SOURCE_TOKEN).toBe('install-token');
     expect(envVars.SOURCE_TARBALL_URL).toBe('https://api.github.com/repos/owner/repo/tarball/sha1');
     expect(envVars.VOID_API_URL).toBe('https://api.void.cloud');
-    // The fallback Void CLI version is PINNED (never `latest`) so a moving npm
+    // The fallback Nosam CLI version is PINNED (never `latest`) so a moving npm
     // dist-tag can't change deploy behavior with no repo diff.
     expect(envVars.VOID_CLI_VERSION).toBeDefined();
     expect(envVars.VOID_CLI_VERSION).not.toBe('latest');

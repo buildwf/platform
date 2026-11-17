@@ -1,4 +1,4 @@
-# Testing Void
+# Testing Nosam
 
 ## Local verification
 
@@ -326,7 +326,7 @@ explicit, manually reviewed operation against exact resource IDs.
 
 ### Select the Cloudflare account
 
-Authenticate and inspect the accounts available to Void:
+Authenticate and inspect the accounts available to Nosam:
 
 ```sh
 void cloudflare login
@@ -357,7 +357,7 @@ For a separate Access-protected readiness test:
   `cloudflared access token --app=https://<worker>.<account-subdomain>.workers.dev`;
 - in CI, use an admitted `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` service-token pair.
 
-Void sends these credentials only to its guarded readiness request. Do not put them in
+Nosam sends these credentials only to its guarded readiness request. Do not put them in
 `wrangler.jsonc`, `.env`, fixture source, command-line arguments, or tracked files.
 
 ### Baseline smoke test

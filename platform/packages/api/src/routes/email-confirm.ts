@@ -146,7 +146,7 @@ app.post('/destinations/confirm', async (context) => {
 
 function consentPage(slug: string, address: string, token: string): string {
   return `<div class="void-auth-lead"><h1 id="void-auth-title">Allow ${escapeHtml(slug)} to email ${escapeHtml(address)}?</h1>
-<p>The Void project <strong>${escapeHtml(slug)}</strong> wants permission to send email to <strong>${escapeHtml(address)}</strong>.</p></div>
+<p>The Nosam project <strong>${escapeHtml(slug)}</strong> wants permission to send email to <strong>${escapeHtml(address)}</strong>.</p></div>
 <form method="post" action="?token=${escapeHtml(token)}"><button class="void-auth-button void-auth-button-primary" type="submit">Confirm</button></form>
 <p class="void-auth-note">If you didn't expect this, close this page. No permission is granted until you select Confirm.</p>`;
 }

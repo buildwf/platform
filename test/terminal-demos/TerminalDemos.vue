@@ -156,7 +156,7 @@ onBeforeUnmount(() => {
     <div class="demos-container">
       <header v-if="!capture" class="demos-header">
         <div>
-          <p class="demos-eyebrow">Void / {{ studio ? 'Terminal studio' : 'In your terminal' }}</p>
+          <p class="demos-eyebrow">Nosam / {{ studio ? 'Terminal studio' : 'In your terminal' }}</p>
           <h2>
             {{ studio ? 'See what shipping feels like.' : 'A few commands. A lot of possibility.' }}
           </h2>
@@ -169,7 +169,7 @@ onBeforeUnmount(() => {
           }}
         </p>
       </header>
-      <div v-if="!capture" class="demos-tabs" role="tablist" aria-label="Void terminal examples">
+      <div v-if="!capture" class="demos-tabs" role="tablist" aria-label="Nosam terminal examples">
         <button
           v-for="(item, index) in terminalDemos"
           :id="'demo-tab-' + item.id"

@@ -194,7 +194,7 @@ describe.each(['postgresql', 'mysql'] as const)('void/db %s across requests', (d
 
   it('builds one pool for a transaction outside a request scope', async () => {
     const { db, users, state, endPools } = await loadDb(dialect, url);
-    // A framework entry that Void does not wrap runs without its request scope.
+    // A framework entry that Nosam does not wrap runs without its request scope.
     const previousEnv = (globalThis as Record<string, unknown>).__env__;
     (globalThis as Record<string, unknown>).__env__ = { DATABASE_URL: url };
     try {

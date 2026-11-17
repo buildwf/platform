@@ -148,7 +148,7 @@ Messages are JSON events. Raw string and binary messages are not supported.
 
 ## Authentication
 
-When Void auth is enabled, every WebSocket hook receives the current user as `ctx.user`, or `null` for an anonymous connection. Use `onBeforeConnect` to reject unauthenticated clients.
+When Nosam auth is enabled, every WebSocket hook receives the current user as `ctx.user`, or `null` for an anonymous connection. Use `onBeforeConnect` to reject unauthenticated clients.
 
 Connections from another origin are anonymous unless that origin is in your auth `trustedOrigins`. If you read your own cookies from `ctx.request` in `onBeforeConnect`, check its `Origin` header yourself.
 
@@ -164,7 +164,7 @@ Both `defineRoom()` and `defineWebSocket()` support:
 - `onClose(ctx, details)`: receives `{ code, reason, wasClean }`
 - `onRequest(ctx)`: handles ordinary HTTP requests to the same path
 
-Void completes the WebSocket close handshake automatically. Use `onClose` for application cleanup;
+Nosam completes the WebSocket close handshake automatically. Use `onClose` for application cleanup;
 you do not need to close the socket again in this hook.
 
 Every hook receives a context with:
@@ -197,7 +197,7 @@ export default defineRoom({
 });
 ```
 
-Move the file to `routes/rooms/[room].ws.ts`, update clients to connect to `/rooms/[room]`, and deploy normally. Keep the same parameter names and values: room `general` still uses its existing storage. The Worker class, binding, and migration history stay the same on both Cloudflare and Void platform deployments.
+Move the file to `routes/rooms/[room].ws.ts`, update clients to connect to `/rooms/[room]`, and deploy normally. Keep the same parameter names and values: room `general` still uses its existing storage. The Worker class, binding, and migration history stay the same on both Cloudflare and Nosam platform deployments.
 
 Both `defineRoom()` and `defineWebSocket()` accept optional `name`. Use a static string, inline or in a local `const`. Each route must produce a distinct Worker class; changing the name selects a different resource. If you already moved a route, `void info` also shows unmatched identities recorded in `void.lock.json`. Identify the original resource before adopting its suggested name; otherwise restore the original source and discover the name there.
 
@@ -227,4 +227,4 @@ Each socket connects to one route instance. To switch rooms, close the current c
 
 ## Deployment
 
-WebSocket routes work on Cloudflare and Void platform deployments. Commit `void.lock.json` when Void adds a binding or migration. Do not delete or reorder deployed migration steps.
+WebSocket routes work on Cloudflare and Nosam platform deployments. Commit `void.lock.json` when Nosam adds a binding or migration. Do not delete or reorder deployed migration steps.

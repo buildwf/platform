@@ -12,16 +12,16 @@ Keep one password-manager entry for this platform. Paste the saved values into t
 | Management API token                   | You, in Cloudflare               | Lets the CLI create a zone, change DNS, and set up Access.                               |
 | Runtime API token                      | You, in Cloudflare               | Stored as a Worker secret so the platform can deploy apps after you close your terminal. |
 | PostgreSQL URL                         | You, with your database provider | Stores platform users, projects, and deployments.                                        |
-| Login provider client ID and secret    | You, or Void for Access login    | Signs people in to the platform.                                                         |
+| Login provider client ID and secret    | You, or Nosam for Access login   | Signs people in to the platform.                                                         |
 | R2 Access Key ID and Secret Access Key | You, in Cloudflare               | Lets the platform sign upload links so `void deploy` sends static files straight to R2.  |
 | Access setup and app-access tokens     | You, in Cloudflare               | Only with Cloudflare Access: create and manage Access applications.                      |
-| JWT signing key                        | Void, on interactive installs    | Signs platform login tokens.                                                             |
-| Project encryption key                 | Void, on interactive installs    | Encrypts app secrets stored by your platform.                                            |
-| Email signing key                      | Void, when email is enabled      | Signs confirmation links and email requests.                                             |
+| JWT signing key                        | Nosam, on interactive installs   | Signs platform login tokens.                                                             |
+| Project encryption key                 | Nosam, on interactive installs   | Encrypts app secrets stored by your platform.                                            |
+| Email signing key                      | Nosam, when email is enabled     | Signs confirmation links and email requests.                                             |
 
 ## Cloudflare API Tokens {#runtime-token-permissions}
 
-Follow the installer's [token-creation links](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) to create a runtime token. Void also asks for a separate management token when it creates a zone, adds wildcard DNS, or configures Access. The links select the permissions and suggest names based on your platform's name.
+Follow the installer's [token-creation links](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) to create a runtime token. Nosam also asks for a separate management token when it creates a zone, adds wildcard DNS, or configures Access. The links select the permissions and suggest names based on your platform's name.
 
 For a domain installation, choose the zone scope in Cloudflare's form:
 
@@ -30,11 +30,11 @@ For a domain installation, choose the zone scope in Cloudflare's form:
 
 Save the tokens in your password manager and paste them into the masked CLI prompts.
 
-Browser login can authorize workers.dev setup with the default API hostname. It also works for a domain installation with an existing proxied `*.<application domain>` record. If Void cannot read the account's Access requirements, it asks for a scoped Access token.
+Browser login can authorize workers.dev setup with the default API hostname. It also works for a domain installation with an existing proxied `*.<application domain>` record. If Nosam cannot read the account's Access requirements, it asks for a scoped Access token.
 
-Configuring Access requires a management token, including on workers.dev. Protected apps and public apps under Default-Deny also need an ongoing app-management token, which Void stores encrypted. Skip zone permissions until you add a domain.
+Configuring Access requires a management token, including on workers.dev. Protected apps and public apps under Default-Deny also need an ongoing app-management token, which Nosam stores encrypted. Skip zone permissions until you add a domain.
 
-Browser login does not grant AI Gateway access. Include **Account → AI Gateway → Edit** on the runtime token so Void can verify and create that resource.
+Browser login does not grant AI Gateway access. Include **Account → AI Gateway → Edit** on the runtime token so Nosam can verify and create that resource.
 
 The management token lets your CLI install and maintain the platform. The runtime token is stored as a Worker secret so the platform can deploy apps after you close your terminal. They are separate credentials.
 
@@ -63,11 +63,11 @@ Use the following permissions for the core platform. Cloudflare may label write 
 | Zone    | Workers Routes     | Edit       | —                                       |
 | Zone    | Cache Purge        | —          | Purge                                   |
 
-When Void configures Access in the installation account, the initial management-token link also selects **Account → Access: Apps and Policies → Edit** and **Account → Access: Organizations, Identity Providers, and Groups → Read**. Protection adds **Account → Access: Service Tokens → Edit**. When the authentication configuration or saved setup selects existing applications, the link requests Read access instead of Edit. These permissions belong to the management token; the runtime token does not need them.
+When Nosam configures Access in the installation account, the initial management-token link also selects **Account → Access: Apps and Policies → Edit** and **Account → Access: Organizations, Identity Providers, and Groups → Read**. Protection adds **Account → Access: Service Tokens → Edit**. When the authentication configuration or saved setup selects existing applications, the link requests Read access instead of Edit. These permissions belong to the management token; the runtime token does not need them.
 
-The management token also needs **Zone Edit** with authority to create zones if you ask Void to create the zone. If it already exists, use the selected zone with Zone Read and DNS Edit. Nested application domains additionally need **SSL and Certificates: Read** on the management token. An installation with [project custom domains](/guide/platform/installation/domains#project-custom-domains) needs **SSL and Certificates: Edit** on the runtime token.
+The management token also needs **Zone Edit** with authority to create zones if you ask Nosam to create the zone. If it already exists, use the selected zone with Zone Read and DNS Edit. Nested application domains additionally need **SSL and Certificates: Read** on the management token. An installation with [project custom domains](/guide/platform/installation/domains#project-custom-domains) needs **SSL and Certificates: Edit** on the runtime token.
 
-Void checks access before provisioning. If it reports a missing permission, update the token's permissions for the selected account or zone and retry.
+Nosam checks access before provisioning. If it reports a missing permission, update the token's permissions for the selected account or zone and retry.
 
 :::
 
@@ -99,7 +99,7 @@ VOID_EMAIL_SHARED_ZONE_ID=your-zone-id \
 void platform upgrade your-installation-id
 ```
 
-Void saves this domain and zone for later upgrades. Choose them for the lifetime of the installation.
+Nosam saves this domain and zone for later upgrades. Choose them for the lifetime of the installation.
 
 If setup reports a missing permission, add it to the runtime token and rerun the command. Select all permissions in the table, including Edit access and Email Sending.
 
@@ -137,4 +137,4 @@ Paste it into your password manager as **JWT signing key**. Run the command agai
 
 :::
 
-When email is enabled, Void also creates an independent **Email signing key** for confirmation links and service-to-service email requests. The installer keeps it in encrypted recovery state. Set `VOID_PLATFORM_EMAIL_SIGNING_SECRET` to a separate value of at least 32 random bytes when you need an externally custodied copy, including a headless installation whose local recovery files will not persist.
+When email is enabled, Nosam also creates an independent **Email signing key** for confirmation links and service-to-service email requests. The installer keeps it in encrypted recovery state. Set `VOID_PLATFORM_EMAIL_SIGNING_SECRET` to a separate value of at least 32 random bytes when you need an externally custodied copy, including a headless installation whose local recovery files will not persist.

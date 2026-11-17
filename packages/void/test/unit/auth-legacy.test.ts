@@ -219,7 +219,7 @@ describe('retired unscoped credentials', () => {
       accountId: null,
       apiUrl: 'https://platform.example.test',
       applicationDomain: 'apps.example.test',
-      displayName: 'Company Void',
+      displayName: 'Company Nosam',
       installationId: null,
       kind: 'connected',
       proxyUrl: 'https://proxy.example.test',

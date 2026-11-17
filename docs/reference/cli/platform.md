@@ -5,7 +5,7 @@ outline: deep
 
 # Platform Management {#platform-management}
 
-Void-managed projects deploy to an explicitly selected platform. Join one with [`void connect`](./auth.md#connect). Connections are stored per API origin, and credentials are scoped to that origin.
+Nosam-managed projects deploy to an explicitly selected platform. Join one with [`void connect`](./auth.md#connect). Connections are stored per API origin, and credentials are scoped to that origin.
 
 ## Connection commands {#connection-commands}
 
@@ -15,7 +15,7 @@ void platform use [id]
 void platform status [id]
 ```
 
-`list` shows the currently selected platform first, followed by other saved platforms. For a platform with local installation records, its installation slug appears beside its name, such as `Cloudflare Void (cloudflare)`. Select it with `void platform use cloudflare`. For a connected platform without a local installation slug, use its printed API URL.
+`list` shows the currently selected platform first, followed by other saved platforms. For a platform with local installation records, its installation slug appears beside its name, such as `Cloudflare Nosam (cloudflare)`. Select it with `void platform use cloudflare`. For a connected platform without a local installation slug, use its printed API URL.
 
 `use` and `status` accept an installation slug, display name, saved ID, or API URL. If a slug or name matches several platforms, use the API URL to choose one. They auto-select the only configured platform; with multiple platforms they show a picker interactively and require an explicit selector in non-interactive use. A project with a recorded platform URL keeps using that platform when the global default changes.
 
@@ -28,7 +28,7 @@ checkpoint and exits with an error; it does not confirm current availability.
 
 Use `void platform` to administer the users and apps on your selected platform. Start with the [Platform Administration guide](../../guide/platform-administration.md) for signing in, giving people access, and investigating deployments.
 
-Every command below accepts `--connection <slug-or-url>` to select a registered platform and `--json` for structured output. Display names and saved IDs also work. Without `--connection`, Void uses `VOID_API_URL` if set, then the active platform connection. Application project files do not change this selection.
+Every command below accepts `--connection <slug-or-url>` to select a registered platform and `--json` for structured output. Display names and saved IDs also work. Without `--connection`, Nosam uses `VOID_API_URL` if set, then the active platform connection. Application project files do not change this selection.
 
 ### Making Changes {#making-changes}
 
@@ -43,7 +43,7 @@ void platform user plan <user-id> pro --yes
 
 Each preview and apply request allows five minutes. Set `--timeout <seconds>` to an integer from 1 to 3600 to change that limit. Read requests and individual log polls allow 30 seconds.
 
-Void does not automatically retry changes. If a request loses its connection or times out, inspect the affected objects and `void platform system events` before repeating it. Partial results describe the work that completed and exit with a nonzero status.
+Nosam does not automatically retry changes. If a request loses its connection or times out, inspect the affected objects and `void platform system events` before repeating it. Partial results describe the work that completed and exit with a nonzero status.
 
 ### Authentication {#operator-authentication}
 

@@ -133,7 +133,7 @@ function databaseInteger(value: unknown): number | null {
 }
 
 /**
- * A Hyperdrive that Void creates validates the server against public certificate authorities
+ * A Hyperdrive that Nosam creates validates the server against public certificate authorities
  * only, so it cannot honor a private CA that the local database client would trust.
  */
 export function assertVoidCreatedHyperdriveTrustsDatabase(databaseUrl: string): void {
@@ -141,7 +141,7 @@ export function assertVoidCreatedHyperdriveTrustsDatabase(databaseUrl: string): 
   const sslrootcert = new URL(databaseUrl).searchParams.getAll('sslrootcert').at(-1);
   if (sslrootcert && sslrootcert !== 'system') {
     throw new Error(
-      'platform: A Hyperdrive created by Void trusts only public certificate authorities, so it cannot use the certificate authority in DATABASE_URL sslrootcert. If the database certificate comes from a public certificate authority, use sslrootcert=system. Otherwise create a separately managed Hyperdrive that trusts it, then select it with "Use an existing Hyperdrive" when you start a new installation, or set VOID_PLATFORM_HYPERDRIVE_ID, VOID_PLATFORM_HYPERDRIVE_ORIGIN_HOST, and VOID_PLATFORM_HYPERDRIVE_ORIGIN_USER.',
+      'platform: A Hyperdrive created by Nosam trusts only public certificate authorities, so it cannot use the certificate authority in DATABASE_URL sslrootcert. If the database certificate comes from a public certificate authority, use sslrootcert=system. Otherwise create a separately managed Hyperdrive that trusts it, then select it with "Use an existing Hyperdrive" when you start a new installation, or set VOID_PLATFORM_HYPERDRIVE_ID, VOID_PLATFORM_HYPERDRIVE_ORIGIN_HOST, and VOID_PLATFORM_HYPERDRIVE_ORIGIN_USER.',
     );
   }
 }
@@ -375,7 +375,7 @@ export async function inspectPlatformDatabaseStateConnection(
   );
   if (result.rows.length > database.migrations.length) {
     throw new Error(
-      'platform: PostgreSQL contains migrations newer than this Void Platform package.',
+      'platform: PostgreSQL contains migrations newer than this Nosam Platform package.',
     );
   }
   let previousTimestamp = -1;
@@ -389,7 +389,7 @@ export async function inspectPlatformDatabaseStateConnection(
     const expected = database.migrations[position];
     if (!expected || timestampMillis !== expected.timestampMillis || row.hash !== expected.sha256) {
       throw new Error(
-        'platform: PostgreSQL migration history is not an exact prefix of this Void Platform package. Refusing to apply edited, forked, or out-of-order migrations.',
+        'platform: PostgreSQL migration history is not an exact prefix of this Nosam Platform package. Refusing to apply edited, forked, or out-of-order migrations.',
       );
     }
     previousTimestamp = timestampMillis;
@@ -429,7 +429,7 @@ export async function preparePlatformDatabaseConnection(
     )
   ) {
     throw new Error(
-      `platform: Void Platform ${sourcePlatformVersion ?? 'unknown'} cannot safely roll back after migrating database schema ${before.schemaDigest} to this release. Upgrade through a supported intermediate version or install into a fresh database.`,
+      `platform: Nosam Platform ${sourcePlatformVersion ?? 'unknown'} cannot safely roll back after migrating database schema ${before.schemaDigest} to this release. Upgrade through a supported intermediate version or install into a fresh database.`,
     );
   }
 
@@ -933,7 +933,7 @@ export function assertPlatformRuntimeSafety(
   const requiredSandboxDrain = Math.max(installed.sandboxDrain, database.sandboxDrain);
   if ((runtime.safetyProtocols?.sandboxDrain ?? 0) < requiredSandboxDrain) {
     throw new Error(
-      `platform: Void Platform ${runtime.platformVersion} predates the required sandbox-drain safety protocol. Refusing to upload or activate a runtime that could reopen sandbox creation after drain.`,
+      `platform: Nosam Platform ${runtime.platformVersion} predates the required sandbox-drain safety protocol. Refusing to upload or activate a runtime that could reopen sandbox creation after drain.`,
     );
   }
 }
@@ -1000,7 +1000,7 @@ async function claimPlatformDatabaseConnection(
       claim.ownership_nonce !== ownershipNonce
     ) {
       throw new Error(
-        `platform: This PostgreSQL database is already claimed by Void platform installation ${claim.installation_id}. Uninstall keeps the database and its data, so use a dedicated empty database for each installation.`,
+        `platform: This PostgreSQL database is already claimed by Nosam platform installation ${claim.installation_id}. Uninstall keeps the database and its data, so use a dedicated empty database for each installation.`,
       );
     }
     await client.query('COMMIT');

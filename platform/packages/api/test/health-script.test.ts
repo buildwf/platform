@@ -49,7 +49,7 @@ describe('platform health script', () => {
     expect(process.exitCode).toBe(0);
   });
 
-  it('keeps the explicit Void Cloud staging shortcut', async () => {
+  it('keeps the explicit Nosam Cloud staging shortcut', async () => {
     process.argv.push('--staging');
     await import('../scripts/health.ts');
     expect(spawnSync).toHaveBeenCalledWith(

@@ -138,7 +138,7 @@ describe('runGithubJoin', () => {
 
     expect(exitSpy).toHaveBeenCalledWith(1);
     expect(errorSpy).toHaveBeenCalledWith(
-      'Organization installation sharing is not enabled on this Void instance.',
+      'Organization installation sharing is not enabled on this Nosam instance.',
     );
     expect(completeGithubJoin).not.toHaveBeenCalled();
 

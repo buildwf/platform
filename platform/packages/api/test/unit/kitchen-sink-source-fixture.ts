@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 /** Transform actual playground source without needing generated playground types. */
 export function kitchenSinkSourceFixture(files: Array<string>) {
   const workspace = fileURLToPath(new URL('../../../../../', import.meta.url));
-  // Stay under the API package so the public Void imports resolve through its
+  // Stay under the API package so the public Nosam imports resolve through its
   // installed workspace dependency, including on a package-only CI build.
   const root = mkdtempSync(join(import.meta.dirname, '.tmp-kitchen-sink-source-'));
   try {

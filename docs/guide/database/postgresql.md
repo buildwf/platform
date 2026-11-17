@@ -11,7 +11,7 @@ Connect your PostgreSQL database through [Cloudflare Hyperdrive](https://develop
 
 Hyperdrive pools connections between your Worker and PostgreSQL. Requests reuse an existing connection instead of opening a new TCP and TLS connection each time.
 
-Void can provision the Hyperdrive configuration from your connection string. Direct Cloudflare deploys also need an API token for first-time provisioning; see the [Cloudflare guide](../../integrations/cloudflare.md#databases-and-secrets).
+Nosam can provision the Hyperdrive configuration from your connection string. Direct Cloudflare deploys also need an API token for first-time provisioning; see the [Cloudflare guide](../../integrations/cloudflare.md#databases-and-secrets).
 
 ## Configuration
 
@@ -37,11 +37,11 @@ This connects directly to your Postgres database during local Vite development.
 
 ### 3. Deploy
 
-For a Void platform, deploy prompts for the connection string if needed. You can also set it with `void db set-url`. For direct Cloudflare deploys, export the production `DATABASE_URL` in your shell.
+For a Nosam platform, deploy prompts for the connection string if needed. You can also set it with `void db set-url`. For direct Cloudflare deploys, export the production `DATABASE_URL` in your shell.
 
-Void provisions Hyperdrive without saving the connection string in project config. Both `postgres://` and `postgresql://` URLs are supported, including provider query strings such as `?sslmode=require`.
+Nosam provisions Hyperdrive without saving the connection string in project config. Both `postgres://` and `postgresql://` URLs are supported, including provider query strings such as `?sslmode=require`.
 
-The Hyperdrive that Void creates connects with TLS in Cloudflare's default `require` mode. Hyperdrive does not use the `sslmode=verify-ca`, `sslmode=verify-full`, or `sslrootcert` settings from your connection string. To have Hyperdrive verify your database against a specific certificate authority on a direct Cloudflare deploy, [create the Hyperdrive in Cloudflare with that certificate](https://developers.cloudflare.com/hyperdrive/configuration/tls-ssl-certificates-for-hyperdrive/) and add its ID to [`cloudflare.hyperdrive`](../../integrations/cloudflare.md#databases-and-secrets).
+The Hyperdrive that Nosam creates connects with TLS in Cloudflare's default `require` mode. Hyperdrive does not use the `sslmode=verify-ca`, `sslmode=verify-full`, or `sslrootcert` settings from your connection string. To have Hyperdrive verify your database against a specific certificate authority on a direct Cloudflare deploy, [create the Hyperdrive in Cloudflare with that certificate](https://developers.cloudflare.com/hyperdrive/configuration/tls-ssl-certificates-for-hyperdrive/) and add its ID to [`cloudflare.hyperdrive`](../../integrations/cloudflare.md#databases-and-secrets).
 
 ## Schema Definition
 
@@ -85,7 +85,7 @@ The main difference is that PostgreSQL supports **transactional DDL**. Each migr
 
 ## Updating the Connection String
 
-To update a linked Void project's connection, for example after moving the database to another host:
+To update a linked Nosam project's connection, for example after moving the database to another host:
 
 ```bash
 void db set-url

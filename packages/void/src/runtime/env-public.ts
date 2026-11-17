@@ -108,7 +108,7 @@ type InferEnv<S extends AnySchema> = {
 /**
  * Register an env schema and return the typed `env` proxy.
  *
- * Calling `defineEnv` is the only required step — Void auto-discovers
+ * Calling `defineEnv` is the only required step — Nosam auto-discovers
  * `env.ts` at project root, imports it, and uses the schema for runtime
  * validation, type generation, and deploy-time secret checks.
  *
@@ -340,7 +340,7 @@ function readKey(key: string): unknown {
       `env: Async validator for '${key}' cannot be resolved synchronously. ` +
         `Proxy property access is synchronous, so async Standard Schema ` +
         `validators must be pre-resolved by calling \`_validateEnvOnce(env)\` ` +
-        `at worker boot (Void splices this into the generated entry) or by ` +
+        `at worker boot (Nosam splices this into the generated entry) or by ` +
         `awaiting \`validateAllEnv(env)\` before the first \`env.${key}\` read. ` +
         `Once pre-validated, the resolved value is cached and served synchronously here.`,
     );
@@ -461,7 +461,7 @@ async function validateAllEnvWithValues(
 export { string, number, boolean, url, email, oneOf, json, type EnvSchema } from './env-helpers.ts';
 
 // Ambient Cloudflare.Env declarations so user tsconfigs that include
-// `types: ["void/env"]` expose D1/KV/R2 globals plus the auto-inferred Void
+// `types: ["void/env"]` expose D1/KV/R2 globals plus the auto-inferred Nosam
 // framework bindings.
 declare global {
   namespace Cloudflare {

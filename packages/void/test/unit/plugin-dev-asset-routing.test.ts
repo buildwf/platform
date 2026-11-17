@@ -538,7 +538,7 @@ describe('voidPlugin dev asset routing', () => {
     ['preview', { command: 'serve', mode: 'production', isPreview: true }],
     ['build', { command: 'build', mode: 'production' }],
   ] as const)(
-    'uses the Void Cloudflare login when a direct %s opens a remote session',
+    'uses the Nosam Cloudflare login when a direct %s opens a remote session',
     async (_label, configEnv) => {
       vi.stubEnv('CLOUDFLARE_CF_AUTH', undefined);
       vi.stubEnv('CLOUDFLARE_AUTH_USE_KEYRING', undefined);
@@ -607,7 +607,7 @@ describe('voidPlugin dev asset routing', () => {
       env: import('vite').ConfigEnv,
     ) => Promise<void>;
     await expect(schemaConfig({}, { command: 'serve', mode: 'development' })).rejects.toThrow(
-      '.env defines names reserved for Void: __VOID_PROXY_TOKEN. Void sets these itself',
+      '.env defines names reserved for Nosam: __VOID_PROXY_TOKEN. Nosam sets these itself',
     );
   });
 
@@ -621,7 +621,7 @@ describe('voidPlugin dev asset routing', () => {
     expect(config.ai).toEqual({ binding: 'AI', remote: true, staging: true });
   });
 
-  it('keeps managed Workers AI development on the Void proxy', async () => {
+  it('keeps managed Workers AI development on the Nosam proxy', async () => {
     vi.stubEnv('CLOUDFLARE_CF_AUTH', undefined);
     vi.stubEnv('CLOUDFLARE_AUTH_USE_KEYRING', undefined);
     vi.stubEnv('VOID_TOKEN', 'managed-token');
@@ -658,7 +658,7 @@ describe('voidPlugin dev asset routing', () => {
     expect(process.env.CLOUDFLARE_AUTH_USE_KEYRING).toBeUndefined();
   });
 
-  it('adds no remote AI to a direct non-AI app but keeps its remote bindings on the Void login', async () => {
+  it('adds no remote AI to a direct non-AI app but keeps its remote bindings on the Nosam login', async () => {
     vi.stubEnv('CLOUDFLARE_CF_AUTH', undefined);
     vi.stubEnv('CLOUDFLARE_AUTH_USE_KEYRING', 'false');
     const root = createApiOnlyProjectRoot();

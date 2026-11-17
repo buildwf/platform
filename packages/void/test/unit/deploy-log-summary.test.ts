@@ -149,7 +149,7 @@ describe('formatDeployLogSummary', () => {
     expect(out).toContain('detail=first second third');
   });
 
-  // Void masks the credentials it emits itself. Fields it names are its own,
+  // Nosam masks the credentials it emits itself. Fields it names are its own,
   // so a credential-shaped key is masked whatever the value looks like.
   it('masks a field whose key names a credential', () => {
     const out = plain(
@@ -176,7 +176,7 @@ describe('formatDeployLogSummary', () => {
   });
 
   // Scrubbing user-supplied values is left to the CI platform, which owns the
-  // secrets and masks them before the log is written. Void neither guesses at
+  // secrets and masks them before the log is written. Nosam neither guesses at
   // credential-shaped names nor parses credentials out of values it was handed.
   it('passes user-supplied values through unchanged', () => {
     const out = plain(

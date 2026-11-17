@@ -58,10 +58,10 @@ Platform administrators can also choose AI Gateway logging [per project](./cli/p
 | `void env check [--remote]`       | Validate env.ts schema                                                        |
 | `void env types`                  | Regenerate .void/env.d.ts from env.ts                                         |
 | `void auth login`                 | Authenticate with the project’s saved destination, or choose one              |
-| `void account login`              | Authenticate with a Void platform                                             |
-| `void cloudflare login`           | Authenticate with Cloudflare through Void                                     |
-| `void platform install`           | Install a company Void platform in Cloudflare                                 |
-| `void connect <url>`              | Connect the CLI to a Void platform; hostnames default to HTTPS                |
+| `void account login`              | Authenticate with a Nosam platform                                            |
+| `void cloudflare login`           | Authenticate with Cloudflare through Nosam                                    |
+| `void platform install`           | Install a company Nosam platform in Cloudflare                                |
+| `void connect <url>`              | Connect the CLI to a Nosam platform; hostnames default to HTTPS               |
 | `void project link`               | Link directory to a project                                                   |
 | `void project logs`               | Show runtime logs from deployed project                                       |
 | `void project requests`           | Show request-level traffic (status, method, timing)                           |

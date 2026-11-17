@@ -151,7 +151,7 @@ export type DurableStateDefinition<
 
 export type DurableStateApi<TMethods> = {
   class: DurableStateClass<TMethods>;
-  /** @internal Called by Void's generated worker entry. */
+  /** @internal Called by Nosam's generated worker entry. */
   __bind(bindingName: string, resourceName?: string): void;
   get(name: string): TypedDurableObjectStub<TMethods>;
   get(namespace: DurableObjectNamespace, name: string): TypedDurableObjectStub<TMethods>;

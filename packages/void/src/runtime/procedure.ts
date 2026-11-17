@@ -4,18 +4,18 @@ import type { CloudBindings } from './handler.ts';
 
 /**
  * Builders for files in `procedures/`. `env` in handlers and providers is typed from
- * Void's generated bindings. Leave the name out: Void names each procedure from its
+ * Nosam's generated bindings. Leave the name out: Nosam names each procedure from its
  * file and export (`procedures/contacts.ts` exporting `get` is `contacts.get`).
  */
 const builders: ReturnType<typeof createProcedures<CloudBindings>> =
   createProcedures<CloudBindings>();
-// Void names each procedure from its file and export, so the name is optional here (core wants one).
+// Nosam names each procedure from its file and export, so the name is optional here (core wants one).
 export const procedure: (name?: string) => ReturnType<typeof builders.procedure<string>> = (name) =>
   builders.procedure(name as string);
 export const profile: typeof builders.profile = builders.profile;
 
 /**
- * The signed-in Better Auth user. Void's auth middleware runs before procedures, so this
+ * The signed-in Better Auth user. Nosam's auth middleware runs before procedures, so this
  * reads the session it already resolved. Null (a 401) when nobody is signed in.
  */
 export const session: AuthProvider<AuthUser, CloudBindings> = {
@@ -24,7 +24,7 @@ export const session: AuthProvider<AuthUser, CloudBindings> = {
   actorId: (user) => user.id,
 };
 
-/** Someone signed in. Today that is a session; API keys join it once Void has them. */
+/** Someone signed in. Today that is a session; API keys join it once Nosam has them. */
 export const signedIn: AuthProvider<AuthUser, CloudBindings> = session;
 
 const sha256 = async (text: string): Promise<string> =>

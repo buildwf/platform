@@ -2305,7 +2305,7 @@ describe('scheduled() — cron-driven auto-activation reconciliation', () => {
   });
 
   it('hourly tier re-triggers HTTP DCV via PATCH for a pending, ungated, http-method domain', async () => {
-    // Void's add-first flow creates the CF hostname with ssl.method:'http'
+    // Nosam's add-first flow creates the CF hostname with ssl.method:'http'
     // BEFORE the user points their CNAME at cname.void.app. CF requires a PATCH
     // to complete HTTP validation once the domain is pointing at the Managed
     // CNAME — a GET alone never re-triggers DCV and the hostname can stay

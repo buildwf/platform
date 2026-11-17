@@ -224,7 +224,7 @@ describe('envSchemaPlugin auto-discovery', () => {
         // Vite drops the inline comment.
         'VITE_C=local-comment # note',
         'VITE_D=local-plain',
-        // Vite reads this key; Void's own parser skips it.
+        // Vite reads this key; Nosam's own parser skips it.
         'VITE_E.F=local-dot',
         'MODE=local-mode',
         '',
@@ -524,7 +524,7 @@ describe('envSchemaPlugin reserved __VOID_ names', () => {
         writeFileSync(join(root, '.env'), `API_URL=http://localhost\n${key}=local\n`);
 
         await expect(runConfigFor(root, 'serve')).rejects.toThrow(
-          `.env defines names reserved for Void: ${key}. Void sets these itself; remove them. ` +
+          `.env defines names reserved for Nosam: ${key}. Nosam sets these itself; remove them. ` +
             'To trigger crons or queues locally, use the x-void-dev-trigger header printed at dev start.',
         );
       },
@@ -540,7 +540,7 @@ describe('envSchemaPlugin reserved __VOID_ names', () => {
     writeFileSync(join(root, '.env'), `API_URL=http://localhost\n${line}\n`);
 
     await expect(runConfigFor(root, 'serve')).rejects.toThrow(
-      `.env defines names reserved for Void: ${key}.`,
+      `.env defines names reserved for Nosam: ${key}.`,
     );
   });
 
@@ -572,7 +572,7 @@ describe('envSchemaPlugin reserved __VOID_ names', () => {
       defineEnv({ API_URL: string(), __VOID_X: string().optional() });
 
       await expect(runConfigFor(root, command)).rejects.toThrow(
-        'env.ts declares names reserved for Void: __VOID_X.',
+        'env.ts declares names reserved for Nosam: __VOID_X.',
       );
     },
   );
@@ -626,7 +626,7 @@ describe('envSchemaPlugin with "sideEffects": false', () => {
       .join('\n');
   }
 
-  // Void's server entries import env.ts to register its schema.
+  // Nosam's server entries import env.ts to register its schema.
   it('keeps env.ts in a server build', async () => {
     expect(await buildEntryImportingEnv('server')).toContain('48213');
   });

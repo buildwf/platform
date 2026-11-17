@@ -15,16 +15,16 @@ export function getPlatformDisplayName(
     return name;
   }
   if (bindings.PLATFORM_INSTALLATION_ID) {
-    return 'Void Platform';
+    return 'Nosam Platform';
   }
   const apiUrl = getPlatformApiUrl(bindings, requestUrl);
   return ['https://api.void.cloud', 'https://api.staging.void.cloud'].includes(apiUrl)
-    ? 'Void Cloud'
-    : 'Void Platform';
+    ? 'Nosam Cloud'
+    : 'Nosam Platform';
 }
 
 export function formatPlatformPageTitle(page: string, platformName: string): string {
-  return `${page} · ${platformName}${/\bvoid\b/i.test(platformName) ? '' : ' · Void'}`;
+  return `${page} · ${platformName}${/\bvoid\b/i.test(platformName) ? '' : ' · Nosam'}`;
 }
 
 /** Use configured deployment identity or the actual request URL, never forwarded headers. */

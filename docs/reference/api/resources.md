@@ -66,7 +66,7 @@ const response = await ai.provider('openai').fetch('/chat/completions', {
 
 **Key exports:** `ai`, `VoidAi`, provider request types. See [AI](../../guide/ai.md) for provider setup and streaming examples.
 
-AI methods return promises and reject usage limits with `UsageLimit` from `void/limits`. Void routes and Pages actions return a structured HTTP 429 for uncaught limits. See [usage limits](../../guide/ai.md#usage-limits) for optional `instanceof UsageLimit` handling.
+AI methods return promises and reject usage limits with `UsageLimit` from `void/limits`. Nosam routes and Pages actions return a structured HTTP 429 for uncaught limits. See [usage limits](../../guide/ai.md#usage-limits) for optional `instanceof UsageLimit` handling.
 
 ### Provider keys
 

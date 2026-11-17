@@ -9,7 +9,7 @@ Imported from `"void/env"`.
 
 ## `defineEnv(schema)` {#defineenv-schema}
 
-Register an env schema and return the typed [`env`](#env) proxy. Void auto-discovers `env.ts`, imports it during dev/build/deploy, generates `.void/env.d.ts`, validates production secrets before deploy, and validates values at worker boot.
+Register an env schema and return the typed [`env`](#env) proxy. Nosam auto-discovers `env.ts`, imports it during dev/build/deploy, generates `.void/env.d.ts`, validates production secrets before deploy, and validates values at worker boot.
 
 ```ts
 import { defineEnv, string, number, oneOf, url } from 'void/env';

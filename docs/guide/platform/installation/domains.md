@@ -14,17 +14,17 @@ void platform domain set example.app --plan
 void platform domain set example.app
 ```
 
-The command selects your installed platform (or offers a picker), finds or creates its zone, sets up DNS and routing, and verifies HTTPS before publishing the new application URLs. Set the management token as described in [installation setup](/guide/platform/installation/setup) when creating DNS or a zone. Grant the existing runtime token **Cache Purge: Purge** on the new zone; Void checks that permission through the running platform without asking you to paste its token again.
+The command selects your installed platform (or offers a picker), finds or creates its zone, sets up DNS and routing, and verifies HTTPS before publishing the new application URLs. Set the management token as described in [installation setup](/guide/platform/installation/setup) when creating DNS or a zone. Grant the existing runtime token **Cache Purge: Purge** on the new zone; Nosam checks that permission through the running platform without asking you to paste its token again.
 
-If nameservers, certificates, or project Zero Trust protection are pending, follow the printed guidance and rerun the same command. Void preserves each project's public or protected setting before making the new URLs available. Your workers.dev app URLs continue working during and after setup. Projects, deployments, secrets, and the platform API URL stay the same, so developers do not reconnect and configured login callbacks do not change. DNS and configuration changes may take time to propagate.
+If nameservers, certificates, or project Zero Trust protection are pending, follow the printed guidance and rerun the same command. Nosam preserves each project's public or protected setting before making the new URLs available. Your workers.dev app URLs continue working during and after setup. Projects, deployments, secrets, and the platform API URL stay the same, so developers do not reconnect and configured login callbacks do not change. DNS and configuration changes may take time to propagate.
 
 Use `--installation <id>` to select an installation explicitly, `--zone example.com` for an app domain such as `apps.example.com`, or `--dedicated-zone` for catch-all routing on a dedicated zone. Nested domains still need the wildcard certificate described below. This command adds the first domain; replacing an existing application domain is not currently supported. It uses the installed runtime and does not require `--runtime` or an app redeploy.
 
-Choose an application domain whose wildcard leaves existing Worker Custom Domains reachable. Existing more-specific routes covering all requests can preserve those hostnames. If Void reports a conflict, choose another application domain; for a new installation, you can start with `void platform install --workers-dev` and add a suitable domain later.
+Choose an application domain whose wildcard leaves existing Worker Custom Domains reachable. Existing more-specific routes covering all requests can preserve those hostnames. If Nosam reports a conflict, choose another application domain; for a new installation, you can start with `void platform install --workers-dev` and add a suitable domain later.
 
-Browser login sessions are specific to each origin. Apps using their own OAuth providers may need to register their new callback URLs. Void's built-in auth uses the request origin automatically unless the app overrides that configuration.
+Browser login sessions are specific to each origin. Apps using their own OAuth providers may need to register their new callback URLs. Nosam's built-in auth uses the request origin automatically unless the app overrides that configuration.
 
-Apps on one application domain can set cookies that the other apps there receive. With a nested domain such as `apps.example.com`, apps can also set cookies for `example.com` and its other subdomains. Apps on `workers.dev` testing URLs can set cookies that every Worker on your account's `workers.dev` subdomain receives. If people outside your team can deploy, use a domain that serves only Void apps. A platform that serves thousands of independent developers can also apply to list its application domain on the [Public Suffix List](https://github.com/publicsuffix/list/wiki/Guidelines).
+Apps on one application domain can set cookies that the other apps there receive. With a nested domain such as `apps.example.com`, apps can also set cookies for `example.com` and its other subdomains. Apps on `workers.dev` testing URLs can set cookies that every Worker on your account's `workers.dev` subdomain receives. If people outside your team can deploy, use a domain that serves only Nosam apps. A platform that serves thousands of independent developers can also apply to list its application domain on the [Public Suffix List](https://github.com/publicsuffix/list/wiki/Guidelines).
 
 ### What Changes in Testing Mode?
 
@@ -50,7 +50,7 @@ An app at `my-app.apps.example.com` needs a certificate for `*.apps.example.com`
 void platform install --application-domain apps.example.com --zone example.com --plan
 ```
 
-The management token needs **SSL and Certificates: Read** (or Edit) on that zone for the certificate check. Void does not order certificates or enable paid products automatically. Leave `--dedicated-zone` off: that flag is only for installations whose application domain is the entire zone and adds catch-all routes for otherwise unmatched traffic.
+The management token needs **SSL and Certificates: Read** (or Edit) on that zone for the certificate check. Nosam does not order certificates or enable paid products automatically. Leave `--dedicated-zone` off: that flag is only for installations whose application domain is the entire zone and adds catch-all routes for otherwise unmatched traffic.
 
 :::
 
@@ -63,12 +63,12 @@ void platform install --application-domain example.app --zone example.app --dedi
 void platform upgrade <installation-id> --custom-domains
 ```
 
-The runtime token needs **SSL and Certificates: Edit** on the application zone. Void includes it in the runtime token's creation link and checks it before deploying; a token created before custom domains were on needs it added. Before adding the first domain, set up Cloudflare for SaaS on that zone once:
+The runtime token needs **SSL and Certificates: Edit** on the application zone. Nosam includes it in the runtime token's creation link and checks it before deploying; a token created before custom domains were on needs it added. Before adding the first domain, set up Cloudflare for SaaS on that zone once:
 
 1. Create a proxied DNS record for `cname.<application domain>`, for example an `AAAA` record pointing to `100::`.
 2. Open **SSL/TLS > Custom Hostnames**, enable Cloudflare for SaaS, and set `cname.<application domain>` as the fallback origin.
 
-A project owner then runs `void domain add <hostname>`. Void prints the CNAME target, `cname.<application domain>`, and the TXT records that prove ownership. Once the records resolve and the certificate is issued, the dedicated zone's catch-all routes send the hostname to the project.
+A project owner then runs `void domain add <hostname>`. Nosam prints the CNAME target, `cname.<application domain>`, and the TXT records that prove ownership. Once the records resolve and the certificate is issued, the dedicated zone's catch-all routes send the hostname to the project.
 
 ## Optional Dashboard
 
@@ -83,7 +83,7 @@ void platform repair <installation-id> --dashboard-url https://dash.example.com 
 void platform repair <installation-id> --dashboard-url https://dash.example.com --yes
 ```
 
-The origin must contain no credentials, path, query, or fragment. Void saves it
+The origin must contain no credentials, path, query, or fragment. Nosam saves it
 for login callbacks and keeps it across upgrades and repairs. The command does
 not create a dashboard Worker or DNS records. Follow the source app’s
 [standalone dashboard preparation](https://github.com/voidzero-dev/void/tree/main/platform/packages/dashboard#standalone-deployment)
@@ -103,7 +103,7 @@ the configured origin is outside the active coverage.
 
 ## Cloudflare footprint
 
-New platform resources use deterministic `void-<installation-name>-<role>` names where Cloudflare allows them, such as `void-team-api`. Choose an unused installation name in the account; Void stops on an unowned name conflict instead of replacing that resource. Existing installations keep their recorded names, including older names with suffixes.
+New platform resources use deterministic `void-<installation-name>-<role>` names where Cloudflare allows them, such as `void-team-api`. Choose an unused installation name in the account; Nosam stops on an unowned name conflict instead of replacing that resource. Existing installations keep their recorded names, including older names with suffixes.
 
 | Resource                                  |                                 Count | Purpose                                                                                       |
 | ----------------------------------------- | ------------------------------------: | --------------------------------------------------------------------------------------------- |

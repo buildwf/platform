@@ -5,7 +5,7 @@ outline: deep
 
 # Rewrites {#rewrites}
 
-URL rewrites re-dispatch a request at a different internal path without changing the browser's URL. `c.rewrite()`, `c.originalUrl()`, and `c.isRewritten()` are available on every Hono `Context` the Void runtime hands you. See the [Rewrites guide](../../guide/edge/rewrites.md) for the full overview, including static `routing.rewrites` / `routing.fallbacks` in [`void.config.ts`](../config.md#routing).
+URL rewrites re-dispatch a request at a different internal path without changing the browser's URL. `c.rewrite()`, `c.originalUrl()`, and `c.isRewritten()` are available on every Hono `Context` the Nosam runtime hands you. See the [Rewrites guide](../../guide/edge/rewrites.md) for the full overview, including static `routing.rewrites` / `routing.fallbacks` in [`void.config.ts`](../config.md#routing).
 
 ## `c.rewrite(destination)` {#c-rewrite-destination}
 
@@ -38,7 +38,7 @@ return c.redirect('https://example.com/login');
 return c.redirect(checkoutUrl as Href);
 ```
 
-A cast skips the type check; Void doesn't validate redirect destinations at runtime. For request values such as `?redirectTo=`, check the origin before redirecting:
+A cast skips the type check; Nosam doesn't validate redirect destinations at runtime. For request values such as `?redirectTo=`, check the origin before redirecting:
 
 ```ts
 const requested = new URL(c.req.query('redirectTo') ?? '/', c.req.url);

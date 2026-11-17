@@ -72,7 +72,7 @@ export function preservedCheckRunConclusion(raw: unknown): CheckRunConclusion {
  * run's name + repo + head SHA, so a rename in one producer and not the other
  * would silently make the "Re-run" button a no-op for that executor.
  */
-export const VOID_BUILD_CHECK_RUN_NAME = 'Void Build';
+export const VOID_BUILD_CHECK_RUN_NAME = 'Nosam Build';
 
 // Same retry shape as `getBranchHeadComparisonStatus` (compare): up to 2 extra
 // attempts with a short fixed delay on transient 5xx/network/token-mint. A 4xx

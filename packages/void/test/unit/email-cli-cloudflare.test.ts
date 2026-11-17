@@ -478,7 +478,7 @@ describe('void email setup --platform cloudflare', () => {
     expect(code).toBe(1);
     expect(confirm).not.toHaveBeenCalled();
     expect(printed[0]).toContain(
-      '✘ acme.com already receives mail (aspmx.l.google.com). Void never enables routing over live mail. Use something@mail.acme.com.',
+      '✘ acme.com already receives mail (aspmx.l.google.com). Nosam never enables routing over live mail. Use something@mail.acme.com.',
     );
     expect(calls.some((c) => c.args.includes('enable'))).toBe(false);
     expect(fetchCalls.every((c) => c.method === 'GET')).toBe(true);
@@ -549,7 +549,7 @@ describe('void email setup --platform cloudflare', () => {
   });
 
   it('Workers Free: routing + subaddressing on, sending refused → exit 0 with the plan hint, addresses written', async () => {
-    // Sending onboarding needs Workers Paid, which Void cannot buy; inbound is complete and
+    // Sending onboarding needs Workers Paid, which Nosam cannot buy; inbound is complete and
     // `addresses` is committed, which is all `setup` exists to do (CI commits the file).
     // The plan hint and the `(verified destinations only)` marker are the warning.
     const root = makeProject();
@@ -951,7 +951,7 @@ describe('void email setup|status without --platform cloudflare', () => {
     }
   });
 
-  it('says status reads your own Cloudflare account and names the Void platform commands', async () => {
+  it('says status reads your own Cloudflare account and names the Nosam platform commands', async () => {
     const root = mkdtempSync(join(tmpdir(), 'void-email-cli-'));
     roots.push(root);
     const logged = captureLog();
@@ -963,7 +963,7 @@ describe('void email setup|status without --platform cloudflare', () => {
       logged.restore();
     }
     expect(logged.lines).toEqual([
-      'email: `void email status` checks email on your own Cloudflare account. Run it with `--platform cloudflare`. On the Void platform, use `void email usage` and `void email destinations`.',
+      'email: `void email status` checks email on your own Cloudflare account. Run it with `--platform cloudflare`. On the Nosam platform, use `void email usage` and `void email destinations`.',
     ]);
   });
 });

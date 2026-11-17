@@ -112,7 +112,7 @@ export function snapshotBindingIdentities(
 }
 
 /**
- * Binding fields that Void's own build emits (through `mergeWorkerBindings` in
+ * Binding fields that Nosam's own build emits (through `mergeWorkerBindings` in
  * plugin-worker-bindings.ts or the config normalizer), so they are not checked against the
  * pre-build root.
  */
@@ -122,7 +122,7 @@ export const DEPLOY_PASSTHROUGH_EXCLUDE_FIELDS: ReadonlySet<string> = new Set<st
   'kv_namespaces',
   'r2_buckets',
   'hyperdrive',
-  // emitted by Void
+  // emitted by Nosam
   'ai',
   'durable_objects',
   'assets',
@@ -135,7 +135,7 @@ export const DEPLOY_PASSTHROUGH_EXCLUDE_FIELDS: ReadonlySet<string> = new Set<st
 ]);
 
 /**
- * Every known binding field ({@link FRIENDLY_BINDING_NAMES}) that Void does not emit. An emitted
+ * Every known binding field ({@link FRIENDLY_BINDING_NAMES}) that Nosam does not emit. An emitted
  * entry in one of these must come verbatim from the root config; any other entry (a `services`
  * binding, an `unsafe` binding, ...) was added by the build. New registry fields are checked
  * until they are excluded above.
@@ -146,7 +146,7 @@ export const DEPLOY_PASSTHROUGH_ASSERT_FIELDS: ReadonlyArray<string> = Object.ke
 
 /**
  * Fields the CF plugin passes through verbatim that the per-entry pin cannot cover, so each is
- * compared whole against the root value. Void's own build emits none of them.
+ * compared whole against the root value. Nosam's own build emits none of them.
  *   - `unsafe`: its `metadata` replaces the whole uploaded bindings list.
  *   - `tail_consumers` / `streaming_tail_consumers`: forward every log to another Worker.
  *   - `routes` / `route` / `workers_dev` / `preview_urls`: attach the Worker to traffic.
@@ -165,7 +165,7 @@ export const DEPLOY_WHOLE_OBJECT_PINNED_FIELDS: ReadonlyArray<string> = [
 
 /**
  * Root values captured for {@link verifyGeneratedDeployConfig}: the whole-object fields plus
- * `durable_objects`, `ai` and `migrations`, which Void emits but a build could still tamper with.
+ * `durable_objects`, `ai` and `migrations`, which Nosam emits but a build could still tamper with.
  */
 const DEPLOY_RAW_SNAPSHOT_FIELDS: ReadonlyArray<string> = [
   ...DEPLOY_WHOLE_OBJECT_PINNED_FIELDS,
@@ -174,13 +174,13 @@ const DEPLOY_RAW_SNAPSHOT_FIELDS: ReadonlyArray<string> = [
   'migrations',
 ];
 
-/** Default Workers AI binding name that Void emits. */
+/** Default Workers AI binding name that Nosam emits. */
 export const DEFAULT_VOID_AI_BINDING = 'AI';
 
-/** `durable_objects` sub-fields that bind another Worker's Durable Objects. Void never emits them. */
+/** `durable_objects` sub-fields that bind another Worker's Durable Objects. Nosam never emits them. */
 const DURABLE_OBJECT_EXTERNAL_FIELDS = ['script_name', 'environment'];
 
-/** Migration keys that delete or move Durable Object classes. Void only emits creation keys. */
+/** Migration keys that delete or move Durable Object classes. Nosam only emits creation keys. */
 const DESTRUCTIVE_MIGRATION_KEYS = [
   'deleted_classes',
   'renamed_classes',
@@ -226,8 +226,8 @@ export function snapshotPassthroughRawFields(
 }
 
 /**
- * The `containers` array Void's build emits: root containers verbatim and, when the app needs
- * Sandbox, Void's sandbox container in place of any root container with the same class (as
+ * The `containers` array Nosam's build emits: root containers verbatim and, when the app needs
+ * Sandbox, Nosam's sandbox container in place of any root container with the same class (as
  * `mergeWorkerBindings` does). Deploy rejects an emitted array that differs.
  */
 export function reconstructExpectedContainers(

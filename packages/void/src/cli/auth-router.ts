@@ -29,12 +29,12 @@ async function chooseDestination(
       label: connection.displayName,
       hint: connection.apiUrl,
     })),
-    // With no saved connection, a Void platform has no origin to sign in to yet.
+    // With no saved connection, a Nosam platform has no origin to sign in to yet.
     ...(connections.length === 0
       ? [
           {
             value: 'void',
-            label: 'Void platform',
+            label: 'Nosam platform',
             hint: 'Run `void connect <url>` first',
             disabled: true,
           },

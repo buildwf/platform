@@ -460,7 +460,7 @@ export async function startPlatformLogin(
         context.req.query('code_challenge_method') !== 'S256'
       ) {
         throw new AuthenticationConfigurationError(
-          'CLI login requires PKCE. Update the Void CLI and try again.',
+          'CLI login requires PKCE. Update the Nosam CLI and try again.',
           'pkce_required',
           400,
         );
@@ -725,7 +725,7 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
           'Link login method',
           browserPageLead(
             'Link this login method?',
-            'Review the identity before linking it to your existing Void account.',
+            'Review the identity before linking it to your existing Nosam account.',
           ) +
             browserPageIdentity(identity) +
             '<form method="post" action="/auth/link/confirm"><input type="hidden" name="confirm" value="yes"><button class="void-auth-button void-auth-button-primary" type="submit">Link this identity</button></form>',
@@ -740,7 +740,7 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
         browserPageStatus('success') +
           browserPageLead(
             'Login verified',
-            'Return to Void to review the identity and finish configuration.',
+            'Return to Nosam to review the identity and finish configuration.',
           ),
       );
     }
@@ -934,7 +934,7 @@ export async function confirmIdentityLink(context: Context<ApiEnv>): Promise<Res
       browserPageStatus('success') +
         browserPageLead(
           'Login method linked',
-          'Your login method is linked. You can close this window and return to Void.',
+          'Your login method is linked. You can close this window and return to Nosam.',
         ),
     );
   } catch (error) {

@@ -6,7 +6,7 @@ import { parse as parseToml } from 'smol-toml';
 import { migrateBuiltWranglerConfig } from './cli/cf-config-migrate.ts';
 import { readGeneratedWranglerConfigFile } from './cli/generated-wrangler-config.ts';
 
-/** Void keeps its Wrangler-shaped public options independently of the upstream plugin. */
+/** Nosam keeps its Wrangler-shaped public options independently of the upstream plugin. */
 export type WorkerConfig = ReturnType<typeof convertToWranglerConfig>;
 
 type AuxiliaryConfig =
@@ -90,7 +90,7 @@ export function toNativeCloudflareConfig(
       : 'void-top-level',
   );
   if (!config.worker) {
-    throw new Error('Void requires a Cloudflare Worker configuration.');
+    throw new Error('Nosam requires a Cloudflare Worker configuration.');
   }
   // The codemod uses disposable files. Keep all variable values, including
   // local development credentials, out of those files as well as the root config.

@@ -160,7 +160,7 @@ export interface CloudflareDeployDeps {
   readEmittedWorkerVars?: (root: string) => EmittedWorkerVarsResult;
   /**
    * Override CI / non-interactive detection for the email step prompt (default: wrangler's
-   * own {@link isWranglerNonInteractiveOrCI}, so Void and wrangler call the same run
+   * own {@link isWranglerNonInteractiveOrCI}, so Nosam and wrangler call the same run
    * interactive).
    */
   isCI?: boolean;

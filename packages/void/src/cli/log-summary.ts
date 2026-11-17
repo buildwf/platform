@@ -30,7 +30,7 @@ const RESERVED_KEYS = new Set(['ts', 'elapsedMs', 'lvl', 'msg', 'err']);
 // Scrubbing here covers only credentials this code emits itself — a presigned
 // URL it built, an auth header it set, a field it named. Scrubbing user data is
 // left to the CI platform, which owns the secrets and masks them before the log
-// is written. GitHub Actions does this for everything under `secrets.*`. Void
+// is written. GitHub Actions does this for everything under `secrets.*`. Nosam
 // does not guess at credential-shaped names or at credentials embedded in
 // values the user supplied.
 

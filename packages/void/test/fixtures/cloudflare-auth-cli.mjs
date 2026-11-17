@@ -1,4 +1,4 @@
-// File-backed stand-in for Void's bundled Cloudflare CLI. Identities are synthetic.
+// File-backed stand-in for Nosam's bundled Cloudflare CLI. Identities are synthetic.
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const filename = 'auth-fixture.json';

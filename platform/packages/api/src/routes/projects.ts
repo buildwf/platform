@@ -21,20 +21,14 @@ import {
 import type { Db } from '../db.ts';
 import {
   createProject,
-  createResource,
   getBuild,
   getProjectBuilds,
   getProjectBySlug,
   getProjectByEmailAlias,
-  getAccessibleProjectsByUserId,
-  getAccessibleProjectBySlug,
-  getLatestDeploymentsByProjectIds,
-  getProjectDeployments,
   getProjectResources,
   getActivatedDeployments,
   getTerminalFailedDeployments,
   getDomainsByProjectId,
-  getDomainsByProjectIds,
   getDeployment,
   getActiveDeployment,
   createDeployment,
@@ -54,13 +48,10 @@ import {
   recordMigrationRenames,
   migrationRenameExists,
   invalidateMigrationRenamesForOldName,
-  upsertProjectDatabaseUrl,
-  getProjectDatabaseUrl,
   tryCreateEmailDestination,
-  ACTIVE_BUILD_STATUSES,
 } from '../db.ts';
 import { databaseTimestampMs } from '../deploy/recovery.ts';
-import { type ApiEnv, isDevBypass } from '../env.ts';
+import { type ApiEnv } from '../env.ts';
 import { validateSubmittedExecutionPlans } from '../migrations/execution-plan.ts';
 import { ensureTrackingTable, queryD1, runRemoteMigrations } from '../migrations/remote-runner.ts';
 import { getProjectDeploymentWorkerName, getProjectQueueName } from '../naming.ts';
@@ -68,22 +59,16 @@ import { LOG_ROW_GROUP_BY, runtimeLogsField } from '../observability/log-rows.ts
 import { hasSqlState } from '../pg-errors.ts';
 import { initialPlanDefaultFor, resolvePlan, resolvePlanLimits } from '../plans.ts';
 import { PROJECT_PERMISSION_MESSAGES } from '../project-access.ts';
-import { MAX_SLUG_LENGTH, projectNameError } from '../project-names.ts';
-import { encryptProjectSecret, decryptProjectSecret } from '../project-secrets.ts';
+import { projectNameError } from '../project-names.ts';
+import {} from '../project-secrets.ts';
 import { ProjectRequiresNormalizationError, requireNormalizedProject } from '../project-state.ts';
 import { projectWithUrl } from '../project-url.ts';
 import {
-  CloudflareApiError,
-  InvalidHyperdriveConnectionStringError,
   addQueueConsumer,
-  createHyperdrive,
-  deleteHyperdrive,
   getDispatchWorkerProxyToken,
-  getHyperdriveByName,
   removeQueueConsumer,
   restoreQueueConsumer,
   snapshotQueueConsumer,
-  updateHyperdrive,
 } from '../provisioning/cloudflare-api.ts';
 import { reconcileManagedDurableObjects } from '../provisioning/durable-objects.ts';
 import {
@@ -95,10 +80,7 @@ import {
   isAlreadyExistsError as isDestinationAlreadyExistsError,
 } from '../provisioning/email-routing.ts';
 import { isManagedSandbox, verifySandboxController } from '../provisioning/sandbox-controller.ts';
-import {
-  proxyTokenRotationWarnings,
-  requestRotationIfReplacingUntrustedCode,
-} from '../proxy-token-rotation.ts';
+import { requestRotationIfReplacingUntrustedCode } from '../proxy-token-rotation.ts';
 import { projectRouteKey } from '../routing.ts';
 import {
   buildRoutingJson,
@@ -106,7 +88,7 @@ import {
   computeDispatchLimits,
   resolveRoutingUndo,
 } from '../routing.ts';
-import type { Build, DeployManifest, Project, ProjectRole, User } from '../types.ts';
+import type { Build, DeployManifest, User } from '../types.ts';
 import { ZeroTrustUnavailableError, zeroTrustNotReadyMessage } from '../zero-trust/errors.ts';
 import { lockZeroTrustConfiguration } from '../zero-trust/lock.ts';
 import { initializeNewProjectZeroTrust } from '../zero-trust/project.ts';
@@ -118,7 +100,7 @@ import {
 import { publicProjectZeroTrustState } from '../zero-trust/state.ts';
 import { rollbackCfDestination } from './email.ts';
 import { requireProjectRouteCapability } from './project-access.ts';
-import { getRequestsDataset, queryAnalyticsEngine, queryProjectRequestOverview } from './usage.ts';
+import { getRequestsDataset, queryAnalyticsEngine } from './usage.ts';
 
 const DESTRUCTIVE_PATTERNS = [
   /\bDROP\s+TABLE\b/i,
@@ -545,7 +527,7 @@ const app = new Hono<ApiEnv>()
       const manifest = JSON.parse(preCheck.manifest) as DeployManifest;
       if (manifest.sandbox && !getPlatformCapabilities(context.env).sandbox) {
         return context.json(
-          { error: 'This Void platform does not enable rollback to Sandbox deployments.' },
+          { error: 'This Nosam platform does not enable rollback to Sandbox deployments.' },
           501,
         );
       }
@@ -745,7 +727,7 @@ const app = new Hono<ApiEnv>()
             if (manifest.sandbox && !getPlatformCapabilities(context.env).sandbox) {
               throw new RollbackError(
                 501,
-                'This Void platform does not enable rollback to Sandbox deployments.',
+                'This Nosam platform does not enable rollback to Sandbox deployments.',
               );
             }
             if (manifest.sandbox) {
@@ -2713,7 +2695,7 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
       zeroTrust = await initializeNewProjectZeroTrust(context.env, context.db, project.id);
     } catch (error) {
       zeroTrustWarning =
-        'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Void retries within an hour. To retry now, a project owner or admin can run `void project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.';
+        'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Nosam retries within an hour. To retry now, a project owner or admin can run `void project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.';
       console.error('[zero-trust] new project initialization failed', {
         projectId: project.id,
         error,

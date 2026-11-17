@@ -279,7 +279,7 @@ function renderListHtml(messages: Array<CapturedMessage>, href: (path: string) =
     .join('');
 
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Void — Email inbox</title><style>${STYLE}</style></head>
+<html><head><meta charset="utf-8"><title>Nosam — Email inbox</title><style>${STYLE}</style></head>
 <body>
   <h1>Email inbox <span class="meta">(${messages.length} message${messages.length === 1 ? '' : 's'})</span></h1>
   ${
@@ -308,7 +308,7 @@ function renderDetailHtml(m: CapturedMessage, href: (path: string) => string): s
     : `<pre>${escapeHtml(m.text ?? '')}</pre>`;
 
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${escapeHtml(m.subject || '(no subject)')} — Void inbox</title><style>${STYLE}</style></head>
+<html><head><meta charset="utf-8"><title>${escapeHtml(m.subject || '(no subject)')} — Nosam inbox</title><style>${STYLE}</style></head>
 <body>
   <div class="actions">
     <a class="button" href="${escapeHtml(href(''))}">← Back</a>

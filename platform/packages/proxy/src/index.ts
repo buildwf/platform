@@ -17,7 +17,7 @@ import { verifyTenantProxyToken } from './proxy-token.ts';
 import { r2 } from './r2.ts';
 import { readRequestJson, requestBodyMaxBytes, RequestBodyError } from './request-body.ts';
 import { verifyProjectDeployAccess } from './resolve.ts';
-import type { Env, JwtPayload, ProxyBody, ProxyEnv } from './types.ts';
+import type { JwtPayload, ProxyBody, ProxyEnv } from './types.ts';
 
 const app = new Hono<ProxyEnv>();
 
@@ -151,7 +151,7 @@ app.post('/*', async (context, next) => {
     return context.json(
       {
         error: 'authorization required',
-        message: 'Send a Void platform token in the Authorization header.',
+        message: 'Send a Nosam platform token in the Authorization header.',
       },
       401,
     );
@@ -247,7 +247,7 @@ app.post('/ai/*', async (context, next) => {
       {
         error: 'platform capability unavailable',
         capability: 'ai',
-        message: 'This Void platform does not enable AI.',
+        message: 'This Nosam platform does not enable AI.',
       },
       501,
     );
@@ -274,7 +274,7 @@ app.post('/email/*', async (context, next) => {
       {
         error: 'platform capability unavailable',
         capability: 'email',
-        message: 'This Void platform does not enable email.',
+        message: 'This Nosam platform does not enable email.',
       },
       501,
     );

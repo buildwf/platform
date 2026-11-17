@@ -50,7 +50,7 @@ export function createCloudflareBuiltinsExternalPlugin(): Plugin {
 
 /**
  * Send a bare `void` import in server code to the handler helpers (`defineScheduled`,
- * `defineQueue`, ...), as Void apps and the cron/queue deploy bundles do. The package entry is the
+ * `defineQueue`, ...), as Nosam apps and the cron/queue deploy bundles do. The package entry is the
  * Vite plugin: loaded in a worker environment, it pulls Wrangler into the dependency optimizer.
  */
 export function createDefaultWorkerEnvironmentPlugin(): Plugin {
@@ -185,7 +185,7 @@ export function createServerRuntimeOptimizerPlugin(
         return;
       }
       // The Cloudflare plugin gives every environment it runs in workerd these conditions from
-      // its config hook, which runs before any configEnvironment hook. That covers Void's own
+      // its config hook, which runs before any configEnvironment hook. That covers Nosam's own
       // worker. Node runtimes load CommonJS themselves, and an include there turns on SSR
       // prebundling nobody asked for.
       if (!environment.resolve?.conditions?.includes('workerd')) {

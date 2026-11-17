@@ -95,13 +95,13 @@ export function parseDeployArgs(
   }
 
   // The Cloudflare backend deploys to the user's OWN account and therefore never
-  // resolves a Void project. Static flags are target-neutral: both backends honor
+  // resolves a Nosam project. Static flags are target-neutral: both backends honor
   // `--dir` and `--spa` through their respective static deployment adapters.
   if (platform === 'cloudflare') {
     if (projectSlug !== undefined) {
       throw new Error(
         'deploy: --project is not supported with --platform cloudflare — this platform deploys ' +
-          'to your own Cloudflare account and no Void project is involved.',
+          'to your own Cloudflare account and no Nosam project is involved.',
       );
     }
   }

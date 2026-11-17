@@ -74,7 +74,7 @@ export async function recoverPlatformInstallations(
       manifest = parsePlatformInstallationManifest(JSON.parse(value) as unknown);
     } catch (error) {
       throw new Error(
-        `platform: Routing namespace ${namespace.name} contains invalid Void ownership metadata: ${error instanceof Error ? error.message : String(error)}`,
+        `platform: Routing namespace ${namespace.name} contains invalid Nosam ownership metadata: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
     if (

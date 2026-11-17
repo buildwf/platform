@@ -1,6 +1,6 @@
 # create-void
 
-Create a full-stack Vite app with [Void](https://void.cloud), ready for local development and deployment to Cloudflare.
+Create a full-stack Vite app with Nosam, ready for local development and deployment to Cloudflare.
 
 ## Getting Started
 
@@ -22,6 +22,6 @@ npx void deploy
 
 ## Documentation
 
-Follow the [Quickstart](https://void.cloud/guide/quickstart) to explore your new app. For an existing Vite app, install `void` and run `npx void init`.
+Follow the Quickstart to explore your new app. For an existing Vite app, install `void` and run `npx void init`.
 
-Read the [Void documentation](https://void.cloud) online or use the Markdown guides and references in `node_modules/void/docs/`, included with the `void` package.
+Read the Nosam documentation online or use the Markdown guides and references in `node_modules/void/docs/`, included with the `void` package.

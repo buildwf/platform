@@ -56,7 +56,7 @@ describe('PostgreSQL binding generation', () => {
     },
   );
 
-  it('does not emit a D1 placeholder for a Void app using void/db', async () => {
+  it('does not emit a D1 placeholder for a Nosam app using void/db', async () => {
     const root = project();
     vi.spyOn(process, 'cwd').mockReturnValue(root);
     const { voidPlugin } = await import('../../src/index.ts');

@@ -27,7 +27,7 @@ import { hasEmailHandlers } from './router/email.ts';
 
 /**
  * A disposable Cloudflare Build Output directory. Experimental: it follows Cloudflare's draft
- * Build Output format, which can change between Void releases.
+ * Build Output format, which can change between Nosam releases.
  */
 export type CfBuildOutput = {
   directory: string;

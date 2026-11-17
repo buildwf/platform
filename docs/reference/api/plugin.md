@@ -1,5 +1,5 @@
 ---
-description: 'Add Void to Vite. The plugin sets up routing, migrations, and the Cloudflare Workers runtime.'
+description: 'Add Nosam to Vite. The plugin sets up routing, migrations, and the Cloudflare Workers runtime.'
 outline: deep
 ---
 
@@ -26,7 +26,7 @@ export default defineConfig({
 
 ### `defineConfig(config)` {#defineconfig-config}
 
-Import from `void/config` in the root `void.config.ts`. It returns the config with editor completion and TypeScript checking. Void validates the result when loading it, including values computed at runtime.
+Import from `void/config` in the root `void.config.ts`. It returns the config with editor completion and TypeScript checking. Nosam validates the result when loading it, including values computed at runtime.
 
 ```ts
 import { defineConfig } from 'void/config';

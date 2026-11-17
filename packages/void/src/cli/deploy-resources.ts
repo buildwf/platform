@@ -47,7 +47,7 @@ const CLOUDFLARE_CONTAINERS_PRICING_URL = 'https://developers.cloudflare.com/con
 export function formatCloudflareSandboxUnavailable(options?: { preflight?: boolean }): string {
   return [
     options?.preflight
-      ? 'deploy: this app uses `void/sandbox`, but Void could not verify Cloudflare Containers with the current account and credentials.'
+      ? 'deploy: this app uses `void/sandbox`, but Nosam could not verify Cloudflare Containers with the current account and credentials.'
       : "deploy: Cloudflare rejected access to Containers while deploying this app's Sandbox.",
     'Cloudflare Containers require the Workers Paid plan and are not available on Workers Free.',
     '',
@@ -58,7 +58,7 @@ export function formatCloudflareSandboxUnavailable(options?: { preflight?: boole
     '  • Run `void cloudflare login` again; or',
     '  • Give CLOUDFLARE_API_TOKEN Account / Containers: Edit and Account / Cloudchamber: Edit.',
     '',
-    'Rerun the deploy; Void will verify Containers access automatically.',
+    'Rerun the deploy; Nosam will verify Containers access automatically.',
     options?.preflight
       ? 'No resources were provisioned and the app was not built or deployed.'
       : 'The Sandbox container was not deployed.',
@@ -173,7 +173,7 @@ export async function computeDesiredCloudflareResources(
   const databaseReason = analysis.reasons.database[0]!;
   if (needsDatabase && dialect === 'sqlite') {
     const binding = bindingNames?.d1 ?? 'DB';
-    // An explicitly authored name is the intended remote identity even before Void
+    // An explicitly authored name is the intended remote identity even before Nosam
     // has pinned its ID. Only inferred local placeholders need a generated name.
     const storedName = readStoredResourceName(config, 'd1_databases', binding, 'database_name');
     const storedId = readStoredResourceName(config, 'd1_databases', binding, 'database_id');

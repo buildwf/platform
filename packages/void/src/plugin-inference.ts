@@ -16,7 +16,7 @@ import { deriveFromSource } from './shared/source-analysis-cache.ts';
 const SOURCE_GLOB = '**/*.{ts,tsx,mts,js,jsx,mjs}';
 
 /**
- * Directories to scan for binding inference in Void app mode.
+ * Directories to scan for binding inference in Nosam app mode.
  *
  * `email` is included so a `sendEmail()` call from inside an inbound handler
  * (`email/<addr>.ts`) registers `needsEmail = true`. Otherwise the manifest

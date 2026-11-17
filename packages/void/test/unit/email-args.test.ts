@@ -287,7 +287,7 @@ describe('parseEmailArgs', () => {
 
   it('rejects --platform cloudflare on alias', () => {
     expect(() => parseEmailArgs(['alias', '--platform', 'cloudflare'])).toThrow(
-      'email: --platform cloudflare applies to `void email status` and `void email setup` only (`alias` is a Void platform command).',
+      'email: --platform cloudflare applies to `void email status` and `void email setup` only (`alias` is a Nosam platform command).',
     );
   });
 

@@ -133,7 +133,7 @@ describe('Cloudflare operational parsing', () => {
     expect(active).toBe('target');
     expect(runner.mock.calls.some(([args]) => args.type.startsWith('triggers.'))).toBe(false);
   });
-  it('reads active traffic and Void migration metadata', () => {
+  it('reads active traffic and Nosam migration metadata', () => {
     expect(
       parseActiveVersionId({
         versions: [

@@ -401,7 +401,7 @@ describe('auth middleware', () => {
     },
   );
 
-  test('serves authenticated React pages and Void navigation data', async () => {
+  test('serves authenticated React pages and Nosam navigation data', async () => {
     const admin = await createTestUser(env.db, 'react-admin', 'github', undefined, 'free', 'admin');
     const htmlResponse = await req('/admin/', admin.adminJwt);
     const html = await adminHtml(htmlResponse);
@@ -654,7 +654,7 @@ describe('auth middleware', () => {
     const namedEnv = { ...env, PLATFORM_DISPLAY_NAME: '<Example Platform>' };
     const login = await app.fetch(new Request('http://localhost/admin/login'), namedEnv);
     expect(await adminHtml(login)).toContain(
-      '<title>Admin Login · &lt;Example Platform&gt; · Void</title>',
+      '<title>Admin Login · &lt;Example Platform&gt; · Nosam</title>',
     );
 
     const admin = await createTestUser(env.db, 'named-admin', 'github', undefined, 'free', 'admin');
@@ -667,7 +667,7 @@ describe('auth middleware', () => {
       );
       expect(response.status).toBe(200);
       expect(await adminHtml(response)).toContain(
-        `<title>${path === '/admin/' ? 'Dashboard' : 'Users'} · &lt;Example Platform&gt; · Void</title>`,
+        `<title>${path === '/admin/' ? 'Dashboard' : 'Users'} · &lt;Example Platform&gt; · Nosam</title>`,
       );
     }
   });
@@ -913,7 +913,7 @@ describe('admin Zero Trust', () => {
     expect(html).toContain('action="/admin/zero-trust/reconcile"');
     expect(html).toContain('action="/admin/zero-trust/disable"');
     expect(html).toContain(
-      'data-confirm="Remove Void-managed Access protection? Apps may become public or be blocked by account-wide Default-Deny."',
+      'data-confirm="Remove Nosam-managed Access protection? Apps may become public or be blocked by account-wide Default-Deny."',
     );
     expect(html).toContain('name="apiToken"');
     expect(html.toLowerCase()).toContain('autocomplete="new-password"');
@@ -1626,7 +1626,7 @@ describe('GET /admin/ (dashboard)', () => {
             const invite = page.getByRole('region', { name: 'Invite people', exact: true });
             for (const [label, value] of [
               ['Platform invitation page', 'http://localhost/invite'],
-              ['Void CLI connection command', "void connect 'localhost'"],
+              ['Nosam CLI connection command', "void connect 'localhost'"],
             ]) {
               const field = invite.getByRole('group', { name: label, exact: true });
               const input = field.getByRole('textbox', { name: label, exact: true });
@@ -3115,8 +3115,8 @@ describe('GET /admin/login', () => {
     expect(res.status).toBe(200);
     const html = await adminHtml(res);
     expect(html).toContain('Sign in to administer');
-    expect(html).toContain('Void Platform');
-    expect(html).toContain('aria-label="Void"');
+    expect(html).toContain('Nosam Platform');
+    expect(html).toContain('aria-label="Nosam"');
     expect(html).toContain('GitHub');
     expect(html).toContain('Google');
   });

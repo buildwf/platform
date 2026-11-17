@@ -14,7 +14,7 @@ import { parsePlatformAccessSetupSpec } from './platform-access-setup.ts';
 import { PlatformCloudflareClient } from './platform-cloudflare.ts';
 import type { PlatformInstallPlan } from './platform-plan.ts';
 
-/** These reserved endpoints require Void's probe token and cannot serve application traffic. */
+/** These reserved endpoints require Nosam's probe token and cannot serve application traffic. */
 export function platformAccessHealthTargets(
   plan: PlatformInstallPlan,
 ): ReadonlyArray<{ key: string; destination: string }> {
@@ -142,7 +142,7 @@ export async function ensurePlatformAccessHealthChecks(input: {
       destinations: [{ type: 'public', uri: destination }],
       policies: [
         {
-          name: 'Void platform health check',
+          name: 'Nosam platform health check',
           decision: 'bypass',
           precedence: 1,
           include: [{ everyone: {} }],
@@ -184,7 +184,7 @@ export async function ensurePlatformAccessHealthChecks(input: {
     if (!recorded?.id) {
       if (spec.mode !== 'create') {
         throw new Error(
-          `platform: Configure an Access exception limited to ${destination}, then resume. Void's private probe token still protects this endpoint.`,
+          `platform: Configure an Access exception limited to ${destination}, then resume. Nosam's private probe token still protects this endpoint.`,
         );
       }
       if (inventory.some((app) => app.name === name)) {

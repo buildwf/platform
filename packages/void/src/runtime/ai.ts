@@ -308,20 +308,20 @@ function toDirectBody(body: unknown): { body: BodyInit | undefined; contentType?
 function resolveBackend(): AiBackend {
   const runtimeEnv = getRawRuntimeEnv();
 
-  // Priority 1: Service binding (production via Void)
+  // Priority 1: Service binding (production via Nosam)
   const proxy = runtimeEnv.__VOID_PROXY as Fetcher | undefined;
   if (proxy) {
     return makeServiceBindingBackend(proxy, runtimeEnv);
   }
 
-  // Priority 2: HTTPS to our proxy (local dev with Void auth)
+  // Priority 2: HTTPS to our proxy (local dev with Nosam auth)
   const token = runtimeEnv.__VOID_TOKEN;
   const projectId = runtimeEnv.__VOID_PROJECT_ID;
   if (typeof token === 'string' && typeof projectId === 'string') {
     return makeHttpBackend(token, projectId, runtimeEnv);
   }
 
-  // Priority 3: Direct AI binding (user's own CF account). Void's generated
+  // Priority 3: Direct AI binding (user's own CF account). Nosam's generated
   // wrangler config stamps custom binding names into a private runtime var;
   // default and managed deployments continue to use `AI`.
   const aiBindingName =
@@ -336,7 +336,7 @@ function resolveBackend(): AiBackend {
   }
 
   throw new Error(
-    `ai: Not available. Configure a Workers AI binding (env.${aiBindingName}) for direct Cloudflare development or deployment, or connect and link a Void platform.`,
+    `ai: Not available. Configure a Workers AI binding (env.${aiBindingName}) for direct Cloudflare development or deployment, or connect and link a Nosam platform.`,
   );
 }
 
@@ -371,7 +371,7 @@ type ProxySend = (
   signal?: AbortSignal | null,
 ) => Promise<Response>;
 
-/** Backend for the Void platform proxy, reached by service binding or HTTPS. */
+/** Backend for the Nosam platform proxy, reached by service binding or HTTPS. */
 function makeProxyBackend(send: ProxySend, runtimeEnv: RuntimeEnv): AiBackend {
   async function proxyFetch(
     action: string,

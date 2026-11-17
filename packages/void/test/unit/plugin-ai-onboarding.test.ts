@@ -10,7 +10,7 @@ const runAiSetupPrompt = vi.hoisted(() => vi.fn());
 vi.mock('../../src/plugin-cloudflare.ts', () => import('../helpers/cloudflare-vite-plugin.ts'));
 vi.mock('../../src/plugin-ai-setup.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/plugin-ai-setup.ts')>()),
-  // Signed in to Void, with no project linked.
+  // Signed in to Nosam, with no project linked.
   readVoidDevCredentials: () => ({
     status: 'no-project',
     apiUrl: 'https://void.example',

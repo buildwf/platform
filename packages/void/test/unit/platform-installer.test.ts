@@ -1993,7 +1993,7 @@ describe('platform installer', () => {
         { versionId: 'version-a', percentage: 25 },
         { versionId: 'version-b', percentage: 75 },
       ],
-      message: 'Void platform restoration deployment-intervening',
+      message: 'Nosam platform restoration deployment-intervening',
     });
     expect(commands.some((args) => args.type.endsWith('.delete'))).toBe(false);
   });
@@ -4648,7 +4648,7 @@ describe('platform installer', () => {
     'postgres://user:password@db.example.com/void?sslmode=verify-full&sslrootcert=/etc/ssl/private-ca.pem',
     'postgres://user:password@db.example.com/void?sslmode=verify-full&sslrootcert=system&sslrootcert=/etc/ssl/private-ca.pem',
   ])(
-    'rejects a private certificate authority for a Void-created Hyperdrive before claiming the database: %s',
+    'rejects a private certificate authority for a Nosam-created Hyperdrive before claiming the database: %s',
     async (databaseUrl) => {
       const directory = useRegistryDirectory();
       const plan = await examplePlan();
@@ -4688,7 +4688,7 @@ describe('platform installer', () => {
 
       const rejected = installPlatform(plan, secrets(databaseUrl), null, dependencies);
       await expect(rejected).rejects.toThrow(
-        'A Hyperdrive created by Void trusts only public certificate authorities',
+        'A Hyperdrive created by Nosam trusts only public certificate authorities',
       );
       await expect(rejected).rejects.toThrow('Use an existing Hyperdrive');
       await expect(rejected).rejects.toThrow('VOID_PLATFORM_HYPERDRIVE_ID');
@@ -5371,7 +5371,7 @@ describe('platform installer', () => {
     expect(upgraded.manifest.resources).toHaveLength(16);
   });
 
-  describe('Workers changed outside Void', () => {
+  describe('Workers changed outside Nosam', () => {
     async function upgradeWithOutsideChange(
       uploadOutsideChanges: NonNullable<TestInstallerDependencies['uploadOutsideChanges']>,
     ) {

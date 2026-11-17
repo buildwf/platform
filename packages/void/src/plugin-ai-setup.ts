@@ -9,7 +9,7 @@ import { scopedAccessCredentials } from './shared/cf-access.ts';
  *
  * Builds use the production binding. During dev, a project explicitly saved
  * with the direct Cloudflare destination uses Cloudflare's remote binding;
- * managed and unsaved projects keep using the Void HTTPS proxy.
+ * managed and unsaved projects keep using the Nosam HTTPS proxy.
  *
  * `!resolvedAi` is load-bearing: mergeBindings' return is defu-merged over the
  * resolved root-wrangler config and wins, so skipping when the user already
@@ -54,7 +54,7 @@ type CredentialStatus =
   | { status: 'no-project'; apiUrl: string; token: string };
 
 /**
- * Read Void auth credentials for local dev AI proxy access.
+ * Read Nosam auth credentials for local dev AI proxy access.
  * Returns a discriminated union so callers can distinguish
  * "no token" from "no project" for targeted onboarding guidance.
  */
@@ -141,7 +141,7 @@ export async function runAiSetupPrompt(
         inferDefaultSlug(root),
         async (defaultSlug) => {
           const slugResult = await text({
-            message: 'Choose a slug for your new Void project:',
+            message: 'Choose a slug for your new Nosam project:',
             placeholder: 'my-app',
             initialValue: defaultSlug,
             validate: validateProjectSlug,

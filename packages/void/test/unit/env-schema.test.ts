@@ -386,7 +386,7 @@ describe('_validateEnvOnce (boot-time worker check)', () => {
       },
     };
 
-    // Void's Worker entry validates before it opens the request scope that reads run in.
+    // Nosam's Worker entry validates before it opens the request scope that reads run in.
     it('serves them in a request scope opened after validation', async () => {
       defineEnv({ TOKEN: upper });
       const rawEnv = { TOKEN: 'sk_test' };

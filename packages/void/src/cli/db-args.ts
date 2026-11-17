@@ -38,7 +38,7 @@ export const dbSubcommands: Array<SubcommandDef> = [
       { name: '--provider', arg: '<name-or-module>', description: 'Provision with an adapter' },
       { name: '--name', arg: '<name>', description: 'Provider project/database name' },
       { name: '--region', arg: '<region>', description: 'Provider region identifier' },
-      { name: '--local-only', description: 'Do not sync a linked Void project' },
+      { name: '--local-only', description: 'Do not sync a linked Nosam project' },
     ],
   },
   {

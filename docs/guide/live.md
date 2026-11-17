@@ -5,7 +5,7 @@ outline: deep
 
 # Live Event Streams
 
-`void/live` lets a browser subscribe to several topics over one SSE connection. Publish an event from a route, scheduled job, or queue consumer, and Void delivers it to connected subscribers using Durable Objects.
+`void/live` lets a browser subscribe to several topics over one SSE connection. Publish an event from a route, scheduled job, or queue consumer, and Nosam delivers it to connected subscribers using Durable Objects.
 
 For example, a page can subscribe to updates for a post and its comments, then change those subscriptions as the user navigates. If a single request produces the whole stream, such as an AI response, [`void/sse`](./sse.md) is enough.
 
@@ -25,7 +25,7 @@ export const live = defineLiveStream({
 
 This example accepts visitors who are not signed in. Without `onSubscribe`, any connection can subscribe to any topic, so read [Authorization](#authorization) before you publish private data.
 
-Void enables live streams when a [scanned file](../reference/resource-inference.md#scanned-directories) imports `void/live`, so keep this module in `src/` or another scanned directory. To keep it in an unscanned directory such as `lib/`, add that directory to [`inference.scanDirs`](../reference/resource-inference.md#custom-scan-directories) and list the default directories you still use, because `scanDirs` replaces them.
+Nosam enables live streams when a [scanned file](../reference/resource-inference.md#scanned-directories) imports `void/live`, so keep this module in `src/` or another scanned directory. To keep it in an unscanned directory such as `lib/`, add that directory to [`inference.scanDirs`](../reference/resource-inference.md#custom-scan-directories) and list the default directories you still use, because `scanDirs` replaces them.
 
 Expose it from a normal route:
 
@@ -82,7 +82,7 @@ With [`routing.typedRoutes`](../reference/config.md#routing-typedroutes), TypeSc
 
 ## Publish
 
-Publish from any server-side code that has a Void runtime env:
+Publish from any server-side code that has a Nosam runtime env:
 
 ```ts
 import { live } from '../src/live';
@@ -94,7 +94,7 @@ await live.publish(
 );
 ```
 
-Choose your own topic names and JSON payloads. Void includes `type` and `eventId` in the event envelope without interpreting or storing them. It doesn't use native SSE `id` fields.
+Choose your own topic names and JSON payloads. Nosam includes `type` and `eventId` in the event envelope without interpreting or storing them. It doesn't use native SSE `id` fields.
 
 If you are outside an active request/runtime context, pass env explicitly:
 
@@ -104,7 +104,7 @@ await live.withEnv(env).publish('post:12', { title: 'Updated title' });
 
 ## Authorization
 
-Only a connection's owner can change its subscriptions. The example above allows anonymous connections; authenticated streams use the current Void user by default.
+Only a connection's owner can change its subscriptions. The example above allows anonymous connections; authenticated streams use the current Nosam user by default.
 
 The owner decides who can change a connection's subscriptions, not which topics the connection can read.
 
@@ -129,7 +129,7 @@ export const live = defineLiveStream({
 });
 ```
 
-When `identifyConnection` returns `null` or `undefined`, Void falls back to the
+When `identifyConnection` returns `null` or `undefined`, Nosam falls back to the
 current authenticated user and uses `user:${user.id}` when the user has a string
 `id`. If neither path produces an owner and `allowAnonymousControl` is not set,
 the request is rejected with `403`.
@@ -178,4 +178,4 @@ export const live = defineLiveStream({
 
 Events are ordered within a topic and delivered at most once. Deploys, rollbacks, restarts, and reconnects can drop live state, so clients may miss events. Raw HTTP clients must resubscribe after reconnecting.
 
-For replay, store events in your application and use `eventId` and `lastEventId` to resume. Void does not store events or manage client state.
+For replay, store events in your application and use `eventId` and `lastEventId` to resume. Nosam does not store events or manage client state.

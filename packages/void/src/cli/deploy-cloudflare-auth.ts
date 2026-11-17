@@ -193,7 +193,7 @@ export type WranglerAuthTokenResult =
 
 /**
  * Read the current Cloudflare session bearer through the pinned deploy runner, for API calls
- * Void makes itself. The token goes only to the caller. A failure is built fresh from the
+ * Nosam makes itself. The token goes only to the caller. A failure is built fresh from the
  * child's status, signal and stderr: it never carries the child's errorCode, failure, errors
  * or data, so an auth failure can never be read as a Cloudflare upload error.
  */
@@ -239,7 +239,7 @@ export async function readWranglerAuthToken(
   const token = parsed?.token;
   return (type === 'oauth' || type === 'api_token') && typeof token === 'string' && token.length > 0
     ? { ok: true, token }
-    : fail(1, null, 'the Void CLI helper process returned no session credential.');
+    : fail(1, null, 'the Nosam CLI helper process returned no session credential.');
 }
 
 /** {@link readWranglerAuthToken} for callers that only need the token; every failure is `null`. */

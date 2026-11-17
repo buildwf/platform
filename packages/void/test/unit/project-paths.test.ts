@@ -44,7 +44,7 @@ describe('project path resolution', () => {
     expect(paths.sourceRelative('db/migrations')).toBe('db/migrations');
   });
 
-  it('moves Void source conventions under sourceDir', () => {
+  it('moves Nosam source conventions under sourceDir', () => {
     const paths = resolveProjectPaths(root, { sourceDir: 'src' });
     expect(paths.sourceDir).toBe('src');
     expect(paths.sourceRoot).toBe(toSlash(join(root, 'src')));

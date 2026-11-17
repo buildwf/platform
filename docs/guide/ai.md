@@ -16,7 +16,7 @@ void connect --platform cloudflare
 npm run dev
 ```
 
-When the app imports `void/ai`, Void enables a remote Workers AI binding during
+When the app imports `void/ai`, Nosam enables a remote Workers AI binding during
 development and preview. Requests use your Cloudflare account and its allowance;
 Workers AI has no local simulator. Development and preview use the same
 Cloudflare login as `void connect`; sign in with `void cloudflare login`. A
@@ -100,7 +100,7 @@ requests also use your provider credentials and their billing terms.
 
 A team platform uses its own Cloudflare account and may apply per-user limits. Ask your administrator about the available allowance.
 
-Usage limits reject the operation's promise with `UsageLimit` from `void/limits`. It includes `resource`, `reason`, and an optional `retryAt` timestamp. In Void route handlers and Pages actions, an uncaught limit produces a structured HTTP 429 with retry information. In queues, scheduled jobs, and other server code, it remains a rejected promise.
+Usage limits reject the operation's promise with `UsageLimit` from `void/limits`. It includes `resource`, `reason`, and an optional `retryAt` timestamp. In Nosam route handlers and Pages actions, an uncaught limit produces a structured HTTP 429 with retry information. In queues, scheduled jobs, and other server code, it remains a rejected promise.
 
 Handling a limit is optional. Use `instanceof UsageLimit` when you want a fallback or a message tailored to your app:
 
@@ -193,7 +193,7 @@ const response = await ai
 
 ### Custom Providers
 
-For providers that are not in Void's default key map, pass the secret name and API-key header:
+For providers that are not in Nosam's default key map, pass the secret name and API-key header:
 
 ```ts
 const response = await ai

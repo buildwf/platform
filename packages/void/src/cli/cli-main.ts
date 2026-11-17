@@ -1,4 +1,4 @@
-// The Void CLI. cli.ts checks the runtime and then loads this module.
+// The Nosam CLI. cli.ts checks the runtime and then loads this module.
 
 import { log } from '@voidzero-dev/vite-plus-prompts';
 import { accountSubcommands, parseAccountArgs } from './account-args.ts';
@@ -66,7 +66,7 @@ async function runSubcommandGroup<T>(
       const { promptSubcommand } = await import('./subcommand-prompt.ts');
       if (command === 'platform' && !sub) {
         log.info(
-          'A Void platform lets a team deploy Void apps to a shared Cloudflare account.\n' +
+          'A Nosam platform lets a team deploy Nosam apps to a shared Cloudflare account.\n' +
             'This command sets up and manages platforms. Join with `void connect <url>`.\n' +
             `Docs: ${formatUrl('https://void.cloud/guide/self-hosted-platform')}`,
         );
@@ -285,17 +285,17 @@ if (helpPath) {
       hint: '--json',
       description: 'Inspect persistent resource names in this project',
     },
-    { name: 'connect', description: 'Connect to Cloudflare or a Void platform' },
+    { name: 'connect', description: 'Connect to Cloudflare or a Nosam platform' },
     { name: 'deploy', description: 'Build and deploy, or link an existing Cloudflare Worker' },
     {
       name: 'auth',
       hint: 'login | status | logout',
-      description: 'Sign in to this project’s Cloudflare or Void destination',
+      description: 'Sign in to this project’s Cloudflare or Nosam destination',
     },
     {
       name: 'account',
       hint: 'login | link | logout | whoami | token',
-      description: 'Manage your Void platform account',
+      description: 'Manage your Nosam platform account',
     },
     {
       name: 'platform',

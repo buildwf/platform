@@ -1,5 +1,5 @@
 ---
-description: 'See how the React app, routes, middleware, and other optional directories map onto a Void app.'
+description: 'See how the React app, routes, middleware, and other optional directories map onto a Nosam app.'
 outline: deep
 ---
 
@@ -17,7 +17,7 @@ const items = [
   { name: "public/", description: "Static assets (served as-is)", link: "#public" },
   { name: ".void/", description: "Auto-generated (gitignored)", link: "#void" },
   { name: "vite.config.ts", description: "Vite config with voidPlugin()", link: "#config-files" },
-  { name: "void.config.ts", description: "Void project config (optional)", link: "#config-files" },
+  { name: "void.config.ts", description: "Nosam project config (optional)", link: "#config-files" },
   { name: ".env", description: "Local environment values", link: "#config-files" },
   { name: "env.ts", description: "Environment schema", link: "#config-files" },
   { name: "package.json" },
@@ -57,7 +57,7 @@ const dbItems = [
 
 ## Overview
 
-A Void app is a React single-page app (`index.html` + `src/`) with optional file-based conventions for API routes, middleware, and more. All directories are optional, so you only need the pieces your app actually uses.
+A Nosam app is a React single-page app (`index.html` + `src/`) with optional file-based conventions for API routes, middleware, and more. All directories are optional, so you only need the pieces your app actually uses.
 
 <FileTree :items="items" />
 
@@ -127,12 +127,12 @@ Generated types and local development state (gitignored). Run `void prepare` to 
 
 ## Config Files
 
-| File             | Purpose                                                                                                                                                  |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vite.config.ts` | Vite configuration. Must include `voidPlugin()`.                                                                                                         |
-| `void.config.ts` | Optional Void config for [routing](/reference/config#routing), [inference](/reference/config#inference), and [worker settings](/reference/config#worker) |
-| `tsconfig.json`  | TypeScript config. Extend `.void/tsconfig.json` for auto-generated types; run `void init --tsconfig` when an existing config already uses `extends`.     |
-| `.env`           | Local development values only (gitignored; never deployed)                                                                                               |
-| `env.ts`         | Checked-in env names, types, defaults, and requiredness                                                                                                  |
+| File             | Purpose                                                                                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vite.config.ts` | Vite configuration. Must include `voidPlugin()`.                                                                                                          |
+| `void.config.ts` | Optional Nosam config for [routing](/reference/config#routing), [inference](/reference/config#inference), and [worker settings](/reference/config#worker) |
+| `tsconfig.json`  | TypeScript config. Extend `.void/tsconfig.json` for auto-generated types; run `void init --tsconfig` when an existing config already uses `extends`.      |
+| `.env`           | Local development values only (gitignored; never deployed)                                                                                                |
+| `env.ts`         | Checked-in env names, types, defaults, and requiredness                                                                                                   |
 
 See [Environment Variables](/guide/env-vars) for local, production-secret, and client build behavior.

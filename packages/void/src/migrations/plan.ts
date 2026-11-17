@@ -67,7 +67,7 @@ export function classifyMigration(migration: {
   const transactionControl = includesTransactionControl(sql);
   if (transactionControl) {
     throw new Error(
-      `Migration ${migration.name} contains ${transactionControl}; Void owns the stable D1 transaction boundary.`,
+      `Migration ${migration.name} contains ${transactionControl}; Nosam owns the stable D1 transaction boundary.`,
     );
   }
 

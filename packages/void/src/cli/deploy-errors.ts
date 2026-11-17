@@ -135,7 +135,7 @@ export function formatStreamDeployError(
 
   if (isHeadersTimeoutError(err)) {
     const lines = [
-      `deploy: The Void platform did not respond while preparing the deploy. Tried ${DEPLOY_POST_ATTEMPTS} times; the last try waited 5 minutes.`,
+      `deploy: The Nosam platform did not respond while preparing the deploy. Tried ${DEPLOY_POST_ATTEMPTS} times; the last try waited 5 minutes.`,
       'It may still finish. Check `void project status`, then run `void deploy` again to retry.',
     ];
     if (logPath) {

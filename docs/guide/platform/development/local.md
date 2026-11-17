@@ -84,7 +84,7 @@ SITE_DOMAIN=apps.example.com
 ```
 
 The helper refreshes an Access session before the dev server starts. Human
-dashboard requests require the user's Access session as well as their Void login;
+dashboard requests require the user's Access session as well as their Nosam login;
 a service token does not represent that user. Service-token pairs are for scoped
 machine operations. This is dashboard development configuration; Access
 credentials are separate from platform login credentials.

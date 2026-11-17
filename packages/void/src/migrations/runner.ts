@@ -54,7 +54,7 @@ export function toBetterSqlite3Error(error: unknown, cwd: string = process.cwd()
   const usesVitePlus = projectUsesVitePlus(cwd);
   const rebuildCommand = usesVitePlus ? 'vp rebuild' : 'pnpm rebuild better-sqlite3';
   const commandReason = usesVitePlus
-    ? 'Vite+ uses its managed Node.js runtime for `vp dev`; rebuild native modules with `vp rebuild` and run Void CLI commands through Vite+ as `vp exec void <command>`.'
+    ? 'Vite+ uses its managed Node.js runtime for `vp dev`; rebuild native modules with `vp rebuild` and run Nosam CLI commands through Vite+ as `vp exec void <command>`.'
     : 'Plain Vite projects use your system Node.js runtime, so `pnpm rebuild better-sqlite3` rebuilds the matching native module.';
 
   return new Error(
@@ -204,7 +204,7 @@ function assertLocalMigrationState(
   if (appliedNames.size === 0 && migrations.length > 0 && applicationTables.length > 0) {
     throw new Error(
       [
-        'Local database already has application tables but no Void migration history.',
+        'Local database already has application tables but no Nosam migration history.',
         '',
         `Existing tables: ${applicationTables.join(', ')}`,
         '',

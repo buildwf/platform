@@ -133,7 +133,7 @@ export class PlatformAccessClient {
   }
 }
 
-/** The selected providers or policies cannot protect Void; other errors are not about the selection. */
+/** The selected providers or policies cannot protect Nosam; other errors are not about the selection. */
 export class PlatformAccessPolicyRejectedError extends Error {}
 
 /** Preserve corporate MFA/device requirements; reject broad policies rather than rewriting them. */
@@ -238,7 +238,7 @@ export async function verifyCompanyAccessPolicies(
     }
     if (policy.decision === 'bypass') {
       throw new PlatformAccessPolicyRejectedError(
-        'platform: A bypass policy cannot protect a Void platform.',
+        'platform: A bypass policy cannot protect a Nosam platform.',
       );
     }
     if (policy.decision !== 'allow') {
@@ -583,7 +583,7 @@ export async function provisionPlatformAccess(
       !sameSet(ids(oidc.grant_types), ['authorization_code_with_pkce']) ||
       oidc.allow_pkce_without_client_secret === true
     ) {
-      throw new Error('platform: Access OIDC redirect or flow settings do not match Void.');
+      throw new Error('platform: Access OIDC redirect or flow settings do not match Nosam.');
     }
     const clientId = text(oidc.client_id, 'OIDC client ID');
     const clientSecret = input.login.clientSecret ?? state.resources[key]?.clientSecret;
@@ -662,7 +662,7 @@ export async function provisionPlatformAccess(
       policies: [
         ...policies,
         {
-          name: 'Void installer and CI',
+          name: 'Nosam installer and CI',
           decision: 'non_identity',
           precedence: 0,
           include: [{ service_token: { token_id: service.id } }],

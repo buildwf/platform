@@ -17,11 +17,11 @@ If setup stops or fails, continue from the saved progress:
 void platform install --resume --name <id>
 ```
 
-You can correct the database URL if the initial connection failed. Once Void has claimed the database or provisioned Hyperdrive, that database is fixed for the installation. A later command with a different URL stops before making changes.
+You can correct the database URL if the initial connection failed. Once Nosam has claimed the database or provisioned Hyperdrive, that database is fixed for the installation. A later command with a different URL stops before making changes.
 
 ### Cloudflare Access blocks the health check {#cloudflare-access}
 
-If installation reports **Default-Deny (error 1050)**, Cloudflare blocked the HTTP health check before it reached Void. This is separate from the API token used to deploy the Workers.
+If installation reports **Default-Deny (error 1050)**, Cloudflare blocked the HTTP health check before it reached Nosam. This is separate from the API token used to deploy the Workers.
 
 Keep the company protection in place. Automatic Access setup saves its scoped
 service credentials with the installation's encrypted recovery material. For an
@@ -30,7 +30,7 @@ that the application covers the printed API and proxy origins. A Cloudflare
 management API token does not authenticate an Access-protected HTTP request.
 
 For automatic setup, resuming also creates or verifies an Access exception
-limited to `/health` on the reserved dispatch health hostname. Void still requires
+limited to `/health` on the reserved dispatch health hostname. Nosam still requires
 its private probe token on that endpoint; requests without it cannot reach an
 application. This lets installation check routing while employee protection and
 account-wide Default-Deny remain enabled. It does not bypass Access for an entire
@@ -39,7 +39,7 @@ Worker or for deployed apps.
 For externally supplied credentials, set `VOID_ACCESS_CREDENTIALS` from your
 secret manager to an object keyed by each exact API/proxy origin, with
 `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` in each entry. Then rerun
-`void platform install --resume --name <id>`. Void retains the saved resources
+`void platform install --resume --name <id>`. Nosam retains the saved resources
 and stops if the gate still rejects its checks. Account-wide Default-Deny and
 deployed-application policies remain your responsibility.
 
@@ -47,7 +47,7 @@ deployed-application policies remain your responsibility.
 
 Resume an unfinished installation with `void platform install --resume --name <id>`.
 For completed provisioning whose administrator setup is still pending, run
-`void platform repair <id>`. Void prints a fresh setup code if the earlier code
+`void platform repair <id>`. Nosam prints a fresh setup code if the earlier code
 expired. Enter it at `/setup`, sign in, and confirm the displayed identity.
 An installation that already has an administrator does not reopen setup.
 
@@ -116,7 +116,7 @@ An upgrade validates the runtime, applies supported pending migrations, deploys 
 
 Install, upgrade, and repair also publish the saved [AI Gateway logging](/reference/cli/platform-users#ai-gateway-logging) settings (**Publishing AI logging settings**). For about 2 minutes afterward, `void platform project show` reports projects with a setting other than `inherit` as `pending`, as well as projects it switched back to `inherit`.
 
-Before starting, Void checks access to the installation's Cloudflare account, Workers, and existing R2 buckets. If credentials are rejected, set `CLOUDFLARE_API_TOKEN` to a management token scoped to that account and retry. This overrides the installation's saved management token.
+Before starting, Nosam checks access to the installation's Cloudflare account, Workers, and existing R2 buckets. If credentials are rejected, set `CLOUDFLARE_API_TOKEN` to a management token scoped to that account and retry. This overrides the installation's saved management token.
 
 Some upgrades pause application traffic until the new version passes health checks. If a command fails while traffic is paused:
 
@@ -133,7 +133,7 @@ workstation does not overwrite them, and upgrades preserve the live signing keys
 and complete project-encryption keyring. Keep current credentials in your secret
 manager so they can also restore a missing Worker during repair.
 
-Database migrations only move forward. Void checks compatibility before upgrading and tells you if an intermediate release is needed. If deployment fails, it attempts to restore the previous Workers against the compatible database schema. Retrying does not repeat completed migrations.
+Database migrations only move forward. Nosam checks compatibility before upgrading and tells you if an intermediate release is needed. If deployment fails, it attempts to restore the previous Workers against the compatible database schema. Retrying does not repeat completed migrations.
 
 After a successful upgrade, you can restore a declared-compatible earlier runtime without reversing migrations:
 
@@ -142,9 +142,9 @@ void platform rollback [id] --runtime /path/to/earlier/runtime --plan
 void platform rollback [id] --runtime /path/to/earlier/runtime
 ```
 
-Keep the earlier runtime files if you need rollback. If the installed version is a custom build, also pass its files with `--from-runtime /path/to/current/runtime`. Void checks that the earlier version can run against your current database and refuses incompatible rollbacks. A later `upgrade` can move forward again. See [Platform Development](/guide/platform/development/runtime#deploying-your-runtime) for working with custom builds.
+Keep the earlier runtime files if you need rollback. If the installed version is a custom build, also pass its files with `--from-runtime /path/to/current/runtime`. Nosam checks that the earlier version can run against your current database and refuses incompatible rollbacks. A later `upgrade` can move forward again. See [Platform Development](/guide/platform/development/runtime#deploying-your-runtime) for working with custom builds.
 
-Do not roll back to 0.26.0 or earlier after upgrading to a later release. Void does not refuse this rollback, but those releases reject the credentials that later releases give your apps. Every project deployed or rotated since the upgrade loses AI, email, and remote D1, KV, and R2 until you upgrade again. If you have rolled back that far, upgrade again, then run `void platform system rotate-proxy-tokens --all --yes` and check with `--plan` until nothing is pending or failed.
+Do not roll back to 0.26.0 or earlier after upgrading to a later release. Nosam does not refuse this rollback, but those releases reject the credentials that later releases give your apps. Every project deployed or rotated since the upgrade loses AI, email, and remote D1, KV, and R2 until you upgrade again. If you have rolled back that far, upgrade again, then run `void platform system rotate-proxy-tokens --all --yes` and check with `--plan` until nothing is pending or failed.
 
 After a rollback to 1.8.0, plan [AI Gateway logging](/guide/platform/administration/plans#ai-gateway-logging) defaults are not applied: projects that follow a plan default use the gateway's own setting, which logs prompts and responses on a new installation. Project settings still apply. Plan defaults stay saved, and the next upgrade publishes them again. A rollback to a release before 1.8.0 applies no AI logging settings.
 
@@ -167,11 +167,11 @@ If updating project logs fails, the platform upgrade still completes and prints 
 
 While runtime logs are minimal, `void platform rollback` refuses a runtime that does not support the setting. Run `void platform upgrade [id] --runtime-logs full` first.
 
-### Platform Workers changed outside Void {#workers-changed-outside-void}
+### Platform Workers changed outside Nosam {#workers-changed-outside-void}
 
-Use Void commands to manage the platform's Workers. If their configuration was changed in Cloudflare, or Void cannot identify the active version, maintenance asks you to approve replacing it. Preview the affected Workers with `--plan`.
+Use Nosam commands to manage the platform's Workers. If their configuration was changed in Cloudflare, or Nosam cannot identify the active version, maintenance asks you to approve replacing it. Preview the affected Workers with `--plan`.
 
-Run the printed command in a terminal and review **Replace the configuration of these Workers?** The default is No. Accepting restores Void's configuration, including removing manually added variables. You may see another confirmation with the configuration differences before deployment. Declining that later prompt leaves any resource and database preparation in place.
+Run the printed command in a terminal and review **Replace the configuration of these Workers?** The default is No. Accepting restores Nosam's configuration, including removing manually added variables. You may see another confirmation with the configuration differences before deployment. Declining that later prompt leaves any resource and database preparation in place.
 
 CI and `--yes` runs stop when this approval is needed. Complete the interactive command once, then resume automation. If a Worker uses a gradual deployment, first select one version for 100% of traffic in Cloudflare.
 
@@ -203,7 +203,7 @@ administrator changed the installation.
 
 When application traffic is paused, visitors receive a temporary-unavailability
 page with a **Try again** link. API requests and form submissions still receive
-HTTP 503 responses. Void does not automatically replay requests; visitors who
+HTTP 503 responses. Nosam does not automatically replay requests; visitors who
 submitted a form should check its result before submitting it again.
 
 ### Manage an installation from another machine
@@ -237,13 +237,13 @@ During a restore, keep platform and application traffic disabled before changing
 
 ### Where local state lives
 
-Installation records live in `~/.void/platforms/`. Credentials are stored separately in encrypted recovery files, with the encryption key in your operating system's keychain. Keep your original secrets in a password manager for recovery on another machine. Signing and encryption keys that Void generated exist only in these files; to keep your own copy, [supply them when installing](/guide/platform/installation/credentials#signing-and-encryption-keys).
+Installation records live in `~/.void/platforms/`. Credentials are stored separately in encrypted recovery files, with the encryption key in your operating system's keychain. Keep your original secrets in a password manager for recovery on another machine. Signing and encryption keys that Nosam generated exist only in these files; to keep your own copy, [supply them when installing](/guide/platform/installation/credentials#signing-and-encryption-keys).
 
-If the keychain isn't available, Void stops before writing secrets. Headless environments can supply `VOID_PLATFORM_RECOVERY_KEY`: a canonical base64-encoded 32-byte key from a secret manager. A temporary CI runner can use a new recovery-encryption key for each run only when every original credential remains available in protected CI secrets, including `VOID_PLATFORM_JWT_SECRET`, `VOID_PLATFORM_EMAIL_SIGNING_SECRET` for an email-enabled installation, and either the original `VOID_PLATFORM_PROJECT_SECRET_KEY` or the complete rotated keyring and active-version pair.
+If the keychain isn't available, Nosam stops before writing secrets. Headless environments can supply `VOID_PLATFORM_RECOVERY_KEY`: a canonical base64-encoded 32-byte key from a secret manager. A temporary CI runner can use a new recovery-encryption key for each run only when every original credential remains available in protected CI secrets, including `VOID_PLATFORM_JWT_SECRET`, `VOID_PLATFORM_EMAIL_SIGNING_SECRET` for an email-enabled installation, and either the original `VOID_PLATFORM_PROJECT_SECRET_KEY` or the complete rotated keyring and active-version pair.
 
 ::: details Ownership and interrupted maintenance
 
-Void checks resource ownership and the configured database before making changes. Concurrent maintenance commands are coordinated so one administrator cannot overwrite another's work.
+Nosam checks resource ownership and the configured database before making changes. Concurrent maintenance commands are coordinated so one administrator cannot overwrite another's work.
 
 If maintenance is interrupted, rerun the same command. Traffic may stay paused until verification succeeds. Existing routes, domains, and data are preserved.
 

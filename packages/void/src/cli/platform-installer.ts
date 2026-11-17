@@ -273,7 +273,7 @@ export async function installPlatform(
     : ['api', 'proxy', 'tail', 'dispatch'];
   if (plan.deployment.authentication.configurable && runtime.authenticationProtocolVersion !== 1) {
     throw new Error(
-      'platform: This runtime does not support configurable authentication. Upgrade Void or use a compatible runtime.',
+      'platform: This runtime does not support configurable authentication. Upgrade Nosam or use a compatible runtime.',
     );
   }
   if (plan.deployment.application.workersDev && runtime.applicationRoutingVersion !== 1) {
@@ -638,7 +638,7 @@ export async function installPlatform(
       trafficState: preserveDisabled ? 'staging' : 'enabled',
     });
     // The Cloudflare CLI asks the operator before it replaces changes made
-    // outside Void. Let it ask now: the resources that these configs use
+    // outside Nosam. Let it ask now: the resources that these configs use
     // exist, and this run has not paused traffic or deployed a Worker.
     const outsideChangeConfigs = workerKeys
       .map((key) => enabledConfigs[key])

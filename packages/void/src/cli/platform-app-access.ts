@@ -170,7 +170,7 @@ export async function prepareInstallationAppAccess(input: {
             { key: 'access_acct', type: 'read' },
           ]),
         }),
-      instructions: `Scope the token to ${input.plan.account.name}: Access Apps and Policies Edit; Organizations, Identity Providers, and Groups Read. Void stores it encrypted to manage app access.`,
+      instructions: `Scope the token to ${input.plan.account.name}: Access Apps and Policies Edit; Organizations, Identity Providers, and Groups Read. Nosam stores it encrypted to manage app access.`,
     });
   const collectToken = async () => {
     if (!process.stdin.isTTY) {
@@ -253,7 +253,7 @@ export async function prepareInstallationAppAccess(input: {
   }
   if (!token) {
     log.info(
-      'Void needs an Access-management token stored encrypted to manage access for future apps and custom domains.',
+      'Nosam needs an Access-management token stored encrypted to manage access for future apps and custom domains.',
     );
     if (
       reusable &&
@@ -330,7 +330,7 @@ export async function prepareInstallationAppAccess(input: {
     }
   } else {
     log.info(
-      'This account requires Access. Void will create public rules scoped to app hostnames.',
+      'This account requires Access. Nosam will create public rules scoped to app hostnames.',
     );
   }
   const setup = parsePlatformAppAccessSetup({
@@ -497,7 +497,7 @@ export async function turnOffInstalledProjectZeroTrust(
   }
   if (result.code === 'app_access_credentials') {
     throw new Error(
-      'platform: Cloudflare rejected the saved app access token, so Void cannot turn off project Zero Trust.',
+      'platform: Cloudflare rejected the saved app access token, so Nosam cannot turn off project Zero Trust.',
     );
   }
   if (!response.ok || result.installationId !== input.installationId) {

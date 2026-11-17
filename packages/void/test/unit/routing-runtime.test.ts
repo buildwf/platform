@@ -862,7 +862,7 @@ describe('native HTTPS policy', () => {
     expect(upgrade.status).toBe(308);
   });
 
-  it('answers Void endpoints for tools and the platform over HTTP', async () => {
+  it('answers Nosam endpoints for tools and the platform over HTTP', async () => {
     const fetch = worker({
       alwaysUseHttps: true,
       emailReceipt: async () => new Response('receipt', { status: 202 }),

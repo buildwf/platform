@@ -55,6 +55,6 @@ projects support up to 100 custom domains.
 The token needs **Access: Apps and Policies Write** plus **Access:
 Organizations, Identity Providers, and Groups Read**, scoped to the platform's
 Cloudflare account. Select at least one Allow policy that matches people by
-identity; Void rejects Bypass and Service Auth policies and rules that allow
+identity; Nosam rejects Bypass and Service Auth policies and rules that allow
 Everyone or any service token. See [Project Zero Trust](../../guide/platform/administration/zero-trust.md)
 for requirements and recovery.

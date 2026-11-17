@@ -179,7 +179,7 @@ async function runCloudflareRollback(
   }
   if (!current?.metadata?.migrations || !target.metadata?.migrations) {
     log.warn(
-      'Void migration metadata is unavailable for one of these versions. Database migrations are forward-only and will not be reverted.',
+      'Nosam migration metadata is unavailable for one of these versions. Database migrations are forward-only and will not be reverted.',
     );
     await confirmRollbackOrExit();
   } else {

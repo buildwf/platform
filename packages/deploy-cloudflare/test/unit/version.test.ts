@@ -322,7 +322,7 @@ const TRIGGER_FAILURE: CloudflareCommandResult = {
   status: 1,
 };
 
-/** Placeholder Void's secret transport deploys before a Worker exists: no bindings yet. */
+/** Placeholder Nosam's secret transport deploys before a Worker exists: no bindings yet. */
 function voidZeroBindingPlaceholder(): Record<string, unknown> {
   return {
     ...voidSecretDraftVersion(),
@@ -1687,7 +1687,7 @@ describe('Cloudflare version activation', () => {
     expect(runWrangler.mock.calls.some(([args]) => args[1] === 'upload')).toBe(false);
   });
 
-  it('does not trust an unpublished version with a copied Void annotation', async () => {
+  it('does not trust an unpublished version with a copied Nosam annotation', async () => {
     const unpublished = '44444444-4444-4444-8444-444444444444';
     const runWrangler = runner({
       versions: ok(
@@ -2210,7 +2210,7 @@ describe('Cloudflare version activation', () => {
   });
 
   // The Cloudflare CLI applies its Email Routing plan inside `triggers deploy`, reading the
-  // config's `addresses`. The trigger-only config Void hands it must therefore carry the
+  // config's `addresses`. The trigger-only config Nosam hands it must therefore carry the
   // snapshot's addresses verbatim — and carry NOTHING when the snapshot has none, because an
   // absent key skips the plan while `[]` deletes every rule the Worker owns.
   it('snapshots explicit observability and restores it without borrowing local settings', async () => {
@@ -2562,7 +2562,7 @@ describe('Cloudflare version activation', () => {
   });
 
   it('replays the previous snapshot addresses when managed-queue cleanup rebuilds it', async () => {
-    // `queueConsumerCleanup` is non-empty on EVERY deploy of a project with Void-managed
+    // `queueConsumerCleanup` is non-empty on EVERY deploy of a project with Nosam-managed
     // consumers (`readWranglerManagedQueueCleanupCandidates` includes the current consumers
     // for schema-1 upgrades), so the rebuilt previous config is what `stabilize…` replays when
     // a concurrent rollback returns traffic to the previous version. Wrangler's Email Routing
@@ -4976,7 +4976,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
     triggersRestored: 'no',
   };
 
-  it('switches back to a Void version with a trigger snapshot and replays its triggers', async () => {
+  it('switches back to a Nosam version with a trigger snapshot and replays its triggers', async () => {
     const fixture = recoveryActivation({
       previous: VOID_SCHEMA_2_PREVIOUS,
       triggers: [TRIGGER_FAILURE],
@@ -4997,7 +4997,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
 
   it.each([
     {
-      kind: 'a version deployed without Void',
+      kind: 'a version deployed without Nosam',
       previous: { id: CURRENT, number: 1, annotations: { 'workers/triggered_by': 'upload' } },
       restoreSkipped: 'no-trigger-snapshot',
     },
@@ -5007,7 +5007,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
       restoreSkipped: 'placeholder',
     },
     {
-      kind: "Void's zero-binding secret placeholder",
+      kind: "Nosam's zero-binding secret placeholder",
       previous: {
         id: CURRENT,
         number: 1,
@@ -5060,7 +5060,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
   it.each(
     [
       {
-        kind: 'Void placeholder marker',
+        kind: 'Nosam placeholder marker',
         annotations: {
           'workers/message': 'void:secret-draft',
           'workers/triggered_by': 'deployment',
@@ -5084,7 +5084,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
     },
   );
 
-  it("keeps this deploy live over Void's secret draft through the bootstrap path", async () => {
+  it("keeps this deploy live over Nosam's secret draft through the bootstrap path", async () => {
     const fixture = sdkDraftActivation();
     const original = fixture.runWrangler.getMockImplementation()!;
     fixture.runWrangler.mockImplementation(async (operation) =>

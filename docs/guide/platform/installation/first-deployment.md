@@ -15,7 +15,7 @@ void platform auth login
 void platform system health
 ```
 
-Administrator login is separate from the credentials used to deploy apps. In a new or unlinked Void app directory, connect using the installed API URL and deploy your first project:
+Administrator login is separate from the credentials used to deploy apps. In a new or unlinked Nosam app directory, connect using the installed API URL and deploy your first project:
 
 ```sh
 void connect void-company-api.example.workers.dev
@@ -26,7 +26,7 @@ void deploy --platform void --project my-first-app
 
 Once accepted by the platform, a deployment continues independently of the CLI connection. The CLI reconnects automatically after a connection failure. Use `void project status` to inspect a deployment after closing the CLI, or `void project cancel` to request cancellation.
 
-The CLI stores login credentials in your system keychain, separately for each platform URL. With no URL, `void connect` offers Cloudflare or a Void platform; `void connect --platform void` offers saved platforms and an option to enter another URL.
+The CLI stores login credentials in your system keychain, separately for each platform URL. With no URL, `void connect` offers Cloudflare or a Nosam platform; `void connect --platform void` offers saved platforms and an option to enter another URL.
 
 For CI, create a bounded, project-scoped deploy credential while signed in as
 the project owner:
@@ -45,7 +45,7 @@ with `.void/*` and `!.void/project.json`. Rotate with `void project token renew 
 `void project token revoke <id>`. A human login token is not a CI credential.
 
 If Cloudflare Access protects the platform, Access proof and the project
-credential are both required; the service token does not grant Void user or
+credential are both required; the service token does not grant Nosam user or
 operator authority. A deploy that uses remote bindings calls
 both the API and proxy, so store `VOID_ACCESS_CREDENTIALS` in the CI secret
 manager with entries for both exact HTTPS origins. Include both entries even
@@ -84,7 +84,7 @@ void platform auth login
 void platform signup allow github teammate
 ```
 
-Void shows the proposed access change and asks you to confirm it. Once approved, `teammate` can connect to the platform's API URL and sign in with GitHub.
+Nosam shows the proposed access change and asks you to confirm it. Once approved, `teammate` can connect to the platform's API URL and sign in with GitHub.
 
 To allow email addresses, domains, or OIDC identities, or to open signup, see [Giving People Access](/guide/platform/administration/access#giving-people-access).
 

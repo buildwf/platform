@@ -9,7 +9,7 @@ it('passes prefilled setup URLs intact to Windows without command-shell interpre
   Object.defineProperty(process, 'platform', { configurable: true, value: 'win32' });
   const run = vi.fn();
   const url =
-    'https://dash.cloudflare.com/?to=%2Faccount%2Fapi-tokens&name=Void%20Runtime&permissionGroupKeys=%5B%5D';
+    'https://dash.cloudflare.com/?to=%2Faccount%2Fapi-tokens&name=Nosam%20Runtime&permissionGroupKeys=%5B%5D';
   openBrowser(url, run as unknown as typeof execFile);
   expect(run).toHaveBeenCalledWith(
     'rundll32.exe',

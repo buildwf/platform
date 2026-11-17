@@ -133,7 +133,7 @@ describe('Better Auth D1 consistency', () => {
           'first-unconstrained',
           'first-primary',
         ]);
-        // Framework handlers without a Void request scope must also read from primary.
+        // Framework handlers without a Nosam request scope must also read from primary.
         binding.withSession.mockClear();
         expect(await envContext.run({ [bindingName]: binding }, findSession)).toBeNull();
         expect(binding.withSession).toHaveBeenCalled();

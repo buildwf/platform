@@ -38,7 +38,7 @@ countIf(eq(posts.id, 1));
 orderBy(posts.title);
 
 const writes: [BatchItem<'sqlite'>, ...Array<BatchItem<'sqlite'>>] = [
-  db.update(posts).set({ title: 'Void' }).where(eq(posts.id, 1)),
+  db.update(posts).set({ title: 'Nosam' }).where(eq(posts.id, 1)),
 ];
-writes.push(db.insert(posts).values({ id: 2, title: 'Void' }));
+writes.push(db.insert(posts).values({ id: 2, title: 'Nosam' }));
 void db.batch(writes);

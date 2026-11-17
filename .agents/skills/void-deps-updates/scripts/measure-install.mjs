@@ -24,7 +24,7 @@ const { values } = parseArgs({
 });
 if (values.help) {
   console.log(
-    'Usage: node measure-install.mjs --repo <Void checkout> --out <new directory> [--archives <captured cohort>]',
+    'Usage: node measure-install.mjs --repo <Nosam checkout> --out <new directory> [--archives <captured cohort>]',
   );
 } else {
   try {
@@ -58,7 +58,7 @@ async function measure() {
     '--out must be a new directory; existing results are never overwritten.',
   );
   const registryModule = join(repository, '.github/scripts/packed-registry.mjs');
-  assert(existsSync(registryModule), 'Not a Void checkout: packed registry helper missing.');
+  assert(existsSync(registryModule), 'Not a Nosam checkout: packed registry helper missing.');
   const { inspectPackage, startPackedRegistry } = await import(pathToFileURL(registryModule));
   const publicPackages = readdirSync(join(repository, 'packages'), { withFileTypes: true })
     .filter((entry) => entry.isDirectory())

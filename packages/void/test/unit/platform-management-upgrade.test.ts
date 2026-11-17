@@ -1338,7 +1338,7 @@ describe('installed platform upgrade', () => {
 
       // The Workers can use a newer token than the one saved on this machine.
       await expect(upgrade()).rejects.toThrow(
-        'platform: The runtime API token saved on this machine cannot use platform email. Cloudflare denied: Zone → Zone Settings → Edit, Zone → Email Routing Rules → Edit, Account → Email Routing Addresses → Edit (HTTP 403). Void checked this token because VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN is not set. If the platform uses a different runtime token, set VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to that token, and Void checks that token instead.',
+        'platform: The runtime API token saved on this machine cannot use platform email. Cloudflare denied: Zone → Zone Settings → Edit, Zone → Email Routing Rules → Edit, Account → Email Routing Addresses → Edit (HTTP 403). Nosam checked this token because VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN is not set. If the platform uses a different runtime token, set VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to that token, and Nosam checks that token instead.',
       );
       expect(installPlatform).not.toHaveBeenCalled();
 
@@ -1378,7 +1378,7 @@ describe('installed platform upgrade', () => {
 
       expect(vi.mocked(log.warn).mock.calls).toEqual([
         [
-          'The runtime API token saved on this machine is not valid (HTTP 401). Void cannot check the platform email permissions before it changes the platform, and it continues without this check. To do the check, set VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to the runtime token of the platform.',
+          'The runtime API token saved on this machine is not valid (HTTP 401). Nosam cannot check the platform email permissions before it changes the platform, and it continues without this check. To do the check, set VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to the runtime token of the platform.',
         ],
       ]);
       expect(emailRequests()).toEqual(emailPaths.map((path) => `request:${path}`));
@@ -1474,7 +1474,7 @@ describe('installed platform upgrade', () => {
     });
   });
 
-  describe('platform Workers changed outside Void', () => {
+  describe('platform Workers changed outside Nosam', () => {
     const apiWorker = () => state.manifest!.deployment.resources.apiWorker;
     const activeVersion = '44444444-4444-4444-8444-444444444444';
     const withApiWorker = () => {
@@ -1496,7 +1496,7 @@ describe('installed platform upgrade', () => {
           ],
         };
       });
-      // Void deployed the active version of the API Worker.
+      // Nosam deployed the active version of the API Worker.
       state.request.mockImplementation(async (path: string) => {
         if (path.endsWith(`/${apiWorker()}/deployments`)) {
           return {
@@ -1554,7 +1554,7 @@ describe('installed platform upgrade', () => {
       expect(state.cfRunner).not.toHaveBeenCalled();
     });
 
-    it('runs unchanged when Void made the last change', async () => {
+    it('runs unchanged when Nosam made the last change', async () => {
       withApiWorker();
 
       await upgrade();
@@ -1577,13 +1577,13 @@ describe('installed platform upgrade', () => {
       await upgrade({ plan: true });
 
       expect(log.warn).toHaveBeenCalledWith(
-        `These platform Workers need your approval before this command replaces their configuration:\n${apiWorker()}: changed in the Cloudflare API\nThis command replaces their configuration with the Void configuration. Run it in a terminal to review them first.`,
+        `These platform Workers need your approval before this command replaces their configuration:\n${apiWorker()}: changed in the Cloudflare API\nThis command replaces their configuration with the Nosam configuration. Run it in a terminal to review them first.`,
       );
       expect(installPlatform).not.toHaveBeenCalled();
       expect(state.events).toEqual([]);
     });
 
-    describe('when Void cannot read the Worker', () => {
+    describe('when Nosam cannot read the Worker', () => {
       const failure = (status: number) =>
         new PlatformCloudflareApiError('Cloudflare error', status);
       /** Answer the reads of one path with these answers, and the other reads as before. */
@@ -1692,8 +1692,8 @@ describe('installed platform upgrade', () => {
         queueConsumers: [],
         workflows: [],
       };
-      // The run agreed to replace a change made outside Void on the API
-      // Worker. It made Void's version active and stopped before the cutover
+      // The run agreed to replace a change made outside Nosam on the API
+      // Worker. It made Nosam's version active and stopped before the cutover
       // finished. The marker shows the Cloudflare CLI.
       const stoppedRun = (sessionsRequired: boolean) => {
         withApiWorker();
@@ -1737,7 +1737,7 @@ describe('installed platform upgrade', () => {
         });
       };
 
-      it('stops before any change when the run restores an earlier version without a Void record', async () => {
+      it('stops before any change when the run restores an earlier version without a Nosam record', async () => {
         stoppedRun(false);
 
         const error = await upgrade().then(
@@ -1746,7 +1746,7 @@ describe('installed platform upgrade', () => {
         );
 
         expect(error?.message).toContain(
-          `${apiWorker()}: has an active version without a Void deployment record\nNo platform Worker changed.`,
+          `${apiWorker()}: has an active version without a Nosam deployment record\nNo platform Worker changed.`,
         );
         expect(state.request).toHaveBeenCalledWith(
           `/accounts/account/workers/scripts/${apiWorker()}/versions/${earlierVersion}`,
@@ -1755,7 +1755,7 @@ describe('installed platform upgrade', () => {
         expect(gateWrites()).toEqual([]);
       });
 
-      it('runs when the installer keeps the version of Void, as the database shows', async () => {
+      it('runs when the installer keeps the version of Nosam, as the database shows', async () => {
         stoppedRun(true);
 
         await upgrade();
@@ -1808,7 +1808,7 @@ describe('installed platform upgrade', () => {
           return { name: 'assets' };
         });
         // Like the installer: it creates a resource, uploads the Workers changed
-        // outside Void with the configs that the run deploys, then pauses traffic.
+        // outside Nosam with the configs that the run deploys, then pauses traffic.
         const installer = vi.mocked(installPlatform).getMockImplementation()!;
         vi.mocked(installPlatform).mockImplementation(
           async (plan, _secrets, existing, dependencies) => {
@@ -1911,10 +1911,10 @@ describe('installed platform upgrade', () => {
         expect(state.progress.error).toHaveBeenCalledWith('Platform upgrade failed.');
       });
 
-      it('replaces an active version that Void did not deploy without a review upload', async () => {
+      it('replaces an active version that Nosam did not deploy without a review upload', async () => {
         // An earlier run replaced the change with the Cloudflare CLI and then
         // stopped. The marker shows the Cloudflare CLI, but the active version
-        // in runInTerminal still has no Void record of its triggers.
+        // in runInTerminal still has no Nosam record of its triggers.
         expect(await runInTerminal()).toBeNull();
 
         expect(confirm).toHaveBeenCalledOnce();

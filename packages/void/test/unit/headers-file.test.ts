@@ -147,7 +147,7 @@ describe('parseHeadersFile', () => {
 });
 
 describe('readGeneratedAssetHeadersFile', () => {
-  it('returns the text of the _headers file Void generated', () => {
+  it('returns the text of the _headers file Nosam generated', () => {
     const content = `${GENERATED_ASSET_HEADERS_MARKER}\n/assets/app.js\n  Cache-Control: immutable\n`;
     setup(content);
     expect(readGeneratedAssetHeadersFile(tmpDir)).toBe(content);

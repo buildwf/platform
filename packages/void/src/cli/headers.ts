@@ -103,7 +103,7 @@ export function parseHeadersFile(dir: string): Array<HeaderRule> | undefined {
   return rules;
 }
 
-/** The `_headers` text in `dir` when Void generated it, otherwise undefined. */
+/** The `_headers` text in `dir` when Nosam generated it, otherwise undefined. */
 export function readGeneratedAssetHeadersFile(dir: string): string | undefined {
   const filePath = join(dir, '_headers');
   if (!existsSync(filePath)) {

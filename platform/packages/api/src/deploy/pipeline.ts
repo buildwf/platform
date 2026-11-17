@@ -661,7 +661,7 @@ export async function runDeploymentPipeline(input: {
           if (verified.size !== size || verified.hashes.some((value) => value !== hash)) {
             emit({
               event: 'error',
-              message: 'Uploaded asset differs from the artifact approved on Void.',
+              message: 'Uploaded asset differs from the artifact approved on Nosam.',
               step: currentStep,
             });
             return;

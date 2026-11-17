@@ -123,7 +123,7 @@ describe('runMigrations (local SQLite)', () => {
     writeMigration(migDir, '001_init.sql', 'CREATE TABLE users (id TEXT PRIMARY KEY)');
 
     await expect(runMigrations(migDir, dbPath)).rejects.toThrow(
-      'Local database already has application tables but no Void migration history.',
+      'Local database already has application tables but no Nosam migration history.',
     );
   });
 

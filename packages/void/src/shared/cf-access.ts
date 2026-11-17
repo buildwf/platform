@@ -77,7 +77,7 @@ export function cfAccessHeaders(
 /**
  * Capture credentials for a Cloudflare Worker readiness request whose target
  * is resolved and constrained by the direct-deploy adapter rather than a
- * user-connected Void platform URL.
+ * user-connected Nosam platform URL.
  */
 export function trustedCloudflareWorkerAccessHeaders(
   env: Record<string, unknown>,

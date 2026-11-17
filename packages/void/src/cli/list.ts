@@ -60,7 +60,7 @@ export async function runListCommand(root: string, slug?: string): Promise<void>
 async function showCloudflareDeployments(root: string, slug?: string): Promise<void> {
   if (slug) {
     throw new Error(
-      'project: A project name selects a Void platform project and is not used for direct Cloudflare apps.',
+      'project: A project name selects a Nosam platform project and is not used for direct Cloudflare apps.',
     );
   }
   const { readCloudflareWorkerStatus, resolveCloudflareOperationContext } =

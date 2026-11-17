@@ -42,6 +42,6 @@ name?: string;
 key?: (context: { params: Record<string, string> }) => string;
 ```
 
-`name` fixes the Worker class and binding identity. Without it, Void derives the identity from the route file. Run `void info` before moving a deployed route and pin its displayed name.
+`name` fixes the Worker class and binding identity. Without it, Nosam derives the identity from the route file. Run `void info` before moving a deployed route and pin its displayed name.
 
 `key` selects the route instance and its `ctx.id`. Without it, routes use parameter names and values in route order (`room=general`, or `default` without parameters). A callback must return a stable string synchronously. When renaming parameters, preserve the complete old key to retain state. See [moving routes](../../guide/websockets.md#move-a-route-while-keeping-its-state) and [renaming parameters](../../guide/websockets.md#rename-a-route-parameter).

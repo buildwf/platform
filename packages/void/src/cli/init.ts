@@ -193,7 +193,7 @@ const PNPM_BUILD_DEFAULTS = [
 // pnpm writes this value for each blocked build it wants a decision on.
 const PNPM_BUILD_PLACEHOLDER = 'set this to true or false';
 
-// Packages a previous Void starter can leave behind, so re-running init
+// Packages a previous Nosam starter can leave behind, so re-running init
 // after deleting the app files still takes the starter path.
 const EMPTY_PROJECT_ALLOWED_PACKAGES = new Set([
   'void',
@@ -600,7 +600,7 @@ async function resolveInitRoot(root: string): Promise<string> {
   }
 
   const choice = await select({
-    message: 'This folder is not empty. Where should Void initialize?',
+    message: 'This folder is not empty. Where should Nosam initialize?',
     initialValue: 'subfolder',
     options: [
       {
@@ -611,7 +611,7 @@ async function resolveInitRoot(root: string): Promise<string> {
       {
         value: 'current',
         label: 'Continue here',
-        hint: 'Add package.json, vite.config.ts, and Void files to this directory.',
+        hint: 'Add package.json, vite.config.ts, and Nosam files to this directory.',
       },
     ],
   });
@@ -1240,7 +1240,7 @@ function setupTsconfig(root: string, state: ProjectState, framework?: ScaffoldFr
       if (JSON.stringify(tsconfig.files) !== JSON.stringify(files)) {
         tsconfig.files = files;
         updated = true;
-        log.step('Updated tsconfig.json — merged generated Void type files');
+        log.step('Updated tsconfig.json — merged generated Nosam type files');
       }
     }
 
@@ -1251,7 +1251,7 @@ function setupTsconfig(root: string, state: ProjectState, framework?: ScaffoldFr
       if (JSON.stringify(existingPaths) !== JSON.stringify(paths)) {
         compilerOptions.paths = paths;
         updated = true;
-        log.step('Updated tsconfig.json — merged generated Void path aliases');
+        log.step('Updated tsconfig.json — merged generated Nosam path aliases');
       }
     }
 
@@ -1376,7 +1376,7 @@ function clearConfiguredDatabase(
   log.step(messages.updated);
 }
 
-/** Remove `database` entirely: its casing alone still makes Void serve `void/db`. */
+/** Remove `database` entirely: its casing alone still makes Nosam serve `void/db`. */
 function removeDatabaseConfig(root: string): void {
   const config = readConfig(root);
   if (config.database === undefined) {
@@ -1482,7 +1482,7 @@ async function promptStarterMode(starter?: ScaffoldStarterMode): Promise<Scaffol
       {
         value: 'spa',
         label: 'React SPA only',
-        hint: 'No database or backend starter files yet; add routes/ and Void features later.',
+        hint: 'No database or backend starter files yet; add routes/ and Nosam features later.',
       },
     ],
   });
@@ -1528,7 +1528,7 @@ async function promptDatabaseSetup(root: string): Promise<DatabaseSetupChoice> {
       {
         value: 'sqlite',
         label: currentSetup === 'sqlite' ? 'D1 (SQLite) [current]' : 'D1 (SQLite)',
-        hint: 'Zero-config and fully managed by Void; best for prototyping and read-heavy apps.',
+        hint: 'Zero-config and fully managed by Nosam; best for prototyping and read-heavy apps.',
       },
       {
         value: 'postgresql',
@@ -1577,13 +1577,13 @@ async function promptDeploymentPlatform(
       },
       {
         value: 'void',
-        label: current === 'void' ? 'Void [current]' : 'Void',
-        hint: "Deploy to your company's Void Platform.",
+        label: current === 'void' ? 'Nosam [current]' : 'Nosam',
+        hint: "Deploy to your company's Nosam Platform.",
       },
       {
         value: 'none',
         label: current === 'none' ? 'Skip deployment setup [current]' : 'Skip deployment setup',
-        hint: 'Use Void locally or deploy another way.',
+        hint: 'Use Nosam locally or deploy another way.',
       },
     ],
   });
@@ -1608,7 +1608,7 @@ export async function ensureVoidPlatformConnection(
     selectedApiUrl = getApiUrl(root);
     getSiteDomain(root);
   } catch (error) {
-    if (!(error instanceof Error) || !error.message.includes('No Void platform connected')) {
+    if (!(error instanceof Error) || !error.message.includes('No Nosam platform connected')) {
       throw error;
     }
     // A genuinely new user must identify the company platform before login.
@@ -1616,7 +1616,7 @@ export async function ensureVoidPlatformConnection(
   if (!selectedApiUrl) {
     promptedForPlatform = true;
     const value = await text({
-      message: 'Void platform API URL:',
+      message: 'Nosam platform API URL:',
       placeholder: 'https://platform.example.com',
     });
     if (isCancel(value) || typeof value === 'symbol') {
@@ -1711,7 +1711,7 @@ function getWorkflowSetupSteps(
 }
 
 /**
- * The deploy workflow. Void deploys exchange a GitHub OIDC token (`id-token: write`)
+ * The deploy workflow. Nosam deploys exchange a GitHub OIDC token (`id-token: write`)
  * at deploy time, so no long-lived token is stored. Without a `slug`, the workflow
  * reads a `vars.VOID_PROJECT` repository variable.
  */
@@ -1759,7 +1759,7 @@ ${install}
   }
   if (!platformApiUrl) {
     throw new Error(
-      'init: Connect to a Void platform before generating a deployment workflow. Run `void connect <url>` first.',
+      'init: Connect to a Nosam platform before generating a deployment workflow. Run `void connect <url>` first.',
     );
   }
   // When the slug is unknown, fall back to a repository variable and prefix the
@@ -1770,7 +1770,7 @@ ${install}
     : `# Set a VOID_PROJECT repository variable to your project slug
   # (Settings → Secrets and variables → Actions → Variables).
   VOID_PROJECT: \${{ vars.VOID_PROJECT }}`;
-  return `name: Deploy to Void
+  return `name: Deploy to Nosam
 on:
   push:
     branches: [main]
@@ -1842,14 +1842,14 @@ function setupGithubActions(
   } else if (slug) {
     note(
       `Pushes to main will build and deploy "${slug}" via GitHub OIDC — no token to store.\n` +
-        'Connect the repo to your project in the Void dashboard to authorize it.',
+        'Connect the repo to your project in the Nosam dashboard to authorize it.',
       'GitHub Actions OIDC deploy',
     );
   } else {
     note(
       'Pushes to main will build and deploy via GitHub OIDC — no token to store.\n' +
         'Set a VOID_PROJECT repository variable (Settings → Secrets and variables → Actions → Variables)\n' +
-        'to your project slug, and connect the repo to your project in the Void dashboard.',
+        'to your project slug, and connect the repo to your project in the Nosam dashboard.',
       'GitHub Actions OIDC deploy',
     );
   }
@@ -1891,7 +1891,7 @@ function writeFileIfMissing(root: string, filePath: string, content: string): vo
 function ensureGitignore(root: string): void {
   const existed = existsSync(join(root, '.gitignore'));
   if (ensureGitignoreLines(root, SCAFFOLD_GITIGNORE_LINES).length > 0) {
-    log.step(existed ? 'Updated .gitignore with Void defaults' : 'Created .gitignore');
+    log.step(existed ? 'Updated .gitignore with Nosam defaults' : 'Created .gitignore');
   }
 }
 
@@ -1928,7 +1928,7 @@ function pnpmAllowBuildsEntryName(line: string): string | undefined {
 
 /**
  * Keeps the existing `allowBuilds` entries as written, approves the legacy
- * `onlyBuiltDependencies` list, and adds each Void default that is missing.
+ * `onlyBuiltDependencies` list, and adds each Nosam default that is missing.
  */
 function pnpmAllowBuildsYaml(entries: Array<string>, legacyList: Array<string>): string {
   const legacy = legacyList.flatMap((line) => {
@@ -2012,7 +2012,7 @@ function ensurePnpmAllowBuilds(root: string, pkg: JsonObject): void {
     if (missing.length > 0) {
       log.warn(
         `Add ${missing.map(([name, value]) => `${name}: ${value}`).join(', ')} to allowBuilds in ${displayPath}. ` +
-          'Void only edits allowBuilds when each entry is on its own line.',
+          'Nosam only edits allowBuilds when each entry is on its own line.',
       );
     }
     return;
@@ -2240,14 +2240,14 @@ function scaffoldSpaApp(
     const devCommand = getDevCommand(root);
     note(
       `Add DATABASE_URL to .env before running \`${devCommand}\`.\n` +
-        'Void uses that direct connection for local PostgreSQL development.',
+        'Nosam uses that direct connection for local PostgreSQL development.',
       'PostgreSQL local dev',
     );
   } else if (starterMode === 'mysql') {
     const devCommand = getDevCommand(root);
     note(
       `Add DATABASE_URL to .env before running \`${devCommand}\`.\n` +
-        'Void uses that direct connection for local MySQL development.',
+        'Nosam uses that direct connection for local MySQL development.',
       'MySQL local dev',
     );
   }
@@ -2271,7 +2271,7 @@ function ensureExistingProjectPackage(
     try {
       pkg = asRecord(JSON.parse(readFileSync(packageJsonPath, 'utf-8'))) ?? {};
     } catch {
-      throw new Error('Could not parse package.json while configuring Void');
+      throw new Error('Could not parse package.json while configuring Nosam');
     }
   }
 
@@ -2327,11 +2327,11 @@ function ensureExistingProjectPackage(
     log.step(
       existedBefore
         ? plainViteSetup
-          ? 'Updated package.json with Void dependencies and Vite scripts'
-          : 'Updated package.json with Void dependency'
+          ? 'Updated package.json with Nosam dependencies and Vite scripts'
+          : 'Updated package.json with Nosam dependency'
         : plainViteSetup
-          ? 'Created package.json with Void dependencies and Vite scripts'
-          : 'Created package.json with Void dependency',
+          ? 'Created package.json with Nosam dependencies and Vite scripts'
+          : 'Created package.json with Nosam dependency',
     );
   }
 
@@ -2391,7 +2391,7 @@ function ensureExistingProjectViteConfig(root: string): void {
 
 /** Returns whether a dependency was added. */
 function setupExistingProject(root: string): boolean {
-  log.info('Existing project detected. Configuring Void...');
+  log.info('Existing project detected. Configuring Nosam...');
   const dependencyAdded = ensureExistingProjectPackage(root, {
     plainViteSetup: true,
   });
@@ -2522,7 +2522,7 @@ async function injectAgentBlock(root: string, newProject: boolean): Promise<void
   const existing = existsSync(fullPath) ? readFileSync(fullPath, 'utf-8') : null;
   const managedBlock = existing?.match(MARKER_BLOCK_RE);
   if (managedBlock?.[0] === block) {
-    log.info(`${filePath} already has Void instructions (v${version})`);
+    log.info(`${filePath} already has Nosam instructions (v${version})`);
     return;
   }
 
@@ -2535,10 +2535,10 @@ async function injectAgentBlock(root: string, newProject: boolean): Promise<void
     }
     const accepted = await confirm({
       message: managedBlock
-        ? 'Update Void instructions in AGENTS.md?'
+        ? 'Update Nosam instructions in AGENTS.md?'
         : existing !== null
-          ? 'Append Void instructions to AGENTS.md?'
-          : 'Create AGENTS.md with Void instructions?',
+          ? 'Append Nosam instructions to AGENTS.md?'
+          : 'Create AGENTS.md with Nosam instructions?',
       initialValue: true,
     });
     if (isCancel(accepted)) {
@@ -2554,16 +2554,16 @@ async function injectAgentBlock(root: string, newProject: boolean): Promise<void
     if (managedBlock) {
       const updated = existing.replace(MARKER_BLOCK_RE, block);
       writeFileSync(fullPath, updated);
-      log.step(`Updated Void instructions in ${filePath}`);
+      log.step(`Updated Nosam instructions in ${filePath}`);
     } else {
       // Append block to end of file
       const separator = existing.endsWith('\n') ? '\n' : '\n\n';
       writeFileSync(fullPath, existing + separator + block + '\n');
-      log.step(`Added Void instructions to ${filePath}`);
+      log.step(`Added Nosam instructions to ${filePath}`);
     }
   } else {
     writeFileSync(fullPath, block + '\n');
-    log.step(`Created ${filePath} with Void instructions`);
+    log.step(`Created ${filePath} with Nosam instructions`);
   }
 }
 
@@ -2668,7 +2668,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
         workspaceSubpackageSkip = true;
         const relRoot = relative(deferral.workspaceRoot, root) || '.';
         note(
-          `Configured Void in ./${relRoot}.\n\n` +
+          `Configured Nosam in ./${relRoot}.\n\n` +
             `Run your workspace install from ${deferral.workspaceRoot} to sync the lockfile and pick up the updated dependencies.\n` +
             `If this init flow scaffolds database files, then run \`void db generate\` from ./${relRoot}.`,
           'Workspace subpackage',
@@ -2708,7 +2708,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
     const { linkSkillsForSpecificAgents } = await import('./skills.ts');
     linkSkillsForSpecificAgents(root, agents);
   } else {
-    log.info('Bundled Void docs: node_modules/void/docs/');
+    log.info('Bundled Nosam docs: node_modules/void/docs/');
   }
 
   // Demo code only in the full flow.

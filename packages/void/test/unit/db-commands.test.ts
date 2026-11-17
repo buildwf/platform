@@ -522,7 +522,7 @@ describe('void db export', () => {
     expect(lines.at(-1)).toBe('SET FOREIGN_KEY_CHECKS = 1;');
   });
 
-  it('MySQL: skips only Void bookkeeping tables and reads values as MySQL text', async () => {
+  it('MySQL: skips only Nosam bookkeeping tables and reads values as MySQL text', async () => {
     const root = mkdtempSync(join(tmpdir(), 'void-export-mysql-'));
     rootsToClean.push(root);
     writeFileSync(join(root, 'void.json'), JSON.stringify({ database: 'mysql' }));
@@ -1073,7 +1073,7 @@ describe('void db rename-migrations', () => {
 
   it('refuses direct Cloudflare deploys before renaming anything', async () => {
     mockReadDeploymentPlatform.mockReturnValue('cloudflare');
-    // A project that moved from Void keeps its old link, so the hosted rename must not run either.
+    // A project that moved from Nosam keeps its old link, so the hosted rename must not run either.
     mockGetToken.mockReturnValue('test-token');
     mockReadProjectConfig.mockReturnValue({ projectId: 'proj-under-test', slug: 'under-test' });
     const root = createRenameProjectRoot({
@@ -1168,7 +1168,7 @@ describe('void db rename-migrations', () => {
     expect(mockLog.error).not.toHaveBeenCalled();
   });
 
-  it('refuses a Void project that is not linked', async () => {
+  it('refuses a Nosam project that is not linked', async () => {
     mockReadDeploymentPlatform.mockReturnValue('void');
     const root = createRenameProjectRoot({
       files: { '0001_a.sql': '-- a\n', '0002_b.sql': '-- b\n' },

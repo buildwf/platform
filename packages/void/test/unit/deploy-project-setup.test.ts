@@ -53,7 +53,7 @@ describe('promptDeployProjectConfig', () => {
       accountId: null,
       apiUrl: 'https://api.void.cloud',
       applicationDomain: 'void.app',
-      displayName: 'Void Cloud',
+      displayName: 'Nosam Cloud',
       installationId: null,
       kind: 'connected',
       proxyUrl: 'https://proxy.void.cloud',
@@ -127,7 +127,7 @@ describe('promptDeployProjectConfig', () => {
     expect(client.listProjectChoices).toHaveBeenCalledOnce();
     expect(mockSelect).toHaveBeenCalledTimes(1);
     expect(mockSelect).toHaveBeenCalledWith({
-      message: 'Set up a Void project for deploy:',
+      message: 'Set up a Nosam project for deploy:',
       options: [{ value: 'create', label: 'Create a new project' }],
     });
     expect(client.createProject).toHaveBeenCalledWith('new-app');
@@ -199,7 +199,7 @@ describe('promptDeployProjectConfig', () => {
 
     expect(mockSelect).toHaveBeenCalledTimes(2);
     expect(mockSelect.mock.calls[0]?.[0]).toMatchObject({
-      message: 'Set up a Void project for deploy:',
+      message: 'Set up a Nosam project for deploy:',
       options: [
         { value: 'create', label: 'Create a new project' },
         { value: 'link', label: 'Link an existing project' },
@@ -271,7 +271,7 @@ describe('promptDeployProjectConfig', () => {
 
     expect(mockSelect).toHaveBeenCalledOnce();
     expect(mockSelect).toHaveBeenCalledWith({
-      message: 'Set up a Void project for deploy:',
+      message: 'Set up a Nosam project for deploy:',
       options: [{ value: 'create', label: 'Create a new project' }],
     });
     expect(mockWarn).toHaveBeenCalledWith(expect.stringContaining('grant collaborator access'));

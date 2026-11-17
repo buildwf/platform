@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Void Configuration",
+  "title": "Nosam Configuration",
   "description": "Configuration file for void projects (void.json)",
   "type": "object",
   "properties": {
@@ -22,7 +22,7 @@
     "sourceDir": {
       "type": "string",
       "pattern": "^(?!/)(?!\\.\\.?$)(?!\\./$)(?!\\.\\./)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\s$)(?!\\s).+$",
-      "description": "Directory containing Void source conventions such as routes, middleware, crons, queues, db, auth.ts, and env.ts. Omit to use the project root."
+      "description": "Directory containing Nosam source conventions such as routes, middleware, crons, queues, db, auth.ts, and env.ts. Omit to use the project root."
     },
     "auth": {
       "type": "object",
@@ -92,7 +92,7 @@
         "notFound": {
           "type": "string",
           "enum": ["single-page-application", "404-page", "none"],
-          "description": "Override how the asset layer answers a request that matched no asset and no worker route. Void infers \"single-page-application\" when the worker does not own HTML routing; set \"404-page\" for a static-site-generator build so unknown URLs serve 404.html with a real HTTP 404 instead of index.html with a 200. Does not change run_worker_first."
+          "description": "Override how the asset layer answers a request that matched no asset and no worker route. Nosam infers \"single-page-application\" when the worker does not own HTML routing; set \"404-page\" for a static-site-generator build so unknown URLs serve 404.html with a real HTTP 404 instead of index.html with a 200. Does not change run_worker_first."
         },
         "headers": {
           "type": "object",
@@ -251,7 +251,7 @@
     },
     "worker": {
       "type": "object",
-      "description": "Curated wrangler config passthrough. Cloudflare-targeted apps require compatibility_date here unless provided by wrangler.jsonc/wrangler.json; Void pins the latest known-good date here if none is configured. Binding arrays (d1_databases, kv_namespaces, r2_buckets) are not allowed here — bindings are fully managed by void.",
+      "description": "Curated wrangler config passthrough. Cloudflare-targeted apps require compatibility_date here unless provided by wrangler.jsonc/wrangler.json; Nosam pins the latest known-good date here if none is configured. Binding arrays (d1_databases, kv_namespaces, r2_buckets) are not allowed here — bindings are fully managed by void.",
       "properties": {
         "compatibility_date": {
           "type": "string",
@@ -285,7 +285,7 @@
     },
     "deploy": {
       "type": "object",
-      "description": "Void deployment choices. Cloudflare Worker settings belong in cloudflare instead.",
+      "description": "Nosam deployment choices. Cloudflare Worker settings belong in cloudflare instead.",
       "properties": {
         "cloudflare": {
           "type": "object",
@@ -343,7 +343,7 @@
       "properties": {
         "from": {
           "type": "string",
-          "description": "Default sender for sendEmail(): one address, optionally with a display name (\"Acme <noreply@mail.acme.com>\"). On `void deploy --backend cloudflare` its host is the domain Void sets Email Routing and Email Sending up on."
+          "description": "Default sender for sendEmail(): one address, optionally with a display name (\"Acme <noreply@mail.acme.com>\"). On `void deploy --backend cloudflare` its host is the domain Nosam sets Email Routing and Email Sending up on."
         }
       },
       "additionalProperties": false

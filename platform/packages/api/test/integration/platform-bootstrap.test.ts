@@ -815,7 +815,7 @@ describe('provider-independent first administrator setup', () => {
       PLATFORM_DISPLAY_NAME: '<Example Platform>',
     });
     expect(await adminHtml(setupPage)).toContain(
-      '<title>Set up administrator · &lt;Example Platform&gt; · Void</title>',
+      '<title>Set up administrator · &lt;Example Platform&gt; · Nosam</title>',
     );
     expect((await form('/auth/bootstrap', { code: randomLoginProof() })).status).toBe(403);
     expect(
@@ -825,7 +825,9 @@ describe('provider-independent first administrator setup', () => {
     expect(callback.status).toBe(200);
     const callbackHtml = await adminHtml(callback);
     expect(callbackHtml).toContain('administrator@example.com');
-    expect(callbackHtml).toContain('<title>Confirm platform administrator · Void Platform</title>');
+    expect(callbackHtml).toContain(
+      '<title>Confirm platform administrator · Nosam Platform</title>',
+    );
     expect(await env.db.select().from(users)).toHaveLength(0);
     const proofCookie = callback.headers
       .getSetCookie()

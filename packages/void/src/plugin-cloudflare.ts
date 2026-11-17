@@ -32,7 +32,7 @@ function isInside(directory: string, path: string): boolean {
 /**
  * Vitest runs tests in Node.js, in a Vite server of its own that turns off dependency
  * prebundling. The Cloudflare plugin needs prebundling to start the Worker, so the Worker would
- * fail before any test runs. Leave these plugins out of that server; Void's other plugins still
+ * fail before any test runs. Leave these plugins out of that server; Nosam's other plugins still
  * resolve `void/*`, `@schema` and the generated modules for tests.
  */
 function skipOnVitestServer(plugins: Array<Plugin>): Array<Plugin> {
@@ -47,7 +47,7 @@ function skipOnVitestServer(plugins: Array<Plugin>): Array<Plugin> {
   return plugins;
 }
 
-/** Keep Void's public configuration and artifact layout while running the v2 plugin. */
+/** Keep Nosam's public configuration and artifact layout while running the v2 plugin. */
 export function cloudflare(options: {
   configPath?: string;
   config: (resolved: WorkerConfig) => Partial<WorkerConfig>;
@@ -91,7 +91,7 @@ export function cloudflare(options: {
       native = toNativeCloudflareConfig(workerConfig, root);
       pluginNative = structuredClone(native);
       if (environment.command === 'build' && native.containers.length > 0) {
-        // Void builds images during deployment preparation. Managed builds consume
+        // Nosam builds images during deployment preparation. Managed builds consume
         // the Worker bundle and must not acquire a local Docker prerequisite.
         pluginNative.containers = [];
         for (const declaration of Object.values(pluginNative.worker?.exports ?? {})) {
@@ -157,7 +157,7 @@ export function cloudflare(options: {
         const destination = outputDirectories.get(environment)!;
         const client = outputDirectories.get('client')!;
         if (!worker.bundleDir || !worker.config.manifest) {
-          throw new Error('Void requires a built Cloudflare Worker.');
+          throw new Error('Nosam requires a built Cloudflare Worker.');
         }
         for (const directory of [destination, client]) {
           // Match Vite's default cleanup for output inside the project. Never erase the

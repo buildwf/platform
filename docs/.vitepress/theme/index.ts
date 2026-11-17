@@ -68,7 +68,7 @@ export default {
     app.provide(themeContextKey, {
       logoDark,
       logoLight,
-      logoAlt: 'Void',
+      logoAlt: 'Nosam',
       footerBg,
       monoIcon,
     });

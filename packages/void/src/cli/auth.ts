@@ -77,7 +77,7 @@ function readOriginScopedToken(apiUrl: string, config: Config): string | null {
 
 function connectedPlatform(apiUrl: string | null | undefined) {
   if (!apiUrl) {
-    throw new Error('platform: No Void platform connected. Run `void connect <url>` first.');
+    throw new Error('platform: No Nosam platform connected. Run `void connect <url>` first.');
   }
   const origin = normalizePlatformApiUrl(apiUrl);
   const connection = listPlatformConnections().find((entry) => entry.apiUrl === origin);
@@ -420,7 +420,7 @@ export async function awaitBrowserCallback<T>(options: {
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(
         page(
-          options.successTitle ?? 'Signed in to Void',
+          options.successTitle ?? 'Signed in to Nosam',
           'You can close this tab and return to the terminal.',
         ),
       );

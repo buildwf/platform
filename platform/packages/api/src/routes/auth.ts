@@ -432,7 +432,7 @@ app.get('/callback', async (context) => {
       }
       if (resolvedProvider === 'github') {
         // Enforce RFC 0074's one-github-identity-per-account invariant on the login
-        // path too (Vercel model: a Void account has a single GitHub login identity;
+        // path too (Vercel model: a Nosam account has a single GitHub login identity;
         // extra repo access is via installations, not a second identity). `providerId`
         // is guaranteed NOT yet an oauth row (the getUserByOAuthAccount branch above
         // handled that), so linkGitHubIdentity either links it (existing had no github)

@@ -3,7 +3,7 @@ import type { SubcommandDef } from './subcommand-prompt.ts';
 const PLATFORM_FLAG = {
   name: '--platform',
   arg: '<cloudflare|void>',
-  description: 'Your own Cloudflare account (`cloudflare`) instead of the Void platform',
+  description: 'Your own Cloudflare account (`cloudflare`) instead of the Nosam platform',
 };
 
 export const emailSubcommands: Array<SubcommandDef> = [
@@ -61,7 +61,7 @@ export interface EmailArgs {
   projectSlug?: string;
   limit?: number;
   address?: string;
-  /** `cloudflare` is the developer's own account; `void` (the default) is the Void platform. */
+  /** `cloudflare` is the developer's own account; `void` (the default) is the Nosam platform. */
   platform?: 'cloudflare' | 'void';
   /** `void email alias <name> --yes` sets the permanent alias without a prompt. */
   yes?: boolean;
@@ -170,7 +170,7 @@ export function parseEmailArgs(args: Array<string>): EmailArgs {
   if (subcommand === 'domain') {
     if (platform === 'cloudflare') {
       throw new Error(
-        'email: --platform cloudflare applies to `void email status` and `void email setup` only (`domain` is a Void platform command).',
+        'email: --platform cloudflare applies to `void email status` and `void email setup` only (`domain` is a Nosam platform command).',
       );
     }
     return parseEmailDomainArgs(positional, { projectSlug, limit, platform });
@@ -189,16 +189,16 @@ export function parseEmailArgs(args: Array<string>): EmailArgs {
   }
 
   // `--platform cloudflare` reads the local project and the developer's own Cloudflare
-  // session, never a Void project, so `--project` has nothing to select.
+  // session, never a Nosam project, so `--project` has nothing to select.
   if (platform === 'cloudflare') {
     if (subcommand !== 'status' && subcommand !== 'setup') {
       throw new Error(
-        `email: --platform cloudflare applies to \`void email status\` and \`void email setup\` only (\`${subcommand}\` is a Void platform command).`,
+        `email: --platform cloudflare applies to \`void email status\` and \`void email setup\` only (\`${subcommand}\` is a Nosam platform command).`,
       );
     }
     if (projectSlug !== undefined) {
       throw new Error(
-        'email: --project cannot be combined with --platform cloudflare (it reads the local project, not a Void project).',
+        'email: --project cannot be combined with --platform cloudflare (it reads the local project, not a Nosam project).',
       );
     }
     if (address !== undefined) {

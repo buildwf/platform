@@ -424,7 +424,7 @@ describe('POST /email/send — platform capability', () => {
     expect(await res.json()).toEqual({
       error: 'platform capability unavailable',
       capability: 'email',
-      message: 'This Void platform does not enable email.',
+      message: 'This Nosam platform does not enable email.',
     });
     expect((env.SEND_EMAIL as { send: ReturnType<typeof vi.fn> }).send).not.toHaveBeenCalled();
     expect(nonAuthKvReads(kv)).toEqual([]);

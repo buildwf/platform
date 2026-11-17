@@ -60,7 +60,7 @@ export class CloudflareAuthenticationError extends Error {
 }
 
 /**
- * Authenticate with Cloudflare through Void's bundled deployment tooling.
+ * Authenticate with Cloudflare through Nosam's bundled deployment tooling.
  *
  * The caller owns the runner so deploy can retain its pinned account, API base,
  * config, and uploader-integrity boundary. Interactive sessions recover from an

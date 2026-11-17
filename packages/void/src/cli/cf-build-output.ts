@@ -178,12 +178,12 @@ export async function prepareCfBuildOutput(
         !isInside(source, resolve(source, path)) ||
         resolve(source, path) === source
       ) {
-        throw new Error('Invalid Void Container build output directory.');
+        throw new Error('Invalid Nosam Container build output directory.');
       }
       const directory = realpathSync(resolve(source, path));
       const canonicalRoot = realpathSync(source);
       if (directory === canonicalRoot || !isInside(canonicalRoot, directory)) {
-        throw new Error('Void Container output must stay inside the project.');
+        throw new Error('Nosam Container output must stay inside the project.');
       }
       const prepared = await prepareCfBuildOutput(
         directory,
@@ -580,7 +580,7 @@ async function prepareBundledBuildOutput(options: {
   }
 }
 
-/** Bundle Void's generated thin static Worker before handing it to cf as prebuilt output. */
+/** Bundle Nosam's generated thin static Worker before handing it to cf as prebuilt output. */
 export async function prepareCfStaticBuildOutput(options: {
   projectRoot: string;
   configPath: string;

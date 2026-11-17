@@ -1,11 +1,11 @@
 ---
-description: 'Stream events from a route handler to the browser. Void formats the messages, sends keepalives, and closes the stream.'
+description: 'Stream events from a route handler to the browser. Nosam formats the messages, sends keepalives, and closes the stream.'
 outline: deep
 ---
 
 # Server-Sent Events
 
-Use `void/sse` to stream events from a route handler to the browser. Void formats messages, sends keepalives, and closes the stream when the request ends.
+Use `void/sse` to stream events from a route handler to the browser. Nosam formats messages, sends keepalives, and closes the stream when the request ends.
 
 SSE is a good fit for AI tokens, progress updates, or logs produced by one request. If other requests need to publish to connected clients, see [Live Event Streams](./live.md). Store events yourself if clients need to replay them.
 

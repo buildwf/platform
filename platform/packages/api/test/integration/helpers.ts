@@ -498,7 +498,7 @@ export function createCronSchedulerMock(): {
 export type SetupEnvOptions = Readonly<{
   /**
    * Set `PLATFORM_AUTH_DATABASE_UNCACHED` (default true, like a self-hosted install).
-   * Hosted Void Cloud leaves it unset; suites whose behaviour must not depend on it
+   * Hosted Nosam Cloud leaves it unset; suites whose behaviour must not depend on it
    * pass false. Keep the default: platform access protection needs the flag.
    */
   authDatabaseUncached?: boolean;
@@ -1981,11 +1981,15 @@ export function withLegacyDeploy<
   const fetchApp = app.fetch.bind(app) as (...args: Array<unknown>) => Promise<Response>;
   const fetch = async (request: Request, ...rest: Array<unknown>): Promise<Response> => {
     const match = DEPLOY_PATH.exec(new URL(request.url).pathname);
-    if (!match || request.method !== 'POST') return fetchApp(request, ...rest);
+    if (!match || request.method !== 'POST') {
+      return fetchApp(request, ...rest);
+    }
     const headers = new Headers({ 'Content-Type': 'application/json' });
     for (const name of ['authorization', 'x-void-cli-version', 'user-agent']) {
       const value = request.headers.get(name);
-      if (value) headers.set(name, value);
+      if (value) {
+        headers.set(name, value);
+      }
     }
     const key = request.headers.get('x-void-deploy-idempotency-key');
     const text = await request.text();
@@ -2074,7 +2078,9 @@ export function withLegacyDeploy<
           };
         };
         events.push(...data.events.map((item) => ({ ...item.event, seq: item.seq })));
-        if (data.terminal) break;
+        if (data.terminal) {
+          break;
+        }
         since = data.lastSeq;
         await new Promise((resolve) => setTimeout(resolve, 20));
       }

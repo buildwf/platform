@@ -843,7 +843,7 @@ describe('registered OAuth applications', () => {
     expect(events.map((event) => event.status)).toEqual(['success', 'success']);
     expect(JSON.stringify(events)).not.toContain(clientSecret);
   });
-  it('keeps the account-token login bridge on Void’s own domain', async () => {
+  it('keeps the account-token login bridge on Nosam’s own domain', async () => {
     const params = new URLSearchParams({
       client_id: registration.client.id,
       redirect_uri: redirect,
@@ -950,7 +950,7 @@ describe('registered OAuth applications', () => {
     expect((await exchange(code)).status).toBe(200);
     expect((await exchange(code)).status).toBe(400);
   });
-  it('requires the browser proof and Void origin for consent and honors cancellation', async () => {
+  it('requires the browser proof and Nosam origin for consent and honors cancellation', async () => {
     const flow = await authorize();
     expect((await approve(flow.id!, 'void_oauth_user=' + user.jwt)).status).toBe(403);
     const csrf = await request('/oauth/approve', {

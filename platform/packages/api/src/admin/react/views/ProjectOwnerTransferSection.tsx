@@ -12,7 +12,7 @@ export function ProjectOwnerTransferSection({ projectId }: { projectId: string }
     <SectionStack id="owner-transfer" className="void-admin-owner-transfer">
       <h2>Transfer Ownership</h2>
       <p>
-        Transfer this project to an existing Void Platform user. You will review the ownership,
+        Transfer this project to an existing Nosam Platform user. You will review the ownership,
         plan, suspension, active-work, routing, and usage-counter changes before applying them.
       </p>
       <SectionStack

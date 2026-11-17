@@ -107,15 +107,15 @@ function operatorHelpTree(): HelpTree {
 const HELP_TREE: HelpTree = {
   connect: {
     summary:
-      'Connect this project to Cloudflare or an existing Void platform. Platform hostnames default to HTTPS.',
+      'Connect this project to Cloudflare or an existing Nosam platform. Platform hostnames default to HTTPS.',
     usage: ['void connect [url] [--platform <cloudflare|void>] [--no-login]'],
     options: [
       { command: '--platform <cloudflare|void>', description: 'Choose the deployment destination' },
-      { command: '--no-login', description: 'Save a Void connection without authenticating' },
+      { command: '--no-login', description: 'Save a Nosam connection without authenticating' },
     ],
     examples: [
       { command: 'void connect', description: 'Choose a destination and sign in' },
-      { command: 'void connect platform.example.com', description: 'Join a Void platform' },
+      { command: 'void connect platform.example.com', description: 'Join a Nosam platform' },
       {
         command: 'void connect --platform cloudflare',
         description: 'Sign in and select a Cloudflare account',
@@ -123,7 +123,7 @@ const HELP_TREE: HelpTree = {
     ],
   },
   init: {
-    summary: 'Set up Void in a new or existing project.',
+    summary: 'Set up Nosam in a new or existing project.',
     usage: ['void init [options]'],
     options: [
       { command: '--tsconfig', description: 'Update tsconfig.json and set up coding agents' },
@@ -207,7 +207,7 @@ const HELP_TREE: HelpTree = {
   },
   auth: {
     summary:
-      'Authenticate with this project’s saved Cloudflare or Void destination. Without one, choose interactively or pass --platform.',
+      'Authenticate with this project’s saved Cloudflare or Nosam destination. Without one, choose interactively or pass --platform.',
     usage: ['void auth <login|status|logout> [--platform cloudflare|void]'],
     commands: [
       { command: 'login', description: 'Sign in to the selected destination' },
@@ -233,7 +233,7 @@ const HELP_TREE: HelpTree = {
     },
   },
   account: {
-    summary: 'Manage your Void platform account.',
+    summary: 'Manage your Nosam platform account.',
     usage: ['void account <command>'],
     commands: [
       { command: 'login', description: 'Log in with an enabled platform login method' },
@@ -254,7 +254,7 @@ const HELP_TREE: HelpTree = {
     },
   },
   cloudflare: {
-    summary: 'Manage Cloudflare authentication used by Void.',
+    summary: 'Manage Cloudflare authentication used by Nosam.',
     usage: ['void cloudflare <command>'],
     commands: [
       { command: 'login', description: 'Sign in or switch users with browser OAuth' },
@@ -278,7 +278,7 @@ const HELP_TREE: HelpTree = {
   },
   platform: {
     summary:
-      'Install Void platforms and administer users, projects, access, and operations. Use `void connect` to join one.',
+      'Install Nosam platforms and administer users, projects, access, and operations. Use `void connect` to join one.',
     usage: ['void platform <command>'],
     commands: [
       ...operatorGroups.map((group) => ({
@@ -294,26 +294,26 @@ const HELP_TREE: HelpTree = {
         description: 'Manage plans, account limits, and the default plan',
       },
       { command: 'list', description: 'List installed and connected platforms' },
-      { command: 'use [id]', description: 'Select the default Void platform' },
+      { command: 'use [id]', description: 'Select the default Nosam platform' },
       { command: 'status [id]', description: 'Inspect a platform and its health' },
       { command: 'discover', description: 'Recover installations from a Cloudflare account' },
       {
         command: 'domain set <domain>',
         description: 'Add an application domain to a test platform',
       },
-      { command: 'install', description: 'Install a Void platform in Cloudflare' },
-      { command: 'upgrade [id]', description: 'Upgrade an installed Void platform' },
+      { command: 'install', description: 'Install a Nosam platform in Cloudflare' },
+      { command: 'upgrade [id]', description: 'Upgrade an installed Nosam platform' },
       {
         command: 'rollback [id]',
         description: 'Restore a compatible earlier platform runtime',
       },
       {
         command: 'repair [id]',
-        description: 'Reconcile an installed Void platform or its unfinished login setup',
+        description: 'Reconcile an installed Nosam platform or its unfinished login setup',
       },
       { command: 'disable [id]', description: 'Disable traffic without deleting data' },
       { command: 'enable [id]', description: 'Restore traffic for a disabled platform' },
-      { command: 'uninstall [id]', description: 'Safely remove an installed Void platform' },
+      { command: 'uninstall [id]', description: 'Safely remove an installed Nosam platform' },
     ],
     children: {
       ...operatorHelpTree(),
@@ -483,7 +483,7 @@ const HELP_TREE: HelpTree = {
       },
       list: basicSubcommand('List installed and connected platforms.', 'void platform list'),
       use: basicSubcommand(
-        'Select the default Void platform by installation slug, name, saved ID, or API URL.',
+        'Select the default Nosam platform by installation slug, name, saved ID, or API URL.',
         'void platform use [id]',
       ),
       status: basicSubcommand('Inspect a platform and its health.', 'void platform status [id]'),
@@ -499,7 +499,7 @@ const HELP_TREE: HelpTree = {
         ],
       },
       install: {
-        summary: 'Install or resume a Void platform with a domain, or workers.dev for testing.',
+        summary: 'Install or resume a Nosam platform with a domain, or workers.dev for testing.',
         usage: ['void platform install [options]'],
         options: [
           {
@@ -626,7 +626,7 @@ const HELP_TREE: HelpTree = {
     },
   },
   project: {
-    summary: 'Manage Void projects and deployments.',
+    summary: 'Manage Nosam projects and deployments.',
     usage: ['void project <command>'],
     commands: [
       { command: 'status [name]', description: 'Show deployments for a project' },
@@ -651,7 +651,7 @@ const HELP_TREE: HelpTree = {
         'void project status my-app',
       ),
       link: basicSubcommand(
-        'Link this directory to a Void project.',
+        'Link this directory to a Nosam project.',
         'void project link [name]',
         'void project link my-app',
       ),
@@ -674,7 +674,7 @@ const HELP_TREE: HelpTree = {
         ],
       },
       team: {
-        summary: 'Manage members and invitations for Void platform projects.',
+        summary: 'Manage members and invitations for Nosam platform projects.',
         usage: ['void project team <command>'],
         commands: [
           { command: 'list', description: 'List project members and roles' },
@@ -694,7 +694,7 @@ const HELP_TREE: HelpTree = {
             'void project team list [options]',
           ),
           invite: {
-            summary: 'Invite an existing Void platform user by registered email address.',
+            summary: 'Invite an existing Nosam platform user by registered email address.',
             usage: ['void project team invite <email> --role <role> [options]'],
             options: [
               { command: '--role <role>', description: 'reader, collaborator, or admin' },
@@ -733,7 +733,7 @@ const HELP_TREE: HelpTree = {
         },
       },
       'zero-trust': {
-        summary: 'Inspect and manage Zero Trust protection for a Void platform project.',
+        summary: 'Inspect and manage Zero Trust protection for a Nosam platform project.',
         usage: ['void project zero-trust <status|protect|public|reconcile> [options]'],
         commands: [
           { command: 'status', description: 'Show desired and effective protection state' },
@@ -824,7 +824,7 @@ const HELP_TREE: HelpTree = {
     },
   },
   secret: {
-    summary: 'Manage production secrets for Void projects.',
+    summary: 'Manage production secrets for Nosam projects.',
     usage: ['void secret <command>'],
     commands: [
       { command: 'list', description: 'List project secrets' },
@@ -850,7 +850,7 @@ const HELP_TREE: HelpTree = {
     },
   },
   domain: {
-    summary: 'Configure custom domains for Void projects.',
+    summary: 'Configure custom domains for Nosam projects.',
     usage: ['void domain <command>'],
     commands: [
       { command: 'add <hostname>', description: 'Add a custom domain' },
@@ -947,7 +947,7 @@ const HELP_TREE: HelpTree = {
         ],
       },
       // The one nested group: verbs parse in email-args.ts (`domain <add|status|list|sync|rotate-secret|remove>`).
-      // Void-platform-only; custom inbound requires a zone apex.
+      // Nosam-platform-only; custom inbound requires a zone apex.
       domain: {
         summary: 'Send and receive at your own domain on a Cloudflare zone.',
         usage: ['void email domain <verb> [<domain>] [options]'],
@@ -1004,7 +1004,7 @@ const HELP_TREE: HelpTree = {
         },
       },
       // Native Cloudflare email: both read the local project + your wrangler session,
-      // never a Void project, so neither takes `--project`.
+      // never a Nosam project, so neither takes `--project`.
       status: {
         summary: 'Show the email setup state and address map. Exit 1 when not ready.',
         usage: ['void email status --platform cloudflare'],
@@ -1012,18 +1012,19 @@ const HELP_TREE: HelpTree = {
           {
             command: '--platform cloudflare',
             description:
-              'Your own Cloudflare account (required; on the Void platform use `void email usage`)',
+              'Your own Cloudflare account (required; on the Nosam platform use `void email usage`)',
           },
         ],
       },
       setup: {
         summary:
-          'Set email up on your own Cloudflare account: enable Email Routing, onboard Email Sending, and record send_email + addresses in the Cloudflare config managed by Void. Asks once before changing the account.',
+          'Set email up on your own Cloudflare account: enable Email Routing, onboard Email Sending, and record send_email + addresses in the Cloudflare config managed by Nosam. Asks once before changing the account.',
         usage: ['void email setup --platform cloudflare'],
         options: [
           {
             command: '--platform cloudflare',
-            description: 'Your own Cloudflare account (required; the Void platform needs no setup)',
+            description:
+              'Your own Cloudflare account (required; the Nosam platform needs no setup)',
           },
         ],
       },
@@ -1051,7 +1052,7 @@ const HELP_TREE: HelpTree = {
         command: 'disconnect [project]',
         description: 'Disconnect a project from its GitHub repository',
       },
-      { command: 'link', description: 'Link your GitHub account to Void' },
+      { command: 'link', description: 'Link your GitHub account to Nosam' },
       {
         command: 'join',
         description: "Join your organization's shared GitHub App installations",
@@ -1066,7 +1067,7 @@ const HELP_TREE: HelpTree = {
         'List your GitHub App installations.',
         'void github installations',
       ),
-      link: basicSubcommand('Link your GitHub account to Void.', 'void github link'),
+      link: basicSubcommand('Link your GitHub account to Nosam.', 'void github link'),
       join: basicSubcommand(
         "Join your organization's shared GitHub App installations.",
         'void github join',
@@ -1331,7 +1332,7 @@ const HELP_TREE: HelpTree = {
           { command: '--provider <name-or-module>', description: 'Provision with an adapter' },
           { command: '--name <name>', description: 'Provider project/database name' },
           { command: '--region <region>', description: 'Provider region identifier' },
-          { command: '--local-only', description: 'Do not sync a linked Void project' },
+          { command: '--local-only', description: 'Do not sync a linked Nosam project' },
         ],
         examples: [
           {

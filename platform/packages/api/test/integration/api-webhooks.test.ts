@@ -265,7 +265,7 @@ async function post(
   } else if (options?.signature !== null) {
     headers['X-Hub-Signature-256'] = await sign(options?.secret ?? WEBHOOK_SECRET, body);
   }
-  // The workflow_run handler defers the best-effort "Void Build" check-run
+  // The workflow_run handler defers the best-effort "Nosam Build" check-run
   // completion onto `executionCtx.waitUntil` (off the webhook 2xx path). Capture
   // those promises and await them before returning so tests can assert the PATCH
   // deterministically — real Workers await waitUntil on response close; Hono
@@ -1316,10 +1316,10 @@ describe('POST /webhooks/github', () => {
     expect(unchanged!.completed_at).toBeNull();
   });
 
-  // github_actions builds have no BuildManager DO, so the "Void Build" check run
+  // github_actions builds have no BuildManager DO, so the "Nosam Build" check run
   // created at OIDC-exchange time is finalized HERE, on workflow_run:completed.
   // A successful run PATCHes the run to completed/success.
-  it('completes the "Void Build" check run on workflow_run:completed (success)', async () => {
+  it('completes the "Nosam Build" check run on workflow_run:completed (success)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'wh-check-ok');
     await createGitHubConnection(env.db, {
@@ -1371,7 +1371,7 @@ describe('POST /webhooks/github', () => {
   });
 
   // A failed run PATCHes the run to completed/failure.
-  it('completes the "Void Build" check run on workflow_run:completed (failure)', async () => {
+  it('completes the "Nosam Build" check run on workflow_run:completed (failure)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'wh-check-fail');
     await createGitHubConnection(env.db, {
@@ -1535,7 +1535,7 @@ describe('POST /webhooks/github', () => {
   // carries a check_run_id must STILL PATCH the check — otherwise it stays
   // stranded `in_progress` forever. Also exercises the widened conclusion mapping
   // (cancelled → 'cancelled').
-  it('completes the "Void Build" check run even when the build is already terminal', async () => {
+  it('completes the "Nosam Build" check run even when the build is already terminal', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'wh-check-terminal');
     await createGitHubConnection(env.db, {
@@ -4300,10 +4300,10 @@ describe('POST /webhooks/github — organization member_removed revocation', () 
   // A member_removed(X) whose affected-user set is EMPTY (X has no oauth link and no membership proof-id row) must STILL write
   // a tombstone for (each org install, github_account_id=X). This is the pre-mint
   // hole: a soon-to-be-removed member pre-mints a join_code + connect_grant
-  // carrying X while still in the org, WITHOUT any Void user/membership/oauth-link,
+  // carrying X while still in the org, WITHOUT any Nosam user/membership/oauth-link,
   // so there is nobody to sever — but the durable tombstone must be recorded or the
   // post-removal replay of those artifacts creates an auto-deploying connection.
-  it('EXACT HOLE: writes a tombstone for (each org install, X) even when NO Void user is affected', async () => {
+  it('EXACT HOLE: writes a tombstone for (each org install, X) even when NO Nosam user is affected', async () => {
     const X = '99999'; // removed GitHub id: NO oauth link, NO membership proof-id
     // Two installs under ORG so we can assert the tombstone lands on EACH.
     const owner = await createTestUser(env.db, 'org-hole-owner', 'github', G);
@@ -4339,7 +4339,7 @@ describe('POST /webhooks/github — organization member_removed revocation', () 
     expect(await getInstallationRevocationAt(env.db, '8111', X)).not.toBeNull();
     // Scope: the other org's install is NOT tombstoned.
     expect(await getInstallationRevocationAt(env.db, '8112', X)).toBeNull();
-    // Nothing severed (no affected Void user) — the unrelated connection survives.
+    // Nothing severed (no affected Nosam user) — the unrelated connection survives.
     expect(await getGitHubConnection(env.db, project.id)).not.toBeNull();
   });
 
@@ -4350,7 +4350,7 @@ describe('POST /webhooks/github — organization member_removed revocation', () 
   // id is not the grant id).
   it('does NOT sever a connection for a member pulled in ONLY by a browser-proof-X membership; voids only the X membership + writes the tombstone', async () => {
     // X is the removed GitHub id with NO oauth link — getUserByOAuthAccount('github',
-    // X) resolves nobody. V is a google-only Void account (NOT oauth-linked to X)
+    // X) resolves nobody. V is a google-only Nosam account (NOT oauth-linked to X)
     // holding an X-keyed browser-proof membership on the org install. The seeded
     // connection for V is an unreachable state (Threat-L1: the member connect gate
     // requires the caller's OWN linked GitHub id to equal the grant id, and V has
@@ -4400,7 +4400,7 @@ describe('POST /webhooks/github — organization member_removed revocation', () 
     // oauth-links X.
     expect(await getInstallationRevocationAt(env.db, '8190', X)).not.toBeNull();
     // Connection is NOT severed and the build is NOT terminated: the connection is
-    // oauth-backed (never by a browser-proof membership), and X owns no oauth Void
+    // oauth-backed (never by a browser-proof membership), and X owns no oauth Nosam
     // account, so there is nothing X-backed to sever.
     expect(await getGitHubConnection(env.db, project.id)).not.toBeNull();
     const updated = await getBuild(env.db, build.id);
@@ -4473,7 +4473,7 @@ describe('POST /webhooks/github — organization member_removed revocation', () 
     expect(await getInstallationRevocationAt(env.db, '8200', X)).not.toBeNull();
   });
 
-  // The same Void user holds an X-keyed membership on one org install AND a
+  // The same Nosam user holds an X-keyed membership on one org install AND a
   // legit Z-backed connection on a DIFFERENT org install (X != its oauth id Z).
   // member_removed(X) must void only the X membership and leave the Z-backed
   // connection + its in-flight build fully intact.
@@ -4823,7 +4823,7 @@ describe('POST /webhooks/github — organization member_removed revocation', () 
 });
 
 // ---------------------------------------------------------------------------
-// GitHub's "Re-run" button on the Void Build check run (`check_run:rerequested`)
+// GitHub's "Re-run" button on the Nosam Build check run (`check_run:rerequested`)
 // and "Re-run all checks" (`check_suite:rerequested`).
 //
 // The rerun reuses the PUSH pipeline, so it inherits the freshness gate: a rerun
@@ -4864,7 +4864,7 @@ describe('POST /webhooks/github — rerun from the check run', () => {
     repository: { full_name: 'octo/site', id: 9001 },
     check_run: {
       id: overrides?.id ?? 55001,
-      name: overrides?.name ?? 'Void Build',
+      name: overrides?.name ?? 'Nosam Build',
       head_sha: overrides?.headSha ?? 'cafe1234',
       external_id: overrides?.externalId ?? 'bld_old',
       conclusion: overrides?.conclusion === undefined ? 'failure' : overrides.conclusion,
@@ -4981,7 +4981,7 @@ describe('POST /webhooks/github — rerun from the check run', () => {
       checkRunPayload({ name: 'Socket Security: Project Report' }),
     );
 
-    expect(await res.json()).toEqual({ ok: true, ignored: 'check_run is not the Void build' });
+    expect(await res.json()).toEqual({ ok: true, ignored: 'check_run is not the Nosam build' });
   });
 
   it('ignores non-rerequested check_run actions', async () => {
@@ -5128,7 +5128,7 @@ describe('POST /webhooks/github — rerun from the check run', () => {
 
     const res = await post(app, appEnv, 'check_run', {
       action: 'rerequested',
-      check_run: { name: 'Void Build' },
+      check_run: { name: 'Nosam Build' },
     });
 
     expect(await res.json()).toEqual({ ok: true, ignored: 'missing check_run routing fields' });

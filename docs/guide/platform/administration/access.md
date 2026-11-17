@@ -27,11 +27,11 @@ void platform auth status
 This shows your account, the session's expiry, and the features available on the platform. To end the session, run `void platform auth logout`.
 
 If the platform is protected by Cloudflare Access, `void connect <url>` handles
-the company sign-in before Void login. Interactive Access authentication uses a
+the company sign-in before Nosam login. Interactive Access authentication uses a
 locally installed `cloudflared` and saves its short-lived credential in your
 system keychain for that platform origin. You do not need to copy browser cookies.
 
-For CI, use a [project deploy token](/guide/platform/installation/first-deployment) alongside your Access credentials in origin-keyed `VOID_ACCESS_CREDENTIALS`. An Access service token does not authorize a Void deployment. See [CI deployment setup](/guide/platform/installation/first-deployment) for the required origins and shape.
+For CI, use a [project deploy token](/guide/platform/installation/first-deployment) alongside your Access credentials in origin-keyed `VOID_ACCESS_CREDENTIALS`. An Access service token does not authorize a Nosam deployment. See [CI deployment setup](/guide/platform/installation/first-deployment) for the required origins and shape.
 
 ## Choosing a Platform
 
@@ -115,7 +115,7 @@ With invited/allowlisted signup selected, let a teammate join with GitHub by add
 void platform signup allow github teammate
 ```
 
-Void shows the change and asks you to confirm it. The teammate can then run `void connect` with the platform's URL and sign in.
+Nosam shows the change and asks you to confirm it. The teammate can then run `void connect` with the platform's URL and sign in.
 
 You can allow an email address or a whole email domain in the same way:
 
@@ -124,7 +124,7 @@ void platform signup allow email teammate@example.com
 void platform signup allow email '*@example.com'
 ```
 
-Email patterns apply across the platform's sign-in providers. Quote a domain pattern so your shell passes the `*` to Void.
+Email patterns apply across the platform's sign-in providers. Quote a domain pattern so your shell passes the `*` to Nosam.
 
 For an OIDC login without a verified email, allow the identity by its login connection and stable provider subject instead:
 
@@ -142,7 +142,7 @@ void platform invitation send alex@example.org
 
 An invitation grants signup access for that exact email address. The person must
 sign in with a login method that supplies the same verified email address.
-When platform email delivery is configured, Void also sends connection
+When platform email delivery is configured, Nosam also sends connection
 instructions. If delivery is unavailable or fails, the grant still works:
 share the platform's `/invite` page or `void connect '<platform URL>'` command
 with the person yourself. The admin dashboard shows the delivery outcome
@@ -162,4 +162,4 @@ remains visible when that account's login no longer exists.
 
 ## Connected apps
 
-Register separate applications as OAuth clients through [Connected apps](./connected-apps.md). Users connect their identity and approve each publish on Void.
+Register separate applications as OAuth clients through [Connected apps](./connected-apps.md). Users connect their identity and approve each publish on Nosam.

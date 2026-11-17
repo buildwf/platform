@@ -32,7 +32,7 @@ for the recovery requirements.
 
 ### Mail that the platform sends {#platform-sender}
 
-Platform invitations, welcome mail, and deployment alerts use `noreply@<mail domain>` with the platform's display name. Void configures this sender automatically.
+Platform invitations, welcome mail, and deployment alerts use `noreply@<mail domain>` with the platform's display name. Nosam configures this sender automatically.
 
 Mail to an address that is not verified needs Cloudflare Email Sending onboarding and [Workers Paid](https://dash.cloudflare.com/?to=/:account/workers/plans).
 

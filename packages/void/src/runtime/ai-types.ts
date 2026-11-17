@@ -25,7 +25,7 @@ export type AiProviderName =
 export type AiProvider = AiProviderName | (string & {});
 
 /**
- * @deprecated No Void API accepts this type. To send a file with `ai.provider().fetch()`,
+ * @deprecated No Nosam API accepts this type. To send a file with `ai.provider().fetch()`,
  * put it in `FormData`. Removed in the next major version.
  */
 export type ImageFileInput =

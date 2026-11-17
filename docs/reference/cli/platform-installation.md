@@ -1,5 +1,5 @@
 ---
-description: 'Install a Void platform from the CLI, set its domain, and run its lifecycle commands.'
+description: 'Install a Nosam platform from the CLI, set its domain, and run its lifecycle commands.'
 outline: deep
 ---
 
@@ -36,17 +36,17 @@ void platform install [options] [--yes]
 | `--runtime <path>`                        | Deploy a locally built, integrity-checked runtime directory                          |
 | `--yes`                                   | Acknowledge Cloudflare changes in non-interactive use                                |
 
-For a first installation, follow [Install a Void Platform](../../guide/self-hosted-platform.md). The interactive installer recommends using a domain and offers **Use workers.dev for testing** as a visible alternative. Void creates the platform infrastructure and tables. External PostgreSQL and a configured login method are required in either mode. Select all login methods you want to enable; none are selected initially. Non-interactive installation defaults to GitHub when no login configuration is supplied. `--workers-dev` skips zone/DNS/certificate operations and cannot be combined with `--application-domain`, `--zone`, or `--dedicated-zone`.
+For a first installation, follow [Install a Nosam Platform](../../guide/self-hosted-platform.md). The interactive installer recommends using a domain and offers **Use workers.dev for testing** as a visible alternative. Nosam creates the platform infrastructure and tables. External PostgreSQL and a configured login method are required in either mode. Select all login methods you want to enable; none are selected initially. Non-interactive installation defaults to GitHub when no login configuration is supplied. `--workers-dev` skips zone/DNS/certificate operations and cannot be combined with `--application-domain`, `--zone`, or `--dedicated-zone`.
 
 Read-only plans, workers.dev installations with the default API hostname, and supported lifecycle operations can use Cloudflare browser login and the system keychain. Installation that writes DNS or creates a zone needs a management API token. The interactive installer guides you to create one and paste it into a masked prompt; scripts use `CLOUDFLARE_API_TOKEN` or `CF_API_TOKEN`.
 
 The installed platform needs a separate runtime token to provision resources for apps. The interactive installer prompts for it and the other setup values. For non-interactive installs, inject the variables listed in [Install from CI](../../guide/platform/installation/ci.md).
 
-To enable email during install or upgrade, set both `VOID_EMAIL_SENDER_DOMAIN` and `VOID_EMAIL_SHARED_ZONE_ID`. Void records the pair for later upgrades; supplying only one is an error.
+To enable email during install or upgrade, set both `VOID_EMAIL_SENDER_DOMAIN` and `VOID_EMAIL_SHARED_ZONE_ID`. Nosam records the pair for later upgrades; supplying only one is an error.
 
 Use `--dashboard-url https://dash.example.com` when deploying the optional user
 dashboard separately. The URL must be an HTTPS origin without credentials, a
-path, query, or fragment. Void permits that origin's login callbacks and saves
+path, query, or fragment. Nosam permits that origin's login callbacks and saves
 it for later maintenance; it does not deploy a dashboard Worker. Omission keeps
 an existing installation's saved dashboard origin.
 
@@ -64,19 +64,19 @@ New resources use `void-<name>-<role>` names; choose an unused installation name
 
 During Access setup, choose existing company policies or **Create in Cloudflare**
 for manual setup instructions and an account dashboard link. After you save the
-policy and confirm completion, Void reloads the list so you can select it and
-continue in the same run. When Void creates the Access applications, **Allow my
+policy and confirm completion, Nosam reloads the list so you can select it and
+continue in the same run. When Nosam creates the Access applications, **Allow my
 company’s email domain** creates an Allow policy for the domains you enter and
 selects it. **Refresh list** reloads policies created in another window. Your
 identity-provider choice and still-available policy selections are retained. If a
-selected policy does not restrict sign-in to company identities, Void explains why
+selected policy does not restrict sign-in to company identities, Nosam explains why
 and asks again.
 
 Installation progress and partial credentials are saved encrypted locally. Rerun the installer to continue unfinished setup, or pass `--resume --name <id>`. Use lifecycle commands for completed installations.
 
 Use an empty PostgreSQL database dedicated to the installation. You can correct a failed initial connection, but after the database is claimed or Hyperdrive is provisioned, commands reject a different URL.
 
-Choose whether Void creates Hyperdrive or uses an existing configuration. An existing Hyperdrive must point to the platform database with SQL result caching disabled. Supply a database owner URL for migrations. See [Use an existing Hyperdrive](../../guide/platform/installation/prerequisites.md#use-an-existing-hyperdrive) for setup and [Install from CI](../../guide/platform/installation/ci.md) for unattended inputs.
+Choose whether Nosam creates Hyperdrive or uses an existing configuration. An existing Hyperdrive must point to the platform database with SQL result caching disabled. Supply a database owner URL for migrations. See [Use an existing Hyperdrive](../../guide/platform/installation/prerequisites.md#use-an-existing-hyperdrive) for setup and [Install from CI](../../guide/platform/installation/ci.md) for unattended inputs.
 
 Recovery secrets are encrypted using your system keychain. Without one, supply a base64-encoded 32-byte `VOID_PLATFORM_RECOVERY_KEY`. Keep the original credentials in protected CI secrets for recovery.
 
@@ -86,7 +86,7 @@ If a newly created zone is waiting for registrar delegation, resume after it bec
 void platform install --resume --name <installation-id>
 ```
 
-See [Self-host a Void platform](../../guide/self-hosted-platform.md) for prerequisites, token scope, exact footprint, domain behavior, and an end-to-end walkthrough.
+See [Self-host a Nosam platform](../../guide/self-hosted-platform.md) for prerequisites, token scope, exact footprint, domain behavior, and an end-to-end walkthrough.
 
 ## `void platform domain set` {#void-platform-domain-set}
 
@@ -145,17 +145,17 @@ After discovery on another machine, set `VOID_PLATFORM_DATABASE_URL`. See [Manag
 
 Repair and upgrade preserve disabled state. New, resumed, and previously disabled installations block user traffic until all target Workers pass verification; the installer's health probes can still run. Routes and custom domains remain attached.
 
-Replacing platform Worker configuration changed outside Void requires interactive approval. Follow [Platform Workers changed outside Void](../../guide/platform/installation/maintenance.md#workers-changed-outside-void) if maintenance asks for it.
+Replacing platform Worker configuration changed outside Nosam requires interactive approval. Follow [Platform Workers changed outside Nosam](../../guide/platform/installation/maintenance.md#workers-changed-outside-void) if maintenance asks for it.
 
-`--runtime` selects a custom platform build. Relative paths resolve from your current directory. Void verifies the build before making changes; see [Platform Development](../../guide/platform/development/runtime.md#deploying-your-runtime) for creating one.
+`--runtime` selects a custom platform build. Relative paths resolve from your current directory. Nosam verifies the build before making changes; see [Platform Development](../../guide/platform/development/runtime.md#deploying-your-runtime) for creating one.
 
 Without `--runtime`, the CLI uses its packaged platform version.
 
-Platform migrations only move forward. Void checks compatibility before updating the database and tells you if an intermediate release is needed.
+Platform migrations only move forward. Nosam checks compatibility before updating the database and tells you if an intermediate release is needed.
 
-An upgrade completes after the new Workers pass health checks. If rollout fails, Void attempts to restore the previous Workers. Retrying does not repeat completed migrations.
+An upgrade completes after the new Workers pass health checks. If rollout fails, Nosam attempts to restore the previous Workers. Retrying does not repeat completed migrations.
 
-`platform rollback` restores a compatible earlier runtime without reversing database migrations. Pass its files with `--runtime`; if the installed version is custom, also supply that version with `--from-runtime`. Void refuses incompatible targets.
+`platform rollback` restores a compatible earlier runtime without reversing database migrations. Pass its files with `--runtime`; if the installed version is custom, also supply that version with `--from-runtime`. Nosam refuses incompatible targets.
 
 If project Zero Trust is on and no platform user exists yet, uninstall turns it off and deletes its Access applications first. Run it on the computer that installed the platform.
 

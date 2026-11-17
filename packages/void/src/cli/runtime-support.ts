@@ -14,7 +14,7 @@ export const NODE_ENGINES = '^24.22.0 || >=26.12.0';
 /**
  * Bun is not a documented runtime, but `bunx --bun` and Bun-only images (where
  * `node` is Bun) run the CLI on it. Bun reports a Node version below 26.12, so
- * it gets its own floor: 1.4.0 is the first release where Void's Cloudflare
+ * it gets its own floor: 1.4.0 is the first release where Nosam's Cloudflare
  * helper process loads. This lets working setups keep working.
  */
 export const BUN_MINIMUM = '1.4.0';

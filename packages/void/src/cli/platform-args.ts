@@ -29,7 +29,7 @@ export const platformSubcommands: Array<SubcommandDef> = [
     description: `Administer platform ${name}`,
   })),
   { name: 'list', description: 'List installed and connected platforms' },
-  { name: 'use', arg: '[id]', description: 'Select the default Void platform' },
+  { name: 'use', arg: '[id]', description: 'Select the default Nosam platform' },
   { name: 'status', arg: '[id]', description: 'Inspect a platform and its health' },
   { name: 'discover', description: 'Recover installations from a Cloudflare account' },
   {
@@ -40,9 +40,9 @@ export const platformSubcommands: Array<SubcommandDef> = [
   {
     name: 'install',
     hint: 'Preview and save choices with --plan, then select the saved plan to install',
-    description: 'Install a Void platform and choose who can access its apps',
+    description: 'Install a Nosam platform and choose who can access its apps',
   },
-  { name: 'upgrade', arg: '[id]', description: 'Upgrade an installed Void platform' },
+  { name: 'upgrade', arg: '[id]', description: 'Upgrade an installed Nosam platform' },
   { name: 'rollback', arg: '[id]', description: 'Restore a compatible earlier platform runtime' },
   {
     name: 'repair',
@@ -51,7 +51,7 @@ export const platformSubcommands: Array<SubcommandDef> = [
   },
   { name: 'disable', arg: '[id]', description: 'Disable traffic without deleting data' },
   { name: 'enable', arg: '[id]', description: 'Restore traffic for a disabled platform' },
-  { name: 'uninstall', arg: '[id]', description: 'Safely remove an installed Void platform' },
+  { name: 'uninstall', arg: '[id]', description: 'Safely remove an installed Nosam platform' },
 ];
 
 export type PlatformArgs =

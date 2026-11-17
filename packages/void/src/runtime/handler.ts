@@ -31,7 +31,7 @@ export class VoidAssetRewriteError extends Error {
 // destinations may contain placeholders or static files.
 type RewritePath = TypedRoutes extends true ? RouteUrl : RewriteDestination;
 
-/** Hono `Variables` for Void workers, including auth values populated by Better Auth middleware. */
+/** Hono `Variables` for Nosam workers, including auth values populated by Better Auth middleware. */
 export interface CloudContextVariables {
   user: AuthUser | null;
   session: AuthSession | null;
@@ -48,7 +48,7 @@ declare global {
 }
 
 /**
- * Hono `Bindings` shape for Void workers.
+ * Hono `Bindings` shape for Nosam workers.
  *
  * Augmented by the generated `.void/env.d.ts` so user-declared env keys
  * become typed on `c.env`. The index signature keeps untyped access
@@ -104,7 +104,7 @@ declare module 'hono' {
      * Returns the URL the client actually requested — the pre-rewrite URL as
      * a `URL` object — or `null` when the current request was not rewritten.
      *
-     * Set on every Void-managed request, whether the rewrite came from a
+     * Set on every Nosam-managed request, whether the rewrite came from a
      * static rule (`routing.rewrites`, `routing.fallbacks`, `_redirects`
      * `200`/`200!`) or `c.rewrite()` in middleware. Useful for canonical
      * link generation and locale negotiation that must reference the URL
@@ -434,9 +434,9 @@ function resolveBasicAuthOption(value: BasicAuthOptionValue | undefined, fallbac
  * Create Basic authentication middleware for temporary site gates and
  * pre-launch protection.
  *
- * Void internal endpoints under `/__void` are always excluded so deploy-time
+ * Nosam internal endpoints under `/__void` are always excluded so deploy-time
  * migrations, prerendering, cron/queue dispatch, and remote binding helpers
- * continue to reach Void's own internal-token checks.
+ * continue to reach Nosam's own internal-token checks.
  */
 export function basicAuth(options: BasicAuthOptions): MiddlewareHandler<CloudEnv> {
   return defineMiddleware(async (c, next) => {

@@ -27,7 +27,7 @@ export default function App() {
 
   return (
     <div>
-      <h1>Void Playground</h1>
+      <h1>Nosam Playground</h1>
 
       <h2>Hello API</h2>
       <pre>{JSON.stringify(hello, null, 2)}</pre>

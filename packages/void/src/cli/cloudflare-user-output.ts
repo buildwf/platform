@@ -1,8 +1,8 @@
 /**
- * Keep Void's public CLI vocabulary at the product level while preserving real
+ * Keep Nosam's public CLI vocabulary at the product level while preserving real
  * Cloudflare config filenames and environment variables that users may need to
  * inspect. The underlying implementation remains available in source and deploy
- * diagnostics, but normal remediation always points back to Void commands.
+ * diagnostics, but normal remediation always points back to Nosam commands.
  */
 export function formatCloudflareUserMessage(message: string): string {
   const preserved: Array<string> = [];

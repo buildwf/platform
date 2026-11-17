@@ -63,7 +63,7 @@ function readOptionInitializers(
   ) {
     warnedExportAll.add(absPath);
     voidWarn(
-      `queue: '${filePath}' uses \`export * from\`. Void does not read consumer options through it, so declare them in the queue file with \`export const\`. Re-export other names individually to remove this warning.`,
+      `queue: '${filePath}' uses \`export * from\`. Nosam does not read consumer options through it, so declare them in the queue file with \`export const\`. Re-export other names individually to remove this warning.`,
     );
   }
   return exports.initializers;

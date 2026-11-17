@@ -113,7 +113,7 @@ export function deduplicateGeneratedCompatibilityFlags(
 }
 
 /**
- * Check whether Void contributes worker-side routing rules.
+ * Check whether Nosam contributes worker-side routing rules.
  */
 /**
  * Remove the CF plugin's deploy pointer before building. The plugin rewrites it only when it
@@ -136,23 +136,23 @@ export function verifyGeneratedDeployConfig(
     workerName: string;
     desired?: DesiredResourceSet;
     bindingIdentitySnapshot?: BindingIdentitySnapshot;
-    /** Pre-build entries for binding fields Void never emits. */
+    /** Pre-build entries for binding fields Nosam never emits. */
     passthroughIdentitySnapshot?: Map<string, Map<string, Record<string, unknown>>>;
     /** Pre-build raw values for whole-object fields, `durable_objects`, `ai` and `migrations`. */
     passthroughRawFields?: Map<string, unknown>;
-    /** Whether the source uses Workers AI; only then may the build add Void's AI binding. */
+    /** Whether the source uses Workers AI; only then may the build add Nosam's AI binding. */
     needsAI?: boolean;
-    /** Custom `inference.bindings.ai` name authorized for Void's emitted AI binding. */
+    /** Custom `inference.bindings.ai` name authorized for Nosam's emitted AI binding. */
     aiBindingName?: string;
     /** Require BETTER_AUTH_SECRET in `secrets.required` so the upload keeps the remote value. */
     authEnabled?: boolean;
     /** Additional Worker secret names the generated version must inherit. */
     requiredSecretNames?: Array<string>;
-    /** Containers the build should emit: the root's, plus Void's sandbox container when used. */
+    /** Containers the build should emit: the root's, plus Nosam's sandbox container when used. */
     expectedContainers?: Array<Record<string, unknown>>;
-    /** Exact pre-build Durable Object bindings, including Void's sandbox and live additions. */
+    /** Exact pre-build Durable Object bindings, including Nosam's sandbox and live additions. */
     expectedDurableObjectBindings?: Array<Record<string, unknown>>;
-    /** Exact pre-build migration sequence, including Void's sandbox and live additions. */
+    /** Exact pre-build migration sequence, including Nosam's sandbox and live additions. */
     expectedMigrations?: Array<Record<string, unknown>>;
     /** Cron schedules the build should emit, derived from the source before the build. */
     expectedCrons?: Array<string>;
@@ -284,7 +284,7 @@ export function verifyGeneratedDeployConfig(
       }
     }
   }
-  // Binding fields Void never emits: each emitted entry must equal its pre-build entry. Fields
+  // Binding fields Nosam never emits: each emitted entry must equal its pre-build entry. Fields
   // outside the assert set stay unchecked, so a binding type added later cannot fail a valid build.
   if (expected.passthroughIdentitySnapshot) {
     const passthrough = expected.passthroughIdentitySnapshot;
@@ -383,7 +383,7 @@ export function verifyGeneratedDeployConfig(
         };
       }
     } else if (emittedAi !== undefined) {
-      // Otherwise only Void's own AI binding, and only when the source uses Workers AI.
+      // Otherwise only Nosam's own AI binding, and only when the source uses Workers AI.
       const expectedAi = { binding: expected.aiBindingName ?? DEFAULT_VOID_AI_BINDING };
       if (!(expected.needsAI === true && deepEqual(emittedAi, expectedAi))) {
         return {
@@ -392,7 +392,7 @@ export function verifyGeneratedDeployConfig(
         };
       }
     }
-    // Void emits only creation migrations; a destructive one must come from the root config.
+    // Nosam emits only creation migrations; a destructive one must come from the root config.
     const destructiveMigration = verifyNoInjectedDestructiveMigration(
       generated.migrations,
       raw.get('migrations'),
@@ -475,7 +475,7 @@ export function verifyGeneratedDeployConfig(
         if (expectedContainer === undefined) {
           return {
             ok: false,
-            reason: `generated config declares a container application ${JSON.stringify(className)} that Void did not derive from source — refusing to deploy a container application the build injected.`,
+            reason: `generated config declares a container application ${JSON.stringify(className)} that Nosam did not derive from source — refusing to deploy a container application the build injected.`,
           };
         }
         if (
@@ -495,17 +495,17 @@ export function verifyGeneratedDeployConfig(
         if (!emittedByClass.has(className)) {
           return {
             ok: false,
-            reason: `generated config no longer declares the container application ${JSON.stringify(className)} that Void derived from source — refusing to deploy a build that dropped a container application.`,
+            reason: `generated config no longer declares the container application ${JSON.stringify(className)} that Nosam derived from source — refusing to deploy a build that dropped a container application.`,
           };
         }
       }
-      // Class-less containers — deepEqual multiset (never a Void-emitted shape).
+      // Class-less containers — deepEqual multiset (never a Nosam-emitted shape).
       for (const emitted of emittedNoClass) {
         const matchIndex = expectedNoClass.findIndex((candidate) => deepEqual(emitted, candidate));
         if (matchIndex === -1) {
           return {
             ok: false,
-            reason: `generated config declares a container application that Void did not derive from source — refusing to deploy a container application the build injected.`,
+            reason: `generated config declares a container application that Nosam did not derive from source — refusing to deploy a container application the build injected.`,
           };
         }
         expectedNoClass.splice(matchIndex, 1);
@@ -518,7 +518,7 @@ export function verifyGeneratedDeployConfig(
       }
     }
   }
-  // Every emitted queue must be one Void derived from source.
+  // Every emitted queue must be one Nosam derived from source.
   if (expected.desired) {
     const desiredQueues = new Set(expected.desired.queues);
     const emittedProducers = collectEmittedQueueGroupNames(generated.queues, 'producers');
@@ -527,16 +527,16 @@ export function verifyGeneratedDeployConfig(
       if (!desiredQueues.has(name)) {
         return {
           ok: false,
-          reason: `generated config declares a queue binding ${JSON.stringify(name)} that Void did not derive from source — refusing to deploy a queue binding the build injected.`,
+          reason: `generated config declares a queue binding ${JSON.stringify(name)} that Nosam did not derive from source — refusing to deploy a queue binding the build injected.`,
         };
       }
     }
-    // Void emits every desired queue as both a producer and a consumer; both must remain.
+    // Nosam emits every desired queue as both a producer and a consumer; both must remain.
     for (const name of expected.desired.queues) {
       if (!emittedProducers.has(name) || !emittedConsumers.has(name)) {
         return {
           ok: false,
-          reason: `generated config no longer binds the queue ${JSON.stringify(name)} as both a producer and a consumer that Void derived from source — refusing to deploy a build that dropped a queue binding the source declared.`,
+          reason: `generated config no longer binds the queue ${JSON.stringify(name)} as both a producer and a consumer that Nosam derived from source — refusing to deploy a build that dropped a queue binding the source declared.`,
         };
       }
     }
@@ -561,7 +561,7 @@ export function verifyGeneratedDeployConfig(
       if (typeof schedule !== 'string' || remaining <= 0) {
         return {
           ok: false,
-          reason: `generated config declares a cron trigger schedule ${JSON.stringify(schedule)} that Void did not derive from source — refusing to deploy a schedule the build injected.`,
+          reason: `generated config declares a cron trigger schedule ${JSON.stringify(schedule)} that Nosam did not derive from source — refusing to deploy a schedule the build injected.`,
         };
       }
       expectedCronCounts.set(schedule, remaining - 1);
@@ -571,7 +571,7 @@ export function verifyGeneratedDeployConfig(
       if (remaining > 0) {
         return {
           ok: false,
-          reason: `generated config no longer installs the cron trigger schedule ${JSON.stringify(schedule)} that Void derived from source — refusing to deploy a build that dropped a cron trigger.`,
+          reason: `generated config no longer installs the cron trigger schedule ${JSON.stringify(schedule)} that Nosam derived from source — refusing to deploy a build that dropped a cron trigger.`,
         };
       }
     }

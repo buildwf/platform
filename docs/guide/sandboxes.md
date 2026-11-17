@@ -57,7 +57,7 @@ File operations live under `sandbox.files`: `readFile`, `writeFile`, `stat`, `ls
 
 To reach a server inside the container, await `sandbox.fetch(port, new Request(url))`. `sandbox.running()` checks whether the container is running; `sandbox.destroy()` stops it.
 
-On native Cloudflare deployments, `sandbox.fetch()` also supports WebSocket upgrade requests. Return its response from your Worker handler to connect the client to the container. WebSocket upgrades are currently unavailable on managed Void deployments.
+On native Cloudflare deployments, `sandbox.fetch()` also supports WebSocket upgrade requests. Return its response from your Worker handler to connect the client to the container. WebSocket upgrades are currently unavailable on managed Nosam deployments.
 
 `getSandbox()` options include `inactivityTimeoutMs` (default ten minutes, maximum six hours), `enableInternet` (default `false`), and string `labels`. Internet access and labels take effect on the next container start. `binding` selects a custom native binding; managed platforms use the configured binding.
 
@@ -65,7 +65,7 @@ For code that runs on both deployment targets, use `getSandbox()`. Direct access
 
 ## Usage limits
 
-Sandbox limits reject with `SandboxLimitError`, which extends `UsageLimit` from `void/limits`. The error includes `resource: 'sandbox'` and a `reason` of `concurrency` or `runtime_budget`. Void route handlers and Pages actions automatically send a structured HTTP 429 when the error is left uncaught.
+Sandbox limits reject with `SandboxLimitError`, which extends `UsageLimit` from `void/limits`. The error includes `resource: 'sandbox'` and a `reason` of `concurrency` or `runtime_budget`. Nosam route handlers and Pages actions automatically send a structured HTTP 429 when the error is left uncaught.
 
 Use `instanceof UsageLimit` to optionally handle both AI and Sandbox limits, or `instanceof SandboxLimitError` for Sandbox-specific handling:
 
@@ -96,7 +96,7 @@ Keep user input available so it can be retried. Checking `running()`, stopping a
 
 `getSandbox(id)` selects the same Durable Object for that ID within a deployment. Native Cloudflare deployments preserve that namespace across Worker versions. Each managed platform deployment has its own namespace; rolling back to a retained deployment reconnects to that deployment's namespace.
 
-Files, running processes, and listening servers last only as long as the container. It can stop after inactivity, crash, or restart. Save anything you need to keep in your database, KV, or R2. Deleting a project on a Void platform removes both its Durable Objects and containers.
+Files, running processes, and listening servers last only as long as the container. It can stop after inactivity, crash, or restart. Save anything you need to keep in your database, KV, or R2. Deleting a project on a Nosam platform removes both its Durable Objects and containers.
 
 ## Configuration
 
@@ -118,7 +118,7 @@ export default defineConfig({
 
 See the [configuration reference](../reference/config.md#sandbox) for binding names, image settings, and container sizes.
 
-Custom images must include the helper matching Void's installed Sandbox SDK version. The SDK image supplies this binary, but is not a runnable environment itself:
+Custom images must include the helper matching Nosam's installed Sandbox SDK version. The SDK image supplies this binary, but is not a runnable environment itself:
 
 ```dockerfile
 FROM node:26.12.1-trixie-slim
@@ -131,4 +131,4 @@ For a managed platform, push your custom image to that platform account's Cloudf
 
 ## Deployment
 
-`void deploy --platform cloudflare` builds native images and deploys the Sandbox alongside the application. `void deploy` on a connected Void Platform applies the platform's Sandbox concurrency and runtime limits.
+`void deploy --platform cloudflare` builds native images and deploys the Sandbox alongside the application. `void deploy` on a connected Nosam Platform applies the platform's Sandbox concurrency and runtime limits.

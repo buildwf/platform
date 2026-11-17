@@ -15,9 +15,9 @@ import { voidWarn } from './log.ts';
 /**
  * Whether Vite is resolving the server that Vitest creates to run tests, whatever its `--mode`.
  * Vitest adds its own plugins (`vitest`, `vitest:*`) to that server's config; a server that a
- * test starts through Vite's API has none. Vitest runs test files in Node.js, so Void starts no
+ * test starts through Vite's API has none. Vitest runs test files in Node.js, so Nosam starts no
  * Worker there, applies no local migrations and asks no questions. Check these names again when
- * updating Vitest: `test/integration/vitest-app.test.ts` runs the tests of Void apps.
+ * updating Vitest: `test/integration/vitest-app.test.ts` runs the tests of Nosam apps.
  */
 export function isVitestServer(config: {
   readonly plugins?: ReadonlyArray<PluginOption>;
@@ -68,7 +68,7 @@ export function isViteBuildOrPreview(): boolean {
  * Wrangler's platform proxy authenticate remote bindings here, in dev, preview
  * and build. They read cf's login only when `CLOUDFLARE_CF_AUTH`
  * is present (any value), and Wrangler's separate login otherwise. The keyring
- * flag selects the encrypted cf profile that Void's login writes. Environment
+ * flag selects the encrypted cf profile that Nosam's login writes. Environment
  * API tokens still take precedence, and the OAuth token stays in the store.
  */
 export function selectVoidCloudflareLogin(): void {

@@ -75,7 +75,7 @@ describe('formatStreamDeployError', () => {
 
     expect(formatted.message).toBe(
       [
-        'deploy: The Void platform did not respond while preparing the deploy. Tried 4 times; the last try waited 5 minutes.',
+        'deploy: The Nosam platform did not respond while preparing the deploy. Tried 4 times; the last try waited 5 minutes.',
         'It may still finish. Check `void project status`, then run `void deploy` again to retry.',
         'If this keeps happening, share the detailed log below.',
         'Detailed log: /tmp/deploy.jsonl',

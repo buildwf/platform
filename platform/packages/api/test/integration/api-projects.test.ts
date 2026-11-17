@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vite-plus/test';
-import { importLegacyAuthentication } from '../../src/auth/configuration.ts';
-import { signDeployToken, signProjectCredentialToken } from '../../src/auth/deploy-token.ts';
-import { revokeConnectionSessions } from '../../src/auth/sessions.ts';
+import {} from '../../src/auth/configuration.ts';
+import { signDeployToken } from '../../src/auth/deploy-token.ts';
+import {} from '../../src/auth/sessions.ts';
 import {
   createDeployment,
   updateDeploymentStatus,
@@ -17,7 +17,7 @@ import {
   proxyTokenRotationStuckWarning,
   proxyTokenRotationTarget,
 } from '../../src/proxy-token-rotation.ts';
-import { deriveProxyInternalAuth, deriveProxyToken } from '../../src/proxy-token.ts';
+import { deriveProxyToken } from '../../src/proxy-token.ts';
 import { users } from '../../src/schema.ts';
 import {
   deployments,
@@ -28,11 +28,10 @@ import {
   resources,
   projectDatabaseCredentials,
   projectDeployCredentials,
-  platformLoginConnections,
   platformSettings,
   projectCleanupJobs,
 } from '../../src/schema.ts';
-import { verifyDeployToken } from '../helpers/project-token.ts';
+import {} from '../helpers/project-token.ts';
 import {
   createTestBuild,
   setupEnv,
@@ -1446,7 +1445,7 @@ describe('POST /projects', () => {
     expect(body).toMatchObject({
       slug: 'warning-app',
       warnings: [
-        'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Void retries within an hour. To retry now, a project owner or admin can run `void project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.',
+        'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Nosam retries within an hour. To retry now, a project owner or admin can run `void project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.',
       ],
     });
     expect(body).not.toHaveProperty('warning');

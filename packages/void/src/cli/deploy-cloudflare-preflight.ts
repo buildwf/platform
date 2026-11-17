@@ -123,7 +123,7 @@ export async function prepareCloudflareDeploySource(
     log.error(
       [
         `deploy: ${dialect === 'mysql' ? 'MySQL' : 'PostgreSQL'} migrations require DATABASE_URL for --platform cloudflare.`,
-        'Set the production connection string in the deploy environment. Void uses it only to',
+        'Set the production connection string in the deploy environment. Nosam uses it only to',
         'provision Hyperdrive and apply checked-in migrations before uploading the Worker; it is',
         'never written to wrangler.jsonc or the generated Worker config.',
       ].join('\n'),
@@ -131,7 +131,7 @@ export async function prepareCloudflareDeploySource(
     return null;
   }
 
-  // Void generates and applies migrations from one folder only, and the provisioner never
+  // Nosam generates and applies migrations from one folder only, and the provisioner never
   // rewrites a set migrations_dir. Any spelling of that folder matches; another folder stops
   // the deploy here. A handoff applies no migrations, so it is kept.
   const storedDir =
@@ -149,19 +149,19 @@ export async function prepareCloudflareDeploySource(
     !sameMigrationsDir(configPath, storedDir, desired.d1.migrationsDir)
   ) {
     const expected = JSON.stringify(desired.d1.migrationsDir);
-    let fix = `Set migrations_dir to ${expected} in d1_databases of ${basename(configPath)}, or remove it and Void will fill it in.`;
+    let fix = `Set migrations_dir to ${expected} in d1_databases of ${basename(configPath)}, or remove it and Nosam will fill it in.`;
     if (basename(configPath) === MATERIALIZED_CLOUDFLARE_FILE) {
-      // Removing helps only for an authored value; one Void filled in lives in void.lock.json.
+      // Removing helps only for an authored value; one Nosam filled in lives in void.lock.json.
       const authored = readStoredResourceName(
         voidConfig.cloudflare ?? {},
         'd1_databases',
         desired.d1.binding,
         'migrations_dir',
       );
-      fix = `Set migrations_dir to ${expected} in cloudflare.d1_databases of void.config.ts${authored === undefined ? '.' : ', or remove it and Void will fill it in.'}`;
+      fix = `Set migrations_dir to ${expected} in cloudflare.d1_databases of void.config.ts${authored === undefined ? '.' : ', or remove it and Nosam will fill it in.'}`;
     }
     log.error(
-      `deploy: D1 binding ${JSON.stringify(desired.d1.binding)} sets migrations_dir ${JSON.stringify(storedDir)}, but Void generates and applies migrations from ${expected}. ${fix}`,
+      `deploy: D1 binding ${JSON.stringify(desired.d1.binding)} sets migrations_dir ${JSON.stringify(storedDir)}, but Nosam generates and applies migrations from ${expected}. ${fix}`,
     );
     return null;
   }
@@ -331,7 +331,7 @@ export async function preflightCloudflareWorker(input: {
     if (staleAddresses.length > 0 || staleBinding) {
       log.warn(
         [
-          'deploy: this app no longer declares email handlers or imports void/email, but the Cloudflare config still carries the email setup Void wrote:',
+          'deploy: this app no longer declares email handlers or imports void/email, but the Cloudflare config still carries the email setup Nosam wrote:',
           ...staleAddresses.map(
             (a) =>
               `  • ${a} — still routed to worker "${workerName}", which no longer exports email(); inbound mail there will fail.`,

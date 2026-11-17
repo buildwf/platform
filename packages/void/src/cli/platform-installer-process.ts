@@ -70,7 +70,7 @@ export async function runPlatformWranglerAtApiBase(
   writePlatformTiming(`Cloudflare ${operation.type}`, startedAt);
   const stdout = result.stdout || '';
   const stderr = result.stderr || '';
-  // Void owns progress output. Successful commands may still emit banners and
+  // Nosam owns progress output. Successful commands may still emit banners and
   // warnings; keep those captured, but retain diagnostics for failed commands.
   if (!capture && result.status !== 0) {
     if (stdout) {

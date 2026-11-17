@@ -162,7 +162,7 @@ export function recordPlatformLog(
   }
 
   const message =
-    `Void platform: your worker did not respond within ${data.timeoutMs} ms. ` +
+    `Nosam platform: your worker did not respond within ${data.timeoutMs} ms. ` +
     `${data.method}${target} was cut short and ` +
     `returned ${data.status}. The operation may still have side effects; ` +
     `check its outcome before retrying.`;

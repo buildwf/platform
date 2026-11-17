@@ -2,7 +2,7 @@ import { redirectToHttps } from '@void/edge';
 import type { ExecutionContext } from 'hono';
 import { createManifestLoader, type ManifestLoader } from './routing-assets.ts';
 
-// Native Void routing records intentional 404s before Hono wraps HEAD responses.
+// Native Nosam routing records intentional 404s before Hono wraps HEAD responses.
 export const intentionalNotFoundRequests: WeakSet<Request> = new WeakSet();
 
 export type AssetBinding = { fetch: (request: Request) => Promise<Response> };

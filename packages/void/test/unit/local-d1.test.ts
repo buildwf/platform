@@ -52,7 +52,7 @@ afterEach(() => {
 });
 
 describe('local D1 identity', () => {
-  it('keeps the unconfigured Void default on local/.void', () => {
+  it('keeps the unconfigured Nosam default on local/.void', () => {
     const root = createRoot();
 
     expect(resolveLocalD1Target(root)).toMatchObject({

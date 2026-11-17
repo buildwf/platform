@@ -568,7 +568,7 @@ describe('POST /projects/:id/deploy', () => {
         expect(await response.json()).toEqual({
           event: 'error',
           message:
-            'SQLite migrations require an updated Void runtime. Upgrade void, rebuild the app, and deploy again.',
+            'SQLite migrations require an updated Nosam runtime. Upgrade void, rebuild the app, and deploy again.',
         });
         expect(provider).not.toHaveBeenCalled();
         expect(ingress).not.toHaveBeenCalled();

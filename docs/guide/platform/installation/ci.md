@@ -1,5 +1,5 @@
 ---
-description: 'Install or update a Void platform from CI after you have configured it once interactively.'
+description: 'Install or update a Nosam platform from CI after you have configured it once interactively.'
 outline: deep
 ---
 
@@ -44,7 +44,7 @@ Set both email values to enable email during install or upgrade. Later upgrades 
 ```sh
 void platform install \
   --name team \
-  --display-name "Team Void" \
+  --display-name "Team Nosam" \
   --account <account-id> \
   --application-domain example.app \
   --zone example.app \
@@ -53,7 +53,7 @@ void platform install \
 
 Mutations require `--yes` in CI; a read-only `--plan` does not. Custom runtimes also require `--runtime <directory>`. For a new installation, run `--plan` with the same account, name, and domain options as the unattended install. If you use `--auth-config`, pass the same file to both commands. Register `<platform-api-url>/auth/callback` when creating a login provider's OAuth or OIDC client manually; automatic Access setup manages its own application. A custom API hostname is optional.
 
-In CI, `upgrade`, `repair`, `enable`, `rollback`, and `install --resume` stop before they change a platform Worker or pause traffic when a platform Worker was changed in the Cloudflare dashboard or with the Cloudflare API, or has an active version without a Void deployment record. See [Platform Workers changed outside Void](/guide/platform/installation/maintenance#workers-changed-outside-void).
+In CI, `upgrade`, `repair`, `enable`, `rollback`, and `install --resume` stop before they change a platform Worker or pause traffic when a platform Worker was changed in the Cloudflare dashboard or with the Cloudflare API, or has an active version without a Nosam deployment record. See [Platform Workers changed outside Nosam](/guide/platform/installation/maintenance#workers-changed-outside-void).
 
 :::
 

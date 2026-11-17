@@ -105,7 +105,7 @@ if (devVars.CF_ACCESS_TOKEN && devVars.CF_ACCESS_TOKEN_ORIGIN !== selectedOrigin
 }
 
 // Explicit opt-in for self-hosted APIs protected by Cloudflare Access. Keep
-// the established Void Cloud staging behavior for existing local checkouts.
+// the established Nosam Cloud staging behavior for existing local checkouts.
 const accessAppUrl = process.env.CF_ACCESS_APP_URL ?? devVars.CF_ACCESS_APP_URL;
 
 if (!apiUrl || (!accessAppUrl && !isStagingApi(apiUrl))) {

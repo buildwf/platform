@@ -131,7 +131,7 @@ describe('Cloudflare Access provisioning', () => {
     expect(app.policies).toEqual([
       { id: 'employees', precedence: 1 },
       {
-        name: 'Void installer and CI',
+        name: 'Nosam installer and CI',
         decision: 'non_identity',
         precedence: 0,
         include: [{ service_token: { token_id: 'token-1' } }],

@@ -1,7 +1,7 @@
 {
   "name": "@void/platform",
   "version": "1.9.1",
-  "description": "Packaged runtime and installation contracts for self-hosted Void platforms.",
+  "description": "Packaged runtime and installation contracts for self-hosted Nosam platforms.",
   "homepage": "https://void.cloud",
   "bugs": {
     "url": "https://github.com/voidzero-dev/void/issues"

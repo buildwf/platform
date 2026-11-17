@@ -101,7 +101,7 @@ export function resolveCloudflareOperationArgv(): Array<string> {
   ].find((candidate) => existsSync(candidate));
   if (!entry) {
     throw new Error(
-      `Void's bundled Cloudflare tooling is unavailable. Reinstall the project's dependencies from its trusted lockfile, then retry.`,
+      `Nosam's bundled Cloudflare tooling is unavailable. Reinstall the project's dependencies from its trusted lockfile, then retry.`,
     );
   }
   return [process.execPath, entry];
@@ -210,12 +210,12 @@ export function detectPreset(
 function ssgWithBackendMessage(ssgDep: string, backendSources: Array<string>): string {
   return [
     `deploy: "${ssgDep}" was detected, but this project also has backend code: ${backendSources.join(', ')}.`,
-    'A static deploy would silently drop it, so Void will not guess. Pick one in void.config.ts:',
+    'A static deploy would silently drop it, so Nosam will not guess. Pick one in void.config.ts:',
     '',
     '  Deploy the static output only (the backend is NOT deployed):',
     '    { "inference": { "appType": "static" } }',
     '',
-    '  Deploy both — the SSG emits the site, then Void packages it with the worker:',
+    '  Deploy both — the SSG emits the site, then Nosam packages it with the worker:',
     '    { "inference": { "appType": "void", "build": "<ssg> build && vite build" } }',
     '    ...and in vite.config.ts add voidPlugin() plus `publicDir: "<ssg output dir>"`,',
     '    so the generated site is copied into the client build alongside the worker.',

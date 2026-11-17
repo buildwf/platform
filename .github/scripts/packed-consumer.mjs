@@ -287,7 +287,7 @@ try {
           fixture,
         );
         if (useVitePlus) {
-          // Vitest loads the app's Vite config, Void's plugin included, and runs the tests in
+          // Vitest loads the app's Vite config, Nosam's plugin included, and runs the tests in
           // Node.js. The test from docs/guide/testing.md replaces the KV module it uses.
           mkdirSync(join(fixture, 'src'), { recursive: true });
           writeFileSync(

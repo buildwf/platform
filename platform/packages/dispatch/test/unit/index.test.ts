@@ -65,13 +65,6 @@ function createCtx(): ExecutionContext {
   return { waitUntil: vi.fn(), passThroughOnException: vi.fn() } as unknown as ExecutionContext;
 }
 
-// `Headers.getSetCookie()` exists on the Workers runtime but is missing from
-// `@cloudflare/workers-types` — reach it through a narrow cast (mirrors the
-// `readSetCookies` helper in src/index.ts).
-function getSetCookies(headers: Headers): Array<string> {
-  return (headers as Headers & { getSetCookie(): Array<string> }).getSetCookie();
-}
-
 function currentSharedCacheResponse(response: Response): Response {
   markSharedCachePolicy(response.headers);
   return response;
@@ -2115,7 +2108,7 @@ describe('rewrite rules', () => {
 
   // Dispatch owns X-Void-Original-URL. A client-supplied value on a request
   // with no matching rewrite must not leak through to the user worker —
-  // otherwise a non-Void worker that trusts the header could be spoofed.
+  // otherwise a non-Nosam worker that trusts the header could be spoofed.
   it('strips client-supplied X-Void-Original-URL when no rewrite fires', async () => {
     const { env, workerFetch } = createEnv({
       routing: {
@@ -3568,7 +3561,7 @@ describe('request type metering for SSR routes with a file extension', () => {
   // An SSR worker answers both the app's routes and the deploy's static files.
   // A route such as `routes/sponsors.svg.ts` has a file extension, so its label
   // comes from the asset manifest or from how the worker answered, never from
-  // the path alone. Void SSR deploys run the worker first for every path.
+  // the path alone. Nosam SSR deploys run the worker first for every path.
   const routing: RoutingEntry = {
     workerName: 'user-app-dpl_1',
     projectId: 'proj_1',

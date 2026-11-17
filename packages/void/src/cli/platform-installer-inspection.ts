@@ -99,9 +99,9 @@ export function readActivePlatformWorkerDeployment(
 }
 
 /**
- * Whether a version of a platform Worker has Void's record of its triggers.
+ * Whether a version of a platform Worker has Nosam's record of its triggers.
  * This is the rule of the upgrade: it refuses a version without the record,
- * for example a version deployed outside Void.
+ * for example a version deployed outside Nosam.
  */
 export async function platformWorkerVersionHasTriggerRecord(
   readCloudflare: (path: string) => Promise<unknown>,
@@ -379,8 +379,8 @@ export async function readPlatformWorkerVersionSnapshot(
       ? ((annotations as Record<string, string>)['workers/message'] ?? null)
       : null;
   const metadata = parseCloudflareVersionMessage(message);
-  // A version made outside Void has no Void record of its triggers. Only a run
-  // that replaces those changes, with the operator's consent, gives Void's own.
+  // A version made outside Nosam has no Nosam record of its triggers. Only a run
+  // that replaces those changes, with the operator's consent, gives Nosam's own.
   if (metadata?.schema !== 2 && unrecordedTriggerConfig) {
     return {
       migrationTag: readCloudflareVersionMigrationTag(value),

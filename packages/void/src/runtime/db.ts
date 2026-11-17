@@ -1,7 +1,7 @@
 /**
  * void/db — Drizzle-powered database access.
  *
- * At build time, the Void plugin intercepts this import and serves a
+ * At build time, the Nosam plugin intercepts this import and serves a
  * virtual module that auto-wires the D1 binding with the user's schema.
  * This stub exists for the published npm package and type declarations.
  */
@@ -80,7 +80,7 @@ function requireD1(): D1Database {
 
 /**
  * Default Drizzle D1 instance — resolves the `DB` binding from the runtime
- * environment. When the Void plugin is active, this is replaced with a
+ * environment. When the Nosam plugin is active, this is replaced with a
  * schema-aware instance via virtual module.
  */
 export const db: DrizzleD1Database = new Proxy({} as DrizzleD1Database, {
@@ -88,7 +88,7 @@ export const db: DrizzleD1Database = new Proxy({} as DrizzleD1Database, {
     const instance = getRuntimeRequestResource(
       requestDbKey,
       () => createDb(requireD1()),
-      // Framework adapters do not always enter Void's request scope. Without a
+      // Framework adapters do not always enter Nosam's request scope. Without a
       // shared session, each operation starts on primary to preserve fresh reads.
       () => createPrimaryDb(requireD1()),
     );

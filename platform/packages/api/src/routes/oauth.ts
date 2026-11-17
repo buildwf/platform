@@ -186,8 +186,8 @@ async function loginPage(context: Context<ApiEnv>, id: string) {
         ];
   return platformBrowserPage(
     context,
-    'Sign in to Void',
-    browserPageLead('Sign in to Void', 'Choose your platform login method.') +
+    'Sign in to Nosam',
+    browserPageLead('Sign in to Nosam', 'Choose your platform login method.') +
       '<div class="void-auth-actions">' +
       methods
         .map(

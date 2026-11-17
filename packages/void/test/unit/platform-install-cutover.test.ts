@@ -490,7 +490,7 @@ it('rolls forward a partially restored credential update without restoring old s
       .slice(start)
       .filter(
         ({ args }) =>
-          args.type === 'versions.deploy' && args.message?.startsWith('Void platform restoration'),
+          args.type === 'versions.deploy' && args.message?.startsWith('Nosam platform restoration'),
       ),
   ).toEqual([]);
 
@@ -520,7 +520,7 @@ it('rolls forward a partially restored credential update without restoring old s
       .slice(resumeStart)
       .filter(
         ({ args }) =>
-          args.type === 'versions.deploy' && args.message?.startsWith('Void platform restoration'),
+          args.type === 'versions.deploy' && args.message?.startsWith('Nosam platform restoration'),
       ),
   ).toEqual([]);
   expect(readInstallationRecoverySecrets(result.manifest)?.workerSecretUpdatesJson).toBeUndefined();
@@ -698,7 +698,7 @@ it('still restores a failed cutover without credential updates', async () => {
       .slice(start)
       .some(
         ({ args }) =>
-          args.type === 'versions.deploy' && args.message?.startsWith('Void platform restoration'),
+          args.type === 'versions.deploy' && args.message?.startsWith('Nosam platform restoration'),
       ),
   ).toBe(true);
   // Neither the activations nor the restorations skip Cloudflare's checks.

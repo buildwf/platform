@@ -80,7 +80,7 @@ describe('project team target selection', () => {
         projectSlug: '',
       }),
     ).rejects.toThrow(
-      'Teams are available only for projects hosted on a Void platform, not direct Cloudflare deployments',
+      'Teams are available only for projects hosted on a Nosam platform, not direct Cloudflare deployments',
     );
   });
 
@@ -249,7 +249,7 @@ describe('project team target selection', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('uses the linked Void platform project for member listing', async () => {
+  it('uses the linked Nosam platform project for member listing', async () => {
     const platformA = 'https://platform-a.example.test';
     const platformB = 'https://platform-b.example.test';
     const root = rootWithPlatform('void', { platformUrl: platformA });

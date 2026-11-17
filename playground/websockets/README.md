@@ -1,6 +1,6 @@
 # WebSocket Playground
 
-React single-page app for Void's typed WebSocket support.
+React single-page app for Nosam's typed WebSocket support.
 
 ## Demos
 

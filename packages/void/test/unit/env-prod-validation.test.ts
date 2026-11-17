@@ -155,9 +155,9 @@ describe('validateProdEnv — deploy-time schema enforcement', () => {
       const error = await validateProdEnv(root, { productionOnly: false }).catch((e: Error) => e);
       expect(error).toBeInstanceOf(Error);
       expect((error as Error).message).toContain(
-        '.env defines names reserved for Void: __VOID_PROXY_TOKEN, __VOID_EMAIL_FROM.',
+        '.env defines names reserved for Nosam: __VOID_PROXY_TOKEN, __VOID_EMAIL_FROM.',
       );
-      expect((error as Error).message).toContain('Void sets these itself');
+      expect((error as Error).message).toContain('Nosam sets these itself');
       expect((error as Error).message).toContain('x-void-dev-trigger header printed at dev start');
     }
   });
@@ -171,7 +171,7 @@ describe('validateProdEnv — deploy-time schema enforcement', () => {
     );
 
     await expect(validateProdEnv(root, { productionOnly: false })).rejects.toThrow(
-      '.env defines names reserved for Void: __VOID_PROXY_TOKEN, __VOID_EMAIL_FROM.',
+      '.env defines names reserved for Nosam: __VOID_PROXY_TOKEN, __VOID_EMAIL_FROM.',
     );
   });
 
@@ -210,7 +210,7 @@ describe('validateProdEnv — deploy-time schema enforcement', () => {
       defineEnv({ STRIPE_KEY: string(), __VOID_TOKEN: string().optional() });
 
       await expect(validateProdEnv(root, { productionOnly })).rejects.toThrow(
-        'env.ts declares names reserved for Void: __VOID_TOKEN.',
+        'env.ts declares names reserved for Nosam: __VOID_TOKEN.',
       );
     },
   );

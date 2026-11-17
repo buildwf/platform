@@ -61,7 +61,7 @@ async function generatedBindings(
     | ((config: UserConfig, environment: ConfigEnv) => void)
     | undefined;
   if (!configure) {
-    throw new Error('Expected Void environment plugin.');
+    throw new Error('Expected Nosam environment plugin.');
   }
   configure({}, environment);
   const cloudflarePlugin = plugins.find((plugin) => plugin.name === 'mock:cloudflare');

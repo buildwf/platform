@@ -67,15 +67,15 @@ export default defineConfig({
 });
 ```
 
-Void returns a permanent `308` redirect that preserves the path, query string, and request method. The option defaults to `false`. Localhost and loopback addresses stay on HTTP for local development and previews.
+Nosam returns a permanent `308` redirect that preserves the path, query string, and request method. The option defaults to `false`. Localhost and loopback addresses stay on HTTP for local development and previews.
 
-This option requires the Cloudflare target and works for Void apps and static sites on either deployment platform.
+This option requires the Cloudflare target and works for Nosam apps and static sites on either deployment platform.
 
 For direct Cloudflare deployments, also enable [Always Use HTTPS](https://developers.cloudflare.com/ssl/edge-certificates/additional-options/always-use-https/) on your zone to cover assets served directly by Cloudflare.
 
 ## `_redirects` files
 
-Void reads `_redirects` files produced by your build, such as a static site generator's output. You can also place one in Vite's `publicDir`:
+Nosam reads `_redirects` files produced by your build, such as a static site generator's output. You can also place one in Vite's `publicDir`:
 
 ```text
 /old-page  /new-page     301

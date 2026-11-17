@@ -96,7 +96,7 @@ export type StaticEdgeRouting = {
 /**
  * Route a static deploy around its thin edge Worker. Without edge rules that
  * Worker only answers `/__void/ready`, so Cloudflare serves every other request
- * from assets without starting it. The Void-generated `_headers` is not such a
+ * from assets without starting it. The Nosam-generated `_headers` is not such a
  * rule: it only marks fingerprinted files immutable, which Cloudflare applies
  * itself. Any other rule keeps the Worker in front of every request.
  */

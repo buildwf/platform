@@ -551,7 +551,7 @@ export function formatCloudflareActivationError(
 ): string {
   const message = formatCloudflareActivationFailure(result);
   return result.restoredOlderSecrets
-    ? `${message}\nCloudflare refused to restore the previous version because this deploy changed a secret, so Void forced the restore. The previous version runs with its old secret values; deploy again to apply the new ones.`
+    ? `${message}\nCloudflare refused to restore the previous version because this deploy changed a secret, so Nosam forced the restore. The previous version runs with its old secret values; deploy again to apply the new ones.`
     : message;
 }
 
@@ -576,7 +576,7 @@ function formatCloudflareActivationFailure(
         return 'deploy: the verified Wrangler uploader changed after version activation, and automatic traffic restoration failed. Inspect `void project status` immediately.';
       }
       if (result.rollback === 'unsafe') {
-        return 'deploy: the verified Wrangler uploader changed after version activation. Void did not invoke the changed binary to restore traffic; reinstall Wrangler from a trusted lockfile and inspect `void project status` immediately.';
+        return 'deploy: the verified Wrangler uploader changed after version activation. Nosam did not invoke the changed binary to restore traffic; reinstall Wrangler from a trusted lockfile and inspect `void project status` immediately.';
       }
       return 'deploy: the verified Wrangler uploader changed before version activation.';
     case 'status-failed':
@@ -586,7 +586,7 @@ function formatCloudflareActivationFailure(
       return `deploy: could not snapshot the current Cloudflare deployment${status}; no version was uploaded.`;
     case 'deployment-changed':
       return result.triggerRepair === 'succeeded'
-        ? `deploy: another Cloudflare operation superseded this deployment. Void restored triggers for the active version ${result.activeVersionId ?? '(unknown)'}; retry from fresh deployment status.`
+        ? `deploy: another Cloudflare operation superseded this deployment. Nosam restored triggers for the active version ${result.activeVersionId ?? '(unknown)'}; retry from fresh deployment status.`
         : `deploy: another Cloudflare operation superseded this deployment, but its trigger state could not be verified. Inspect the active Worker version ${result.activeVersionId ?? '(unknown)'} immediately.`;
     case 'inheritance-source-unavailable':
       return 'deploy: could not verify which Worker Version would supply inherited secrets; production traffic is unchanged.';
@@ -598,13 +598,13 @@ function formatCloudflareActivationFailure(
       ].join('\n');
     case 'traffic-preservation-unavailable':
       return [
-        'deploy: the existing Worker has dashboard-managed routes or visibility that Void cannot safely republish.',
+        'deploy: the existing Worker has dashboard-managed routes or visibility that Nosam cannot safely republish.',
         'Add its current routes, workers_dev, and preview_urls values to the root Wrangler config, then retry; no version was uploaded.',
       ].join('\n');
     case 'traffic-split-unsupported':
       return [
         'deploy: the current Cloudflare deployment splits traffic across multiple Worker Versions.',
-        'Void will not flatten an existing gradual rollout to 100%. Finish or cancel that rollout',
+        'Nosam will not flatten an existing gradual rollout to 100%. Finish or cancel that rollout',
         'in Cloudflare, then retry; no version was uploaded.',
       ].join('\n');
     case 'upload-failed':
@@ -617,15 +617,15 @@ function formatCloudflareActivationFailure(
       }
       if (result.workersDev === false) {
         return [
-          'deploy: the uploaded Worker Version has no URL Void can use to verify readiness.',
+          'deploy: the uploaded Worker Version has no URL Nosam can use to verify readiness.',
           'workers.dev is off for this Worker, so an account subdomain does not create one.',
           'Production traffic is unchanged.',
         ].join('\n');
       }
       return [
-        'deploy: the uploaded Worker Version has no preview URL, so Void cannot verify readiness.',
+        'deploy: the uploaded Worker Version has no preview URL, so Nosam cannot verify readiness.',
         'Set CLOUDFLARE_WORKERS_SUBDOMAIN to your account subdomain (for example "my-team")',
-        'and retry. Void caches it after a successful workers.dev deployment; production traffic is unchanged.',
+        'and retry. Nosam caches it after a successful workers.dev deployment; production traffic is unchanged.',
       ].join('\n');
     case 'readiness-staging-failed': {
       const hint =
@@ -745,10 +745,10 @@ function formatCloudflareTriggerRecovery(
   const diagnostic = result.diagnostic ? ['', result.diagnostic] : [];
   if (live === null) {
     return [
-      'Live now: unknown. Void could not read which version serves production.',
+      'Live now: unknown. Nosam could not read which version serves production.',
       ...(result.triggersRestored === 'unknown' && previous
         ? [
-            `Void tried to switch back to the previous version ${previous} and restore its ${TRIGGER_KINDS}, but could not confirm the result.`,
+            `Nosam tried to switch back to the previous version ${previous} and restore its ${TRIGGER_KINDS}, but could not confirm the result.`,
           ]
         : []),
       `Its ${TRIGGER_KINDS} may be partly updated. ${INSPECT_STATUS}`,
@@ -756,7 +756,7 @@ function formatCloudflareTriggerRecovery(
     ];
   }
   if (live === result.versionId) {
-    // Only a real app is worth rolling back to. Without `restoreSkipped`, Void could not tell
+    // Only a real app is worth rolling back to. Without `restoreSkipped`, Nosam could not tell
     // whether the previous version is an empty draft, so it offers nothing.
     const rollbackHint =
       previous &&
@@ -774,18 +774,18 @@ function formatCloudflareTriggerRecovery(
     ];
   }
   if (live === previous) {
-    // Without restored triggers, Void cannot tell whether its own command or another operation
+    // Without restored triggers, Nosam cannot tell whether its own command or another operation
     // moved traffic back (a restore skipped over a foreign deployment also lands here).
     return [
       result.triggersRestored === 'yes'
-        ? `Live now: ${live} (the previous version). Void switched traffic back to it and restored its ${TRIGGER_KINDS}.`
-        : `Live now: ${live} (the previous version). Void did not restore its ${TRIGGER_KINDS}, so they may be partly updated.`,
+        ? `Live now: ${live} (the previous version). Nosam switched traffic back to it and restored its ${TRIGGER_KINDS}.`
+        : `Live now: ${live} (the previous version). Nosam did not restore its ${TRIGGER_KINDS}, so they may be partly updated.`,
       result.triggersRestored === 'yes' ? RETRY_DEPLOY : INSPECT_STATUS,
       ...diagnostic,
     ];
   }
   return [
-    `Live now: ${live}. Another Cloudflare operation changed production while Void was switching back.`,
+    `Live now: ${live}. Another Cloudflare operation changed production while Nosam was switching back.`,
     `Its ${TRIGGER_KINDS} may not match it. ${INSPECT_STATUS}`,
     ...diagnostic,
   ];
@@ -801,27 +801,27 @@ function keptDeployReason(
   }
   switch (restoreSkipped) {
     case 'placeholder':
-      return `Void did not switch back to the previous version ${previous} because it is an empty placeholder or secret-only draft.`;
+      return `Nosam did not switch back to the previous version ${previous} because it is an empty placeholder or secret-only draft.`;
     case 'no-trigger-snapshot':
-      return `Void did not switch back to the previous version ${previous} because it has no Void trigger snapshot to restore.`;
+      return `Nosam did not switch back to the previous version ${previous} because it has no Nosam trigger snapshot to restore.`;
     case 'atomic':
-      return `This deploy published at 100% directly, so Void did not switch back to the previous version ${previous}.`;
+      return `This deploy published at 100% directly, so Nosam did not switch back to the previous version ${previous}.`;
     default:
-      return `Void could not switch back to the previous version ${previous}.`;
+      return `Nosam could not switch back to the previous version ${previous}.`;
   }
 }
 
 /** Explain why a custom-route readiness probe carried no Access credentials. */
 function customRouteAccessHint(origin: string): Array<string> {
   return [
-    `Void did not send Access credentials to ${origin}. A route or Custom Domain receives them only when CF_ACCESS_READINESS_ORIGIN names its origin.`,
+    `Nosam did not send Access credentials to ${origin}. A route or Custom Domain receives them only when CF_ACCESS_READINESS_ORIGIN names its origin.`,
     `If Access protects ${origin} and admits your credentials, set CF_ACCESS_READINESS_ORIGIN=${origin} with CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET, or CF_ACCESS_TOKEN. Then retry.`,
-    'Set it only if you control this hostname and it serves this Worker, because Void sends your Access credentials to it.',
+    'Set it only if you control this hostname and it serves this Worker, because Nosam sends your Access credentials to it.',
   ];
 }
 
 const ATOMIC_ACCESS_ALTERNATIVE =
-  'For a Worker with Durable Object migration history, `void deploy --platform cloudflare --atomic` publishes without the zero-traffic check. The new version receives traffic first, and the command still exits with an error because Void cannot verify readiness through Access.';
+  'For a Worker with Durable Object migration history, `void deploy --platform cloudflare --atomic` publishes without the zero-traffic check. The new version receives traffic first, and the command still exits with an error because Nosam cannot verify readiness through Access.';
 
 function formatCloudflareReadinessRestoration(
   result: Exclude<CloudflareActivationResult, { ok: true }>,
@@ -832,7 +832,7 @@ function formatCloudflareReadinessRestoration(
     case 'failed':
       return 'Automatic traffic restoration failed; inspect `void project status` immediately.';
     case 'unsafe':
-      return 'Void did not invoke the changed Wrangler binary to restore traffic; reinstall Wrangler from a trusted lockfile and inspect `void project status` immediately.';
+      return 'Nosam did not invoke the changed Wrangler binary to restore traffic; reinstall Wrangler from a trusted lockfile and inspect `void project status` immediately.';
     case 'unavailable':
       return 'No previous version was available to restore; inspect `void project status` immediately.';
     default:
@@ -843,7 +843,7 @@ function formatCloudflareReadinessRestoration(
 const WORKERS_SUBDOMAIN_EXAMPLE = '(for example "my-team", or "my-team.fed" for FedRAMP High)';
 
 /**
- * Tell the operator how to recover a publish whose URL Void could not determine.
+ * Tell the operator how to recover a publish whose URL Nosam could not determine.
  * An account subdomain only becomes a readiness URL when workers.dev is on.
  */
 function workersDevReadinessRecovery(
@@ -865,11 +865,11 @@ function workersDevReadinessRecovery(
   }
 }
 
-/** Explain a live version whose readiness URL Void could not determine. */
+/** Explain a live version whose readiness URL Nosam could not determine. */
 function formatCloudflarePublishWithoutUrl(published: string, recovery: string): string {
   return [
-    `deploy: ${published}, but Void could not determine its URL.`,
-    'Void did not update its routes, workers.dev setting, or other triggers, and did not check /__void/ready.',
+    `deploy: ${published}, but Nosam could not determine its URL.`,
+    'Nosam did not update its routes, workers.dev setting, or other triggers, and did not check /__void/ready.',
     recovery,
     'Then inspect `void project status` before you deploy again.',
   ].join('\n');

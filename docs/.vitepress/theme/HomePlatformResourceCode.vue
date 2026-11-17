@@ -32,7 +32,7 @@ const commandColumns = [
 
 <template>
   <div class="platform-command-stage">
-    <div class="platform-command-window" role="group" aria-label="Void platform commands">
+    <div class="platform-command-window" role="group" aria-label="Nosam platform commands">
       <div class="platform-command-header">
         <span class="platform-command-heading">void platform</span>
       </div>

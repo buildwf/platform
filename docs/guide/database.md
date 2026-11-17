@@ -34,7 +34,7 @@ const dbFileItems = [
 
 # Database
 
-Define your tables in TypeScript, then query them with `db` from `void/db`. Void includes [Drizzle ORM](https://orm.drizzle.team) and configures the connection, so you can use the same schema and query workflow with D1, PostgreSQL, or MySQL.
+Define your tables in TypeScript, then query them with `db` from `void/db`. Nosam includes [Drizzle ORM](https://orm.drizzle.team) and configures the connection, so you can use the same schema and query workflow with D1, PostgreSQL, or MySQL.
 
 <FileTree :items="dbFileItems" default-expanded />
 
@@ -45,10 +45,10 @@ Choose a database during `void init`, or set `database` in `void.config.ts`:
 |            | [D1 (SQLite)](./database/d1) | [PostgreSQL](./database/postgresql) | [MySQL](./database/mysql) |
 | ---------- | ---------------------------- | ----------------------------------- | ------------------------- |
 | Config     | Default                      | `"database": "pg"`                  | `"database": "mysql"`     |
-| Managed by | Void                         | Bring your own database             | Bring your own database   |
+| Managed by | Nosam                        | Bring your own database             | Bring your own database   |
 | Connection | Automatic D1 binding         | Hyperdrive                          | Hyperdrive                |
 
-A Void platform keeps Hyperdrive query caching off for your database connection, so reads reflect completed writes. An existing connection is updated on the project's next deploy.
+A Nosam platform keeps Hyperdrive query caching off for your database connection, so reads reflect completed writes. An existing connection is updated on the project's next deploy.
 
 ## Schema Definition
 
@@ -143,7 +143,7 @@ Omit `dialect` for D1. If your database already has tables, run `void db generat
 
 ## Querying
 
-Void re-exports all common [Drizzle query operators](https://orm.drizzle.team/docs/select) from `void/db` so you don't need to install `drizzle-orm` separately. Import `db` from `void/db` and your tables from `@schema`:
+Nosam re-exports all common [Drizzle query operators](https://orm.drizzle.team/docs/select) from `void/db` so you don't need to install `drizzle-orm` separately. Import `db` from `void/db` and your tables from `@schema`:
 
 ```ts
 import { users } from '@schema';
@@ -151,7 +151,7 @@ import { db } from 'void/db';
 ```
 
 ::: info What is `@schema`?
-`@schema` is a Vite path alias that the Void plugin configures automatically. It points to your `db/schema.ts` file, or `db/schema/` if you split tables across files. You can just use it to import table definitions.
+`@schema` is a Vite path alias that the Nosam plugin configures automatically. It points to your `db/schema.ts` file, or `db/schema/` if you split tables across files. You can just use it to import table definitions.
 :::
 
 ### List rows
@@ -364,7 +364,7 @@ Three functions are available:
 | `createSelectSchema` | Matches the shape of selected rows                                            |
 | `createUpdateSchema` | Like insert but all fields are optional (partial update)                      |
 
-Void already bundles the Drizzle adapters. Install the validator library itself if you use its direct APIs in your schema file:
+Nosam already bundles the Drizzle adapters. Install the validator library itself if you use its direct APIs in your schema file:
 
 ```bash
 npm install zod
@@ -388,7 +388,7 @@ See the [CLI reference](../reference/cli/database.md#database) for connection se
 
 ## Adopt an existing Drizzle PostgreSQL database {#adopt-existing-drizzle}
 
-To use Void with a PostgreSQL database that Drizzle has already migrated, record its applied migrations before your first deployment:
+To use Nosam with a PostgreSQL database that Drizzle has already migrated, record its applied migrations before your first deployment:
 
 1. Back up the database and pause deployments. Try the procedure on a restored copy first.
 2. Set `database: 'pg'` in `void.config.ts`. Keep your existing schema, SQL filenames, and `db/migrations/meta/` directory. Do not regenerate or rename migrations during adoption.
@@ -416,10 +416,10 @@ To use Void with a PostgreSQL database that Drizzle has already migrated, record
    COMMIT;
    ```
 
-5. Run the file with your PostgreSQL client, stopping on errors. Use the database and search path Void will use. This records the filenames without running their SQL or changing Drizzle's history.
-6. Connect Void to the database and run `void db status`. Only new migrations should be pending. For direct Cloudflare deployments, set `DATABASE_URL` in the shell or CI environment that runs `void deploy`.
+5. Run the file with your PostgreSQL client, stopping on errors. Use the database and search path Nosam will use. This records the filenames without running their SQL or changing Drizzle's history.
+6. Connect Nosam to the database and run `void db status`. Only new migrations should be pending. For direct Cloudflare deployments, set `DATABASE_URL` in the shell or CI environment that runs `void deploy`.
 
-Repeat these steps for each database; development and production may have different migration histories. Keep Drizzle's history table, and use Void for future migrations.
+Repeat these steps for each database; development and production may have different migration histories. Keep Drizzle's history table, and use Nosam for future migrations.
 
 ## Hand-written migrations {#hand-written-migrations}
 

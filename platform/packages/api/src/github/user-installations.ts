@@ -234,7 +234,7 @@ export async function authorizeInstallViaUserToken(
  * Discover the installation ids the holder of the OAuth `code` can manage,
  * together with their numeric GitHub account id. Consumed by the JOIN flow,
  * which unions the caller's accessible installations against the ones
- * Void already tracks to decide which connections the caller may join.
+ * Nosam already tracks to decide which connections the caller may join.
  *
  * Fails closed:
  *   - App not configured for user-auth-on-install → `{ installationIds: empty,

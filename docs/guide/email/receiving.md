@@ -1,11 +1,11 @@
 ---
-description: 'Receive mail with handlers in email/. Inbound email is available in native Void apps.'
+description: 'Receive mail with handlers in email/. Inbound email is available in native Nosam apps.'
 outline: deep
 ---
 
 # Receiving Email {#inbound}
 
-Receive mail with handlers in the top-level `email/` directory. Inbound handlers require a Void app with a Worker.
+Receive mail with handlers in the top-level `email/` directory. Inbound handlers require a Nosam app with a Worker.
 
 ```ts
 // email/_default.ts — fallback for any unmatched recipient
@@ -81,7 +81,7 @@ export default defineEmail(async (message, env, ctx, info) => {
 
 `replyEmail()` replies to the original sender with a threaded subject. You can override `subject`. To reply after the handler returns, use [`sendEmail` with `threading`](./sending.md#reply-later).
 
-On a Void platform, the default sender is your project's shared address, or the address that received mail on your registered domain. Use that default for shared mail; `message.to` has the project prefix removed. Sender overrides must belong to your project.
+On a Nosam platform, the default sender is your project's shared address, or the address that received mail on your registered domain. Use that default for shared mail; `message.to` has the project prefix removed. Sender overrides must belong to your project.
 
 Replies follow your project's recipient policy. Verify shared-sender recipients with `void email allow <address>`. Check `void email logs` for the provider outcome after the handler finishes.
 
@@ -90,7 +90,7 @@ Forwarding requires a native Cloudflare email event. For custom domains relayed 
 ## Configuring inbound delivery {#configuring-inbound-delivery}
 
 On an email-enabled platform, `<slug>+anything@<mail domain>` reaches your
-deployed `email/` handlers without per-project DNS setup once the platform has verified your recipient rule and enabled plus addressing. Void sets up that rule when you deploy handlers; creating a project or only sending mail requires no inbound rule. Deployment reports a routing conflict or capacity limit if setup cannot complete. A
+deployed `email/` handlers without per-project DNS setup once the platform has verified your recipient rule and enabled plus addressing. Nosam sets up that rule when you deploy handlers; creating a project or only sending mail requires no inbound rule. Deployment reports a routing conflict or capacity limit if setup cannot complete. A
 [registered custom domain](./domains.md#your-own-domain-on-the-platform) reaches those
 handlers once its inbound readiness is `ready`. Use `void email domain status`
 to check current provider routing and any remaining setup steps.

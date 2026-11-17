@@ -212,7 +212,7 @@ export interface ProvisionLogger {
   warn: (msg: string) => void;
 }
 
-/** Where Void keeps D1 migrations — written as `migrations_dir` on the D1 entry. */
+/** Where Nosam keeps D1 migrations — written as `migrations_dir` on the D1 entry. */
 const D1_MIGRATIONS_DIR = './db/migrations';
 
 /** UTF-8 byte-order mark. Node's utf-8 read preserves a leading one. */
@@ -443,7 +443,7 @@ export function assertNoTransportRedirectInProjectDotenv(
     if (outputOffenders.length > 0) {
       throw new Error(
         `provision: refusing to provision — the project file "${file}" sets ` +
-          `${outputOffenders.join(', ')}. Void does not allow Cloudflare session output files ` +
+          `${outputOffenders.join(', ')}. Nosam does not allow Cloudflare session output files ` +
           `during provisioning. Remove ${outputOffenders.join(', ')} from "${file}".`,
       );
     }
@@ -2993,7 +2993,7 @@ async function reconcileHyperdrive(
         throw new Error(
           `provision: could not check whether Hyperdrive config ${JSON.stringify(name)} already ` +
             `exists (see the warning above). A create would duplicate a config with the same ` +
-            `name, so Void did not create it. Check that CLOUDFLARE_API_TOKEN can read ` +
+            `name, so Nosam did not create it. Check that CLOUDFLARE_API_TOKEN can read ` +
             `Hyperdrive configs, then retry.`,
         );
       } else {
@@ -3150,7 +3150,7 @@ async function provisionCloudflareResourcesLocked(
   if (hasRemoteWork && !effectiveAccountId) {
     throw new Error(
       `provision: no Cloudflare account is resolvable. Set \`cloudflare.account_id\` in ` +
-        `void.config.ts or export CLOUDFLARE_ACCOUNT_ID, then rerun \`void deploy\`. Void does ` +
+        `void.config.ts or export CLOUDFLARE_ACCOUNT_ID, then rerun \`void deploy\`. Nosam does ` +
         `not provision resources without a pinned account.`,
     );
   }
@@ -3171,7 +3171,7 @@ async function provisionCloudflareResourcesLocked(
     if (!alreadyProvisioned && !resolveHyperdriveApiToken(opts?.apiToken)) {
       if (connectionString) {
         throw new Error(
-          `provision: Hyperdrive config ${JSON.stringify(name)} has no ID yet. Before Void ` +
+          `provision: Hyperdrive config ${JSON.stringify(name)} has no ID yet. Before Nosam ` +
             `creates one, it checks for an existing config with the Cloudflare API. That check ` +
             `needs an API token; a browser login cannot call it. Without the check, a create ` +
             `could duplicate an existing config with the same name, so nothing was ` +
@@ -3188,7 +3188,7 @@ async function provisionCloudflareResourcesLocked(
         `provision: Hyperdrive config ${JSON.stringify(name)} has no ID yet, and ` +
           `there is no DATABASE_URL to create it from. Nothing was provisioned. ` +
           `Either (a) export DATABASE_URL with your PostgreSQL connection string and rerun ` +
-          `(Void reads it from the shell — a value in .env/.env.local is NOT used here, so it ` +
+          `(Nosam reads it from the shell — a value in .env/.env.local is NOT used here, so it ` +
           `never ships as a plaintext worker var), or (b) create the Hyperdrive config in the ` +
           `Cloudflare dashboard and add its ID to the ${JSON.stringify(binding)} entry in ` +
           `\`cloudflare.hyperdrive\` in void.config.ts. Deploying an already-provisioned ` +

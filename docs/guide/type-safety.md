@@ -5,7 +5,7 @@ outline: deep
 
 # Type Safety
 
-Void infers types from your database schema and route handlers. When you change a field, TypeScript shows which queries, requests, and components need to change.
+Nosam infers types from your database schema and route handlers. When you change a field, TypeScript shows which queries, requests, and components need to change.
 
 ## The Type Pipeline
 
@@ -244,7 +244,7 @@ declare module 'void' {
 }
 ```
 
-Augmentation can refine a generated binding or add one you provide separately. Values declared in `env.ts` keep their schema types. These types apply to Void's `c.env`; for `cloudflare:workers`, use your framework's binding types.
+Augmentation can refine a generated binding or add one you provide separately. Values declared in `env.ts` keep their schema types. These types apply to Nosam's `c.env`; for `cloudflare:workers`, use your framework's binding types.
 
 ## Setup
 
@@ -265,6 +265,6 @@ Extend the generated tsconfig in your project:
 }
 ```
 
-If you already have a TypeScript config, run `void init --tsconfig` to add Void types while preserving your settings.
+If you already have a TypeScript config, run `void init --tsconfig` to add Nosam types while preserving your settings.
 
 Run `void prepare` in CI or after a fresh clone, or let `vite dev` / `vite build` generate the `.void/` files during normal app workflows.

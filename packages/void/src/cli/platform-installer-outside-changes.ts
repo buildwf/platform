@@ -32,12 +32,12 @@ const OUTSIDE_SOURCES = {
   // these sources. Without a terminal it stops the upload, and no option skips that.
   dash: 'changed in the Cloudflare dashboard',
   api: 'changed in the Cloudflare API',
-  // The upgrade refuses an active version without Void's record of its
+  // The upgrade refuses an active version without Nosam's record of its
   // triggers. A run can stop after the Cloudflare CLI replaced a change and
-  // before Void deployed its own version, or restore the earlier version.
-  // The Worker then shows no change, but that version stays active. Void
+  // before Nosam deployed its own version, or restore the earlier version.
+  // The Worker then shows no change, but that version stays active. Nosam
   // releases before the record deployed versions without it too.
-  unrecorded: 'has an active version without a Void deployment record',
+  unrecorded: 'has an active version without a Nosam deployment record',
 } as const;
 
 const PLATFORM_WORKER_KEYS: ReadonlyArray<PlatformWorkerKey> = [
@@ -56,7 +56,7 @@ const NO_WORKER_CHANGED =
 /** The wait before the second and the third read of a Worker. */
 const READ_RETRY_DELAYS_MS = [250, 500] as const;
 
-/** Stop before the run changes a Worker, because Void cannot tell what the run replaces. */
+/** Stop before the run changes a Worker, because Nosam cannot tell what the run replaces. */
 function unreadablePlatformWorker(workerName: string, error: unknown): Error {
   const status = error instanceof PlatformCloudflareApiError ? error.status : null;
   const answer =
@@ -65,7 +65,7 @@ function unreadablePlatformWorker(workerName: string, error: unknown): Error {
       : `HTTP ${status}`;
   return new Error(
     [
-      `platform: Void cannot read the platform Worker ${workerName} (${answer}), so it cannot find changes made outside Void.`,
+      `platform: Nosam cannot read the platform Worker ${workerName} (${answer}), so it cannot find changes made outside Nosam.`,
       NO_WORKER_CHANGED,
       status === 401 || status === 403
         ? 'Make sure that the Cloudflare API token has Account → Workers Scripts → Edit for this account. Then run the command again.'
@@ -104,7 +104,7 @@ export type PlatformWorkerOutsideChange = Readonly<{
 export type PlatformOutsideChangeInstallation = Readonly<{
   manifest: PlatformInstallationManifest;
   /**
-   * The database read that the installer uses. Without it, Void expects the
+   * The database read that the installer uses. Without it, Nosam expects the
    * run to restore the earlier versions of a stopped Worker cutover.
    */
   readAuthenticationState?: PlatformDatabaseLifecycleLock['readAuthenticationState'];
@@ -117,7 +117,7 @@ function needsReviewUpload(change: PlatformWorkerOutsideChange): boolean {
 
 /**
  * The earlier version of each Worker that the installer makes active again
- * before it deploys. A run that stopped during a Worker cutover left Void's
+ * before it deploys. A run that stopped during a Worker cutover left Nosam's
  * version active, and the next run first restores the earlier one. Like the
  * installer, retain rotated credentials or a configurable sign-in transition
  * that already requires sign-in. Every Worker that this check reads exists,
@@ -146,7 +146,7 @@ async function restoredPlatformWorkerVersions(
   );
 }
 
-/** Find the existing platform Workers that a run uploads and that were changed outside Void. */
+/** Find the existing platform Workers that a run uploads and that were changed outside Nosam. */
 export async function findPlatformWorkerOutsideChanges(
   client: Pick<PlatformCloudflareClient, 'getWorkerLastDeployedFrom' | 'request'>,
   plan: PlatformInstallPlan,
@@ -189,14 +189,14 @@ export async function findPlatformWorkerOutsideChanges(
           }),
       );
       // No deployments. The installer finds a missing Worker itself, but a
-      // marker from outside Void still makes the Cloudflare CLI stop.
+      // marker from outside Nosam still makes the Cloudflare CLI stop.
       if (deployments === null) {
         return source === 'dash' || source === 'api' ? { ...worker, source } : null;
       }
       const active = readActivePlatformWorkerDeployment(deployments);
       if (active.kind === 'malformed') {
         throw new Error(
-          `platform: Cloudflare returned malformed deployment data for the platform Worker ${worker.name}, so Void cannot find changes made outside Void. ${NO_WORKER_CHANGED} Run the command again.`,
+          `platform: Cloudflare returned malformed deployment data for the platform Worker ${worker.name}, so Nosam cannot find changes made outside Nosam. ${NO_WORKER_CHANGED} Run the command again.`,
         );
       }
       // The deploy and the restore of a stopped cutover need one active version.
@@ -236,7 +236,7 @@ function listPlatformWorkerOutsideChanges(
 
 /**
  * The list of Workers after a heading. The heading must be true for each
- * source: an older Void release can have deployed the active version.
+ * source: an older Nosam release can have deployed the active version.
  */
 export function formatPlatformWorkerOutsideChanges(
   changes: ReadonlyArray<PlatformWorkerOutsideChange>,
@@ -246,7 +246,7 @@ export function formatPlatformWorkerOutsideChanges(
 
 /**
  * Do this before a run changes a Worker or pauses traffic. When platform
- * Workers were changed outside Void, stop, or ask the operator in a terminal.
+ * Workers were changed outside Nosam, stop, or ask the operator in a terminal.
  * Returns the Workers whose outside changes the operator agreed to replace.
  * The installer uploads them later with uploadPlatformWorkerOutsideChanges.
  */
@@ -276,7 +276,7 @@ export async function reviewPlatformWorkerOutsideChanges(
       [
         `platform: ${formatPlatformWorkerOutsideChanges(changes)}`,
         NO_WORKER_CHANGED,
-        'This command replaces their configuration with the Void configuration. It can ask for your approval only in a terminal.',
+        'This command replaces their configuration with the Nosam configuration. It can ask for your approval only in a terminal.',
         `Run this command once in a terminal to review them:\n${input.command}`,
       ].join('\n'),
     );
@@ -285,9 +285,9 @@ export async function reviewPlatformWorkerOutsideChanges(
     [
       listPlatformWorkerOutsideChanges(changes),
       '',
-      'This command replaces the configuration of these Workers with the Void configuration.',
-      'It removes values that Void does not set, for example an EMAIL_FROM that you added.',
-      'It resets values that Void sets, for example AUTH_REDIRECT_URI.',
+      'This command replaces the configuration of these Workers with the Nosam configuration.',
+      'It removes values that Nosam does not set, for example an EMAIL_FROM that you added.',
+      'It resets values that Nosam sets, for example AUTH_REDIRECT_URI.',
       ...(changes.some(needsReviewUpload)
         ? [
             'First, it prepares the platform resources and the database.',

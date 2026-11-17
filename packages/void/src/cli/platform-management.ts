@@ -509,7 +509,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
       });
       if (outsideChanges.length > 0) {
         log.warn(
-          `${formatPlatformWorkerOutsideChanges(outsideChanges)}\nThis command replaces their configuration with the Void configuration. Run it in a terminal to review them first.`,
+          `${formatPlatformWorkerOutsideChanges(outsideChanges)}\nThis command replaces their configuration with the Nosam configuration. Run it in a terminal to review them first.`,
         );
       }
       outro('No Cloudflare or local installation state was changed.');
@@ -658,7 +658,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
           throw error;
         }
         log.warn(
-          'The runtime API token saved on this machine is not valid (HTTP 401). Void cannot check the platform email permissions before it changes the platform, and it continues without this check. To do the check, set VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to the runtime token of the platform.',
+          'The runtime API token saved on this machine is not valid (HTTP 401). Nosam cannot check the platform email permissions before it changes the platform, and it continues without this check. To do the check, set VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to the runtime token of the platform.',
         );
       }
     }
@@ -669,8 +669,8 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
       );
     }
     // Without a terminal, the Cloudflare CLI stops the upload of a Worker
-    // changed outside Void, and the upgrade refuses an active version without
-    // Void's record of its triggers. Both happen after traffic pauses. Find
+    // changed outside Nosam, and the upgrade refuses an active version without
+    // Nosam's record of its triggers. Both happen after traffic pauses. Find
     // them first.
     const outsideChanges = await reviewPlatformWorkerOutsideChanges({
       client,
@@ -1027,7 +1027,7 @@ export function resolvePlatformRuntimeTokenToPreflight(
   if (options.enablingCustomDomains) {
     if (!secrets.cloudflareApiToken) {
       throw new Error(
-        'platform: Before enabling project custom domains, set VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to the platform runtime token with Zone → SSL and Certificates → Edit on the application zone so Void can check its access.',
+        'platform: Before enabling project custom domains, set VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to the platform runtime token with Zone → SSL and Certificates → Edit on the application zone so Nosam can check its access.',
       );
     }
     return secrets.cloudflareApiToken;
@@ -1066,7 +1066,7 @@ export async function resolveInstalledPlatformManifest(
   const picked = dependencies.selectInstallation
     ? await dependencies.selectInstallation(manifests)
     : await select({
-        message: 'Select an installed Void platform:',
+        message: 'Select an installed Nosam platform:',
         options: manifests.map((manifest) => ({
           hint: `${manifest.account.name} · ${manifest.id}`,
           label: manifest.deployment.displayName,

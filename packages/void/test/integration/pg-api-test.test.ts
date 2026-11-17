@@ -21,7 +21,7 @@ const USERS = [
   { id: 2, name: 'Linus', email: 'linus@example.com' },
 ];
 
-// No db/migrations and no auth: no other Void module imports pg, so void/db's own import
+// No db/migrations and no auth: no other Nosam module imports pg, so void/db's own import
 // must reach workerd prebundled.
 describe('playground/pg-api-test', () => {
   let pglite: PGlite;

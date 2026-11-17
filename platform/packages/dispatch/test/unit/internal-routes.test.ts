@@ -249,7 +249,7 @@ describe('internal route blocking', () => {
     expect(response.status).toBe(503);
   });
 
-  it('preserves the legacy Void Cloud admin health probe', async () => {
+  it('preserves the legacy Nosam Cloud admin health probe', async () => {
     const response = await app.fetch(
       new Request('https://test.void.app/health', {
         headers: { 'X-Health-Check': 'void-admin' },
@@ -261,7 +261,7 @@ describe('internal route blocking', () => {
     expect(await response.json()).toEqual({ ok: true });
   });
 
-  it('does not add a lifecycle routing read for hosted Void Cloud', async () => {
+  it('does not add a lifecycle routing read for hosted Nosam Cloud', async () => {
     const env = createEnv();
     const response = await app.fetch(
       new Request('https://my-app.void.app/normal-path'),

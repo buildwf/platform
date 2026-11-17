@@ -96,9 +96,9 @@ export function viteAuthConfigImporter(
 
 /**
  * The importer for commands outside Vite, such as `void prepare`. It does not load
- * the app's Vite config: evaluating it constructs the app's plugins, and Void's
+ * the app's Vite config: evaluating it constructs the app's plugins, and Nosam's
  * write generated files and Cloudflare config when constructed. Imports resolve
- * without extensions, through tsconfig `paths`, and through Void's `@schema`
+ * without extensions, through tsconfig `paths`, and through Nosam's `@schema`
  * alias; an alias set only in vite.config resolves in dev and builds.
  */
 export function projectAuthConfigImporter(root: string): ModuleImporter {

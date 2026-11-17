@@ -49,7 +49,7 @@ export function assertInstalledVoidMatchesCli(root: string): void {
     throw new Error(
       `deploy: this CLI is void@${cli.version}, but the project's installed Vite plugin is ` +
         `${installedVersion ? `void@${installedVersion}` : 'missing'}. ` +
-        'Install the same Void version in the project (or link this development checkout) ' +
+        'Install the same Nosam version in the project (or link this development checkout) ' +
         'before deploying. The build imports the project package; mixing versions can ' +
         'rewrite legacy config and produce an unsafe Cloudflare deploy target.',
     );
@@ -60,7 +60,7 @@ export function assertInstalledVoidMatchesCli(root: string): void {
     realpathSync(installedPackageDir) !== realpathSync(cliPackageDir)
   ) {
     throw new Error(
-      'deploy: this development CLI and the project Vite plugin come from different Void ' +
+      'deploy: this development CLI and the project Vite plugin come from different Nosam ' +
         'builds, even though their package versions match. Link the same development checkout ' +
         'into the project before deploying.',
     );

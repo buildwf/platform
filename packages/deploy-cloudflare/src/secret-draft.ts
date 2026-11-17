@@ -60,18 +60,18 @@ export function isWranglerSecretOnlyDraft(entry: Record<string, unknown>): boole
   );
 }
 
-// Keep these bytes aligned with the private placeholder written by Void's
+// Keep these bytes aligned with the private placeholder written by Nosam's
 // Cloudflare secret transport. Unlike the legacy Wrangler placeholder, cf
 // uploads include a compatibility date, so metadata alone cannot distinguish
 // them from an existing fetch-only application after a secret update.
 export const VOID_SECRET_DRAFT_SOURCE =
   'export default { fetch() { return new Response(""); } };\n';
 
-/** Message on the placeholder that Void's secret transport deploys to a Worker without code. */
+/** Message on the placeholder that Nosam's secret transport deploys to a Worker without code. */
 export const VOID_SECRET_DRAFT_MESSAGE = 'void:secret-draft';
 
 /**
- * Annotations of a Void secret placeholder, checked before its source is inspected:
+ * Annotations of a Nosam secret placeholder, checked before its source is inspected:
  * - `api`: the secret transport uploaded and deployed the placeholder and its first secrets in
  *   one Workers API request.
  * - `cf_cli`: `cf workers secrets` added secrets to a deployed placeholder.
@@ -93,7 +93,7 @@ export function isVoidSecretDraftHeader(entry: Record<string, unknown>): boolean
   );
 }
 
-/** Prove a Void secret placeholder from the exact immutable version's source. */
+/** Prove a Nosam secret placeholder from the exact immutable version's source. */
 export function isVoidSecretOnlyDraft(entry: Record<string, unknown>): boolean {
   const metadataFields = new Set([
     'id',

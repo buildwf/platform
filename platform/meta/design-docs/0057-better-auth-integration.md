@@ -5,11 +5,11 @@ status: implemented
 
 # Better Auth integration
 
-Void apps use Better Auth for managed authentication. Auth activates from configuration or auth imports, mounts its route at /api/auth, and exposes the preconfigured client through void/client. Server helpers are available from void/auth; defineAuth() provides advanced configuration. Meta-framework mode is outside this integration.
+Nosam apps use Better Auth for managed authentication. Auth activates from configuration or auth imports, mounts its route at /api/auth, and exposes the preconfigured client through void/client. Server helpers are available from void/auth; defineAuth() provides advanced configuration. Meta-framework mode is outside this integration.
 
-Void supports the app's D1, PostgreSQL, or MySQL database through its generated auth schema and Drizzle adapter. Auth-enabled deployments require BETTER_AUTH_SECRET, which the platform stores as a project secret. This replaces the earlier bespoke session and identity implementation.
+Nosam supports the app's D1, PostgreSQL, or MySQL database through its generated auth schema and Drizzle adapter. Auth-enabled deployments require BETTER_AUTH_SECRET, which the platform stores as a project secret. This replaces the earlier bespoke session and identity implementation.
 
-Void generates tables and an adapter into `.void/better-auth-schema.ts` and
+Nosam generates tables and an adapter into `.void/better-auth-schema.ts` and
 `.void/better-auth-db.ts`. The adapter uses the app's `void/db` connection with
 Better Auth's Drizzle adapter, and the auth route reuses the auth instance
 prepared for its request.

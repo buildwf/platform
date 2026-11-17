@@ -33,7 +33,7 @@ export function classifyCloudflareDeployApp(
       [
         `deploy: --platform cloudflare could not resolve the ${appType} output to deploy.`,
         'Set inference.outputDir in void.config.ts, pass --dir with an existing build directory,',
-        'or add a supported build tool so Void can locate the generated static assets.',
+        'or add a supported build tool so Nosam can locate the generated static assets.',
       ].join('\n'),
     );
   }
@@ -41,8 +41,8 @@ export function classifyCloudflareDeployApp(
   if (!hasBackendFiles(root)) {
     return unsupported(
       [
-        'deploy: --platform cloudflare found no Void backend to deploy.',
-        'A full Void app has at least one of: routes/, middleware, crons/, queues/, or email/.',
+        'deploy: --platform cloudflare found no Nosam backend to deploy.',
+        'A full Nosam app has at least one of: routes/, middleware, crons/, queues/, or email/.',
         'Add your server code, or use `void deploy` for a static site.',
       ].join('\n'),
     );

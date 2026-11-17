@@ -44,9 +44,9 @@ To also remove eligible data resources owned by the installer:
 void platform uninstall [id] --purge-data
 ```
 
-Even with `--purge-data`, Void retains Workers, the Queues they use, R2, AI Gateway, DNS records, routes, custom domains, Access resources, adopted resources, external PostgreSQL, and zones. Review those in the Cloudflare dashboard if you want to remove them, or use `--purge-resources`.
+Even with `--purge-data`, Nosam retains Workers, the Queues they use, R2, AI Gateway, DNS records, routes, custom domains, Access resources, adopted resources, external PostgreSQL, and zones. Review those in the Cloudflare dashboard if you want to remove them, or use `--purge-resources`.
 
-### Remove everything Void created
+### Remove everything Nosam created
 
 To delete every Cloudflare resource the installation created:
 
@@ -67,7 +67,7 @@ Set `CLOUDFLARE_API_TOKEN` to a token with the Edit permissions listed by `--pla
 
 The read checks cannot verify Edit permissions. If a deletion is denied, uninstall may have already disabled traffic or removed resources. Update the token permissions and rerun the command to resume.
 
-If a route, custom domain, DNS record, or Access resource no longer matches what the installation recorded, for example a route that now sends traffic to another Worker, it is kept and listed with the reason, and uninstall continues. Do not run `--purge-resources` while someone else is changing the platform's Workers, routes, or custom domains: a change made after Void checks a resource and before it deletes it is not detected.
+If a route, custom domain, DNS record, or Access resource no longer matches what the installation recorded, for example a route that now sends traffic to another Worker, it is kept and listed with the reason, and uninstall continues. Do not run `--purge-resources` while someone else is changing the platform's Workers, routes, or custom domains: a change made after Nosam checks a resource and before it deletes it is not detected.
 
 If Cloudflare refuses a deletion, for example because a Worker you created yourself still sends logs to the platform tail Worker, uninstall stops and names the resource. Fix it, then rerun the same command to continue.
 
@@ -101,7 +101,7 @@ the platform. If the uninstall asks you to, update an older platform runtime fir
 
 ::: details Why some resources require manual cleanup
 
-Resources that may have been shared or repurposed require manual review before deletion. Void verifies ownership, keeps those resources in place, and blocks platform traffic.
+Resources that may have been shared or repurposed require manual review before deletion. Nosam verifies ownership, keeps those resources in place, and blocks platform traffic.
 
 If removal is interrupted, rerun the command to continue. If a resource has changed ownership, resolve the reported conflict before retrying.
 

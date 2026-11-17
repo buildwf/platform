@@ -755,7 +755,7 @@ describe('syncWranglerBindings', () => {
 
 describe('writeProvisionedWranglerConfig', () => {
   const commentedFixture = `{
-  // Void manages this file — comments below must survive provisioning.
+  // Nosam manages this file — comments below must survive provisioning.
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": "src/index.ts",
   /* App databases (real ids written by \`wrangler d1 create --update-config\`). */
@@ -845,7 +845,7 @@ describe('writeProvisionedWranglerConfig', () => {
     expect(result.configPath).toBe(toSlash(join(tmpDir, 'wrangler.jsonc')));
 
     const raw = readRaw('wrangler.jsonc');
-    expect(raw).toContain('// Void manages this file');
+    expect(raw).toContain('// Nosam manages this file');
     expect(raw).toContain('/* App databases');
     expect((raw.match(/"account_id"/g) ?? []).length).toBe(1);
     expect((raw.match(/"migrations_dir"/g) ?? []).length).toBe(1);
@@ -1087,7 +1087,7 @@ describe('writeProvisionedWranglerConfig', () => {
     });
   });
 
-  it('prunes only queue entries that Void explicitly recorded as managed', () => {
+  it('prunes only queue entries that Nosam explicitly recorded as managed', () => {
     setup('wrangler.jsonc', '{}');
     writeProvisionedWranglerConfig(tmpDir, {
       queues: {
@@ -1140,7 +1140,7 @@ describe('writeProvisionedWranglerConfig', () => {
     ]);
   });
 
-  it('moves a framework queue Void wrote earlier to its new Cloudflare name', () => {
+  it('moves a framework queue Nosam wrote earlier to its new Cloudflare name', () => {
     setup('wrangler.jsonc', '{}');
     writeProvisionedWranglerConfig(tmpDir, {
       queues: {
@@ -1229,7 +1229,7 @@ describe('writeProvisionedWranglerConfig', () => {
 
     expect(writeProvisionedWranglerConfig(tmpDir, patch).modified).toBe(true);
     const afterFirst = readRaw('wrangler.jsonc');
-    expect(afterFirst).toContain('// Void manages this file');
+    expect(afterFirst).toContain('// Nosam manages this file');
     expect((afterFirst.match(/"binding": "QUEUE_JOBS"/g) ?? []).length).toBe(1);
 
     const q = parseRaw('wrangler.jsonc').queues as {
@@ -1283,7 +1283,7 @@ describe('writeProvisionedWranglerConfig', () => {
     setup(
       'wrangler.jsonc',
       `{
-  // Void manages this file — comments below must survive queue upserts.
+  // Nosam manages this file — comments below must survive queue upserts.
   "queues": {
     "producers": [
       // job producer — delivery_delay is user-tuned and must NOT be lost
@@ -1312,7 +1312,7 @@ describe('writeProvisionedWranglerConfig', () => {
     expect(first.modified).toBe(true);
 
     const raw = readRaw('wrangler.jsonc');
-    expect(raw).toContain('// Void manages this file');
+    expect(raw).toContain('// Nosam manages this file');
     expect(raw).toContain('// job producer — delivery_delay is user-tuned');
     expect(raw).toContain('// route failures here — must survive');
 
@@ -1371,7 +1371,7 @@ describe('writeProvisionedWranglerConfig', () => {
     setup(
       'wrangler.jsonc',
       `{
-  // Void manages this file — comments must survive queue upserts.
+  // Nosam manages this file — comments must survive queue upserts.
   "queues": {
     "producers": [
       // user's own producer — must be left untouched
@@ -1389,7 +1389,7 @@ describe('writeProvisionedWranglerConfig', () => {
     expect(first.modified).toBe(true);
 
     const raw = readRaw('wrangler.jsonc');
-    expect(raw).toContain('// Void manages this file');
+    expect(raw).toContain('// Nosam manages this file');
     expect(raw).toContain("// user's own producer — must be left untouched");
 
     const q = parseRaw('wrangler.jsonc').queues as { producers: Array<Record<string, unknown>> };
@@ -2444,7 +2444,7 @@ describe('writeProvisionedWranglerConfig', () => {
 describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars', () => {
   // Comments and trailing commas at every level, like a hand-edited file.
   const emailFixture = `{
-  // Void manages this file — every comment below must survive.
+  // Nosam manages this file — every comment below must survive.
   "name": "acme-support", // worker name
   "vars": {
     "APP_ENV": "production", // user var
@@ -2556,7 +2556,7 @@ describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars
     expect(parsed.vars).toEqual({ APP_ENV: 'production' });
   });
 
-  it('addresses: replaces an existing array outright (Void owns it) and is byte-identical on re-run', () => {
+  it('addresses: replaces an existing array outright (Nosam owns it) and is byte-identical on re-run', () => {
     setup(
       'wrangler.jsonc',
       `{
@@ -2588,7 +2588,7 @@ describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars
   });
 
   it('addresses: a different array cannot be written over comments nested inside the old one — throws without writing', () => {
-    // Void owns the array, but the writer never drops a comment.
+    // Nosam owns the array, but the writer never drops a comment.
     setup('wrangler.jsonc', emailFixture);
     const before = readRaw('wrangler.jsonc');
     expect(() =>
@@ -2728,7 +2728,7 @@ describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars
     setup(
       'wrangler.jsonc',
       `{
-  // Void manages this file — every comment below must survive.
+  // Nosam manages this file — every comment below must survive.
   "name": "acme-support", // worker name
   "vars": {
     "APP_ENV": "production", // user var
@@ -2746,7 +2746,7 @@ describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars
     expect(writeProvisionedWranglerConfig(tmpDir, patch).modified).toBe(true);
     const raw = readRaw('wrangler.jsonc');
     for (const comment of [
-      '// Void manages this file',
+      '// Nosam manages this file',
       '// worker name',
       '// user var',
       '// cache',
@@ -2767,7 +2767,7 @@ describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars
     expect(writeProvisionedWranglerConfig(tmpDir, { addresses: null }).modified).toBe(true);
     const withdrawn = readRaw('wrangler.jsonc');
     for (const comment of [
-      '// Void manages this file',
+      '// Nosam manages this file',
       '// worker name',
       '// user var',
       '// cache',

@@ -795,7 +795,7 @@ describe('platform Cloudflare client', () => {
         }).catch((error: Error) => error.message);
 
       await expect(check(true)).resolves.toBe(
-        'platform: The runtime API token saved on this machine cannot use platform email. Cloudflare denied: Zone → Email Routing Rules → Edit (HTTP 403). Void checked this token because VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN is not set. If the platform uses a different runtime token, set VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to that token, and Void checks that token instead. Otherwise, check that the zone permissions of the saved token include the email zone mail-zone. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Then run the command again.',
+        'platform: The runtime API token saved on this machine cannot use platform email. Cloudflare denied: Zone → Email Routing Rules → Edit (HTTP 403). Nosam checked this token because VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN is not set. If the platform uses a different runtime token, set VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to that token, and Nosam checks that token instead. Otherwise, check that the zone permissions of the saved token include the email zone mail-zone. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Then run the command again.',
       );
       // A token from VOID_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN, or one that
       // the run sends to the Workers, keeps the message.

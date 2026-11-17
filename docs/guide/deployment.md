@@ -5,9 +5,9 @@ outline: deep
 
 # Deployment
 
-`void deploy` builds your app, provisions resources, applies migrations, and deploys it. Choose your own Cloudflare account or a Void platform run by your team.
+`void deploy` builds your app, provisions resources, applies migrations, and deploys it. Choose your own Cloudflare account or a Nosam platform run by your team.
 
-After a successful deployment, Void prints your deployment URL in a summary box with the details reported by your deployment target.
+After a successful deployment, Nosam prints your deployment URL in a summary box with the details reported by your deployment target.
 
 ## Deploy to Cloudflare
 
@@ -18,7 +18,7 @@ void connect --platform cloudflare
 void deploy --platform cloudflare
 ```
 
-Void opens your browser to sign in and asks which account to use. Later deploys use the saved target, so you can run `void deploy`.
+Nosam opens your browser to sign in and asks which account to use. Later deploys use the saved target, so you can run `void deploy`.
 
 Native apps work on Workers Free within its quotas. [Sandboxes](./sandboxes.md#requirements) require Workers Paid and Containers access. See the [Cloudflare guide](../integrations/cloudflare.md) for configuration, token permissions, and features with additional requirements.
 
@@ -90,9 +90,9 @@ void deploy --platform void --project my-app
 
 Sign in and confirm project creation when asked. To use an existing project, run `void project link`. Later deploys use the saved destination.
 
-Project owners can [share access](./project-collaboration.md). To install a platform for your team, start with [Install a Void Platform](./self-hosted-platform.md), which also compares the deployment features of both targets.
+Project owners can [share access](./project-collaboration.md). To install a platform for your team, start with [Install a Nosam Platform](./self-hosted-platform.md), which also compares the deployment features of both targets.
 
-### Deploy to another Void platform
+### Deploy to another Nosam platform
 
 For a single deployment to a different platform, connect and name its project:
 

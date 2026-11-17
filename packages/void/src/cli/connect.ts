@@ -16,14 +16,14 @@ import {
 
 async function selectVoidPlatform(interactive: boolean): Promise<string> {
   if (!interactive) {
-    throw new Error('connect: Supply a Void platform URL in non-interactive mode.');
+    throw new Error('connect: Supply a Nosam platform URL in non-interactive mode.');
   }
   const connections = listPlatformConnections();
   if (connections.length === 0) {
     return promptPlatformUrl();
   }
   const value = await select({
-    message: 'Select a Void platform:',
+    message: 'Select a Nosam platform:',
     options: [
       ...connections.map((entry) => ({
         value: entry.apiUrl,
@@ -97,7 +97,7 @@ export async function runConnectCommand(
           label: 'Cloudflare',
           hint: 'Deploy to your own Cloudflare account.',
         },
-        { value: 'void', label: 'Void', hint: "Deploy to your company's Void Platform." },
+        { value: 'void', label: 'Nosam', hint: "Deploy to your company's Nosam Platform." },
       ],
     });
     if (isCancel(value)) {

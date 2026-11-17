@@ -49,7 +49,7 @@ describe('void auth destination routing', () => {
     expect(mocks.select).not.toHaveBeenCalled();
   });
 
-  it('uses the saved Void destination and maps status to whoami', async () => {
+  it('uses the saved Nosam destination and maps status to whoami', async () => {
     writeDeploymentPlatform(root, 'void');
     await runAuthRouter(root, parseAuthArgs(['status']), false);
     expect(mocks.account).toHaveBeenCalledWith(root, { subcommand: 'whoami' });
@@ -123,7 +123,7 @@ describe('void auth destination routing', () => {
     expect(process.env.VOID_TOKEN).toBe('env-token-for-a');
   });
 
-  it('shows the Void platform as disabled until a platform is connected', async () => {
+  it('shows the Nosam platform as disabled until a platform is connected', async () => {
     mocks.select.mockResolvedValue('cloudflare');
     await runAuthRouter(root, parseAuthArgs(['login']), true);
     expect(mocks.select.mock.calls[0]?.[0].options).toContainEqual(

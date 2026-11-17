@@ -160,7 +160,7 @@ describe('protected platform health checks', () => {
         destinations: [{ type: 'public', uri: destination }],
         policies: [
           {
-            name: 'Void platform health check',
+            name: 'Nosam platform health check',
             decision: 'bypass',
             precedence: 1,
             include: [{ everyone: {} }],

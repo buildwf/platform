@@ -21,7 +21,7 @@ function assertSchemaFixturePreserved(original, rows, projectModeMigrationApplie
   for (const [table, row] of Object.entries(original)) {
     for (const [key, value] of Object.entries(row)) {
       // 0054 deliberately normalizes the obsolete Worker mode to the public
-      // Void mode. Permit only this exact conversion after its immutable SQL
+      // Nosam mode. Permit only this exact conversion after its immutable SQL
       // was applied; every other pre-existing value must remain identical.
       const expected =
         projectModeMigrationApplied &&

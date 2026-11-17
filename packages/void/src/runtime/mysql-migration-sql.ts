@@ -1,7 +1,7 @@
 import { splitMigrationSql } from './migration-handler.ts';
 
 /**
- * Splits a MySQL migration file into the statements Void runs one query at a time. Hyperdrive
+ * Splits a MySQL migration file into the statements Nosam runs one query at a time. Hyperdrive
  * does not accept several statements in one query, and a file that runs statement by statement
  * can tell whether a failure left earlier statements committed.
  *

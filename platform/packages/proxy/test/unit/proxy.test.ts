@@ -271,7 +271,7 @@ describe('proxy worker', () => {
     expect(res.status).toBe(503);
   });
 
-  it('does not read the lifecycle gate for hosted Void Cloud', async () => {
+  it('does not read the lifecycle gate for hosted Nosam Cloud', async () => {
     const env = createEnv();
     const res = await worker.fetch(new Request('https://proxy.void.cloud/health'), env);
     expect(res.status).toBe(200);
@@ -1244,7 +1244,7 @@ describe('proxy worker', () => {
       expect(await res.json()).toEqual({
         error: 'platform capability unavailable',
         capability: 'ai',
-        message: 'This Void platform does not enable AI.',
+        message: 'This Nosam platform does not enable AI.',
       });
       for (const binding of Object.values(env.AI)) {
         expect(binding).not.toHaveBeenCalled();
@@ -1621,7 +1621,7 @@ describe('proxy worker', () => {
       );
     });
 
-    it('preserves user gateway options while forcing Void gateway id and project metadata', async () => {
+    it('preserves user gateway options while forcing Nosam gateway id and project metadata', async () => {
       const env = createEnv();
       await worker.fetch(
         post('/ai/run', {

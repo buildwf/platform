@@ -44,19 +44,19 @@ import { resolveCommandProjectId } from './resolve-project.ts';
 import { writeProvisionedWranglerConfig } from './wrangler.ts';
 
 export async function runEmailCommand(root: string, args: EmailArgs): Promise<void> {
-  // The developer's own Cloudflare account needs no Void token or project.
+  // The developer's own Cloudflare account needs no Nosam token or project.
   if (args.platform === 'cloudflare') {
     return runEmailCloudflareCommand(root, args);
   }
   if (args.subcommand === 'setup') {
     log.error(
-      'email: `void email setup` sets email up on your OWN Cloudflare account — run it with `--platform cloudflare`. The Void platform needs no setup: deploy, and `void email alias` shows your address.',
+      'email: `void email setup` sets email up on your OWN Cloudflare account — run it with `--platform cloudflare`. The Nosam platform needs no setup: deploy, and `void email alias` shows your address.',
     );
     process.exit(1);
   }
   if (args.subcommand === 'status') {
     log.error(
-      'email: `void email status` checks email on your own Cloudflare account. Run it with `--platform cloudflare`. On the Void platform, use `void email usage` and `void email destinations`.',
+      'email: `void email status` checks email on your own Cloudflare account. Run it with `--platform cloudflare`. On the Nosam platform, use `void email usage` and `void email destinations`.',
     );
     process.exit(1);
   }
@@ -204,7 +204,7 @@ export async function emailAllow(
     log.info(`${dest.address} is already verified.`);
   } else if (sent) {
     log.info(
-      'They click the link in their inbox — no Void or Cloudflare account needed. `void email destinations` to poll status.',
+      'They click the link in their inbox — no Nosam or Cloudflare account needed. `void email destinations` to poll status.',
     );
     printSuccess(`Verification email sent to ${dest.address}.`);
   } else if (dest.created) {
@@ -285,7 +285,7 @@ export function buildCfApiTokenTemplateUrl(domain: string): string {
   // Both are required by the form; the customer narrows them in the summary.
   url.searchParams.set('accountId', '*');
   url.searchParams.set('zoneId', 'all');
-  url.searchParams.set('name', `Void email — ${domain}`);
+  url.searchParams.set('name', `Nosam email — ${domain}`);
   return url.href;
 }
 

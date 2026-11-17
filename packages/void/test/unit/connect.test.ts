@@ -45,7 +45,7 @@ const discovery = {
   apiUrl: 'https://platform.example.com',
   applicationDomain: 'apps.example.com',
   proxyUrl: 'https://proxy.example.com',
-  displayName: 'Company Void',
+  displayName: 'Company Nosam',
   installationId: null,
   authenticationProviders: ['github'],
 };
@@ -221,7 +221,7 @@ describe('connect workflow', () => {
     expect(existsSync(projectFile())).toBe(false);
     expect(getActivePlatformConnection()).toBeNull();
   });
-  it('saves Cloudflare while retaining an existing Void project link', async () => {
+  it('saves Cloudflare while retaining an existing Nosam project link', async () => {
     seedProject({ projectId: 'project', slug: 'app', platformUrl: discovery.apiUrl });
     await runConnectCommand(root, parseConnectArgs(['--platform', 'cloudflare']), true);
     expect(mocks.cloudflare).toHaveBeenCalledWith(root, true);

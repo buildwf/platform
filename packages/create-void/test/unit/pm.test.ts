@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 describe('create-void package manager bootstrap', () => {
-  it('writes the narrow Void build policy before a fresh pnpm install', () => {
+  it('writes the narrow Nosam build policy before a fresh pnpm install', () => {
     const root = mkdtempSync(join(tmpdir(), 'create-void-pnpm-'));
     temporaryDirectories.push(root);
 

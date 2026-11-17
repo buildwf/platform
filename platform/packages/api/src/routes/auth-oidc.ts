@@ -373,7 +373,7 @@ app.post('/github-oidc', async (context) => {
     return context.json({ error: 'oidc sha is not the current branch head' }, 409);
   }
 
-  // Best-effort: create the executor-agnostic "Void Build" GitHub Check Run so
+  // Best-effort: create the executor-agnostic "Nosam Build" GitHub Check Run so
   // the github_actions path reports deploy status on the commit — mirroring the
   // container path (which creates it inside the BuildManager DO). Placed AFTER
   // the post-create freshness re-check so the cancel-and-return branch above can
@@ -399,7 +399,7 @@ app.post('/github-oidc', async (context) => {
   // run, attempt) while the build is still active reuses the in-flight row
   // (`result.outcome === 'reused'`), which already carries the check_run_id
   // its creating exchange persisted. Creating
-  // again would POST a SECOND "Void Build" run and overwrite the id, orphaning the
+  // again would POST a SECOND "Nosam Build" run and overwrite the id, orphaning the
   // first `in_progress` forever. A reused build whose earlier create FAILED still
   // has a null id, so a retry is allowed and cannot duplicate.
   //
@@ -428,7 +428,7 @@ app.post('/github-oidc', async (context) => {
           // container path uses. `build.logs_url` is the same run URL the webhook
           // completion reads, so create and complete stay consistent.
           detailsUrl: build.logs_url ?? undefined,
-          title: 'Void deploy in progress',
+          title: 'Nosam deploy in progress',
           summary: `Deploying \`${branch}\` @ ${claims.sha.slice(0, 7)} via GitHub Actions`,
         },
       );

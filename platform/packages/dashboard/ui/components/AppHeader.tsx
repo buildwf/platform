@@ -30,7 +30,7 @@ export default function AppHeader({
           <div className="dashboard-brand-spacer" />
           <picture>
             <source media="(prefers-color-scheme: dark)" srcSet={logoLight} />
-            <img alt="Void" className="dashboard-logo" src={logoDark} />
+            <img alt="Nosam" className="dashboard-logo" src={logoDark} />
           </picture>
         </a>
       </div>

@@ -191,7 +191,7 @@ describe('voidPlugin Vite environments', () => {
     }
   }, 30_000);
 
-  it('passes database.casing to the void/db client of a Void app', async () => {
+  it('passes database.casing to the void/db client of a Nosam app', async () => {
     const root = createProjectRoot();
     writeFileSync(join(root, 'package.json'), JSON.stringify({ type: 'module' }));
     writeFileSync(

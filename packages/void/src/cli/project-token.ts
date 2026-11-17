@@ -35,7 +35,7 @@ function printIssued(
     return;
   }
   log.info(`Credential ${result.id} is valid until ${result.expiresAt}.`);
-  log.warn('Copy this token now. Void will not display it again.');
+  log.warn('Copy this token now. Nosam will not display it again.');
   console.log(`\nVOID_TOKEN=${result.token}\nVOID_API_URL=${apiUrl}\n`);
   printSuccess('Project deploy credential created.');
 }

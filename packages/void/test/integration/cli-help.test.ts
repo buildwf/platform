@@ -59,7 +59,7 @@ describe('void help (subprocess)', () => {
     expect(output).toContain('--skip-build');
   });
 
-  it('distinguishes destination auth from Void account auth in help', () => {
+  it('distinguishes destination auth from Nosam account auth in help', () => {
     const root = createProject();
     const auth = runVoid(root, ['auth', '--help']);
     const account = runVoid(root, ['account', '--help']);

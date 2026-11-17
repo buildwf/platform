@@ -30,7 +30,7 @@ function uploadConflictMessage(result: CloudflareCommandResult, operation: strin
       line.includes('set via the Cloudflare Dashboard'),
   );
   if (outsideChange) {
-    return `platform: The Cloudflare CLI did not ${operation}: ${outsideChange.replace(/:$/, '.')} This Worker was changed outside Void. Run the same command in a terminal. Void then lists the changes and asks you before it replaces them.`;
+    return `platform: The Cloudflare CLI did not ${operation}: ${outsideChange.replace(/:$/, '.')} This Worker was changed outside Nosam. Run the same command in a terminal. Nosam then lists the changes and asks you before it replaces them.`;
   }
   // A config variable or binding has the name of a secret on the Worker. Keep
   // only the names: the CLI stopped, so its sentence about the replacement of
@@ -40,10 +40,10 @@ function uploadConflictMessage(result: CloudflareCommandResult, operation: strin
     ([name]) => name,
   );
   if (secretNames.length === 1) {
-    return `platform: The Cloudflare CLI did not ${operation}: the Worker has a secret with the same name as a value that Void sets: ${secretNames[0]}. Delete that secret from the Worker in the Cloudflare dashboard, then run the command again.`;
+    return `platform: The Cloudflare CLI did not ${operation}: the Worker has a secret with the same name as a value that Nosam sets: ${secretNames[0]}. Delete that secret from the Worker in the Cloudflare dashboard, then run the command again.`;
   }
   if (secretNames.length > 1) {
-    return `platform: The Cloudflare CLI did not ${operation}: the Worker has secrets with the same names as values that Void sets: ${new Intl.ListFormat('en').format(secretNames)}. Delete those secrets from the Worker in the Cloudflare dashboard, then run the command again.`;
+    return `platform: The Cloudflare CLI did not ${operation}: the Worker has secrets with the same names as values that Nosam sets: ${new Intl.ListFormat('en').format(secretNames)}. Delete those secrets from the Worker in the Cloudflare dashboard, then run the command again.`;
   }
   // Another Worker owns a workflow that this Worker binds. Keep the workflow
   // and Worker names, and not the advice about a config file.

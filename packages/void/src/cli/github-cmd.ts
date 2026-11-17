@@ -201,7 +201,7 @@ export async function runInstall(
       err.status === 403 &&
       err.code === 'github_identity_required'
     ) {
-      log.message('Your Void account needs a linked GitHub identity. Starting the GitHub link…');
+      log.message('Your Nosam account needs a linked GitHub identity. Starting the GitHub link…');
       await linkIdentity(client);
       try {
         ({ url } = await client.getGithubInstallUrl());
@@ -226,13 +226,13 @@ export async function runInstall(
     }
   }
 
-  log.message(`Open this URL to install the Void GitHub App:\n${pc.blue(formatUrl(url))}`);
+  log.message(`Open this URL to install the Nosam GitHub App:\n${pc.blue(formatUrl(url))}`);
   openBrowser(url);
   log.message('After installing, run `void github connect` to link a repository to your project.');
 }
 
 /**
- * Link the logged-in Void account to a GitHub identity. Returns on success so
+ * Link the logged-in Nosam account to a GitHub identity. Returns on success so
  * `github install` can continue after linking.
  */
 export async function runGithubLink(client: PlatformClient): Promise<void> {
@@ -266,14 +266,14 @@ export async function runGithubLink(client: PlatformClient): Promise<void> {
     }));
   } catch (err) {
     if (err instanceof PlatformApiError && err.code === 'github_already_linked') {
-      log.error('Your Void account is already linked to a different GitHub account.');
+      log.error('Your Nosam account is already linked to a different GitHub account.');
       process.exit(1);
     }
     if (
       err instanceof PlatformApiError &&
       (err.status === 409 || err.code === 'github_identity_conflict')
     ) {
-      log.error('This GitHub account is already linked to another Void account.');
+      log.error('This GitHub account is already linked to another Nosam account.');
       process.exit(1);
     }
     throw err;
@@ -333,7 +333,7 @@ export async function runGithubJoin(client: PlatformClient): Promise<void> {
       err.status === 503 &&
       err.code === 'github_oauth_not_configured'
     ) {
-      log.error('Organization installation sharing is not enabled on this Void instance.');
+      log.error('Organization installation sharing is not enabled on this Nosam instance.');
       process.exit(1);
     }
     throw err;
@@ -515,7 +515,7 @@ export async function runConnect(
 
   if (installations.length === 0 && isTTY) {
     log.info(
-      'No GitHub App installation is linked to your account yet — checking whether your organization already installed the Void GitHub App…',
+      'No GitHub App installation is linked to your account yet — checking whether your organization already installed the Nosam GitHub App…',
     );
     if ((await attemptAutoJoin()) > 0) {
       installations = await listActiveInstallations();
@@ -526,7 +526,7 @@ export async function runConnect(
     log.error(
       isTTY
         ? 'No GitHub App installation found for your account or your organizations. Run `void github install` first.'
-        : 'No active GitHub App installation. Run `void github install` first, or `void github join` if your organization already installed the Void GitHub App.',
+        : 'No active GitHub App installation. Run `void github install` first, or `void github join` if your organization already installed the Nosam GitHub App.',
     );
     process.exit(1);
   }
@@ -646,7 +646,7 @@ export async function runConnect(
     const picked = await select({
       message: 'Build executor:',
       options: [
-        { value: 'container', label: 'Cloudflare Container', hint: 'build on Void (default)' },
+        { value: 'container', label: 'Cloudflare Container', hint: 'build on Nosam (default)' },
         { value: 'github_actions', label: 'GitHub Actions', hint: "build in your repo's runner" },
       ],
       initialValue: 'container',

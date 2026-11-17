@@ -1246,7 +1246,7 @@ const CUSTOM_HEADER_FRAMING_OCTETS: number = ': '.length + CRLF.length;
 
 /**
  * Lower bound on every header rendered from caller values. Bcc and reserved
- * custom headers never render, and the fixed framing of Void's own headers
+ * custom headers never render, and the fixed framing of Nosam's own headers
  * is omitted. A custom header's name and framing, and each attachment part's
  * framing and filename (twice), are charged: a message of many empty headers
  * or attachments is all framing.

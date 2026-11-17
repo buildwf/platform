@@ -83,7 +83,7 @@ describe('runLink', () => {
       accountId: null,
       apiUrl: 'https://api.void.cloud',
       applicationDomain: 'void.app',
-      displayName: 'Void Cloud',
+      displayName: 'Nosam Cloud',
       installationId: null,
       kind: 'connected',
       proxyUrl: 'https://proxy.void.cloud',

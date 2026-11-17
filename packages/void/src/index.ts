@@ -73,7 +73,7 @@ import { CLOUDFLARE_DEPLOY_BUILD_ENV, loadLocalEnv, resolveRemoteMode } from './
 
 const scheduledPreviewPointerCleanups = new Set<string>();
 
-/** Returns the Vite plugins that build and serve a Void app on Cloudflare. */
+/** Returns the Vite plugins that build and serve a Nosam app on Cloudflare. */
 export function voidPlugin(options?: {
   persistTo?: string;
   auxiliaryWorkers?: Array<AuxiliaryWorkerConfig>;
@@ -520,7 +520,7 @@ export function voidPlugin(options?: {
     },
   };
 
-  // Void-managed auth uses native node:crypto password hashing.
+  // Nosam-managed auth uses native node:crypto password hashing.
   // PostgreSQL needs nodejs_compat for the `pg` driver (events, net, tls, dns, etc.).
   // Cloudflare's Sandbox SDK also imports Node built-ins.
   // Other apps only need nodejs_als for AsyncLocalStorage (isomorphic fetch context threading).

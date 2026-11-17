@@ -9,18 +9,18 @@ export function platformWelcomePage(platformName: string, apiUrl: string): strin
     content:
       browserPageLead(
         `Welcome to ${platformName}`,
-        'This is a Void platform. Connect the Void CLI to deploy and manage your applications here.',
+        'This is a Nosam platform. Connect the Nosam CLI to deploy and manage your applications here.',
       ) +
       `<div class="void-auth-section">
 <h2>Connect to this platform</h2>
-<p>Install the Void CLI if you haven't already:</p>
+<p>Install the Nosam CLI if you haven't already:</p>
 <pre><code>npm install -g void</code></pre>
-<p>From a new or unlinked Void app directory, connect to this platform:</p>
+<p>From a new or unlinked Nosam app directory, connect to this platform:</p>
 <pre><code>${command}</code></pre>
 <p>The CLI opens your browser to sign in when needed. If access is restricted, ask your platform administrator for an invitation and sign in with the invited email address.</p>
 </div>
 <div class="void-auth-section">
-<p>Ready to deploy? Run <code>void deploy</code> from your application's directory. To create a new application, follow the <a href="https://void.cloud/guide/quickstart">Void quickstart</a>, then connect it to this platform before deploying.</p>
+<p>Ready to deploy? Run <code>void deploy</code> from your application's directory. To create a new application, follow the <a href="https://void.cloud/guide/quickstart">Nosam quickstart</a>, then connect it to this platform before deploying.</p>
 </div>
 <div class="void-auth-section">
 <h2>Administration</h2>
@@ -45,7 +45,7 @@ export function platformInvitationPage(
     content:
       browserPageLead(
         invitationCommand ? 'Accept your project invitation' : `Get Started with ${platformName}`,
-        'Connect the Void CLI to this platform. When prompted, sign in with an account whose verified email address matches your invitation:',
+        'Connect the Nosam CLI to this platform. When prompted, sign in with an account whose verified email address matches your invitation:',
       ) +
       `<pre><code>${command}</code></pre>
 ${
@@ -56,7 +56,7 @@ ${
 }
 <p>The CLI opens your browser to sign in when needed. Invitation commands use your connected platform account and can run from any directory.</p>
 <p>To work on an application on this platform, open its directory and run <code>void project link</code> if it is not linked yet. If that directory is already linked to another project, use a separate checkout without a <code>.void/project.json</code> file, connect to this platform there, and run <code>void project link</code>. Accepting an invitation keeps existing project links.</p>
-<p>Need to create an application? Read the <a href="https://void.cloud/guide/quickstart">Void quickstart</a>, then return here to connect to this platform before deploying.</p>`,
+<p>Need to create an application? Read the <a href="https://void.cloud/guide/quickstart">Nosam quickstart</a>, then return here to connect to this platform before deploying.</p>`,
   });
 }
 

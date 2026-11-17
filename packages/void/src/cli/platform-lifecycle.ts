@@ -173,7 +173,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       recoverPlatformInstallations(client, accountId, undefined, commandArgs.selector),
     );
     if (recovered.length === 0) {
-      log.info(`No recoverable Void platform installations were found in ${accountId}.`);
+      log.info(`No recoverable Nosam platform installations were found in ${accountId}.`);
       return;
     }
     for (const manifest of recovered) {
@@ -447,13 +447,16 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
   const displayName =
     recorded?.displayName ??
     (args.displayName ||
-      (await promptText('Platform display name:', `${installationName || installationSlug} Void`)));
+      (await promptText(
+        'Platform display name:',
+        `${installationName || installationSlug} Nosam`,
+      )));
   let controlPlaneDomain = recorded
     ? (recorded.controlPlane.apiHostname ?? '')
     : args.controlPlaneDomain ||
       (process.stdin.isTTY && !args.noControlPlaneDomain
         ? await promptText(
-            'Where do you want to host the Void Platform API? Leave empty for a workers.dev fallback.',
+            'Where do you want to host the Nosam Platform API? Leave empty for a workers.dev fallback.',
             { placeholder: applicationDomain || 'platform.example.com' },
             true,
           )
@@ -468,7 +471,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
     process.stdin.isTTY
   ) {
     const catchAll = await confirm({
-      message: `Dedicate all unmatched ${zoneName} traffic to Void apps?`,
+      message: `Dedicate all unmatched ${zoneName} traffic to Nosam apps?`,
       initialValue: false,
     });
     if (isCancel(catchAll) || typeof catchAll === 'symbol') {
@@ -623,13 +626,13 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       const choice = requestedHyperdriveId
         ? 'existing'
         : await select({
-            message: 'How should Void set up Hyperdrive?',
+            message: 'How should Nosam set up Hyperdrive?',
             options: [
               ...(configurations.length > 0
                 ? [{ value: 'existing', label: 'Use an existing Hyperdrive' }]
                 : []),
               ...(suggestedNameAvailable
-                ? [{ value: 'create', label: 'Let Void create Hyperdrive', hint: 'recommended' }]
+                ? [{ value: 'create', label: 'Let Nosam create Hyperdrive', hint: 'recommended' }]
                 : []),
               { value: 'setup', label: 'Set up a separately managed Hyperdrive' },
             ],
@@ -639,7 +642,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       }
       if (choice === 'setup') {
         note(
-          `Create a Hyperdrive in account ${accountId} with any unused name${suggestedNameAvailable ? ` such as ${suggestedName}` : ''}. Point it at the same dedicated PostgreSQL database you will give Void, use a runtime database user, and disable SQL result caching. If your organization manages Hyperdrive, ask its administrator to create it. Then rerun this command and select it from the list.\nSetup: ${formatUrl('https://developers.cloudflare.com/hyperdrive/get-started/')}`,
+          `Create a Hyperdrive in account ${accountId} with any unused name${suggestedNameAvailable ? ` such as ${suggestedName}` : ''}. Point it at the same dedicated PostgreSQL database you will give Nosam, use a runtime database user, and disable SQL result caching. If your organization manages Hyperdrive, ask its administrator to create it. Then rerun this command and select it from the list.\nSetup: ${formatUrl('https://developers.cloudflare.com/hyperdrive/get-started/')}`,
           pc.bold('Set up Hyperdrive first'),
         );
         outro('No Cloudflare or local installation state was changed.');
@@ -649,7 +652,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
         const selectedId =
           requestedHyperdriveId ??
           (await select({
-            message: 'Which Hyperdrive should Void use?',
+            message: 'Which Hyperdrive should Nosam use?',
             options: [...configurations]
               .sort(
                 (a, b) =>
@@ -1298,7 +1301,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
     });
     if (generatedKeys.length) {
       log.info(
-        `Void generated the ${generatedKeys.join(' and ')} and keeps ${generatedKeys.length > 1 ? 'them' : 'it'} in this machine’s encrypted recovery data. ` +
+        `Nosam generated the ${generatedKeys.join(' and ')} and keeps ${generatedKeys.length > 1 ? 'them' : 'it'} in this machine’s encrypted recovery data. ` +
           platformSetupLink({
             title: 'About these keys',
             url: 'https://void.cloud/guide/platform/installation/credentials#signing-and-encryption-keys',
@@ -1306,8 +1309,8 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       );
     }
     // A resumed install uploads the Workers it created before. Without a
-    // terminal, the Cloudflare CLI stops that upload after a change outside Void,
-    // and the install refuses an active version without Void's record of its
+    // terminal, the Cloudflare CLI stops that upload after a change outside Nosam,
+    // and the install refuses an active version without Nosam's record of its
     // triggers. The installer takes the database lock later, so this check
     // cannot read the database.
     const outsideChanges = await reviewPlatformWorkerOutsideChanges({

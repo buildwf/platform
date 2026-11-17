@@ -1368,7 +1368,7 @@ describe('platform installation planning', () => {
     });
 
     await expect(createPlatformInstallPlan(withGateway, input, manifest)).rejects.toThrow(
-      `platform: ai-gateway "${name}" already exists, and Void cannot tell whether this installation created it. Nothing was overwritten. If an earlier failed attempt of this installation created it, delete it in the Cloudflare dashboard, then rerun the command. Otherwise, choose another installation name.`,
+      `platform: ai-gateway "${name}" already exists, and Nosam cannot tell whether this installation created it. Nothing was overwritten. If an earlier failed attempt of this installation created it, delete it in the Cloudflare dashboard, then rerun the command. Otherwise, choose another installation name.`,
     );
     await expect(createPlatformInstallPlan(withGateway, input, null)).rejects.toThrow(
       'Resume the owning installation, or choose another installation name.',

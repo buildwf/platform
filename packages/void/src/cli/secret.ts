@@ -140,7 +140,7 @@ async function resolveCloudflareSecretBackend(
 ): Promise<SecretBackend> {
   if (args.projectName) {
     throw new Error(
-      'secret: --project selects a Void platform project and is not used for direct Cloudflare apps.',
+      'secret: --project selects a Nosam platform project and is not used for direct Cloudflare apps.',
     );
   }
   const {

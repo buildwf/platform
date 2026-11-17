@@ -164,24 +164,24 @@ function buildDatabaseManifest() {
   const journalContents = readFileSync(journalPath);
   const journal = parseObjectJson(journalContents, journalPath);
   if (journal.dialect !== 'postgresql') {
-    throw new Error('Void Platform migrations must use the PostgreSQL dialect.');
+    throw new Error('Nosam Platform migrations must use the PostgreSQL dialect.');
   }
   if (!Array.isArray(journal.entries)) {
-    throw new Error('Void Platform migration journal entries must be an array.');
+    throw new Error('Nosam Platform migration journal entries must be an array.');
   }
   const compatibilityPath = join(drizzleRoot, 'compatibility.json');
   const compatibility = parseObjectJson(readFileSync(compatibilityPath), compatibilityPath);
   if (compatibility.schemaVersion !== 1) {
-    throw new Error('Void Platform database compatibility schemaVersion must be 1.');
+    throw new Error('Nosam Platform database compatibility schemaVersion must be 1.');
   }
   if (!Array.isArray(compatibility.rollbackSafeFrom)) {
-    throw new Error('Void Platform rollbackSafeFrom must be an array.');
+    throw new Error('Nosam Platform rollbackSafeFrom must be an array.');
   }
   // parsePlatformRuntimeManifest validates these values, their order, and the rollback lineage.
   const migrations = journal.entries.map((entry, position) => {
     const tag = entry?.tag;
     if (typeof tag !== 'string') {
-      throw new Error(`Void Platform migration journal entry ${position} has an invalid tag.`);
+      throw new Error(`Nosam Platform migration journal entry ${position} has an invalid tag.`);
     }
     const sqlPath = join(drizzleRoot, `${tag}.sql`);
     let sql;
@@ -189,7 +189,7 @@ function buildDatabaseManifest() {
       sql = readFileSync(sqlPath);
     } catch (error) {
       throw new Error(
-        `Void Platform migration ${tag} is missing: ${error instanceof Error ? error.message : String(error)}`,
+        `Nosam Platform migration ${tag} is missing: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
     return {
@@ -215,11 +215,11 @@ function parseObjectJson(contents, path) {
     value = JSON.parse(contents.toString('utf8'));
   } catch (error) {
     throw new Error(
-      `Void Platform metadata is invalid at ${path}: ${error instanceof Error ? error.message : String(error)}`,
+      `Nosam Platform metadata is invalid at ${path}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error(`Void Platform metadata at ${path} must be an object.`);
+    throw new Error(`Nosam Platform metadata at ${path} must be an object.`);
   }
   return value;
 }

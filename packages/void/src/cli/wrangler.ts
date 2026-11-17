@@ -137,7 +137,7 @@ export function readRootWranglerConfig(root: string): RootWranglerConfig | undef
   return undefined;
 }
 
-/** Read the last traffic attachment state Void successfully published remotely. */
+/** Read the last traffic attachment state Nosam successfully published remotely. */
 export function readWranglerPublishedTrafficSnapshot(
   configPath: string,
 ): WranglerPublishedTrafficSnapshot | undefined {
@@ -201,7 +201,7 @@ type DurableObjectMigration = DurableObjectMigrationStep & {
   tag?: string;
 };
 
-/** Latest compatibility date the Void test suite is pinned against. */
+/** Latest compatibility date the Nosam test suite is pinned against. */
 export const LATEST_KNOWN_COMPAT_DATE = '2026-02-24';
 
 /** Subset of wrangler config fields we extract. */
@@ -361,7 +361,7 @@ function resolveGeneratedName(base: string, used: Set<string>, kind: string): st
 }
 
 /**
- * Read compatibility settings with priority: Void config > project Wrangler config >
+ * Read compatibility settings with priority: Nosam config > project Wrangler config >
  * `<buildOutputDir>/wrangler.json` > latest known-good date. Read-only; use
  * `ensureWranglerCompat()` to pin the default date.
  */
@@ -588,7 +588,7 @@ export function syncWranglerBindings(
   }
 
   // Workers AI has no local simulator, so direct Cloudflare development binds it remotely.
-  // Managed projects keep using Void's proxy and gain no billable binding.
+  // Managed projects keep using Nosam's proxy and gain no billable binding.
   if (bindings.needsAI && options?.directCloudflareAi) {
     const existing = parsed.ai as Record<string, unknown> | undefined;
     const binding =
@@ -783,7 +783,7 @@ export function syncWranglerWebSockets(
 
 /**
  * Registered WebSocket classes without a source route. They stay exported while their
- * bindings remain; only classes created by Void's WebSocket migration tag count.
+ * bindings remain; only classes created by Nosam's WebSocket migration tag count.
  */
 export function readWranglerWebSocketTombstones(
   root: string,
@@ -854,7 +854,7 @@ export type WranglerQueueProducer = {
   binding: string;
 };
 
-/** A Wrangler `queues.consumers[]` entry, as Void's queue scanner emits it. */
+/** A Wrangler `queues.consumers[]` entry, as Nosam's queue scanner emits it. */
 export type WranglerQueueConsumer = {
   queue: string;
   max_batch_size?: number;
@@ -866,7 +866,7 @@ export type WranglerQueueConsumer = {
 /**
  * Root Wrangler config fields that Cloudflare's create commands do not write.
  *
- * Pass `queues` for framework self-host builds only. A native Void build already emits
+ * Pass `queues` for framework self-host builds only. A native Nosam build already emits
  * scanner queues, and the Cloudflare plugin concatenates arrays, so they would duplicate.
  */
 export type ProvisionedWranglerPatch = {
@@ -898,13 +898,13 @@ export type ProvisionedWranglerPatch = {
   queues?: {
     producers?: Array<WranglerQueueProducer>;
     consumers?: Array<WranglerQueueConsumer>;
-    /** Remove only stale entries carrying explicit Void-managed provenance. */
+    /** Remove only stale entries carrying explicit Nosam-managed provenance. */
     reconcileVoidOwned?: boolean;
   };
   /** Upserts `{ name }` into `send_email[]`; an existing entry's destinations are user-owned. */
   sendEmail?: { name: string };
   /**
-   * Email Routing `addresses`, owned by Void as a whole array. `null` deletes the key:
+   * Email Routing `addresses`, owned by Nosam as a whole array. `null` deletes the key:
    * an empty array would delete every routing rule.
    */
   addresses?: Array<string> | null;
@@ -915,7 +915,7 @@ export type ProvisionedWranglerPatch = {
 type ManagedQueueProvenance = {
   producerBindings: Array<string>;
   consumerQueues: Array<string>;
-  /** Void-owned consumers removed locally but not yet confirmed removed remotely. */
+  /** Nosam-owned consumers removed locally but not yet confirmed removed remotely. */
   pendingConsumerRemovals: Array<string>;
 };
 
@@ -976,7 +976,7 @@ function writeManagedQueueProvenance(text: string, provenance: ManagedQueueProve
 }
 
 /**
- * Void-owned consumer queues that may need remote cleanup: current managed consumers (the
+ * Nosam-owned consumer queues that may need remote cleanup: current managed consumers (the
  * caller subtracts desired ones) and pending removals, which survive failed deploys.
  */
 export function readWranglerManagedQueueCleanupCandidates(configPath: string): Array<string> {
@@ -1214,7 +1214,7 @@ export function writeProvisionedWranglerConfig(
     if (matches.length > 1) {
       throw new Error(
         `deploy: cannot update "${configPath}" — binding ${JSON.stringify(binding)} is declared ` +
-          `${matches.length} times in "${field}". Void cannot choose which entry to update, and ` +
+          `${matches.length} times in "${field}". Nosam cannot choose which entry to update, and ` +
           `wrangler rejects duplicate binding names. Remove the duplicate and retry.`,
       );
     }
@@ -1319,10 +1319,10 @@ export function writeProvisionedWranglerConfig(
           throw new Error(
             `deploy: cannot update "${configPath}" — the D1 entry for binding ` +
               `${JSON.stringify(patch.d1MigrationsDir.binding)} already sets "migrations_dir": ` +
-              `${JSON.stringify(existingDir)}, but Void keeps this database's migrations in ` +
+              `${JSON.stringify(existingDir)}, but Nosam keeps this database's migrations in ` +
               `${JSON.stringify(patch.d1MigrationsDir.dir)}. Refusing to overwrite an explicit ` +
               `different migrations directory. Either remove "migrations_dir" from the entry (or ` +
-              `set it to ${JSON.stringify(patch.d1MigrationsDir.dir)}) to let Void manage it, or ` +
+              `set it to ${JSON.stringify(patch.d1MigrationsDir.dir)}) to let Nosam manage it, or ` +
               `move the migrations and keep your directory, then retry.`,
           );
         }
@@ -1389,7 +1389,7 @@ export function writeProvisionedWranglerConfig(
               `this config. Remove the duplicate producers and retry.`,
           );
         }
-        // A producer Void wrote earlier may move to the queue's new name; the update below
+        // A producer Nosam wrote earlier may move to the queue's new name; the update below
         // rewrites its `queue` in place.
         const voidOwned =
           reconcileManagedQueues && managedProducerBindings.has(String(entry.binding));

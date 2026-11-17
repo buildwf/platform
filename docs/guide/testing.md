@@ -5,7 +5,7 @@ outline: deep
 
 # Testing
 
-Void apps use [Vitest](https://vitest.dev/). With Vite+, run your tests with:
+Nosam apps use [Vitest](https://vitest.dev/). With Vite+, run your tests with:
 
 ```sh
 vp test
@@ -15,7 +15,7 @@ Import `it`, `expect`, and other test APIs from `vite-plus/test`. If you chose V
 
 Vitest uses your `vite.config.ts`. Imports such as `void/*` and `@schema` work without extra test configuration.
 
-Put tests in `tests/` or beside the code they test in `src/`. Keep them out of [convention directories](../reference/structure.md) such as `routes/`, where Void would treat them as app routes.
+Put tests in `tests/` or beside the code they test in `src/`. Keep them out of [convention directories](../reference/structure.md) such as `routes/`, where Nosam would treat them as app routes.
 
 ## Bindings {#bindings}
 

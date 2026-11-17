@@ -219,7 +219,7 @@ describe('init scaffold arguments', () => {
 });
 
 describe('GitHub Actions deployment workflows', () => {
-  it('requires a selected URL for a Void deployment workflow', () => {
+  it('requires a selected URL for a Nosam deployment workflow', () => {
     expect(() => getWorkflowYaml('/project', 'npm', 'my-app', 'void')).toThrow('void connect');
   });
   it('scaffolds the direct Cloudflare deployment path with a scoped API token', () => {
@@ -304,7 +304,7 @@ describe('GitHub Actions deployment workflows', () => {
       'void',
       'https://api.company.example',
     );
-    expect(yaml).toContain('name: Deploy to Void');
+    expect(yaml).toContain('name: Deploy to Nosam');
     expect(yaml).toContain('id-token: write');
     expect(yaml).toContain(
       "VOID_API_URL: ${{ vars.VOID_API_URL || 'https://api.company.example' }}",
@@ -657,7 +657,7 @@ beforeEach(() => {
     accountId: null,
     apiUrl: 'https://api.void.cloud',
     applicationDomain: 'void.app',
-    displayName: 'Void Cloud',
+    displayName: 'Nosam Cloud',
     installationId: null,
     kind: 'connected',
     proxyUrl: 'https://proxy.void.cloud',
@@ -685,7 +685,7 @@ beforeEach(() => {
       managedBuilds: true,
       sandbox: true,
     },
-    displayName: 'Void Cloud',
+    displayName: 'Nosam Cloud',
     installationId: null,
     platformVersion: '0.10.14',
     proxyUrl: 'https://proxy.void.cloud',
@@ -693,11 +693,11 @@ beforeEach(() => {
   });
 });
 
-describe('Void platform deployment setup', () => {
+describe('Nosam platform deployment setup', () => {
   it('connects a genuinely new user before attempting platform login', async () => {
     rmSync(platformRegistryDirectory, { force: true, recursive: true });
     mockGetApiUrl.mockImplementation(() => {
-      throw new Error('No Void platform connected');
+      throw new Error('No Nosam platform connected');
     });
     mockText.mockResolvedValue('https://platform.example.test');
     mockDiscoverPlatform.mockResolvedValueOnce({
@@ -714,7 +714,7 @@ describe('Void platform deployment setup', () => {
         managedBuilds: false,
         sandbox: false,
       },
-      displayName: 'Company Void',
+      displayName: 'Company Nosam',
       installationId: 'company-a1b2c3d4',
       platformVersion: '0.10.14',
       proxyUrl: 'https://proxy.example.test',
@@ -753,7 +753,7 @@ describe('Void platform deployment setup', () => {
           managedBuilds: false,
           sandbox: false,
         },
-        displayName: 'Company Void',
+        displayName: 'Company Nosam',
         installationId: 'company-a1b2c3d4',
         platformVersion: '0.10.14',
         proxyUrl: 'https://proxy.example.test',
@@ -761,7 +761,7 @@ describe('Void platform deployment setup', () => {
       });
 
       await expect(runInitCommand(root, { github: true, tsconfig: false })).rejects.toThrow(
-        'Company Void does not support GitHub Actions deployments',
+        'Company Nosam does not support GitHub Actions deployments',
       );
       expect(existsSync(join(root, '.github', 'workflows', 'void-deploy.yml'))).toBe(false);
     } finally {
@@ -1399,7 +1399,7 @@ describe('isScaffoldableEmptyProject', () => {
         'import "./style.css"',
       );
       const page = readFileSync(join(root, 'src', 'App.tsx'), 'utf-8');
-      expect(page).toContain('Welcome to Void');
+      expect(page).toContain('Welcome to Nosam');
       expect(page).toContain('The list below is loaded from');
       expect(page).toContain('href="/api/hello"');
       expect(page).toContain('src="/react.svg"');
@@ -1480,7 +1480,7 @@ describe('isScaffoldableEmptyProject', () => {
       expect(pkg.scripts.dev).toBe('vp dev');
 
       const page = readFileSync(join(root, 'src', 'App.tsx'), 'utf-8');
-      expect(page).toContain('Welcome to Void');
+      expect(page).toContain('Welcome to Nosam');
       expect(page).toContain('This starter is a React single-page app with no backend yet.');
       expect(page).toContain('features.');
       expect(page).not.toContain('href="/api/hello"');
@@ -1637,13 +1637,11 @@ describe('isScaffoldableEmptyProject', () => {
       const pkg = JSON.parse(readFileSync(join(appRoot, 'package.json'), 'utf-8'));
       expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
       expect(pkg.scripts.dev).toBe('vp dev');
-      expect(readFileSync(join(appRoot, 'src', 'App.tsx'), 'utf-8')).toContain(
-        'Welcome to Void',
-      );
+      expect(readFileSync(join(appRoot, 'src', 'App.tsx'), 'utf-8')).toContain('Welcome to Nosam');
 
       const locationPrompt = mockSelect.mock.calls[0]?.[0];
       expect(locationPrompt.message).toBe(
-        'This folder is not empty. Where should Void initialize?',
+        'This folder is not empty. Where should Nosam initialize?',
       );
       expect(locationPrompt.initialValue).toBe('subfolder');
       expect(mockText).toHaveBeenCalledWith(
@@ -1874,7 +1872,7 @@ jobs:
       const workflows = readdirSync(join(root, '.github', 'workflows')).sort();
       expect(workflows).toEqual(['deploy.yml', 'void-deploy.yml']);
       const oidc = readFileSync(join(root, '.github', 'workflows', 'void-deploy.yml'), 'utf-8');
-      expect(oidc).toContain('name: Deploy to Void');
+      expect(oidc).toContain('name: Deploy to Nosam');
       expect(oidc).toContain('npx void deploy --platform void --project "$VOID_PROJECT"');
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -2190,7 +2188,7 @@ export default config;
         await runInitCommand(root, { tsconfig: true, github: false });
 
         const instructions = readFileSync(join(root, 'AGENTS.md'), 'utf-8');
-        expect(instructions).toContain('## Void');
+        expect(instructions).toContain('## Nosam');
         expect(instructions).toContain('node_modules/void/docs/');
         expect(instructions.match(/^- /gm)).toHaveLength(2);
         expect(existsSync(join(root, 'CLAUDE.md'))).toBe(false);
@@ -2223,7 +2221,7 @@ export default config;
           await runInitCommand(root, { tsconfig: true, github: false });
 
           const instructions = readFileSync(join(root, 'AGENTS.md'), 'utf-8');
-          expect(instructions).toContain('## Void');
+          expect(instructions).toContain('## Nosam');
           if (hasAgentsFile) {
             expect(instructions.startsWith(projectInstructions)).toBe(true);
           }
@@ -2232,8 +2230,8 @@ export default config;
           expect(mockSelect).not.toHaveBeenCalled();
           expect(mockConfirm).toHaveBeenCalledExactlyOnceWith({
             message: hasAgentsFile
-              ? 'Append Void instructions to AGENTS.md?'
-              : 'Create AGENTS.md with Void instructions?',
+              ? 'Append Nosam instructions to AGENTS.md?'
+              : 'Create AGENTS.md with Nosam instructions?',
             initialValue: true,
           });
         } finally {
@@ -2271,7 +2269,7 @@ export default config;
           expect(updated.match(/<!--injected-by-void-v/g)).toHaveLength(1);
           expect(updated.match(/<!--\/injected-by-void-->/g)).toHaveLength(1);
           expect(mockConfirm).toHaveBeenCalledExactlyOnceWith({
-            message: 'Update Void instructions in AGENTS.md?',
+            message: 'Update Nosam instructions in AGENTS.md?',
             initialValue: true,
           });
           await runInitCommand(root, { tsconfig: true, github: false });
@@ -2346,7 +2344,7 @@ export default config;
     });
   });
 
-  it('creates .gitignore with Void defaults during targeted setup', async () => {
+  it('creates .gitignore with Nosam defaults during targeted setup', async () => {
     const root = mkdtempSync(join(tmpdir(), 'void-init-'));
     try {
       await runInitCommand(root, { tsconfig: true, github: false });
@@ -2363,7 +2361,7 @@ export default config;
     }
   });
 
-  it('appends missing Void defaults to an existing .gitignore', async () => {
+  it('appends missing Nosam defaults to an existing .gitignore', async () => {
     const root = mkdtempSync(join(tmpdir(), 'void-init-'));
     try {
       writeFileSync(join(root, '.gitignore'), 'node_modules\ncustom-cache\n');
@@ -2407,7 +2405,7 @@ export default config;
     }
   });
 
-  it('merges Void type files and path aliases into root-level tsconfig fields', async () => {
+  it('merges Nosam type files and path aliases into root-level tsconfig fields', async () => {
     const root = mkdtempSync(join(tmpdir(), 'void-init-'));
     try {
       mkdirSync(join(root, 'routes'), { recursive: true });
@@ -2446,7 +2444,7 @@ export default config;
     }
   });
 
-  it('preserves directly extended tsconfig files and paths when adding Void config', async () => {
+  it('preserves directly extended tsconfig files and paths when adding Nosam config', async () => {
     const root = mkdtempSync(join(tmpdir(), 'void-init-'));
     try {
       mkdirSync(join(root, 'routes'), { recursive: true });
@@ -2492,7 +2490,7 @@ export default config;
     }
   });
 
-  it('writes Void path aliases relative to an inherited baseUrl', async () => {
+  it('writes Nosam path aliases relative to an inherited baseUrl', async () => {
     const workspaceRoot = mkdtempSync(join(tmpdir(), 'void-init-'));
     try {
       const root = join(workspaceRoot, 'packages', 'app');
@@ -2537,7 +2535,7 @@ export default config;
     }
   });
 
-  it('merges Void type files and paths into explicit empty tsconfig override fields', async () => {
+  it('merges Nosam type files and paths into explicit empty tsconfig override fields', async () => {
     const root = mkdtempSync(join(tmpdir(), 'void-init-'));
     try {
       mkdirSync(join(root, 'routes'), { recursive: true });
@@ -2772,7 +2770,7 @@ export default config;
       await runInitCommand(root);
 
       expect(mockConfirm.mock.calls[1]?.[0]).toMatchObject({
-        message: 'Log in now and link or create a Void project?',
+        message: 'Log in now and link or create a Nosam project?',
       });
       expect(mockRunLogin).toHaveBeenCalledWith(
         'https://api.void.cloud',
@@ -2847,7 +2845,7 @@ export default config;
       await runInitCommand(root);
 
       expect(mockConfirm.mock.calls[1]?.[0]).toMatchObject({
-        message: 'Link your Void project now?',
+        message: 'Link your Nosam project now?',
       });
       expect(mockConfirm.mock.calls[2]?.[0]).toMatchObject({
         message:
@@ -2869,7 +2867,7 @@ export default config;
     }
   });
 
-  it('persists skipped deployment setup without prompting for Void setup', async () => {
+  it('persists skipped deployment setup without prompting for Nosam setup', async () => {
     const root = mkdtempSync(join(tmpdir(), 'void-init-'));
     try {
       writeFileSync(
@@ -2929,7 +2927,7 @@ export default config;
         {
           value: 'sqlite',
           label: 'D1 (SQLite)',
-          hint: 'Zero-config and fully managed by Void; best for prototyping and read-heavy apps.',
+          hint: 'Zero-config and fully managed by Nosam; best for prototyping and read-heavy apps.',
         },
         {
           value: 'postgresql',
@@ -3495,7 +3493,7 @@ export default config;
     }
   });
 
-  it('keeps the existing pnpm build approvals when adding the Void defaults', async () => {
+  it('keeps the existing pnpm build approvals when adding the Nosam defaults', async () => {
     const roots: Array<string> = [];
     const initWithWorkspaceYaml = async (yaml: string): Promise<string> => {
       const root = mkdtempSync(join(tmpdir(), 'void-init-'));

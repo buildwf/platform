@@ -112,7 +112,7 @@ onBeforeUnmount(() => {
 <template>
   <section id="cli" class="cli-section" data-theme="dark" aria-labelledby="cli-heading">
     <div class="wrapper border-t border-nickel cli-heading">
-      <a href="/reference/cli" class="cli-wordmark" aria-label="Void CLI reference">
+      <a href="/reference/cli" class="cli-wordmark" aria-label="Nosam CLI reference">
         <img src="/void-cli.svg" alt="" width="536" height="113" />
       </a>
       <h2 id="cli-heading" class="text-white">Deploy with One Command</h2>
@@ -139,7 +139,7 @@ onBeforeUnmount(() => {
         </TabsContent>
 
         <div class="cli-controls">
-          <TabsList aria-label="Void CLI commands" class="cli-tabs">
+          <TabsList aria-label="Nosam CLI commands" class="cli-tabs">
             <TabsTrigger v-for="tab in tabs" :key="tab.id" :value="tab.id">
               {{ tab.label }}
             </TabsTrigger>

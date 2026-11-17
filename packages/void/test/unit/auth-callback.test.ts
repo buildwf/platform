@@ -74,7 +74,7 @@ describe('awaitBrowserCallback', () => {
     const res = await fetch(hit);
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain('Signed in to Void');
+    expect(html).toContain('Signed in to Nosam');
     expect(html).toContain('aria-label="Success"');
 
     // finalize ran inside the request handler with the callback params, and the

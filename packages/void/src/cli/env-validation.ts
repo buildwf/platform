@@ -594,7 +594,7 @@ function secretListFailureMessage(
     case 'nonzero-exit':
       return (
         `${base} (reason: nonzero-exit, status ${detail.exitCode ?? 'unknown'}). ` +
-        'Run `void secret list` to retry through Void and see the Cloudflare diagnostics.'
+        'Run `void secret list` to retry through Nosam and see the Cloudflare diagnostics.'
       );
     case 'malformed-output':
       return (
@@ -769,7 +769,7 @@ export function createDefaultSecretListRunner(
 }
 
 /**
- * Child env for the default runner: drops the CF Access credentials (Void API only),
+ * Child env for the default runner: drops the CF Access credentials (Nosam API only),
  * forces sanitized logs, and pins the account. Ambient transport env such as
  * `CLOUDFLARE_API_BASE_URL` is kept so a staging or FedRAMP endpoint still applies.
  * Windows env keys are case-insensitive, so there every case variant is removed.

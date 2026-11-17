@@ -50,7 +50,7 @@ export async function promptPlatformUrl(): Promise<string> {
     throw new Error('platform: A platform URL is required in non-interactive mode.');
   }
   const value = await text({
-    message: 'Void platform API URL:',
+    message: 'Nosam platform API URL:',
     placeholder: 'platform.example.com',
     validate: (input) => {
       if (!input) {
@@ -86,7 +86,7 @@ async function resolveConnection(selector: string): Promise<PlatformConnection> 
     );
   }
   const picked = await select({
-    message: 'Select a Void platform:',
+    message: 'Select a Nosam platform:',
     options: connections.map((connection) => ({
       label: connection.displayName,
       hint: connection.apiUrl,

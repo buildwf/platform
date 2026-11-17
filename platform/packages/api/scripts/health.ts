@@ -3,7 +3,7 @@
  *
  * From the repository root:
  *   vp run --filter @voidcloud/platform health --connection https://platform.example.com
- *   vp run --filter @voidcloud/platform health:staging  # Void Cloud maintainers
+ *   vp run --filter @voidcloud/platform health:staging  # Nosam Cloud maintainers
  *
  * Sign in with `void platform auth login`, or supply VOID_OPERATOR_TOKEN and
  * VOID_API_URL in automation. Build the SDK with `vp run build` first.

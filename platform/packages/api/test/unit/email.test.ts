@@ -223,8 +223,8 @@ describe('platform email identity', () => {
       },
       'member@example.com',
     );
-    expect(sent[0].subject).toBe("You're invited to Void Platform");
-    expect(sent[0].html + sent[0].text).not.toContain('Void Cloud');
+    expect(sent[0].subject).toBe("You're invited to Nosam Platform");
+    expect(sent[0].html + sent[0].text).not.toContain('Nosam Cloud');
     expect(sent[0].text).toContain("void connect 'api.example.com'");
   });
 
@@ -267,7 +267,7 @@ describe('platform email identity', () => {
       expect(sent.map(({ from }) => from)).toEqual([
         defaultSender,
         identity.EMAIL_FROM,
-        'Void <noreply@void.cloud>',
+        'Nosam <noreply@void.cloud>',
       ]);
     });
 
@@ -283,11 +283,11 @@ describe('platform email identity', () => {
     });
   });
 
-  it('preserves the Void Cloud sender only for its hosted deployment', async () => {
+  it('preserves the Nosam Cloud sender only for its hosted deployment', async () => {
     const { binding, sent } = mockBinding();
     await sendInvitationEmail(binding, 'member@example.com');
-    expect(sent[0].from).toBe('Void <noreply@void.cloud>');
-    expect(sent[0].subject).toBe("You're invited to Void Cloud");
+    expect(sent[0].from).toBe('Nosam <noreply@void.cloud>');
+    expect(sent[0].subject).toBe("You're invited to Nosam Cloud");
     expect(sent[0].text).toContain("void connect 'api.void.cloud'");
   });
 });

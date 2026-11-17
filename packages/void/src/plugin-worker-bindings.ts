@@ -157,7 +157,7 @@ export function mergeWorkerBindings(
     }
   }
 
-  // Void owns the generated asset routing policy. Replace stale root
+  // Nosam owns the generated asset routing policy. Replace stale root
   // wrangler settings instead of letting the Cloudflare plugin concatenate
   // them with generated rules. This preserves static-first behavior for
   // API-only apps while avoiding asset-served HTML bypassing middleware.
@@ -209,7 +209,7 @@ export function mergeWorkerBindings(
 
   // Workers AI has no local simulator, so direct Cloudflare dev uses the remote
   // binding; an authored root binding only gains `remote: true`. Managed and
-  // unsaved dev projects use the Void proxy below.
+  // unsaved dev projects use the Nosam proxy below.
   const resolvedAi = (resolved as { ai?: unknown }).ai;
   const aiBindingName = resolveWorkersAiBindingName(resolvedAi, bindingNames?.ai);
   if (
@@ -476,7 +476,7 @@ export function mergeWorkerBindings(
     }
   }
 
-  // AI — in local dev, inject Void credentials for the HTTPS proxy path.
+  // AI — in local dev, inject Nosam credentials for the HTTPS proxy path.
   // In production, the platform adds a __VOID_PROXY service binding instead.
   if (viteCommand === 'serve' && bindings.needsAI && !directCloudflareDestination) {
     const credentials = readVoidDevCredentials(root);

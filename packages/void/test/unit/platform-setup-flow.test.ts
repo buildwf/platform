@@ -72,7 +72,7 @@ vi.mock('@voidzero-dev/vite-plus-prompts', async (original) => ({
   select: (input: { message: string; options: Array<{ value: string }> }) =>
     input.message === 'Who should be able to access deployed apps?'
       ? Promise.resolve('public')
-      : input.message === 'How should Void set up Hyperdrive?'
+      : input.message === 'How should Nosam set up Hyperdrive?'
         ? Promise.resolve(input.options[0]!.value)
         : mocks.select(input),
   text: mocks.text,
@@ -254,7 +254,7 @@ afterEach(() => {
 async function savedSetup(name = 'test-setup') {
   const plan = await mocks.plan(
     null,
-    { installationSlug: name, displayName: `${name} Void` },
+    { installationSlug: name, displayName: `${name} Nosam` },
     null,
   );
   const draft = savePlatformSetupDraft(plan, '1.0.0');
@@ -1101,7 +1101,7 @@ describe('platform credential onboarding', () => {
     mocks.text.mockResolvedValueOnce('test-setup');
     await runPlatformLifecycleCommand(parsePlatformArgs(['install', '--plan']));
     expect(mocks.confirm).toHaveBeenCalledWith({
-      message: 'Resume installation for test-setup Void (test-setup)?',
+      message: 'Resume installation for test-setup Nosam (test-setup)?',
       initialValue: true,
     });
     expect(mocks.plan).toHaveBeenCalledWith(
@@ -1261,7 +1261,7 @@ describe('platform credential onboarding', () => {
     const hint =
       'To use another PostgreSQL database, set VOID_PLATFORM_DATABASE_URL to its URL first.';
     const refused =
-      'platform: This PostgreSQL database is already claimed by Void platform installation old-team.';
+      'platform: This PostgreSQL database is already claimed by Nosam platform installation old-team.';
     mocks.install.mockImplementationOnce(async (_plan, _secrets, manifest) => {
       writePendingInstallationSecrets(manifest, {
         ...readPendingInstallationSecrets(manifest),
@@ -1421,7 +1421,7 @@ describe('platform credential onboarding', () => {
       'https://void.cloud/guide/platform/installation/prerequisites#platform-database',
     );
     expect(descriptions).toContain(
-      'Void generated the JWT signing key and project encryption key and keeps them in this machine’s encrypted recovery data.',
+      'Nosam generated the JWT signing key and project encryption key and keeps them in this machine’s encrypted recovery data.',
     );
     expect(descriptions).not.toContain('openssl rand');
     expect(descriptions).not.toContain(environment.VOID_PLATFORM_DATABASE_URL);
@@ -1452,7 +1452,7 @@ describe('platform credential onboarding', () => {
     expect(descriptions).toContain(
       'Generate a project encryption key for app secrets. Run openssl rand -base64 32 separately',
     );
-    expect(descriptions).not.toContain('Void generated');
+    expect(descriptions).not.toContain('Nosam generated');
     expect(mocks.install.mock.calls[0]![1]).toMatchObject({
       jwtSecret: environment.VOID_PLATFORM_JWT_SECRET,
       projectSecretKey: environment.VOID_PLATFORM_PROJECT_SECRET_KEY,
@@ -1762,7 +1762,7 @@ describe('platform credential onboarding', () => {
       options: [
         {
           value: draft.id,
-          label: 'Continue setup for test-setup Void (test-setup)',
+          label: 'Continue setup for test-setup Nosam (test-setup)',
           hint: 'Account',
         },
         { value: 'new', label: 'Start a new platform install' },
@@ -1828,11 +1828,11 @@ describe('platform credential onboarding', () => {
       expect.arrayContaining([
         expect.objectContaining({
           value: first.id,
-          label: 'Continue setup for first Void (first)',
+          label: 'Continue setup for first Nosam (first)',
         }),
         expect.objectContaining({
           value: second.id,
-          label: 'Continue setup for second Void (second)',
+          label: 'Continue setup for second Nosam (second)',
         }),
         { value: 'new', label: 'Start a new platform install' },
       ]),
@@ -1915,7 +1915,7 @@ describe('platform credential onboarding', () => {
       input.message === 'Installation name:'
         ? 'void-e2e'
         : input.message === 'Platform display name:'
-          ? 'void-e2e Void'
+          ? 'void-e2e Nosam'
           : normalText(input),
     );
     const normalPassword = mocks.password.getMockImplementation()!;
@@ -1932,7 +1932,7 @@ describe('platform credential onboarding', () => {
     expect(mocks.text).toHaveBeenCalledWith(
       expect.objectContaining({
         message:
-          'Where do you want to host the Void Platform API? Leave empty for a workers.dev fallback.',
+          'Where do you want to host the Nosam Platform API? Leave empty for a workers.dev fallback.',
       }),
     );
     const draft = listInstallationManifests()[0]!;
@@ -2017,7 +2017,7 @@ describe('platform credential onboarding', () => {
     expect(mocks.select).not.toHaveBeenCalled();
     expect(
       mocks.text.mock.calls.some(([input]) =>
-        input.message.startsWith('Where do you want to host the Void Platform API?'),
+        input.message.startsWith('Where do you want to host the Nosam Platform API?'),
       ),
     ).toBe(false);
     expect(mocks.password).toHaveBeenCalled();
@@ -2227,7 +2227,7 @@ describe('platform credential onboarding', () => {
       };
     });
   };
-  it('stops a resumed install before the installer when its Worker was changed outside Void', async () => {
+  it('stops a resumed install before the installer when its Worker was changed outside Nosam', async () => {
     const manifest = await interruptedInstall();
     for (const [key, value] of Object.entries(environment)) {
       vi.stubEnv(key, value);
@@ -2267,7 +2267,7 @@ describe('platform credential onboarding', () => {
     expect(request).toHaveBeenCalledOnce();
     expect(mocks.install).not.toHaveBeenCalled();
   });
-  it('uploads a resumed install’s Worker changed outside Void when the installer asks', async () => {
+  it('uploads a resumed install’s Worker changed outside Nosam when the installer asks', async () => {
     const manifest = await interruptedInstall();
     for (const [key, value] of Object.entries(environment)) {
       vi.stubEnv(key, value);
@@ -2314,7 +2314,7 @@ describe('platform credential onboarding', () => {
     mocks.progress.pause.mockImplementation(() => events.push('progress-pause'));
     mocks.progress.resume.mockImplementation(() => events.push('progress-resume'));
     // Like the installer: it creates a resource, uploads the Workers changed
-    // outside Void with the configs that the run deploys, then pauses traffic.
+    // outside Nosam with the configs that the run deploys, then pauses traffic.
     mocks.install.mockImplementation(async (_plan, _secrets, existing, dependencies) => {
       events.push('installer-start', 'create:isr-cache-kv');
       await dependencies.uploadOutsideChanges([
@@ -2368,7 +2368,7 @@ describe('platform credential onboarding', () => {
       replaceOutsideChanges: [apiWorker],
     });
   });
-  it('replaces a resumed install’s active version that Void did not deploy without a review upload', async () => {
+  it('replaces a resumed install’s active version that Nosam did not deploy without a review upload', async () => {
     const manifest = await interruptedInstall();
     for (const [key, value] of Object.entries(environment)) {
       vi.stubEnv(key, value);
@@ -2377,7 +2377,7 @@ describe('platform credential onboarding', () => {
     const apiWorker = manifest.deployment.resources.apiWorker;
     const version = '11111111-1111-4111-8111-111111111111';
     // An earlier run stopped after the Cloudflare CLI replaced the change, so
-    // the marker shows the Cloudflare CLI. The active version has no Void record.
+    // the marker shows the Cloudflare CLI. The active version has no Nosam record.
     vi.spyOn(PlatformCloudflareClient.prototype, 'getWorkerLastDeployedFrom').mockResolvedValue(
       'cf_cli',
     );
@@ -2428,7 +2428,7 @@ describe('platform credential onboarding', () => {
       replaceOutsideChanges: [apiWorker],
     });
   });
-  it('stops a resumed install that restores an earlier version without a Void record', async () => {
+  it('stops a resumed install that restores an earlier version without a Nosam record', async () => {
     const manifest = await interruptedInstall();
     for (const [key, value] of Object.entries(environment)) {
       vi.stubEnv(key, value);
@@ -2445,8 +2445,8 @@ describe('platform credential onboarding', () => {
       queueConsumers: [],
       workflows: [],
     };
-    // An earlier run agreed to replace a change made outside Void, made
-    // Void's version active and stopped before the cutover finished. The
+    // An earlier run agreed to replace a change made outside Nosam, made
+    // Nosam's version active and stopped before the cutover finished. The
     // installer first restores the earlier version.
     writeInstallationManifest(
       recordWorkerCutoverStage(
@@ -2492,7 +2492,7 @@ describe('platform credential onboarding', () => {
       runPlatformLifecycleCommand(
         parsePlatformArgs(['install', '--resume', '--name', manifest.id, '--yes']),
       ),
-    ).rejects.toThrow(`${apiWorker}: has an active version without a Void deployment record\n`);
+    ).rejects.toThrow(`${apiWorker}: has an active version without a Nosam deployment record\n`);
     expect(request).toHaveBeenCalledWith(
       `/accounts/${manifest.account.id}/workers/scripts/${apiWorker}/versions/${earlierVersion}`,
     );

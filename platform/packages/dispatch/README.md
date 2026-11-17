@@ -1,6 +1,6 @@
 # @voidcloud/dispatch
 
-Edge router for deployed Void apps. It routes requests to user workers, serves static deployments, manages ISR caching, applies redirect/rewrite/header rules, and records request usage.
+Edge router for deployed Nosam apps. It routes requests to user workers, serves static deployments, manages ISR caching, applies redirect/rewrite/header rules, and records request usage.
 
 ## Request Flow
 

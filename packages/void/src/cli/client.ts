@@ -33,7 +33,7 @@ function readCliVersion(): string | null {
 
 const VOID_CLI_VERSION = readCliVersion();
 
-/** The oldest Void platform release this CLI supports. */
+/** The oldest Nosam platform release this CLI supports. */
 export const MIN_PLATFORM_VERSION = '1.9.0';
 
 const RELEASE_VERSION = /^(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/;
@@ -86,10 +86,10 @@ function assertSupportedPlatform(apiUrl: string, probe: PlatformVersionProbe): v
     return;
   }
   if (probe.kind === 'missing') {
-    // Every Void platform release serves discovery, so a 404 there means a
+    // Every Nosam platform release serves discovery, so a 404 there means a
     // platform that predates it, and therefore predates the minimum.
     throw new Error(
-      `The Void platform at ${apiUrl} does not report its version, but this CLI requires ${MIN_PLATFORM_VERSION} or later. ${UPGRADE_PLATFORM_ACTION}`,
+      `The Nosam platform at ${apiUrl} does not report its version, but this CLI requires ${MIN_PLATFORM_VERSION} or later. ${UPGRADE_PLATFORM_ACTION}`,
     );
   }
   const { version } = probe;
@@ -101,7 +101,7 @@ function assertSupportedPlatform(apiUrl: string, probe: PlatformVersionProbe): v
     return;
   }
   throw new Error(
-    `The Void platform at ${apiUrl} runs version ${version}, but this CLI requires ${MIN_PLATFORM_VERSION} or later. ${UPGRADE_PLATFORM_ACTION}`,
+    `The Nosam platform at ${apiUrl} runs version ${version}, but this CLI requires ${MIN_PLATFORM_VERSION} or later. ${UPGRADE_PLATFORM_ACTION}`,
   );
 }
 
@@ -639,7 +639,7 @@ function parseDeployEvent(value: unknown): SequencedDeployEvent {
 }
 
 /**
- * HTTP client for the Void platform API.
+ * HTTP client for the Nosam platform API.
  */
 export class PlatformClient {
   private readonly baseUrl: string;
@@ -729,7 +729,7 @@ export class PlatformClient {
       : null;
     if (capabilities?.skipMigrations !== true) {
       throw new Error(
-        'deploy: This Void platform does not support --skip-migrations. Ask its administrator to upgrade with `void platform upgrade`.',
+        'deploy: This Nosam platform does not support --skip-migrations. Ask its administrator to upgrade with `void platform upgrade`.',
       );
     }
   }
@@ -1294,12 +1294,18 @@ export class PlatformClient {
     for (const raw of inline ?? []) {
       const event = parseDeployEvent(raw);
       if (event.seq !== undefined) {
-        if (event.seq <= cursor) continue;
+        if (event.seq <= cursor) {
+          continue;
+        }
         cursor = event.seq;
       }
-      if (event.event === 'start') continue;
+      if (event.event === 'start') {
+        continue;
+      }
       yield event;
-      if (event.event === 'done' || event.event === 'error') return;
+      if (event.event === 'done' || event.event === 'error') {
+        return;
+      }
     }
     yield* this.followDeploymentEvents(
       projectId,

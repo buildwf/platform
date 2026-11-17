@@ -3,7 +3,7 @@ import { isRecord } from '@void/deploy-core';
  * Uninstall turns off the platform API, and only that API can remove the
  * Cloudflare Access applications project Zero Trust created. The shared
  * project application covers every hostname under the application domain, so
- * a left-over one keeps asking for sign-in on hosts Void no longer serves.
+ * a left-over one keeps asking for sign-in on hosts Nosam no longer serves.
  * Uninstall therefore reads the saved Zero Trust state straight from
  * PostgreSQL, which works whether or not the API still answers, and refuses
  * while anything remains to clean up or the state cannot be read.
@@ -56,7 +56,7 @@ export type PlatformProjectZeroTrustState = Readonly<{
   active: boolean;
   /** Hostname patterns of the shared project application, when it is recorded. */
   destinations: ReadonlyArray<string>;
-  /** Void-managed Access applications that may still exist in Cloudflare. */
+  /** Nosam-managed Access applications that may still exist in Cloudflare. */
   applications: ReadonlyArray<PlatformZeroTrustApplication>;
   /** Projects whose deletion stopped before it removed their applications. */
   unfinishedDeletions: ReadonlyArray<string>;
@@ -222,7 +222,7 @@ export async function readPlatformProjectZeroTrustStateConnection(
 
 /**
  * Take the Zero Trust configuration lock exclusively on this session. Every
- * API path that records or creates a Void-managed Access application or
+ * API path that records or creates a Nosam-managed Access application or
  * creates a project holds the same lock, so none can commit until the
  * returned release runs.
  */
@@ -304,7 +304,7 @@ function unfinishedDeletionLines(state: PlatformProjectZeroTrustState): Readonly
     return [];
   }
   return [
-    `Deletion of ${state.unfinishedDeletions.length === 1 ? 'project' : 'projects'} ${state.unfinishedDeletions.join(', ')} stopped before it removed their Access applications. Rerun \`void project delete <name>\` for each, or delete it again from the admin dashboard. This removes their applications, including ones already deleted in the Cloudflare dashboard, and Void's records of them.`,
+    `Deletion of ${state.unfinishedDeletions.length === 1 ? 'project' : 'projects'} ${state.unfinishedDeletions.join(', ')} stopped before it removed their Access applications. Rerun \`void project delete <name>\` for each, or delete it again from the admin dashboard. This removes their applications, including ones already deleted in the Cloudflare dashboard, and Nosam's records of them.`,
   ];
 }
 
@@ -321,7 +321,7 @@ export async function assertProjectZeroTrustAllowsUninstall(
   const state = await readPlatformDatabase(read, (reason) =>
     [
       `platform: Refusing to uninstall because the project Zero Trust state could not be read from the platform database: ${reason}`,
-      'Uninstall turns off the platform API, which Void needs to remove the Cloudflare Access applications that project Zero Trust created.',
+      'Uninstall turns off the platform API, which Nosam needs to remove the Cloudflare Access applications that project Zero Trust created.',
       'Make the installation database reachable (export VOID_PLATFORM_DATABASE_URL if this machine has not recorded it), then retry. If project Zero Trust was ever enabled, run `void platform zero-trust disable` first.',
     ].join('\n'),
   );
@@ -335,14 +335,14 @@ export async function assertProjectZeroTrustAllowsUninstall(
     throw new Error(
       [
         'platform: Refusing to uninstall while project Zero Trust is enabled or still changing.',
-        `Uninstall turns off the platform API, so Void could no longer remove its Cloudflare Access applications, and Access would keep asking for sign-in${covered}, including hostnames Void does not serve.`,
+        `Uninstall turns off the platform API, so Nosam could no longer remove its Cloudflare Access applications, and Access would keep asking for sign-in${covered}, including hostnames Nosam does not serve.`,
         // Without a user there is no administrator to run zero-trust disable.
         state.usersExist === false
           ? 'No platform user exists yet. Run this command on the computer that installed the platform; it keeps the authority to turn off project Zero Trust.'
           : 'Run `void platform zero-trust disable`, rerun it until `void platform zero-trust status` reports Zero Trust disabled with no operation running, then retry the uninstall.',
         'If the platform API does not answer, bring it back with `void platform enable` or `void platform repair` first.',
         ...(state.applications.length
-          ? ['Void-managed Access applications:', formatZeroTrustApplications(state.applications)]
+          ? ['Nosam-managed Access applications:', formatZeroTrustApplications(state.applications)]
           : []),
         ...unfinishedDeletionLines(state),
         DASHBOARD_HINT,
@@ -352,13 +352,13 @@ export async function assertProjectZeroTrustAllowsUninstall(
   if (state.applications.length) {
     throw new Error(
       [
-        'platform: Refusing to uninstall while Void-managed Access applications from project Zero Trust remain.',
+        'platform: Refusing to uninstall while Nosam-managed Access applications from project Zero Trust remain.',
         'Zero Trust is disabled, but it could not remove the applications of some projects. Retry the uninstall once they are gone.',
-        'Void-managed Access applications:',
+        'Nosam-managed Access applications:',
         formatZeroTrustApplications(state.applications),
         ...(state.applications.some((application) => !application.deleting)
           ? [
-              `Hourly maintenance retries ${state.unfinishedDeletions.length ? 'the other applications' : 'them'} while the platform is enabled, and clears Void's records of any you delete in the dashboard.`,
+              `Hourly maintenance retries ${state.unfinishedDeletions.length ? 'the other applications' : 'them'} while the platform is enabled, and clears Nosam's records of any you delete in the dashboard.`,
             ]
           : []),
         ...unfinishedDeletionLines(state),

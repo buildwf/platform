@@ -375,7 +375,7 @@ export function detectNonSpaFallbackWarning(
   );
 }
 
-/** Add the database, KV, R2, and AI bindings to a Void manifest. */
+/** Add the database, KV, R2, and AI bindings to a Nosam manifest. */
 function applyResourceBindings(
   manifest: DeployManifest,
   bindings: InferredBindings,
@@ -424,7 +424,7 @@ function toMigrationsManifest(
 }
 
 /**
- * Build a Void-app deploy manifest from the inferred bindings + per-feature
+ * Build a Nosam-app deploy manifest from the inferred bindings + per-feature
  * inputs. Pure shape transformation: reads no files, has no I/O.
  *
  * Note: callers are responsible for surfacing the non-SPA-fallbacks warning

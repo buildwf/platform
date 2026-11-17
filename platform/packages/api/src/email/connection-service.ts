@@ -1674,7 +1674,7 @@ export async function requestEmailDomainAdd(
           throw new EmailOperationError(
             existingRoute.inbound_mode === 'none'
               ? 'email domain is set up as outbound-only; remove it before adding it with inbound mail'
-              : 'email domain receives mail through Void; remove it before adding it as outbound-only',
+              : 'email domain receives mail through Nosam; remove it before adding it as outbound-only',
             409,
           );
         }

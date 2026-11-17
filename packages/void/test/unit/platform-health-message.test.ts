@@ -38,7 +38,7 @@ To make this test platform publicly reachable:
    void-dev platform install --resume --name example-123
 
 This removes Cloudflare Access protection for these Workers.
-Void’s own authentication stays enabled. Keep account-wide Default-Deny on.
+Nosam’s own authentication stays enabled. Keep account-wide Default-Deny on.
 
 For platforms that must remain Access-protected:
 https://void.cloud/guide/platform/installation/maintenance#cloudflare-access`);
@@ -74,7 +74,7 @@ it('keeps protected installations out of the public Worker bypass instructions',
   expect(error.message).toContain(
     'Keep employee Access protection and account-wide Default-Deny enabled.',
   );
-  expect(error.message).toContain('Void’s private probe token');
+  expect(error.message).toContain('Nosam’s private probe token');
   expect(error.message).toContain(
     'Blocked URL: https://void-platform-health.apps.example.com/health',
   );

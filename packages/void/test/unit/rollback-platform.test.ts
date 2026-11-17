@@ -78,7 +78,7 @@ describe('void project rollback --platform cloudflare', () => {
     expect(mockActivateCloudflareExistingVersion).toHaveBeenCalledOnce();
   });
 
-  it('rolls back the Cloudflare Worker after a one-off deploy from a Void project', async () => {
+  it('rolls back the Cloudflare Worker after a one-off deploy from a Nosam project', async () => {
     mockReadDeploymentPlatform.mockReturnValue('void');
 
     await runRollbackCommand('/app', 'old-version', 'cloudflare');
@@ -88,7 +88,7 @@ describe('void project rollback --platform cloudflare', () => {
       expect.objectContaining({ id: 'old-version' }),
       expect.objectContaining({ id: 'new-version' }),
     );
-    // The bare restore command would follow the saved Void platform.
+    // The bare restore command would follow the saved Nosam platform.
     expect(messages()).toContain('`void db restore --platform cloudflare --bookmark <bookmark>`');
     expect(output.printSuccess).toHaveBeenCalledWith('Rolled back to old-version.');
   });
@@ -110,7 +110,7 @@ describe('void project rollback --platform cloudflare', () => {
     expect(messages()).toContain('`void db restore --bookmark <bookmark>`');
   });
 
-  it('follows the saved Void platform without --platform', async () => {
+  it('follows the saved Nosam platform without --platform', async () => {
     mockReadDeploymentPlatform.mockReturnValue('void');
 
     await expect(runRollbackCommand('/app', 'old-version')).rejects.toThrow('process.exit:1');

@@ -353,9 +353,11 @@ async function runConnect(
     if (token && projectConfig) {
       const client = new PlatformClient(token, { root });
       await client.setDatabaseUrl(projectConfig.projectId, connectionString);
-      log.step('Updated the linked Void project database URL.');
+      log.step('Updated the linked Nosam project database URL.');
     } else {
-      log.info('No authenticated Void project is linked, so only local configuration was updated.');
+      log.info(
+        'No authenticated Nosam project is linked, so only local configuration was updated.',
+      );
     }
   }
 
@@ -1629,7 +1631,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
     return;
   }
 
-  // Void cannot rename the records in a direct Cloudflare database, and `void deploy` decides
+  // Nosam cannot rename the records in a direct Cloudflare database, and `void deploy` decides
   // what is pending by file name, so a renamed applied migration would run again. `.void` is not
   // checked in, so a fresh checkout shows a direct deploy only through its Cloudflare config.
   const platform = readDeploymentPlatform(root);
@@ -1640,7 +1642,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
   ) {
     log.error(
       '`void db rename-migrations` does not support direct Cloudflare deploys.\n' +
-        'Void cannot rename the migration records in your deployed database, so the next deploy would run the renamed migrations again.\n' +
+        'Nosam cannot rename the migration records in your deployed database, so the next deploy would run the renamed migrations again.\n' +
         'Keep the current file names. New migrations use timestamps and run after them.',
     );
     process.exit(1);
@@ -1648,7 +1650,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
   // A hosted project renames its deployed records only through its link.
   if (platform === 'void' && !config) {
     log.error(
-      'This project deploys to Void but is not linked, so Void cannot rename the migration records in its deployed database.\n' +
+      'This project deploys to Nosam but is not linked, so Nosam cannot rename the migration records in its deployed database.\n' +
         'Run `void project link`, then run `void db rename-migrations` again.',
     );
     process.exit(1);
@@ -1942,7 +1944,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
   printSuccess(`Renamed ${formatCount(renames.length, 'migration')} to timestamp format.`);
 }
 
-// Void and Cloudflare bookkeeping tables. A full export skips them; app tables starting with `_` stay.
+// Nosam and Cloudflare bookkeeping tables. A full export skips them; app tables starting with `_` stay.
 const INTERNAL_TABLES = new Set([
   '_void_migrations',
   '_void_migration_attempts',

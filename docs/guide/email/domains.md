@@ -1,11 +1,11 @@
 ---
-description: 'Register an email domain on a Void platform, or configure sending and receiving in your own Cloudflare account.'
+description: 'Register an email domain on a Nosam platform, or configure sending and receiving in your own Cloudflare account.'
 outline: deep
 ---
 
 # Email Domains and Setup
 
-Choose the setup for your deployment: register a domain on a Void platform, or configure email in your own Cloudflare account. For the platform’s shared sender, follow [Sending Email](./sending.md#setup).
+Choose the setup for your deployment: register a domain on a Nosam platform, or configure email in your own Cloudflare account. For the platform’s shared sender, follow [Sending Email](./sending.md#setup).
 
 ## Your own domain on the platform {#your-own-domain-on-the-platform}
 
@@ -47,15 +47,15 @@ export default defineConfig({
 });
 ```
 
-Use a mail subdomain to keep existing mail on `acme.com` with its current provider. Void refuses to replace another provider's MX records.
+Use a mail subdomain to keep existing mail on `acme.com` with its current provider. Nosam refuses to replace another provider's MX records.
 
 ### Setup {#setup-1}
 
 Sign in with `void cloudflare login`, or use a `CLOUDFLARE_API_TOKEN` with **Email Routing Edit** and **Email Sending Edit** in addition to deploy permissions. If your browser session lacks email permissions, log out and sign in again. Global API Keys aren't supported.
 
-Run `void deploy --platform cloudflare`. Void shows the domain, routing, sending, DNS, and handler addresses it would configure. Accept to set up email and deploy. Later deploys reuse the setup. If you decline the initial setup, the app deploys without email.
+Run `void deploy --platform cloudflare`. Nosam shows the domain, routing, sending, DNS, and handler addresses it would configure. Accept to set up email and deploy. Later deploys reuse the setup. If you decline the initial setup, the app deploys without email.
 
-Without `email.from`, Void skips automatic setup and preserves authored `cloudflare.send_email` bindings and `cloudflare.addresses`; check their readiness yourself. `--require-email` still refuses deployment when automatic setup cannot be verified.
+Without `email.from`, Nosam skips automatic setup and preserves authored `cloudflare.send_email` bindings and `cloudflare.addresses`; check their readiness yourself. `--require-email` still refuses deployment when automatic setup cannot be verified.
 
 If subdomain setup needs a dashboard step, follow the checklist under **Email → Settings → Subdomains**, then retry. After DNS changes, check readiness with:
 
@@ -85,15 +85,15 @@ On Workers Free, `sendEmail()` can send to verified destinations listed under **
 
 Configure your sender domain's SPF, DKIM, and DMARC records using [Cloudflare's email authentication guidance](https://developers.cloudflare.com/email-service/concepts/email-authentication/), then check the authentication results in a received message's original headers. A successful `sendEmail()` result confirms provider acceptance; it does not confirm delivery or authentication readiness.
 
-Sending to arbitrary recipients requires [Workers Paid](https://dash.cloudflare.com/?to=/:account/workers/plans) and Email Sending onboarding. After upgrading, run `void email setup --platform cloudflare`. Void doesn't retry onboarding during ordinary deploys.
+Sending to arbitrary recipients requires [Workers Paid](https://dash.cloudflare.com/?to=/:account/workers/plans) and Email Sending onboarding. After upgrading, run `void email setup --platform cloudflare`. Nosam doesn't retry onboarding during ordinary deploys.
 
 Existing DMARC or bounce-domain records can block onboarding; the checklist identifies conflicts to resolve. Inbound mail remains available.
 
-The `void email usage`, `logs`, `destinations`, `allow`, and `disallow` commands apply to Void platforms.
+The `void email usage`, `logs`, `destinations`, `allow`, and `disallow` commands apply to Nosam platforms.
 
 ### Configuration changes {#configuration-changes}
 
-Commit `void.lock.json` after setup. Void derives routing addresses from your handlers and creates their rules during deployment.
+Commit `void.lock.json` after setup. Nosam derives routing addresses from your handlers and creates their rules during deployment.
 
 Existing rules owned by another Worker or forwarding service are left in place. If you manage `cloudflare.addresses` yourself, follow the checklist rather than combining it with automatic email setup.
 

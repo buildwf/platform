@@ -72,7 +72,7 @@ Use the [platform lifecycle commands](./platform-installation.md#lifecycle-comma
 
 ## Hosted Workers {#operator-workers}
 
-The following commands manage the Workers of the hosted Void Cloud platform.
+The following commands manage the Workers of the hosted Nosam Cloud platform.
 They are unavailable on a self-hosted installation; use the
 [lifecycle commands](./platform-installation.md#lifecycle-commands) there instead.
 

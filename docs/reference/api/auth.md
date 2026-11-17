@@ -9,7 +9,7 @@ Imported from `"void/auth"`. Client-side helpers imported from `"void/client"`.
 
 ## `defineAuth(config)` {#defineauth-config}
 
-Advanced escape hatch for customizing Void's Better Auth config.
+Advanced escape hatch for customizing Nosam's Better Auth config.
 
 ```ts
 import { defineAuth } from 'void/auth';
@@ -119,7 +119,7 @@ function requireAuth(c: CloudContext, options?: { throwRedirect?: string }): Aut
 
 ## `AuthUser` {#authuser}
 
-Better Auth user shape re-exported by Void. It also includes the fields that Better Auth plugins and `user.additionalFields` in `auth.ts` add, for example `role` from `admin()` or a custom `plan` field. Your tsconfig needs the generated Void types for this; see [Type Safety setup](../../guide/type-safety.md#setup).
+Better Auth user shape re-exported by Nosam. It also includes the fields that Better Auth plugins and `user.additionalFields` in `auth.ts` add, for example `role` from `admin()` or a custom `plan` field. Your tsconfig needs the generated Nosam types for this; see [Type Safety setup](../../guide/type-safety.md#setup).
 
 ```ts
 interface AuthUser {
@@ -135,7 +135,7 @@ interface AuthUser {
 
 ## `AuthSession` {#authsession}
 
-Better Auth session shape re-exported by Void. It also includes the session fields that Better Auth plugins in `auth.ts` add, for example `impersonatedBy` from `admin()`.
+Better Auth session shape re-exported by Nosam. It also includes the session fields that Better Auth plugins in `auth.ts` add, for example `impersonatedBy` from `admin()`.
 
 ```ts
 interface AuthSession {
@@ -151,7 +151,7 @@ interface AuthSession {
 ```
 
 ::: tip Types inside `auth.ts`
-In `auth.ts` and its imports, let Better Auth infer hook types or use its `User` and `Session` types. Using Void's inferred auth types or auth helper results there creates a circular reference. Callbacks such as `sendResetPassword` receive Better Auth's base `User` type.
+In `auth.ts` and its imports, let Better Auth infer hook types or use its `User` and `Session` types. Using Nosam's inferred auth types or auth helper results there creates a circular reference. Callbacks such as `sendResetPassword` receive Better Auth's base `User` type.
 :::
 
 ## `AuthState` {#authstate}

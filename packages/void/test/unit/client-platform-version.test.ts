@@ -112,7 +112,7 @@ describe('minimum platform version', () => {
   ])('refuses a platform reporting %s', async (version) => {
     serve(version);
     await expect(client().listProjectChoices()).rejects.toThrow(
-      `The Void platform at ${origin} runs version ${version}, but this CLI requires 1.9.0 or later. Ask its administrator to upgrade the platform runtime with \`void platform upgrade\`.`,
+      `The Nosam platform at ${origin} runs version ${version}, but this CLI requires 1.9.0 or later. Ask its administrator to upgrade the platform runtime with \`void platform upgrade\`.`,
     );
     expect(requestedPaths()).toEqual(['/.well-known/void-platform']);
   });
@@ -149,7 +149,7 @@ describe('minimum platform version', () => {
     ['a JSON 404', () => Response.json({ error: 'not found' }, { status: 404 })],
   ])('refuses a platform that answers discovery with %s', async (_label, answer) => {
     serve(answer);
-    const message = `The Void platform at ${origin} does not report its version, but this CLI requires 1.9.0 or later. Ask its administrator to upgrade the platform runtime with \`void platform upgrade\`.`;
+    const message = `The Nosam platform at ${origin} does not report its version, but this CLI requires 1.9.0 or later. Ask its administrator to upgrade the platform runtime with \`void platform upgrade\`.`;
     await expect(client().listProjectChoices()).rejects.toThrow(message);
     await expect(client().listProjects()).rejects.toThrow(message);
     expect(requestedPaths()).toEqual(['/.well-known/void-platform']);

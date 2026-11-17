@@ -99,7 +99,7 @@ describe('runGithubLink', () => {
     // The new code maps to the "your account, different GitHub" message —
     // distinct from the other-user github_identity_conflict wording.
     expect(errorSpy).toHaveBeenCalledWith(
-      'Your Void account is already linked to a different GitHub account.',
+      'Your Nosam account is already linked to a different GitHub account.',
     );
     errorSpy.mockRestore();
   });

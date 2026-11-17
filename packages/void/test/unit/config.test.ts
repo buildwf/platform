@@ -117,7 +117,7 @@ describe('routing.typedRoutes', () => {
 });
 
 describe('readConfig', () => {
-  it('loads and re-reads a typed Void config', () => {
+  it('loads and re-reads a typed Nosam config', () => {
     setup();
     const path = join(tmpDir, 'void.config.ts');
     writeFileSync(

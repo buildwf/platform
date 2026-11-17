@@ -140,10 +140,10 @@ export function platformManagementSetupPage(
         permissionGroupKeys: JSON.stringify(permissions),
       }),
     instructions: [
-      'This token lets the Void CLI install your platform. Void will now open a pre-configured token creation site. Please review the permissions and then paste the token here.',
+      'This token lets the Nosam CLI install your platform. Nosam will now open a pre-configured token creation site. Please review the permissions and then paste the token here.',
       `Scope it to ${plan.account.name}.`,
       ...(createsZone
-        ? [`Keep the zone policy on All Domains so Void can create ${zoneName}.`]
+        ? [`Keep the zone policy on All Domains so Nosam can create ${zoneName}.`]
         : zones.length
           ? [specifiedDomainsInstruction(zones)]
           : []),
@@ -194,12 +194,12 @@ export function platformSetupPages(plan: PlatformInstallPlan): {
       linkInTitle: true,
       url: 'https://dash.cloudflare.com/?' + query,
       instructions: [
-        'Create a Cloudflare runtime token that Void can use to manage the platform. Please review the permissions and then paste the token here.',
-        // A zone that Void creates later cannot be selected yet; All Domains
+        'Create a Cloudflare runtime token that Nosam can use to manage the platform. Please review the permissions and then paste the token here.',
+        // A zone that Nosam creates later cannot be selected yet; All Domains
         // lets Cache Purge reach it once it exists.
         ...(zoneName && plansZoneCreation(plan)
           ? [
-              `Keep the zone policy on All Domains so the token can purge cache on ${zoneName} after Void creates it.`,
+              `Keep the zone policy on All Domains so the token can purge cache on ${zoneName} after Nosam creates it.`,
             ]
           : zoneName
             ? [
@@ -217,7 +217,7 @@ export function platformSetupPages(plan: PlatformInstallPlan): {
       title: 'GitHub OAuth App',
       url: 'https://github.com/settings/applications/new',
       instructions:
-        'GitHub Auth will be used by the users of your Void Platform instance. Register a GitHub app and generate a client secret.\nHomepage: ' +
+        'GitHub Auth will be used by the users of your Nosam Platform instance. Register a GitHub app and generate a client secret.\nHomepage: ' +
         plan.apiUrl +
         '\nRedirect URI: ' +
         plan.apiUrl +

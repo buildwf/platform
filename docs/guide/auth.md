@@ -5,11 +5,11 @@ outline: deep
 
 # Authentication
 
-::: warning ⚠️ Void Apps Only
-Void-managed auth requires a Void app with a backend. For a static SPA without `routes/`, use Better Auth directly.
+::: warning ⚠️ Nosam Apps Only
+Nosam-managed auth requires a Nosam app with a backend. For a static SPA without `routes/`, use Better Auth directly.
 :::
 
-Void configures [Better Auth](https://www.better-auth.com/) for your app, including its database connection, API routes, and client. Start with email and password, or add a social login provider.
+Nosam configures [Better Auth](https://www.better-auth.com/) for your app, including its database connection, API routes, and client. Start with email and password, or add a social login provider.
 
 ## Quick Start
 
@@ -108,7 +108,7 @@ For example, `github` uses:
 
 ## Client Usage
 
-The `auth` client uses [Better Auth's client API](https://www.better-auth.com/docs/concepts/client) at `/api/auth`. Void selects the client for your framework automatically.
+The `auth` client uses [Better Auth's client API](https://www.better-auth.com/docs/concepts/client) at `/api/auth`. Nosam selects the client for your framework automatically.
 
 For a custom client, import `createAuthClient` from `void/client`.
 
@@ -132,7 +132,7 @@ Import `AuthUser` and `AuthSession` from `void/auth` for type annotations. They 
 
 ## Querying Authentication Tables
 
-To query users or reference them from your own tables, import Void's generated authentication schema. It exports `userTable`, `sessionTable`, `accountTable`, `verificationTable`, and any tables added by your Better Auth plugins.
+To query users or reference them from your own tables, import Nosam's generated authentication schema. It exports `userTable`, `sessionTable`, `accountTable`, `verificationTable`, and any tables added by your Better Auth plugins.
 
 Add an alias to your root `tsconfig.json`:
 
@@ -175,11 +175,11 @@ export const postTable = sqliteTable('post', {
 
 This example uses D1 and the default text IDs. For PostgreSQL or MySQL, use `void/schema-pg` or `void/schema-mysql`. With `advanced.database.generateId: 'serial'`, use an integer foreign key.
 
-Void regenerates `.void/better-auth-schema.ts`. Configure authentication in `auth.ts` rather than editing the generated file.
+Nosam regenerates `.void/better-auth-schema.ts`. Configure authentication in `auth.ts` rather than editing the generated file.
 
 ## Behavior
 
-Auth sessions use the same database as your app. Void creates `BETTER_AUTH_SECRET` on deploy if it is missing and reuses it on later deploys.
+Auth sessions use the same database as your app. Nosam creates `BETTER_AUTH_SECRET` on deploy if it is missing and reuses it on later deploys.
 
 Local development needs no secret setup. To preview a production build locally, provide `BETTER_AUTH_SECRET`.
 
@@ -236,7 +236,7 @@ export default defineAuth(({ defaults }) => ({
 }));
 ```
 
-`defaults` already includes Void's conventions. Extend it explicitly instead of expecting a deep merge.
+`defaults` already includes Nosam's conventions. Extend it explicitly instead of expecting a deep merge.
 
 In `auth.ts`, load helpers that import `@auth-schema` inside the hook that uses them, with `await import('./server/users')`. This lets `void prepare` generate the authentication schema on a fresh clone. The same applies when a helper imports your app's database schema and that schema references authentication tables.
 
@@ -244,12 +244,12 @@ For the full set of available options, see the official [Better Auth options ref
 
 ## Database and Migrations
 
-Auth tables live alongside your app's tables. During local development, Void creates them automatically. While the dev server runs, saving `auth.ts`, or a local file it imports, updates the auth schema Void generates for your app. New auth tables and columns are created in the local database the next time the dev server starts.
+Auth tables live alongside your app's tables. During local development, Nosam creates them automatically. While the dev server runs, saving `auth.ts`, or a local file it imports, updates the auth schema Nosam generates for your app. New auth tables and columns are created in the local database the next time the dev server starts.
 
-Void platforms create auth tables automatically. For a direct Cloudflare deploy, include them in your checked-in migrations:
+Nosam platforms create auth tables automatically. For a direct Cloudflare deploy, include them in your checked-in migrations:
 
 ```sh
 void db generate
 ```
 
-Review and commit the SQL before deploying. Void includes your auth configuration and plugin tables; you don't need to duplicate them in `db/schema.ts` or run the Better Auth CLI.
+Review and commit the SQL before deploying. Nosam includes your auth configuration and plugin tables; you don't need to duplicate them in `db/schema.ts` or run the Better Auth CLI.

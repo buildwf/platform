@@ -62,7 +62,7 @@ export type RoutingConfig = {
   /**
    * Override the inferred `not_found_handling` for the asset layer.
    *
-   * Void infers `single-page-application` whenever the worker does not own HTML
+   * Nosam infers `single-page-application` whenever the worker does not own HTML
    * routing, because a real SPA needs `/index.html` served for deep links. An
    * app whose assets were emitted by a static site generator (VitePress,
    * Docusaurus, …) wants the opposite: unknown URLs should serve the generator's
@@ -110,7 +110,7 @@ export type EmailConfig = {
   from?: string;
 };
 
-/** Deployment choices owned by Void rather than passed to the Worker config. */
+/** Deployment choices owned by Nosam rather than passed to the Worker config. */
 export type DeployConfig = {
   cloudflare?: { mode?: 'staged' | 'atomic' };
 };
@@ -176,7 +176,7 @@ export type CloudflareConfig = Record<string, unknown> & {
   addresses?: Array<string>;
 };
 
-/** Shape of the Void project config. All fields optional. */
+/** Shape of the Nosam project config. All fields optional. */
 export type VoidConfig = {
   storage?: StorageConfig;
   sourceDir?: string;

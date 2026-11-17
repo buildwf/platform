@@ -276,7 +276,7 @@ export function SignupControlPage({ path, platformName, username }: AdminPagePro
             <SectionStack as="div" className="void-admin-access-share">
               <h3>{emailEnabled ? 'Share connection details' : 'Share these details manually'}</h3>
               <CopyValue label="Platform invitation page" value={inviteUrl} />
-              <CopyValue label="Void CLI connection command" value={connectCommand} />
+              <CopyValue label="Nosam CLI connection command" value={connectCommand} />
             </SectionStack>
           </AdminCard>
         </section>

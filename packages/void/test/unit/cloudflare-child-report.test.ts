@@ -170,13 +170,13 @@ describe('observeCloudflareRunner', () => {
 describe('describeCloudflareChildFailure', () => {
   it('names the exit code, the signal or the spawn error', () => {
     expect(describeCloudflareChildFailure({ status: 1 })).toBe(
-      'the Void CLI helper process exited with code 1',
+      'the Nosam CLI helper process exited with code 1',
     );
     expect(describeCloudflareChildFailure({ status: 1, signal: 'SIGKILL' })).toBe(
-      'the Void CLI helper process was stopped by SIGKILL',
+      'the Nosam CLI helper process was stopped by SIGKILL',
     );
     expect(describeCloudflareChildFailure({ status: 1, error: 'spawn EACCES' })).toBe(
-      'the Void CLI helper process could not run: spawn EACCES',
+      'the Nosam CLI helper process could not run: spawn EACCES',
     );
     expect(
       formatCloudflareChildFailure({
@@ -186,7 +186,7 @@ describe('describeCloudflareChildFailure', () => {
       }),
     ).toBe(
       [
-        'the Void CLI helper process exited with code 1.',
+        'the Nosam CLI helper process exited with code 1.',
         "SyntaxError: The requested module 'node:http' does not provide an export named 'setGlobalProxyFromEnv'",
         '',
         'Node.js v22.23.4',

@@ -110,7 +110,7 @@ export function scrubCloudflareError(error: unknown, redactor: CredentialRedacto
 /** Why a child failed: its spawn error, the signal that stopped it, or its exit code. */
 export function describeCloudflareChildFailure(
   result: Pick<CloudflareCommandResult, 'status' | 'signal' | 'error'>,
-  subject = 'the Void CLI helper process',
+  subject = 'the Nosam CLI helper process',
 ): string {
   if (result.error) {
     return `${subject} could not run: ${result.error}`;

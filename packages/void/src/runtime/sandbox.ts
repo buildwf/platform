@@ -52,7 +52,7 @@ export class SandboxLimitError extends UsageLimit {
 }
 export class SandboxUnavailableError extends Error {
   override readonly name = 'SandboxUnavailableError';
-  constructor(message = 'Managed Sandbox is unavailable on this Void platform.') {
+  constructor(message = 'Managed Sandbox is unavailable on this Nosam platform.') {
     super(message);
   }
 }

@@ -123,7 +123,7 @@ describe('platform credential setup links', () => {
     );
     expect(page.instructions).toBe(
       [
-        'This token lets the Void CLI install your platform. Void will now open a pre-configured token creation site. Please review the permissions and then paste the token here.',
+        'This token lets the Nosam CLI install your platform. Nosam will now open a pre-configured token creation site. Please review the permissions and then paste the token here.',
         'Scope it to Account.',
         'Change the zone policy from All Domains to Specified Domains → example.com.',
       ].join('\n'),
@@ -146,7 +146,7 @@ describe('platform credential setup links', () => {
     );
     expect(permissionGroupKeys(createZone.url)).toContainEqual({ key: 'zone', type: 'edit' });
     expect(createZone.instructions).toContain(
-      'Keep the zone policy on All Domains so Void can create example.com.',
+      'Keep the zone policy on All Domains so Nosam can create example.com.',
     );
     expect(createZone.instructions).not.toContain('Specified Domains');
     const separateApi = platformManagementSetupPage(
@@ -284,7 +284,7 @@ describe('platform credential setup links', () => {
       ),
     ).toBe(false);
     expect(pages.runtime.instructions).toBe(
-      'Create a Cloudflare runtime token that Void can use to manage the platform. Please review the permissions and then paste the token here.',
+      'Create a Cloudflare runtime token that Nosam can use to manage the platform. Please review the permissions and then paste the token here.',
     );
   });
   it('prefills an R2 upload token with object write access to all current and future buckets', () => {
@@ -487,7 +487,7 @@ describe('platform credential setup links', () => {
       'Change the zone policy from All Domains to Specified Domains → example.com and every zone that will carry mail.',
     );
   });
-  it('keeps the runtime token on All Domains when Void creates the zone', () => {
+  it('keeps the runtime token on All Domains when Nosam creates the zone', () => {
     // The zone does not exist yet, so Specified Domains cannot select it.
     const page = platformSetupPages({
       ...plan('example.com'),
@@ -503,7 +503,7 @@ describe('platform credential setup links', () => {
       ],
     }).runtime;
     expect(page.instructions).toContain(
-      'Keep the zone policy on All Domains so the token can purge cache on example.com after Void creates it.',
+      'Keep the zone policy on All Domains so the token can purge cache on example.com after Nosam creates it.',
     );
   });
   it('opens only in interactive mode and retains a manual link if opening fails', () => {

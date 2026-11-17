@@ -60,7 +60,7 @@ describe('ordinary account linking CLI', () => {
     state.who
       .mockResolvedValueOnce({ id: 'original', login: 'original' })
       .mockResolvedValueOnce({ id: 'different', login: 'different' });
-    await expect(runAuthLink('/app', 'company')).rejects.toThrow('different Void account');
+    await expect(runAuthLink('/app', 'company')).rejects.toThrow('different Nosam account');
     expect(state.save).not.toHaveBeenCalled();
     expect(state.link).not.toHaveBeenCalled();
     expect(state.open).not.toHaveBeenCalled();

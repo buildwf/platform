@@ -178,7 +178,7 @@ function getConnectionString() {
 
 // mysql2 closes idle connections only from a timer that it starts when it builds a pool with
 // maxIdle below connectionLimit, and that timer runs until the pool ends: workerd rejects it in
-// global scope, and nothing ends Void's pools. Time each connection from its release instead,
+// global scope, and nothing ends Nosam's pools. Time each connection from its release instead,
 // which runs in the request that ran the query.
 function closeIdleConnections(pool, idleTimeout) {
   const timers = new WeakMap();
@@ -208,7 +208,7 @@ function createPools() {
 }
 
 function getPools() {
-  // Framework entries that Void does not own run outside its request scope:
+  // Framework entries that Nosam does not own run outside its request scope:
   // they get a client for each use, never one shared across requests.
   return getRuntimeRequestResource(_requestResourceKey, createPools, createPools);
 }
@@ -269,7 +269,7 @@ function createPool() {
 }
 
 function getPool() {
-  // Framework entries that Void does not own run outside its request scope:
+  // Framework entries that Nosam does not own run outside its request scope:
   // they get a client for each use, never one shared across requests.
   return getRuntimeRequestResource(_requestResourceKey, createPool, createPool);
 }
@@ -425,7 +425,7 @@ export function drizzlePlugin(
 }
 
 /**
- * `void/db` and `@schema` for bundles that do not run Void's Vite plugins, such as the cron and
+ * `void/db` and `@schema` for bundles that do not run Nosam's Vite plugins, such as the cron and
  * queue handler bundle that deploys build. Without it they load the package's static `void/db`, a D1 client without the app's
  * schema. It reads the dialect, schema and D1 binding from the project, as the Vite plugin does.
  * Its hooks are plain Rollup hooks; Vite also needs `enforce` to run them before its resolver.

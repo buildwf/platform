@@ -753,9 +753,9 @@ describe('sendEmail (proxy round trip)', () => {
       {
         error: 'platform capability unavailable',
         capability: 'email',
-        message: 'This Void platform does not enable email.',
+        message: 'This Nosam platform does not enable email.',
       },
-      'This Void platform does not enable email.',
+      'This Nosam platform does not enable email.',
     ],
     [
       'a 403 from the auth middleware (no message, falls back to error)',

@@ -61,11 +61,11 @@ async function main() {
 
   writeFileSync(resolve(targetDir, 'package.json'), JSON.stringify(pkg, null, 2) + '\n');
   // pnpm 12 fails the first install when a dependency has an unapproved build
-  // script. Write Void's narrow policy before installing the CLI so a fresh
+  // script. Write Nosam's narrow policy before installing the CLI so a fresh
   // project can bootstrap without disabling pnpm's build-script protection.
   writePnpmBuildPolicy(targetDir, pm);
 
-  p.log.step('Installing Void...');
+  p.log.step('Installing Nosam...');
   await run(pmInstall(pm), targetDir);
 
   p.log.step('Scaffolding starter...');

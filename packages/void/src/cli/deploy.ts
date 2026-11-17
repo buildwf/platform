@@ -48,7 +48,7 @@ export function resolveDeploymentPlatform(
   root: string,
   options?: RunDeployOptions,
 ): DeploymentPlatform {
-  // Projects with no saved choice predate the init prompt and keep the Void default.
+  // Projects with no saved choice predate the init prompt and keep the Nosam default.
   return options?.platform ?? readDeploymentPlatform(root) ?? 'void';
 }
 
@@ -106,7 +106,7 @@ const cloudflareDeployTarget: RunDeployTargetAdapter = {
   async deploy(root, options, cliLog): Promise<void> {
     if (options.projectSlug !== undefined) {
       throw new Error(
-        'deploy: --project is not supported with platform cloudflare — this platform deploys to your own Cloudflare account and no Void project is involved.',
+        'deploy: --project is not supported with platform cloudflare — this platform deploys to your own Cloudflare account and no Nosam project is involved.',
       );
     }
     assertInstalledVoidMatchesCli(root);

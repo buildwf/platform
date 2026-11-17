@@ -42,7 +42,7 @@ describe('assertInstalledVoidMatchesCli', () => {
 
   it('stops different development builds with the same version', () => {
     project(cliVersion);
-    expect(() => assertInstalledVoidMatchesCli(root)).toThrow('different Void builds');
+    expect(() => assertInstalledVoidMatchesCli(root)).toThrow('different Nosam builds');
   });
 
   it('stops a newer global CLI before an older project plugin can build', () => {

@@ -50,7 +50,7 @@ export function readCfSessionCredential(
   return token;
 }
 
-/** Keep subsequent cf logins on the encrypted profile adopted by Void. */
+/** Keep subsequent cf logins on the encrypted profile adopted by Nosam. */
 export function persistCfKeyringPreference(root: string): void {
   if (
     getCloudflareAuthUseKeyringFromEnv() === false ||

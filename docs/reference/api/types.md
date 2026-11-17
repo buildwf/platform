@@ -15,7 +15,7 @@ import type { CloudContext } from 'void';
 
 ## `CloudEnv` {#cloudenv}
 
-Hono environment type for Void workers. Extends Hono's `Env` with Cloudflare bindings and context variables.
+Hono environment type for Nosam workers. Extends Hono's `Env` with Cloudflare bindings and context variables.
 
 ```ts
 interface CloudEnv extends Env {

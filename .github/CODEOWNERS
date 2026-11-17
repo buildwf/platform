@@ -1,5 +1,5 @@
 # Changes to CI, release scripts, and dependency manifests need a review from
-# the Void team. Later rules take precedence over earlier ones.
+# the Nosam team. Later rules take precedence over earlier ones.
 
 /.github/ @voidzero-dev/void
 # Script folders at any depth: the publish and deploy jobs run package build

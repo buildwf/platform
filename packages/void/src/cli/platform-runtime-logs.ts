@@ -30,7 +30,7 @@ export function assertPlatformRuntimeLogsSupported(
 ): void {
   if (deployment.runtimeLogs && runtime.runtimeLogs !== 1) {
     throw new Error(
-      'platform: This platform runtime cannot keep runtime logs minimal. Upgrade Void or use a current platform runtime.',
+      'platform: This platform runtime cannot keep runtime logs minimal. Upgrade Nosam or use a current platform runtime.',
     );
   }
 }

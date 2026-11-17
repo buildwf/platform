@@ -71,7 +71,7 @@ describe('env check --remote target dispatch', () => {
     expect(mocks.listHostedSecrets).not.toHaveBeenCalled();
   });
 
-  it('retains hosted Void secret lookup for Void projects', async () => {
+  it('retains hosted Nosam secret lookup for Nosam projects', async () => {
     const root = project('void');
 
     await runEnvCommand(root, { subcommand: 'check', useRemoteSecrets: true });

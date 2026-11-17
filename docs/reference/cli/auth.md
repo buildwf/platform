@@ -1,5 +1,5 @@
 ---
-description: 'Connect the CLI to Cloudflare or a Void platform, and sign in to the account that receives deploys.'
+description: 'Connect the CLI to Cloudflare or a Nosam platform, and sign in to the account that receives deploys.'
 outline: deep
 ---
 
@@ -12,28 +12,28 @@ void connect --platform cloudflare
 void connect --platform void
 ```
 
-Connect a project to its deployment destination. With no arguments, choose Cloudflare or a Void platform interactively. A URL selects a Void platform directly. `--platform void` offers saved platforms and an option to enter another URL.
+Connect a project to its deployment destination. With no arguments, choose Cloudflare or a Nosam platform interactively. A URL selects a Nosam platform directly. `--platform void` offers saved platforms and an option to enter another URL.
 
 You can use a hostname: `void connect platform.example.com` connects over HTTPS. Loopback hosts (`localhost`, `127.0.0.1`, and `[::1]`) default to HTTP, so use `void connect localhost:8787` for a local platform. This also works in the interactive prompt. Include a scheme to override the default, for example `void connect https://localhost:8787`.
 
-For Cloudflare, Void signs in through the browser when needed, selects an accessible account, and saves `cloudflare.account_id` in `void.config.ts` or resolved state in `void.lock.json`. It shares this setup with `void init`. An existing account selection is preserved; conflicting or inaccessible account settings must be resolved before continuing.
+For Cloudflare, Nosam signs in through the browser when needed, selects an accessible account, and saves `cloudflare.account_id` in `void.config.ts` or resolved state in `void.lock.json`. It shares this setup with `void init`. An existing account selection is preserved; conflicting or inaccessible account settings must be resolved before continuing.
 
-For a Void platform, Void checks the connection and signs you in through your browser when needed. It saves credentials in your system keychain separately for each platform.
+For a Nosam platform, Nosam checks the connection and signs you in through your browser when needed. It saves credentials in your system keychain separately for each platform.
 
-The deployment preference is saved in `.void/project.json`. Connecting to another Void platform preserves an existing project link; the CLI explains when that link or an environment override still selects a different destination. Use `void project link` to explicitly choose a project. Cloudflare selection also retains existing Void project metadata so you can switch back later.
+The deployment preference is saved in `.void/project.json`. Connecting to another Nosam platform preserves an existing project link; the CLI explains when that link or an environment override still selects a different destination. Use `void project link` to explicitly choose a project. Cloudflare selection also retains existing Nosam project metadata so you can switch back later.
 
-In a non-interactive shell, supply a URL or explicit target. Cloudflare requires usable credentials and an unambiguous account (`CLOUDFLARE_ACCOUNT_ID` when needed). For a Void platform, provide `VOID_TOKEN` with a matching `VOID_API_URL`, or reuse a valid origin-scoped keychain session. Use `void connect <url> --no-login` to save the verified connection without authenticating; this option is only available for Void platforms.
+In a non-interactive shell, supply a URL or explicit target. Cloudflare requires usable credentials and an unambiguous account (`CLOUDFLARE_ACCOUNT_ID` when needed). For a Nosam platform, provide `VOID_TOKEN` with a matching `VOID_API_URL`, or reuse a valid origin-scoped keychain session. Use `void connect <url> --no-login` to save the verified connection without authenticating; this option is only available for Nosam platforms.
 
 ## Authentication {#authentication}
 
 `void auth login`, `void auth status`, and `void auth logout` use the destination
 saved for the current project by `void init` or `void connect`. If no destination
-is saved, interactive commands let you choose Cloudflare or a connected Void
+is saved, interactive commands let you choose Cloudflare or a connected Nosam
 platform. In a non-interactive shell, pass `--platform cloudflare|void` or use
 the explicit `void cloudflare` and `void account` commands. Choosing a destination
 for authentication does not change the project's deploy target.
 
-## Void platform account {#void-platform-account}
+## Nosam platform account {#void-platform-account}
 
 ### `void account login` {#void-account-login}
 
@@ -69,12 +69,12 @@ Prints your current login.
 Copies your human auth token to the system clipboard. It is intended for
 interactive troubleshooting and remains subject to login-method revocation. Do
 not combine it with a Cloudflare Access service token for CI; machine Access
-proof cannot turn a human Void token into an automation identity. Create a
+proof cannot turn a human Nosam token into an automation identity. Create a
 project-scoped credential with `void project token create` instead.
 
 ## Cloudflare authentication {#cloudflare-authentication}
 
-Use Void's Cloudflare commands to sign in and manage credentials. No separate Cloudflare CLI is needed. Browser credentials are encrypted and protected by your system keychain.
+Use Nosam's Cloudflare commands to sign in and manage credentials. No separate Cloudflare CLI is needed. Browser credentials are encrypted and protected by your system keychain.
 
 - `void cloudflare login` — sign in through your browser or switch Cloudflare users.
 - `void cloudflare status` — show your identity, credential source, accessible accounts, and deployment account.

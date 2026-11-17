@@ -1,7 +1,7 @@
 // void/email — outbound email. MIME is built here, then sent through the
 // first available transport: the `void dev` inbox, the worker's own
 // `SEND_EMAIL` binding (`void deploy --platform cloudflare`, one
-// `EmailMessage` per recipient), or the Void platform proxy, which enforces
+// `EmailMessage` per recipient), or the Nosam platform proxy, which enforces
 // project policy and quotas.
 
 import { isRecord } from '@void/deploy-core';
@@ -685,7 +685,7 @@ function capturedResult(normalized: NormalizedEmail, captureId: string): SendEma
 }
 
 /**
- * Send an email via the worker's own `SEND_EMAIL` binding or the Void
+ * Send an email via the worker's own `SEND_EMAIL` binding or the Nosam
  * platform proxy.
  *
  * During `void dev` the message is captured by the local inbox
@@ -706,7 +706,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
   if (resolvedOpts.from === undefined) {
     return err(
       'INVALID_FROM',
-      "email: 'from' is required. Set it explicitly or deploy via Void so the platform-injected __VOID_PROJECT_SLUG and __VOID_EMAIL_DOMAIN can default it to <slug>+noreply@<domain>.",
+      "email: 'from' is required. Set it explicitly or deploy via Nosam so the platform-injected __VOID_PROJECT_SLUG and __VOID_EMAIL_DOMAIN can default it to <slug>+noreply@<domain>.",
     );
   }
 
@@ -762,7 +762,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
     if (opts.idempotencyKey !== undefined) {
       return err(
         'MIME_ERROR',
-        'email: idempotencyKey requires a Void platform; the native Cloudflare binding cannot deduplicate sends.',
+        'email: idempotencyKey requires a Nosam platform; the native Cloudflare binding cannot deduplicate sends.',
       );
     }
     return sendViaBinding(sendBinding, normalized.from.email, recipients, raw, messageId);
@@ -775,7 +775,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
   if (!proxy || !projectId || !proxyToken) {
     return err(
       'BINDING_MISSING',
-      'email: neither SEND_EMAIL nor __VOID_PROXY is available, so nothing was sent. Deploy via Void to bind the platform proxy, ' +
+      'email: neither SEND_EMAIL nor __VOID_PROXY is available, so nothing was sent. Deploy via Nosam to bind the platform proxy, ' +
         'or set `email.from` in void.config.ts so `void deploy --platform cloudflare` provisions the SEND_EMAIL binding. ' +
         'Under `void dev` messages are captured by the local inbox at /__void/inbox instead — reaching this error there means ' +
         'that path was bypassed by the deprecated `sendInDev: true` (it never delivers) or unavailable ' +

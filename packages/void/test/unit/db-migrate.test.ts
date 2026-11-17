@@ -269,7 +269,7 @@ describe('void db migrate', () => {
         ],
       }),
     );
-    // Cloudflare's default folder holds SQL that Void never checked.
+    // Cloudflare's default folder holds SQL that Nosam never checked.
     mkdirSync(join(root, 'migrations'));
     writeFileSync(join(root, 'migrations', '0001_legacy.sql'), 'DROP TABLE users;');
     selectCloudflare(root);
@@ -579,7 +579,7 @@ describe('void db restore', () => {
       expect.objectContaining({ migrateToken: 'app-db' }),
       { bookmark },
     );
-    // The saved platform is Void, so the bare follow-up commands would not reach Cloudflare.
+    // The saved platform is Nosam, so the bare follow-up commands would not reach Cloudflare.
     expect(mockLog.info).toHaveBeenCalledWith(
       `To undo this restore, run \`void db restore --platform cloudflare --bookmark=${previous}\`.`,
     );
@@ -612,7 +612,7 @@ describe('void db restore', () => {
       () => createProjectRoot({}),
       'run it with `--platform cloudflare`',
     ],
-    ['is saved on a Void platform', savedOnVoid, 'run it with `--platform cloudflare`'],
+    ['is saved on a Nosam platform', savedOnVoid, 'run it with `--platform cloudflare`'],
     [
       'uses PostgreSQL',
       () => {

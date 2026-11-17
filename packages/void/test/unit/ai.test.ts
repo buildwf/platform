@@ -86,7 +86,7 @@ describe('runtime ai', () => {
     vi.unstubAllGlobals();
   });
 
-  it('explains missing bindings without suggesting Void login for a direct Cloudflare project', async () => {
+  it('explains missing bindings without suggesting Nosam login for a direct Cloudflare project', async () => {
     vi.resetModules();
     const { envContext } = await import('../../src/runtime/env-raw.ts');
     const { ai } = await import('../../src/runtime/ai.ts');
@@ -401,7 +401,7 @@ describe('runtime ai', () => {
       const { envContext } = await import('../../src/runtime/env-raw.ts');
       const { ai } = await import('../../src/runtime/ai.ts');
 
-      // Any accidental fall-through to the Void proxy would hit fetch — assert it doesn't.
+      // Any accidental fall-through to the Nosam proxy would hit fetch — assert it doesn't.
       const fetchMock = vi.fn(
         async (_url: string | URL | Request, _init?: RequestInit) =>
           new Response('proxy-should-not-be-used', { status: 500 }),

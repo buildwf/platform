@@ -28,7 +28,7 @@ const HTTP_URL = /^https?:\/\/\S+$/;
 const SMALL_INTEGER = /^(?:0|[1-9]\d{0,4})$/;
 
 /**
- * Classify a single `.env` value into the Void built-in helper to use.
+ * Classify a single `.env` value into the Nosam built-in helper to use.
  * Returns `'string'` whenever inference is ambiguous — the comment in the
  * scaffolded file asks the user to tighten any wrong guesses.
  */

@@ -254,7 +254,7 @@ export function createCfResourceVerifier(options: {
   };
 }
 
-/** Run the pinned package-local cf binary with Void's existing Cloudflare session. */
+/** Run the pinned package-local cf binary with Nosam's existing Cloudflare session. */
 export function createCfCommand(options: {
   accountId: string;
   apiBaseUrl: string;
@@ -271,7 +271,7 @@ export function createCfCommand(options: {
       ...options.env(options.accountId, options.apiBaseUrl),
       CF_DELEGATION: '1',
       CLI_VERSION: getCfCliVersion(),
-      // Void owns the terminal UI. Keep cf's notices, progress, and telemetry out
+      // Nosam owns the terminal UI. Keep cf's notices, progress, and telemetry out
       // of successful deploys; retain its complete output for error diagnosis.
       CF_QUIET: '1',
       CF_NO_OSC_PROGRESS: '1',
@@ -335,7 +335,7 @@ export function createCfCommand(options: {
               stop();
             }, run.timeoutMs);
       // Version lists contain full Worker records. Preserve the previous 256 MiB
-      // limit while letting Void's spinner animate during the network operation.
+      // limit while letting Nosam's spinner animate during the network operation.
       const collect = (chunks: Array<Buffer>, chunk: Buffer) => {
         bytes += chunk.length;
         if (bytes > (run.maxOutputBytes ?? 256 * 1024 * 1024)) {

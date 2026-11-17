@@ -325,7 +325,7 @@ describe('drizzlePlugin db typing generation', () => {
     ]);
   });
 
-  it('uses a primary D1 session when a framework handler has no Void request scope', async () => {
+  it('uses a primary D1 session when a framework handler has no Nosam request scope', async () => {
     const { module, state } = await loadExecutableDbModule('sqlite');
     const previousEnv = (globalThis as Record<string, unknown>).__env__;
     (globalThis as Record<string, unknown>).__env__ = {
@@ -351,7 +351,7 @@ describe('drizzlePlugin db typing generation', () => {
   });
 
   it.each(['postgresql', 'mysql'] as const)(
-    'builds a %s client for each use when a framework handler has no Void request scope',
+    'builds a %s client for each use when a framework handler has no Nosam request scope',
     async (dialect) => {
       const { module, state } = await loadExecutableDbModule(dialect);
       const previousEnv = (globalThis as Record<string, unknown>).__env__;
@@ -689,7 +689,7 @@ export const requestPoolConfig = (env) =>
         }, 1000);
       });
 
-      // A framework entry that Void does not wrap runs outside its request scope, where each
+      // A framework entry that Nosam does not wrap runs outside its request scope, where each
       // use builds a pool.
       (globalThis as Record<string, unknown>).__env__ = { DATABASE_URL: url };
       void db.$client.config;

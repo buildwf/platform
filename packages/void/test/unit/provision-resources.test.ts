@@ -243,7 +243,7 @@ describe('provisionCloudflareResources — read-first', () => {
     ]);
   });
 
-  it('points to the Void Cloudflare login when replication has no bearer', async () => {
+  it('points to the Nosam Cloudflare login when replication has no bearer', async () => {
     setup(
       JSON.stringify({
         d1_databases: [{ binding: 'DB', database_name: 'myapp-db', database_id: uuid('db1') }],
@@ -2474,7 +2474,7 @@ describe('provisionCloudflareResources — boundary account fence', () => {
     expect(error).toBeInstanceOf(Error);
     const message = (error as Error).message;
     expect(message).toMatch(/no Cloudflare account is resolvable/);
-    // The remedy names the Void setting, not a Wrangler config file.
+    // The remedy names the Nosam setting, not a Wrangler config file.
     expect(message).toContain('cloudflare.account_id');
     expect(message).not.toContain('wrangler');
     expect(calls).toEqual([]);

@@ -21,8 +21,8 @@ export async function maybeSetupDeployProject(root: string): Promise<ProjectConf
   const existingToken = getToken(root);
   const shouldSetup = await confirm({
     message: existingToken
-      ? 'Link your Void project now?'
-      : 'Log in now and link or create a Void project?',
+      ? 'Link your Nosam project now?'
+      : 'Log in now and link or create a Nosam project?',
   });
   if (isCancel(shouldSetup)) {
     cancel('Setup cancelled.');
