@@ -1,4 +1,4 @@
-import { PLATFORM_USAGE_PROTOCOL_VERSION } from '@nosam/platform';
+import { PLATFORM_USAGE_PROTOCOL_VERSION } from '@buildwf/platform';
 
 export const USAGE_PROTOCOL_VERSION = PLATFORM_USAGE_PROTOCOL_VERSION;
 

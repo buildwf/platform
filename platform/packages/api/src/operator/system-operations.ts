@@ -1,4 +1,4 @@
-import { platformHealthHostname, readPlatformApplication } from '@nosam/platform';
+import { platformHealthHostname, readPlatformApplication } from '@buildwf/platform';
 import { sql } from 'drizzle-orm';
 import { backfillQueueTokens } from '../admin/backfill-queue-tokens.ts';
 import { getPlatformCapabilities } from '../capabilities.ts';

@@ -150,7 +150,7 @@ export async function addEmailDomainForProject(
         return context.json(
           {
             error: 'email domains on this platform are managed by its administrator',
-            adminCommand: `nosam platform email domain-add ${input.domain} --project ${project.slug}`,
+            adminCommand: `bwf platform email domain-add ${input.domain} --project ${project.slug}`,
           },
           403,
         );

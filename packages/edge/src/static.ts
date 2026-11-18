@@ -1,6 +1,6 @@
-import type { AssetConfig } from '@nosam/deploy-core';
+import type { AssetConfig } from '@buildwf/deploy-core';
 
-export type { AssetConfig } from '@nosam/deploy-core';
+export type { AssetConfig } from '@buildwf/deploy-core';
 
 export type ResolvedAsset = Readonly<{
   path: string;

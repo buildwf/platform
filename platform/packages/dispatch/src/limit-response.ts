@@ -1,4 +1,4 @@
-import { usageLimitResponse, type UsageLimitData } from '@nosam/edge';
+import { usageLimitResponse, type UsageLimitData } from '@buildwf/edge';
 import { createErrorResponse, shouldServeHtmlErrorPage } from './error-page.ts';
 
 /** Runs entirely in dispatch: app execution and app resources are never needed. */

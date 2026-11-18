@@ -1,4 +1,4 @@
-import { boolean, defineEnv, oneOf, string, url } from 'nosam/env';
+import { boolean, defineEnv, oneOf, string, url } from '@buildwf/bwf/env';
 
 export default defineEnv({
   APP_NAME: string(),

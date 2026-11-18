@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
-import { isRecord } from '@nosam/deploy-core';
+import { isRecord } from '@buildwf/deploy-core';
 
 /**
  * `wrangler secret put` creates a fetch-only draft before attaching a first secret to a Worker.
@@ -60,23 +60,23 @@ export function isWranglerSecretOnlyDraft(entry: Record<string, unknown>): boole
   );
 }
 
-// Keep these bytes aligned with the private placeholder written by Nosam's
+// Keep these bytes aligned with the private placeholder written by bwf's
 // Cloudflare secret transport. Unlike the legacy Wrangler placeholder, cf
 // uploads include a compatibility date, so metadata alone cannot distinguish
 // them from an existing fetch-only application after a secret update.
 export const NOSAM_SECRET_DRAFT_SOURCE =
   'export default { fetch() { return new Response(""); } };\n';
 
-/** Message on the placeholder that Nosam's secret transport deploys to a Worker without code. */
+/** Message on the placeholder that bwf's secret transport deploys to a Worker without code. */
 export const NOSAM_SECRET_DRAFT_MESSAGE = 'nosam:secret-draft';
 
 /**
- * Annotations of a Nosam secret placeholder, checked before its source is inspected:
+ * Annotations of a bwf secret placeholder, checked before its source is inspected:
  * - `api`: the secret transport uploaded and deployed the placeholder and its first secrets in
  *   one Workers API request.
  * - `cf_cli`: `cf workers secrets` added secrets to a deployed placeholder.
  */
-export function isNosamSecretDraftHeader(entry: Record<string, unknown>): boolean {
+export function isBwfSecretDraftHeader(entry: Record<string, unknown>): boolean {
   if (!isRecord(entry.annotations)) {
     return false;
   }
@@ -93,8 +93,8 @@ export function isNosamSecretDraftHeader(entry: Record<string, unknown>): boolea
   );
 }
 
-/** Prove a Nosam secret placeholder from the exact immutable version's source. */
-export function isNosamSecretOnlyDraft(entry: Record<string, unknown>): boolean {
+/** Prove a bwf secret placeholder from the exact immutable version's source. */
+export function isBwfSecretOnlyDraft(entry: Record<string, unknown>): boolean {
   const metadataFields = new Set([
     'id',
     'number',
@@ -116,7 +116,7 @@ export function isNosamSecretOnlyDraft(entry: Record<string, unknown>): boolean 
   ]);
   if (
     Object.keys(entry).some((key) => !metadataFields.has(key)) ||
-    !isNosamSecretDraftHeader(entry) ||
+    !isBwfSecretDraftHeader(entry) ||
     entry.main_module !== 'index.js' ||
     !Array.isArray(entry.urls) ||
     entry.urls.length !== 0 ||

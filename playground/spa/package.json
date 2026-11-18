@@ -15,12 +15,12 @@
     "valibot": "^1.5.0"
   },
   "devDependencies": {
+    "@buildwf/bwf": "workspace:*",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
-    "vite-plus": "catalog:",
-    "nosam": "workspace:*"
+    "vite-plus": "catalog:"
   }
 }

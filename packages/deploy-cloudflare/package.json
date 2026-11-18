@@ -1,15 +1,15 @@
 {
-  "name": "@nosam/deploy-cloudflare",
+  "name": "@buildwf/deploy-cloudflare",
   "version": "1.9.1",
-  "description": "Cloudflare deployment primitives for Nosam runtimes and deployment adapters.",
-  "homepage": "https://void.cloud",
+  "description": "Cloudflare deployment primitives for bwf runtimes and deployment adapters.",
+  "homepage": "https://github.com/buildwf/fif-spa",
   "bugs": {
-    "url": "https://github.com/voidzero-dev/void/issues"
+    "url": "https://github.com/buildwf/fif-spa/issues"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/voidzero-dev/void.git",
+    "url": "git+https://github.com/buildwf/fif-spa.git",
     "directory": "packages/deploy-cloudflare"
   },
   "files": [
@@ -31,7 +31,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@nosam/deploy-core": "workspace:*",
+    "@buildwf/deploy-core": "workspace:*",
     "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {

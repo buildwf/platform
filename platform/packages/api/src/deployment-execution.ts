@@ -168,7 +168,10 @@ async function writeDeploymentInputReceipt(
   // prepared input, including no-op redeploys and later failures, not a live
   // publication. Keep the parent prefix unchanged for cleanup and recovery.
   const kind = appType === 'spa' ? 'spa' : moduleCount > 0 ? 'worker' : 'static';
-  await r2.put(`${prefix}receipt-nosam-platform-${kind}`, JSON.stringify({ createdAt: Date.now() }));
+  await r2.put(
+    `${prefix}receipt-nosam-platform-${kind}`,
+    JSON.stringify({ createdAt: Date.now() }),
+  );
 }
 
 export async function prepareDeploymentInput(

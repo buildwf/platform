@@ -145,7 +145,7 @@ export async function setOperatorEmailSettings(
       previous: { domains: previous },
       effect:
         domains === 'admin'
-          ? 'Project owners are told to ask an administrator; `nosam email domain add` no longer opens a Cloudflare consent.'
+          ? 'Project owners are told to ask an administrator; `bwf email domain add` no longer opens a Cloudflare consent.'
           : 'Project owners register email domains with their own Cloudflare credential.',
     });
   }

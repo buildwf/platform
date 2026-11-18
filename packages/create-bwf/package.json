@@ -1,0 +1,40 @@
+{
+  "name": "create-bwf",
+  "version": "1.9.1",
+  "description": "Create a full-stack bwf app for Cloudflare Workers.",
+  "homepage": "https://github.com/buildwf/fif-spa",
+  "bugs": {
+    "url": "https://github.com/buildwf/fif-spa/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buildwf/fif-spa.git",
+    "directory": "packages/create-bwf"
+  },
+  "bin": {
+    "create-bwf": "dist/index.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@voidzero-dev/vite-plus-prompts": "catalog:",
+    "pathslash": "catalog:",
+    "picocolors": "^1.1.1",
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  },
+  "engines": {
+    "node": "^24.22.0 || >=26.12.0"
+  }
+}

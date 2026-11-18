@@ -1,4 +1,4 @@
-import { defineEmail } from 'nosam/email';
+import { defineEmail } from '@buildwf/bwf/email';
 
 /**
  * Fallback for any inbound message that doesn't match a per-address handler.

@@ -18,7 +18,7 @@ Build systems may set `NOSAM_PLATFORM_SOURCE_REVISION` when they need to overrid
 The runtime is written to `packages/platform/dist/runtime`. Use the built CLI to preview a new installation from those files:
 
 ```sh
-nosam-dev platform install \
+bwf-dev platform install \
   --name my-team \
   --application-domain example.app \
   --zone example.app \
@@ -26,14 +26,14 @@ nosam-dev platform install \
   --plan
 ```
 
-Before applying the plan, complete the [installation guides](/guide/self-hosted-platform). Run the command without `--plan` to install. For testing before your domain is ready, replace `--application-domain` and `--zone` with `--workers-dev`; PostgreSQL and the runtime, login-provider, and R2 credentials are still needed. Use `nosam-dev` in place of `nosam` and keep `--runtime packages/platform/dist/runtime` on install and resume commands. For an interrupted installation, keep that runtime build available until it completes.
+Before applying the plan, complete the [installation guides](/guide/self-hosted-platform). Run the command without `--plan` to install. For testing before your domain is ready, replace `--application-domain` and `--zone` with `--workers-dev`; PostgreSQL and the runtime, login-provider, and R2 credentials are still needed. Use `bwf-dev` in place of `bwf` and keep `--runtime packages/platform/dist/runtime` on install and resume commands. For an interrupted installation, keep that runtime build available until it completes.
 
-Later, run `nosam-dev platform domain set example.app`. Domain setup uses the existing installed runtime and needs no `--runtime`, rebuild, or app redeploy. It keeps the platform API URL and original workers.dev app URLs available.
+Later, run `bwf-dev platform domain set example.app`. Domain setup uses the existing installed runtime and needs no `--runtime`, rebuild, or app redeploy. It keeps the platform API URL and original workers.dev app URLs available.
 
 For an existing installation, preview an upgrade using its connection ID:
 
 ```sh
-nosam-dev platform upgrade <installation-id> \
+bwf-dev platform upgrade <installation-id> \
   --runtime packages/platform/dist/runtime --plan
 ```
 
@@ -44,7 +44,7 @@ Then run it without `--plan` to apply the upgrade. Source-built runtimes go thro
 The core installer does not deploy the dashboard, GitHub App, build Containers,
 or webhook ingress. Passing a source build with `--runtime` does not provision
 their infrastructure, bindings, credentials, or platform capabilities. The
-repository's hosted deployment scripts target Nosam Cloud; they are not a
+repository's hosted deployment scripts target bwf Cloud; they are not a
 general setup procedure for adding these services to a self-hosted platform.
 Use the core CLI deployment workflow unless your fork supplies and maintains
 that optional integration.
@@ -87,7 +87,7 @@ The ingress accepts payloads up to 25 MiB. See [GitHub’s payload limit](https:
 
 ## Deploying Source Builds from CI
 
-Build `@nosam/platform` from your checkout and pass its runtime directory to `install`, `upgrade`, `repair`, `enable`, or `rollback` with `--runtime`. Custom runtimes get the same integrity, migration, health, and rollback checks as packaged releases.
+Build `@buildwf/platform` from your checkout and pass its runtime directory to `install`, `upgrade`, `repair`, `enable`, or `rollback` with `--runtime`. Custom runtimes get the same integrity, migration, health, and rollback checks as packaged releases.
 
 Use a clean Git checkout or set `NOSAM_PLATFORM_SOURCE_REVISION` to identify the revision you deploy.
 
@@ -100,11 +100,11 @@ vp run build:core
 
 export NOSAM_PLATFORM_REGISTRY_DIR="$RUNNER_TEMP/nosam-platform-registry"
 export NOSAM_PLATFORM_RECOVERY_KEY="$(openssl rand -base64 32)"
-node packages/nosam/dist/cli/cli.mjs platform discover --account "$CLOUDFLARE_ACCOUNT_ID" \
+node packages/bwf/dist/cli/cli.mjs platform discover --account "$CLOUDFLARE_ACCOUNT_ID" \
   --installation "$NOSAM_PLATFORM_INSTALLATION"
-node packages/nosam/dist/cli/cli.mjs platform upgrade "$NOSAM_PLATFORM_INSTALLATION" \
+node packages/bwf/dist/cli/cli.mjs platform upgrade "$NOSAM_PLATFORM_INSTALLATION" \
   --runtime packages/platform/dist/runtime --plan
-node packages/nosam/dist/cli/cli.mjs platform upgrade "$NOSAM_PLATFORM_INSTALLATION" \
+node packages/bwf/dist/cli/cli.mjs platform upgrade "$NOSAM_PLATFORM_INSTALLATION" \
   --runtime packages/platform/dist/runtime --yes
 ```
 

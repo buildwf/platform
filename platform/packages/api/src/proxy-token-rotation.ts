@@ -1048,7 +1048,7 @@ export function proxyTokenRotationStuckWarning(projectId: string): string {
     "Replacing this project's platform credentials keeps failing. Until it finishes, older " +
     'credentials still work, including any a removed member may still hold. The platform keeps ' +
     'retrying. If this warning stays, ask your platform administrator to run ' +
-    `\`nosam platform system rotate-proxy-tokens --plan --project ${projectId}\`.`
+    `\`bwf platform system rotate-proxy-tokens --plan --project ${projectId}\`.`
   );
 }
 

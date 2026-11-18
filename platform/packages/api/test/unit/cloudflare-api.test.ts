@@ -526,7 +526,12 @@ describe('getDispatchWorkerProxyToken', () => {
   it('returns {kind:"error"} when fetch itself throws (network failure)', async () => {
     fetchMock.mockRejectedValueOnce(new Error('ECONNRESET'));
 
-    const result = await getDispatchWorkerProxyToken(ACCOUNT, TOKEN, 'nosam-users', 'user-net-fail');
+    const result = await getDispatchWorkerProxyToken(
+      ACCOUNT,
+      TOKEN,
+      'nosam-users',
+      'user-net-fail',
+    );
 
     expect(result.kind).toBe('error');
     if (result.kind === 'error') {

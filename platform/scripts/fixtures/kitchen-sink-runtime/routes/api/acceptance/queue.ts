@@ -1,6 +1,6 @@
-import { defineHandler } from 'nosam';
-import { env } from 'nosam/env';
-import { queues } from 'nosam/queues';
+import { defineHandler } from '@buildwf/bwf';
+import { env } from '@buildwf/bwf/env';
+import { queues } from '@buildwf/bwf/queues';
 import { queueCases, queueResultKey, validQueueRun } from '../../../lib/queue-acceptance.ts';
 
 export const POST = defineHandler(async (c) => {

@@ -11,7 +11,7 @@ export type DeployAssetManifestEntry = {
   hash: string;
 };
 
-/** Target-neutral output of packaging a Nosam application for deployment. */
+/** Target-neutral output of packaging a bwf application for deployment. */
 export type DeployArtifact = Readonly<{
   artifactVersion: typeof DEPLOY_ARTIFACT_VERSION;
   manifest: Readonly<DeployManifest>;

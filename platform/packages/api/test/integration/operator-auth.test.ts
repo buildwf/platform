@@ -1,4 +1,4 @@
-import { PLATFORM_SANDBOX_DRAIN_KEY } from '@nosam/platform';
+import { PLATFORM_SANDBOX_DRAIN_KEY } from '@buildwf/platform';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vite-plus/test';
 import { signJwt, verifyJwt } from '../../src/auth/jwt.ts';

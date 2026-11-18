@@ -1076,7 +1076,7 @@ describe('GET /projects/:id/database-url', () => {
 
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({
-      error: { code: 'NOT_STORED', message: expect.stringContaining('nosam db set-url') },
+      error: { code: 'NOT_STORED', message: expect.stringContaining('bwf db set-url') },
     });
   });
 
@@ -1445,7 +1445,7 @@ describe('POST /projects', () => {
     expect(body).toMatchObject({
       slug: 'warning-app',
       warnings: [
-        'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Nosam retries within an hour. To retry now, a project owner or admin can run `nosam project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.',
+        'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Nosam retries within an hour. To retry now, a project owner or admin can run `bwf project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.',
       ],
     });
     expect(body).not.toHaveProperty('warning');
@@ -2643,7 +2643,9 @@ describe('POST /projects/:id/rollback', () => {
     // rollback uses THIS value rather than re-deriving from JWT_SECRET.
     mockCfApi({
       listWorkerBindings: () =>
-        cfSuccess([{ type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: 'baked-into-d1-cron' }]),
+        cfSuccess([
+          { type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: 'baked-into-d1-cron' },
+        ]),
     });
 
     const doCalls: Array<{ url: string; body: string | null }> = [];
@@ -3723,7 +3725,7 @@ describe('POST /projects — owner email destination auto-add', () => {
   //
   // Interleaves at the driver: `env.db.$client` is the object drizzle issues
   // every statement through (PGlite here, `pg.Pool` under
-  // NOSAM_TEST_DATABASE_URL), so a hook on its `query` can run the competing
+  // BWF_TEST_DATABASE_URL), so a hook on its `query` can run the competing
   // delete after the helper's INSERT and before its SELECT with the real
   // helper untouched. The SQL shape is drizzle's: PGlite takes the text
   // directly, node-postgres wraps it in `{ text }`.

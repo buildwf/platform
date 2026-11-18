@@ -1,4 +1,4 @@
-import { createDeployIntent, isR2LocationHint, type R2LocationHint } from '@nosam/deploy-core';
+import { createDeployIntent, isR2LocationHint, type R2LocationHint } from '@buildwf/deploy-core';
 import { getProjectResources, createResource, type Db } from '../db.ts';
 import { getProjectQueueName } from '../naming.ts';
 import type { DeployManifest, Resource } from '../types.ts';
@@ -154,7 +154,7 @@ export async function provisionBindings(
         );
         if (!found) {
           throw new Error(
-            `Hyperdrive not provisioned for binding "${resource.bindingName}". Run \`nosam db set-url\` first.`,
+            `Hyperdrive not provisioned for binding "${resource.bindingName}". Run \`bwf db set-url\` first.`,
           );
         }
         tasks.push(
@@ -179,7 +179,7 @@ export async function provisionBindings(
   bindings.push({ type: 'service', name: '__NOSAM_PROXY', service: aiProxyService });
   bindings.push({ type: 'plain_text', name: '__PROJECT_ID', text: projectId });
   bindings.push({ type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: platform.proxyToken });
-  // Project slug — the SINGLE producer of `__NOSAM_PROJECT_SLUG`. `nosam/email`
+  // Project slug — the SINGLE producer of `__NOSAM_PROJECT_SLUG`. `@buildwf/bwf/email`
   // needs it on every worker to default an outbound `from` to
   // `<slug>+noreply@<domain>`, and the sandbox runtime reads the same name.
   // Emitted after the user's vars in the upload array, so it cannot be

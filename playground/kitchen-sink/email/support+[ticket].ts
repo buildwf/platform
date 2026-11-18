@@ -1,4 +1,4 @@
-import { defineEmail, parseEmail, replyEmail } from 'nosam/email';
+import { defineEmail, parseEmail, replyEmail } from '@buildwf/bwf/email';
 
 /**
  * Inbound handler for `support+<ticket>@<sender-domain>`.
@@ -9,7 +9,7 @@ import { defineEmail, parseEmail, replyEmail } from 'nosam/email';
  *   - replyEmail with threading-aware reply MIME (In-Reply-To / References / Re:)
  *
  * To try it locally, deliver a test message with `createInboundTestHarness`
- * from `nosam/email/testing`.
+ * from `@buildwf/bwf/email/testing`.
  */
 export default defineEmail(async (message, _env, _ctx, info) => {
   const ticket = info?.params.ticket ?? 'unknown';

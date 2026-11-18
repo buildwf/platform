@@ -1,5 +1,5 @@
+import { defineRoom } from '@buildwf/bwf/ws';
 import * as v from 'valibot';
-import { defineRoom } from 'nosam/ws';
 
 const ChatClientMessage = v.variant('type', [
   v.object({

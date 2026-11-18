@@ -1,11 +1,11 @@
 ---
-description: 'Run local code against a project already deployed to your Nosam platform, including its database and storage.'
+description: 'Run local code against a project already deployed to your bwf platform, including its database and storage.'
 outline: deep
 ---
 
 # Remote Development
 
-Nosam normally uses local D1, KV, and R2 through [Miniflare](https://miniflare.dev/). Remote mode lets you run local code against a project deployed to your Nosam platform, for example to test with existing data or investigate an issue.
+bwf normally uses local D1, KV, and R2 through [Miniflare](https://miniflare.dev/). Remote mode lets you run local code against a project deployed to your bwf platform, for example to test with existing data or investigate an issue.
 
 Calls such as `db.select()` and `env.KV.get()` use the deployed resources without changing your application code. Writes affect real data, so use a staging project when possible.
 
@@ -13,12 +13,12 @@ Calls such as `db.select()` and `env.KV.get()` use the deployed resources withou
 
 Before enabling remote mode, you need:
 
-1. Connect to your team's platform with `nosam connect <url>`. It signs you in when needed.
-2. Link a project with `nosam project link`. Deploy it at least once so its resources exist.
+1. Connect to your team's platform with `bwf connect <url>`. It signs you in when needed.
+2. Link a project with `bwf project link`. Deploy it at least once so its resources exist.
 
 ## Enabling Remote Mode
 
-### In `nosam.config.ts` (persistent)
+### In `bwf.config.ts` (persistent)
 
 ```json
 {
@@ -29,10 +29,10 @@ Before enabling remote mode, you need:
 ### Via environment variable (one-off)
 
 ```bash
-NOSAM_REMOTE=1 vite dev
+BWF_REMOTE=1 vite dev
 ```
 
-`NOSAM_REMOTE=0` disables remote mode even if `nosam.config.ts` has `"remote": true`.
+`BWF_REMOTE=0` disables remote mode even if `bwf.config.ts` has `"remote": true`.
 
 ## Supported Bindings
 

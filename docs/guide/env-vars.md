@@ -1,17 +1,17 @@
 ---
-description: 'Declare environment variables in env.ts and read the typed values from nosam/env. Use .env locally and secrets in production.'
+description: 'Declare environment variables in env.ts and read the typed values from bwf/env. Use .env locally and secrets in production.'
 ---
 
 # Environment variables
 
-Declare your environment variables in `env.ts`, then read them through `env` from `nosam/env`. Use `.env` for local values and `nosam secret put` for production server values.
+Declare your environment variables in `env.ts`, then read them through `env` from `@buildwf/bwf/env`. Use `.env` for local values and `bwf secret put` for production server values.
 
 ## Define the schema
 
 Create `env.ts` at the project root:
 
 ```ts
-import { defineEnv, number, string, url } from 'nosam/env';
+import { defineEnv, number, string, url } from '@buildwf/bwf/env';
 
 export default defineEnv({
   DATABASE_URL: url(),
@@ -24,7 +24,7 @@ export default defineEnv({
 Import the typed `env` object in your app:
 
 ```ts
-import { env } from 'nosam/env';
+import { env } from '@buildwf/bwf/env';
 
 const databaseUrl = env.DATABASE_URL;
 ```
@@ -47,12 +47,12 @@ An unquoted value ends at `#`, which starts a comment. Quote a value that contai
 
 Keep `.env` out of Git. Other dotenv files, including `.env.local`, `.env.production`, `.env.example`, and Wrangler’s `.dev.vars*`, are not supported.
 
-Names starting with `__NOSAM_` are reserved for Nosam. Nosam stops with an error if `.env` or `env.ts` defines one.
+Names starting with `__NOSAM_` are reserved for bwf. bwf stops with an error if `.env` or `env.ts` defines one.
 
 Run the local check at any time:
 
 ```sh
-nosam env check
+bwf env check
 ```
 
 Local database, migration, auth, and dev-server tooling all read the same `.env` file. Shell values override it.
@@ -62,21 +62,21 @@ Local database, migration, auth, and dev-server tooling all read the same `.env`
 Every schema key that is not client-prefixed is a server value. Set it remotely:
 
 ```sh
-nosam secret put DATABASE_URL
-nosam secret put STRIPE_KEY
+bwf secret put DATABASE_URL
+bwf secret put STRIPE_KEY
 ```
 
 For bulk upload, prepare a dotenv-formatted file containing only production server values:
 
 ```sh
-nosam secret sync production-secrets.txt
+bwf secret sync production-secrets.txt
 ```
 
 Secret commands validate values against `env.ts` before upload. Production values are encrypted and validated again at Worker startup.
 
 Client-prefixed keys are rejected by secret commands. Keep local development credentials and `VITE_*` values out of the production secrets file.
 
-`nosam deploy` requires every required server key to exist remotely. It never uploads `.env` values.
+`bwf deploy` requires every required server key to exist remotely. It never uploads `.env` values.
 
 The same secret commands work for direct Cloudflare deployments. Schema-declared server values must be Worker secrets, not plaintext `vars`.
 
@@ -87,7 +87,7 @@ Keys beginning with `VITE_` are client values, even if your framework customizes
 Client values are embedded in browser JavaScript and are never secrets. Supply them through the build shell or use a schema default:
 
 ```sh
-VITE_API_ORIGIN=https://api.example.com nosam deploy
+VITE_API_ORIGIN=https://api.example.com bwf deploy
 ```
 
 ```ts
@@ -103,12 +103,12 @@ Server rendering uses the same public build values as the browser.
 ## Validation and redaction
 
 ```sh
-nosam env check           # validate .env + shell for local development
-nosam env check --remote  # validate build-time client values and remote server names
-nosam env types           # regenerate .nosam/env.d.ts
+bwf env check           # validate .env + shell for local development
+bwf env check --remote  # validate build-time client values and remote server names
+bwf env types           # regenerate .bwf/env.d.ts
 ```
 
-Invalid-value diagnostics redact the supplied value by default. Set `NOSAM_ENV_UNMASK=1` only for deliberate local debugging; Nosam prints a notice when redaction is disabled.
+Invalid-value diagnostics redact the supplied value by default. Set `BWF_ENV_UNMASK=1` only for deliberate local debugging; bwf prints a notice when redaction is disabled.
 
 ## Imports inside `env.ts`
 

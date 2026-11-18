@@ -107,7 +107,7 @@ const aiLoggingStates: Record<string, (status: AiLoggingStatusDisplay) => string
 
 /**
  * `metadata (from plan "pro") — applied`. Keep the wording in step with `project show`
- * (`aiLoggingStatusLine` in packages/nosam/src/cli/operator-ai-logging.ts).
+ * (`aiLoggingStatusLine` in packages/bwf/src/cli/operator-ai-logging.ts).
  */
 export function formatAiLoggingStatus(status: AiLoggingStatusDisplay | null): string {
   if (!status) {

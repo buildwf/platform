@@ -19,9 +19,9 @@ export function buildSandboxController(outputDirectory = join(packageRoot, 'dist
         compatibility_date: '2026-02-24',
         compatibility_flags: ['nodejs_compat'],
         alias: {
-          'nosam/_sandbox-container': join(
+          '@buildwf/bwf/_sandbox-container': join(
             packageRoot,
-            '../../../packages/nosam/src/runtime/sandbox-container.ts',
+            '../../../packages/bwf/src/runtime/sandbox-container.ts',
           ),
         },
       }),

@@ -1,7 +1,7 @@
+import { defineHandler } from '@buildwf/bwf';
+import { db, desc, eq } from '@buildwf/bwf/db';
+import { queues } from '@buildwf/bwf/queues';
 import { queueResults } from '@schema';
-import { defineHandler } from 'nosam';
-import { db, desc, eq } from 'nosam/db';
-import { queues } from 'nosam/queues';
 
 export const GET = defineHandler(() =>
   db.select().from(queueResults).orderBy(desc(queueResults.id)).limit(50),

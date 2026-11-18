@@ -1,4 +1,4 @@
-import type { ProjectZeroTrustRouting } from '@nosam/edge';
+import type { ProjectZeroTrustRouting } from '@buildwf/edge';
 import { createRemoteJWKSet, customFetch, jwtVerify } from 'jose';
 
 function matchesHostname(pattern: string, hostname: string): boolean {

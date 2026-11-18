@@ -3,7 +3,7 @@ import {
   createPlatformDeploymentManifest,
   createPlatformResourceNames,
   parsePlatformDeploymentManifest,
-} from '@nosam/platform';
+} from '@buildwf/platform';
 import { describe, expect, it } from 'vite-plus/test';
 
 describe('platform deployment manifest', () => {

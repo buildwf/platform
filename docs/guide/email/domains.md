@@ -1,18 +1,18 @@
 ---
-description: 'Register an email domain on a Nosam platform, or configure sending and receiving in your own Cloudflare account.'
+description: 'Register an email domain on a bwf platform, or configure sending and receiving in your own Cloudflare account.'
 outline: deep
 ---
 
 # Email Domains and Setup
 
-Choose the setup for your deployment: register a domain on a Nosam platform, or configure email in your own Cloudflare account. For the platform’s shared sender, follow [Sending Email](./sending.md#setup).
+Choose the setup for your deployment: register a domain on a bwf platform, or configure email in your own Cloudflare account. For the platform’s shared sender, follow [Sending Email](./sending.md#setup).
 
 ## Your own domain on the platform {#your-own-domain-on-the-platform}
 
 The shared sender uses the platform's configured mail domain. To send — and receive — at a domain you own, register its Cloudflare zone with the project:
 
 ```sh
-nosam email domain add acme.com
+bwf email domain add acme.com
 ```
 
 `add` opens a Cloudflare API-token template. Restrict the token to the selected account and mail zone before creating it; Workers Scripts permission applies across that account. The CLI accepts a masked paste or a newly copied token and asks you to confirm those restrictions. The platform encrypts the credential for the zone connection, so projects sharing that zone do not need separate ingress Workers.
@@ -21,15 +21,15 @@ For inbound mail, use a Cloudflare zone apex with no existing mail service, such
 
 To keep receiving mail through another provider, ask your platform administrator to register the domain as [outbound-only](../platform/administration/email.md#sending-from-a-domain-that-already-receives-mail). You can also use the platform's shared mail address.
 
-If setup is interrupted, use `nosam email domain status <domain>` to inspect the saved operation before retrying.
+If setup is interrupted, use `bwf email domain status <domain>` to inspect the saved operation before retrying.
 
-`nosam email domain status <domain>` reports three independent results:
+`bwf email domain status <domain>` reports three independent results:
 
 - **Inbound**: whether mail can reach the project's handlers.
 - **Outbound**: whether sending is ready, restricted to verified destinations, pending, or blocked.
 - **Management**: whether the stored Cloudflare credential can manage the connection.
 
-Use `nosam email domain sync <domain>` to finish setup and refresh readiness. The status lists any dashboard or credential steps still needed. Use `rotate-secret` to rotate the connection secret after inbound is ready, or `remove` to detach the domain. Revoke unused API tokens in Cloudflare. See [Email domain commands](../../reference/cli/email.md#nosam-email-domain).
+Use `bwf email domain sync <domain>` to finish setup and refresh readiness. The status lists any dashboard or credential steps still needed. Use `rotate-secret` to rotate the connection secret after inbound is ready, or `remove` to detach the domain. Revoke unused API tokens in Cloudflare. See [Email domain commands](../../reference/cli/email.md#nosam-email-domain).
 
 Once inbound is ready, mail to any address on that domain reaches your `email/` handlers. Sending to arbitrary recipients also needs outbound readiness; a domain limited to verified destinations still requires recipient verification. Platform quotas and suspension apply to both shared and custom senders.
 
@@ -40,27 +40,27 @@ On an administrator-managed platform, `add` prints the administrator command for
 Set a sender on a Cloudflare zone you own:
 
 ```ts
-import { defineConfig } from 'nosam/config';
+import { defineConfig } from '@buildwf/bwf/config';
 
 export default defineConfig({
   email: { from: 'Acme <support@mail.acme.com>' },
 });
 ```
 
-Use a mail subdomain to keep existing mail on `acme.com` with its current provider. Nosam refuses to replace another provider's MX records.
+Use a mail subdomain to keep existing mail on `acme.com` with its current provider. bwf refuses to replace another provider's MX records.
 
 ### Setup {#setup-1}
 
-Sign in with `nosam cloudflare login`, or use a `CLOUDFLARE_API_TOKEN` with **Email Routing Edit** and **Email Sending Edit** in addition to deploy permissions. If your browser session lacks email permissions, log out and sign in again. Global API Keys aren't supported.
+Sign in with `bwf cloudflare login`, or use a `CLOUDFLARE_API_TOKEN` with **Email Routing Edit** and **Email Sending Edit** in addition to deploy permissions. If your browser session lacks email permissions, log out and sign in again. Global API Keys aren't supported.
 
-Run `nosam deploy --platform cloudflare`. Nosam shows the domain, routing, sending, DNS, and handler addresses it would configure. Accept to set up email and deploy. Later deploys reuse the setup. If you decline the initial setup, the app deploys without email.
+Run `bwf deploy --platform cloudflare`. bwf shows the domain, routing, sending, DNS, and handler addresses it would configure. Accept to set up email and deploy. Later deploys reuse the setup. If you decline the initial setup, the app deploys without email.
 
-Without `email.from`, Nosam skips automatic setup and preserves authored `cloudflare.send_email` bindings and `cloudflare.addresses`; check their readiness yourself. `--require-email` still refuses deployment when automatic setup cannot be verified.
+Without `email.from`, bwf skips automatic setup and preserves authored `cloudflare.send_email` bindings and `cloudflare.addresses`; check their readiness yourself. `--require-email` still refuses deployment when automatic setup cannot be verified.
 
 If subdomain setup needs a dashboard step, follow the checklist under **Email → Settings → Subdomains**, then retry. After DNS changes, check readiness with:
 
 ```sh
-nosam email status --platform cloudflare
+bwf email status --platform cloudflare
 ```
 
 ### Inbound addresses {#inbound-addresses}
@@ -85,35 +85,35 @@ On Workers Free, `sendEmail()` can send to verified destinations listed under **
 
 Configure your sender domain's SPF, DKIM, and DMARC records using [Cloudflare's email authentication guidance](https://developers.cloudflare.com/email-service/concepts/email-authentication/), then check the authentication results in a received message's original headers. A successful `sendEmail()` result confirms provider acceptance; it does not confirm delivery or authentication readiness.
 
-Sending to arbitrary recipients requires [Workers Paid](https://dash.cloudflare.com/?to=/:account/workers/plans) and Email Sending onboarding. After upgrading, run `nosam email setup --platform cloudflare`. Nosam doesn't retry onboarding during ordinary deploys.
+Sending to arbitrary recipients requires [Workers Paid](https://dash.cloudflare.com/?to=/:account/workers/plans) and Email Sending onboarding. After upgrading, run `bwf email setup --platform cloudflare`. bwf doesn't retry onboarding during ordinary deploys.
 
 Existing DMARC or bounce-domain records can block onboarding; the checklist identifies conflicts to resolve. Inbound mail remains available.
 
-The `nosam email usage`, `logs`, `destinations`, `allow`, and `disallow` commands apply to Nosam platforms.
+The `bwf email usage`, `logs`, `destinations`, `allow`, and `disallow` commands apply to bwf platforms.
 
 ### Configuration changes {#configuration-changes}
 
-Commit `nosam.lock.json` after setup. Nosam derives routing addresses from your handlers and creates their rules during deployment.
+Commit `bwf.lock.json` after setup. bwf derives routing addresses from your handlers and creates their rules during deployment.
 
 Existing rules owned by another Worker or forwarding service are left in place. If you manage `cloudflare.addresses` yourself, follow the checklist rather than combining it with automatic email setup.
 
 After deleting a handler, review the reported stale address and set the desired `cloudflare.addresses`. Deleting a routing rule requires confirmation in an interactive terminal.
 
-To remove all email setup, remove `addresses`, `send_email`, and `vars.__NOSAM_EMAIL_FROM` from `resolved` in `nosam.lock.json`, remove corresponding overrides in `nosam.config.ts`, and delete the routing rules in Cloudflare.
+To remove all email setup, remove `addresses`, `send_email`, and `vars.__NOSAM_EMAIL_FROM` from `resolved` in `bwf.lock.json`, remove corresponding overrides in `bwf.config.ts`, and delete the routing rules in Cloudflare.
 
 ### CI {#ci}
 
 Set up email locally first:
 
 ```sh
-nosam email setup --platform cloudflare
-nosam email status --platform cloudflare
+bwf email setup --platform cloudflare
+bwf email status --platform cloudflare
 ```
 
-Commit `nosam.lock.json`, then deploy in CI with:
+Commit `bwf.lock.json`, then deploy in CI with:
 
 ```sh
-nosam deploy --platform cloudflare --require-email
+bwf deploy --platform cloudflare --require-email
 ```
 
 CI cannot answer setup prompts. Without `--require-email`, an unconfigured app can deploy without email. If setup is saved but DNS hasn't propagated, deployment waits for a later retry. Workers Free setup for verified recipients satisfies `--require-email`.

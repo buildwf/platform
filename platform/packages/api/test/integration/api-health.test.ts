@@ -1,4 +1,4 @@
-import { PLATFORM_DISABLED_KEY, PLATFORM_SANDBOX_DRAIN_KEY } from '@nosam/platform';
+import { PLATFORM_DISABLED_KEY, PLATFORM_SANDBOX_DRAIN_KEY } from '@buildwf/platform';
 import { sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 import app from '../../src/index.ts';

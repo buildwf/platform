@@ -47,8 +47,8 @@ test/log-data-point.test.ts
 
 ## Configuration and Deployment
 
-For a self-hosted installation, `nosam platform install` configures the tail
-consumer and its Analytics Engine binding, and `nosam platform upgrade` deploys
+For a self-hosted installation, `bwf platform install` configures the tail
+consumer and its Analytics Engine binding, and `bwf platform upgrade` deploys
 changes from the packaged runtime. Dataset and Worker names belong to that
 installation.
 

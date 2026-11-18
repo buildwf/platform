@@ -222,8 +222,8 @@ describe('staging kitchen-sink fixture env', () => {
           timeout: 10_000,
           env: {
             ...process.env,
-            NOSAM_API_URL: 'https://api.staging.void.cloud',
-            NOSAM_TOKEN: 'fake-token',
+            BWF_API_URL: 'https://api.staging.void.cloud',
+            BWF_TOKEN: 'fake-token',
             // Scope fixture credentials so no personal Access session is consulted.
             NOSAM_ACCESS_ORIGIN: 'https://api.staging.void.cloud',
             NOSAM_ACCESS_CREDENTIALS: '',

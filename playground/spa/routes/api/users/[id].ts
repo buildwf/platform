@@ -1,7 +1,7 @@
+import { defineHandler } from '@buildwf/bwf';
+import { db, eq } from '@buildwf/bwf/db';
 import { users } from '@schema';
 import * as v from 'valibot';
-import { defineHandler } from 'nosam';
-import { db, eq } from 'nosam/db';
 
 export const GET = defineHandler.withValidator({
   params: v.object({ id: v.string() }),

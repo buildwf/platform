@@ -1,4 +1,4 @@
-import { createDeployArtifact } from '@nosam/deploy-core';
+import { createDeployArtifact } from '@buildwf/deploy-core';
 import { eq, isNull } from 'drizzle-orm';
 import {
   beforeAll,
@@ -1065,7 +1065,7 @@ describe('registered OAuth applications', () => {
     const [grant] = await env.db.select().from(oauthGrants);
     expect(grant!.revoked_at).not.toBeNull();
   });
-  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))(
     'lets exactly one of many concurrent PostgreSQL redemptions rotate the token',
     async () => {
       const { token } = await connect();

@@ -1,15 +1,15 @@
 ---
-description: 'Connect MySQL through Cloudflare Hyperdrive, then query it with Drizzle. Nosam applies your migrations on deploy.'
+description: 'Connect MySQL through Cloudflare Hyperdrive, then query it with Drizzle. bwf applies your migrations on deploy.'
 outline: deep
 ---
 
 # MySQL
 
-Connect your MySQL database through [Cloudflare Hyperdrive](https://developers.cloudflare.com/hyperdrive/), then define tables and query them with Drizzle. Nosam configures the connection and applies your migrations when you deploy.
+Connect your MySQL database through [Cloudflare Hyperdrive](https://developers.cloudflare.com/hyperdrive/), then define tables and query them with Drizzle. bwf configures the connection and applies your migrations when you deploy.
 
 ## Configure
 
-Set the dialect in `nosam.config.ts`:
+Set the dialect in `bwf.config.ts`:
 
 ```json
 {
@@ -23,13 +23,13 @@ Add a direct connection for local development:
 DATABASE_URL=mysql://user:password@host:3306/app
 ```
 
-Nosam reads `.env` for the dev server and `nosam db` commands. In production, the Worker connects through the inferred `HYPERDRIVE` binding.
+bwf reads `.env` for the dev server and `bwf db` commands. In production, the Worker connects through the inferred `HYPERDRIVE` binding.
 
 ## Define a schema
 
 ```ts
 // db/schema.ts
-import { int, mysqlTable, text, timestamp } from 'nosam/schema-mysql';
+import { int, mysqlTable, text, timestamp } from '@buildwf/bwf/schema-mysql';
 
 export const messages = mysqlTable('messages', {
   id: int('id').autoincrement().primaryKey(),
@@ -38,35 +38,35 @@ export const messages = mysqlTable('messages', {
 });
 ```
 
-`nosam gen model` generates MySQL builders automatically when the project uses the MySQL dialect.
+`bwf gen model` generates MySQL builders automatically when the project uses the MySQL dialect.
 
 ## Migrations
 
 Use the normal workflow:
 
 ```sh
-nosam db generate
-nosam db migrate
-nosam deploy
+bwf db generate
+bwf db migrate
+bwf deploy
 ```
 
-For direct Cloudflare deploys, export the production `DATABASE_URL` in the shell running `nosam deploy --platform cloudflare`. Nosam uses it to provision Hyperdrive and apply pending checked-in migrations before uploading the Worker; it is not written to the Worker config.
+For direct Cloudflare deploys, export the production `DATABASE_URL` in the shell running `bwf deploy --platform cloudflare`. bwf uses it to provision Hyperdrive and apply pending checked-in migrations before uploading the Worker; it is not written to the Worker config.
 
-Only one migration run changes a database at a time, whether it comes from `nosam db migrate`, `nosam db reset`, the reset that `nosam db seed` does before it loads data, `nosam deploy --platform cloudflare`, or a `nosam deploy` of any project that uses the database. Better Auth's table changes run inside the same run. Another run waits for it, up to about 20 seconds for a command that connects with `DATABASE_URL` and about 2 minutes for a `nosam deploy` to the Nosam platform, then stops with an error that asks you to try again.
+Only one migration run changes a database at a time, whether it comes from `bwf db migrate`, `bwf db reset`, the reset that `bwf db seed` does before it loads data, `bwf deploy --platform cloudflare`, or a `bwf deploy` of any project that uses the database. Better Auth's table changes run inside the same run. Another run waits for it, up to about 20 seconds for a command that connects with `DATABASE_URL` and about 2 minutes for a `bwf deploy` to the bwf platform, then stops with an error that asks you to try again.
 
 ### Failed migrations {#failed-migrations}
 
 Each migration file runs in a transaction, so a failed file that only changes data leaves the database unchanged. On a sharded Vitess keyspace, such as a sharded PlanetScale database, a commit that fails on one shard does not undo the shards that already committed. MySQL commits schema changes such as `CREATE TABLE` and `ALTER TABLE` immediately, so when a file with schema changes fails partway through, its earlier statements stay applied. The error names the file that failed.
 
-To recover, undo the applied statements, fix the file, then run `nosam db migrate` or `nosam deploy` again:
+To recover, undo the applied statements, fix the file, then run `bwf db migrate` or `bwf deploy` again:
 
 ```sh
-nosam db execute "DROP TABLE comments"
-nosam db execute --remote "DROP TABLE comments" # deployed database
+bwf db execute "DROP TABLE comments"
+bwf db execute --remote "DROP TABLE comments" # deployed database
 ```
 
 MySQL rejects `IF NOT EXISTS` on `ADD COLUMN` and `CREATE INDEX`, so undoing a statement is usually simpler than making it safe to rerun. Small migrations leave less to undo.
 
 ## Database commands
 
-`nosam db push`, `generate`, `migrate`, `status`, `reset`, `seed`, `execute`, `studio`, `export`, `rename-migrations`, and `set-url` all understand MySQL. Local commands use `DATABASE_URL` from `.env`; `--remote` execution and Studio use the encrypted URL stored for a linked Nosam project.
+`bwf db push`, `generate`, `migrate`, `status`, `reset`, `seed`, `execute`, `studio`, `export`, `rename-migrations`, and `set-url` all understand MySQL. Local commands use `DATABASE_URL` from `.env`; `--remote` execution and Studio use the encrypted URL stored for a linked bwf project.

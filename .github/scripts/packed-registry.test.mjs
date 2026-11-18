@@ -12,9 +12,9 @@ function createPackage(t, overrides = {}, includeLicense = true) {
   const directory = join(root, 'package');
   mkdirSync(directory);
   const manifest = {
-    name: '@nosam/test',
+    name: '@buildwf/test',
     version: '0.0.0',
-    description: 'A Nosam test package.',
+    description: 'A bwf test package.',
     license: 'MIT',
     homepage: 'https://void.cloud',
     bugs: { url: 'https://github.com/voidzero-dev/void/issues' },
@@ -33,7 +33,7 @@ function createPackage(t, overrides = {}, includeLicense = true) {
 
 test('accepts complete metadata and license in a real package tarball', (t) => {
   const inspected = inspectPackage(createPackage(t));
-  assert.equal(inspected.manifest.name, '@nosam/test');
+  assert.equal(inspected.manifest.name, '@buildwf/test');
   assert.match(inspected.integrity, /^sha512-/);
 });
 

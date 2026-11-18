@@ -1,4 +1,4 @@
-import { PLATFORM_DISABLED_KEY } from '@nosam/platform';
+import { PLATFORM_DISABLED_KEY } from '@buildwf/platform';
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import app from '../../src/index.ts';
 import { setupEnv, teardownEnv, type TestEnv } from './helpers.ts';

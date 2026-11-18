@@ -1,7 +1,7 @@
 import {
   platformAuthenticationRecoveryMessage,
   type PlatformAuthenticationRecovery,
-} from '@nosam/platform';
+} from '@buildwf/platform';
 import { eq, sql } from 'drizzle-orm';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { chromium } from 'playwright';
@@ -18,9 +18,9 @@ import {
 import {
   commitAuthenticationRecovery,
   recoverAuthenticationCredential,
-} from '../../../../../packages/nosam/src/cli/platform-auth-recovery-core.ts';
-import { authenticationSetupRequestHash } from '../../../../../packages/nosam/src/cli/platform-install-auth.ts';
-import { readPlatformAdministratorSetupConnection } from '../../../../../packages/nosam/src/cli/platform-installer-database.ts';
+} from '../../../../../packages/bwf/src/cli/platform-auth-recovery-core.ts';
+import { authenticationSetupRequestHash } from '../../../../../packages/bwf/src/cli/platform-install-auth.ts';
+import { readPlatformAdministratorSetupConnection } from '../../../../../packages/bwf/src/cli/platform-installer-database.ts';
 import { AUTH_SETUP_PROOF_PREFIX, initializeAuthentication } from '../../src/auth/bootstrap.ts';
 import { hmacSignState } from '../../src/auth/hmac.ts';
 import { signJwt } from '../../src/auth/jwt.ts';
@@ -912,7 +912,7 @@ describe('provider-independent first administrator setup', () => {
     expect(html).toContain('The provider refused the token request.');
     expect(html).toContain('Error code: oidc_token_failed');
     expect(html).toContain(`Callback URL: ${origin}/auth/callback`);
-    expect(html).toContain(`nosam platform repair ${installationId}</code>`);
+    expect(html).toContain(`bwf platform repair ${installationId}</code>`);
     expect(html).toContain('href="/setup"');
     expect(errors).toHaveBeenCalledWith('[auth] login failed', {
       code: 'oidc_token_failed',

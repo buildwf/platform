@@ -9,4 +9,4 @@ nosam/live delivers topic events from routes, scheduled jobs, and queue consumer
 
 Applications define a stream, expose its connect and control handlers, and publish by topic. Authorization, replay behavior, and delivery limits are described in the [live streams guide](../../../docs/guide/live.md).
 
-See [server runtime](../../../packages/nosam/src/runtime/live.ts), [hub implementation](../../../packages/nosam/src/runtime/live-server.ts), and [browser client](../../../packages/nosam/src/runtime/live-client.ts).
+See [server runtime](../../../packages/bwf/src/runtime/live.ts), [hub implementation](../../../packages/bwf/src/runtime/live-server.ts), and [browser client](../../../packages/bwf/src/runtime/live-client.ts).

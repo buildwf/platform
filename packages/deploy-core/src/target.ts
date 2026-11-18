@@ -1,16 +1,16 @@
-/** A concrete destination that can execute a Nosam deployment. */
+/** A concrete destination that can execute a bwf deployment. */
 export type DeployTarget = 'cloudflare' | 'nosam';
 
 export type DeployAppType = 'nosam' | 'spa' | 'static';
 
 /**
- * @deprecated Nosam does not read deploy target capabilities. Removed in the
+ * @deprecated bwf does not read deploy target capabilities. Removed in the
  * next major version.
  */
 export type DeployCapabilitySupport = 'supported' | 'partial' | 'unsupported';
 
 /**
- * @deprecated Nosam does not read deploy target capabilities. They do not gate
+ * @deprecated bwf does not read deploy target capabilities. They do not gate
  * deploys or appear in diagnostics. Removed in the next major version.
  */
 export type DeployTargetCapabilities = {
@@ -42,7 +42,7 @@ export type DeployTargetCapabilities = {
  */
 export type DeployTargetAdapter<TOptions, TContext> = {
   readonly target: DeployTarget;
-  /** @deprecated Nosam ignores this field. Removed in the next major version. */
+  /** @deprecated bwf ignores this field. Removed in the next major version. */
   readonly capabilities: DeployTargetCapabilities;
   deploy(root: string, options: TOptions, context: TContext): Promise<void>;
 };

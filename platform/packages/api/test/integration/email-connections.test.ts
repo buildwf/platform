@@ -824,7 +824,7 @@ describe('durable zone email connections', () => {
     ).toBe(syncs[0]);
   });
 
-  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))(
     'orders project-admin demotion before durable email-domain mutations',
     async () => {
       const failures: NonNullable<Parameters<typeof stubCustomerCf>[0]>['failOn'] = {};
@@ -947,7 +947,7 @@ describe('durable zone email connections', () => {
     20_000,
   );
 
-  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))(
     'serializes concurrent first assignments on the same Cloudflare zone',
     async () => {
       const user = await createTestUser(env.db);
@@ -1024,7 +1024,7 @@ describe('durable zone email connections', () => {
     15_000,
   );
 
-  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))(
     'keeps provider status read-back behind the route-to-connection removal lock order',
     async () => {
       const user = await createTestUser(env.db);
@@ -1093,7 +1093,7 @@ describe('durable zone email connections', () => {
     15_000,
   );
 
-  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))(
     'keeps inbound probe read-back behind the route-to-connection removal lock order',
     async () => {
       const user = await createTestUser(env.db);
@@ -2174,7 +2174,7 @@ describe('durable zone email connections', () => {
     ).toBe('completed');
   });
 
-  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))(
     'serializes late provider success with unknown-operation read-back',
     async () => {
       const user = await createTestUser(env.db);
@@ -2272,7 +2272,7 @@ describe('durable zone email connections', () => {
     15_000,
   );
 
-  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))(
     'serializes an expired lease with a late provider failure',
     async () => {
       const user = await createTestUser(env.db);
@@ -2383,7 +2383,7 @@ describe('durable zone email connections', () => {
     15_000,
   );
 
-  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))(
     'keeps operator recovery ineligible for 24 real hours under a non-UTC process timezone',
     async () => {
       const previousTimezone = process.env.TZ;

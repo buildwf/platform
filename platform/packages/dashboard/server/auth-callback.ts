@@ -1,6 +1,6 @@
+import { defineHandler } from '@buildwf/bwf';
 import type { Context } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
-import { defineHandler } from 'nosam';
 import { fetchApi, getApiErrorMessage, readApiJson } from '../lib/api.ts';
 import { isLocalDashboardHost } from '../lib/origin.ts';
 

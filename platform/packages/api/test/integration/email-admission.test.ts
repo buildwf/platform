@@ -309,7 +309,7 @@ describe('authoritative email admission', () => {
     expect((await getProjectEmailUsage(env.db, project.id)).received).toBe(1);
   });
 
-  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL)).each(['native', 'relayed'] as const)(
+  it.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL)).each(['native', 'relayed'] as const)(
     'serializes a fresh %s receipt with a concurrent route disable',
     async (transport) => {
       const project = await fixture();
@@ -1245,7 +1245,7 @@ describe('authoritative email admission', () => {
   });
 
   it
-    .runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))
+    .runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))
     .each(['outbound', 'native', 'relayed'] as const)(
     'serializes %s admission with a concurrent owner suspension',
     async (transport) => {
@@ -1407,7 +1407,7 @@ describe('authoritative email admission', () => {
     expect((await getProjectEmailUsage(env.db, project.id)).attempts).toBe(1);
   });
 
-  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))(
     'refunds the UTC quota month under a non-UTC PostgreSQL session',
     async () => {
       const project = await fixture();

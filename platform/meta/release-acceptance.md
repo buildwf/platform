@@ -12,7 +12,7 @@ the actual public-package tarballs:
 
 ```sh
 vp run build
-NOSAM_PACKED_SUITE=full node .github/scripts/packed-consumer.mjs
+BWF_PACKED_SUITE=full node .github/scripts/packed-consumer.mjs
 ```
 
 The matrix tests npm and pnpm, public Vite, real initialization and frozen
@@ -33,10 +33,10 @@ Select a disposable account, domain, database and protected credentials for
 these checks. Review the resource plan before provisioning; keep unrelated
 account resources outside the test.
 
-1. Run the gated [native Cloudflare suite](../../packages/nosam/test/e2e/README.md)
+1. Run the gated [native Cloudflare suite](../../packages/bwf/test/e2e/README.md)
    on Workers Free. Include a Pages app and inspect data, logs, routing rules,
    failed-candidate secret rotation, rollback and an existing-Worker handoff.
-2. Run the packaged `nosam platform install --plan`, review its account and
+2. Run the packaged `bwf platform install --plan`, review its account and
    resource names, then install into an eligible disposable platform account.
    Complete actual GitHub OAuth login and have a second developer connect and
    deploy an app.

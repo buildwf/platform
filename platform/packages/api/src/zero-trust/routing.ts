@@ -1,4 +1,4 @@
-import type { ProjectZeroTrustRouting } from '@nosam/edge';
+import type { ProjectZeroTrustRouting } from '@buildwf/edge';
 import { and, eq, gt } from 'drizzle-orm';
 import type { Db, DbOrTx } from '../db.ts';
 import {

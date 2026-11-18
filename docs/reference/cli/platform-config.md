@@ -7,18 +7,18 @@ outline: deep
 
 Use your administrator session for these commands. See [Platform Management](./platform.md#operator-commands) for platform selection, previews, and confirmation.
 
-`nosam platform config plans` opens an interactive plan menu using your administrator session. Plans have stable IDs and editable display names. Copy an existing plan to add one, edit limits without redeploying, archive it to stop new assignments, or remove it with an explicit replacement for its accounts.
+`bwf platform config plans` opens an interactive plan menu using your administrator session. Plans have stable IDs and editable display names. Copy an existing plan to add one, edit limits without redeploying, archive it to stop new assignments, or remove it with an explicit replacement for its accounts.
 
 ```sh
-nosam platform config plans show [plan-id]
-nosam platform config plans add <plan-id> --copy <existing-id> --name "Team"
-nosam platform config plans set <plan-id> [--name "Team"] [--file plan.json]
-nosam platform config plans reset <builtin-plan-id>
-nosam platform config plans archive <plan-id>
-nosam platform config plans restore <plan-id>
-nosam platform config plans remove <plan-id> [--replacement <plan-id>]
-nosam platform config plans default <plan-id>
-nosam platform config plans sync
+bwf platform config plans show [plan-id]
+bwf platform config plans add <plan-id> --copy <existing-id> --name "Team"
+bwf platform config plans set <plan-id> [--name "Team"] [--file plan.json]
+bwf platform config plans reset <builtin-plan-id>
+bwf platform config plans archive <plan-id>
+bwf platform config plans restore <plan-id>
+bwf platform config plans remove <plan-id> [--replacement <plan-id>]
+bwf platform config plans default <plan-id>
+bwf platform config plans sync
 ```
 
 Use `--plan` to preview changes and affected accounts; scripted mutations require `--yes`. Every command supports `--connection <slug-or-url>` and `--json`. `show` reports the effective limits, default, assignments, and pending account and AI logging updates. `show <plan-id>` also reports the plan's AI Gateway logging default. `reset` restores a built-in plan's original limits and build instance size. Archived plans keep their existing accounts but cannot receive new assignments; change the default before archiving it. `remove` requires a replacement for a plan that has accounts or is the default. Changing the default affects new accounts, plus the AI Gateway logging of accounts whose plan is not in the catalog.
@@ -29,29 +29,29 @@ An apply checks the preview's revision and rejects concurrent changes. Lower quo
 
 ## Authentication configuration {#authentication-configuration}
 
-`nosam platform config auth` opens interactive configuration. These commands use
-your administrator session from `nosam platform auth login`:
+`bwf platform config auth` opens interactive configuration. These commands use
+your administrator session from `bwf platform auth login`:
 
 ```sh
-nosam platform config auth list
-nosam platform config auth show company
-nosam platform config auth add google
-nosam platform config auth add oidc --id company
-nosam platform config auth add cloudflare-access --id access
-nosam platform config auth configure company
-nosam platform config auth test company
-nosam platform config auth link company
-nosam platform config auth enable company
-nosam platform config auth disable github
-nosam platform config auth admission
-nosam platform config auth protection show
-nosam platform config auth protection enable --installation <id>
-nosam platform config auth protection disable --installation <id>
-nosam platform config auth recover company --installation <id> --file recovery.json
+bwf platform config auth list
+bwf platform config auth show company
+bwf platform config auth add google
+bwf platform config auth add oidc --id company
+bwf platform config auth add cloudflare-access --id access
+bwf platform config auth configure company
+bwf platform config auth test company
+bwf platform config auth link company
+bwf platform config auth enable company
+bwf platform config auth disable github
+bwf platform config auth admission
+bwf platform config auth protection show
+bwf platform config auth protection enable --installation <id>
+bwf platform config auth protection disable --installation <id>
+bwf platform config auth recover company --installation <id> --file recovery.json
 ```
 
 When configuring an existing installation for the first time, run
-`nosam platform config auth initialize`, then sign in again. Its current login
+`bwf platform config auth initialize`, then sign in again. Its current login
 methods and signup policy are preserved.
 
 Adding or editing a method saves a pending configuration. Enabling it verifies the
@@ -59,7 +59,7 @@ login in your browser before applying it. Linking the verified identity to your
 account is a separate, explicit action. Before disabling a method, verify a linked
 alternative; the last method cannot be disabled. Disabling revokes human sessions
 created through that method, including operator sessions. Scoped deployment tokens
-remain valid; a human login token used as `NOSAM_TOKEN` is still revoked.
+remain valid; a human login token used as `BWF_TOKEN` is still revoked.
 
 Commands accept `--connection <slug-or-url>` and `--json`. Changes accept
 `--plan` or `--yes`. For scripted configuration, use `--file <path>` for the

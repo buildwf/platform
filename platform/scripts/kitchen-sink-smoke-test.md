@@ -36,11 +36,11 @@ Pass `--email` when preparing the fixture to add inbound handlers and `/api/acce
 - `POST /api/acceptance/email` accepts `sendEmail()` options as JSON. Send a unique subject to a verified test mailbox and confirm both provider acceptance and actual mailbox delivery. Repeat the identical body and `idempotencyKey` to confirm one delivery; change the body with the same key to confirm `IDEMPOTENCY_CONFLICT`. Check partial recipients, sender restrictions, and administrator-configured quotas separately.
 - Send inbound mail to `<slug>+support@<shared-mail-domain>` and confirm `GET /api/acceptance/email?subject=<encoded-subject>` returns the `support` route, original text/HTML, and attachment metadata. For a registered custom domain, use `support@<domain>` instead. The KV receipt expires after one hour; poll because KV reads can be eventually consistent.
 - Verify tag precedence with `<slug>+support+ticket-42@<shared-mail-domain>` (`support-ticket`, `params.ticket= ticket-42`) and `<slug>+support+vip@<shared-mail-domain>` (`support-vip`). An unmatched recipient reaches `default`.
-- Subjects beginning with `REPLY ` send a threaded reply. Verify its arrival and `In-Reply-To`/`References`, and inspect `nosam email logs` for the action outcome.
+- Subjects beginning with `REPLY ` send a threaded reply. Verify its arrival and `In-Reply-To`/`References`, and inspect `bwf email logs` for the action outcome.
 - Subjects beginning with `FORWARD ` forward to the verified address in the original message's `x-nosam-e2e-forward` header. Shared-domain native events support forwarding; customer-zone relayed mail records `UNSUPPORTED_ACTION` without sending. Confirm that recorded distinction.
 - Subjects beginning with `REJECT ` reject with `Nosam email acceptance reject`. Verify the sender's non-delivery outcome and the platform's inbound log.
 
-Use `nosam email usage`, `destinations`, and `logs` to compare API outcomes with recorded provider outcomes. Test admin email policy/caps and custom-domain readiness, secret rotation, and removal through the operator UI or CLI. A provider acceptance result alone does not prove mailbox delivery.
+Use `bwf email usage`, `destinations`, and `logs` to compare API outcomes with recorded provider outcomes. Test admin email policy/caps and custom-domain readiness, secret rotation, and removal through the operator UI or CLI. A provider acceptance result alone does not prove mailbox delivery.
 
 ## Sandbox runtime acceptance fixture
 

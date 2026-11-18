@@ -138,12 +138,12 @@ export async function initializePackedProject(
           'npm',
           'exec',
           '--yes',
-          `--package=create-nosam@${version}`,
+          `--package=create-bwf@${version}`,
           '--',
-          'create-nosam',
+          'create-bwf',
           basename(root),
         ]
-      : ['pnpm', 'dlx', `create-nosam@${version}`, basename(root)];
+      : ['pnpm', 'dlx', `create-bwf@${version}`, basename(root)];
   await runPty(argv, {
     cwd: dirname(root),
     env,

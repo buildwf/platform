@@ -221,7 +221,7 @@ export type SandboxManifestMeta = {
   migrations?: ReadonlyArray<SandboxMigrationMeta>;
   /** Written by the managed platform, never accepted from deployment clients. */
   runtime?: { protocol: 1 | 2 };
-  /** Managed transport implemented by the application's bundled Nosam runtime. */
+  /** Managed transport implemented by the application's bundled bwf runtime. */
   controllerProtocol?: 1 | 2;
 };
 

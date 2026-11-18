@@ -1,5 +1,5 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import type { AssetConfig, HeaderRule, RedirectRule } from '@nosam/deploy-core';
+import type { AssetConfig, HeaderRule, RedirectRule } from '@buildwf/deploy-core';
 import {
   createScanner,
   parse,
@@ -40,18 +40,18 @@ export function renderCloudflareStaticEntry(options: {
       : {}),
   });
   return [
-    `import { createStaticEdgeHandler } from ${JSON.stringify(options.runtimeImport ?? '@nosam/edge')};`,
+    `import { createStaticEdgeHandler } from ${JSON.stringify(options.runtimeImport ?? '@buildwf/edge')};`,
     `export default createStaticEdgeHandler(${config});`,
     '',
   ].join('\n');
 }
 
 /**
- * Copy static assets into Nosam's deploy area without Cloudflare's reserved routing files.
+ * Copy static assets into bwf's deploy area without Cloudflare's reserved routing files.
  *
- * Nosam has already compiled the root `_headers` and `_redirects` files into the thin edge
+ * bwf has already compiled the root `_headers` and `_redirects` files into the thin edge
  * Worker. Wrangler parses those files independently of `.assetsignore`, so uploading the source
- * directory would apply every rule twice and can reject valid Nosam fallbacks as redirect loops.
+ * directory would apply every rule twice and can reject valid bwf fallbacks as redirect loops.
  * `headers` becomes the staged `_headers` for rules Cloudflare applies to asset responses itself.
  */
 export function stageCloudflareStaticAssets(options: {

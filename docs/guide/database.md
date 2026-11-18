@@ -34,32 +34,32 @@ const dbFileItems = [
 
 # Database
 
-Define your tables in TypeScript, then query them with `db` from `nosam/db`. Nosam includes [Drizzle ORM](https://orm.drizzle.team) and configures the connection, so you can use the same schema and query workflow with D1, PostgreSQL, or MySQL.
+Define your tables in TypeScript, then query them with `db` from `@buildwf/bwf/db`. bwf includes [Drizzle ORM](https://orm.drizzle.team) and configures the connection, so you can use the same schema and query workflow with D1, PostgreSQL, or MySQL.
 
 <FileTree :items="dbFileItems" default-expanded />
 
 ## Choosing a Dialect
 
-Choose a database during `nosam init`, or set `database` in `nosam.config.ts`:
+Choose a database during `bwf init`, or set `database` in `bwf.config.ts`:
 
 |            | [D1 (SQLite)](./database/d1) | [PostgreSQL](./database/postgresql) | [MySQL](./database/mysql) |
 | ---------- | ---------------------------- | ----------------------------------- | ------------------------- |
 | Config     | Default                      | `"database": "pg"`                  | `"database": "mysql"`     |
-| Managed by | Nosam                        | Bring your own database             | Bring your own database   |
+| Managed by | bwf                          | Bring your own database             | Bring your own database   |
 | Connection | Automatic D1 binding         | Hyperdrive                          | Hyperdrive                |
 
-A Nosam platform keeps Hyperdrive query caching off for your database connection, so reads reflect completed writes. An existing connection is updated on the project's next deploy.
+A bwf platform keeps Hyperdrive query caching off for your database connection, so reads reflect completed writes. An existing connection is updated on the project's next deploy.
 
 ## Schema Definition
 
-Define your tables in `db/schema.ts` using column helpers from `nosam/schema-d1`, `nosam/schema-pg`, or `nosam/schema-mysql`.
+Define your tables in `db/schema.ts` using column helpers from `@buildwf/bwf/schema-d1`, `@buildwf/bwf/schema-pg`, or `@buildwf/bwf/schema-mysql`.
 
 ::: code-group
 
 ```ts [SQLite (D1)]
 // db/schema.ts
-import { sql } from 'nosam/db';
-import { sqliteTable, text, integer } from 'nosam/schema-d1';
+import { sql } from '@buildwf/bwf/db';
+import { sqliteTable, text, integer } from '@buildwf/bwf/schema-d1';
 
 export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -74,7 +74,7 @@ export const users = sqliteTable('users', {
 
 ```ts [PostgreSQL]
 // db/schema.ts
-import { pgTable, serial, text, timestamp } from 'nosam/schema-pg';
+import { pgTable, serial, text, timestamp } from '@buildwf/bwf/schema-pg';
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -87,7 +87,7 @@ export const users = pgTable('users', {
 
 ```ts [MySQL]
 // db/schema.ts
-import { int, mysqlTable, text, timestamp } from 'nosam/schema-mysql';
+import { int, mysqlTable, text, timestamp } from '@buildwf/bwf/schema-mysql';
 
 export const users = mysqlTable('users', {
   id: int('id').autoincrement().primaryKey(),
@@ -99,7 +99,7 @@ export const users = mysqlTable('users', {
 
 :::
 
-The schema helpers are included in `nosam`. You can write tables yourself or generate a starting point with `nosam gen model`.
+The schema helpers are included in `bwf`. You can write tables yourself or generate a starting point with `bwf gen model`.
 
 You can also split your schema across multiple files under `db/schema/` and re-export from a barrel file:
 
@@ -117,11 +117,11 @@ export * from "./schema/posts";
 
 ### Column casing
 
-By default, a column declared without a name, such as `createdAt: timestamp()`, uses its key as the column name. Set `database.casing` to `'snake_case'` to store these columns as `created_at` instead. It applies to `nosam/db` queries and to `nosam db` commands such as `generate`, `push`, and `seed`. Columns with an explicit name, such as `text('created_at')`, keep that name.
+By default, a column declared without a name, such as `createdAt: timestamp()`, uses its key as the column name. Set `database.casing` to `'snake_case'` to store these columns as `created_at` instead. It applies to `@buildwf/bwf/db` queries and to `bwf db` commands such as `generate`, `push`, and `seed`. Columns with an explicit name, such as `text('created_at')`, keep that name.
 
 ```ts
-// nosam.config.ts
-import { defineConfig } from 'nosam/config';
+// bwf.config.ts
+import { defineConfig } from '@buildwf/bwf/config';
 
 export default defineConfig({
   database: { dialect: 'pg', casing: 'snake_case' },
@@ -130,7 +130,7 @@ export default defineConfig({
 
 ```ts
 // db/schema.ts
-import { pgTable, serial, text, timestamp } from 'nosam/schema-pg';
+import { pgTable, serial, text, timestamp } from '@buildwf/bwf/schema-pg';
 
 export const posts = pgTable('posts', {
   id: serial().primaryKey(),
@@ -139,19 +139,19 @@ export const posts = pgTable('posts', {
 });
 ```
 
-Omit `dialect` for D1. If your database already has tables, run `nosam db generate` after you change `casing` and review the migration before you apply it.
+Omit `dialect` for D1. If your database already has tables, run `bwf db generate` after you change `casing` and review the migration before you apply it.
 
 ## Querying
 
-Nosam re-exports all common [Drizzle query operators](https://orm.drizzle.team/docs/select) from `nosam/db` so you don't need to install `drizzle-orm` separately. Import `db` from `nosam/db` and your tables from `@schema`:
+bwf re-exports all common [Drizzle query operators](https://orm.drizzle.team/docs/select) from `@buildwf/bwf/db` so you don't need to install `drizzle-orm` separately. Import `db` from `@buildwf/bwf/db` and your tables from `@schema`:
 
 ```ts
+import { db } from '@buildwf/bwf/db';
 import { users } from '@schema';
-import { db } from 'nosam/db';
 ```
 
 ::: info What is `@schema`?
-`@schema` is a Vite path alias that the Nosam plugin configures automatically. It points to your `db/schema.ts` file, or `db/schema/` if you split tables across files. You can just use it to import table definitions.
+`@schema` is a Vite path alias that the bwf plugin configures automatically. It points to your `db/schema.ts` file, or `db/schema/` if you split tables across files. You can just use it to import table definitions.
 :::
 
 ### List rows
@@ -163,8 +163,8 @@ const allUsers = await db.select().from(users);
 ### Filter with `where`
 
 ```ts
+import { db, eq, and, or } from '@buildwf/bwf/db';
 import { users } from '@schema';
-import { db, eq, and, or } from 'nosam/db';
 
 // Single condition
 const user = await db.select().from(users).where(eq(users.id, 1));
@@ -229,8 +229,8 @@ const names = await db.select({ name: users.name, email: users.email }).from(use
 ### Ordering and pagination
 
 ```ts
+import { db, desc } from '@buildwf/bwf/db';
 import { users } from '@schema';
-import { db, desc } from 'nosam/db';
 
 const page = await db.select().from(users).orderBy(desc(users.createdAt)).limit(10).offset(20);
 ```
@@ -238,8 +238,8 @@ const page = await db.select().from(users).orderBy(desc(users.createdAt)).limit(
 ### Joins
 
 ```ts
+import { db, eq } from '@buildwf/bwf/db';
 import { users, posts } from '@schema';
-import { db, eq } from 'nosam/db';
 
 const results = await db
   .select({
@@ -263,7 +263,7 @@ const usersWithPosts = await db.query.users.findMany({
 
 ## Seeding
 
-Use `nosam db seed` to reset your local database, re-apply migrations, and then run a seed file.
+Use `bwf db seed` to reset your local database, re-apply migrations, and then run a seed file.
 
 Use `db/seed.ts` for a programmatic seed or `db/seed.sql` for SQL. JavaScript and `.mts` / `.mjs` files also work. If more than one seed file exists, choose one with `--file <path>`.
 
@@ -273,7 +273,7 @@ Use `db/seed.ts` when you want to generate seed data in code. Export a default f
 
 ```ts
 // db/seed.ts
-import { defineSeed } from 'nosam/seed';
+import { defineSeed } from '@buildwf/bwf/seed';
 
 export default defineSeed<typeof import('./schema')>(async ({ db, schema }) => {
   const rows = Array.from({ length: 100 }, (_, i) => ({
@@ -300,13 +300,13 @@ INSERT INTO messages (text) VALUES ('Hello from SQL');
 
 ## Schema-Derived Validators
 
-Derive request validators from your tables with `nosam/drizzle-zod`, `nosam/drizzle-valibot`, or `nosam/drizzle-arktype`. Add the validator after your table definition:
+Derive request validators from your tables with `@buildwf/bwf/drizzle-zod`, `@buildwf/bwf/drizzle-valibot`, or `@buildwf/bwf/drizzle-arktype`. Add the validator after your table definition:
 
 ::: code-group
 
 ```ts [Zod]
 // db/schema.ts
-import { createInsertSchema } from 'nosam/drizzle-zod';
+import { createInsertSchema } from '@buildwf/bwf/drizzle-zod';
 
 export const insertUserSchema = createInsertSchema(users, {
   name: (schema) => schema.min(1),
@@ -315,9 +315,9 @@ export const insertUserSchema = createInsertSchema(users, {
 ```
 
 ```ts [Valibot]
+import { createInsertSchema } from '@buildwf/bwf/drizzle-valibot';
 // db/schema.ts
 import { pipe, minLength, email } from 'valibot';
-import { createInsertSchema } from 'nosam/drizzle-valibot';
 
 export const insertUserSchema = createInsertSchema(users, {
   name: (schema) => pipe(schema, minLength(1)),
@@ -326,9 +326,9 @@ export const insertUserSchema = createInsertSchema(users, {
 ```
 
 ```ts [ArkType]
+import { createInsertSchema } from '@buildwf/bwf/drizzle-arktype';
 // db/schema.ts
 import { type } from 'arktype';
-import { createInsertSchema } from 'nosam/drizzle-arktype';
 
 export const insertUserSchema = createInsertSchema(users, {
   name: type('string > 0'),
@@ -343,10 +343,10 @@ export const insertUserSchema = createInsertSchema(users, {
 Use the derived schema in your route handlers with [`withValidator()`](./server-routing.md#validation):
 
 ```ts
+import { defineHandler } from '@buildwf/bwf';
+import { db } from '@buildwf/bwf/db';
 // routes/api/users/index.ts
 import { users, insertUserSchema } from '@schema';
-import { defineHandler } from 'nosam';
-import { db } from 'nosam/db';
 
 export const POST = defineHandler.withValidator({
   body: insertUserSchema,
@@ -364,7 +364,7 @@ Three functions are available:
 | `createSelectSchema` | Matches the shape of selected rows                                            |
 | `createUpdateSchema` | Like insert but all fields are optional (partial update)                      |
 
-Nosam already bundles the Drizzle adapters. Install the validator library itself if you use its direct APIs in your schema file:
+bwf already bundles the Drizzle adapters. Install the validator library itself if you use its direct APIs in your schema file:
 
 ```bash
 npm install zod
@@ -376,22 +376,22 @@ npm install arktype
 
 ## CLI Commands
 
-| Command            | Purpose                                              |
-| ------------------ | ---------------------------------------------------- |
-| `nosam db push`     | Apply schema changes locally without migration files |
-| `nosam db generate` | Generate SQL migrations                              |
-| `nosam db migrate`  | Apply pending migrations locally                     |
-| `nosam db status`   | Check schema drift and pending migrations            |
-| `nosam db seed`     | Reset the local database and run a seed file         |
+| Command           | Purpose                                              |
+| ----------------- | ---------------------------------------------------- |
+| `bwf db push`     | Apply schema changes locally without migration files |
+| `bwf db generate` | Generate SQL migrations                              |
+| `bwf db migrate`  | Apply pending migrations locally                     |
+| `bwf db status`   | Check schema drift and pending migrations            |
+| `bwf db seed`     | Reset the local database and run a seed file         |
 
 See the [CLI reference](../reference/cli/database.md#database) for connection setup, SQL execution, Studio, exports, and other commands.
 
 ## Adopt an existing Drizzle PostgreSQL database {#adopt-existing-drizzle}
 
-To use Nosam with a PostgreSQL database that Drizzle has already migrated, record its applied migrations before your first deployment:
+To use bwf with a PostgreSQL database that Drizzle has already migrated, record its applied migrations before your first deployment:
 
 1. Back up the database and pause deployments. Try the procedure on a restored copy first.
-2. Set `database: 'pg'` in `nosam.config.ts`. Keep your existing schema, SQL filenames, and `db/migrations/meta/` directory. Do not regenerate or rename migrations during adoption.
+2. Set `database: 'pg'` in `bwf.config.ts`. Keep your existing schema, SQL filenames, and `db/migrations/meta/` directory. Do not regenerate or rename migrations during adoption.
 3. Read Drizzle's migration history. The default table is `drizzle.__drizzle_migrations`; use your configured schema and table if different.
 
    ```sql
@@ -416,32 +416,32 @@ To use Nosam with a PostgreSQL database that Drizzle has already migrated, recor
    COMMIT;
    ```
 
-5. Run the file with your PostgreSQL client, stopping on errors. Use the database and search path Nosam will use. This records the filenames without running their SQL or changing Drizzle's history.
-6. Connect Nosam to the database and run `nosam db status`. Only new migrations should be pending. For direct Cloudflare deployments, set `DATABASE_URL` in the shell or CI environment that runs `nosam deploy`.
+5. Run the file with your PostgreSQL client, stopping on errors. Use the database and search path bwf will use. This records the filenames without running their SQL or changing Drizzle's history.
+6. Connect bwf to the database and run `bwf db status`. Only new migrations should be pending. For direct Cloudflare deployments, set `DATABASE_URL` in the shell or CI environment that runs `bwf deploy`.
 
-Repeat these steps for each database; development and production may have different migration histories. Keep Drizzle's history table, and use Nosam for future migrations.
+Repeat these steps for each database; development and production may have different migration histories. Keep Drizzle's history table, and use bwf for future migrations.
 
 ## Hand-written migrations {#hand-written-migrations}
 
-Deploy compares your Drizzle schema with the snapshots in `db/migrations/meta/`. If you have SQL migrations without this metadata, running `nosam db generate` would create another migration for the same tables.
+Deploy compares your Drizzle schema with the snapshots in `db/migrations/meta/`. If you have SQL migrations without this metadata, running `bwf db generate` would create another migration for the same tables.
 
 To keep an existing migration history:
 
 1. Make your Drizzle schema match the tables your SQL migrations create.
-2. In a scratch copy of the project, remove `db/migrations/` and run `nosam db generate`.
+2. In a scratch copy of the project, remove `db/migrations/` and run `bwf db generate`.
 3. Copy the generated `meta/` folder into your original migration directory. In `_journal.json`, replace `entries` with an entry for each existing SQL file in order. Use consecutive `idx` values starting at `0`, the file name without `.sql` as `tag`, increasing timestamps as `when`, and the generated entry's `version`. Set `breakpoints` to whether the file uses `--> statement-breakpoint` lines.
 4. Rename the generated snapshot to `<prefix>_snapshot.json`, where `<prefix>` is the part of the last migration tag before its first `_`. For `001_create_users.sql`, use `001_snapshot.json`.
 
-Review and commit the metadata, then run `nosam deploy` again. If no database has applied the SQL yet, you can instead replace it with migrations from `nosam db generate`.
+Review and commit the metadata, then run `bwf deploy` again. If no database has applied the SQL yet, you can instead replace it with migrations from `bwf db generate`.
 
 For D1 migrations containing triggers, and MySQL migrations containing triggers, procedures, functions or events, add a `--> statement-breakpoint` line after each complete SQL statement, including the trigger's closing `END;`. Keep the trigger body together.
 
 ## Scaffolding
 
-The `nosam gen model` command generates dialect-appropriate `sqliteTable`, `pgTable`, or `mysqlTable` definitions.
+The `bwf gen model` command generates dialect-appropriate `sqliteTable`, `pgTable`, or `mysqlTable` definitions.
 
 ```bash
-nosam gen model posts title:string body:text published:boolean
+bwf gen model posts title:string body:text published:boolean
 ```
 
 This creates:

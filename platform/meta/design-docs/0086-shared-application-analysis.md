@@ -8,7 +8,7 @@ created: 2026-10-02
 
 ## Ownership
 
-`packages/nosam/src/application-analysis.ts` resolves source paths, framework,
+`packages/bwf/src/application-analysis.ts` resolves source paths, framework,
 binding inference and overrides, auth, database requirements, migrations, and
 handler inventories. It records the reasons for resource requirements.
 `application-routing.ts` completes HTTP export and page analysis using those
@@ -18,7 +18,7 @@ and managed packaging consume this result instead of reconstructing enablement.
 Each source phase has its own snapshot. Plugin construction inventories both
 route environments for stable binding and class reservations. Vite's config
 hook selects development or production analysis; route HMR refreshes it. Builds
-and deploys select production; `nosam prepare` includes both environments.
+and deploys select production; `bwf prepare` includes both environments.
 Completing a snapshot reuses its route, middleware, cron, queue, WebSocket, and
 email inventories. HTTP export detection creates separate route objects so it
 does not mutate the original snapshot.
@@ -47,7 +47,7 @@ Provider IDs, resource names, migration history, credentials and cutover are
 still owned by the deployment target. Analysis does not rename or adopt any
 persistent resources.
 
-The existing `@nosam/deploy-core` artifact, manifest and asset-manifest versions
+The existing `@buildwf/deploy-core` artifact, manifest and asset-manifest versions
 remain unchanged. Managed packaging emits that contract; native deployment
 compiles Cloudflare Build Output and validates the actual emitted provider
 configuration. A source snapshot does not replace artifact validation. Native

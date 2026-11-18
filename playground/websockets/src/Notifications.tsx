@@ -1,8 +1,8 @@
+import type { WebSocketRouteMap } from '@buildwf/bwf/routes';
+import { connect, type BwfSocket } from '@buildwf/bwf/ws';
 import { startTransition, useEffect, useEffectEvent, useRef, useState } from 'react';
-import type { WebSocketRouteMap } from 'nosam/routes';
-import { connect, type NosamSocket } from 'nosam/ws';
 
-type NotificationSocket = NosamSocket<'/ws/notifications'>;
+type NotificationSocket = BwfSocket<'/ws/notifications'>;
 type NotificationClientEvent = WebSocketRouteMap['/ws/notifications']['client'];
 type NotificationServerEvent = WebSocketRouteMap['/ws/notifications']['server'];
 

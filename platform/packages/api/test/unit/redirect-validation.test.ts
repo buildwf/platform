@@ -26,7 +26,11 @@ describe('isAllowedRedirect', () => {
 
   it('does not inherit the hosted dashboard in a self-hosted installation', () => {
     expect(
-      isAllowedRedirect('https://nosam.buildwithfriends.dev/auth/callback', undefined, 'example-a1b2c3d4'),
+      isAllowedRedirect(
+        'https://nosam.buildwithfriends.dev/auth/callback',
+        undefined,
+        'example-a1b2c3d4',
+      ),
     ).toBe(false);
     expect(
       isAllowedRedirect(

@@ -36,9 +36,9 @@ Place the environment suffix **before** `.ws`, as in `chat.dev.ws.ts`.
 Use `defineRoom()` when clients should share a room or document identified by the route.
 
 ```ts
+import { defineRoom } from '@buildwf/bwf/ws';
 // routes/chat/[room].ws.ts
 import * as v from 'valibot';
-import { defineRoom } from 'nosam/ws';
 
 const ClientMessage = v.variant('type', [
   v.object({ type: v.literal('chat.message'), text: v.string() }),
@@ -92,9 +92,9 @@ export default defineRoom({
 Use `defineWebSocket()` when each connection is handled independently instead of as a shared room.
 
 ```ts
+import { defineWebSocket } from '@buildwf/bwf/ws';
 // routes/notifications.ws.ts
 import * as v from 'valibot';
-import { defineWebSocket } from 'nosam/ws';
 
 export default defineWebSocket({
   messages: {
@@ -114,10 +114,10 @@ export default defineWebSocket({
 
 ## Client
 
-Use `connect()` from `nosam/ws` on the client:
+Use `connect()` from `@buildwf/bwf/ws` on the client:
 
 ```ts
-import { connect } from 'nosam/ws';
+import { connect } from '@buildwf/bwf/ws';
 
 const socket = connect('/chat/[room]', {
   params: { room: 'general' },
@@ -148,7 +148,7 @@ Messages are JSON events. Raw string and binary messages are not supported.
 
 ## Authentication
 
-When Nosam auth is enabled, every WebSocket hook receives the current user as `ctx.user`, or `null` for an anonymous connection. Use `onBeforeConnect` to reject unauthenticated clients.
+When bwf auth is enabled, every WebSocket hook receives the current user as `ctx.user`, or `null` for an anonymous connection. Use `onBeforeConnect` to reject unauthenticated clients.
 
 Connections from another origin are anonymous unless that origin is in your auth `trustedOrigins`. If you read your own cookies from `ctx.request` in `onBeforeConnect`, check its `Origin` header yourself.
 
@@ -164,7 +164,7 @@ Both `defineRoom()` and `defineWebSocket()` support:
 - `onClose(ctx, details)`: receives `{ code, reason, wasClean }`
 - `onRequest(ctx)`: handles ordinary HTTP requests to the same path
 
-Nosam completes the WebSocket close handshake automatically. Use `onClose` for application cleanup;
+bwf completes the WebSocket close handshake automatically. Use `onClose` for application cleanup;
 you do not need to close the socket again in this hook.
 
 Every hook receives a context with:
@@ -180,7 +180,7 @@ If a route does not define `onRequest()`, non-WebSocket requests return `426 Upg
 
 ## Move a route while keeping its state
 
-Before moving a deployed route, run `nosam info`. For `routes/chat/[room].ws.ts`, the output includes:
+Before moving a deployed route, run `bwf info`. For `routes/chat/[room].ws.ts`, the output includes:
 
 ```text
 To preserve this resource when moving its code, add this to 'defineRoom':
@@ -197,9 +197,9 @@ export default defineRoom({
 });
 ```
 
-Move the file to `routes/rooms/[room].ws.ts`, update clients to connect to `/rooms/[room]`, and deploy normally. Keep the same parameter names and values: room `general` still uses its existing storage. The Worker class, binding, and migration history stay the same on both Cloudflare and Nosam platform deployments.
+Move the file to `routes/rooms/[room].ws.ts`, update clients to connect to `/rooms/[room]`, and deploy normally. Keep the same parameter names and values: room `general` still uses its existing storage. The Worker class, binding, and migration history stay the same on both Cloudflare and bwf platform deployments.
 
-Both `defineRoom()` and `defineWebSocket()` accept optional `name`. Use a static string, inline or in a local `const`. Each route must produce a distinct Worker class; changing the name selects a different resource. If you already moved a route, `nosam info` also shows unmatched identities recorded in `nosam.lock.json`. Identify the original resource before adopting its suggested name; otherwise restore the original source and discover the name there.
+Both `defineRoom()` and `defineWebSocket()` accept optional `name`. Use a static string, inline or in a local `const`. Each route must produce a distinct Worker class; changing the name selects a different resource. If you already moved a route, `bwf info` also shows unmatched identities recorded in `bwf.lock.json`. Identify the original resource before adopting its suggested name; otherwise restore the original source and discover the name there.
 
 ### Rename a route parameter
 
@@ -227,4 +227,4 @@ Each socket connects to one route instance. To switch rooms, close the current c
 
 ## Deployment
 
-WebSocket routes work on Cloudflare and Nosam platform deployments. Commit `nosam.lock.json` when Nosam adds a binding or migration. Do not delete or reorder deployed migration steps.
+WebSocket routes work on Cloudflare and bwf platform deployments. Commit `bwf.lock.json` when bwf adds a binding or migration. Do not delete or reorder deployed migration steps.

@@ -150,13 +150,13 @@ describe('project secrets API', () => {
   // Not reserved: there is exactly one project-slug binding and it is
   // `__NOSAM_PROJECT_SLUG`. Reserving an undotted twin nothing injects would
   // take a usable name away for no benefit.
-  it('allows a secret named NOSAM_PROJECT_SLUG', async () => {
+  it('allows a secret named BWF_PROJECT_SLUG', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'secret-bare-slug');
     const res = await app.fetch(
       rpcRequest('secrets.set', user.jwt, {
         projectId: project.id,
-        name: 'NOSAM_PROJECT_SLUG',
+        name: 'BWF_PROJECT_SLUG',
         value: 'whatever',
       }),
       env,

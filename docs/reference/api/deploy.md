@@ -4,38 +4,38 @@ description: 'Prepare a built app, SPA, or static site for a managed platform de
 
 # Deployment artifacts
 
-Use `nosam/deploy` from Node.js to prepare a built Nosam app, SPA, or static site for a managed platform deployment without platform credentials.
+Use `@buildwf/bwf/deploy` from Node.js to prepare a built bwf app, SPA, or static site for a managed platform deployment without platform credentials.
 
 Build the app in managed mode inside its isolated environment:
 
 ```sh
-NOSAM_DEPLOY_BUILD=1 NOSAM_DEPLOY_PROJECT_ID=artifact npm run build
+BWF_DEPLOY_BUILD=1 NOSAM_DEPLOY_PROJECT_ID=artifact npm run build
 ```
 
 These values select a platform-compatible build. The target project is selected during publish approval.
 
 ```ts
-import { prepareDeployArtifact } from 'nosam/deploy';
+import { prepareDeployArtifact } from '@buildwf/bwf/deploy';
 
 const { artifact, assets } = await prepareDeployArtifact('/path/to/app');
 ```
 
-`artifact` contains the deployment manifest, asset metadata, and any Worker modules. `assets` maps asset URL paths to base64 bytes. SPAs and static sites use the same output directory and routing configuration as `nosam deploy`. Keep the prepared result unchanged while requesting [publish approval](/guide/platform/administration/connected-apps).
+`artifact` contains the deployment manifest, asset metadata, and any Worker modules. `assets` maps asset URL paths to base64 bytes. SPAs and static sites use the same output directory and routing configuration as `bwf deploy`. Keep the prepared result unchanged while requesting [publish approval](/guide/platform/administration/connected-apps).
 
-Use this API for built Cloudflare Worker apps, SPAs, and static sites. For remote data, Sandbox, or Live resources, use `nosam deploy`.
+Use this API for built Cloudflare Worker apps, SPAs, and static sites. For remote data, Sandbox, or Live resources, use `bwf deploy`.
 
 Run preparation inside the same isolated environment as the app build. App configuration and build plugins execute project code; keep platform credentials on the publishing server.
 
 ## Cloudflare Build Output
 
 ::: warning Experimental
-`prepareCfBuildOutput` follows Cloudflare's draft Build Output format. Its options and the prepared directory can change between Nosam releases.
+`prepareCfBuildOutput` follows Cloudflare's draft Build Output format. Its options and the prepared directory can change between bwf releases.
 :::
 
 Use `prepareCfBuildOutput` to prepare an existing Worker build for Cloudflare publication:
 
 ```ts
-import { prepareCfBuildOutput } from 'nosam/deploy';
+import { prepareCfBuildOutput } from '@buildwf/bwf/deploy';
 
 const prepared = await prepareCfBuildOutput('/path/to/app/dist/server', {
   projectRoot: '/path/to/app',

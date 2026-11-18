@@ -1,6 +1,6 @@
 import { deriveProxyInternalAuth, deriveProxyToken } from '@nosamcloud/api/proxy-token';
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vite-plus/test';
-import { createBindingHandler } from '../../../../../packages/nosam/src/runtime/remote/binding-handler.ts';
+import { createBindingHandler } from '../../../../../packages/bwf/src/runtime/remote/binding-handler.ts';
 import { dispatchToWorker } from '../../src/dispatch.ts';
 import worker from '../../src/index.ts';
 import { clearProxyTokenStateCache } from '../../src/proxy-token.ts';

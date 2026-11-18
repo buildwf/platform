@@ -1,4 +1,4 @@
-import { defineHandler } from 'nosam';
+import { defineHandler } from '@buildwf/bwf';
 import { fetchApi, getApiErrorMessage, readApiJson } from '../lib/api.ts';
 import { dashboardRequestOrigin } from '../lib/origin.ts';
 import { discoveryDisplayName } from '../lib/platform-title.ts';

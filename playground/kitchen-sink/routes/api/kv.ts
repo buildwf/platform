@@ -1,5 +1,5 @@
-import { defineHandler } from 'nosam';
-import { kv } from 'nosam/kv';
+import { defineHandler } from '@buildwf/bwf';
+import { kv } from '@buildwf/bwf/kv';
 
 export const GET = defineHandler(async (c) => {
   const lookupKey = c.req.query('lookup');

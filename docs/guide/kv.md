@@ -5,14 +5,14 @@ outline: deep
 
 # Key-Value Storage
 
-Read and write data in [Cloudflare Workers KV](https://developers.cloudflare.com/kv/) with `kv` from `nosam/kv`. Values are stored as JSON, and `kv.map()` gives a collection its own key prefix and value type.
+Read and write data in [Cloudflare Workers KV](https://developers.cloudflare.com/kv/) with `kv` from `@buildwf/bwf/kv`. Values are stored as JSON, and `kv.map()` gives a collection its own key prefix and value type.
 
 ## Basic Operations
 
 ### Get
 
 ```ts
-import { kv } from 'nosam/kv';
+import { kv } from '@buildwf/bwf/kv';
 
 const user = await kv.get<User>('user:123');
 // User | null

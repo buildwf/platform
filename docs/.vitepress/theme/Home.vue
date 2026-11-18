@@ -27,7 +27,7 @@ const { frontmatter } = useData();
       <a
         href="/guide/self-hosted-platform"
         class="section-label-link"
-        aria-label="Self-host Nosam Platform guide"
+        aria-label="Self-host bwf Platform guide"
       >
         <img src="/nosam-platform-dark.svg" alt="" class="section-label" />
       </a>
@@ -35,7 +35,7 @@ const { frontmatter } = useData();
         Deploy with your Security Built-In
       </h2>
       <p class="max-w-md text-pretty text-primary/70">
-        Self-host your team's Nosam Platform & customize it to fit your security needs.
+        Self-host your team's bwf Platform & customize it to fit your security needs.
       </p>
     </section>
 
@@ -47,12 +47,12 @@ const { frontmatter } = useData();
     class="wrapper border-t border-nickel px-5 sm:px-10 h-70 sm:h-[22rem] flex flex-col justify-center gap-6 text-center items-center"
     aria-labelledby="features-heading"
   >
-    <a href="/guide/" class="section-label-link" aria-label="Nosam SDK guide">
+    <a href="/guide/" class="section-label-link" aria-label="bwf SDK guide">
       <img src="/nosam-sdk.svg" alt="" class="section-label section-label--sdk" />
     </a>
     <h2 id="features-heading" class="text-white">Turn Vite Apps Full-Stack</h2>
     <p class="max-w-md text-white/70 text-balance sm:text-pretty">
-      Use your favorite Vite framework, add the backend features you need, and let Nosam infer your
+      Use your favorite Vite framework, add the backend features you need, and let bwf infer your
       resources.
     </p>
   </section>

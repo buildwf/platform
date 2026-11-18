@@ -1,6 +1,6 @@
-import { isRecord } from '@nosam/deploy-core';
-import { usageLimitResponse } from '@nosam/edge';
-import { verifyEmailReceipt } from '@nosam/platform/email-protocol';
+import { isRecord } from '@buildwf/deploy-core';
+import { usageLimitResponse } from '@buildwf/edge';
+import { verifyEmailReceipt } from '@buildwf/platform/email-protocol';
 import { isProjectId } from '@nosamcloud/api/id';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';

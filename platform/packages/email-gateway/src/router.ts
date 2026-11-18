@@ -100,7 +100,7 @@ interface EmailEnvelope {
 /** Shared with the dedicated gateway. */
 export type { EmailEnvelope };
 
-/** Mirrors `nosam/email`'s EmailAction. */
+/** Mirrors `@buildwf/bwf/email`'s EmailAction. */
 type EmailAction =
   | { type: 'reject'; reason: string }
   | { type: 'forward'; to: string; headers?: Record<string, string> }
@@ -250,7 +250,7 @@ export async function routeInbound(
   authoritative: AuthoritativeEmailRoute,
 ): Promise<void> {
   // The sender domain labels bounces, but is not needed to route inbound mail.
-  const label = readSenderDomain(env) ?? 'nosam email';
+  const label = readSenderDomain(env) ?? 'bwf email';
 
   const to = String(message.to ?? '').toLowerCase();
   const local = to.split('@')[0] ?? '';

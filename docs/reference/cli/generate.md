@@ -5,16 +5,16 @@ outline: deep
 
 # Code Generation {#code-generation}
 
-## `nosam gen model` {#nosam-gen-model}
+## `bwf gen model` {#nosam-gen-model}
 
 ```
-nosam gen model <name> [columns...]
+bwf gen model <name> [columns...]
 ```
 
 Scaffold a Drizzle table, list and create routes, and a route to fetch one row by ID.
 
 ```sh
-nosam gen model posts title:string body:text published:boolean
+bwf gen model posts title:string body:text published:boolean
 ```
 
 Creates:
@@ -23,91 +23,91 @@ Creates:
 - An export from `db/schema.ts`
 - `routes/api/posts/index.ts`: `GET` for list and `POST` for insert with validation
 - `routes/api/posts/[id].ts`: `GET` by id with `404` handling
-- Regenerated types and TypeScript configuration in `.nosam/`
+- Regenerated types and TypeScript configuration in `.bwf/`
 
-The generated routes automatically detect your validation library from `package.json` (`valibot`, `zod`, or `arktype`). If none is found, you will be prompted to choose one or skip validation. Run `nosam db push` to apply the schema locally, or `nosam db generate` to create migrations before deploying.
+The generated routes automatically detect your validation library from `package.json` (`valibot`, `zod`, or `arktype`). If none is found, you will be prompted to choose one or skip validation. Run `bwf db push` to apply the schema locally, or `bwf db generate` to create migrations before deploying.
 
 Column format: `name:type` or `name:type?` (nullable). Types: `string`, `text`, `datetime`, `integer`, `boolean`, `real`, `blob`.
 
 Model names must be lowercase alphanumeric with underscores (e.g. `posts`, `user_roles`). Existing files are never overwritten.
 
-## `nosam gen migration` {#nosam-gen-migration}
+## `bwf gen migration` {#nosam-gen-migration}
 
 ```
-nosam gen migration <name>
+bwf gen migration <name>
 ```
 
 Create an empty migration file with a timestamp prefix (`YYYYMMDDHHMMSS`).
 
 ```sh
-nosam gen migration add_avatar_to_users
+bwf gen migration add_avatar_to_users
 # → db/migrations/20260410161500_add_avatar_to_users.sql
 ```
 
-Existing projects using the old numeric prefix (`0001_`, `0002_`, ...) can rename with `nosam db rename-migrations`.
+Existing projects using the old numeric prefix (`0001_`, `0002_`, ...) can rename with `bwf db rename-migrations`.
 
-## `nosam gen route` {#nosam-gen-route}
+## `bwf gen route` {#nosam-gen-route}
 
 ```
-nosam gen route <path> [--methods get,post,...]
+bwf gen route <path> [--methods get,post,...]
 ```
 
 Create a route file with `defineHandler` exports. Defaults to GET.
 
 ```sh
-nosam gen route api/health
-nosam gen route api/users --methods get,post,delete
+bwf gen route api/health
+bwf gen route api/users --methods get,post,delete
 ```
 
 Creates `routes/<path>.ts` with an exported handler for each method. Supported methods: `get`, `post`, `put`, `patch`, `delete`.
 
-## `nosam gen middleware` {#nosam-gen-middleware}
+## `bwf gen middleware` {#nosam-gen-middleware}
 
 ```
-nosam gen middleware <name>
+bwf gen middleware <name>
 ```
 
 Create a numbered middleware file with `defineMiddleware` default export.
 
 ```sh
-nosam gen middleware auth
+bwf gen middleware auth
 # → middleware/01.auth.ts (or 02, 03, etc.)
 ```
 
 The prefix is auto-detected from existing middleware files.
 
-## `nosam gen cron` {#nosam-gen-cron}
+## `bwf gen cron` {#nosam-gen-cron}
 
 ```
-nosam gen cron <name>
+bwf gen cron <name>
 ```
 
 Create a cron job file in `crons/` with `defineScheduled` and a placeholder cron expression.
 
 ```sh
-nosam gen cron hourly-sync
+bwf gen cron hourly-sync
 ```
 
-## `nosam gen queue` {#nosam-gen-queue}
+## `bwf gen queue` {#nosam-gen-queue}
 
 ```
-nosam gen queue <name>
+bwf gen queue <name>
 ```
 
 Create a queue consumer file in `queues/` with `defineQueue`, a `Message` type, and commented-out batch options.
 
 ```sh
-nosam gen queue emails
+bwf gen queue emails
 ```
 
-## `nosam gen procedure` {#nosam-gen-procedure}
+## `bwf gen procedure` {#nosam-gen-procedure}
 
 ```
-nosam gen procedure <file.name>
+bwf gen procedure <file.name>
 ```
 
 Create a procedure in `procedures/`. The last word is the export and the rest is the file, so `contacts.get` adds a `get` export to `procedures/contacts.ts`, and `billing.invoices.list` adds `list` to `procedures/billing/invoices.ts`. The file lists the decisions each procedure must make before it can deploy.
 
 ```sh
-nosam gen procedure contacts.get
+bwf gen procedure contacts.get
 ```

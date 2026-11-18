@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 /**
- * Control-plane coverage for `nosam/email`.
+ * Control-plane coverage for `@buildwf/bwf/email`.
  *
  * Routes under test (all mounted in `src/index.ts`):
  *   - `GET    /projects/:id/email/usage`
@@ -1379,7 +1379,7 @@ describe('per-project verification (Option C + Option B)', () => {
     // create, and it mails its link on create only — so this add sends
     // nothing, and the row waits on the link from the FIRST add. The 201 is
     // real (the project's row is new) but must not read as "a link went
-    // out": `nosam email allow` prints "Verification email sent" from a bare
+    // out": `bwf email allow` prints "Verification email sent" from a bare
     // 201.
     const user = await createTestUser(env.db);
     await setUserEmail(user.id, 'owner@example.com');
@@ -1801,7 +1801,7 @@ describe('revokeOwnerVerifiedDestinationsForUserChange', () => {
     // CF keeps reporting the address verified forever. The destinations GET
     // refreshes every row that is `pending` and NOT 'platform'-sourced against
     // exactly that list — so demoting `status` alone leaves the row sitting in
-    // the refresh filter, and the owner's very next `nosam email destinations`
+    // the refresh filter, and the owner's very next `bwf email destinations`
     // silently re-promotes it, undoing the revoke. Re-sourcing the row to
     // 'platform' is what makes the revoke stick.
     const user = await createTestUser(env.db);

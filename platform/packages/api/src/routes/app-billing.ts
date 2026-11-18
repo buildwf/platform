@@ -73,10 +73,10 @@ async function standing(context: BillingContext, person: string) {
 export const appBillingRoutes = new Hono<ApiEnv>()
   .use('*', async (context, next) => {
     try {
-      context.set('billingClient', (await authenticateOAuthClient(
-        context.get('db'),
-        context.req.header('Authorization'),
-      )).id);
+      context.set(
+        'billingClient',
+        (await authenticateOAuthClient(context.get('db'), context.req.header('Authorization'))).id,
+      );
     } catch (error) {
       if (error instanceof OAuthError) {
         return context.json({ error: error.code, message: error.message }, error.status);
@@ -93,7 +93,11 @@ export const appBillingRoutes = new Hono<ApiEnv>()
   .post('/usage.record', async (context) => {
     const body = await context.req.json().catch(() => null);
     const count = (value: unknown) =>
-      value === undefined ? 0 : Number.isSafeInteger(value) && (value as number) >= 0 ? (value as number) : -1;
+      value === undefined
+        ? 0
+        : Number.isSafeInteger(value) && (value as number) >= 0
+          ? (value as number)
+          : -1;
     const neurons = count(body?.aiNeurons);
     const seconds = count(body?.sandboxSeconds);
     if (!isPersonId(body?.person)) return context.json({ error: 'bad_person' }, 400);
@@ -155,7 +159,8 @@ export const appBillingRoutes = new Hono<ApiEnv>()
       });
       return context.json({ data: { url } });
     } catch (error) {
-      if (error instanceof BillingUnavailableError) return context.json({ error: 'billing_unavailable' }, 503);
+      if (error instanceof BillingUnavailableError)
+        return context.json({ error: 'billing_unavailable' }, 503);
       throw error;
     }
   })
@@ -181,7 +186,8 @@ export const appBillingRoutes = new Hono<ApiEnv>()
       });
       return context.json({ data: { url } });
     } catch (error) {
-      if (error instanceof BillingUnavailableError) return context.json({ error: 'billing_unavailable' }, 503);
+      if (error instanceof BillingUnavailableError)
+        return context.json({ error: 'billing_unavailable' }, 503);
       throw error;
     }
   });

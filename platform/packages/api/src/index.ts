@@ -4,7 +4,7 @@ import {
   resolvePlatformApplicationEnvironment,
   PLATFORM_DISABLED_KEY,
   PLATFORM_DISABLED_VALUE,
-} from '@nosam/platform';
+} from '@buildwf/platform';
 import { eq, lt, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { adminFateHandler } from './admin/fate/server.ts';
@@ -103,6 +103,7 @@ import {
 import { reconcileEmailDestinationCleanups } from './provisioning/email-destination-cleanup.ts';
 import { retrySandboxControllerCleanup } from './provisioning/sandbox-controller.ts';
 import { reconcileProxyTokenRotations } from './proxy-token-rotation.ts';
+import { appBillingRoutes } from './routes/app-billing.ts';
 import { oidcRoutes } from './routes/auth-oidc.ts';
 import auth from './routes/auth.ts';
 import deleteRoute from './routes/delete.ts';
@@ -121,7 +122,6 @@ import oauth, { oauthMetadata } from './routes/oauth.ts';
 import platformBootstrapRoutes from './routes/platform-bootstrap.ts';
 import projectZeroTrustRoutes from './routes/project-zero-trust.ts';
 import projects from './routes/projects.ts';
-import { appBillingRoutes } from './routes/app-billing.ts';
 import { stripeWebhookRoutes } from './routes/stripe-webhook.ts';
 import { webhookRoutes } from './routes/webhooks.ts';
 import { setProjectsRoutingSuspension } from './routing.ts';
@@ -937,7 +937,7 @@ async function scheduled(
 // activation gate (tryActivateDomain) and activate it if CF has finished
 // validating ownership + cert AND the project has live slug routing. This is
 // what lets a domain come online after the user configures DNS without them
-// re-running `nosam domain status`. Per-domain failures (e.g. a CF API error)
+// re-running `bwf domain status`. Per-domain failures (e.g. a CF API error)
 // are isolated so one bad domain never aborts the batch. `retriggerDcv` is
 // forwarded to tryActivateDomain to gate the HTTP-DCV re-trigger PATCH — only
 // the hourly tier passes `true` (see the scheduled() call sites).
@@ -956,7 +956,7 @@ async function reconcilePendingDomains(
   const projectMap = new Map(projectRows.map((project) => [project.id, project]));
 
   // Batch-load the owners of the loaded projects so we can skip domains whose
-  // owner is ADMIN-suspended. The authenticated `nosam domain status` route is
+  // owner is ADMIN-suspended. The authenticated `bwf domain status` route is
   // behind authMiddleware, which 403s admin-suspended owners; the cron must
   // match that — it should never advance a domain the authed path would
   // refuse. Usage-suspended owners (isAdminSuspended === false) are NOT skipped
@@ -1046,7 +1046,7 @@ export async function cleanupStalePendingDomains(
   let cleaned = 0;
   for (const domain of stale) {
     // The `stale` snapshot can be racy: a user may finish DNS on day 8, or a
-    // concurrent `nosam domain status` poll may activate the domain between the
+    // concurrent `bwf domain status` poll may activate the domain between the
     // snapshot and now. Re-check CF live before tearing anything down so we
     // never delete a hostname that has since verified.
     let live;

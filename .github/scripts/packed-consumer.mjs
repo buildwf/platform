@@ -18,14 +18,11 @@ import { inspectPackage, startPackedRegistry } from './packed-registry.mjs';
 import { packedServerUrl } from './packed-server.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
-const suite = process.env.NOSAM_PACKED_SUITE ?? 'smoke';
-assert(['smoke', 'full'].includes(suite), 'NOSAM_PACKED_SUITE must be smoke or full');
+const suite = process.env.BWF_PACKED_SUITE ?? 'smoke';
+assert(['smoke', 'full'].includes(suite), 'BWF_PACKED_SUITE must be smoke or full');
 const full = suite === 'full';
-const toolchain = process.env.NOSAM_PACKED_TOOLCHAIN ?? 'vite';
-assert(
-  ['vite', 'vite-plus'].includes(toolchain),
-  'NOSAM_PACKED_TOOLCHAIN must be vite or vite-plus',
-);
+const toolchain = process.env.BWF_PACKED_TOOLCHAIN ?? 'vite';
+assert(['vite', 'vite-plus'].includes(toolchain), 'BWF_PACKED_TOOLCHAIN must be vite or vite-plus');
 const useVitePlus = toolchain === 'vite-plus';
 const vitePlusVersion = JSON.parse(
   readFileSync(join(root, 'node_modules/vite-plus/package.json'), 'utf8'),
@@ -143,8 +140,8 @@ writeFileSync(
 environment.npm_config_registry = registry.origin;
 environment.NPM_CONFIG_REGISTRY = registry.origin;
 environment.PNPM_CONFIG_REGISTRY = registry.origin;
-const version = packages.find((pkg) => pkg.manifest.name === 'nosam').manifest.version;
-const managers = process.env.NOSAM_PACKED_PM ? [process.env.NOSAM_PACKED_PM] : ['npm', 'pnpm'];
+const version = packages.find((pkg) => pkg.manifest.name === '@buildwf/bwf').manifest.version;
+const managers = process.env.BWF_PACKED_PM ? [process.env.BWF_PACKED_PM] : ['npm', 'pnpm'];
 assert(managers.every((manager) => ['npm', 'pnpm'].includes(manager)));
 const frameworks = ['react'];
 const app = (label) => `import { useEffect, useState } from 'react';
@@ -167,7 +164,7 @@ try {
       const label = `${manager}-${framework}`;
       try {
         const fixture = join(work, label);
-        console.log(`Checking packed ${label}: create-nosam and interactive init`);
+        console.log(`Checking packed ${label}: create-bwf and interactive init`);
         await run(
           process.execPath,
           [
@@ -182,8 +179,8 @@ try {
         );
         const agentInstructions = readFileSync(join(fixture, 'AGENTS.md'), 'utf8');
         assert.equal(agentInstructions.match(/^- /gm)?.length, 2);
-        assert(agentInstructions.includes('node_modules/nosam/docs/'));
-        assert(existsSync(join(fixture, 'node_modules/nosam/docs/guide/quickstart.md')));
+        assert(agentInstructions.includes('node_modules/@buildwf/bwf/docs/'));
+        assert(existsSync(join(fixture, 'node_modules/@buildwf/bwf/docs/guide/quickstart.md')));
         assert(
           existsSync(join(fixture, '.git')),
           'Init should initialize the accepted Git repository',
@@ -223,7 +220,7 @@ try {
           join(fixture, '.npmrc'),
           `registry=${registry.origin}\nengine-strict=true\n${manager === 'pnpm' ? 'strict-peer-dependencies=true\n' : ''}audit=false\nfund=false\n`,
         );
-        const cli = join(fixture, 'node_modules/nosam/dist/cli/cli.mjs');
+        const cli = join(fixture, 'node_modules/@buildwf/bwf/dist/cli/cli.mjs');
         await run(process.execPath, [cli, '--help'], fixture);
         const manifest = JSON.parse(readFileSync(join(fixture, 'package.json'), 'utf8'));
         if (useVitePlus) {
@@ -258,7 +255,8 @@ try {
           assert(installedVite.version.startsWith('8.'), 'The consumer must use public Vite 8');
         }
         assert.equal(
-          JSON.parse(readFileSync(join(fixture, 'node_modules/nosam/package.json'), 'utf8')).version,
+          JSON.parse(readFileSync(join(fixture, 'node_modules/@buildwf/bwf/package.json'), 'utf8'))
+            .version,
           version,
         );
         await run(process.execPath, [cli, 'prepare'], fixture);
@@ -267,12 +265,12 @@ try {
         mkdirSync(join(fixture, 'routes/api'), { recursive: true });
         writeFileSync(
           join(fixture, 'routes/api/packed.ts'),
-          `import { defineHandler } from 'nosam';\nimport { kv } from 'nosam/kv';\nexport const GET = defineHandler(async () => { await kv.put('packed', 'ok'); return { value: await kv.get('packed') }; });\n`,
+          `import { defineHandler } from '@buildwf/bwf';\nimport { kv } from '@buildwf/bwf/kv';\nexport const GET = defineHandler(async () => { await kv.put('packed', 'ok'); return { value: await kv.get('packed') }; });\n`,
         );
-        // nosam/email pulls a CommonJS dependency into the Worker; only an installed package shows whether dev serves it.
+        // bwf/email pulls a CommonJS dependency into the Worker; only an installed package shows whether dev serves it.
         writeFileSync(
           join(fixture, 'routes/api/packed-email.ts'),
-          `import { defineHandler } from 'nosam';\nimport { sendEmail } from 'nosam/email';\nexport const GET = defineHandler(async () => { return sendEmail({ from: 'packed@example.com', to: 'inbox@example.com', subject: 'Packed', text: 'ok' }); });\n`,
+          `import { defineHandler } from '@buildwf/bwf';\nimport { sendEmail } from '@buildwf/bwf/email';\nexport const GET = defineHandler(async () => { return sendEmail({ from: 'packed@example.com', to: 'inbox@example.com', subject: 'Packed', text: 'ok' }); });\n`,
         );
         mkdirSync(join(fixture, 'public'), { recursive: true });
         writeFileSync(join(fixture, 'public/packed.txt'), label);
@@ -287,16 +285,16 @@ try {
           fixture,
         );
         if (useVitePlus) {
-          // Vitest loads the app's Vite config, Nosam's plugin included, and runs the tests in
+          // Vitest loads the app's Vite config, bwf's plugin included, and runs the tests in
           // Node.js. The test from docs/guide/testing.md replaces the KV module it uses.
           mkdirSync(join(fixture, 'src'), { recursive: true });
           writeFileSync(
             join(fixture, 'src/visits.ts'),
-            `import { kv } from 'nosam/kv';\nexport async function countVisit(): Promise<number> {\n  const visits = ((await kv.get<number>('visits')) ?? 0) + 1;\n  await kv.put('visits', visits);\n  return visits;\n}\n`,
+            `import { kv } from '@buildwf/bwf/kv';\nexport async function countVisit(): Promise<number> {\n  const visits = ((await kv.get<number>('visits')) ?? 0) + 1;\n  await kv.put('visits', visits);\n  return visits;\n}\n`,
           );
           writeFileSync(
             join(fixture, 'src/visits.test.ts'),
-            `import { expect, it, vi } from 'vite-plus/test';\nimport { countVisit } from './visits';\nvi.mock('nosam/kv', () => {\n  const values = new Map<string, unknown>();\n  return { kv: { get: async (key: string) => values.get(key) ?? null, put: async (key: string, value: unknown) => { values.set(key, value); } } };\n});\nit('counts visits', async () => {\n  await countVisit();\n  expect(await countVisit()).toBe(2);\n});\n`,
+            `import { expect, it, vi } from 'vite-plus/test';\nimport { countVisit } from './visits';\nvi.mock('@buildwf/bwf/kv', () => {\n  const values = new Map<string, unknown>();\n  return { kv: { get: async (key: string) => values.get(key) ?? null, put: async (key: string, value: unknown) => { values.set(key, value); } } };\n});\nit('counts visits', async () => {\n  await countVisit();\n  expect(await countVisit()).toBe(2);\n});\n`,
           );
           await run(process.execPath, [vite, 'test', 'run'], fixture);
           rmSync(join(fixture, 'src/visits.ts'));
@@ -311,7 +309,7 @@ try {
             `import { findPackageJSON } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-const manifestPath = findPackageJSON('@nosam/platform', import.meta.resolve('nosam'));
+const manifestPath = findPackageJSON('@buildwf/platform', import.meta.resolve('@buildwf/bwf'));
 const entry = JSON.parse(readFileSync(manifestPath, 'utf8')).exports['./installer'].import;
 const { resolvePlatformRuntime } = await import(new URL(entry, pathToFileURL(manifestPath)));
 const runtime = resolvePlatformRuntime();

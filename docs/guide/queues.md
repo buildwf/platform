@@ -11,13 +11,13 @@ Use queues to process work asynchronously, such as sending emails or handling up
 
 Create a consumer in `queues/`. TypeScript and JavaScript files are supported (`.ts`, `.mts`, `.js`, `.mjs`). Its path determines the queue name: `queues/emails.ts` creates `emails`, and `queues/order/notifications.ts` creates `order-notifications`. Each queue must have a unique name.
 
-The resulting name must follow Cloudflare's queue naming rules: 1–63 characters, only letters, digits, and `-`, beginning and ending with a letter or digit. On `nosam deploy --platform cloudflare`, the Cloudflare queue also carries the Worker name, so the limit applies to that full name; see [Cloudflare queue names](#cloudflare-queue-names).
+The resulting name must follow Cloudflare's queue naming rules: 1–63 characters, only letters, digits, and `-`, beginning and ending with a letter or digit. On `bwf deploy --platform cloudflare`, the Cloudflare queue also carries the Worker name, so the limit applies to that full name; see [Cloudflare queue names](#cloudflare-queue-names).
 
 Export a default handler wrapped with [`defineQueue<T>`](../reference/api/handlers.md#definequeue-t-handler). `T` defines the message body for both the consumer and calls to `send()`:
 
 ```ts
 // queues/emails.ts
-import { defineQueue } from 'nosam';
+import { defineQueue } from '@buildwf/bwf';
 
 interface Message {
   to: string;
@@ -36,12 +36,12 @@ Files or directories starting with `_` are ignored.
 
 ## Sending messages
 
-Import the typed `queues` proxy from `nosam/queues` to send messages. Each queue is available as a property matching its name, with full type safety from the consumer's `defineQueue<T>` generic.
+Import the typed `queues` proxy from `@buildwf/bwf/queues` to send messages. Each queue is available as a property matching its name, with full type safety from the consumer's `defineQueue<T>` generic.
 
 ```ts
 // routes/api/orders.ts
-import { defineHandler } from 'nosam';
-import { queues } from 'nosam/queues';
+import { defineHandler } from '@buildwf/bwf';
+import { queues } from '@buildwf/bwf/queues';
 
 export const POST = defineHandler(async (c) => {
   const order = await c.req.json();
@@ -77,7 +77,7 @@ export default defineQueue<Message>(async (batch, env) => {
 - `batch.ackAll()`: acknowledge all messages in the batch
 - `batch.retryAll(options?)`: retry all messages in the batch
 
-The first `ack()` or `retry()` call wins for each message. Messages without an explicit decision are acknowledged when the handler succeeds and retried when it throws. Nosam logs handler errors automatically.
+The first `ack()` or `retry()` call wins for each message. Messages without an explicit decision are acknowledged when the handler succeeds and retried when it throws. bwf logs handler errors automatically.
 
 The `timestamp` field on each message is a `Date` object.
 
@@ -87,7 +87,7 @@ Export named constants to configure how Cloudflare delivers batches to your cons
 
 ```ts
 // queues/emails.ts
-import { defineQueue } from 'nosam';
+import { defineQueue } from '@buildwf/bwf';
 
 interface Message {
   to: string;
@@ -117,21 +117,21 @@ Nosam-managed queues do not configure a dead-letter queue. Cloudflare permanentl
 deletes messages that exhaust their retries without one; see
 [Cloudflare's dead-letter queue guide](https://developers.cloudflare.com/queues/configuration/dead-letter-queues/).
 
-Nosam provisions queues and connects their producers and consumers when you deploy.
+bwf provisions queues and connects their producers and consumers when you deploy.
 
 ### Cloudflare queue names
 
-With `nosam deploy --platform cloudflare`, queue names include the Worker name: `queues/jobs.ts` in `app-staging` creates `app-staging-jobs`. Underscores in the Worker name become hyphens. Your app uses `queues.jobs.send()` in every environment.
+With `bwf deploy --platform cloudflare`, queue names include the Worker name: `queues/jobs.ts` in `app-staging` creates `app-staging-jobs`. Underscores in the Worker name become hyphens. Your app uses `queues.jobs.send()` in every environment.
 
-Keep the full name within 63 characters and unique within the account. Each Cloudflare queue supports one consumer; Nosam reports naming or consumer conflicts during deploy.
+Keep the full name within 63 characters and unique within the account. Each Cloudflare queue supports one consumer; bwf reports naming or consumer conflicts during deploy.
 
 Existing deployments keep their queues and messages. To adopt the new naming, pause producers, drain the old queue, remove its Worker consumer in Cloudflare, and redeploy. Check that the old queue is empty before deleting it.
 
 ## Local development
 
-In native Nosam apps, sending a message through a queue binding automatically invokes the consumer in Miniflare. Local delivery uses the same handler as production.
+In native bwf apps, sending a message through a queue binding automatically invokes the consumer in Miniflare. Local delivery uses the same handler as production.
 
-You can also manually dispatch a batch by POSTing to the dev endpoint Nosam exposes:
+You can also manually dispatch a batch by POSTing to the dev endpoint bwf exposes:
 
 ```
 POST /__nosam/queue
@@ -139,7 +139,7 @@ Content-Type: application/json
 { "queue": "<queue-name>", "messages": [{ "id": "1", "timestamp": <unix_ms>, "body": <any>, "attempts": 1 }] }
 ```
 
-The endpoint requires a local dev trigger token. Nosam prints a paste-ready curl command with the current token when the dev server starts.
+The endpoint requires a local dev trigger token. bwf prints a paste-ready curl command with the current token when the dev server starts.
 
 ```bash
 curl -X POST http://localhost:5173/__nosam/queue \

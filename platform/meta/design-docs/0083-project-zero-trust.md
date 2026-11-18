@@ -212,4 +212,4 @@ idempotent and the cascade drops the row.
 
 Code: `platform/packages/api/src/zero-trust/` (`installation`, `operation`,
 `project`, `routing`, `maintenance`, `status`, `lock`, `state`); the uninstall
-check is `packages/nosam/src/cli/platform-zero-trust-uninstall.ts`.
+check is `packages/bwf/src/cli/platform-zero-trust-uninstall.ts`.

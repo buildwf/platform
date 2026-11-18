@@ -5,4 +5,4 @@ export {
   type ClearSiteDataMember,
   type HeaderRule,
   type HeaderRulePolicy,
-} from '@nosam/edge';
+} from '@buildwf/edge';

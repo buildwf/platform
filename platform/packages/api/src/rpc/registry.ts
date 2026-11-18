@@ -1,11 +1,11 @@
 import { defineRegistry } from '@eeao/core';
+import * as billing from './procedures/billing.ts';
 import * as credentials from './procedures/credentials.ts';
 import * as database from './procedures/database.ts';
 import * as deploy from './procedures/deploy.ts';
 import * as deployments from './procedures/deployments.ts';
 import * as domains from './procedures/domains.ts';
 import * as finalize from './procedures/finalize.ts';
-import * as billing from './procedures/billing.ts';
 import * as me from './procedures/me.ts';
 import * as projects from './procedures/projects.ts';
 import * as secrets from './procedures/secrets.ts';

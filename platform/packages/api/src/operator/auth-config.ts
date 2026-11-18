@@ -2,7 +2,7 @@ import {
   parsePlatformLoginConfiguration,
   parsePlatformAdmissionPolicy,
   parsePlatformAccessProtection,
-} from '@nosam/platform';
+} from '@buildwf/platform';
 import { and, eq, gt, sql } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import { platformAccessVerifier } from '../auth/access.ts';

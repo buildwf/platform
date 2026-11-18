@@ -1,6 +1,6 @@
-import { defineHandler } from 'nosam';
-import { ai } from 'nosam/ai';
-import { UsageLimit } from 'nosam/limits';
+import { defineHandler } from '@buildwf/bwf';
+import { ai } from '@buildwf/bwf/ai';
+import { UsageLimit } from '@buildwf/bwf/limits';
 
 function textInputForModel(model: string, prompt: string) {
   if (model.startsWith('google/')) {

@@ -1,9 +1,9 @@
-import type { PlatformLoginConfiguration, PlatformAuthenticationRecovery } from '@nosam/platform';
+import type { PlatformLoginConfiguration, PlatformAuthenticationRecovery } from '@buildwf/platform';
 import {
   browserPageIdentity,
   browserPageLead,
   browserPageStatus,
-} from '@nosam/platform/browser-page';
+} from '@buildwf/platform/browser-page';
 import { and, eq, gt } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
@@ -119,7 +119,7 @@ function authenticationError(
       ],
       ...(bootstrap
         ? {
-            command: `nosam platform repair ${context.env.PLATFORM_INSTALLATION_ID ?? '<id>'}${groups ? ' --auth-config <path>' : ''}`,
+            command: `bwf platform repair ${context.env.PLATFORM_INSTALLATION_ID ?? '<id>'}${groups ? ' --auth-config <path>' : ''}`,
             returnUrl: '/setup',
           }
         : {}),

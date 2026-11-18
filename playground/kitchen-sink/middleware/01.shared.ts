@@ -1,6 +1,6 @@
-import { defineMiddleware } from 'nosam';
+import { defineMiddleware } from '@buildwf/bwf';
 
-declare module 'nosam' {
+declare module '@buildwf/bwf' {
   interface CloudContextVariables {
     shared: { appName: string };
   }

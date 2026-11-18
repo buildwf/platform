@@ -3,7 +3,7 @@ import {
   aiLoggingKey,
   parsePublishedAiLogging,
   type AiLoggingMode,
-} from '@nosam/platform/ai-logging';
+} from '@buildwf/platform/ai-logging';
 import type { Context } from 'hono';
 import type { ProxyEnv } from './types.ts';
 

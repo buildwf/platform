@@ -1,4 +1,4 @@
-import { platformProjectHostnames, readPlatformApplication } from '@nosam/platform';
+import { platformProjectHostnames, readPlatformApplication } from '@buildwf/platform';
 import { and, eq, or, sql as drizzleSql } from 'drizzle-orm';
 import { type Context } from 'hono';
 import { findR2Assets, persistedR2AssetSizes } from '../asset-inventory.ts';
@@ -715,7 +715,7 @@ export async function runDeploymentPipeline(input: {
           const unique = Array.from(new Set(unbound));
           emit({
             event: 'error',
-            message: `routing rule host not bound to project: ${unique.join(', ')} — add the domain (\`nosam domain add\`) before deploying rules scoped to it`,
+            message: `routing rule host not bound to project: ${unique.join(', ')} — add the domain (\`bwf domain add\`) before deploying rules scoped to it`,
             step: currentStep,
           });
           return;
@@ -837,7 +837,7 @@ export async function runDeploymentPipeline(input: {
         // them directly into `assetsByHash` (not into our R2 — they're
         // a deploy-local artifact, not a CLI-uploaded asset).
         if (!isStaticOnly && Object.keys(assetManifest).length > 0) {
-          const bustPath = `/.nosam-deploy/${deployment.id}.txt`;
+          const bustPath = `/.bwf-deploy/${deployment.id}.txt`;
           const bustContent = `${deployment.id}\n${Date.now()}\n`;
           const bustBytes = new TextEncoder().encode(bustContent);
           const bustBuffer = bustBytes.buffer.slice(

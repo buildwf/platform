@@ -1,4 +1,4 @@
-import { PLATFORM_APPLICATION_KEY, PLATFORM_DISABLED_KEY } from '@nosam/platform';
+import { PLATFORM_APPLICATION_KEY, PLATFORM_DISABLED_KEY } from '@buildwf/platform';
 import {
   afterAll,
   afterEach,

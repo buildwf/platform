@@ -1,5 +1,5 @@
-import { defineHandler } from 'nosam';
-import { requireAuth } from 'nosam/auth';
+import { defineHandler } from '@buildwf/bwf';
+import { requireAuth } from '@buildwf/bwf/auth';
 
 export const GET = defineHandler((c) => {
   const user = requireAuth(c);

@@ -53,7 +53,7 @@ const { frontmatter } = useData();
       <div
         class="relative px-10 pb-10 md:pt-10 h-full flex flex-col justify-center overflow-clip"
         role="img"
-        aria-label="Animation showing a Vite app becoming a Nosam app"
+        aria-label="Animation showing a Vite app becoming a bwf app"
       >
         <RiveAnimation
           :desktop-src="heroAnimation"

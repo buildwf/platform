@@ -17,28 +17,28 @@ const pgliteUnitTests = [
   'platform/packages/api/test/unit/github-authority-migration.test.ts',
 ];
 const cliUnitTests = [
-  'packages/nosam/test/unit/cf-*.test.ts',
-  'packages/nosam/test/unit/provision-*.test.ts',
-  'packages/nosam/test/unit/deploy-drift.test.ts',
+  'packages/bwf/test/unit/cf-*.test.ts',
+  'packages/bwf/test/unit/provision-*.test.ts',
+  'packages/bwf/test/unit/deploy-drift.test.ts',
 ];
 // SDK unit files that start PGlite. Add new PGlite unit files here.
 const sdkPgliteUnitTests = [
-  'packages/nosam/test/unit/auth-migrations.test.ts',
-  'packages/nosam/test/unit/db-export-roundtrip.test.ts',
-  'packages/nosam/test/unit/db-request-pool.test.ts',
-  'packages/nosam/test/unit/db-reset-pg.test.ts',
-  'packages/nosam/test/unit/platform-database-lock.test.ts',
-  'packages/nosam/test/unit/platform-database-migrations.test.ts',
-  'packages/nosam/test/unit/runner-pg.test.ts',
+  'packages/bwf/test/unit/auth-migrations.test.ts',
+  'packages/bwf/test/unit/db-export-roundtrip.test.ts',
+  'packages/bwf/test/unit/db-request-pool.test.ts',
+  'packages/bwf/test/unit/db-reset-pg.test.ts',
+  'packages/bwf/test/unit/platform-database-lock.test.ts',
+  'packages/bwf/test/unit/platform-database-migrations.test.ts',
+  'packages/bwf/test/unit/runner-pg.test.ts',
 ];
 
 // Vitest forwards a FILTERED env to test workers — in CI only NOSAM_E2E_CF_TOKEN survives, while
 // NOSAM_E2E_CF_ACCOUNT_ID and NOSAM_E2E_NAMESPACE are dropped. The gated live Cloudflare deploy e2e
-// (packages/nosam/test/e2e/cloudflare-deploy-live.test.ts) needs all three, so forward them into the
+// (packages/bwf/test/e2e/cloudflare-deploy-live.test.ts) needs all three, so forward them into the
 // core-markdown workers explicitly from this main config process (which has the runner's step env).
 // Absent credentials become empty strings so ordinary test runs skip the live suite.
 const e2eWorkerEnv = {
-  NOSAM_TEST_BROWSER: process.env.NOSAM_TEST_BROWSER ?? 'chromium',
+  BWF_TEST_BROWSER: process.env.BWF_TEST_BROWSER ?? 'chromium',
   NOSAM_E2E_CF_TOKEN: process.env.NOSAM_E2E_CF_TOKEN ?? '',
   NOSAM_E2E_CF_ACCOUNT_ID: process.env.NOSAM_E2E_CF_ACCOUNT_ID ?? '',
   NOSAM_E2E_NAMESPACE: process.env.NOSAM_E2E_NAMESPACE ?? '',
@@ -50,8 +50,8 @@ const testTimeout = 120_000 * ciTimeoutScale;
 const hookTimeout = 120_000 * ciTimeoutScale;
 
 const platformAlias = {
-  'nosam/_sandbox-container': fileURLToPath(
-    new URL('packages/nosam/src/runtime/sandbox-container.ts', import.meta.url),
+  '@buildwf/bwf/_sandbox-container': fileURLToPath(
+    new URL('packages/bwf/src/runtime/sandbox-container.ts', import.meta.url),
   ),
   'nosam:sandbox-controller-source': fileURLToPath(
     new URL('platform/packages/api/test/__mocks__/sandbox-controller-source.ts', import.meta.url),
@@ -108,8 +108,8 @@ export default defineConfig({
     ignorePatterns: [
       '.svelte-kit/**',
       'eeaao/**',
-      'packages/nosam/docs/**',
-      'packages/nosam/skills/nosam/docs/**',
+      'packages/bwf/docs/**',
+      'packages/bwf/skills/bwf/docs/**',
       'platform/packages/api/src/admin/fate/client.generated.ts',
       'playground/**/.output/**',
       'playground/**/build/**',
@@ -142,7 +142,7 @@ export default defineConfig({
       'eeaao/**',
       '**/node_modules/**',
       '**/dist/**',
-      '**/.nosam/**',
+      '**/.bwf/**',
       '**/.vite-cloud/**',
       '**/.wrangler/**',
       '**/.tanstack/**',
@@ -498,7 +498,7 @@ export default defineConfig({
           include: apiTimezoneTests,
           globalSetup: ['platform/packages/api/test/integration/global-setup.ts'],
           setupFiles: ['platform/packages/api/test/integration/setup.ts'],
-          ...(process.env.NOSAM_TEST_DATABASE_URL ? { fileParallelism: false } : {}),
+          ...(process.env.BWF_TEST_DATABASE_URL ? { fileParallelism: false } : {}),
           maxWorkers,
         },
       },
@@ -515,7 +515,7 @@ export default defineConfig({
           exclude: apiTimezoneTests,
           globalSetup: ['platform/packages/api/test/integration/global-setup.ts'],
           setupFiles: ['platform/packages/api/test/integration/setup.ts'],
-          ...(process.env.NOSAM_TEST_DATABASE_URL ? { fileParallelism: false } : {}),
+          ...(process.env.BWF_TEST_DATABASE_URL ? { fileParallelism: false } : {}),
           maxWorkers,
         },
       },
@@ -544,10 +544,10 @@ export default defineConfig({
           // isolated playground-local copy so both remain safe when credentials are present.
           env: e2eWorkerEnv,
           include: [
-            'packages/nosam/test/integration/**/*.test.ts',
+            'packages/bwf/test/integration/**/*.test.ts',
             // Gated live-account e2e (test/e2e/**). Collected here so it is skipped cleanly in CI
             // (no token) rather than silently undiscovered; runs only when its env vars are set.
-            'packages/nosam/test/e2e/**/*.test.ts',
+            'packages/bwf/test/e2e/**/*.test.ts',
           ],
           maxWorkers,
         },

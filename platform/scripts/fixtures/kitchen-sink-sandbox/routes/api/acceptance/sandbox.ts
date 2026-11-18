@@ -1,6 +1,6 @@
-import { defineHandler } from 'nosam';
-import { env } from 'nosam/env';
-import { getSandbox, SandboxLimitError, type SandboxClient } from 'nosam/sandbox';
+import { defineHandler } from '@buildwf/bwf';
+import { env } from '@buildwf/bwf/env';
+import { getSandbox, SandboxLimitError, type SandboxClient } from '@buildwf/bwf/sandbox';
 import { internetAccessProbe } from '../../../lib/internet-probe.ts';
 
 function assert(condition: unknown, message: string): asserts condition {

@@ -1,5 +1,5 @@
-import { defineHandler } from 'nosam';
-import { getSession } from 'nosam/auth';
+import { defineHandler } from '@buildwf/bwf';
+import { getSession } from '@buildwf/bwf/auth';
 
 export const GET = defineHandler(() => {
   const auth = getSession();

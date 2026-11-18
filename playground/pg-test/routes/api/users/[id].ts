@@ -1,6 +1,6 @@
+import { defineHandler } from '@buildwf/bwf';
+import { db, eq } from '@buildwf/bwf/db';
 import { posts, users } from '@schema';
-import { defineHandler } from 'nosam';
-import { db, eq } from 'nosam/db';
 
 export const GET = defineHandler(async (c) => {
   const id = Number(c.req.param('id'));

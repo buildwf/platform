@@ -147,12 +147,12 @@ function EnabledEmailSettingsPage({ path, platformName, username }: AdminPagePro
               <RadioListItem
                 value="self-serve"
                 label="self-serve"
-                description="Project owners grant a Cloudflare credential from nosam email domain add."
+                description="Project owners grant a Cloudflare credential from bwf email domain add."
               />
               <RadioListItem
                 value="admin"
                 label="admin"
-                description="Administrators add domains; nosam email domain add prints the administrator's command instead."
+                description="Administrators add domains; bwf email domain add prints the administrator's command instead."
               />
             </RadioList>
             <Button type="submit" label="Save" />

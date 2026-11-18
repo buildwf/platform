@@ -1,6 +1,6 @@
-import { defineHandler } from 'nosam';
-import { kv } from 'nosam/kv';
-import { storage } from 'nosam/storage';
+import { defineHandler } from '@buildwf/bwf';
+import { kv } from '@buildwf/bwf/kv';
+import { storage } from '@buildwf/bwf/storage';
 
 const D1_TABLES_TO_CLEAR = [
   'notes',

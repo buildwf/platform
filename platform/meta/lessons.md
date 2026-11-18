@@ -14,8 +14,8 @@
   features. Distinguish implemented code from shipped behavior and verified
   release status. Read package scripts before documenting their scope.
 - Keep the bundled matching platform payload when it supports the existing installation workflow. Propose a packaging split only with a concrete user or maintenance benefit.
-- Trace existing contracts before proposing replacements. `nosam.config.ts`
-  already owns authored configuration and `nosam.lock.json` owns generated
+- Trace existing contracts before proposing replacements. `bwf.config.ts`
+  already owns authored configuration and `bwf.lock.json` owns generated
   resource state; prioritize a replacement only after demonstrating its payoff.
 - Keep inferred persistent resource identities as the default. Offer discovery
   and optional explicit names before source moves; preserve existing instance
@@ -24,7 +24,7 @@
 - Introduce one idea, show a small example, then explain its behavior, following
   [Fate's guides](https://fate.technology/guide/requests). Put implementation
   details in maintainer docs and keep command references easy to scan.
-- User installation guides describe the published CLI. Keep `nosam-dev`, checkout
+- User installation guides describe the published CLI. Keep `bwf-dev`, checkout
   builds, and source-release workflows in contributor guidance; keep Nosam Cloud
   maintenance in repository runbooks. Do not turn a one-off development failure
   into a prerequisite for every user.
@@ -64,7 +64,7 @@
 
 ## Framework and schema
 
-- Config changes update `packages/nosam/schema.json`,
+- Config changes update `packages/bwf/schema.json`,
   `docs/reference/config.md`, types, validation and affected examples together.
 - Preserve CLI namespaces and prefer conventions over configuration. Runtime
   APIs belong at package roots; Vite plugin factories use `/plugin` subpaths.
@@ -76,7 +76,7 @@
 - Use the appropriate Drizzle validator adapter and the `@schema` alias.
   SQLite PRAGMA arguments use bare names or single-quoted identifiers.
 - Keep schema changes compatible while old Workers can run. Renames, drops
-  and type changes require staged rollout. Use `NOSAM_TEST_DATABASE_URL`
+  and type changes require staged rollout. Use `BWF_TEST_DATABASE_URL`
   for real PostgreSQL checks; preserve integration-file serialization.
 
 ## Cloudflare and deployment
@@ -166,7 +166,7 @@
 - Render the expected system-health check slots before polling and keep their
   status details on one line so asynchronous updates do not shift dashboard content.
 - Cloudflare Tail sees top-level logs and uncaught throws. Log caught errors
-  explicitly; `nosam project logs --filter` filters message text and
+  explicitly; `bwf project logs --filter` filters message text and
   `--level` filters severity.
 - Test the dashboard against a local API or an explicitly selected
   installation. Put local Worker vars in its `.dev.vars` or local config.

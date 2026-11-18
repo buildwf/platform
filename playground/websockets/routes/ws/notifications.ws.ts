@@ -1,5 +1,5 @@
+import { defineWebSocket, type WebSocketConnection } from '@buildwf/bwf/ws';
 import * as v from 'valibot';
-import { defineWebSocket, type WebSocketConnection } from 'nosam/ws';
 
 const NotificationClientMessage = v.variant('type', [
   v.object({

@@ -33,8 +33,12 @@ describe('stripe billing', () => {
 
   it('keeps live keys off until they are switched on', () => {
     expect(stripeSecretKey({ STRIPE_SECRET_KEY: 'sk_test_x' })).toBe('sk_test_x');
-    expect(() => stripeSecretKey({ STRIPE_SECRET_KEY: 'sk_live_x' })).toThrow(BillingUnavailableError);
-    expect(stripeSecretKey({ STRIPE_SECRET_KEY: 'sk_live_x', STRIPE_LIVE_ENABLED: 'true' })).toBe('sk_live_x');
+    expect(() => stripeSecretKey({ STRIPE_SECRET_KEY: 'sk_live_x' })).toThrow(
+      BillingUnavailableError,
+    );
+    expect(stripeSecretKey({ STRIPE_SECRET_KEY: 'sk_live_x', STRIPE_LIVE_ENABLED: 'true' })).toBe(
+      'sk_live_x',
+    );
     expect(() => stripeSecretKey({})).toThrow(BillingUnavailableError);
   });
 
@@ -47,7 +51,13 @@ describe('stripe billing', () => {
     });
     const url = await createCheckoutSession(
       { STRIPE_SECRET_KEY: 'sk_test_x', STRIPE_PRICE_SOLO: 'price_solo' },
-      { reference: 'usr_1', metadata: { userId: 'usr_1' }, email: null, plan: 'solo', returnUrl: 'https://app.example/billing' },
+      {
+        reference: 'usr_1',
+        metadata: { userId: 'usr_1' },
+        email: null,
+        plan: 'solo',
+        returnUrl: 'https://app.example/billing',
+      },
       fetcher as never,
     );
     expect(url).toBe('https://checkout.stripe.com/c/1');

@@ -1,4 +1,4 @@
-import { defineHandler } from 'nosam';
+import { defineHandler } from '@buildwf/bwf';
 import { fetchApi, type CurrentUser } from '../lib/api.ts';
 import { discoveryDisplayName } from '../lib/platform-title.ts';
 

@@ -153,7 +153,7 @@ export async function tryCreateEmailDestination(
  * authorized those rows no longer represents the current identity, so
  * we flip them back to 'pending' / 'platform' (rather than
  * hard-deleting) to give the user a re-confirm path: a repeat
- * `nosam email allow <address>` re-sends our own confirmation link and
+ * `bwf email allow <address>` re-sends our own confirmation link and
  * the confirm route flips the row back, without losing its history. We
  * also clear the audit columns so the row no longer claims to be
  * owner-verified by a stale identity.
@@ -203,12 +203,12 @@ export async function revokeOwnerVerifiedDestinationsForUserChange(
       // against CF's account-level list — and nothing deleted the address
       // on CF's side, so CF still reports it verified. A row left as 'cf'
       // therefore drops straight back into that filter and the very next
-      // `nosam email destinations` re-promotes it to 'verified', undoing
+      // `bwf email destinations` re-promotes it to 'verified', undoing
       // this revoke entirely. 'platform' is also the correct state on the
       // merits: the account-level CF flag is exactly the consent we just
       // decided we can no longer inherit, so the only thing that may
       // re-verify the row is a per-recipient click on our own confirmation
-      // link (a repeat `nosam email allow <address>` re-sends it).
+      // link (a repeat `bwf email allow <address>` re-sends it).
       //
       // Safe inside this statement: Postgres evaluates the WHERE predicate
       // against the PRE-update row, so narrowing `verification_source` to

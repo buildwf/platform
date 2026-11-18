@@ -407,7 +407,7 @@ describe('enrichLiveManifest', () => {
         version: 3,
         bindings: {},
         live: {
-          bindingName: 'NOSAM_LIVE',
+          bindingName: 'BWF_LIVE',
           className: 'NosamLiveStreamDurableObject',
           storage: 'sqlite',
           classes: ['NosamLiveStreamDurableObject'],
@@ -429,7 +429,7 @@ describe('enrichLiveManifest', () => {
       version: 3,
       bindings: {},
       live: {
-        bindingName: 'NOSAM_LIVE',
+        bindingName: 'BWF_LIVE',
         className: 'NosamLiveStreamDurableObject',
         storage: 'sqlite',
         classes: ['NosamLiveStreamDurableObject'],
@@ -442,7 +442,7 @@ describe('enrichLiveManifest', () => {
         version: 3,
         bindings: {},
         live: {
-          bindingName: 'NOSAM_LIVE',
+          bindingName: 'BWF_LIVE',
           className: 'NosamLiveStreamDurableObject',
           storage: 'sqlite',
           classes: ['NosamLiveStreamDurableObject', 'NosamLiveStreamDurableObject'],
@@ -463,7 +463,7 @@ describe('enrichLiveManifest', () => {
       version: 3,
       bindings: {},
       live: {
-        bindingName: 'NOSAM_LIVE',
+        bindingName: 'BWF_LIVE',
         className: 'NosamLiveStreamDurableObject',
         storage: 'sqlite',
         classes: ['NosamLiveStreamDurableObject'],
@@ -484,7 +484,7 @@ describe('enrichLiveManifest', () => {
         version: 3,
         bindings: {},
         live: {
-          bindingName: 'NOSAM_LIVE',
+          bindingName: 'BWF_LIVE',
           className: 'NosamLiveStreamDurableObject',
           storage: 'sqlite',
           classes: ['NosamLiveStreamDurableObject'],
@@ -538,7 +538,7 @@ describe('buildSandboxUploadMetadata', () => {
   it('serializes live Durable Object binding metadata', () => {
     expect(
       buildLiveUploadBindings({
-        bindingName: 'NOSAM_LIVE',
+        bindingName: 'BWF_LIVE',
         className: 'NosamLiveStreamDurableObject',
         storage: 'sqlite',
         classes: ['NosamLiveStreamDurableObject'],
@@ -546,7 +546,7 @@ describe('buildSandboxUploadMetadata', () => {
     ).toEqual([
       {
         type: 'durable_object_namespace',
-        name: 'NOSAM_LIVE',
+        name: 'BWF_LIVE',
         class_name: 'NosamLiveStreamDurableObject',
       },
     ]);

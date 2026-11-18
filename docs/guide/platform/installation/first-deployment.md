@@ -10,42 +10,42 @@ Open your platform's API URL in a browser to see its welcome page, CLI connectio
 First verify the new platform and sign in with the administrator login method selected during setup:
 
 ```sh
-nosam platform status
-nosam platform auth login
-nosam platform system health
+bwf platform status
+bwf platform auth login
+bwf platform system health
 ```
 
-Administrator login is separate from the credentials used to deploy apps. In a new or unlinked Nosam app directory, connect using the installed API URL and deploy your first project:
+Administrator login is separate from the credentials used to deploy apps. In a new or unlinked bwf app directory, connect using the installed API URL and deploy your first project:
 
 ```sh
-nosam connect nosam-company-api.example.workers.dev
-nosam deploy --platform void --project my-first-app
+bwf connect nosam-company-api.example.workers.dev
+bwf deploy --platform void --project my-first-app
 ```
 
-`nosam connect` validates the platform and signs you in when needed. Confirm project creation when deploy asks. To use a project that already exists, run `nosam project link` instead. An app already linked to another platform keeps its existing destination; use a fresh app directory for your first test.
+`bwf connect` validates the platform and signs you in when needed. Confirm project creation when deploy asks. To use a project that already exists, run `bwf project link` instead. An app already linked to another platform keeps its existing destination; use a fresh app directory for your first test.
 
-Once accepted by the platform, a deployment continues independently of the CLI connection. The CLI reconnects automatically after a connection failure. Use `nosam project status` to inspect a deployment after closing the CLI, or `nosam project cancel` to request cancellation.
+Once accepted by the platform, a deployment continues independently of the CLI connection. The CLI reconnects automatically after a connection failure. Use `bwf project status` to inspect a deployment after closing the CLI, or `bwf project cancel` to request cancellation.
 
-The CLI stores login credentials in your system keychain, separately for each platform URL. With no URL, `nosam connect` offers Cloudflare or a Nosam platform; `nosam connect --platform void` offers saved platforms and an option to enter another URL.
+The CLI stores login credentials in your system keychain, separately for each platform URL. With no URL, `bwf connect` offers Cloudflare or a bwf platform; `bwf connect --platform void` offers saved platforms and an option to enter another URL.
 
 For CI, create a bounded, project-scoped deploy credential while signed in as
 the project owner:
 
 ```sh
-nosam project token create --name ci --expires-in 30
+bwf project token create --name ci --expires-in 30
 ```
 
-Store the printed `NOSAM_TOKEN` and `NOSAM_API_URL` in the CI secret manager, then
-run `nosam connect "$NOSAM_API_URL" --no-login` before deploying in each fresh CI
+Store the printed `BWF_TOKEN` and `BWF_API_URL` in the CI secret manager, then
+run `bwf connect "$BWF_API_URL" --no-login` before deploying in each fresh CI
 environment. Project files do not replace this connection step. CI cannot answer
-the project prompt, so choose the project before `nosam deploy`: set `NOSAM_PROJECT`,
-pass `--project <slug>`, or commit `.nosam/project.json` from `nosam project link`.
-New apps ignore `.nosam` in `.gitignore`; to commit the link, replace that line
-with `.nosam/*` and `!.nosam/project.json`. Rotate with `nosam project token renew <id>` and revoke with
-`nosam project token revoke <id>`. A human login token is not a CI credential.
+the project prompt, so choose the project before `bwf deploy`: set `BWF_PROJECT`,
+pass `--project <slug>`, or commit `.bwf/project.json` from `bwf project link`.
+New apps ignore `.bwf` in `.gitignore`; to commit the link, replace that line
+with `.bwf/*` and `!.bwf/project.json`. Rotate with `bwf project token renew <id>` and revoke with
+`bwf project token revoke <id>`. A human login token is not a CI credential.
 
 If Cloudflare Access protects the platform, Access proof and the project
-credential are both required; the service token does not grant Nosam user or
+credential are both required; the service token does not grant bwf user or
 operator authority. A deploy that uses remote bindings calls
 both the API and proxy, so store `NOSAM_ACCESS_CREDENTIALS` in the CI secret
 manager with entries for both exact HTTPS origins. Include both entries even
@@ -70,9 +70,9 @@ the API origin does not authorize proxy requests.
 Use these commands to inspect connections and installations:
 
 ```sh
-nosam platform list
-nosam platform use [id]
-nosam platform status [id]
+bwf platform list
+bwf platform use [id]
+bwf platform status [id]
 ```
 
 ## Managing Access
@@ -80,11 +80,11 @@ nosam platform status [id]
 After installation, sign in as the first administrator. For a teammate who uses GitHub, add their login to the signup allowlist:
 
 ```sh
-nosam platform auth login
-nosam platform signup allow github teammate
+bwf platform auth login
+bwf platform signup allow github teammate
 ```
 
-Nosam shows the proposed access change and asks you to confirm it. Once approved, `teammate` can connect to the platform's API URL and sign in with GitHub.
+bwf shows the proposed access change and asks you to confirm it. Once approved, `teammate` can connect to the platform's API URL and sign in with GitHub.
 
 To allow email addresses, domains, or OIDC identities, or to open signup, see [Giving People Access](/guide/platform/administration/access#giving-people-access).
 

@@ -3,4 +3,4 @@ export {
   mergeQueryIntoLocation,
   type RedirectRule,
   type RoutingRuleResult,
-} from '@nosam/edge';
+} from '@buildwf/edge';

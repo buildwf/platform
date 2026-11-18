@@ -1,4 +1,4 @@
-import { defineHandler } from 'nosam';
+import { defineHandler } from '@buildwf/bwf';
 
 export const GET = defineHandler((c) =>
   Object.entries(c.env)

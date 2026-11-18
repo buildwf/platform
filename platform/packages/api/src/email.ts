@@ -153,7 +153,7 @@ void project team accept ${escapeHtml(params.invitationId)}</code></pre>
 <p>${button(inviteUrl.href, 'View Invitation')}</p>`,
       "If you didn't expect this invitation, you can decline it or ignore this email.",
     ),
-    text: `You're invited to ${params.projectSlug}\n\n${params.inviterLogin} invited you to join ${params.projectSlug} as ${params.role} on ${name}.\n\nConnect the Nosam CLI with this email address, then accept the invitation:\n\n${command}\nnosam project team accept ${params.invitationId}\n\nView invitation: ${inviteUrl.href}\n\nIf you didn't expect this invitation, you can decline it or ignore this email.`,
+    text: `You're invited to ${params.projectSlug}\n\n${params.inviterLogin} invited you to join ${params.projectSlug} as ${params.role} on ${name}.\n\nConnect the Nosam CLI with this email address, then accept the invitation:\n\n${command}\nbwf project team accept ${params.invitationId}\n\nView invitation: ${inviteUrl.href}\n\nIf you didn't expect this invitation, you can decline it or ignore this email.`,
   });
 }
 
@@ -201,7 +201,7 @@ void project status</code></pre>
 ${projectUrl ? `<p>${button(projectUrl, 'View Project')}</p>` : ''}`,
       `You received this email because you own this project on ${name}.`,
     ),
-    text: `Deploy failed: ${projectSlug}\n\nA deploy to ${projectSlug} on ${name} failed with the following error:\n\n${truncated}\n\nConnect to this platform to inspect the deployment:\n${command}\nnosam project status\n${projectUrl ? `\nView project: ${projectUrl}\n` : ''}\nYou received this email because you own this project on ${name}.`,
+    text: `Deploy failed: ${projectSlug}\n\nA deploy to ${projectSlug} on ${name} failed with the following error:\n\n${truncated}\n\nConnect to this platform to inspect the deployment:\n${command}\nbwf project status\n${projectUrl ? `\nView project: ${projectUrl}\n` : ''}\nYou received this email because you own this project on ${name}.`,
   });
 }
 
@@ -242,8 +242,8 @@ export async function sendErrorAlertEmail(
     ? `between ${utcStamp(window.start)} and ${utcStamp(window.end)}`
     : 'recently';
   const range = window ? suggestRange(window.start, sentAt) : '24h';
-  const requestsHint = `nosam project requests --status 5xx --range ${range}`;
-  const logsHint = `nosam project logs --level error --range ${range}`;
+  const requestsHint = `bwf project requests --status 5xx --range ${range}`;
+  const logsHint = `bwf project logs --level error --range ${range}`;
   const hintNote =
     'The first lists every 5xx, including errors generated at the edge that never reach your worker; the second adds worker logs and exceptions.';
   await sendEmail(env, {

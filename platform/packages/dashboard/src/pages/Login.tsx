@@ -1,4 +1,4 @@
-import { browserPageLogo, browserPageStyles } from '@nosam/platform/browser-page';
+import { browserPageLogo, browserPageStyles } from '@buildwf/platform/browser-page';
 import type { Props } from '../../server/login.ts';
 
 export default function LoginPage({ methods, platformName, unavailable, devLoginUrl }: Props) {

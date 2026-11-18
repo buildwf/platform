@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
 import { isDeepStrictEqual } from 'node:util';
-import { canonicalJson, isRecord } from '@nosam/deploy-core';
+import { canonicalJson, isRecord } from '@buildwf/deploy-core';
 import { join } from 'pathslash';
 import { parseRootWranglerConfig } from './config.ts';
 import { cloudflareCommandDiagnostic } from './diagnostics.ts';
@@ -16,8 +16,8 @@ import {
 } from './execute.ts';
 import type { CloudflareUploadResult } from './operations.ts';
 import {
-  isNosamSecretDraftHeader,
-  isNosamSecretOnlyDraft,
+  isBwfSecretDraftHeader,
+  isBwfSecretOnlyDraft,
   isWranglerSecretOnlyDraft,
   NOSAM_SECRET_DRAFT_MESSAGE,
   NOSAM_SECRET_DRAFT_SOURCE,
@@ -126,31 +126,31 @@ export type CloudflareVersionActivation =
       rollback?: 'not-needed' | 'succeeded' | 'failed' | 'unavailable' | 'unsafe';
       /**
        * Cloudflare refused to restore the previous version because a secret
-       * changed with this deploy, so Nosam forced it. The previous version runs
+       * changed with this deploy, so bwf forced it. The previous version runs
        * with its earlier secret values.
        */
       restoredOlderSecrets?: true;
       /**
-       * Version serving 100% of production when this command stopped, or null when Nosam could
+       * Version serving 100% of production when this command stopped, or null when bwf could
        * not read it. Set when a concurrent operation superseded this command, on every
        * `triggers-failed` result, and after any automatic traffic restoration that read status.
        */
       activeVersionId?: string | null;
       /**
-       * Set on `triggers-failed`. `yes`: Nosam re-applied the live version's own trigger snapshot.
-       * `no`: the live version runs with partly updated triggers. `unknown`: Nosam replayed a
+       * Set on `triggers-failed`. `yes`: bwf re-applied the live version's own trigger snapshot.
+       * `no`: the live version runs with partly updated triggers. `unknown`: bwf replayed a
        * snapshot but could not confirm the outcome.
        */
       triggersRestored?: 'yes' | 'no' | 'unknown';
       /**
-       * Set on `triggers-failed` when Nosam kept this deploy's version live instead of switching
+       * Set on `triggers-failed` when bwf kept this deploy's version live instead of switching
        * back. `placeholder`: the previous version is an empty placeholder or secret-only draft.
-       * `no-trigger-snapshot`: the previous version has no Nosam trigger snapshot to replay.
-       * `atomic`: the deploy published without a staged version, so Nosam does not switch back.
-       * Absent when there was no previous version or Nosam could not inspect it.
+       * `no-trigger-snapshot`: the previous version has no bwf trigger snapshot to replay.
+       * `atomic`: the deploy published without a staged version, so bwf does not switch back.
+       * Absent when there was no previous version or bwf could not inspect it.
        */
       restoreSkipped?: 'placeholder' | 'no-trigger-snapshot' | 'atomic';
-      /** Whether Nosam restored the active version's immutable trigger snapshot. */
+      /** Whether bwf restored the active version's immutable trigger snapshot. */
       triggerRepair?: 'succeeded' | 'failed' | 'unavailable';
       /**
        * Access denied a readiness probe to this custom-route origin. The probe carried no Access
@@ -1059,7 +1059,7 @@ async function activateCloudflareVersionWithSecretsFile(
     return previousVersion?.isSecretOnlyDraft === true;
   }
   // Recovery only: true when the previous version is an empty Worker that must never get traffic
-  // back. Unlike `isNosamSecretOnlyDraft`, this also accepts Nosam's zero-binding placeholder, which
+  // back. Unlike `isBwfSecretOnlyDraft`, this also accepts bwf's zero-binding placeholder, which
   // the bootstrap path must not treat as first-deployment proof.
   async function previousIsRestorePlaceholder(): Promise<boolean | null> {
     if (!previousVersionId) {
@@ -1074,7 +1074,7 @@ async function activateCloudflareVersionWithSecretsFile(
     if (previousVersion.message !== NOSAM_SECRET_DRAFT_MESSAGE) {
       return false;
     }
-    return await isNosamSecretDraftPlaceholderVersion(options, previousVersionId);
+    return await isBwfSecretDraftPlaceholderVersion(options, previousVersionId);
   }
   const previousMetadata = desiredMetadata?.schema === 2 ? previousVersion?.metadata : null;
   const continuesOpaqueTriggerPreservation =
@@ -1139,18 +1139,18 @@ async function activateCloudflareVersionWithSecretsFile(
   );
 
   const alias = `nosam-ready-${Date.now().toString(36)}`;
-  const bootstrapNosamDraft =
+  const bootstrapBwfDraft =
     !options.preserveTriggers &&
     !options.requirePreviewForReadiness &&
-    previousVersion?.isNosamSecretOnlyDraft === true;
-  if (previous.versionId !== null && (options.atomic || bootstrapNosamDraft)) {
+    previousVersion?.isBwfSecretOnlyDraft === true;
+  if (previous.versionId !== null && (options.atomic || bootstrapBwfDraft)) {
     // The exact private cf placeholder has no serving preview. Publish its first
     // application once through the bootstrap path, pinning its active secrets
     // just as for an explicitly atomic release.
-    if (bootstrapNosamDraft && !activeSecretsPinned && !options.pinActiveSecrets) {
+    if (bootstrapBwfDraft && !activeSecretsPinned && !options.pinActiveSecrets) {
       return { ok: false, reason: 'inheritance-source-unavailable' };
     }
-    if (bootstrapNosamDraft || (!activeSecretsPinned && options.pinActiveSecrets)) {
+    if (bootstrapBwfDraft || (!activeSecretsPinned && options.pinActiveSecrets)) {
       let activeSecrets: Awaited<ReturnType<typeof readCloudflareVersionSecretBindings>>;
       try {
         activeSecrets = await readCloudflareVersionSecretBindings(options, previous.versionId);
@@ -1161,12 +1161,12 @@ async function activateCloudflareVersionWithSecretsFile(
         return { ok: false, reason: 'inheritance-source-unavailable' };
       }
       if (
-        bootstrapNosamDraft &&
+        bootstrapBwfDraft &&
         (activeSecrets.length === 0 ||
           activeSecrets.some((secret) => secret.type !== 'secret_text') ||
           !arraysEqual(
             activeSecrets.map((secret) => secret.name).sort(),
-            [...previousVersion!.nosamDraftSecretNames!].sort(),
+            [...previousVersion!.bwfDraftSecretNames!].sort(),
           ) ||
           (activeSecretsPinned &&
             !isDeepStrictEqual(
@@ -1712,8 +1712,8 @@ async function activateCloudflareVersionWithSecretsFile(
         triggerRepair: triggerRepairOutcome(repair),
       };
     }
-    // This deploy owns 100%. Switch back only when Nosam can restore the previous version's
-    // triggers too. An empty placeholder or a version without a Nosam trigger snapshot stays
+    // This deploy owns 100%. Switch back only when bwf can restore the previous version's
+    // triggers too. An empty placeholder or a version without a bwf trigger snapshot stays
     // inactive: moving traffic to it would serve an empty Worker or code with this deploy's
     // partly applied triggers.
     const placeholder = await previousIsRestorePlaceholder();
@@ -1818,7 +1818,7 @@ async function restorePreviousVersionAndTriggers(
       triggersRestored: 'no',
     };
   }
-  // Traffic attachments can change between uploads (for example `nosam domain
+  // Traffic attachments can change between uploads (for example `bwf domain
   // add`), so the caller passes the snapshot captured before this deployment,
   // not the older immutable version annotation. Cleanup-only queue names are
   // deliberately not part of this target snapshot.
@@ -1868,8 +1868,8 @@ type CloudflareVersionInspection = Readonly<{
   metadata: CloudflareVersionMetadata | null;
   message: string | null;
   isSecretOnlyDraft: boolean;
-  isNosamSecretOnlyDraft: boolean;
-  nosamDraftSecretNames: ReadonlyArray<string> | null;
+  isBwfSecretOnlyDraft: boolean;
+  bwfDraftSecretNames: ReadonlyArray<string> | null;
   // A Wrangler `secret put` version whose resources could not be read, so it may still be an
   // empty draft. Recovery must not offer traffic back to it.
   draftUnknown: boolean;
@@ -1913,7 +1913,7 @@ async function readCloudflareVersionInspection(
       if (
         ((annotations?.['workers/triggered_by'] === 'secret' &&
           Object.keys(annotations).length === 1) ||
-          isNosamSecretDraftHeader(entry)) &&
+          isBwfSecretDraftHeader(entry)) &&
         !isWranglerSecretOnlyDraft(entry)
       ) {
         draftUnknown = true;
@@ -1935,13 +1935,13 @@ async function readCloudflareVersionInspection(
           }
         }
       }
-      const isNosamDraft = isNosamSecretOnlyDraft(draft);
+      const isBwfDraft = isBwfSecretOnlyDraft(draft);
       return {
         metadata: typeof message === 'string' ? parseCloudflareVersionMessage(message) : null,
         message: typeof message === 'string' ? message : null,
-        isSecretOnlyDraft: isWranglerSecretOnlyDraft(draft) || isNosamDraft,
-        isNosamSecretOnlyDraft: isNosamDraft,
-        nosamDraftSecretNames: isNosamDraft
+        isSecretOnlyDraft: isWranglerSecretOnlyDraft(draft) || isBwfDraft,
+        isBwfSecretOnlyDraft: isBwfDraft,
+        bwfDraftSecretNames: isBwfDraft
           ? (draft.bindings as Array<{ name: string }>).map((binding) => binding.name)
           : null,
         draftUnknown,
@@ -1954,12 +1954,12 @@ async function readCloudflareVersionInspection(
 }
 
 /**
- * Recovery-only proof that a version is Nosam's secret placeholder: its marker plus the exact
+ * Recovery-only proof that a version is bwf's secret placeholder: its marker plus the exact
  * placeholder source, with no binding other than secrets. It may have zero bindings, so it is
- * deliberately not `isNosamSecretOnlyDraft`, which bootstrap uses as first-deployment proof.
+ * deliberately not `isBwfSecretOnlyDraft`, which bootstrap uses as first-deployment proof.
  * Returns null when the version could not be read.
  */
-async function isNosamSecretDraftPlaceholderVersion(
+async function isBwfSecretDraftPlaceholderVersion(
   options: Pick<
     Parameters<typeof activateCloudflareVersion>[0],
     'configPath' | 'runWrangler' | 'workerName'
@@ -2453,7 +2453,7 @@ async function bootstrapFirstDeployment(
       ...(ready === 'failed' && usesCustomDomain
         ? {
             diagnostic:
-              'The Custom Domain may still be propagating DNS or its TLS certificate. Check the configured domain in Cloudflare, then retry `nosam deploy --platform cloudflare` once its /__nosam/ready endpoint is reachable.',
+              'The Custom Domain may still be propagating DNS or its TLS certificate. Check the configured domain in Cloudflare, then retry `bwf deploy --platform cloudflare` once its /__nosam/ready endpoint is reachable.',
           }
         : {}),
     };
@@ -3008,7 +3008,7 @@ async function restorePreviousVersion(
     deployVersionPercentages(
       { ...options, bypassDeploymentChecks },
       [`${previousVersionId}@100`],
-      `Nosam automatic rollback after ${cause}.`,
+      `bwf automatic rollback after ${cause}.`,
     );
   // A restore that did not exit cleanly may still have moved traffic (a killed child, or a lost
   // response after Cloudflare applied it), so read the owner again instead of reusing the
@@ -3020,7 +3020,7 @@ async function restorePreviousVersion(
   const result = await restore(false);
   // Cloudflare refuses to move traffic back to a version older than a secret
   // change (10220). When the failed version made that change, force the
-  // restore, as Wrangler's rollback does. Check again first that Nosam still
+  // restore, as Wrangler's rollback does. Check again first that bwf still
   // owns traffic, so a deployment made by someone else is not overwritten.
   if (result.errorCode === CLOUDFLARE_SECRET_CHANGED_ERROR) {
     owner = await readOwner();

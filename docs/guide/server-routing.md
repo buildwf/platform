@@ -5,7 +5,7 @@ outline: deep
 
 # Server Routing
 
-Create a file in `routes/` to add an endpoint, and export a handler for each HTTP method you want to support. Nosam uses [Hono](https://hono.dev) for routing and middleware.
+Create a file in `routes/` to add an endpoint, and export a handler for each HTTP method you want to support. bwf uses [Hono](https://hono.dev) for routing and middleware.
 
 ## Route Files
 
@@ -44,13 +44,13 @@ routes/
 
 `.dev` routes run only in development; `.prod` routes run in builds, deployments, and production previews. A resource used only by `.dev` routes is not provisioned for production.
 
-Suffixes apply in `routes/`, not in `middleware/`, `crons/`, or `queues/`. `nosam prepare` generates types for both environments.
+Suffixes apply in `routes/`, not in `middleware/`, `crons/`, or `queues/`. `bwf prepare` generates types for both environments.
 
 Each file exports named HTTP method constants to handle specific methods:
 
 ```ts
 // routes/api/hello.ts  →  GET /api/hello
-import { defineHandler } from 'nosam';
+import { defineHandler } from '@buildwf/bwf';
 
 export const GET = defineHandler((c) => {
   return { message: 'Hello!', timestamp: Date.now() };
@@ -60,10 +60,10 @@ export const GET = defineHandler((c) => {
 A file can export multiple methods:
 
 ```ts
+import { defineHandler } from '@buildwf/bwf';
+import { db } from '@buildwf/bwf/db';
 // routes/api/users/index.ts  →  GET + POST /api/users
 import { users } from '@schema';
-import { defineHandler } from 'nosam';
-import { db } from 'nosam/db';
 
 export const GET = defineHandler(async () => {
   return await db.select().from(users);
@@ -85,9 +85,9 @@ See [Database](./database.md) for queries with D1, PostgreSQL, or MySQL.
 Use `.tsx` or `.jsx` when a server handler contains JSX. Route files use your app's JSX settings. In a React app, render JSX to HTML with React's server renderer:
 
 ```tsx
+import { defineHandler } from '@buildwf/bwf';
 // routes/hello.tsx → GET /hello
 import { renderToStaticMarkup } from 'react-dom/server';
-import { defineHandler } from 'nosam';
 
 export const GET = defineHandler((c) => c.html(renderToStaticMarkup(<h1>Hello!</h1>)));
 ```
@@ -95,13 +95,13 @@ export const GET = defineHandler((c) => c.html(renderToStaticMarkup(<h1>Hello!</
 For API-only apps, add `hono` as a dependency and configure [Hono's JSX](https://hono.dev/docs/guides/jsx) in `vite.config.ts`:
 
 ```ts
+import { bwfPlugin } from '@buildwf/bwf';
 // vite.config.ts
 import { defineConfig } from 'vite-plus';
-import { nosamPlugin } from 'nosam';
 
 export default defineConfig({
   oxc: { jsx: { runtime: 'automatic', importSource: 'hono/jsx' } },
-  plugins: [nosamPlugin()],
+  plugins: [bwfPlugin()],
 });
 ```
 
@@ -109,7 +109,7 @@ export default defineConfig({
 
 ```tsx
 // routes/hello.tsx → GET /hello
-import { defineHandler } from 'nosam';
+import { defineHandler } from '@buildwf/bwf';
 
 export const GET = defineHandler((c) => c.html(<h1>Hello!</h1>));
 ```
@@ -130,10 +130,10 @@ Return values are automatically converted:
 `defineHandler.withValidator()` adds input validation for `body`, `query`, and `params`. The recommended approach is to derive validators from your [Drizzle schema](./database.md#schema-derived-validators), which keeps validation in sync with the database.
 
 ```ts
+import { defineHandler } from '@buildwf/bwf';
+import { db } from '@buildwf/bwf/db';
 // routes/api/users/index.ts
 import { users, insertUserSchema } from '@schema';
-import { defineHandler } from 'nosam';
-import { db } from 'nosam/db';
 
 export const POST = defineHandler.withValidator({
   body: insertUserSchema,
@@ -150,8 +150,8 @@ See [Database: Schema-Derived Validators](./database.md#schema-derived-validator
 For endpoints that don't map to a database table, you can write validators by hand using any [Standard Schema](https://standardschema.dev/)-compatible library (Valibot, Zod, ArkType, etc.):
 
 ```ts
+import { defineHandler } from '@buildwf/bwf';
 import * as v from 'valibot';
-import { defineHandler } from 'nosam';
 
 export const POST = defineHandler.withValidator({
   body: v.object({
@@ -186,10 +186,10 @@ Validator schemas also power the [typed fetch client](./typed-fetch.md), so `bod
 
 ## Middleware
 
-Nosam uses Hono middleware. `defineMiddleware()` adds types to the usual `(c, next)` function, and `defineHandler()` also accepts Hono middleware directly.
+bwf uses Hono middleware. `defineMiddleware()` adds types to the usual `(c, next)` function, and `defineHandler()` also accepts Hono middleware directly.
 
 ```ts
-import { defineMiddleware } from 'nosam';
+import { defineMiddleware } from '@buildwf/bwf';
 
 export const addServerTiming = defineMiddleware(async (c, next) => {
   const start = performance.now();
@@ -198,7 +198,7 @@ export const addServerTiming = defineMiddleware(async (c, next) => {
 });
 ```
 
-Any `hono/*` built-in middleware, response helpers, or third-party Hono ecosystem packages can be used in Nosam apps. If you want to import from `hono/*` in your app, make sure to install `hono` in your app first:
+Any `hono/*` built-in middleware, response helpers, or third-party Hono ecosystem packages can be used in bwf apps. If you want to import from `hono/*` in your app, make sure to install `hono` in your app first:
 
 ```bash
 npm install hono
@@ -220,7 +220,7 @@ Global middleware runs on every request. Place files in `middleware/` and use nu
 - `middleware/02.auth.ts`
 
 ```ts
-import { defineMiddleware } from 'nosam';
+import { defineMiddleware } from '@buildwf/bwf';
 
 export default defineMiddleware(async (c, next) => {
   console.log(c.req.method, c.req.path);
@@ -228,11 +228,11 @@ export default defineMiddleware(async (c, next) => {
 });
 ```
 
-Use `basicAuth()` for a temporary site gate. Nosam's reserved `/__nosam` endpoints remain accessible for deployment and development tooling. Read credentials through callbacks:
+Use `basicAuth()` for a temporary site gate. bwf's reserved `/__nosam` endpoints remain accessible for deployment and development tooling. Read credentials through callbacks:
 
 ```ts
 // env.ts
-import { defineEnv, string } from 'nosam/env';
+import { defineEnv, string } from '@buildwf/bwf/env';
 
 export default defineEnv({
   BASIC_AUTH_USERNAME: string(),
@@ -242,8 +242,8 @@ export default defineEnv({
 
 ```ts
 // middleware/01.basic-auth.ts
-import { basicAuth } from 'nosam';
-import { env } from 'nosam/env';
+import { basicAuth } from '@buildwf/bwf';
+import { env } from '@buildwf/bwf/env';
 
 export default basicAuth({
   username: () => env.BASIC_AUTH_USERNAME,
@@ -269,9 +269,9 @@ defineHandler(middleware1, middleware2, handler);
 Middleware runs in order. Each can short-circuit (return a response without calling `next()`) or post-process (modify the response after `await next()`). Both `defineMiddleware`-wrapped functions and raw Hono `MiddlewareHandler` functions are accepted.
 
 ```ts
+import { defineHandler } from '@buildwf/bwf';
 // routes/api/stats.ts
 import { cors } from 'hono/cors';
-import { defineHandler } from 'nosam';
 
 export const GET = defineHandler(cors({ origin: 'https://app.example.com' }), (c) => ({
   stats: '...',

@@ -1,3 +1,4 @@
+import { auth, fetch as bwfFetch } from '@buildwf/bwf/client';
 import {
   lazy,
   Suspense,
@@ -7,7 +8,6 @@ import {
   type FormEvent,
   type ReactNode,
 } from 'react';
-import { auth, fetch as nosamFetch } from 'nosam/client';
 
 const sections: Record<string, () => ReactNode> = {
   '/': Home,
@@ -121,7 +121,7 @@ function Db() {
 
   async function add(event: FormEvent) {
     event.preventDefault();
-    await nosamFetch('/api/notes', { method: 'POST', body: { title, body } });
+    await bwfFetch('/api/notes', { method: 'POST', body: { title, body } });
     setTitle('');
     setBody('');
     reload();
@@ -145,7 +145,7 @@ function Db() {
               <td>
                 <button
                   onClick={() =>
-                    nosamFetch('/api/notes/:id', {
+                    bwfFetch('/api/notes/:id', {
                       method: 'DELETE',
                       params: { id: String(note.id) },
                     }).then(reload)
@@ -161,7 +161,7 @@ function Db() {
     </div>
   );
 }
-const listNotes = () => nosamFetch('/api/notes');
+const listNotes = () => bwfFetch('/api/notes');
 
 function Kv() {
   const lookup = new URLSearchParams(location.search).get('lookup');

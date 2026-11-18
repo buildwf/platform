@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vite-plus/test';
-import { buildMime, normalizeEmail } from '../../../../../packages/nosam/src/runtime/email/mime.ts';
+import { buildMime, normalizeEmail } from '../../../../../packages/bwf/src/runtime/email/mime.ts';
 
 vi.mock('cloudflare:email', () => ({
   EmailMessage: class {

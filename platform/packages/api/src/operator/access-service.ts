@@ -1,4 +1,4 @@
-import { parsePlatformSignupAllowlistEntry } from '@nosam/platform';
+import { parsePlatformSignupAllowlistEntry } from '@buildwf/platform';
 import { eq, sql } from 'drizzle-orm';
 import type { Context } from 'hono';
 import {

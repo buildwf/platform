@@ -29,7 +29,7 @@ await build({
     sourcemap: false,
     lib: {
       entry: source('platform/packages/api/src/admin/react/client.ts'),
-      name: 'NosamAdmin',
+      name: 'BwfAdmin',
       formats: ['iife'],
       fileName: () => 'client.js',
       cssFileName: 'style',

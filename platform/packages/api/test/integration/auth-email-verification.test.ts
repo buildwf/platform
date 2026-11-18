@@ -363,7 +363,7 @@ describe('email verification gating on account linking', () => {
       expect.objectContaining({
         from: 'Example Platform <platform@example.com>',
         subject: 'Welcome to Example Platform',
-        text: expect.stringContaining("nosam connect 'api.example.com'"),
+        text: expect.stringContaining("bwf connect 'api.example.com'"),
       }),
     );
   });

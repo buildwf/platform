@@ -1,4 +1,7 @@
-import { parsePlatformLoginConfiguration, type PlatformLoginConfiguration } from '@nosam/platform';
+import {
+  parsePlatformLoginConfiguration,
+  type PlatformLoginConfiguration,
+} from '@buildwf/platform';
 import { and, eq, sql } from 'drizzle-orm';
 import { getPlatformCapabilities } from '../capabilities.ts';
 import type { Db } from '../db.ts';

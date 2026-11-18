@@ -38,7 +38,7 @@ describe('build-agent exit path (finishBuildLogging)', () => {
     const { record, finishBuildLogging } = await import('../../container/build-agent.mjs');
 
     // A pending line, so a flush would have something to send.
-    record('[build-agent] nosam deploy exited with code 0', 'stdout');
+    record('[build-agent] bwf deploy exited with code 0', 'stdout');
 
     const startedAt = Date.now();
     // If broken: never resolves — the hung POST holds the exit path open,

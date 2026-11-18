@@ -2,7 +2,7 @@ import {
   parsePlatformAuthenticationSetup,
   PLATFORM_AUTH_SETUP_PROOF_PREFIX,
   type PlatformAuthenticationSetup,
-} from '@nosam/platform';
+} from '@buildwf/platform';
 import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import { createOAuthAccount, createUser, type Db } from '../db.ts';
 import type { ApiEnv } from '../env.ts';

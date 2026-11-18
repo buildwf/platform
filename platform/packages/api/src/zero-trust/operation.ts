@@ -2,7 +2,7 @@ import {
   PLATFORM_APPLICATION_KEY,
   platformHealthHostname,
   readPlatformApplication,
-} from '@nosam/platform';
+} from '@buildwf/platform';
 import { sql } from 'drizzle-orm';
 import type { Db, DbOrTx } from '../db.ts';
 import { getProject } from '../db.ts';
@@ -315,7 +315,7 @@ async function withZeroTrustOperationLock(
 function skippedProjectsError(projectIds: ReadonlyArray<string>): string {
   const shown = projectIds.slice(0, 5).join(', ');
   const more = projectIds.length > 5 ? ' and others' : '';
-  return `The new application domain stays unpublished until Zero Trust can update projects ${shown}${more}. See each project's last error with \`nosam platform zero-trust project-status <project-id>\`, fix the cause, then run \`nosam platform zero-trust reconcile\`. Nosam also retries every hour.`;
+  return `The new application domain stays unpublished until Zero Trust can update projects ${shown}${more}. See each project's last error with \`bwf platform zero-trust project-status <project-id>\`, fix the cause, then run \`bwf platform zero-trust reconcile\`. Nosam also retries every hour.`;
 }
 
 async function completeConfigureOperation(

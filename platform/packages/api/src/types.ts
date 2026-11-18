@@ -22,14 +22,14 @@ import type {
   users,
 } from './schema.ts';
 
-export { SUPPORTED_MANIFEST_VERSIONS } from '@nosam/deploy-core';
+export { SUPPORTED_MANIFEST_VERSIONS } from '@buildwf/deploy-core';
 export type {
   AssetConfig,
   DeployEvent,
   DeployManifest,
   LiveMigrationMeta,
   WebSocketMigrationMeta,
-} from '@nosam/deploy-core';
+} from '@buildwf/deploy-core';
 
 export type InvitationStatus = 'pending' | 'accepted' | 'revoked';
 export type InvitationEmailDeliveryStatus = 'sent' | 'failed' | 'unavailable';

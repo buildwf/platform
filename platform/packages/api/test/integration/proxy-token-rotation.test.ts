@@ -1155,7 +1155,7 @@ describe('proxy token rotation', () => {
     const outcome = await advance(fx.projectId);
     expect(outcome).toMatchObject({ status: 'failed', phase: 'requested' });
     expect(outcome.status === 'failed' && outcome.error).toContain(
-      'nosam platform project normalize',
+      'bwf platform project normalize',
     );
     expect(await issued(fx.projectId)).toBe(0);
   });
@@ -1466,7 +1466,7 @@ describe('proxy token rotation', () => {
     expect(queries.filter(projectLock).length).toBeGreaterThanOrEqual(2 + 4);
   });
 
-  it.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
+  it.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))(
     'keeps a secret written during a PATCH step (lost secret race)',
     async () => {
       const cf = cfApi({

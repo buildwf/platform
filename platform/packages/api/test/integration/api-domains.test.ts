@@ -2710,7 +2710,7 @@ describe('scheduled() — cron-driven auto-activation reconciliation', () => {
   });
 
   it('does NOT activate a domain owned by an ADMIN-suspended account', async () => {
-    // Parity with the authenticated `nosam domain status` route, which is behind
+    // Parity with the authenticated `bwf domain status` route, which is behind
     // authMiddleware and 403s admin-suspended owners. The cron must not advance
     // a domain the authed path refuses.
     const user = await createTestUser(env.db);

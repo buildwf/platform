@@ -6,7 +6,7 @@ import {
   signEmailReceipt,
   type EmailWireAction,
   type EmailWireEnvelope,
-} from '@nosam/platform/email-protocol';
+} from '@buildwf/platform/email-protocol';
 
 const MAX_CONCURRENT_PER_PROJECT = 8;
 const TENANT_DISPATCH_DEADLINE_MS = 20_000;

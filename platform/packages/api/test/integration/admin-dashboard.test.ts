@@ -1055,7 +1055,7 @@ describe('admin Zero Trust', () => {
       await adminHtml(await req(`/admin/projects/${project.id}`, admin.adminJwt)),
     );
     expect(projectPage).toContain('AI Gateway logging');
-    // Same wording as `nosam platform project show`.
+    // Same wording as `bwf platform project show`.
     expect(projectPage).toContain(
       'off (set on project; plan &quot;free&quot; default: metadata) — pending (expected by ',
     );
@@ -1626,7 +1626,7 @@ describe('GET /admin/ (dashboard)', () => {
             const invite = page.getByRole('region', { name: 'Invite people', exact: true });
             for (const [label, value] of [
               ['Platform invitation page', 'http://localhost/invite'],
-              ['Nosam CLI connection command', "nosam connect 'localhost'"],
+              ['Nosam CLI connection command', "bwf connect 'localhost'"],
             ]) {
               const field = invite.getByRole('group', { name: label, exact: true });
               const input = field.getByRole('textbox', { name: label, exact: true });
@@ -2484,7 +2484,7 @@ describe('GET /admin/projects', () => {
     const html = await adminHtml(res);
     expect(html).toContain('my-proj');
     const projectLink = visibleMarkup(html).match(
-      /<a\b[^>]*href="https:\/\/my-proj\.nosam\.app"[^>]*>[\s\S]*?<\/a>/,
+      /<a\b[^>]*href="https:\/\/my-proj\.bwf\.app"[^>]*>[\s\S]*?<\/a>/,
     )?.[0];
     expect(projectLink).toBeDefined();
     expect(projectLink).toContain('target="_blank"');
@@ -3785,7 +3785,7 @@ describe('GET /admin/signup-control', () => {
     expect(visibleMarkup(html)).toContain('>Access</h1>');
     expect(visibleMarkup(html)).toContain('Signup is open to anyone with an enabled login');
     expect(html).toContain('Share these details manually');
-    expect(html).toContain("nosam connect 'localhost'");
+    expect(html).toContain("bwf connect 'localhost'");
     expect(html).toContain('Email not enabled');
   });
 

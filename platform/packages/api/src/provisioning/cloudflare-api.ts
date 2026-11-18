@@ -1,4 +1,4 @@
-import type { R2LocationHint } from '@nosam/deploy-core';
+import type { R2LocationHint } from '@buildwf/deploy-core';
 
 export const CF_API_BASE = 'https://api.cloudflare.com/client/v4/accounts';
 const CF_ZONE_API_BASE = 'https://api.cloudflare.com/client/v4/zones';
@@ -484,7 +484,7 @@ export type CustomHostnameInfo = Readonly<{
 // Do NOT add `custom_metadata` here — it's a paid Enterprise SSL-for-SaaS
 // add-on that our CF account is not provisioned for. Sending the field
 // makes CF reject every create with "No custom metadata access has been
-// allocated for this zone or account", breaking `nosam domain add`.
+// allocated for this zone or account", breaking `bwf domain add`.
 // Forensic attribution is already persisted server-side in the `domains`
 // table (project_id, user_id, created_at) keyed by cf_hostname_id.
 export async function createCustomHostname(
@@ -529,7 +529,7 @@ export async function getCustomHostname(
 }
 
 // Re-send the SSL block via PATCH to re-trigger HTTP DCV. Nosam's flow is
-// add-domain-first: `nosam domain add` creates the custom hostname with
+// add-domain-first: `bwf domain add` creates the custom hostname with
 // `ssl.method:'http'` BEFORE the user points the CNAME at `cname.void.app`.
 // Per CF's Create Custom Hostname API docs, "If `http` is used and the domain
 // is not already pointing to the Managed CNAME host, the PATCH method must be

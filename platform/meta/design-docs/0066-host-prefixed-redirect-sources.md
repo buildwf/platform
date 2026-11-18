@@ -24,7 +24,7 @@ becomes active. Restricting rules to bound hosts catches misspellings at deploy
 time and keeps the wire format independent of an arbitrary request header
 expression language.
 
-Rules from `nosam.json` precede rules in a file-based `_redirects` list in the
+Rules from `bwf.json` precede rules in a file-based `_redirects` list in the
 same routing phase, and the first matching rule wins. See the
 [redirects guide](../../../docs/guide/edge/redirects.md) for syntax and
 validation details.

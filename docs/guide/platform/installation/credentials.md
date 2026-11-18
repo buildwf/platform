@@ -12,16 +12,16 @@ Keep one password-manager entry for this platform. Paste the saved values into t
 | Management API token                   | You, in Cloudflare               | Lets the CLI create a zone, change DNS, and set up Access.                               |
 | Runtime API token                      | You, in Cloudflare               | Stored as a Worker secret so the platform can deploy apps after you close your terminal. |
 | PostgreSQL URL                         | You, with your database provider | Stores platform users, projects, and deployments.                                        |
-| Login provider client ID and secret    | You, or Nosam for Access login   | Signs people in to the platform.                                                         |
-| R2 Access Key ID and Secret Access Key | You, in Cloudflare               | Lets the platform sign upload links so `nosam deploy` sends static files straight to R2.  |
+| Login provider client ID and secret    | You, or bwf for Access login     | Signs people in to the platform.                                                         |
+| R2 Access Key ID and Secret Access Key | You, in Cloudflare               | Lets the platform sign upload links so `bwf deploy` sends static files straight to R2.   |
 | Access setup and app-access tokens     | You, in Cloudflare               | Only with Cloudflare Access: create and manage Access applications.                      |
-| JWT signing key                        | Nosam, on interactive installs   | Signs platform login tokens.                                                             |
-| Project encryption key                 | Nosam, on interactive installs   | Encrypts app secrets stored by your platform.                                            |
-| Email signing key                      | Nosam, when email is enabled     | Signs confirmation links and email requests.                                             |
+| JWT signing key                        | bwf, on interactive installs     | Signs platform login tokens.                                                             |
+| Project encryption key                 | bwf, on interactive installs     | Encrypts app secrets stored by your platform.                                            |
+| Email signing key                      | bwf, when email is enabled       | Signs confirmation links and email requests.                                             |
 
 ## Cloudflare API Tokens {#runtime-token-permissions}
 
-Follow the installer's [token-creation links](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) to create a runtime token. Nosam also asks for a separate management token when it creates a zone, adds wildcard DNS, or configures Access. The links select the permissions and suggest names based on your platform's name.
+Follow the installer's [token-creation links](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) to create a runtime token. bwf also asks for a separate management token when it creates a zone, adds wildcard DNS, or configures Access. The links select the permissions and suggest names based on your platform's name.
 
 For a domain installation, choose the zone scope in Cloudflare's form:
 
@@ -30,11 +30,11 @@ For a domain installation, choose the zone scope in Cloudflare's form:
 
 Save the tokens in your password manager and paste them into the masked CLI prompts.
 
-Browser login can authorize workers.dev setup with the default API hostname. It also works for a domain installation with an existing proxied `*.<application domain>` record. If Nosam cannot read the account's Access requirements, it asks for a scoped Access token.
+Browser login can authorize workers.dev setup with the default API hostname. It also works for a domain installation with an existing proxied `*.<application domain>` record. If bwf cannot read the account's Access requirements, it asks for a scoped Access token.
 
-Configuring Access requires a management token, including on workers.dev. Protected apps and public apps under Default-Deny also need an ongoing app-management token, which Nosam stores encrypted. Skip zone permissions until you add a domain.
+Configuring Access requires a management token, including on workers.dev. Protected apps and public apps under Default-Deny also need an ongoing app-management token, which bwf stores encrypted. Skip zone permissions until you add a domain.
 
-Browser login does not grant AI Gateway access. Include **Account → AI Gateway → Edit** on the runtime token so Nosam can verify and create that resource.
+Browser login does not grant AI Gateway access. Include **Account → AI Gateway → Edit** on the runtime token so bwf can verify and create that resource.
 
 The management token lets your CLI install and maintain the platform. The runtime token is stored as a Worker secret so the platform can deploy apps after you close your terminal. They are separate credentials.
 
@@ -63,11 +63,11 @@ Use the following permissions for the core platform. Cloudflare may label write 
 | Zone    | Workers Routes     | Edit       | —                                       |
 | Zone    | Cache Purge        | —          | Purge                                   |
 
-When Nosam configures Access in the installation account, the initial management-token link also selects **Account → Access: Apps and Policies → Edit** and **Account → Access: Organizations, Identity Providers, and Groups → Read**. Protection adds **Account → Access: Service Tokens → Edit**. When the authentication configuration or saved setup selects existing applications, the link requests Read access instead of Edit. These permissions belong to the management token; the runtime token does not need them.
+When bwf configures Access in the installation account, the initial management-token link also selects **Account → Access: Apps and Policies → Edit** and **Account → Access: Organizations, Identity Providers, and Groups → Read**. Protection adds **Account → Access: Service Tokens → Edit**. When the authentication configuration or saved setup selects existing applications, the link requests Read access instead of Edit. These permissions belong to the management token; the runtime token does not need them.
 
-The management token also needs **Zone Edit** with authority to create zones if you ask Nosam to create the zone. If it already exists, use the selected zone with Zone Read and DNS Edit. Nested application domains additionally need **SSL and Certificates: Read** on the management token. An installation with [project custom domains](/guide/platform/installation/domains#project-custom-domains) needs **SSL and Certificates: Edit** on the runtime token.
+The management token also needs **Zone Edit** with authority to create zones if you ask bwf to create the zone. If it already exists, use the selected zone with Zone Read and DNS Edit. Nested application domains additionally need **SSL and Certificates: Read** on the management token. An installation with [project custom domains](/guide/platform/installation/domains#project-custom-domains) needs **SSL and Certificates: Edit** on the runtime token.
 
-Nosam checks access before provisioning. If it reports a missing permission, update the token's permissions for the selected account or zone and retry.
+bwf checks access before provisioning. If it reports a missing permission, update the token's permissions for the selected account or zone and retry.
 
 :::
 
@@ -89,27 +89,27 @@ Enabling email lets administrators [register email domains for projects](/guide/
 
 The zone permissions must include each zone that will carry mail, including the mail zone. Email Sending onboarding for arbitrary recipients needs Workers Paid.
 
-For a new installation, set `NOSAM_EMAIL_SENDER_DOMAIN` and `NOSAM_EMAIL_SHARED_ZONE_ID` before `nosam platform install`. The runtime-token link then preselects these permissions.
+For a new installation, set `NOSAM_EMAIL_SENDER_DOMAIN` and `NOSAM_EMAIL_SHARED_ZONE_ID` before `bwf platform install`. The runtime-token link then preselects these permissions.
 
 For an existing installation, edit its runtime token's permissions in Cloudflare, or supply a replacement with `NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN`. Then run:
 
 ```sh
 NOSAM_EMAIL_SENDER_DOMAIN=mail.example.com \
 NOSAM_EMAIL_SHARED_ZONE_ID=your-zone-id \
-nosam platform upgrade your-installation-id
+bwf platform upgrade your-installation-id
 ```
 
-Nosam saves this domain and zone for later upgrades. Choose them for the lifetime of the installation.
+bwf saves this domain and zone for later upgrades. Choose them for the lifetime of the installation.
 
 If setup reports a missing permission, add it to the runtime token and rerun the command. Select all permissions in the table, including Edit access and Email Sending.
 
 When maintaining the platform from another machine, set `NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN` to the current runtime token so the CLI checks its permissions.
 
-The installer configures the email gateway and shared mail route. If setup fails, fix the reported permission, DNS, or routing problem and rerun the command. Resume a fresh installation with `nosam platform install --resume --name <installation-id>`.
+The installer configures the email gateway and shared mail route. If setup fails, fix the reported permission, DNS, or routing problem and rerun the command. Resume a fresh installation with `bwf platform install --resume --name <installation-id>`.
 
 ## R2 Upload Credentials
 
-`nosam deploy --platform void` uploads your app's static files straight to R2 instead of through the platform API. The API signs short-lived upload links for them with an R2 key pair.
+`bwf deploy --platform void` uploads your app's static files straight to R2 instead of through the platform API. The API signs short-lived upload links for them with an R2 key pair.
 
 The installer opens the **R2 token creation** form with a token name based on your platform's display name, **Object Read & Write**, and **Apply to all buckets in this account (including newly created buckets)** preselected. Review the settings and create an account token, or a user token if your role requires it. Save its **Access Key ID** and **Secret Access Key** in your password manager, then paste both into the installer. These differ from the management and runtime API tokens. See [R2’s token instructions](https://developers.cloudflare.com/r2/api/tokens/).
 
@@ -137,4 +137,4 @@ Paste it into your password manager as **JWT signing key**. Run the command agai
 
 :::
 
-When email is enabled, Nosam also creates an independent **Email signing key** for confirmation links and service-to-service email requests. The installer keeps it in encrypted recovery state. Set `NOSAM_PLATFORM_EMAIL_SIGNING_SECRET` to a separate value of at least 32 random bytes when you need an externally custodied copy, including a headless installation whose local recovery files will not persist.
+When email is enabled, bwf also creates an independent **Email signing key** for confirmation links and service-to-service email requests. The installer keeps it in encrypted recovery state. Set `NOSAM_PLATFORM_EMAIL_SIGNING_SECRET` to a separate value of at least 32 random bytes when you need an externally custodied copy, including a headless installation whose local recovery files will not persist.

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 // DurableObject base class isn't available in unit tests — mock it like the
 // other DO suites (cron-scheduler, usage-counter).
 vi.mock('../../src/plans.ts', async () => {
-  const { createDefaultPlanCatalog } = await import('@nosam/platform/plans');
+  const { createDefaultPlanCatalog } = await import('@buildwf/platform/plans');
   return {
     readPlanCatalog: vi.fn(async () => createDefaultPlanCatalog()),
     planFromCatalog: (catalog: ReturnType<typeof createDefaultPlanCatalog>, id: string) =>

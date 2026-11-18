@@ -1,19 +1,19 @@
 ---
-description: 'Query D1, PostgreSQL, or MySQL with the Drizzle client from nosam/db, and seed data from a script.'
+description: 'Query D1, PostgreSQL, or MySQL with the Drizzle client from bwf/db, and seed data from a script.'
 outline: deep
 ---
 
 # Database and Seeding {#database}
 
-Imported from `"nosam/db"`. The `db` export is a [Drizzle ORM](https://orm.drizzle.team) instance for the configured database dialect: [Cloudflare D1](https://developers.cloudflare.com/d1/) by default, PostgreSQL with `"database": "pg"`, or MySQL with `"database": "mysql"`.
+Imported from `"@buildwf/bwf/db"`. The `db` export is a [Drizzle ORM](https://orm.drizzle.team) instance for the configured database dialect: [Cloudflare D1](https://developers.cloudflare.com/d1/) by default, PostgreSQL with `"database": "pg"`, or MySQL with `"database": "mysql"`.
 
 ## `db` {#db}
 
 Default Drizzle instance, pre-wired with your schema from `db/schema.ts`.
 
 ```ts
+import { db } from '@buildwf/bwf/db';
 import { users } from '@schema';
-import { db } from 'nosam/db';
 
 const allUsers = await db.select().from(users).all();
 ```
@@ -31,8 +31,8 @@ Creates a Drizzle instance for the active dialect.
 For D1 projects, pass a specific D1 binding. Use this when you have multiple D1 databases or need a non-default binding.
 
 ```ts
+import { createDb } from '@buildwf/bwf/db';
 import { env } from 'cloudflare:workers';
-import { createDb } from 'nosam/db';
 
 const db = createDb(env.MY_OTHER_DB);
 ```
@@ -42,7 +42,7 @@ For a fresh D1 read, pass `{ session: 'first-primary' }` and create the client i
 For PostgreSQL and MySQL projects, pass a connection string.
 
 ```ts
-import { createDb } from 'nosam/db';
+import { createDb } from '@buildwf/bwf/db';
 
 const db = createDb('postgres://user:password@host:5432/app');
 ```
@@ -65,10 +65,10 @@ function createDb(connectionString: string): MySql2Database<Schema>;
 
 ## Query Operators {#query-operators}
 
-`nosam/db` re-exports commonly used [Drizzle operators](https://orm.drizzle.team/docs/operators) so you never need to depend on `drizzle-orm` directly:
+`@buildwf/bwf/db` re-exports commonly used [Drizzle operators](https://orm.drizzle.team/docs/operators) so you never need to depend on `drizzle-orm` directly:
 
 ```ts
-import { db, eq, and, or, desc, like, inArray, sql } from 'nosam/db';
+import { db, eq, and, or, desc, like, inArray, sql } from '@buildwf/bwf/db';
 ```
 
 **Full list:** `sql`, `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `and`, `or`, `not`, `desc`, `asc`, `like`, `ilike`, `notLike`, `inArray`, `notInArray`, `isNull`, `isNotNull`, `between`, `notBetween`, `exists`, `notExists`, `count`, `sum`, `avg`, `min`, `max`.
@@ -76,8 +76,8 @@ import { db, eq, and, or, desc, like, inArray, sql } from 'nosam/db';
 Use the exported Drizzle types `SQL`, `SQLWrapper`, `AnyColumn`, and `BatchItem` to type query helpers and batches:
 
 ```ts
+import { db, sql, type BatchItem, type SQL, type SQLWrapper } from '@buildwf/bwf/db';
 import { posts } from '@schema';
-import { db, sql, type BatchItem, type SQL, type SQLWrapper } from 'nosam/db';
 
 function contains(column: SQLWrapper, text: string): SQL {
   return sql`instr(${column}, ${text}) > 0`;
@@ -92,14 +92,14 @@ await db.batch(writes);
 
 ## Seeding {#seeding}
 
-Imported from `"nosam/seed"`.
+Imported from `"@buildwf/bwf/seed"`.
 
 ### `defineSeed(fn)` {#defineseed-fn}
 
-Identity helper for programmatic seed modules used by `nosam db seed`.
+Identity helper for programmatic seed modules used by `bwf db seed`.
 
 ```ts
-import { defineSeed } from 'nosam/seed';
+import { defineSeed } from '@buildwf/bwf/seed';
 
 export default defineSeed<typeof import('./schema')>(async ({ db, schema }) => {
   await db.insert(schema.users).values([

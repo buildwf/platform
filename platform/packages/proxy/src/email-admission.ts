@@ -153,7 +153,7 @@ export function completeRelayedReceipt(
 }
 
 /** Only generated, transport-irrelevant MIME fields are normalized. Body text stays byte-sensitive. */
-export function canonicalizeNosamMime(raw: Uint8Array): Uint8Array {
+export function canonicalizeBwfMime(raw: Uint8Array): Uint8Array {
   if (findCrlfCrlf(raw) === -1) {
     return raw;
   }
@@ -342,7 +342,7 @@ export async function emailPayloadDigest(
   recipients: Array<string>,
   raw: Uint8Array,
 ): Promise<string> {
-  const canonical = canonicalizeNosamMime(raw);
+  const canonical = canonicalizeBwfMime(raw);
   const prefix = encoder.encode(
     JSON.stringify({
       kind,

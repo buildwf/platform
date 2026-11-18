@@ -1,5 +1,5 @@
-import { parsePlatformAuthenticationSetup } from '@nosam/platform';
-import { browserPageLead, browserPageStatus } from '@nosam/platform/browser-page';
+import { parsePlatformAuthenticationSetup } from '@buildwf/platform';
+import { browserPageLead, browserPageStatus } from '@buildwf/platform/browser-page';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
@@ -166,7 +166,7 @@ app.get('/setup', async (context) => {
           'Setup code expired',
           'Generate a new code from the computer you used to install the platform.',
         ) +
-        '<pre><code>nosam platform repair ' +
+        '<pre><code>bwf platform repair ' +
         escapeHtml(pending.installation_id) +
         '</code></pre>' +
         '<p class="nosam-auth-note">If installation was interrupted, resume the original install command instead.</p>',

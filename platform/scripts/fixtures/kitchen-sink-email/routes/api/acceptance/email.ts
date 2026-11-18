@@ -1,7 +1,7 @@
-import { defineHandler } from 'nosam';
-import { sendEmail, type SendEmailOptions } from 'nosam/email';
-import { env } from 'nosam/env';
-import { kv } from 'nosam/kv';
+import { defineHandler } from '@buildwf/bwf';
+import { sendEmail, type SendEmailOptions } from '@buildwf/bwf/email';
+import { env } from '@buildwf/bwf/env';
+import { kv } from '@buildwf/bwf/kv';
 
 export const POST = defineHandler(async (c) => {
   const secret = env.SECRET_KEY;

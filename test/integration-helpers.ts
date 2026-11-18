@@ -36,7 +36,7 @@ const GENERATED_PLAYGROUND_ENTRIES = new Set([
   '.react-router',
   '.svelte-kit',
   '.tanstack',
-  '.nosam',
+  '.bwf',
   '.vite-cloud',
   '.wrangler',
   'build',
@@ -260,7 +260,7 @@ export function spawnPlaygroundServer(
     {
       cwd: workspaceRoot,
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, NOSAM_INSPECTOR_PORT: 'false' },
+      env: { ...process.env, BWF_INSPECTOR_PORT: 'false' },
     },
   );
 }

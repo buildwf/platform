@@ -18,5 +18,5 @@ it('lets staging smoke tests observe deployment recovery and retain diagnostics'
   expect(workflow).toMatch(
     /if: \$\{\{ always\(\) \}\}[\s\S]*uses: actions\/upload-artifact@[a-f0-9]{40}/,
   );
-  expect(workflow).toContain('~/.nosam/logs/deploy-*.jsonl');
+  expect(workflow).toContain('~/.bwf/logs/deploy-*.jsonl');
 });

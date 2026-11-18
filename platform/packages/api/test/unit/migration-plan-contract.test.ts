@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   buildMigrationPlanBundle,
   classifyMigration,
-} from '../../../../../packages/nosam/src/migrations/plan.ts';
+} from '../../../../../packages/bwf/src/migrations/plan.ts';
 import {
   classifyServerMigrationPlan,
   validateSubmittedExecutionPlans,

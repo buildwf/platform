@@ -1,4 +1,4 @@
-import { createPlatformDeploymentManifest, createPlatformWorkerConfigs } from '@nosam/platform';
+import { createPlatformDeploymentManifest, createPlatformWorkerConfigs } from '@buildwf/platform';
 import { describe, expect, it } from 'vite-plus/test';
 
 describe('platform Worker configuration', () => {

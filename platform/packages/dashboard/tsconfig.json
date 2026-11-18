@@ -1,5 +1,5 @@
 {
-  "extends": "./.nosam/tsconfig.json",
+  "extends": "./.bwf/tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
     "module": "NodeNext",
@@ -8,7 +8,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "types": ["nosam/env", "@cloudflare/workers-types"],
+    "types": ["@buildwf/bwf/env", "@cloudflare/workers-types"],
     "allowImportingTsExtensions": true,
     "noEmit": true
   },

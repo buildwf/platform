@@ -26,7 +26,7 @@ const layers = computed(() => game.value.tiles.length - 1);
 const shareUrl = computed(
   () =>
     `https://x.com/intent/tweet?${new URLSearchParams({
-      text: `I shipped a stack with ${layers.value} ${layers.value === 1 ? 'layer' : 'layers'}. Deploy Vite apps with Nosam. Check out void.cloud`,
+      text: `I shipped a stack with ${layers.value} ${layers.value === 1 ? 'layer' : 'layers'}. Deploy Vite apps with bwf. Check out void.cloud`,
     })}`,
 );
 const framework = computed(() => frameworks[game.value.moving?.framework ?? 0]?.name);

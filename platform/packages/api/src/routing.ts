@@ -1,4 +1,4 @@
-import type { ProjectZeroTrustRouting } from '@nosam/edge';
+import type { ProjectZeroTrustRouting } from '@buildwf/edge';
 import { sql as drizzleSql } from 'drizzle-orm';
 import { getDomainsByProjectIds, getProject, type Db } from './db.ts';
 import type { AssetConfig, DeployManifest } from './types.ts';

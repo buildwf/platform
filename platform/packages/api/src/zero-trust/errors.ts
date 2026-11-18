@@ -14,7 +14,7 @@ export function zeroTrustNotReadyMessage(error: unknown): string | null {
     return 'The platform Zero Trust configuration is invalid. Ask a platform administrator to repair it, then retry.';
   }
   if (error instanceof ZeroTrustUnavailableError) {
-    return `Zero Trust protection for this project is not ready: ${error.message} Run \`nosam project zero-trust status\` for details. A project admin or owner can run \`nosam project zero-trust reconcile\` once the platform is ready, then retry.`;
+    return `Zero Trust protection for this project is not ready: ${error.message} Run \`bwf project zero-trust status\` for details. A project admin or owner can run \`bwf project zero-trust reconcile\` once the platform is ready, then retry.`;
   }
   return null;
 }

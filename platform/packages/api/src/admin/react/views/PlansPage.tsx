@@ -15,7 +15,7 @@ import {
   PLAN_LIMITS,
   type EditablePlanLimit,
   type PlatformPlanDefinition,
-} from '@nosam/platform/plans';
+} from '@buildwf/platform/plans';
 import { useEffect, useState } from 'react';
 import { useRequest, useView } from 'react-fate';
 import type { AiLoggingMode, PlanAiLoggingSettings } from '../../../ai-logging-policy.ts';

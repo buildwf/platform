@@ -360,7 +360,7 @@ describe('GET /github/link-callback', () => {
 
     // State + redirect are validated, so the error is bounced to the CLI's
     // localhost listener (200 + JS redirect) rather than JSON on the API host —
-    // otherwise `nosam github link` hangs until its 5-min timeout.
+    // otherwise `bwf github link` hangs until its 5-min timeout.
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');
     const target = extractRedirectTarget(await res.text());

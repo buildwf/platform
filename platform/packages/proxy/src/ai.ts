@@ -1,5 +1,5 @@
-import { isRecord } from '@nosam/deploy-core';
-import type { AiLoggingMode } from '@nosam/platform/ai-logging';
+import { isRecord } from '@buildwf/deploy-core';
+import type { AiLoggingMode } from '@buildwf/platform/ai-logging';
 import { deriveAiUsageTag } from '@nosamcloud/api/proxy-token';
 import { Hono } from 'hono';
 import { applyAiLoggingHeaders, bindingAiLogging, readAiLoggingMode } from './ai-logging.ts';

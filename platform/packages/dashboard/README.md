@@ -5,7 +5,7 @@ with Nosam server routes. The administrator UI is served by the API Worker.
 
 ## Architecture
 
-- **React SPA** - `index.html` + `src/`, with `nosamPlugin()` serving `routes/`. Each page
+- **React SPA** - `index.html` + `src/`, with `bwfPlugin()` serving `routes/`. Each page
   loads its data from an internal `/api/page/*` endpoint (to be replaced by eeao procedures).
 - **Auth** - enabled platform login methods via the API's `/auth/login` flow. The JWT is
   stored in an httpOnly cookie (`nosam_token`). Middleware validates the token with
@@ -69,7 +69,7 @@ separate copy in `playground-local/my-dashboard`, keeping the app’s source,
 assets, package manifest and TypeScript configuration. Exclude local environment
 files, dependencies and generated output. Give the copied package a unique
 private name and keep its `build: vp build` script. In the copied Vite config,
-keep `nosamPlugin()` and `nosamReact()`, and remove the local API
+keep `bwfPlugin()` and `bwfReact()`, and remove the local API
 `persistTo` option.
 
 Replace the copied `cloudflare` configuration with your deployment settings:
@@ -94,7 +94,7 @@ API’s accepted dashboard origin using the
 Then deploy from the copied app directory with the public Nosam CLI:
 
 ```sh
-vp exec nosam deploy --platform cloudflare
+vp exec bwf deploy --platform cloudflare
 ```
 
 The `API` binding sends server requests to your installed API, while

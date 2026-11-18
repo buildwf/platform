@@ -1,4 +1,4 @@
-import { pgTable, serial, text } from 'nosam/schema-pg';
+import { pgTable, serial, text } from '@buildwf/bwf/schema-pg';
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),

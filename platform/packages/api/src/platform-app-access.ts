@@ -5,7 +5,7 @@ import {
   PLATFORM_DISABLED_KEY,
   PLATFORM_DISABLED_VALUE,
   type PlatformAppAccessSetup,
-} from '@nosam/platform';
+} from '@buildwf/platform';
 import { sql } from 'drizzle-orm';
 import type { Context } from 'hono';
 import type { Db } from './db.ts';
@@ -267,7 +267,7 @@ export async function platformAppAccess(context: Context<ApiEnv>): Promise<Respo
  * Uninstall handoff for an installation whose first administrator never signed
  * in. It turns off the project Zero Trust the installer enabled, using the
  * same authority that turned it on. Without a user there are no projects, and
- * no administrator who could run `nosam platform zero-trust disable`.
+ * no administrator who could run `bwf platform zero-trust disable`.
  */
 export async function platformAppAccessTurnOff(context: Context<ApiEnv>): Promise<Response> {
   const body = await verifyAppAccessProof(context, PLATFORM_APP_ACCESS_TURN_OFF_PROOF_PREFIX);
@@ -290,7 +290,7 @@ export async function platformAppAccessTurnOff(context: Context<ApiEnv>): Promis
       return context.json(
         {
           error:
-            'A platform user exists. An administrator turns off Zero Trust with `nosam platform zero-trust disable`.',
+            'A platform user exists. An administrator turns off Zero Trust with `bwf platform zero-trust disable`.',
           code: 'users_exist',
         },
         409,

@@ -9,7 +9,7 @@
  * into an account it does not own — it is never bundled into the api
  * worker itself.
  *
- * `nosam email domain sync` redeploys at the current RELAY_VERSION. Secret
+ * `bwf email domain sync` redeploys at the current RELAY_VERSION. Secret
  * rotation is a separate durable operation proven against the deployed
  * Worker before promotion. The Worker name stays stable for its zone.
  */

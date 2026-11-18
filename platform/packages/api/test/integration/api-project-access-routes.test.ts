@@ -406,7 +406,7 @@ describe('project route membership capabilities', () => {
     expect(adminUpdate.status).toBe(409);
     expect(await adminUpdate.json()).toEqual({
       error: 'Project Zero Trust is not ready on this platform.',
-      message: expect.stringContaining('nosam project zero-trust status'),
+      message: expect.stringContaining('bwf project zero-trust status'),
     });
   });
 

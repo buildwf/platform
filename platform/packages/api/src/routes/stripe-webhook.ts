@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
-import type { ApiEnv } from '../env.ts';
 import { PAID_PLANS, verifyStripeSignature, type PaidPlan } from '../billing/stripe.ts';
+import type { ApiEnv } from '../env.ts';
 import { changeOperatorUserPlan } from '../operator/tenant-service.ts';
 import { getDefaultPlan } from '../plans.ts';
 import { appPeople } from '../schema.ts';
@@ -9,7 +9,12 @@ import { appPeople } from '../schema.ts';
 type StripeEvent = {
   type: string;
   data: {
-    object: { metadata?: Record<string, string>; customer?: string; subscription?: string; id?: string };
+    object: {
+      metadata?: Record<string, string>;
+      customer?: string;
+      subscription?: string;
+      id?: string;
+    };
   };
 };
 
@@ -24,7 +29,9 @@ export const stripeWebhookRoutes = new Hono<ApiEnv>().post('/', async (context) 
   const secret = context.env.STRIPE_WEBHOOK_SECRET;
   if (!secret) return context.json({ error: 'billing not configured' }, 503);
   const body = await context.req.text();
-  if (!(await verifyStripeSignature(body, context.req.header('stripe-signature') ?? null, secret))) {
+  if (
+    !(await verifyStripeSignature(body, context.req.header('stripe-signature') ?? null, secret))
+  ) {
     return context.json({ error: 'bad signature' }, 400);
   }
   const event = JSON.parse(body) as StripeEvent;
@@ -54,9 +61,7 @@ export const stripeWebhookRoutes = new Hono<ApiEnv>().post('/', async (context) 
           stripe_subscription_id: null,
           updated_at: new Date().toISOString(),
         })
-        .where(
-          and(eq(appPeople.client_id, key.client_id), eq(appPeople.person_id, key.person_id)),
-        );
+        .where(and(eq(appPeople.client_id, key.client_id), eq(appPeople.person_id, key.person_id)));
     } else {
       return context.json({ ok: true, ignored: true });
     }

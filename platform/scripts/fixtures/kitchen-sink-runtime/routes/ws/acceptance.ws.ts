@@ -1,5 +1,5 @@
+import { defineWebSocket } from '@buildwf/bwf/ws';
 import * as v from 'valibot';
-import { defineWebSocket } from 'nosam/ws';
 
 const marker = v.pipe(v.string(), v.regex(/^nosam-e2e-[a-f0-9]{16}$/));
 
