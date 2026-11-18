@@ -261,13 +261,13 @@ describe('platform email identity', () => {
         'member@example.com',
       );
       await sendInvitationEmail(
-        { ...binding, EMAIL_SENDER_DOMAIN: 'mail.void.cloud' },
+        { ...binding, EMAIL_SENDER_DOMAIN: 'buildwf.dev' },
         'member@example.com',
       );
       expect(sent.map(({ from }) => from)).toEqual([
         defaultSender,
         identity.EMAIL_FROM,
-        'Nosam <noreply@void.cloud>',
+        'Nosam <no-reply@buildwf.dev>',
       ]);
     });
 
@@ -286,7 +286,7 @@ describe('platform email identity', () => {
   it('preserves the Nosam Cloud sender only for its hosted deployment', async () => {
     const { binding, sent } = mockBinding();
     await sendInvitationEmail(binding, 'member@example.com');
-    expect(sent[0].from).toBe('Nosam <noreply@void.cloud>');
+    expect(sent[0].from).toBe('Nosam <no-reply@buildwf.dev>');
     expect(sent[0].subject).toBe("You're invited to Nosam Cloud");
     expect(sent[0].text).toContain("bwf connect 'nosam.buildwithfriends.dev'");
   });

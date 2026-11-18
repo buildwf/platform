@@ -476,7 +476,7 @@ Optional vars:
 - `EMAIL_FROM` — optional sender override for the `EMAIL` binding. Without it, an installation sends from `noreply@<EMAIL_SENDER_DOMAIN>` with `PLATFORM_DISPLAY_NAME` as the name
 - `NOSAM_PROXY_SERVICE`
 - `SITE_DOMAIN`
-- `EMAIL_SENDER_DOMAIN` — platform mail domain for this environment (`mail.void.cloud` in production). Set on the proxy worker too, and handed to deployed user workers as `__NOSAM_EMAIL_DOMAIN`. See [Email](#email).
+- `EMAIL_SENDER_DOMAIN` — platform mail domain for this environment (`buildwf.dev` in production). Set on the proxy worker too, and handed to deployed user workers as `__NOSAM_EMAIL_DOMAIN`. See [Email](#email).
 - `GITHUB_APP_ID` — Deploy-on-GitHub App identifier
 - `GITHUB_APP_PRIVATE_KEY` — PKCS#8 PEM (convert GitHub's PKCS#1 with `openssl pkcs8 -topk8 -nocrypt`)
 - `GITHUB_APP_SLUG` — App slug, used to build the install URL
