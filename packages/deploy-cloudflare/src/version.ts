@@ -19,7 +19,7 @@ import {
   isBwfSecretDraftHeader,
   isBwfSecretOnlyDraft,
   isWranglerSecretOnlyDraft,
-  NOSAM_SECRET_DRAFT_MESSAGE,
+  isSecretDraftMessage,
   NOSAM_SECRET_DRAFT_SOURCE,
 } from './secret-draft.ts';
 
@@ -197,11 +197,14 @@ export function encodeCloudflareVersionMessage(
 export function parseCloudflareVersionMessage(
   message: string | null | undefined,
 ): CloudflareVersionMetadata | null {
-  if (!message?.startsWith('nosam:')) {
+  // Versions that earlier releases deployed carry the prefix `void:`, so an upgrade still finds
+  // their record.
+  const prefix = ['nosam:', 'void:'].find((candidate) => message?.startsWith(candidate));
+  if (!message || !prefix) {
     return null;
   }
   try {
-    const value = JSON.parse(message.slice(6)) as {
+    const value = JSON.parse(message.slice(prefix.length)) as {
       schema?: unknown;
       migrations?: unknown;
       triggerConfig?: unknown;
@@ -1071,7 +1074,7 @@ async function activateCloudflareVersionWithSecretsFile(
     if (!previousVersion || previousVersion.draftUnknown) {
       return null;
     }
-    if (previousVersion.message !== NOSAM_SECRET_DRAFT_MESSAGE) {
+    if (!isSecretDraftMessage(previousVersion.message)) {
       return false;
     }
     return await isBwfSecretDraftPlaceholderVersion(options, previousVersionId);
@@ -1986,7 +1989,7 @@ async function isBwfSecretDraftPlaceholderVersion(
       !isRecord(entry) ||
       entry.id !== versionId ||
       !isRecord(entry.annotations) ||
-      entry.annotations['workers/message'] !== NOSAM_SECRET_DRAFT_MESSAGE ||
+      !isSecretDraftMessage(entry.annotations['workers/message']) ||
       !Array.isArray(entry.modules) ||
       entry.modules.length !== 1 ||
       !Array.isArray(entry.bindings)

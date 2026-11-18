@@ -70,6 +70,14 @@ export const NOSAM_SECRET_DRAFT_SOURCE =
 /** Message on the placeholder that bwf's secret transport deploys to a Worker without code. */
 export const NOSAM_SECRET_DRAFT_MESSAGE = 'nosam:secret-draft';
 
+// Placeholders that earlier releases deployed carry this message.
+const LEGACY_SECRET_DRAFT_MESSAGE = 'void:secret-draft';
+
+/** Whether a Worker version message marks a secret placeholder, from this or an earlier release. */
+export function isSecretDraftMessage(message: unknown): boolean {
+  return message === NOSAM_SECRET_DRAFT_MESSAGE || message === LEGACY_SECRET_DRAFT_MESSAGE;
+}
+
 /**
  * Annotations of a bwf secret placeholder, checked before its source is inspected:
  * - `api`: the secret transport uploaded and deployed the placeholder and its first secrets in
@@ -88,7 +96,7 @@ export function isBwfSecretDraftHeader(entry: Record<string, unknown>): boolean 
   return (
     entry.source === 'api' &&
     keys.length === 2 &&
-    annotations['workers/message'] === NOSAM_SECRET_DRAFT_MESSAGE &&
+    isSecretDraftMessage(annotations['workers/message']) &&
     annotations['workers/triggered_by'] === 'create_version_api'
   );
 }

@@ -829,7 +829,7 @@ export async function runPurgeResourcesTeardown(
         if (
           live.name !== access.name ||
           !(
-            access.name.startsWith(`nosam-${next.id}-`) ||
+            access.name.startsWith(`void-${next.id}-`) ||
             access.name.startsWith(`nosam-${next.id}-`)
           )
         ) {

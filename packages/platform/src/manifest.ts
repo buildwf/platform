@@ -193,7 +193,7 @@ export function platformDashboardUrl(deployment: PlatformDeploymentManifest): st
 
 export function createPlatformResourceNames(installationSlug: string): PlatformResourceNames {
   const slug = normalizeInstallationSlug(installationSlug);
-  const prefix = `nosam-${slug}`;
+  const prefix = `void-${slug}`;
   const datasetPrefix = prefix.replaceAll('-', '_');
   return {
     aiGateway: prefix,

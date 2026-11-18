@@ -21,8 +21,8 @@ type ControllerEnv = {
   __NOSAM_SANDBOX_INSTANCE?: SandboxInstance;
 };
 type Lease = { generation: string; phase: 'pending' | 'running' | 'stopped' };
-const LEASE_KEY = '__nosamSandboxLease';
-const ACTIVITY_KEY = '__nosamSandboxActivity';
+const LEASE_KEY = '__voidSandboxLease';
+const ACTIVITY_KEY = '__voidSandboxActivity';
 type Activity = { lastActivity: number; idleDeadline: number };
 const HEARTBEAT_MS = 30_000;
 const CONTROL_TIMEOUT_MS = 5_000;

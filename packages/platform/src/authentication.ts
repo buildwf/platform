@@ -209,7 +209,7 @@ export function parsePlatformAuthenticationSetup(value: unknown): PlatformAuthen
 
 export const DEFAULT_PLATFORM_SESSION_SECONDS: number = 30 * 24 * 60 * 60;
 export const GOOGLE_OIDC_ISSUER = 'https://accounts.google.com';
-export const PLATFORM_AUTH_SETUP_PROOF_PREFIX = 'bwf.platform.auth.setup.v1';
+export const PLATFORM_AUTH_SETUP_PROOF_PREFIX = 'void.platform.auth.setup.v1';
 
 function string(value: unknown, name: string, maximum = 512): string {
   if (!isPrintableText(value, maximum)) {

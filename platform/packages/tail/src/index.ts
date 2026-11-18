@@ -23,7 +23,7 @@ export function parseScriptName(
   platformDispatchWorkerName?: string,
   scriptTags?: ReadonlyArray<string>,
 ): { projectKey: string; deployId: string } | null {
-  if (scriptName.startsWith('nosam-do-')) {
+  if (scriptName.startsWith('void-do-') || scriptName.startsWith('nosam-do-')) {
     const project = scriptTags?.find((tag) => /^nosam-project:user-[a-z0-9-]+$/.test(tag));
     const deployment = scriptTags?.find((tag) => /^nosam-deployment:dpl_[a-zA-Z0-9_]+$/.test(tag));
     return project && deployment

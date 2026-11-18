@@ -57,7 +57,7 @@ export async function durableObjectWorkerName(
   className: string,
 ): Promise<string> {
   const digest = await hash(new TextEncoder().encode(className).buffer);
-  return `nosam-do-${projectId}-${digest.slice(0, 16)}`;
+  return `void-do-${projectId}-${digest.slice(0, 16)}`;
 }
 
 function url(env: Env, worker: string): string {
