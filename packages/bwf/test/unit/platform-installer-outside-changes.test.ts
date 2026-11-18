@@ -19,7 +19,12 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 vi.mock('@voidzero-dev/vite-plus-prompts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@voidzero-dev/vite-plus-prompts')>();
-  return { ...actual, confirm: vi.fn(), log: { ...actual.log, step: vi.fn() }, note: vi.fn() };
+  return {
+    ...actual,
+    confirm: vi.fn(),
+    log: { ...actual.log, step: vi.fn(), warn: vi.fn() },
+    note: vi.fn(),
+  };
 });
 
 // Record the waits before a read is done again, and do not wait.
@@ -648,6 +653,32 @@ describe('platform Workers changed outside bwf', () => {
           'bwf platform upgrade example-a1b2c3d4',
         ].join('\n'),
       );
+      expect(confirm).not.toHaveBeenCalled();
+    });
+
+    it('goes on without a terminal when the operator accepted the changes in advance', async () => {
+      sources.set(names.apiWorker, 'api');
+      activeMessages.set(names.proxyWorker, undefined);
+      await expect(
+        reviewPlatformWorkerOutsideChanges({
+          client,
+          plan: installPlan(allWorkers),
+          runtime,
+          installation: installed,
+          interactive: false,
+          accepted: true,
+          command: 'bwf platform upgrade example-a1b2c3d4',
+        }),
+      ).resolves.toEqual([
+        { key: 'api', name: names.apiWorker, source: 'api' },
+        { key: 'proxy', name: names.proxyWorker, source: 'unrecorded' },
+      ]);
+      const shown = String(vi.mocked(log.warn).mock.calls[0]?.[0]);
+      expect(shown).toContain(`${names.apiWorker}: changed in the Cloudflare API`);
+      expect(shown).toContain(
+        `${names.proxyWorker}: has an active version without a bwf deployment record`,
+      );
+      expect(shown).toContain('--accept-outside-changes');
       expect(confirm).not.toHaveBeenCalled();
     });
 

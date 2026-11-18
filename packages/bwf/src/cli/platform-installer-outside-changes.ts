@@ -260,6 +260,11 @@ export async function reviewPlatformWorkerOutsideChanges(
     interactive: boolean;
     /** The command to run once in a terminal to review the changes. */
     command: string;
+    /**
+     * The operator already agreed to replace the changes (`--accept-outside-changes`). Without a
+     * terminal, the run prints the list and goes on instead of stopping.
+     */
+    accepted?: boolean;
   }>,
 ): Promise<ReadonlyArray<PlatformWorkerOutsideChange>> {
   const changes = await findPlatformWorkerOutsideChanges(
@@ -270,6 +275,17 @@ export async function reviewPlatformWorkerOutsideChanges(
   );
   if (changes.length === 0) {
     return [];
+  }
+  if (!input.interactive && input.accepted) {
+    log.warn(
+      [
+        listPlatformWorkerOutsideChanges(changes),
+        '',
+        'You passed --accept-outside-changes, so this command replaces the configuration of these Workers with the bwf configuration.',
+        'It removes values that bwf does not set and resets values that bwf sets.',
+      ].join('\n'),
+    );
+    return changes;
   }
   if (!input.interactive) {
     throw new Error(
@@ -323,6 +339,8 @@ export async function uploadPlatformWorkerOutsideChanges(
     operatorApiToken: string;
     /** It stops while the Cloudflare CLI uses the terminal, so it cannot write over the question. */
     progress?: Pick<SpinnerResult, 'pause' | 'resume'>;
+    /** The operator agreed in advance, so the Cloudflare CLI runs without a terminal and does not ask. */
+    accepted?: boolean;
     runner?: typeof runPlatformWrangler;
   }>,
 ): Promise<void> {
@@ -353,6 +371,7 @@ export async function uploadPlatformWorkerOutsideChanges(
       const uploaded = await uploadPlatformWorkerForReview(config, {
         readCloudflare: (path) => client.request(path),
         runner,
+        ...(input.accepted ? { interactive: false } : {}),
       });
       // A refused upload can still exit with status 0, so read the source again.
       const source = await client.getWorkerLastDeployedFrom(String(config.account_id), name);

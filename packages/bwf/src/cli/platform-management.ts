@@ -682,6 +682,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
       },
       interactive: process.stdin.isTTY === true && process.stdout.isTTY === true && !args.yes,
       command: platformLifecycleResumeCommand({ ...args, yes: false }, manifest.id),
+      accepted: 'acceptOutsideChanges' in args && args.acceptOutsideChanges === true,
     });
     markPhase('outside changes');
     progress = createPlatformProgress();
@@ -750,6 +751,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
                 client,
                 operatorApiToken: operatorCredential.token,
                 progress,
+                accepted: 'acceptOutsideChanges' in args && args.acceptOutsideChanges === true,
               }),
           }
         : {}),
