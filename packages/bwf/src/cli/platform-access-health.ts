@@ -113,7 +113,7 @@ export async function ensurePlatformAccessHealthChecks(input: {
     accountId,
   );
   const nonce = createHash('sha256')
-    .update(`nosam-access-health:${input.manifest.ownershipNonce}`)
+    .update(`void-access-health:${input.manifest.ownershipNonce}`)
     .digest('hex')
     .slice(0, 32);
   const state: PlatformAccessCheckpoint = input.checkpoint.accessHealthProvisioningJson
@@ -151,7 +151,7 @@ export async function ensurePlatformAccessHealthChecks(input: {
     };
     const fingerprint = createHash('sha256').update(JSON.stringify(expected)).digest('hex');
     let recorded = state.resources[key];
-    const name = `nosam-${input.manifest.id}-${key}`.slice(0, 90) + '-' + nonce.slice(0, 16);
+    const name = `void-${input.manifest.id}-${key}`.slice(0, 90) + '-' + nonce.slice(0, 16);
     if (
       recorded &&
       (recorded.name !== name || recorded.fingerprint !== fingerprint || recorded.adopted)

@@ -46,7 +46,7 @@ export function platformWorkersDevAliasKey(hostname: string): string {
   return `workers-dev:${hostname}`;
 }
 
-export const PLATFORM_APPLICATION_KEY = '__nosam/platform/application/v1';
+export const PLATFORM_APPLICATION_KEY = '__void/platform/application/v1';
 
 export async function resolvePlatformApplicationEnvironment<
   T extends {
@@ -83,7 +83,7 @@ export async function resolvePlatformApplicationEnvironment<
 export function platformProjectIngressPrefix(
   workersDev: NonNullable<PlatformApplication['workersDev']>,
 ): string {
-  return `nosam-${workersDev.installationId.slice(-12)}-`;
+  return `void-${workersDev.installationId.slice(-12)}-`;
 }
 
 export function platformProjectIngressName(

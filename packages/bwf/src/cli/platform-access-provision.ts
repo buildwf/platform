@@ -512,7 +512,7 @@ export async function provisionPlatformAccess(
       );
     }
     const name =
-      `nosam-${input.installationId}-${key}`.slice(0, 90) + '-' + state.nonce.slice(0, 16);
+      `void-${input.installationId}-${key}`.slice(0, 90) + '-' + state.nonce.slice(0, 16);
     if (inventory.some((app) => app.name === name)) {
       throw new Error(
         'platform: An Access application with this installation identity already exists. Connect it explicitly; no duplicate was created.',
@@ -613,7 +613,7 @@ export async function provisionPlatformAccess(
       let saved = state.resources[tokenKey];
       if (!saved) {
         saved = {
-          name: `nosam-${input.installationId}-access-probes-${state.nonce.slice(0, 16)}`,
+          name: `void-${input.installationId}-access-probes-${state.nonce.slice(0, 16)}`,
           fingerprint: fingerprint({ origins }),
           pending: true,
         };

@@ -48,13 +48,13 @@ describe('durable platform deployment Queue', () => {
       application: { baseDomain: 'apps.example.com', zoneName: 'example.com' },
       displayName: 'Team',
       installationSlug: 'team',
-      resources: { apiWorker: 'nosam-team-api-legacy', cronQueue: 'nosam-team-cron-fires-legacy' },
+      resources: { apiWorker: 'void-team-api-legacy', cronQueue: 'void-team-cron-fires-legacy' },
     });
     const { deploymentQueue: _deploymentQueue, ...legacyResources } = current.resources;
     const upgraded = parsePlatformDeploymentManifest({ ...current, resources: legacyResources });
     expect(upgraded.resources).toEqual({
       ...legacyResources,
-      deploymentQueue: 'nosam-team-deployments',
+      deploymentQueue: 'void-team-deployments',
     });
   });
 
@@ -62,11 +62,11 @@ describe('durable platform deployment Queue', () => {
     const configured = configs(1);
     expect(configured.api.queues).toMatchObject({
       producers: expect.arrayContaining([
-        { binding: 'DEPLOYMENTS_QUEUE', queue: 'nosam-team-deployments' },
+        { binding: 'DEPLOYMENTS_QUEUE', queue: 'void-team-deployments' },
       ]),
       consumers: expect.arrayContaining([
         {
-          queue: 'nosam-team-deployments',
+          queue: 'void-team-deployments',
           max_batch_size: 1,
           max_batch_timeout: 1,
           max_retries: 100,
@@ -74,18 +74,18 @@ describe('durable platform deployment Queue', () => {
         },
       ]),
     });
-    expect(configured.api.vars).toHaveProperty('DEPLOYMENTS_QUEUE_NAME', 'nosam-team-deployments');
+    expect(configured.api.vars).toHaveProperty('DEPLOYMENTS_QUEUE_NAME', 'void-team-deployments');
     expect(configured.api.triggers).toEqual({ crons: ['0 * * * *', '*/2 * * * *'] });
     for (const [key, config] of Object.entries(configured)) {
       if (key !== 'api') {
-        expect(JSON.stringify(config)).not.toContain('nosam-team-deployments');
+        expect(JSON.stringify(config)).not.toContain('void-team-deployments');
       }
     }
   });
 
   it('omits producer, consumer and routing name when the target runtime has no executor', () => {
     expect(JSON.stringify(configs())).not.toContain('DEPLOYMENTS_QUEUE');
-    expect(JSON.stringify(configs())).not.toContain('nosam-team-deployments');
+    expect(JSON.stringify(configs())).not.toContain('void-team-deployments');
     expect(configs().api.triggers).toEqual({ crons: ['0 * * * *'] });
   });
 });

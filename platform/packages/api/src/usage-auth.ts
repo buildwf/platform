@@ -2,7 +2,7 @@ import { PLATFORM_USAGE_PROTOCOL_VERSION } from '@buildwf/platform';
 
 export const USAGE_PROTOCOL_VERSION = PLATFORM_USAGE_PROTOCOL_VERSION;
 
-export const USAGE_SIGNING_KEY_KV_KEY = '__nosam:usage-signing-key:v1';
+export const USAGE_SIGNING_KEY_KV_KEY = '__void:usage-signing-key:v1';
 /** Operational usage intervals and their replay receipts share one validity window. */
 export const SANDBOX_USAGE_RETENTION_MS = 8 * 24 * 60 * 60_000;
 
