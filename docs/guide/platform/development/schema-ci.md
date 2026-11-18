@@ -19,13 +19,13 @@ Review the generated SQL and migration journal before committing them. Released 
 
 ## Runtime artifact contract
 
-`@nosam/platform` contains installation manifests, resource naming, discovery contracts, Worker configuration, and deployable bundles under the `./installer` export. Platform source lives in `platform/packages/`.
+`@buildwf/platform` contains installation manifests, resource naming, discovery contracts, Worker configuration, and deployable bundles under the `./installer` export. Platform source lives in `platform/packages/`.
 
 Runtime artifacts include migration SQL, its journal, and a rollback compatibility manifest. Drizzle authoring snapshots remain in the source tree.
 
 ## CI in a Fork
 
-The uncredentialed test workflows use GitHub-hosted runners in forks. They build and test the workspace without requiring Nosam Cloud accounts, tokens, or deployment access.
+The uncredentialed test workflows use GitHub-hosted runners in forks. They build and test the workspace without requiring bwf Cloud accounts, tokens, or deployment access.
 
 If your fork has a released platform version, set the repository variable
 `NOSAM_PLATFORM_PRODUCTION_REF` to its immutable 40-character commit SHA. Platform
@@ -41,4 +41,4 @@ Advancing the production branch does not change the selected baseline. Fork
 workflows that call platform CI must grant `deployments: read` alongside
 `contents: read`.
 
-The upstream repository also contains workflows for deploying Nosam Cloud and publishing the official npm packages. Forks should configure their own release workflow around the built CLI and `platform upgrade --runtime`; the [source-build CI example](/guide/platform/development/runtime#deploying-source-builds-from-ci) shows the required inputs. Keep production credentials in protected environments restricted to the appropriate release refs.
+The upstream repository also contains workflows for deploying bwf Cloud and publishing the official npm packages. Forks should configure their own release workflow around the built CLI and `platform upgrade --runtime`; the [source-build CI example](/guide/platform/development/runtime#deploying-source-builds-from-ci) shows the required inputs. Keep production credentials in protected environments restricted to the appropriate release refs.

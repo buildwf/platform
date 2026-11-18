@@ -5,7 +5,7 @@ import {
   getMigrationPlanHashInput,
   MIGRATION_CLASSIFIER_VERSION,
   type MigrationPlanHashInput,
-} from '@nosam/deploy-core';
+} from '@buildwf/deploy-core';
 
 export type ServerMigrationPlan = {
   name: string;

@@ -1,7 +1,7 @@
 import { appendFileSync, readdirSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-const UNAVAILABLE_NOSAM_VERSIONS = new Set([
+const UNAVAILABLE_BWF_VERSIONS = new Set([
   '0.0.1',
   '0.1.0',
   '0.1.2',
@@ -31,11 +31,11 @@ export function releasePolicy(
     );
   }
   const version = match[1];
-  if (UNAVAILABLE_NOSAM_VERSIONS.has(version)) {
-    throw new Error(`nosam@${version} was previously unpublished and cannot be reused.`);
+  if (UNAVAILABLE_BWF_VERSIONS.has(version)) {
+    throw new Error(`@buildwf/bwf@${version} was previously unpublished and cannot be reused.`);
   }
-  if (!packages.some((pkg) => pkg.name === 'nosam')) {
-    throw new Error('The release must include the public void package.');
+  if (!packages.some((pkg) => pkg.name === '@buildwf/bwf')) {
+    throw new Error('The release must include the public @buildwf/bwf package.');
   }
   for (const pkg of packages) {
     if (pkg.version !== version) {

@@ -77,7 +77,7 @@ export type ApiEnv = Env & {
      * CF Access service-token pair for reaching the Access-gated staging hosts
      * (`api.staging.void.cloud`). Held ONLY by the staging API worker. The
      * `BuildManager` forwards these into a staging container build so the
-     * `nosam deploy` child can authenticate past CF Access when calling the
+     * `bwf deploy` child can authenticate past CF Access when calling the
      * staging deploy endpoint — non-interactive automation can't do the
      * `cloudflared` browser flow. Optional: unset everywhere except staging, so
      * production (not Access-gated) and dev tolerate absence. See

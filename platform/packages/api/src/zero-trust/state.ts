@@ -1,4 +1,4 @@
-import { platformProjectHostnames, readPlatformApplication } from '@nosam/platform';
+import { platformProjectHostnames, readPlatformApplication } from '@buildwf/platform';
 import { and, eq, isNotNull, or, sql } from 'drizzle-orm';
 import type { Db, DbOrTx } from '../db.ts';
 import { getDomainsByProjectId } from '../db.ts';

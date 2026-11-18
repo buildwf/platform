@@ -1,14 +1,14 @@
 ---
-description: 'Send transactional email with sendEmail. Nosam captures messages in a local inbox during development.'
+description: 'Send transactional email with sendEmail. bwf captures messages in a local inbox during development.'
 outline: deep
 ---
 
 # Sending Email
 
-Use `sendEmail` to send transactional email. During development, Nosam captures messages in a local inbox.
+Use `sendEmail` to send transactional email. During development, bwf captures messages in a local inbox.
 
 ```ts
-import { sendEmail } from 'nosam/email';
+import { sendEmail } from '@buildwf/bwf/email';
 
 const result = await sendEmail({
   from: 'Acme <acme+noreply@mail.example.com>', // use your project's sender address
@@ -40,24 +40,24 @@ On a platform with email enabled, deploy without additional email configuration.
 Each project on an email-enabled platform has:
 
 - **Default sender:** `<your-slug>+noreply@<mail-domain>`. Older projects with slugs longer than 56 characters must pass `from` explicitly.
-- **Your account email as a recipient:** it is registered when the project is created. If Cloudflare has not verified it for the platform, follow the emailed verification link and run `nosam email destinations` before sending to it.
+- **Your account email as a recipient:** it is registered when the project is created. If Cloudflare has not verified it for the platform, follow the emailed verification link and run `bwf email destinations` before sending to it.
 
 The shared sender can send only to verified recipients. Verify your own address or [add another recipient](#adding-recipients) before sending.
 
-Deploying to your own Cloudflare account instead (`nosam deploy --platform cloudflare`) requires a sender in `nosam.config.ts` and email setup — see [Your own Cloudflare account](./domains.md#your-own-cloudflare-account).
+Deploying to your own Cloudflare account instead (`bwf deploy --platform cloudflare`) requires a sender in `bwf.config.ts` and email setup — see [Your own Cloudflare account](./domains.md#your-own-cloudflare-account).
 
 ## Adding recipients {#adding-recipients}
 
 Cloudflare's `send_email` binding only delivers to addresses you've registered as recipients. Add them with the CLI:
 
 ```sh
-nosam email allow user@acme.com
+bwf email allow user@acme.com
 ```
 
-Cloudflare emails the recipient with a verification link. Once they click it and `nosam email destinations` has picked the click up, you can send to that address from your project. If the link did not arrive or has expired, run `nosam email allow <address>` again while the address is still pending — the CLI re-sends the link, or tells you how to get a fresh one. List the project's recipients:
+Cloudflare emails the recipient with a verification link. Once they click it and `bwf email destinations` has picked the click up, you can send to that address from your project. If the link did not arrive or has expired, run `bwf email allow <address>` again while the address is still pending — the CLI re-sends the link, or tells you how to get a fresh one. List the project's recipients:
 
 ```sh
-nosam email destinations
+bwf email destinations
 ```
 
 ::: warning When this is the right fit
@@ -68,27 +68,27 @@ For mail to arbitrary users, [register your own domain](./domains.md#your-own-do
 
 ## Options {#options}
 
-| Option           | Type                          | Notes                                                                                                            |
-| ---------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `from`           | `string \| { email, name? }`  | Optional. Pinned to the project sender — see below.                                                              |
-| `to`             | `Address \| Address[]`        | Required. One or more recipients.                                                                                |
-| `subject`        | `string`                      | Required. UTF-8 supported (encoded as RFC 2047).                                                                 |
-| `text`           | `string`                      | At least one of `text` / `html` is required.                                                                     |
-| `html`           | `string`                      | Sent as `multipart/alternative` if both are provided.                                                            |
-| `replyTo`        | `Address`                     | Optional `Reply-To` header.                                                                                      |
-| `cc`, `bcc`      | `Address \| Address[]`        | Optional. Each recipient is sent its own message envelope.                                                       |
-| `headers`        | `Record<string, string>`      | Custom headers; reserved headers (From, Date, etc.) are ignored.                                                 |
-| `threading`      | `{ inReplyTo?, references? }` | Optional. Threads the email under an earlier message. See [Reply later](#reply-later).                           |
-| `attachments`    | `Attachment[]`                | See [Attachments](#attachments).                                                                                 |
-| `idempotencyKey` | `string`                      | Optional on the Nosam Platform: 1–128 printable, non-space ASCII characters. Reuse for retries of the same send. |
+| Option           | Type                          | Notes                                                                                                          |
+| ---------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `from`           | `string \| { email, name? }`  | Optional. Pinned to the project sender — see below.                                                            |
+| `to`             | `Address \| Address[]`        | Required. One or more recipients.                                                                              |
+| `subject`        | `string`                      | Required. UTF-8 supported (encoded as RFC 2047).                                                               |
+| `text`           | `string`                      | At least one of `text` / `html` is required.                                                                   |
+| `html`           | `string`                      | Sent as `multipart/alternative` if both are provided.                                                          |
+| `replyTo`        | `Address`                     | Optional `Reply-To` header.                                                                                    |
+| `cc`, `bcc`      | `Address \| Address[]`        | Optional. Each recipient is sent its own message envelope.                                                     |
+| `headers`        | `Record<string, string>`      | Custom headers; reserved headers (From, Date, etc.) are ignored.                                               |
+| `threading`      | `{ inReplyTo?, references? }` | Optional. Threads the email under an earlier message. See [Reply later](#reply-later).                         |
+| `attachments`    | `Attachment[]`                | See [Attachments](#attachments).                                                                               |
+| `idempotencyKey` | `string`                      | Optional on the bwf Platform: 1–128 printable, non-space ASCII characters. Reuse for retries of the same send. |
 
 You can send to at most 50 recipients across `to`, `cc`, and `bcc`. Use standard email addresses with ASCII local parts, and punycode for internationalized domains.
 
 `Address` accepts either a string (`"hello@acme.dev"` or `"Name <hello@acme.dev>"`) or an object (`{ email, name? }`). Unicode display names are supported.
 
-On the platform the sender is pinned to your project. `from` must be your project's own platform address — `<project-slug>@<mail-domain>` or `<project-slug>+<tag>@<mail-domain>`, optionally with a display name — or any address on a domain registered with `nosam email domain add` (see [Your own domain on the platform](./domains.md#your-own-domain-on-the-platform)). For example, if your platform's mail domain is `mail.example.com`, you can use `Acme <acme+noreply@mail.example.com>`. Anything else is rejected with `INVALID_FROM`. Omit `from` and Nosam fills in `<project-slug>+noreply@<mail-domain>` for you. If the project owner set an [email alias](../../reference/cli/email.md#nosam-email-alias), `<alias>@<mail-domain>` and `<alias>+<tag>@<mail-domain>` are accepted too; the default stays the slug address.
+On the platform the sender is pinned to your project. `from` must be your project's own platform address — `<project-slug>@<mail-domain>` or `<project-slug>+<tag>@<mail-domain>`, optionally with a display name — or any address on a domain registered with `bwf email domain add` (see [Your own domain on the platform](./domains.md#your-own-domain-on-the-platform)). For example, if your platform's mail domain is `mail.example.com`, you can use `Acme <acme+noreply@mail.example.com>`. Anything else is rejected with `INVALID_FROM`. Omit `from` and bwf fills in `<project-slug>+noreply@<mail-domain>` for you. If the project owner set an [email alias](../../reference/cli/email.md#nosam-email-alias), `<alias>@<mail-domain>` and `<alias>+<tag>@<mail-domain>` are accepted too; the default stays the slug address.
 
-On your own Cloudflare account, `from` defaults to `email.from` from `nosam.config.ts` and must be on a domain your account can send from; Cloudflare rejects any other sender and `sendEmail` reports it as `INVALID_FROM`.
+On your own Cloudflare account, `from` defaults to `email.from` from `bwf.config.ts` and must be on a domain your account can send from; Cloudflare rejects any other sender and `sendEmail` reports it as `INVALID_FROM`.
 
 ## Reply later {#reply-later}
 
@@ -157,7 +157,7 @@ await sendEmail({
 });
 ```
 
-Nosam infers `contentType` from the filename if you omit it. An explicit value must be a valid media type. `contentId` names the image referenced by `cid:<id>` in HTML; use an ID such as `logo` or `logo@acme.dev`. The encoded message is limited to 5 MiB and custom headers to 16 KiB. Invalid attachment fields or oversized messages return `MIME_ERROR`.
+bwf infers `contentType` from the filename if you omit it. An explicit value must be a valid media type. `contentId` names the image referenced by `cid:<id>` in HTML; use an ID such as `logo` or `logo@acme.dev`. The encoded message is limited to 5 MiB and custom headers to 16 KiB. Invalid attachment fields or oversized messages return `MIME_ERROR`.
 
 ## Result and errors {#result-and-errors}
 
@@ -184,7 +184,7 @@ if (result.ok) {
 }
 ```
 
-For 30 days, repeating a key with the same payload returns its recorded outcome without another provider submission. Reusing it with a different payload returns `IDEMPOTENCY_CONFLICT`. A lost response or interrupted provider request can return `OUTCOME_UNKNOWN`; check `nosam email logs` or repeat the same key. A new key creates a new send and can produce a duplicate. Native Cloudflare binding sends do not support platform idempotency keys.
+For 30 days, repeating a key with the same payload returns its recorded outcome without another provider submission. Reusing it with a different payload returns `IDEMPOTENCY_CONFLICT`. A lost response or interrupted provider request can return `OUTCOME_UNKNOWN`; check `bwf email logs` or repeat the same key. A new key creates a new send and can produce a duplicate. Native Cloudflare binding sends do not support platform idempotency keys.
 
 | Code                     | Meaning                                                        |
 | ------------------------ | -------------------------------------------------------------- |
@@ -198,9 +198,9 @@ For 30 days, repeating a key with the same payload returns its recorded outcome 
 | `OUTCOME_UNKNOWN`        | The send may have reached the provider; do not blindly resend. |
 | `UPSTREAM_ERROR`         | The provider or platform refused the request.                  |
 
-The default platform allowance is 200 recipient attempts per UTC month and 10 per rolling minute. Failed or uncertain attempts can count toward these limits. Check `nosam email usage` for your current allowance.
+The default platform allowance is 200 recipient attempts per UTC month and 10 per rolling minute. Failed or uncertain attempts can count toward these limits. Check `bwf email usage` for your current allowance.
 
-`nosam email usage` shows monthly recipient attempts, inbound receipts, and the remaining allowance. `nosam email logs --limit 50` shows up to 100 recent metadata entries retained for 30 days: operation, recipient, direction, state, provider reference, and error code. It does not store subjects, bodies, or attachments. Receiving a message and sending a reply are separate events.
+`bwf email usage` shows monthly recipient attempts, inbound receipts, and the remaining allowance. `bwf email logs --limit 50` shows up to 100 recent metadata entries retained for 30 days: operation, recipient, direction, state, provider reference, and error code. It does not store subjects, bodies, or attachments. Receiving a message and sending a reply are separate events.
 
 ## Local development {#local-development}
 
@@ -212,7 +212,7 @@ During local development, sends are captured to an in-memory inbox instead of go
 
 Open a message to preview its HTML, inspect attachments, or download it as an `.eml` file.
 
-Every inbox route requires a local access token. Nosam includes it in the printed inbox URL and browser links. For command-line requests, send it in the `x-nosam-dev-trigger` header as shown below; requests without it return `401`. The token is stored in `.nosam/dev-trigger-token`. Treat inbox URLs as credentials, especially when exposing your dev server to a network.
+Every inbox route requires a local access token. bwf includes it in the printed inbox URL and browser links. For command-line requests, send it in the `x-nosam-dev-trigger` header as shown below; requests without it return `401`. The token is stored in `.bwf/dev-trigger-token`. Treat inbox URLs as credentials, especially when exposing your dev server to a network.
 
 ```bash
 # download a message as .eml
@@ -226,7 +226,7 @@ curl -X DELETE http://localhost:5173/__nosam/inbox \
 
 The inbox keeps the most recent 100 messages through HMR and clears on a full server restart.
 
-The dev inbox works in Nosam apps. Use `createEmailTestHarness` from `nosam/email/testing` to capture sends in tests. If a configured inbox cannot be reached, `sendEmail` returns `UPSTREAM_ERROR` without sending.
+The dev inbox works in bwf apps. Use `createEmailTestHarness` from `@buildwf/bwf/email/testing` to capture sends in tests. If a configured inbox cannot be reached, `sendEmail` returns `UPSTREAM_ERROR` without sending.
 
 Remove the deprecated `sendInDev` option to use the local inbox. Deploy the app to test real delivery.
 
@@ -235,9 +235,9 @@ Remove the deprecated `sendInDev` option to use the local inbox. Deploy the app 
 Use the test harness to assert on outgoing messages without mocking the binding:
 
 ```ts
+import { sendEmail } from '@buildwf/bwf/email';
+import { createEmailTestHarness } from '@buildwf/bwf/email/testing';
 import { describe, it, expect } from 'vite-plus/test';
-import { sendEmail } from 'nosam/email';
-import { createEmailTestHarness } from 'nosam/email/testing';
 
 describe('signup flow', () => {
   it('sends a welcome email', async () => {

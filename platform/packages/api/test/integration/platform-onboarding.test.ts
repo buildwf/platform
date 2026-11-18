@@ -1,4 +1,4 @@
-import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from '@nosam/platform';
+import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from '@buildwf/platform';
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
 import app from '../../src/index.ts';
 import { adminHtml } from '../helpers/admin-html.tsx';
@@ -32,7 +32,7 @@ describe('platform onboarding pages', () => {
     expect(html).toContain('<h1 id="nosam-auth-title">Welcome to &lt;Example Platform&gt;</h1>');
     expect(html).toContain('<title>Welcome · &lt;Example Platform&gt; · Nosam</title>');
     expect(html).toContain('npm install -g void');
-    expect(html).toContain('nosam connect &#39;api.example.com&#39;');
+    expect(html).toContain('bwf connect &#39;api.example.com&#39;');
     expect(html).toContain('href="/admin/"');
     expect(html).toContain('href="https://void.cloud/guide/quickstart"');
     expect(html).not.toContain('<Example Platform>');
@@ -77,12 +77,12 @@ describe('platform onboarding pages', () => {
     expect(html).toContain('<title>Get Started · &lt;Example Platform&gt; · Nosam</title>');
     expect(html).not.toContain('<Example Platform>');
     // `escapeHtml` escapes the quotes too; the browser renders them back.
-    expect(html).toContain('nosam connect &#39;api.example.com&#39;');
+    expect(html).toContain('bwf connect &#39;api.example.com&#39;');
     expect(html).not.toContain('attacker.example');
     expect(html).not.toContain('alias.example.com');
-    expect(html).not.toContain('nosam auth login');
-    expect(html).not.toContain('nosam deploy');
-    expect(html).toContain('nosam project link');
+    expect(html).not.toContain('bwf auth login');
+    expect(html).not.toContain('bwf deploy');
+    expect(html).toContain('bwf project link');
     expect(html).not.toMatch(/private beta|discord|early-access/i);
   });
 
@@ -96,7 +96,7 @@ describe('platform onboarding pages', () => {
     const html = await adminHtml(response);
     expect(html).toContain('Get Started with Nosam Platform');
     // `escapeHtml` escapes the quotes too; the browser renders them back.
-    expect(html).toContain('nosam connect &#39;api.example.com&#39;');
+    expect(html).toContain('bwf connect &#39;api.example.com&#39;');
     expect(html).not.toContain('attacker.example');
   });
 
@@ -113,11 +113,11 @@ describe('platform onboarding pages', () => {
     expect(response.status).toBe(200);
     const html = await adminHtml(response);
     expect(html).toContain('<title>Accept Project Invitation · Nosam Platform</title>');
-    expect(html).toContain('nosam connect &#39;api.example.com&#39;');
-    expect(html).toContain('nosam project team accept pinv_a1b2c3d4e5f6');
+    expect(html).toContain('bwf connect &#39;api.example.com&#39;');
+    expect(html).toContain('bwf project team accept pinv_a1b2c3d4e5f6');
     expect(html).toContain('The CLI checks that it is still valid');
-    expect(html).toContain('run <code>nosam project link</code> if it is not linked yet');
-    expect(html).toContain('use a separate checkout without a <code>.nosam/project.json</code>');
+    expect(html).toContain('run <code>bwf project link</code> if it is not linked yet');
+    expect(html).toContain('use a separate checkout without a <code>.bwf/project.json</code>');
     expect(html).toContain('Accepting an invitation keeps existing project links.');
     expect(html).not.toContain('choose a project on this platform before deploying');
     expect(html).not.toContain('href="/admin');
@@ -138,7 +138,7 @@ describe('platform onboarding pages', () => {
     expect(response.status).toBe(200);
     const html = await adminHtml(response);
     expect(html).toContain('<title>Get Started · Nosam Platform</title>');
-    expect(html).not.toContain('nosam project team accept');
+    expect(html).not.toContain('bwf project team accept');
     expect(html).not.toContain('evil.example');
   });
 
@@ -147,7 +147,10 @@ describe('platform onboarding pages', () => {
     async (path) => {
       const response = await app.fetch(
         new Request(`https://api.example.com${path}`, {
-          headers: { Host: 'nosam.buildwithfriends.dev', 'X-Forwarded-Host': 'nosam.buildwithfriends.dev' },
+          headers: {
+            Host: 'nosam.buildwithfriends.dev',
+            'X-Forwarded-Host': 'nosam.buildwithfriends.dev',
+          },
         }),
         env,
       );
@@ -156,7 +159,7 @@ describe('platform onboarding pages', () => {
       expect(html).toContain('Nosam Platform');
       expect(html).not.toContain('Nosam Cloud');
       if (path === '/') {
-        expect(html).toContain('nosam connect &#39;api.example.com&#39;');
+        expect(html).toContain('bwf connect &#39;api.example.com&#39;');
       }
     },
   );

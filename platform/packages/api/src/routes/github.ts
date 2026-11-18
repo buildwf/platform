@@ -561,7 +561,7 @@ export const githubRoutes = new Hono<ApiEnv>()
     // 200 + JS redirect, not 302 — the redirect target is always localhost
     // (validated above via isLocalhostRedirect) and `wrangler dev` mangles
     // `Location: http://localhost:*` headers (see html-redirect.ts / meta/lessons.md),
-    // which would otherwise drop the link_code and stall local `nosam github link`.
+    // which would otherwise drop the link_code and stall local `bwf github link`.
     return localhostRedirectResponse(redirectUrl.toString());
   })
 
@@ -1785,7 +1785,7 @@ export const githubProjectRoutes = new Hono<ApiEnv>()
     // under a connection-row lock. Terminalizing revokes each build's deploy
     // token (the middleware guard rejects a token whose bound build is no
     // longer active), so an active container build that already minted a
-    // NOSAM_TOKEN can't keep publishing from a now-disconnected repo. GitHub
+    // BWF_TOKEN can't keep publishing from a now-disconnected repo. GitHub
     // Actions builds also stop pinning a concurrency slot (their workflow_run
     // completion webhook resolves the CURRENT connection — once it's gone the
     // completion is ignored and the build would otherwise stay active forever).

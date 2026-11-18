@@ -3,9 +3,9 @@ description: 'Install a shared deployment environment in your Cloudflare account
 outline: deep
 ---
 
-# Install a Nosam Platform
+# Install a bwf Platform
 
-A Nosam platform lets your team deploy apps into a shared Cloudflare account. As an administrator, you install and maintain the platform. Developers connect the Nosam CLI to its URL, sign in through an enabled login method, and deploy their apps.
+A bwf platform lets your team deploy apps into a shared Cloudflare account. As an administrator, you install and maintain the platform. Developers connect the bwf CLI to its URL, sign in through an enabled login method, and deploy their apps.
 
 For an individual app, [deploy directly to Cloudflare](/integrations/cloudflare#deploy-to-your-own-cloudflare-account).
 
@@ -19,7 +19,7 @@ Both targets use the same application APIs. A core platform adds shared access a
 
 | Feature                                         | Direct Cloudflare                | Core self-hosted platform                     |
 | ----------------------------------------------- | -------------------------------- | --------------------------------------------- |
-| Static sites, SPAs, and Nosam apps              | Supported                        | Supported                                     |
+| Static sites, SPAs, and bwf apps                | Supported                        | Supported                                     |
 | Routing rules, WebSockets, queues, and cron     | Supported                        | Supported                                     |
 | D1, KV, R2, and external SQL through Hyperdrive | Supported                        | Supported                                     |
 | Workers AI and provider requests                | Your account and gateway         | Installation gateway and proxy                |

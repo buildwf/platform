@@ -1,15 +1,15 @@
 {
-  "name": "@nosam/platform",
+  "name": "@buildwf/platform",
   "version": "1.9.1",
-  "description": "Packaged runtime and installation contracts for self-hosted Nosam platforms.",
-  "homepage": "https://void.cloud",
+  "description": "Packaged runtime and installation contracts for self-hosted bwf platforms.",
+  "homepage": "https://github.com/buildwf/fif-spa",
   "bugs": {
-    "url": "https://github.com/voidzero-dev/void/issues"
+    "url": "https://github.com/buildwf/fif-spa/issues"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/voidzero-dev/void.git",
+    "url": "git+https://github.com/buildwf/fif-spa.git",
     "directory": "packages/platform"
   },
   "files": [
@@ -51,7 +51,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@nosam/deploy-core": "workspace:*",
+    "@buildwf/deploy-core": "workspace:*",
     "pathslash": "catalog:"
   },
   "devDependencies": {

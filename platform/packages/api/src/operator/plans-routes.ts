@@ -1,4 +1,4 @@
-import { PLAN_EDITABLE_LIMIT_KEYS, parsePlatformPlanId } from '@nosam/platform/plans';
+import { PLAN_EDITABLE_LIMIT_KEYS, parsePlatformPlanId } from '@buildwf/platform/plans';
 import { Hono } from 'hono';
 import { planAiLoggingMode } from '../ai-logging-plans.ts';
 import type { ApiEnv } from '../env.ts';

@@ -26,6 +26,10 @@
   "dependencies": {
     "@astryxdesign/core": "catalog:",
     "@astryxdesign/theme-neutral": "catalog:",
+    "@buildwf/bwf": "workspace:*",
+    "@buildwf/deploy-core": "workspace:*",
+    "@buildwf/edge": "workspace:*",
+    "@buildwf/platform": "workspace:*",
     "@cloudflare/containers": "0.3.7",
     "@cloudflare/sandbox": "catalog:",
     "@eeao/core": "link:../../../eeaao/typescript/packages/core",
@@ -34,9 +38,6 @@
     "@modelcontextprotocol/server": "^2.4.0",
     "@nkzw/fate": "catalog:",
     "@stylexjs/stylex": "catalog:",
-    "@nosam/deploy-core": "workspace:*",
-    "@nosam/edge": "workspace:*",
-    "@nosam/platform": "workspace:*",
     "@xterm/headless": "^6.0.0",
     "agents": "^0.33.0",
     "arktype": "catalog:",
@@ -53,8 +54,7 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-fate": "catalog:",
-    "shiki": "catalog:",
-    "nosam": "workspace:*"
+    "shiki": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:platform",

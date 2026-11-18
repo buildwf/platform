@@ -130,7 +130,7 @@ jobs:
       # build:core produces the core package and its workspace dependencies, including
       # dist/cli/cli.mjs and the built `nosam` plugin the deploy uses to build the app.
       - run: vp run build:core
-      - run: vp test run packages/nosam/test/e2e/cloudflare-deploy-live.test.ts
+      - run: vp test run packages/bwf/test/e2e/cloudflare-deploy-live.test.ts
 
   done:
     runs-on: ubuntu-latest

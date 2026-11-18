@@ -719,7 +719,7 @@ describe('POST /projects/:id/github', () => {
     expect(persisted?.workflow_path).toBe('.github/workflows/deploy.yaml');
   });
 
-  it('defaults workflow_path to the scaffolded nosam-deploy.yml when omitted', async () => {
+  it('defaults workflow_path to the scaffolded bwf-deploy.yml when omitted', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'gh-wf-default');
     await upsertGitHubInstallation(env.db, {
@@ -742,7 +742,7 @@ describe('POST /projects/:id/github', () => {
 
     expect(res.status).toBe(200);
     const persisted = await getGitHubConnection(env.db, project.id);
-    expect(persisted?.workflow_path).toBe('.github/workflows/nosam-deploy.yml');
+    expect(persisted?.workflow_path).toBe('.github/workflows/bwf-deploy.yml');
   });
 
   it('returns 400 when workflowPath is outside .github/workflows/', async () => {
@@ -2586,7 +2586,7 @@ describe('PATCH /projects/:id/github', () => {
     expect(((await res.json()) as { error: string }).error).toBe('invalid workflowPath');
     // The connection's workflow_path is unchanged (still the default).
     const persisted = await getGitHubConnection(env.db, project.id);
-    expect(persisted?.workflow_path).toBe('.github/workflows/nosam-deploy.yml');
+    expect(persisted?.workflow_path).toBe('.github/workflows/bwf-deploy.yml');
   });
 
   it('returns 404 when there is no connection to patch', async () => {
@@ -2738,7 +2738,7 @@ describe('PATCH /projects/:id/github', () => {
       new Request(`http://localhost/projects/${project.id}/github`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
-        // github_actions executor, default workflow (.github/workflows/nosam-deploy.yml).
+        // github_actions executor, default workflow (.github/workflows/bwf-deploy.yml).
         body: JSON.stringify({
           installationId: '783',
           repoFullName: 'acme/app',
@@ -2959,7 +2959,7 @@ describe('DELETE /projects/:id/github', () => {
 
   // Disconnecting must terminalize ALL in-flight builds (queued +
   // active, both executors). A still-running container build already minted a
-  // NOSAM_TOKEN, and its build row staying active would keep the middleware
+  // BWF_TOKEN, and its build row staying active would keep the middleware
   // guard passing, so the container could keep publishing from a now-disconnected
   // repo. Terminalizing the row (→ cancelled) revokes the token; the DO `/cancel`
   // is a best-effort container teardown on top. github_actions builds are also

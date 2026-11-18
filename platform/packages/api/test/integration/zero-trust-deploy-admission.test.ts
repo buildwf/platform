@@ -123,7 +123,7 @@ describe('Zero Trust deploy admission and recovery', () => {
     expect(await response.json()).toEqual({
       event: 'error',
       error: 'zero trust not ready',
-      message: expect.stringContaining('nosam project zero-trust reconcile'),
+      message: expect.stringContaining('bwf project zero-trust reconcile'),
     });
     expect(fetch).not.toHaveBeenCalled();
     expect(
@@ -154,7 +154,7 @@ describe('Zero Trust deploy admission and recovery', () => {
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
       error: 'zero trust not ready',
-      message: expect.stringContaining('nosam project zero-trust reconcile'),
+      message: expect.stringContaining('bwf project zero-trust reconcile'),
     });
   });
 

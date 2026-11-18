@@ -55,7 +55,7 @@ afterEach(() => {
 });
 
 // A scoped (aud:'deploy') token authenticates as the project owner but is
-// minted only to run `nosam deploy` against ONE project. The authMiddleware
+// minted only to run `bwf deploy` against ONE project. The authMiddleware
 // allowlist must let the deploy flow's own endpoints through while denying
 // every other owner-scoped /projects/* route (delete, secrets PUT, github
 // connect, ...) and any cross-project use.

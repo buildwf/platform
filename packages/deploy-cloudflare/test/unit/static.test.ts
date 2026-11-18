@@ -27,7 +27,7 @@ describe('Cloudflare static deployment', () => {
         redirectRules: [{ source: '/old', destination: '/new', status: 301 }],
       }),
     ).toBe(
-      `import { createStaticEdgeHandler } from "@nosam/edge";\n` +
+      `import { createStaticEdgeHandler } from "@buildwf/edge";\n` +
         `export default createStaticEdgeHandler({"redirectRules":[{"source":"/old","destination":"/new","status":301}]});\n`,
     );
   });
@@ -65,7 +65,7 @@ describe('Cloudflare static deployment', () => {
       configPath,
       name: 'my-site',
       accountId: 'account-id',
-      main: '.nosam/deploy/cloudflare/edge.mjs',
+      main: '.bwf/deploy/cloudflare/edge.mjs',
       assetsDirectory: 'dist',
       compatibilityDate: '2026-09-11',
       assetConfig: { not_found_handling: 'single-page-application' as const },
@@ -79,7 +79,7 @@ describe('Cloudflare static deployment', () => {
     expect(parsed).toMatchObject({
       name: 'my-site',
       account_id: 'account-id',
-      main: '.nosam/deploy/cloudflare/edge.mjs',
+      main: '.bwf/deploy/cloudflare/edge.mjs',
       compatibility_date: '2026-09-11',
       no_bundle: false,
       migrations: [{ tag: 'v1', new_sqlite_classes: ['Room'] }],
@@ -191,7 +191,7 @@ describe('Cloudflare static deployment', () => {
   it('stages assets without routing files that the thin Worker already consumed', () => {
     const root = mkdtempSync(join(tmpdir(), 'nosam-static-assets-'));
     const sourceDirectory = join(root, 'public');
-    const destinationDirectory = join(root, '.nosam/deploy/cloudflare/assets');
+    const destinationDirectory = join(root, '.bwf/deploy/cloudflare/assets');
     mkdirSync(join(sourceDirectory, 'nested'), { recursive: true });
     writeFileSync(join(sourceDirectory, 'index.html'), '<h1>Home</h1>');
     writeFileSync(join(sourceDirectory, '_headers'), '/*\n  X-Test: yes\n');

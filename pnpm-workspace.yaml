@@ -99,7 +99,7 @@ peerDependencyRules:
 minimumReleaseAgeExclude:
   - '@cloudflare/*'
   - '@nkzw/*'
-  - '@nosam/*'
+  - '@buildwf/*'
   - '@voidzero-dev/*'
   - 'miniflare'
   - 'workerd'

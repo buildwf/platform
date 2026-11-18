@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { canonicalJson } from '@nosam/deploy-core';
+import { canonicalJson } from '@buildwf/deploy-core';
 import { eq } from 'drizzle-orm';
 import {
   describe,
@@ -103,7 +103,7 @@ type D1MockState = {
    * Defaults to `true` when `trackingRows` is pre-populated (the test is
    * simulating an existing project) and `false` otherwise.
    */
-  nosamTableExists: boolean;
+  bwfTableExists: boolean;
   /**
    * When `true`, the mock tracks identical application CREATE TABLE strings
    * across calls and returns "already exists" on the second+ occurrence.
@@ -121,14 +121,14 @@ function createD1State(init: Partial<D1MockState> = {}): D1MockState {
     legacyRows: init.legacyRows ? new Map(init.legacyRows) : undefined,
     failingSqlPatterns: init.failingSqlPatterns ?? [],
     queries: [],
-    nosamTableExists: init.nosamTableExists ?? trackingRows.size > 0,
+    bwfTableExists: init.bwfTableExists ?? trackingRows.size > 0,
     simulateDuplicateCreate: init.simulateDuplicateCreate,
     _seenCreateSql: init.simulateDuplicateCreate ? new Set() : undefined,
   };
 }
 
 function makeQueryD1(state: D1MockState) {
-  const noNosamTable = () => cfError('no such table: _void_migrations', 400);
+  const noBwfTable = () => cfError('no such table: _void_migrations', 400);
 
   return (_url: string, init?: RequestInit): Response => {
     const parsed = init?.body ? JSON.parse(String(init.body)) : {};
@@ -148,7 +148,7 @@ function makeQueryD1(state: D1MockState) {
 
     // CREATE tracking table — always succeeds and flips the table-exists bit.
     if (/CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+_void_migrations/i.test(sql)) {
-      state.nosamTableExists = true;
+      state.bwfTableExists = true;
       return cfSuccess([{ results: [] }]);
     }
 
@@ -162,8 +162,8 @@ function makeQueryD1(state: D1MockState) {
     // production code ever issues this before the CREATE, the mock surfaces
     // a "no such table" error exactly like real D1 would.
     if (/INSERT\s+OR\s+IGNORE\s+INTO\s+_void_migrations[\s\S]*FROM\s+_migrations/i.test(sql)) {
-      if (!state.nosamTableExists) {
-        return noNosamTable();
+      if (!state.bwfTableExists) {
+        return noBwfTable();
       }
       if (state.legacyRows) {
         for (const [name, appliedAt] of state.legacyRows) {
@@ -183,8 +183,8 @@ function makeQueryD1(state: D1MockState) {
 
     // SELECT name FROM _void_migrations (runRemoteMigrations applied set)
     if (/SELECT\s+name\s+FROM\s+_void_migrations\s*$/i.test(sql.trim())) {
-      if (!state.nosamTableExists) {
-        return noNosamTable();
+      if (!state.bwfTableExists) {
+        return noBwfTable();
       }
       const results = Array.from(state.trackingRows.keys()).map((name) => ({ name }));
       return cfSuccess([{ results }]);
@@ -195,8 +195,8 @@ function makeQueryD1(state: D1MockState) {
     // tracking row that landed between the loser's preflight and its failing
     // SQL is correctly observed.
     if (/SELECT\s+name\s+FROM\s+_void_migrations\s+WHERE\s+name\s*=\s*\?/i.test(sql)) {
-      if (!state.nosamTableExists) {
-        return noNosamTable();
+      if (!state.bwfTableExists) {
+        return noBwfTable();
       }
       const name = Array.isArray(params) ? (params[0] as string | undefined) : undefined;
       const found = name !== undefined && state.trackingRows.has(name) ? [{ name }] : [];
@@ -205,8 +205,8 @@ function makeQueryD1(state: D1MockState) {
 
     // SELECT name, applied_at FROM _void_migrations (GET endpoint)
     if (/SELECT\s+name,\s*applied_at\s+FROM\s+_void_migrations/i.test(sql)) {
-      if (!state.nosamTableExists) {
-        return noNosamTable();
+      if (!state.bwfTableExists) {
+        return noBwfTable();
       }
       const results = Array.from(state.trackingRows.entries()).map(([name, applied_at]) => ({
         name,
@@ -229,8 +229,8 @@ function makeQueryD1(state: D1MockState) {
 
     // UPDATE rename
     if (/UPDATE\s+_void_migrations\s+SET\s+name\s*=\s*\?\s+WHERE\s+name\s*=\s*\?/i.test(sql)) {
-      if (!state.nosamTableExists) {
-        return noNosamTable();
+      if (!state.bwfTableExists) {
+        return noBwfTable();
       }
       let changes = 0;
       if (Array.isArray(params) && typeof params[0] === 'string' && typeof params[1] === 'string') {
@@ -253,8 +253,8 @@ function makeQueryD1(state: D1MockState) {
         sql,
       )
     ) {
-      if (!state.nosamTableExists) {
-        return noNosamTable();
+      if (!state.bwfTableExists) {
+        return noBwfTable();
       }
       const results: Array<{ name: string }> = [];
       if (Array.isArray(params)) {
@@ -274,8 +274,8 @@ function makeQueryD1(state: D1MockState) {
         sql,
       );
     if (tracking) {
-      if (!state.nosamTableExists) {
-        return noNosamTable();
+      if (!state.bwfTableExists) {
+        return noBwfTable();
       }
       const name = tracking[1].replaceAll("''", "'");
       if (state.trackingRows.has(name)) {
@@ -1007,7 +1007,7 @@ describe('POST /projects/:id/migrations/apply', () => {
     //   5. SELECT name FROM _void_migrations (applied set)
     // Any reordering that moves an INSERT / UPDATE / SELECT on
     // _void_migrations before the CREATE would have been caught by the
-    // mock's `nosamTableExists` gating, but pinning the order here gives
+    // mock's `bwfTableExists` gating, but pinning the order here gives
     // the whole upgrade a single assertion to regress on.
     const upgradeSteps = state.queries
       .map((q) => q.sql)
@@ -1537,7 +1537,7 @@ describe('POST /projects/:id/migrations/apply', () => {
 
   it('blocks destructive SQL whose pragma is part of a longer line comment', async () => {
     // A line comment that mentions the pragma but is not standalone — e.g.
-    //   -- TODO: maybe add nosam:allow-destructive here?
+    //   -- TODO: maybe add @buildwf/bwf:allow-destructive here?
     // — must NOT authorize. Only a line comment whose trimmed content is
     // exactly `-- nosam:allow-destructive` counts.
     const user = await createTestUser(env.db);
@@ -1554,7 +1554,8 @@ describe('POST /projects/:id/migrations/apply', () => {
           migrations: [
             {
               name: '001_drop.sql',
-              sql: '-- TODO: maybe add -- nosam:allow-destructive here?\n' + 'DROP TABLE users',
+              sql:
+                '-- TODO: maybe add -- @buildwf/bwf:allow-destructive here?\n' + 'DROP TABLE users',
             },
           ],
         }),

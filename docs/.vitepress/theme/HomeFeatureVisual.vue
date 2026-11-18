@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import RiveAnimation from '@components/shared/RiveAnimation.vue';
-import frameworksAnimation from './assets/animations/640_x_320_vite_frameworks_diamond.riv';
 import connectorsAnimation from './assets/animations/640_x_320_nosam_connectors.riv';
+import frameworksAnimation from './assets/animations/640_x_320_vite_frameworks_diamond.riv';
 import StackAndShip from './game/StackAndShip.vue';
 
 defineProps<{
@@ -9,8 +9,8 @@ defineProps<{
 }>();
 
 const descriptions = {
-  stack: 'Animated illustration of Nosam connectors.',
-  frameworks: 'Animated illustration of Nosam framework integrations.',
+  stack: 'Animated illustration of bwf connectors.',
+  frameworks: 'Animated illustration of bwf framework integrations.',
 };
 </script>
 

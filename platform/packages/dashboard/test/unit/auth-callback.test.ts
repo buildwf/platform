@@ -90,9 +90,9 @@ describe('dashboard auth callback', () => {
 
     expect(response.status).toBe(302);
     expect(response.headers.get('Location')).toBe('https://dashboard.example.com/login');
-    expect(response.headers.getSetCookie().some((cookie) => cookie.startsWith('nosam_token='))).toBe(
-      false,
-    );
+    expect(
+      response.headers.getSetCookie().some((cookie) => cookie.startsWith('nosam_token=')),
+    ).toBe(false);
   });
 
   it('redeems localhost managed-login codes with the cookie-bound PKCE verifier', async () => {
@@ -158,7 +158,9 @@ describe('localhost token bypass', () => {
     expect(cookies).toEqual(
       expect.arrayContaining([expect.stringContaining('nosam_token=test-jwt;')]),
     );
-    expect(cookies).toEqual(expect.arrayContaining([expect.stringContaining('nosam_auth_nonce=;')]));
+    expect(cookies).toEqual(
+      expect.arrayContaining([expect.stringContaining('nosam_auth_nonce=;')]),
+    );
   });
 
   it('rejects token without nonce cookie on localhost', async () => {

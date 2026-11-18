@@ -2,7 +2,7 @@ import {
   parsePlatformAccessProtection,
   parsePlatformAdmissionPolicy,
   validatePlatformAdmissionPolicy,
-} from '@nosam/platform';
+} from '@buildwf/platform';
 import { and, eq, gt, isNull, ne, sql } from 'drizzle-orm';
 import { createOAuthAccount, getUserByOAuthAccount, type Db } from '../db.ts';
 import {

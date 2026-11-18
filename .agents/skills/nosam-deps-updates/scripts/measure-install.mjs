@@ -24,7 +24,7 @@ const { values } = parseArgs({
 });
 if (values.help) {
   console.log(
-    'Usage: node measure-install.mjs --repo <Nosam checkout> --out <new directory> [--archives <captured cohort>]',
+    'Usage: node measure-install.mjs --repo <bwf checkout> --out <new directory> [--archives <captured cohort>]',
   );
 } else {
   try {
@@ -58,7 +58,7 @@ async function measure() {
     '--out must be a new directory; existing results are never overwritten.',
   );
   const registryModule = join(repository, '.github/scripts/packed-registry.mjs');
-  assert(existsSync(registryModule), 'Not a Nosam checkout: packed registry helper missing.');
+  assert(existsSync(registryModule), 'Not a bwf checkout: packed registry helper missing.');
   const { inspectPackage, startPackedRegistry } = await import(pathToFileURL(registryModule));
   const publicPackages = readdirSync(join(repository, 'packages'), { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -92,14 +92,14 @@ async function measure() {
       `Incomplete cohort: missing ${manifest.name}.`,
     );
   }
-  const version = packages.find((pkg) => pkg.manifest.name === 'nosam')?.manifest.version;
+  const version = packages.find((pkg) => pkg.manifest.name === '@buildwf/bwf')?.manifest.version;
   assert(version, 'Captured cohort must include void.');
   assert(
-    packages.some((pkg) => pkg.manifest.name === '@nosam/platform'),
-    'Captured cohort must include @nosam/platform.',
+    packages.some((pkg) => pkg.manifest.name === '@buildwf/platform'),
+    'Captured cohort must include @buildwf/platform.',
   );
   for (const pkg of packages) {
-    if (pkg.manifest.name === 'nosam' || pkg.manifest.name.startsWith('@nosam/')) {
+    if (pkg.manifest.name === '@buildwf/bwf' || pkg.manifest.name.startsWith('@buildwf/')) {
       assert.equal(
         pkg.manifest.version,
         version,
@@ -112,7 +112,7 @@ async function measure() {
     const config = join(output, '.npmrc');
     writeFileSync(
       join(output, 'package.json'),
-      JSON.stringify({ private: true, dependencies: { nosam: version } }, null, 2) + '\n',
+      JSON.stringify({ private: true, dependencies: { bwf: version } }, null, 2) + '\n',
     );
     writeFileSync(
       config,
@@ -149,7 +149,7 @@ async function measure() {
       import { findPackageJSON } from 'node:module';
       import { readFileSync } from 'node:fs';
       import { pathToFileURL } from 'node:url';
-      const file = findPackageJSON('@nosam/platform', import.meta.resolve('nosam'));
+      const file = findPackageJSON('@buildwf/platform', import.meta.resolve('@buildwf/bwf'));
       const entry = JSON.parse(readFileSync(file, 'utf8')).exports['./installer'].import;
       const { resolvePlatformRuntime } = await import(new URL(entry, pathToFileURL(file)));
       if (resolvePlatformRuntime().manifest.platformVersion !== ${JSON.stringify(version)}) throw new Error('Packaged runtime version mismatch.');

@@ -34,7 +34,7 @@ export type GithubOidcClaims = Readonly<{
   // `OWNER/REPO/.github/workflows/FILE@REF`. `job_workflow_ref` is the same for
   // the workflow file that actually defines the running job (it differs from
   // `workflow_ref` only when the job comes from a reusable workflow). The
-  // exchange binds the deploy token to the scaffolded `nosam-deploy.yml` via
+  // exchange binds the deploy token to the scaffolded `bwf-deploy.yml` via
   // these so an arbitrary other workflow in the repo can't act as a deploy
   // oracle.
   workflow_ref: string;

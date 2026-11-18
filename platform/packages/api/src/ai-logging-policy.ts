@@ -28,4 +28,4 @@ export {
   type PlanAiLoggingPublish,
   type PlanAiLoggingSettings,
   type PublishedAiLoggingMode,
-} from '@nosam/platform/ai-logging';
+} from '@buildwf/platform/ai-logging';

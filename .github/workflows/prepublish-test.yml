@@ -62,7 +62,7 @@ jobs:
       contents: read
     env:
       NOSAM_PLATFORM_SOURCE_REVISION: ${{ github.sha }}
-      NOSAM_PACKED_SUITE: ${{ needs.scope.outputs.suite }}
+      BWF_PACKED_SUITE: ${{ needs.scope.outputs.suite }}
     strategy:
       fail-fast: false
       matrix:
@@ -87,11 +87,11 @@ jobs:
       - run: vp run build
       - name: Prepublish Test with ${{ matrix.pm }}
         env:
-          NOSAM_PACKED_PM: ${{ matrix.pm }}
+          BWF_PACKED_PM: ${{ matrix.pm }}
         run: node .github/scripts/packed-consumer.mjs
       - name: Prepublish Test with Vite+ and ${{ matrix.pm }}
         env:
-          NOSAM_PACKED_PM: ${{ matrix.pm }}
-          NOSAM_PACKED_FRAMEWORK: react
-          NOSAM_PACKED_TOOLCHAIN: vite-plus
+          BWF_PACKED_PM: ${{ matrix.pm }}
+          BWF_PACKED_FRAMEWORK: react
+          BWF_PACKED_TOOLCHAIN: vite-plus
         run: node .github/scripts/packed-consumer.mjs

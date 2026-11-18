@@ -1,5 +1,5 @@
-import { tokenizeSql } from '@nosam/deploy-core';
-import type { ProjectZeroTrustRouting } from '@nosam/edge';
+import { tokenizeSql } from '@buildwf/deploy-core';
+import type { ProjectZeroTrustRouting } from '@buildwf/edge';
 import { sql as drizzleSql } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import {
@@ -2673,7 +2673,7 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
 
   const userId = context.user.id;
   try {
-    // `nosam platform uninstall --purge-resources` holds this lock across its last
+    // `bwf platform uninstall --purge-resources` holds this lock across its last
     // check for projects and records the uninstall before releasing it, so a
     // project either commits before that check or is refused here.
     const project = await context.db.transaction(async (tx) => {
@@ -2695,7 +2695,7 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
       zeroTrust = await initializeNewProjectZeroTrust(context.env, context.db, project.id);
     } catch (error) {
       zeroTrustWarning =
-        'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Nosam retries within an hour. To retry now, a project owner or admin can run `nosam project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.';
+        'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Nosam retries within an hour. To retry now, a project owner or admin can run `bwf project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.';
       console.error('[zero-trust] new project initialization failed', {
         projectId: project.id,
         error,
@@ -2737,7 +2737,7 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
       // more: whether CF mails a verification link (fresh address) or
       // adopts one the owner already verified is decided by the add above,
       // which has not run yet. The CLI prints this so the verification
-      // email that may follow is explained; `nosam email destinations`
+      // email that may follow is explained; `bwf email destinations`
       // shows the outcome.
       return {
         ...project,

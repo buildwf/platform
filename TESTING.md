@@ -1,12 +1,12 @@
-# Testing Nosam
+# Testing bwf
 
 ## Local verification
 
 Start with the smallest relevant test file or case while developing:
 
 ```sh
-vp test run packages/nosam/test/unit/plugin-routing.test.ts
-vp test run packages/nosam/test/unit/plugin-routing.test.ts -t 'routing'
+vp test run packages/bwf/test/unit/plugin-routing.test.ts
+vp test run packages/bwf/test/unit/plugin-routing.test.ts -t 'routing'
 vp run check
 ```
 
@@ -58,8 +58,8 @@ artifact check.
 For a leaf-module edit with known import-based consumers, Vitest's native related command is useful:
 
 ```sh
-vp test related --run packages/nosam/src/runtime/sse.ts --project unit --project unit-pglite --project cli-unit
-vp test list packages/nosam/test/unit/plugin-routing.test.ts --filesOnly
+vp test related --run packages/bwf/src/runtime/sse.ts --project unit --project unit-pglite --project cli-unit
+vp test list packages/bwf/test/unit/plugin-routing.test.ts --filesOnly
 ```
 
 Agents should run a focused regression first, then affected verification and `vp run check` after a
@@ -100,7 +100,7 @@ isolation enabled: these suites mock globals, keep database state, and exercise 
 Cloudflare Vite build/dev suites belong in the integration pool: their native macOS file watchers
 can crash Node while a worker thread is being torn down. Keep these suites in separate processes.
 The full verification command builds before running the platform's type-aware lint, so it also
-works without a pre-existing dashboard `.nosam/tsconfig.json`.
+works without a pre-existing dashboard `.bwf/tsconfig.json`.
 
 ## Reusing transforms
 
@@ -121,9 +121,9 @@ the cache for V8 coverage, and `NODE_V8_COVERAGE` disables it too, to preserve p
 Vitest 5's import diagnostics are opt-in so ordinary runs stay quiet:
 
 ```sh
-vp run test:profile packages/nosam/test/unit/plugin-routing.test.ts
+vp run test:profile packages/bwf/test/unit/plugin-routing.test.ts
 vp run test:profile --project 'platform-api-integration*' api-delete-accounting.test.ts
-vp test doctor packages/nosam/test/unit/plugin-routing.test.ts
+vp test doctor packages/bwf/test/unit/plugin-routing.test.ts
 ```
 
 The profile shortcut enables `experimental.importDurations.print` and reports the top 20 imports
@@ -184,7 +184,7 @@ JavaScript interprets timestamps without a timezone as local time. Keep explicit
 regressions for behavior that must work across timezones.
 
 Platform CI runs the candidate's PostgreSQL concurrency cases in a separate job. The selector
-finds API integration files that read `process.env.NOSAM_TEST_DATABASE_URL`, excluding mentions
+finds API integration files that read `process.env.BWF_TEST_DATABASE_URL`, excluding mentions
 in comments or strings. Each selected file runs against its own database clone, with two files
 in flight, using the same bounded runner as schema compatibility. This exercises real locks
 without repeating the entire API suite. To run it locally, migrate a disposable loopback
@@ -236,12 +236,12 @@ Run these checks on Linux or macOS:
 ```sh
 vp run build
 node .github/scripts/packed-consumer.mjs
-NOSAM_PACKED_SUITE=full node .github/scripts/packed-consumer.mjs
+BWF_PACKED_SUITE=full node .github/scripts/packed-consumer.mjs
 node --test --test-timeout=10000 .github/scripts/packed-*.test.mjs
 ```
 
-`NOSAM_PACKED_PM=npm|pnpm` selects a focused
-local run. `NOSAM_PACKED_TOOLCHAIN=vite-plus` verifies Vite+ initialization, the workspace's
+`BWF_PACKED_PM=npm|pnpm` selects a focused
+local run. `BWF_PACKED_TOOLCHAIN=vite-plus` verifies Vite+ initialization, the workspace's
 tested Vite+ version, the generated `vp` build/dev/preview commands, and `vp test` with the
 app's Vite config. CI checks a React
 app with Vite+ for both package managers alongside the plain Vite coverage.
@@ -326,16 +326,16 @@ explicit, manually reviewed operation against exact resource IDs.
 
 ### Select the Cloudflare account
 
-Authenticate and inspect the accounts available to Nosam:
+Authenticate and inspect the accounts available to bwf:
 
 ```sh
-nosam cloudflare login
-nosam cloudflare status
+bwf cloudflare login
+bwf cloudflare status
 ```
 
 Use the intended test account rather than an account name embedded in a script. Pin it by either:
 
-- letting `nosam init` write `account_id` to the ignored fixture's `wrangler.jsonc`; or
+- letting `bwf init` write `account_id` to the ignored fixture's `wrangler.jsonc`; or
 - setting `CLOUDFLARE_ACCOUNT_ID` in the current shell.
 
 When a version has no preview URL, also set `CLOUDFLARE_WORKERS_SUBDOMAIN` to the account's
@@ -357,7 +357,7 @@ For a separate Access-protected readiness test:
   `cloudflared access token --app=https://<worker>.<account-subdomain>.workers.dev`;
 - in CI, use an admitted `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` service-token pair.
 
-Nosam sends these credentials only to its guarded readiness request. Do not put them in
+bwf sends these credentials only to its guarded readiness request. Do not put them in
 `wrangler.jsonc`, `.env`, fixture source, command-line arguments, or tracked files.
 
 ### Baseline smoke test
@@ -366,14 +366,14 @@ From the ignored fixture's root, initialize it for the operator's account and de
 same path a user runs:
 
 ```sh
-nosam init
-nosam deploy --platform cloudflare
+bwf init
+bwf deploy --platform cloudflare
 ```
 
 For a static fixture whose output already exists:
 
 ```sh
-nosam deploy --dir <output-directory> --platform cloudflare
+bwf deploy --dir <output-directory> --platform cloudflare
 ```
 
 At minimum, verify that the reported URL serves the new build and that a second deploy safely

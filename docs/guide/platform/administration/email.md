@@ -11,13 +11,13 @@ These commands apply to a platform that enables email. Every project can send fr
 
 Shared inbound mail uses one exact routing rule per receiving project and enables Cloudflare’s per-zone plus addressing. Creating a project or deploying an app that only sends mail consumes no inbound rule. Existing rules and the apex catch-all remain in place. Cloudflare normally allows [200 routing rules per domain](https://developers.cloudflare.com/email-service/platform/limits/); remove unused rules or request a higher limit if the shared domain reaches capacity. An unrelated rule for a project’s base address or a plus address blocks its setup until that conflict is removed.
 
-A project owner can set a permanent, shorter address with [`nosam email alias <name>`](../../../reference/cli/email.md#nosam-email-alias). Receiving mail at both the slug and alias uses two routing rules. Resolve conflicting rules and check the domain's rule limit before adding an alias.
+A project owner can set a permanent, shorter address with [`bwf email alias <name>`](../../../reference/cli/email.md#nosam-email-alias). Receiving mail at both the slug and alias uses two routing rules. Resolve conflicting rules and check the domain's rule limit before adding an alias.
 
 If recipient creation is interrupted, inspect its retained intent:
 
 ```sh
-nosam platform email shared-recipients --project my-app
-nosam platform email shared-recipient-resolve <recipient-id> --ended --outcome not-applied --reason "Provider audit confirms the request did not create a rule" --plan
+bwf platform email shared-recipients --project my-app
+bwf platform email shared-recipient-resolve <recipient-id> --ended --outcome not-applied --reason "Provider audit confirms the request did not create a rule" --plan
 ```
 
 Wait until the reported recovery time, confirm the original execution ended,
@@ -32,7 +32,7 @@ for the recovery requirements.
 
 ### Mail that the platform sends {#platform-sender}
 
-Platform invitations, welcome mail, and deployment alerts use `noreply@<mail domain>` with the platform's display name. Nosam configures this sender automatically.
+Platform invitations, welcome mail, and deployment alerts use `noreply@<mail domain>` with the platform's display name. bwf configures this sender automatically.
 
 Mail to an address that is not verified needs Cloudflare Email Sending onboarding and [Workers Paid](https://dash.cloudflare.com/?to=/:account/workers/plans).
 
@@ -41,10 +41,10 @@ Mail to an address that is not verified needs Cloudflare Email Sending onboardin
 By default, mail from the shared sender reaches only the recipients each project has verified. For a team whose applications mainly mail colleagues, widen that once for the whole installation:
 
 ```sh
-nosam platform email policy
-nosam platform email policy-set domains --domains example.com,corp.example.net
-nosam platform email policy-set any
-nosam platform email policy-set verified
+bwf platform email policy
+bwf platform email policy-set domains --domains example.com,corp.example.net
+bwf platform email policy-set any
+bwf platform email policy-set verified
 ```
 
 Choose a policy in the admin UI's **Email** page or with the commands above:
@@ -62,7 +62,7 @@ Policy changes apply to new sends; admitted attempts may finish.
 Each project has 200 recipient submissions per UTC calendar month and 10 in a rolling 60-second window by default. An attempt stays charged once it starts, including a failed or uncertain outcome. Raise or lower a project's caps by id or slug:
 
 ```sh
-nosam platform email limit hr-portal --monthly 2000 --burst 30
+bwf platform email limit hr-portal --monthly 2000 --burst 30
 ```
 
 The project's page in the admin UI shows the current values and clears an override.
@@ -73,7 +73,7 @@ If a sender stops after beginning a provider call, its unresolved attempt blocks
 removal of the project or sender domain. Inspect the attempt ID and start time:
 
 ```sh
-nosam platform email attempts --project hr-portal
+bwf platform email attempts --project hr-portal
 ```
 
 First confirm that the original execution has ended through your Worker logs or
@@ -81,8 +81,8 @@ incident records. Once the attempt is at least 24 hours old, resolve it with an
 audit reason that contains no recipient address or message content:
 
 ```sh
-nosam platform email attempt-resolve <attempt-id> --ended --reason "Original Worker execution ended; provider outcome could not be verified" --plan
-nosam platform email attempt-resolve <attempt-id> --ended --reason "Original Worker execution ended; provider outcome could not be verified"
+bwf platform email attempt-resolve <attempt-id> --ended --reason "Original Worker execution ended; provider outcome could not be verified" --plan
+bwf platform email attempt-resolve <attempt-id> --ended --reason "Original Worker execution ended; provider outcome could not be verified"
 ```
 
 This records the send as `outcome_unknown` and releases its cleanup fence. The
@@ -93,7 +93,7 @@ while its original execution may still be active.
 Inspect a project's retained receipt and recipient outcomes with:
 
 ```sh
-nosam platform email logs hr-portal --page 1 --limit 50 --json
+bwf platform email logs hr-portal --page 1 --limit 50 --json
 ```
 
 Logs include operation IDs, recorded outcomes, provider references, and error codes.
@@ -102,28 +102,28 @@ period expires. Message bodies, subjects, attachments, and credentials are not l
 
 ### Registering email domains for projects
 
-Your users may hold no Cloudflare account. Tell the platform that administrators register email domains, so `nosam email domain add` prints the command to ask you for instead of opening a token-creation page:
+Your users may hold no Cloudflare account. Tell the platform that administrators register email domains, so `bwf email domain add` prints the command to ask you for instead of opening a token-creation page:
 
 ```sh
-nosam platform email settings-set --domains admin
+bwf platform email settings-set --domains admin
 ```
 
 Then register a domain for a project. The zone must be in the platform's Cloudflare account; the platform's own credential does the setup, and no Cloudflare credential is stored per domain:
 
 ```sh
-nosam platform email domain-add example.com --project hr-portal
-nosam platform email domain-status example.com
-nosam platform email domain-rotate-secret example.com
-nosam platform email domains
+bwf platform email domain-add example.com --project hr-portal
+bwf platform email domain-status example.com
+bwf platform email domain-rotate-secret example.com
+bwf platform email domains
 ```
 
 Use the apex of the selected Cloudflare zone. Platform-managed custom inbound email uses its catch-all, which does not cover subdomains; choose an apex without another mail provider or use the platform’s shared mail address. `domain-status` reports inbound, outbound, and management readiness separately. Follow any required DNS or Cloudflare dashboard step, then use `domain-sync` to reconcile. Use `domain-rotate-secret` when you need to replace the zone ingress credential explicitly. Email Sending onboarding needs Workers Paid; after upgrading, `domain-sync` re-attempts it. For a zone in another Cloudflare account, pipe an API token for that account on standard input:
 
 ```sh
-nosam platform email domain-add other.example --project hr-portal --token-stdin --yes < token.txt
+bwf platform email domain-add other.example --project hr-portal --token-stdin --yes < token.txt
 ```
 
-Project owners see administrator-registered domains in `nosam email domain list` and `status`; `status` names the `nosam platform email` command for any step they cannot take themselves, and `sync` and `remove` point them at `domain-sync` and `domain-remove`. A domain an owner registered before you switched to `admin` stays theirs to renew, sync and remove. The runtime token needs the [email permissions](/guide/platform/installation/credentials#enable-email) for this to work.
+Project owners see administrator-registered domains in `bwf email domain list` and `status`; `status` names the `bwf platform email` command for any step they cannot take themselves, and `sync` and `remove` point them at `domain-sync` and `domain-remove`. A domain an owner registered before you switched to `admin` stays theirs to renew, sync and remove. The runtime token needs the [email permissions](/guide/platform/installation/credentials#enable-email) for this to work.
 
 A permission refusal leaves setup blocked. After correcting it, run `domain-sync`
 to resume that same setup operation; repeat `domain-rotate-secret` to resume a
@@ -133,7 +133,7 @@ to finish the retained cleanup. If its token has expired or been revoked, provid
 a replacement scoped to the same account and zone:
 
 ```sh
-nosam platform email domain-remove other.example --token-stdin --yes < token.txt
+bwf platform email domain-remove other.example --token-stdin --yes < token.txt
 ```
 
 This recovery is available only after project deletion has begun and no other
@@ -145,8 +145,8 @@ routing, Worker, secret, catch-all, or Sending resource named by the preview,
 and use its recovery fence:
 
 ```sh
-nosam platform email operation-resolve <operation-id> --ended --outcome <applied|not-applied> --reason "Provider state verified" --plan
-nosam platform email operation-resolve <operation-id> --ended --outcome <applied|not-applied> --reason "Provider state verified"
+bwf platform email operation-resolve <operation-id> --ended --outcome <applied|not-applied> --reason "Provider state verified" --plan
+bwf platform email operation-resolve <operation-id> --ended --outcome <applied|not-applied> --reason "Provider state verified"
 ```
 
 Run recovery with the same platform version that created the persisted intent.
@@ -159,7 +159,7 @@ from the unresolved cleanup step. Age alone never authorizes a retry.
 If an apex already receives mail with another provider, such as Microsoft 365 or Google Workspace, register it for sending only:
 
 ```sh
-nosam platform email domain-add brand.example --project hr-portal --outbound-only
+bwf platform email domain-add brand.example --project hr-portal --outbound-only
 ```
 
 The project can then send from any address on the apex, such as `support@brand.example`. Incoming mail, MX records, and the apex SPF record stay with your current provider.

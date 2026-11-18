@@ -1,6 +1,6 @@
+import { defineHandler } from '@buildwf/bwf';
+import { db, eq } from '@buildwf/bwf/db';
 import { users, posts } from '@schema';
-import { defineHandler } from 'nosam';
-import { db, eq } from 'nosam/db';
 
 export const GET = defineHandler(async () => {
   const all = await db

@@ -172,7 +172,7 @@ function runFile(root: string, file: string, databaseUrl: string): Promise<numbe
       ['test', 'run', '--project', 'platform-api-integration*', '--maxWorkers', '1', file],
       {
         cwd: root,
-        env: { ...process.env, NOSAM_TEST_DATABASE_URL: databaseUrl },
+        env: { ...process.env, BWF_TEST_DATABASE_URL: databaseUrl },
         stdio: 'inherit',
         detached: process.platform !== 'win32',
       },

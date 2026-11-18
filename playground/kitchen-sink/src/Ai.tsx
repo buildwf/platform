@@ -136,7 +136,7 @@ export default function AiPage() {
     <div>
       <h1>AI</h1>
       <p>
-        AI inference via <code>nosam/ai</code>.
+        AI inference via <code>bwf/ai</code>.
       </p>
 
       <h2>Model</h2>

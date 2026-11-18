@@ -2,7 +2,7 @@ import {
   isPlatformSignupAllowed,
   parsePlatformSignupAllowlistEntry,
   type PlatformSignupAllowlistEntry,
-} from '@nosam/platform';
+} from '@buildwf/platform';
 
 export type AllowlistEntry = PlatformSignupAllowlistEntry;
 

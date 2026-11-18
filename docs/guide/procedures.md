@@ -13,7 +13,7 @@ A procedure's name comes from its file and export. `procedures/contacts.ts` expo
 
 ```ts
 // procedures/contacts.ts
-import { procedure, signedIn } from 'nosam/procedure';
+import { procedure, signedIn } from '@buildwf/bwf/procedure';
 
 export const get = procedure()
   .auth(signedIn)
@@ -23,15 +23,15 @@ export const get = procedure()
   .handler(({ input, env }) => findContact(env, input.id));
 ```
 
-Each procedure must make every decision (authentication, input, output, authorization, errors, analytics, MCP, CLI and AI tool exposure), either by choosing one or by opting out with a reason. An unfinished procedure stops the Worker from starting, so `nosam deploy` fails instead of shipping it. `nosam gen procedure contacts.get` writes a starting point.
+Each procedure must make every decision (authentication, input, output, authorization, errors, analytics, MCP, CLI and AI tool exposure), either by choosing one or by opting out with a reason. An unfinished procedure stops the Worker from starting, so `bwf deploy` fails instead of shipping it. `bwf gen procedure contacts.get` writes a starting point.
 
 `signedIn` accepts the Better Auth session. Use `apiTokens` with `anyOf` to also accept bearer tokens from the CLI and agents.
 
 ## Calling procedures
 
 ```tsx
-import { rpc } from 'nosam/rpc';
-import { useCall } from 'nosam/rpc/react';
+import { rpc } from '@buildwf/bwf/rpc';
+import { useCall } from '@buildwf/bwf/rpc/react';
 
 function Contact({ id }: { id: string }) {
   const { data, error, loading, refetch } = useCall(rpc.contacts.get, { id });
@@ -43,6 +43,6 @@ await rpc.contacts.update({ id, name });
 
 Inputs, outputs and the error codes of a failed call are typed from the procedure. A failed call throws an `RpcError` with a `code` such as `UNAUTHENTICATED` or `INVALID_INPUT`. `useCall` tracks loading state, errors and refetch, and nothing else: wrap `rpc` in a cache if you need one.
 
-Types come from `.nosam/procedures.d.ts`, which `nosam dev`, `nosam build` and `nosam prepare` keep current. It imports only types, so no server code reaches the browser.
+Types come from `.bwf/procedures.d.ts`, which `bwf dev`, `bwf build` and `bwf prepare` keep current. It imports only types, so no server code reaches the browser.
 
-To call procedures from another origin or a script, create a client with `createRpc({ baseUrl, token })` from `nosam/rpc`.
+To call procedures from another origin or a script, create a client with `createRpc({ baseUrl, token })` from `@buildwf/bwf/rpc`.

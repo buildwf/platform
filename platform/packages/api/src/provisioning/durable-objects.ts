@@ -391,7 +391,7 @@ export async function storeDurableObjectSnapshot(
   for (const [path, asset] of Object.entries(
     (metadata.assetManifest as Record<string, AssetManifestEntry>) ?? {},
   )) {
-    if (!path.startsWith('/.nosam-deploy/')) {
+    if (!path.startsWith('/.bwf-deploy/')) {
       continue;
     }
     const bytes = assetsByHash.get(asset.hash)?.bytes;

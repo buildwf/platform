@@ -13,19 +13,19 @@ Clone your fork and install the workspace dependencies with Vite+:
 git clone https://github.com/your-org/nosam.git
 cd void
 vp install
-vpr install:nosam-dev
-nosam-dev --help
+vpr install:bwf-dev
+bwf-dev --help
 ```
 
 Use the Node.js version recorded in `.node-version`.
 
-`install:nosam-dev` builds the CLI, shared packages, and platform runtime, then makes this checkout's built CLI globally available as `nosam-dev`. Public packages export their built files, so run `vp run build:core` after later source changes to refresh the alias. The installer refuses to replace an unrelated global command. Remove only this checkout's alias with `vpr uninstall:nosam-dev`. The commands on these development pages run from the repository root.
+`install:bwf-dev` builds the CLI, shared packages, and platform runtime, then makes this checkout's built CLI globally available as `bwf-dev`. Public packages export their built files, so run `vp run build:core` after later source changes to refresh the alias. The installer refuses to replace an unrelated global command. Remove only this checkout's alias with `vpr uninstall:bwf-dev`. The commands on these development pages run from the repository root.
 
 ## Finding the Implementation
 
 | Directory                                            | Purpose                                                              |
 | ---------------------------------------------------- | -------------------------------------------------------------------- |
-| `packages/nosam`                                      | Framework, application runtime, and CLI                              |
+| `packages/bwf`                                       | Framework, application runtime, and CLI                              |
 | `packages/platform`                                  | Installer contracts, packaged Workers, and platform migrations       |
 | `packages/deploy-core`, `packages/deploy-cloudflare` | Shared deployment contracts and Cloudflare upload code               |
 | `platform/packages/api`                              | Users, projects, deployments, provisioning, and administrator API/UI |
@@ -35,7 +35,7 @@ Use the Node.js version recorded in `.node-version`.
 | `platform/packages/tail`                             | Runtime log ingestion                                                |
 | `platform/packages/dashboard`                        | Dashboard source and local UI components in `ui/`                    |
 
-The `@nosamcloud/*` names identify workspace implementation packages. Their `private: true` flags prevent publishing those packages to npm. Deployable core Workers are bundled into the public `@nosam/platform` package.
+The `@nosamcloud/*` names identify workspace implementation packages. Their `private: true` flags prevent publishing those packages to npm. Deployable core Workers are bundled into the public `@buildwf/platform` package.
 
 The core installer creates the API, dispatch, proxy, tail, and email gateway Workers. The dashboard and managed GitHub build services are available in the source tree but are not included in that installation. Adding an optional service requires its infrastructure, bindings, authentication, and capability configuration together.
 
@@ -84,7 +84,7 @@ SITE_DOMAIN=apps.example.com
 ```
 
 The helper refreshes an Access session before the dev server starts. Human
-dashboard requests require the user's Access session as well as their Nosam login;
+dashboard requests require the user's Access session as well as their bwf login;
 a service token does not represent that user. Service-token pairs are for scoped
 machine operations. This is dashboard development configuration; Access
 credentials are separate from platform login credentials.
@@ -117,6 +117,6 @@ vp test run
 vp run build:docs
 ```
 
-Platform integration tests use their local test database by default. To test against PostgreSQL, set `NOSAM_TEST_DATABASE_URL` to a disposable database: these tests clear tables between cases.
+Platform integration tests use their local test database by default. To test against PostgreSQL, set `BWF_TEST_DATABASE_URL` to a disposable database: these tests clear tables between cases.
 
 To exercise a deployed application, deploy a disposable copy of `playground/kitchen-sink` and pass its URL as `SMOKE_URL` to the smoke test described in `platform/scripts/kitchen-sink-smoke-test.md`. That test creates and removes application data.

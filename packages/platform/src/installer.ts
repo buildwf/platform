@@ -315,7 +315,7 @@ export function resolvePlatformRuntime(
     }
   } catch (error) {
     throw new Error(
-      `Nosam Platform runtime directory is unavailable at ${requestedDirectory}: ${error instanceof Error ? error.message : String(error)}`,
+      `bwf Platform runtime directory is unavailable at ${requestedDirectory}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
   const { contents, manifest } = readRuntimeManifestFile(join(directory, 'manifest.json'));
@@ -339,7 +339,7 @@ function readRuntimeManifestFile(path: string): {
     };
   } catch (error) {
     throw new Error(
-      `Nosam Platform deployment artifacts are missing or invalid at ${path}: ${error instanceof Error ? error.message : String(error)}`,
+      `bwf Platform deployment artifacts are missing or invalid at ${path}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }

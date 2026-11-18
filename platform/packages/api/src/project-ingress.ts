@@ -5,7 +5,7 @@ import {
   readPlatformApplication,
   PLATFORM_PROJECT_INGRESS_SOURCE,
   type PlatformApplicationProject,
-} from '@nosam/platform';
+} from '@buildwf/platform';
 import type { ApiEnv } from './env.ts';
 import { cfFetch, CF_API_BASE, CloudflareApiError } from './provisioning/cloudflare-api.ts';
 
@@ -33,7 +33,7 @@ export async function ensureProjectIngress(
   const url = `${CF_API_BASE}/${env.CF_ACCOUNT_ID}/workers/scripts/${name}`;
   const bindings = [
     { type: 'plain_text', name: 'NOSAM_APP_HOSTNAME', text: hostname },
-    { type: 'plain_text', name: 'NOSAM_PROJECT_ID', text: project.id },
+    { type: 'plain_text', name: 'BWF_PROJECT_ID', text: project.id },
     { type: 'plain_text', name: 'PLATFORM_INSTALLATION_ID', text: installationId },
     { type: 'service', name: 'PLATFORM_DISPATCH', service: env.DISPATCH_WORKER_NAME },
   ];

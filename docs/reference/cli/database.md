@@ -5,151 +5,151 @@ outline: deep
 
 # Database {#database}
 
-## `nosam db push` {#nosam-db-push}
+## `bwf db push` {#nosam-db-push}
 
 Apply your Drizzle schema directly to the development database without creating migration files. D1 updates the local database; PostgreSQL and MySQL use `DATABASE_URL` from `.env`.
 
-Use this for quick schema iteration while prototyping. Before deploying, generate and review migration files with `nosam db generate`.
+Use this for quick schema iteration while prototyping. Before deploying, generate and review migration files with `bwf db generate`.
 
-## `nosam db generate` {#nosam-db-generate}
+## `bwf db generate` {#nosam-db-generate}
 
 Generate SQL migration files from schema changes.
 
 Compares your schema with the last Drizzle snapshot and writes migrations under `db/migrations/`. It includes Nosam-managed auth tables and configured auth plugins, even without an application schema. Review and commit the generated files before deploying.
 
-For SQLite, Nosam checks that the migration history applies to a fresh database. If generation fails this check, the previous SQL, snapshots, and journal are restored. If an existing migration fails, repair that unapplied migration first: rerunning generation compares snapshots and does not repair existing SQL. This check does not verify that a migration preserves existing data; review table rebuilds and foreign-key actions carefully.
+For SQLite, bwf checks that the migration history applies to a fresh database. If generation fails this check, the previous SQL, snapshots, and journal are restored. If an existing migration fails, repair that unapplied migration first: rerunning generation compares snapshots and does not repair existing SQL. This check does not verify that a migration preserves existing data; review table rebuilds and foreign-key actions carefully.
 
-## `nosam db status` {#nosam-db-status}
+## `bwf db status` {#nosam-db-status}
 
 Show applied and pending migrations locally and on the saved deployment target. Direct Cloudflare PostgreSQL and MySQL projects use `DATABASE_URL` from the current shell for remote status.
 
-## `nosam db reset` {#nosam-db-reset}
+## `bwf db reset` {#nosam-db-reset}
 
 ```
-nosam db reset [--yes]
+bwf db reset [--yes]
 ```
 
 Reset the development database and re-apply all migrations. D1 resets local data. PostgreSQL clears tables, views, sequences, and custom types from the `public` schema while preserving extensions; dependencies from other schemas must be resolved first. MySQL drops all tables and views. PostgreSQL and MySQL use `DATABASE_URL` from `.env`.
 
-When that `DATABASE_URL` points to a host other than `localhost`, Nosam names the database and asks before dropping its tables. Pass `--yes` to skip the prompt in scripts and CI; without a terminal, the command stops unless `--yes` is set. If `.env` uses the same URL as your deployment (for example after `nosam db connect`), reset drops the deployed tables.
+When that `DATABASE_URL` points to a host other than `localhost`, bwf names the database and asks before dropping its tables. Pass `--yes` to skip the prompt in scripts and CI; without a terminal, the command stops unless `--yes` is set. If `.env` uses the same URL as your deployment (for example after `bwf db connect`), reset drops the deployed tables.
 
-## `nosam db seed` {#nosam-db-seed}
+## `bwf db seed` {#nosam-db-seed}
 
 ```
-nosam db seed [--file <path>] [--yes]
+bwf db seed [--file <path>] [--yes]
 ```
 
-Reset the local database, re-apply all migrations, then execute a seed file. The reset works like `nosam db reset`, including the prompt and `--yes`.
+Reset the local database, re-apply all migrations, then execute a seed file. The reset works like `bwf db reset`, including the prompt and `--yes`.
 
-If `--file` is omitted, Nosam looks for default seed files in this order: `db/seed.ts`, `db/seed.mts`, `db/seed.js`, `db/seed.mjs`, `db/seed.sql`.
+If `--file` is omitted, bwf looks for default seed files in this order: `db/seed.ts`, `db/seed.mts`, `db/seed.js`, `db/seed.mjs`, `db/seed.sql`.
 
 If more than one default seed file exists, the CLI stops and asks you to pass `--file <path>`.
 
 Programmatic seed modules must export either a default function or a named `seed` function.
 
-## `nosam db execute` {#nosam-db-execute}
+## `bwf db execute` {#nosam-db-execute}
 
 ```
-nosam db execute <sql>
-nosam db execute --file <path>
-nosam db execute --remote <sql>
+bwf db execute <sql>
+bwf db execute --file <path>
+bwf db execute --remote <sql>
 ```
 
 Run ad-hoc SQL against the database. Provide SQL inline or from a file. SELECT queries display results as a formatted table; other statements execute silently.
 
-By default, targets the local database. Pass `--remote` to run against the deployed database selected in `.nosam/project.json`:
+By default, targets the local database. Pass `--remote` to run against the deployed database selected in `.bwf/project.json`:
 
-- **Nosam platform D1 projects**: routes the query through the selected platform's registered proxy using your auth token.
-- **Direct Cloudflare D1 projects**: invokes Cloudflare against the pinned D1 binding from `nosam.config.ts` or `nosam.lock.json`.
+- **bwf platform D1 projects**: routes the query through the selected platform's registered proxy using your auth token.
+- **Direct Cloudflare D1 projects**: invokes Cloudflare against the pinned D1 binding from `bwf.config.ts` or `bwf.lock.json`.
 - **Hosted PostgreSQL and MySQL projects**: fetches the stored connection string from the platform and connects directly.
 - **Direct Cloudflare PostgreSQL and MySQL projects**: uses `DATABASE_URL` from the current shell; Cloudflare cannot return the password from Hyperdrive.
 
 For destructive statements (`DELETE`, `UPDATE`, `DROP`, etc.) when running in a TTY, you will be prompted to confirm before the query is sent to the deployed database. Non-TTY environments (CI) skip the prompt.
 
-## `nosam db migrate` {#nosam-db-migrate}
+## `bwf db migrate` {#nosam-db-migrate}
 
 ```
-nosam db migrate [--remote]
+bwf db migrate [--remote]
 ```
 
-Apply pending migrations to the local database without resetting. Unlike `nosam db reset`, this preserves existing data and only runs migrations that haven't been applied yet.
+Apply pending migrations to the local database without resetting. Unlike `bwf db reset`, this preserves existing data and only runs migrations that haven't been applied yet.
 
-Pass `--remote` to apply pending migrations to the saved target. Hosted projects require a Nosam login and link. Direct Cloudflare D1 projects use the binding's configured migration directory, table, and pattern. The D1 binding must set `migrations_dir`. Direct PostgreSQL and MySQL projects use the shell `DATABASE_URL`.
+Pass `--remote` to apply pending migrations to the saved target. Hosted projects require a bwf login and link. Direct Cloudflare D1 projects use the binding's configured migration directory, table, and pattern. The D1 binding must set `migrations_dir`. Direct PostgreSQL and MySQL projects use the shell `DATABASE_URL`.
 
-## `nosam db studio` {#nosam-db-studio}
+## `bwf db studio` {#nosam-db-studio}
 
 ```
-nosam db studio [--remote]
+bwf db studio [--remote]
 ```
 
 Open [Drizzle Studio](https://orm.drizzle.team/docs/drizzle-kit-studio) for the database. Launches a web-based GUI for browsing and editing your data.
 
 By default, targets the local database. Pass `--remote` to open Studio against the deployed database:
 
-- **Hosted PostgreSQL and MySQL projects**: fetch the stored connection string from the platform and open Studio against it. If the URL isn't stored yet, run `nosam db set-url` first.
+- **Hosted PostgreSQL and MySQL projects**: fetch the stored connection string from the platform and open Studio against it. If the URL isn't stored yet, run `bwf db set-url` first.
 - **Direct Cloudflare PostgreSQL and MySQL projects**: use `DATABASE_URL` from the current shell.
-- **D1 projects**: use `nosam db execute --remote` to query the deployed database.
+- **D1 projects**: use `bwf db execute --remote` to query the deployed database.
 
-## `nosam db restore` {#nosam-db-restore}
+## `bwf db restore` {#nosam-db-restore}
 
 ```
-nosam db restore --bookmark <bookmark> [--platform cloudflare] [--yes]
-nosam db restore --timestamp <iso-time> [--platform cloudflare] [--yes]
+bwf db restore --bookmark <bookmark> [--platform cloudflare] [--yes]
+bwf db restore --timestamp <iso-time> [--platform cloudflare] [--yes]
 ```
 
 Restore a directly deployed Cloudflare D1 database using [Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/). Use the bookmark printed before deployment migrations, or an ISO 8601 timestamp with a timezone, such as `2026-10-16T09:30:00Z`.
 
 Time Travel keeps 7 days of history on Workers Free and 30 days on Workers Paid. Reverse older migrations with a new migration.
 
-Restoring discards every write made after the selected point. Nosam asks for confirmation and prints a command to undo the restore afterward. Pass `--yes` for scripts and CI.
+Restoring discards every write made after the selected point. bwf asks for confirmation and prints a command to undo the restore afterward. Pass `--yes` for scripts and CI.
 
 To recover from a bad migration:
 
-1. Roll back the code with [`nosam project rollback`](./project.md#nosam-project-rollback-deployid) if the live version needs the newer schema.
+1. Roll back the code with [`bwf project rollback`](./project.md#nosam-project-rollback-deployid) if the live version needs the newer schema.
 2. Restore the database using the printed bookmark.
 3. Fix or remove the failed migration before deploying again. The restore also rewinds migration history, so the next deploy reapplies pending files.
 
 For a one-off Cloudflare deployment, add `--platform cloudflare` to restore, rollback, and deploy commands.
 
-## `nosam db rename-migrations` {#nosam-db-rename-migrations}
+## `bwf db rename-migrations` {#nosam-db-rename-migrations}
 
-For linked Nosam platform projects, rename migrations from numeric prefixes (`0001_name.sql`) to timestamps (`20260410161500_name.sql`) and update local and remote migration records. Sign in and run `nosam project link` first.
+For linked bwf platform projects, rename migrations from numeric prefixes (`0001_name.sql`) to timestamps (`20260410161500_name.sql`) and update local and remote migration records. Sign in and run `bwf project link` first.
 
 For direct Cloudflare deployments, keep existing filenames. New migrations use timestamps and run after them.
 
-## `nosam db connect` {#nosam-db-connect}
+## `bwf db connect` {#nosam-db-connect}
 
 Connect an existing PostgreSQL/MySQL database or provision one through an adapter:
 
 ```sh
-nosam db connect 'postgresql://user:password@host/database'
-NEON_API_KEY=... nosam db connect --provider neon --name my-app
-nosam db connect --provider @acme/nosam-db-provider --region region-id
+bwf db connect 'postgresql://user:password@host/database'
+NEON_API_KEY=... bwf db connect --provider neon --name my-app
+bwf db connect --provider @acme/nosam-db-provider --region region-id
 ```
 
-The command saves `DATABASE_URL` in `.env`. When authenticated with a linked Nosam project, it also updates the encrypted deployment URL; pass `--local-only` to skip that sync. `neon` is built in. Other adapters are project dependencies or local modules exporting a `DatabaseProviderAdapter` from `nosam/database-provider`.
+The command saves `DATABASE_URL` in `.env`. When authenticated with a linked bwf project, it also updates the encrypted deployment URL; pass `--local-only` to skip that sync. `neon` is built in. Other adapters are project dependencies or local modules exporting a `DatabaseProviderAdapter` from `@buildwf/bwf/database-provider`.
 
 Provider-created credentials are never printed. For direct Cloudflare deploys, configure the same URL as a protected `DATABASE_URL` in the shell or CI environment that runs deploy.
 
-For an existing PostgreSQL database migrated by Drizzle, [adopt its applied migration history](../../guide/database.md#adopt-existing-drizzle) before the first Nosam deployment.
+For an existing PostgreSQL database migrated by Drizzle, [adopt its applied migration history](../../guide/database.md#adopt-existing-drizzle) before the first bwf deployment.
 
-## `nosam db set-url` {#nosam-db-set-url}
+## `bwf db set-url` {#nosam-db-set-url}
 
 Update the PostgreSQL or MySQL connection string for deployment. Available for projects with `"database": "pg"` or `"database": "mysql"`.
 
 Prompts for a connection string and sends it to the platform API to create or update the Hyperdrive configuration.
 
-## `nosam db export` {#nosam-db-export}
+## `bwf db export` {#nosam-db-export}
 
 ```
-nosam db export [--output <path>] [--no-data] [--no-schema] [--table <name>]
+bwf db export [--output <path>] [--no-data] [--no-schema] [--table <name>]
 ```
 
 Dump the local database as SQL. Outputs to stdout by default (pipeable), or to a file with `--output`.
 
 Data exports preserve SQLite AUTOINCREMENT and PostgreSQL SERIAL and identity counters, including IDs consumed by deleted rows. SQLite schema exports include indexes, views, and triggers. PostgreSQL schema exports preserve column types, generated columns, identity definitions, serial sequences, constraints, and indexes. `--no-schema` restores counter values into an existing schema; `--no-data` starts counters at their schema-defined starting values.
 
-For PostgreSQL schemas with views, triggers, custom types, functions, or standalone sequences, use `pg_dump` for a complete backup. `nosam db export` reports these objects before writing a schema dump.
+For PostgreSQL schemas with views, triggers, custom types, functions, or standalone sequences, use `pg_dump` for a complete backup. `bwf db export` reports these objects before writing a schema dump.
 
 | Flag              | Purpose                            |
 | ----------------- | ---------------------------------- |

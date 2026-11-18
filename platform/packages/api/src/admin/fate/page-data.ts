@@ -2,7 +2,7 @@ import {
   PLATFORM_LOGIN_KINDS,
   parsePlatformLoginConfiguration,
   type PlatformLoginConfiguration,
-} from '@nosam/platform';
+} from '@buildwf/platform';
 import { and, eq, gt, inArray, ne } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { getPlatformCapabilities } from '../../capabilities.ts';

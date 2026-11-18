@@ -1,4 +1,4 @@
-import { planWebSocketMigrations } from '@nosam/deploy-core';
+import { planWebSocketMigrations } from '@buildwf/deploy-core';
 import {
   type DeployManifest,
   type LiveMigrationMeta,

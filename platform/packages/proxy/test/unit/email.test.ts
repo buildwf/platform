@@ -23,7 +23,7 @@ const { clearProxyTokenStateCache } = await import('../../src/proxy-token.ts');
 // `mimeBase64` a tenant posts — so the proxy's From pin is checked against
 // every `From:` shape it really renders, not against hand-typed lookalikes.
 const { buildMime, normalizeEmail } =
-  await import('../../../../../packages/nosam/src/runtime/email/mime.ts');
+  await import('../../../../../packages/bwf/src/runtime/email/mime.ts');
 
 const JWT_SECRET = 'test-secret-key';
 const EMAIL_SIGNING_SECRET = 'test-email-signing-key-independent';

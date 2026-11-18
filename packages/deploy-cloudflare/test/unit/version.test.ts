@@ -17,7 +17,7 @@ import {
   type CloudflareTriggerConfig,
 } from '../../src/index.ts';
 import { operationFixture } from '../operation-fixture.ts';
-import { apiSecretDraftVersion, nosamSecretDraftVersion } from '../secret-draft-fixture.ts';
+import { apiSecretDraftVersion, bwfSecretDraftVersion } from '../secret-draft-fixture.ts';
 
 const CURRENT = '11111111-1111-4111-8111-111111111111';
 const NEXT = '22222222-2222-4222-8222-222222222222';
@@ -59,7 +59,7 @@ function readConfigArg(args: Array<string>): Record<string, unknown> {
 }
 
 function sdkDraftActivation(
-  source: Record<string, unknown> = nosamSecretDraftVersion(),
+  source: Record<string, unknown> = bwfSecretDraftVersion(),
   listed: Record<string, unknown> = { annotations: { 'workers/triggered_by': 'secret' } },
 ) {
   const events: Array<string> = [];
@@ -322,10 +322,10 @@ const TRIGGER_FAILURE: CloudflareCommandResult = {
   status: 1,
 };
 
-/** Placeholder Nosam's secret transport deploys before a Worker exists: no bindings yet. */
+/** Placeholder bwf's secret transport deploys before a Worker exists: no bindings yet. */
 function voidZeroBindingPlaceholder(): Record<string, unknown> {
   return {
-    ...nosamSecretDraftVersion(),
+    ...bwfSecretDraftVersion(),
     number: 1,
     annotations: { 'workers/message': 'nosam:secret-draft', 'workers/triggered_by': 'deployment' },
     bindings: [],
@@ -669,7 +669,7 @@ describe('Cloudflare version activation', () => {
 
   it('publishes an exact private SDK draft once, proving secrets and callbacks before readiness', async () => {
     const fixture = sdkDraftActivation({
-      ...nosamSecretDraftVersion(),
+      ...bwfSecretDraftVersion(),
       number: undefined,
       compatibility_date: undefined,
       usage_model: undefined,
@@ -704,7 +704,7 @@ describe('Cloudflare version activation', () => {
     expect(fixture.fetcher).toHaveBeenCalledOnce();
   });
 
-  // A draft Worker from `nosam secret put` has workers.dev disabled, so its first
+  // A draft Worker from `bwf secret put` has workers.dev disabled, so its first
   // publish reports a version id without a URL (issue #573).
   function urlLessDraftPublish(
     fixture: ReturnType<typeof sdkDraftActivation>,
@@ -937,7 +937,7 @@ describe('Cloudflare version activation', () => {
     const activation = activateCloudflareVersion(fixture.options);
     await entered.promise;
     fixture.changeOwner();
-    release.resolve(nosamSecretDraftVersion());
+    release.resolve(bwfSecretDraftVersion());
     expect(await activation).toMatchObject({
       ok: false,
       reason: 'deployment-changed',
@@ -960,7 +960,7 @@ describe('Cloudflare version activation', () => {
         { version_id: CURRENT, percentage: 100 },
         { version_id: CONCURRENT, percentage: 0 },
       ]);
-      return nosamSecretDraftVersion();
+      return bwfSecretDraftVersion();
     });
     expect(await activateCloudflareVersion(fixture.options)).toMatchObject({
       ok: false,
@@ -1093,10 +1093,10 @@ describe('Cloudflare version activation', () => {
 
   it('retains preview-first activation for a secret-triggered real app', async () => {
     const fixture = sdkDraftActivation({
-      ...nosamSecretDraftVersion(),
+      ...bwfSecretDraftVersion(),
       modules: [
         {
-          ...nosamSecretDraftVersion().modules[0],
+          ...bwfSecretDraftVersion().modules[0],
           content_base64: Buffer.from(
             'export default { fetch() { return new Response("real app"); } };',
           ).toString('base64'),
@@ -1687,7 +1687,7 @@ describe('Cloudflare version activation', () => {
     expect(runWrangler.mock.calls.some(([args]) => args[1] === 'upload')).toBe(false);
   });
 
-  it('does not trust an unpublished version with a copied Nosam annotation', async () => {
+  it('does not trust an unpublished version with a copied bwf annotation', async () => {
     const unpublished = '44444444-4444-4444-8444-444444444444';
     const runWrangler = runner({
       versions: ok(
@@ -2210,7 +2210,7 @@ describe('Cloudflare version activation', () => {
   });
 
   // The Cloudflare CLI applies its Email Routing plan inside `triggers deploy`, reading the
-  // config's `addresses`. The trigger-only config Nosam hands it must therefore carry the
+  // config's `addresses`. The trigger-only config bwf hands it must therefore carry the
   // snapshot's addresses verbatim — and carry NOTHING when the snapshot has none, because an
   // absent key skips the plan while `[]` deletes every rule the Worker owns.
   it('snapshots explicit observability and restores it without borrowing local settings', async () => {
@@ -2405,7 +2405,7 @@ describe('Cloudflare version activation', () => {
       verifyUploader: () => true,
       workerName: 'my-worker',
       configPath: '/app/wrangler.jsonc',
-      assetsDirectoryOverride: '/app/.nosam/deploy/cloudflare/assets',
+      assetsDirectoryOverride: '/app/.bwf/deploy/cloudflare/assets',
       message: encodeCloudflareVersionMessage(['0001_init.sql']),
       fetch: fetcher,
       sleep: async () => {},
@@ -2445,7 +2445,7 @@ describe('Cloudflare version activation', () => {
       ['deployments', 'status'],
     ]);
     expect(runWrangler.mock.calls[1]![0]).toContain('--assets');
-    expect(runWrangler.mock.calls[1]![0]).toContain('/app/.nosam/deploy/cloudflare/assets');
+    expect(runWrangler.mock.calls[1]![0]).toContain('/app/.bwf/deploy/cloudflare/assets');
     expect(runWrangler.mock.calls[3]![0]).toContain(`${NEXT}@100`);
     expect(runWrangler.mock.calls[5]![0]).toEqual([
       'triggers',
@@ -3603,7 +3603,7 @@ describe('Cloudflare version activation', () => {
           expect(result).toMatchObject({
             ok: false,
             reason: atomic ? 'atomic-readiness-failed' : 'bootstrap-readiness-failed',
-            diagnostic: expect.stringContaining('retry `nosam deploy --platform cloudflare`'),
+            diagnostic: expect.stringContaining('retry `bwf deploy --platform cloudflare`'),
           });
         }
         expect(time).toBeLessThanOrEqual(timeout + 2_000);
@@ -4455,7 +4455,7 @@ describe('Cloudflare version activation', () => {
         verifyUploader: () => true,
         workerName: 'first',
         configPath: '/app/wrangler.jsonc',
-        assetsDirectoryOverride: '/app/.nosam/deploy/cloudflare/assets',
+        assetsDirectoryOverride: '/app/.bwf/deploy/cloudflare/assets',
         message: encodeCloudflareVersionMessage(['0001_init.sql']),
         candidateSecrets: { API_TOKEN: 'first-secret' },
         fetch: fetcher,
@@ -4480,7 +4480,7 @@ describe('Cloudflare version activation', () => {
     ]);
     const deployArgs = runWrangler.mock.calls.find(([args]) => args[0] === 'deploy')![0];
     expect(deployArgs).toContain('--assets');
-    expect(deployArgs).toContain('/app/.nosam/deploy/cloudflare/assets');
+    expect(deployArgs).toContain('/app/.bwf/deploy/cloudflare/assets');
     expect(secretPayloads).toEqual([{ API_TOKEN: 'first-secret' }, { API_TOKEN: 'first-secret' }]);
     expect(new Set(secretPaths).size).toBe(1);
     expect(secretPaths.every((path) => !existsSync(path))).toBe(true);
@@ -4976,7 +4976,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
     triggersRestored: 'no',
   };
 
-  it('switches back to a Nosam version with a trigger snapshot and replays its triggers', async () => {
+  it('switches back to a bwf version with a trigger snapshot and replays its triggers', async () => {
     const fixture = recoveryActivation({
       previous: NOSAM_SCHEMA_2_PREVIOUS,
       triggers: [TRIGGER_FAILURE],
@@ -4997,7 +4997,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
 
   it.each([
     {
-      kind: 'a version deployed without Nosam',
+      kind: 'a version deployed without bwf',
       previous: { id: CURRENT, number: 1, annotations: { 'workers/triggered_by': 'upload' } },
       restoreSkipped: 'no-trigger-snapshot',
     },
@@ -5060,7 +5060,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
   it.each(
     [
       {
-        kind: 'Nosam placeholder marker',
+        kind: 'bwf placeholder marker',
         annotations: {
           'workers/message': 'nosam:secret-draft',
           'workers/triggered_by': 'deployment',
@@ -5084,7 +5084,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
     },
   );
 
-  it("keeps this deploy live over Nosam's secret draft through the bootstrap path", async () => {
+  it("keeps this deploy live over bwf's secret draft through the bootstrap path", async () => {
     const fixture = sdkDraftActivation();
     const original = fixture.runWrangler.getMockImplementation()!;
     fixture.runWrangler.mockImplementation(async (operation) =>

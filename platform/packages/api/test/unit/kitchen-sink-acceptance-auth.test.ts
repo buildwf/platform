@@ -1,8 +1,8 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { CloudEnv } from '@buildwf/bwf/handler';
 import { Hono } from 'hono';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import type { CloudEnv } from 'nosam/handler';
 import { prepareKitchenSinkPlatformFixture } from '../../../../scripts/kitchen-sink-platform-fixture.ts';
 
 const mocks = vi.hoisted(() => ({
@@ -14,13 +14,15 @@ const mocks = vi.hoisted(() => ({
   aiRun: vi.fn(),
   aiStream: vi.fn(),
 }));
-vi.mock('nosam', async () => import('nosam/handler'));
-vi.mock('nosam/env', () => ({ env: mocks.env }));
-vi.mock('nosam/email', () => ({ sendEmail: mocks.sendEmail }));
-vi.mock('nosam/kv', () => ({ kv: { get: mocks.kvGet } }));
-vi.mock('nosam/queues', () => ({ queues: { 'acceptance-queue': { send: mocks.queueSend } } }));
-vi.mock('nosam/ai', () => ({ ai: { run: mocks.aiRun, stream: mocks.aiStream } }));
-vi.mock('nosam/sandbox', () => ({
+vi.mock('@buildwf/bwf', async () => import('@buildwf/bwf/handler'));
+vi.mock('@buildwf/bwf/env', () => ({ env: mocks.env }));
+vi.mock('@buildwf/bwf/email', () => ({ sendEmail: mocks.sendEmail }));
+vi.mock('@buildwf/bwf/kv', () => ({ kv: { get: mocks.kvGet } }));
+vi.mock('@buildwf/bwf/queues', () => ({
+  queues: { 'acceptance-queue': { send: mocks.queueSend } },
+}));
+vi.mock('@buildwf/bwf/ai', () => ({ ai: { run: mocks.aiRun, stream: mocks.aiStream } }));
+vi.mock('@buildwf/bwf/sandbox', () => ({
   getSandbox: mocks.getSandbox,
   SandboxLimitError: class extends Error {},
 }));
@@ -29,8 +31,8 @@ let fixture: ReturnType<typeof prepareKitchenSinkPlatformFixture>;
 let app: Hono<CloudEnv>;
 beforeAll(async () => {
   fixture = prepareKitchenSinkPlatformFixture({ email: true, sandbox: true, runtime: true });
-  // These handler tests use mocked bindings before `nosam init` has generated
-  // .nosam/tsconfig.json. The separate fixture build test checks generated types.
+  // These handler tests use mocked bindings before `bwf init` has generated
+  // .bwf/tsconfig.json. The separate fixture build test checks generated types.
   writeFileSync(join(fixture.root, 'tsconfig.json'), '{}');
   const email = await import(join(fixture.root, 'routes/api/acceptance/email.ts'));
   const sandbox = await import(join(fixture.root, 'routes/api/acceptance/sandbox.ts'));

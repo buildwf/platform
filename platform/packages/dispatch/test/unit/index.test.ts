@@ -3433,7 +3433,7 @@ describe('foreground worker duration', () => {
 
 describe('worker timeout explains itself in the project log stream', () => {
   // A worker cut at the dispatch budget returns nothing, so it logs nothing and
-  // `nosam project logs` was empty for the one failure users most need
+  // `bwf project logs` was empty for the one failure users most need
   // explained. Dispatch now writes the explanation itself, keyed the way the
   // tail worker keys its rows so the existing read path finds it.
   function createHangingEnv(workerName: string) {

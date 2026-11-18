@@ -5,7 +5,7 @@ outline: deep
 
 # Project Collaboration
 
-A project hosted on a Nosam platform can have one owner and additional readers, collaborators, and project administrators. Team access is a platform feature; it is not available for projects deployed directly to Cloudflare.
+A project hosted on a bwf platform can have one owner and additional readers, collaborators, and project administrators. Team access is a platform feature; it is not available for projects deployed directly to Cloudflare.
 
 ## Roles
 
@@ -32,7 +32,7 @@ not an installation administrator and receives no platform-wide access.
 An owner or project administrator can invite someone by the email address registered to their existing account on the same platform:
 
 ```sh
-nosam project team invite teammate@example.com --role collaborator
+bwf project team invite teammate@example.com --role collaborator
 ```
 
 Pass `--project <slug>` to manage a project other than the linked project. An unknown email is rejected. A project invitation neither creates an account nor adds the address to a restricted-signup allowlist.
@@ -40,13 +40,13 @@ Pass `--project <slug>` to manage a project other than the linked project. An un
 Invitations expire after seven days. If the platform cannot send invitation
 email, the CLI prints the invitation ID and connection and acceptance commands
 to share with the invited user. The invitation also appears when that user runs
-`nosam project team pending` on the same platform.
+`bwf project team pending` on the same platform.
 
 List the roster and sent invitations with:
 
 ```sh
-nosam project team list
-nosam project team invitations
+bwf project team list
+bwf project team invitations
 ```
 
 ## Respond to an Invitation
@@ -55,30 +55,30 @@ Connect to the platform from your invitation, then see invitations addressed to
 your account and respond using the invitation ID:
 
 ```sh
-nosam connect api.example.com
-nosam project team pending
-nosam project team accept <invitation-id>
+bwf connect api.example.com
+bwf project team pending
+bwf project team accept <invitation-id>
 # or
-nosam project team decline <invitation-id>
+bwf project team decline <invitation-id>
 ```
 
 An invitation is bound to the registered account. Forwarding its ID does not let another user accept it.
 
 These three commands use the active platform connection selected by
-`nosam connect`, even inside a directory linked to another project or deployed
-directly to Cloudflare. `NOSAM_API_URL` takes precedence when set. If you use
-`NOSAM_TOKEN`, also set `NOSAM_API_URL` to the matching platform. Each command
+`bwf connect`, even inside a directory linked to another project or deployed
+directly to Cloudflare. `BWF_API_URL` takes precedence when set. If you use
+`BWF_TOKEN`, also set `BWF_API_URL` to the matching platform. Each command
 shows the platform it contacts.
 
 Accepting an invitation grants access without linking your current directory.
-Open the invited application's directory and run `nosam project link` if it is
+Open the invited application's directory and run `bwf project link` if it is
 not linked yet. If it is already linked to another project, use a separate
-checkout without `.nosam/project.json`, connect to the invited platform there,
-and run `nosam project link`.
+checkout without `.bwf/project.json`, connect to the invited platform there,
+and run `bwf project link`.
 
 If the invitation is missing, check the platform and signed-in account. To
-switch accounts, set `NOSAM_API_URL` to the invitation's platform URL, unset
-`NOSAM_TOKEN` if present, then run `nosam account logout` and `nosam account login` using
+switch accounts, set `BWF_API_URL` to the invitation's platform URL, unset
+`BWF_TOKEN` if present, then run `bwf account logout` and `bwf account login` using
 the invited email address. For an expired or revoked invitation, ask a project
 administrator to invite you again.
 
@@ -87,13 +87,13 @@ administrator to invite you again.
 Owners and project administrators can change any non-owner member or revoke a pending invitation:
 
 ```sh
-nosam project team role <user-id> reader
-nosam project team remove <user-id>
-nosam project team revoke <invitation-id>
+bwf project team role <user-id> reader
+bwf project team remove <user-id>
+bwf project team revoke <invitation-id>
 ```
 
-A non-owner member can leave with `nosam project team leave`. The owner cannot leave; an installation administrator must [transfer ownership](./platform/administration/projects.md#transferring-project-ownership) first.
+A non-owner member can leave with `bwf project team leave`. The owner cannot leave; an installation administrator must [transfer ownership](./platform/administration/projects.md#transferring-project-ownership) first.
 
-When a collaborator or admin is removed, leaves, or is changed to reader, the platform replaces the credentials the project's Workers use to call platform services such as AI, email, and remote bindings. The old credentials stop working once every Worker of the project has the new ones, usually within about 10 minutes, later while a deploy is running. If the replacement cannot finish, the old credentials keep working until it does, and owners and admins see a warning in `nosam project status` and `nosam project team list`. WebSocket connections reconnect once. While a Worker is switched to the new credentials, its calls to platform services can fail for a moment, a scheduled run can be skipped, and queue messages are delivered again a couple of minutes later.
+When a collaborator or admin is removed, leaves, or is changed to reader, the platform replaces the credentials the project's Workers use to call platform services such as AI, email, and remote bindings. The old credentials stop working once every Worker of the project has the new ones, usually within about 10 minutes, later while a deploy is running. If the replacement cannot finish, the old credentials keep working until it does, and owners and admins see a warning in `bwf project status` and `bwf project team list`. WebSocket connections reconnect once. While a Worker is switched to the new credentials, its calls to platform services can fail for a moment, a scheduled run can be skipped, and queue messages are delivered again a couple of minutes later.
 
 Code the removed person deployed keeps running until you replace it. If you no longer trust it, deploy code you trust; the platform replaces the credentials again after that deploy. Earlier deployments of theirs kept for rollback keep the old credentials, so after a rollback to one of them, AI and email fail until you deploy again.

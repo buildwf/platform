@@ -53,5 +53,5 @@ export function platformConnectCommand(apiUrl: string): string {
   // Keep an explicit protocol when it differs from the CLI's hostname default.
   const address = url.protocol === (local ? 'http:' : 'https:') ? url.host : url.origin;
   // Quote even unusual but valid URL hostnames safely when the command is copied into a shell.
-  return `nosam connect '${address.replaceAll("'", "'\\''")}'`;
+  return `bwf connect '${address.replaceAll("'", "'\\''")}'`;
 }

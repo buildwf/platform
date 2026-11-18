@@ -12,8 +12,8 @@ For the browser admin UI, open `<API URL>/admin` and use the administrator login
 Connect to your platform's API URL, then sign in as an administrator:
 
 ```sh
-nosam connect platform.example.com --no-login
-nosam platform auth login
+bwf connect platform.example.com --no-login
+bwf platform auth login
 ```
 
 The first command saves the connection. The second opens your browser to sign in and saves an administrator session in your system keychain. Sessions last for one hour and are stored separately for each platform.
@@ -21,31 +21,31 @@ The first command saves the connection. The second opens your browser to sign in
 You can check which account is signed in at any time:
 
 ```sh
-nosam platform auth status
+bwf platform auth status
 ```
 
-This shows your account, the session's expiry, and the features available on the platform. To end the session, run `nosam platform auth logout`.
+This shows your account, the session's expiry, and the features available on the platform. To end the session, run `bwf platform auth logout`.
 
-If the platform is protected by Cloudflare Access, `nosam connect <url>` handles
-the company sign-in before Nosam login. Interactive Access authentication uses a
+If the platform is protected by Cloudflare Access, `bwf connect <url>` handles
+the company sign-in before bwf login. Interactive Access authentication uses a
 locally installed `cloudflared` and saves its short-lived credential in your
 system keychain for that platform origin. You do not need to copy browser cookies.
 
-For CI, use a [project deploy token](/guide/platform/installation/first-deployment) alongside your Access credentials in origin-keyed `NOSAM_ACCESS_CREDENTIALS`. An Access service token does not authorize a Nosam deployment. See [CI deployment setup](/guide/platform/installation/first-deployment) for the required origins and shape.
+For CI, use a [project deploy token](/guide/platform/installation/first-deployment) alongside your Access credentials in origin-keyed `NOSAM_ACCESS_CREDENTIALS`. An Access service token does not authorize a bwf deployment. See [CI deployment setup](/guide/platform/installation/first-deployment) for the required origins and shape.
 
 ## Choosing a Platform
 
 If you manage more than one platform, list your connections and choose a default:
 
 ```sh
-nosam platform list
-nosam platform use <connection-id>
+bwf platform list
+bwf platform use <connection-id>
 ```
 
 You can also select a platform for a single command with `--connection`:
 
 ```sh
-nosam platform user list --connection <connection-id>
+bwf platform user list --connection <connection-id>
 ```
 
 Use an ID or URL from the connection list. Administrative commands use this selection even when you run them inside an app with a different deployment destination.
@@ -57,7 +57,7 @@ owner can recover an existing administrator with Cloudflare management access,
 direct database access, and the original encrypted recovery credentials:
 
 ```sh
-nosam platform config auth recover company --installation <id> --file recovery.json
+bwf platform config auth recover company --installation <id> --file recovery.json
 ```
 
 The file identifies the existing account, for example
@@ -74,7 +74,7 @@ the affected administrator and connection before starting recovery.
 
 ## Giving People Access
 
-Open **Settings** in the administrator UI, or run `nosam platform config auth`,
+Open **Settings** in the administrator UI, or run `bwf platform config auth`,
 to add, test, enable, or disable login methods. Access protection and login
 methods are separate settings. A provider test shows the authenticated account
 before you explicitly link it or enable the configuration.
@@ -83,9 +83,9 @@ To change the company gate after installation, use the installing workstation
 with its saved recovery credentials:
 
 ```sh
-nosam platform config auth protection show
-nosam platform config auth protection enable --installation <id>
-nosam platform config auth protection disable --installation <id>
+bwf platform config auth protection show
+bwf platform config auth protection enable --installation <id>
+bwf platform config auth protection disable --installation <id>
 ```
 
 Enabling offers application creation or connection to an existing application.
@@ -97,7 +97,7 @@ Cloudflare applications for deliberate cleanup. Disabling an Access login method
 does not remove the gate.
 
 Users can add another enabled login to their existing account with
-`nosam account link <connection-id>` or **Account** in the optional
+`bwf account link <connection-id>` or **Account** in the optional
 dashboard. Sign in again first if prompted, then authenticate with the additional
 provider and confirm the identity shown. Matching email addresses alone do not
 link accounts.
@@ -112,54 +112,54 @@ before anyone reaches a login page.
 With invited/allowlisted signup selected, let a teammate join with GitHub by adding their login to the allowlist:
 
 ```sh
-nosam platform signup allow github teammate
+bwf platform signup allow github teammate
 ```
 
-Nosam shows the change and asks you to confirm it. The teammate can then run `nosam connect` with the platform's URL and sign in.
+bwf shows the change and asks you to confirm it. The teammate can then run `bwf connect` with the platform's URL and sign in.
 
 You can allow an email address or a whole email domain in the same way:
 
 ```sh
-nosam platform signup allow email teammate@example.com
-nosam platform signup allow email '*@example.com'
+bwf platform signup allow email teammate@example.com
+bwf platform signup allow email '*@example.com'
 ```
 
-Email patterns apply across the platform's sign-in providers. Quote a domain pattern so your shell passes the `*` to Nosam.
+Email patterns apply across the platform's sign-in providers. Quote a domain pattern so your shell passes the `*` to bwf.
 
 For an OIDC login without a verified email, allow the identity by its login connection and stable provider subject instead:
 
 ```sh
-nosam platform signup allow identity company-sso 'Employee-42'
+bwf platform signup allow identity company-sso 'Employee-42'
 ```
 
-Use the connection ID shown by `nosam platform config auth list` and the exact subject reported by your identity provider. The match is case-sensitive and does not infer an email address or link another account. Any domain or group restrictions configured for that login method still apply, and the account joins as an ordinary user. Remove the grant with `nosam platform signup disallow identity company-sso 'Employee-42'`.
+Use the connection ID shown by `bwf platform config auth list` and the exact subject reported by your identity provider. The match is case-sensitive and does not infer an email address or link another account. Any domain or group restrictions configured for that login method still apply, and the account joins as an ordinary user. Remove the grant with `bwf platform signup disallow identity company-sso 'Employee-42'`.
 
 To invite someone else by email, use:
 
 ```sh
-nosam platform invitation send alex@example.org
+bwf platform invitation send alex@example.org
 ```
 
 An invitation grants signup access for that exact email address. The person must
 sign in with a login method that supplies the same verified email address.
-When platform email delivery is configured, Nosam also sends connection
+When platform email delivery is configured, bwf also sends connection
 instructions. If delivery is unavailable or fails, the grant still works:
-share the platform's `/invite` page or `nosam connect '<platform URL>'` command
+share the platform's `/invite` page or `bwf connect '<platform URL>'` command
 with the person yourself. The admin dashboard shows the delivery outcome
 separately from the invitation's pending, accepted, or revoked status.
 
 Inspect the current access settings and invitations with:
 
 ```sh
-nosam platform signup show
-nosam platform invitation list
+bwf platform signup show
+bwf platform invitation list
 ```
 
 Invitation history remains available after an involved account is removed. The stored actor ID
 remains visible when that account's login no longer exists.
 
-`nosam platform signup open` allows anyone to sign up. Everyone who signs up can deploy apps on your application domain, so check how those apps [share cookies](/guide/platform/installation/domains#adding-a-domain) before opening signup. Use `nosam platform signup restrict` to require an allowlist match again. Disallowing an entry affects future signup; it does not suspend an existing account.
+`bwf platform signup open` allows anyone to sign up. Everyone who signs up can deploy apps on your application domain, so check how those apps [share cookies](/guide/platform/installation/domains#adding-a-domain) before opening signup. Use `bwf platform signup restrict` to require an allowlist match again. Disallowing an entry affects future signup; it does not suspend an existing account.
 
 ## Connected apps
 
-Register separate applications as OAuth clients through [Connected apps](./connected-apps.md). Users connect their identity and approve each publish on Nosam.
+Register separate applications as OAuth clients through [Connected apps](./connected-apps.md). Users connect their identity and approve each publish on bwf.

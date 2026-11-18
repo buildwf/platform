@@ -318,7 +318,11 @@ describe('dedicated email gateway', () => {
       const request = new Request(String(url), init as RequestInit);
       const raw = await request.text();
       expect(
-        await hmacVerifyState(raw, request.headers.get('x-nosam-internal') ?? '', 'platform-secret'),
+        await hmacVerifyState(
+          raw,
+          request.headers.get('x-nosam-internal') ?? '',
+          'platform-secret',
+        ),
       ).toBe(true);
       const input = JSON.parse(raw);
       const existing = receipts.get(input.receiptId);

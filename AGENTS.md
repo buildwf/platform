@@ -1,4 +1,4 @@
-# Nosam
+# bwf
 
 React single-page apps with an optional backend on Cloudflare Workers, powered by Vite.
 
@@ -6,20 +6,20 @@ React single-page apps with an optional backend on Cloudflare Workers, powered b
 
 - Documentation source lives in `docs/`.
   - Docs is a Vitepress project using our custom theme. When asked to "link the theme", temporarily edit `docs/package.json` so that `@voidzero-dev/vitepress-theme` point to `link:../../../theme`. Rerun `vp install` to link it. Revert these when asked to "unlink the theme".
-- Packages publish to npm as `nosam` and `@nosam/*`. Consumer-facing code, docs examples, playground source, and package manifests should use only those public package names.
-- Published external runtime dependencies use compatible semver ranges. Preserve `workspace:*` for dependencies and peers between Nosam packages. The lockfile fixes the versions tested in this repository. Keep Miniflare's dated alpha coordinated with the Cloudflare toolchain: a caret does not accept the next date's alpha. Keep the Sandbox SDK version aligned with its packaged Docker helper and verified platform helper layer.
+- Packages publish to npm as `bwf` and `@buildwf/*`. Consumer-facing code, docs examples, playground source, and package manifests should use only those public package names.
+- Published external runtime dependencies use compatible semver ranges. Preserve `workspace:*` for dependencies and peers between bwf packages. The lockfile fixes the versions tested in this repository. Keep Miniflare's dated alpha coordinated with the Cloudflare toolchain: a caret does not accept the next date's alpha. Keep the Sandbox SDK version aligned with its packaged Docker helper and verified platform helper layer.
 
 ## Important Note for Release Workflows
 
-The `nosam` package on npm has these previous versions: '0.0.1', '0.1.0', '0.1.2', '0.1.3', '0.1.5', '0.1.6', '1.0.0', '1.0.1', '1.0.2', '3.0.0', '3.0.1'. We have unpublished these versions but they cannot be published again. In package release workflows, make sure to avoid / skip these versions for `packages/nosam`.
+The `bwf` package on npm has these previous versions: '0.0.1', '0.1.0', '0.1.2', '0.1.3', '0.1.5', '0.1.6', '1.0.0', '1.0.1', '1.0.2', '3.0.0', '3.0.1'. We have unpublished these versions but they cannot be published again. In package release workflows, make sure to avoid / skip these versions for `packages/bwf`.
 
 Deploy hosted production before publishing the npm packages: the CLI checks the platform version. See [operations](./platform/meta/operations.md#github-actions).
 
 ## Best Practices That Must Be Followed
 
 - **Do not use Python for repository scripts or automation**, including inline CI scripts and ad-hoc maintenance commands. Use Node.js with TypeScript/JavaScript, or shell/PowerShell where appropriate.
-- **Keep user-facing documentation focused on using Nosam.** Explain public APIs, configuration, observable behavior, and actions users need to take. Do not add implementation details, internal workarounds, defensive checks, normalization rules, or bug-fix history unless they help users make a decision or resolve an actionable problem. Maintainer-only knowledge belongs in source comments, repository/package `AGENTS.md`, or contributor guides. This applies to app guides, API/CLI references, consumer-facing READMEs, and shipped app-development skills. Code examples should type-check. When an API does not infer a route, param, or path type, annotate the example with the public type that checks it, such as `PageParams`, `RouteUrl`, or `routeUrl()`.
-- **Keep native Cloudflare deploys Workers Free-compatible by default.** New public Nosam SDK/runtime features must work with `nosam deploy --platform cloudflare` on Workers Free unless the underlying Cloudflare product has no Free offering. Paid-only functionality must be explicitly opt-in, inferred and emitted only when the app uses it, and checked before provisioning or building. Its documentation and deploy error must name the required Cloudflare product/plan, link to enable it, and explain any API-token permissions. Platform-internal paid services must never become requirements of a single-app native Cloudflare deploy. Add regression coverage proving that an app which does not use the paid feature emits no paid binding and performs no entitlement probe.
+- **Keep user-facing documentation focused on using bwf.** Explain public APIs, configuration, observable behavior, and actions users need to take. Do not add implementation details, internal workarounds, defensive checks, normalization rules, or bug-fix history unless they help users make a decision or resolve an actionable problem. Maintainer-only knowledge belongs in source comments, repository/package `AGENTS.md`, or contributor guides. This applies to app guides, API/CLI references, consumer-facing READMEs, and shipped app-development skills. Code examples should type-check. When an API does not infer a route, param, or path type, annotate the example with the public type that checks it, such as `PageParams`, `RouteUrl`, or `routeUrl()`.
+- **Keep native Cloudflare deploys Workers Free-compatible by default.** New public bwf SDK/runtime features must work with `bwf deploy --platform cloudflare` on Workers Free unless the underlying Cloudflare product has no Free offering. Paid-only functionality must be explicitly opt-in, inferred and emitted only when the app uses it, and checked before provisioning or building. Its documentation and deploy error must name the required Cloudflare product/plan, link to enable it, and explain any API-token permissions. Platform-internal paid services must never become requirements of a single-app native Cloudflare deploy. Add regression coverage proving that an app which does not use the paid feature emits no paid binding and performs no entitlement probe.
 - Every implementation plan should include the following:
   - During plan generation: ask clarifying questions when necessary, especially around developer-experience defining design decisions.
   - Verification:
@@ -32,11 +32,11 @@ Deploy hosted production before publishing the npm packages: the CLI checks the 
     - `README.md`
     - affected packages's `README.md` or `AGENTS.md`
     - relevant docs md files in `docs`
-    - `packages/nosam/skills/nosam` (if change affects skill/CLI guidance)
-    - `packages/nosam/AGENTS_TEMPLATE.md` (keep at most four brief bullets; detailed guidance belongs in docs)
+    - `packages/bwf/skills/bwf` (if change affects skill/CLI guidance)
+    - `packages/bwf/AGENTS_TEMPLATE.md` (keep at most four brief bullets; detailed guidance belongs in docs)
 - When adding new CLI commands, always remember to update the following:
   - CLI help message
-  - The hint message for command groups in the interactive list when running `nosam` with no args
+  - The hint message for command groups in the interactive list when running `bwf` with no args
   - `docs/reference/cli.md`
 
 ## Quick Reference
@@ -50,7 +50,7 @@ vp run test --list                  # Preview affected test files without builds
 vp run test --base origin/main      # Include committed branch changes
 vp test run                         # Run tests (unit + integration tests)
 vpr test:all                        # Format, lint, build, typecheck, and run all SDK/platform tests
-vp test run packages/nosam           # Only test the core plugin
+vp test run packages/bwf           # Only test the core plugin
 vp lint                             # Oxlint through Vite+
 vp fmt                              # Oxfmt through Vite+
 vp run check                        # Typecheck all packages with TypeScript
@@ -61,16 +61,16 @@ vp run --filter ./packages/vue typecheck # Typecheck a specific package
 
 pnpm workspaces managed through Vite+. Shared dependency versions use the **pnpm catalog** in `pnpm-workspace.yaml` (`typescript`, `vite-plus`, Vite+/Vitest aliases, `@cloudflare/workers-types`, wrangler). Make sure to run `vp install` after making package structure changes.
 
-| Package                                                      | npm name                  | Purpose                                                           |
-| ------------------------------------------------------------ | ------------------------- | ----------------------------------------------------------------- |
-| [`packages/deploy-core`](./packages/deploy-core)             | `@nosam/deploy-core`       | Shared deployment manifests, events, and target-neutral contracts |
-| [`packages/deploy-cloudflare`](./packages/deploy-cloudflare) | `@nosam/deploy-cloudflare` | Direct Cloudflare config and verified upload primitives           |
-| [`packages/edge`](./packages/edge)                           | `@nosam/edge`              | Shared routing, headers, and static edge runtime                  |
-| [`packages/platform`](./packages/platform/README.md)         | `@nosam/platform`          | Self-hosted installation contracts and packaged platform runtime  |
-| [`packages/nosam`](./packages/nosam/AGENTS.md)                 | `nosam`                    | Core Vite plugin — routing, inference, migrations, CLI            |
-| [`docs`](./docs)                                             | (private)                 | Documentation site (VitePress)                                    |
-| [`platform`](./platform/README.md)                           | (private)                 | Self-hosted platform source, routing, proxy, logs, and dashboard  |
-| `playground/*`                                               | (private)                 | local apps for testing                                            |
+| Package                                                      | npm name                     | Purpose                                                           |
+| ------------------------------------------------------------ | ---------------------------- | ----------------------------------------------------------------- |
+| [`packages/deploy-core`](./packages/deploy-core)             | `@buildwf/deploy-core`       | Shared deployment manifests, events, and target-neutral contracts |
+| [`packages/deploy-cloudflare`](./packages/deploy-cloudflare) | `@buildwf/deploy-cloudflare` | Direct Cloudflare config and verified upload primitives           |
+| [`packages/edge`](./packages/edge)                           | `@buildwf/edge`              | Shared routing, headers, and static edge runtime                  |
+| [`packages/platform`](./packages/platform/README.md)         | `@buildwf/platform`          | Self-hosted installation contracts and packaged platform runtime  |
+| [`packages/bwf`](./packages/bwf/AGENTS.md)                   | `bwf`                        | Core Vite plugin — routing, inference, migrations, CLI            |
+| [`docs`](./docs)                                             | (private)                    | Documentation site (VitePress)                                    |
+| [`platform`](./platform/README.md)                           | (private)                    | Self-hosted platform source, routing, proxy, logs, and dashboard  |
+| `playground/*`                                               | (private)                    | local apps for testing                                            |
 
 The platform source is part of this repository. Its workspace-only packages keep `private: true` to prevent accidental npm publication; this does not mean the platform source is private. Use `docs/guide/platform-development.md` for contributor/fork setup and `docs/guide/self-hosted-platform.md` for installation.
 
@@ -78,13 +78,13 @@ Platform packages live under `platform/packages/*` and may depend on public/shar
 
 ## Package guidance
 
-Read [the core package instructions](./packages/nosam/AGENTS.md) for plugin,
+Read [the core package instructions](./packages/bwf/AGENTS.md) for plugin,
 runtime, code-generation and CLI invariants. Each framework adapter has its
 own README under `packages/{react,vue,svelte,solid}`.
 The [API reference](./docs/reference/api.md) and
 [CLI reference](./docs/reference/cli.md) describe the supported public surface.
 
-`packages/nosam/docs` is ignored by Git and copied from `docs/`
+`packages/bwf/docs` is ignored by Git and copied from `docs/`
 during the build. Edit the source documentation instead.
 
 ## Tooling
@@ -120,9 +120,9 @@ targets and the shared browser fixtures.
 - **Miniflare D1 SQLite path** is NOT `<persist>/d1/<id>.db`. It's `<persist>/v3/d1/miniflare-D1DatabaseObject/<hmac-hash>.sqlite` where the hash is derived from `database_id`.
 - **Miniflare D1 `exec()` with multi-statement SQL** fails with `Cannot read properties of undefined (reading 'duration')`. Split into individual statements and use `db.batch(stmts.map(s => db.prepare(s)))` instead.
 - **ArkType `ArkErrors.map()` returns `ArkErrors`** (not a plain array), causing `Response.json()` serialization to crash via its custom `toJSON()`. Use `Array.from(issues, mapper)` instead of `issues.map(mapper)` when flattening Standard Schema issues.
-- **tsconfig `extends` does NOT merge `include`/`files`** — the child completely replaces the parent's. To make generated types discoverable, the `.nosam/tsconfig.json` uses `"files"` (inherited when the child doesn't specify `files`) rather than `"include"` (overridden by the child's `include`).
+- **tsconfig `extends` does NOT merge `include`/`files`** — the child completely replaces the parent's. To make generated types discoverable, the `.bwf/tsconfig.json` uses `"files"` (inherited when the child doesn't specify `files`) rather than `"include"` (overridden by the child's `include`).
 - **`declare module` augmentation requires `export {}`** at the top of the generated file. Without a top-level export/import, TypeScript treats it as an ambient module declaration (replaces the module entirely) rather than an augmentation (merges with existing exports). This hides runtime exports like `db` and `createDb`. Both `routes.d.ts` and `db.d.ts` use `export {}` to ensure augmentation semantics.
-- **tsconfig `lib` must be explicit** for CF Workers packages. Without `"lib": ["ES2022"]`, TS defaults to including `lib.dom.d.ts` which shadows `@cloudflare/workers-types` globals (e.g. `CacheStorage.default`). Applied to `nosam`.
+- **tsconfig `lib` must be explicit** for CF Workers packages. Without `"lib": ["ES2022"]`, TS defaults to including `lib.dom.d.ts` which shadows `@cloudflare/workers-types` globals (e.g. `CacheStorage.default`). Applied to `bwf`.
 - **D1 does not allow `PRAGMA foreign_keys=OFF`** — D1 enforces `foreign_keys=ON` always. Drizzle-generated migrations that do table rebuilds (e.g. adding NOT NULL to an existing column) use `PRAGMA foreign_keys=OFF/ON`, which silently fails on D1. Hand-edit these to `PRAGMA defer_foreign_keys=on/off` instead, which defers FK checks to the end of the current transaction.
 - **Vite config plugins option accepts array of plugins by default** - there is no need to spread plugins that export an array of plugins.
 - **Solid `createComponent()` evaluates immediately** — unlike React's JSX (which creates lazy descriptors), Solid's `createComponent(Fn, props)` calls `Fn` right away. Context providers must wrap the _evaluation_ of child components, not the evaluated result. Build layout chains inside provider `children` getters, not before wrapping in providers.
@@ -142,6 +142,6 @@ This is about tone in writing. It doesn't loosen the working constraints in this
 
 This repository is part of the product. It's what people get for the apps they build, so it takes an app as input and doesn't know which app it is. dedworc is one of those apps, and the first one. The things only dedworc needs as that first user are our own setup, and they live in the dedworc repository.
 
-So dedworc uses the product, and the product doesn't use, import or name anything from our own setup. `packages/nosam/test/unit/product-names.test.ts` checks this by failing when a tracked file here contains the app's name. A deliberate mention, such as this section, goes in the test's `allowed` list with a reason.
+So dedworc uses the product, and the product doesn't use, import or name anything from our own setup. `packages/bwf/test/unit/product-names.test.ts` checks this by failing when a tracked file here contains the app's name. A deliberate mention, such as this section, goes in the test's `allowed` list with a reason.
 
 The full explanation is `docs/scopes.md` in the dedworc repository (https://github.com/buildwf/dedworc/blob/main/docs/scopes.md). The page for people is https://claude.ai/artifact/B6rVb55NfCuUenLokzrp6c.

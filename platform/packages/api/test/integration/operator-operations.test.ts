@@ -1,4 +1,4 @@
-import { PLATFORM_APPLICATION_KEY, PLATFORM_SANDBOX_DRAIN_KEY } from '@nosam/platform';
+import { PLATFORM_APPLICATION_KEY, PLATFORM_SANDBOX_DRAIN_KEY } from '@buildwf/platform';
 import { asc, eq, sql } from 'drizzle-orm';
 import {
   afterAll,
@@ -153,7 +153,7 @@ test('database admission rejects protocol zero after the v2 barrier is armed', a
   expect(admitted?.admissionProtocol).toBe(3);
 });
 
-test.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
+test.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))(
   'updating an existing v2 barrier waits for a legacy admission transaction',
   async () => {
     const project = await createTestProject(env.db, ownerId, 'admission-lock');
@@ -207,7 +207,7 @@ test.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
   },
 );
 
-test.runIf(Boolean(process.env.NOSAM_TEST_DATABASE_URL))(
+test.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))(
   'arming v2 with no checkpoint waits for legacy admission before inventory',
   async () => {
     const project = await createTestProject(env.db, ownerId, 'admission-table-lock');

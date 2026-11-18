@@ -20,7 +20,7 @@ import {
 import { requireProjectRouteCapability } from './project-access.ts';
 
 const RECONCILIATION_FAILED_MESSAGE =
-  'Cloudflare Access could not be updated. Protection remains fail closed. Run `nosam project zero-trust reconcile` to retry, or ask a platform administrator to check the Access token.';
+  'Cloudflare Access could not be updated. Protection remains fail closed. Run `bwf project zero-trust reconcile` to retry, or ask a platform administrator to check the Access token.';
 
 function zeroTrustErrorResponse(
   context: Context<ApiEnv>,
@@ -35,7 +35,7 @@ function zeroTrustErrorResponse(
     return context.json(
       {
         error: error.message,
-        message: `${error.message} Run \`nosam project zero-trust status\` for details.`,
+        message: `${error.message} Run \`bwf project zero-trust status\` for details.`,
       },
       error.status,
     );

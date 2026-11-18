@@ -351,7 +351,7 @@ export async function uploadDeploymentWorker(input: {
     // asset bytes are not held through the Worker upload.
     const deployLocalHashes = new Set(
       Object.entries(assetManifest)
-        .filter(([path]) => path.startsWith('/.nosam-deploy/'))
+        .filter(([path]) => path.startsWith('/.bwf-deploy/'))
         .map(([, entry]) => entry.hash),
     );
     for (const hash of assetsByHash.keys()) {
@@ -371,7 +371,7 @@ export async function uploadDeploymentWorker(input: {
     // asset store returns the dedupe-poisoning stub.
     const servingManifest = Object.fromEntries(
       Object.entries(assetManifest)
-        .filter(([path]) => !path.startsWith('/.nosam-deploy/'))
+        .filter(([path]) => !path.startsWith('/.bwf-deploy/'))
         .map(([path, entry]) => [path, `!${entry.hash}`]),
     );
     const persistedAssetManifest = attachServingStoreMetadata(assetManifest, servingManifest, true);

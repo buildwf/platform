@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, it } from 'vite-plus/test';
-import { parseJsoncObject } from '../../../../../packages/nosam/src/cli/generated-wrangler-config.ts';
+import { parseJsoncObject } from '../../../../../packages/bwf/src/cli/generated-wrangler-config.ts';
 
 type KvBinding = { binding: string; id: string };
 type WorkerConfig = { kv_namespaces?: Array<KvBinding> };
@@ -19,8 +19,18 @@ const proxyConfig = readConfig('../../../proxy/wrangler.jsonc');
 
 it.each([
   ['default', config.vars, 'https://nosam.buildwithfriends.dev', 'nosam-cron-fires'],
-  ['production', config.env.production.vars, 'https://nosam.buildwithfriends.dev', 'nosam-cron-fires'],
-  ['staging', config.env.staging.vars, 'https://api.staging.void.cloud', 'nosam-cron-fires-staging'],
+  [
+    'production',
+    config.env.production.vars,
+    'https://nosam.buildwithfriends.dev',
+    'nosam-cron-fires',
+  ],
+  [
+    'staging',
+    config.env.staging.vars,
+    'https://api.staging.void.cloud',
+    'nosam-cron-fires-staging',
+  ],
 ])('configures OAuth and cron queues for %s', (_name, vars, origin, queue) => {
   expect(vars).toMatchObject({
     AUTH_REDIRECT_URI: `${origin}/auth/callback`,

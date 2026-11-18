@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 const root = join(import.meta.dirname, '..', '..', '..', '..', '..');
 // Reuse the core SDK's declared Miniflare test dependency.
-const require = createRequire(join(root, 'packages/nosam/package.json'));
+const require = createRequire(join(root, 'packages/bwf/package.json'));
 const { Miniflare, convertV4MiniflareOptions } = await import(require.resolve('miniflare'));
 const temporary = mkdtempSync(join(tmpdir(), 'nosam-controller-rpc-'));
 let runtime: { dispatchFetch(url: string): Promise<Response>; dispose(): Promise<void> };
@@ -58,7 +58,7 @@ export default class extends SandboxService {
     writeFileSync(
       join(temporary, 'application.ts'),
       `
-import { getSandbox } from ${JSON.stringify(join(root, 'packages/nosam/src/runtime/sandbox.ts'))};
+import { getSandbox } from ${JSON.stringify(join(root, 'packages/bwf/src/runtime/sandbox.ts'))};
 export default { async fetch(request, env) {
   const id = new URL(request.url).pathname.slice(1);
   const sandbox = await getSandbox(id, { inactivityTimeoutMs: 50 });
@@ -78,7 +78,10 @@ export default { async fetch(request, env) {
         logLevel: 'silent',
         resolve: {
           alias: {
-            'nosam/_sandbox-container': join(root, 'packages/nosam/src/runtime/sandbox-container.ts'),
+            '@buildwf/bwf/_sandbox-container': join(
+              root,
+              'packages/bwf/src/runtime/sandbox-container.ts',
+            ),
           },
         },
         ssr: { noExternal: true },

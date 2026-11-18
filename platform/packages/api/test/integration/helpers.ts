@@ -510,7 +510,7 @@ export async function setupEnv(options: SetupEnvOptions = {}): Promise<TestEnv> 
   const staticAssets = new MemoryKVNamespace();
   const staticAssetsR2 = new MemoryR2Bucket();
 
-  const databaseUrl = process.env.NOSAM_TEST_DATABASE_URL;
+  const databaseUrl = process.env.BWF_TEST_DATABASE_URL;
   const queryCapture: QueryCapture = { active: false, queries: [] };
   const logger = {
     logQuery(query: string) {

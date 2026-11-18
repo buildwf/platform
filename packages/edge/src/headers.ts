@@ -1,7 +1,7 @@
-import type { HeaderRule } from '@nosam/deploy-core';
+import type { HeaderRule } from '@buildwf/deploy-core';
 import { matchLiteralPattern } from './pattern.ts';
 
-export type { HeaderRule } from '@nosam/deploy-core';
+export type { HeaderRule } from '@buildwf/deploy-core';
 
 export type HeaderRulePolicy = Readonly<{
   /**

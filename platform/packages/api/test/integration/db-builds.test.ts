@@ -1983,7 +1983,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'actions-suspended-owner',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     } as const;
 
     await env.db
@@ -2052,7 +2052,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'actions-owner-race',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     } as const;
 
     expect((await createGithubActionsBuildWithinLimit(env.db, args)).outcome).toBe(
@@ -2082,7 +2082,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       repoFullName: 'acme/wf',
       repositoryId: DEFAULT_REPO_ID,
       buildExecutor: 'github_actions',
-      // Pin (the locked row) is the default nosam-deploy.yml.
+      // Pin (the locked row) is the default bwf-deploy.yml.
     });
     await seedActiveInstall(env.db, 'inst-wf');
 
@@ -2120,7 +2120,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-supersede',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(first.outcome).toBe('created');
     if (first.outcome !== 'created') {
@@ -2136,7 +2136,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-supersede',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(second.outcome).toBe('created');
     if (second.outcome !== 'created') {
@@ -2172,7 +2172,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-reuse',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(first.outcome).toBe('created');
     if (first.outcome !== 'created') {
@@ -2187,7 +2187,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-reuse',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(repeat.outcome).toBe('reused');
     if (repeat.outcome !== 'reused') {
@@ -2234,7 +2234,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-branch',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(onMain.outcome).toBe('created');
 
@@ -2263,7 +2263,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-cap',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(first.outcome).toBe('created');
     if (first.outcome !== 'created') {
@@ -2280,7 +2280,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-cap',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(second.outcome).toBe('created');
     if (second.outcome !== 'created') {
@@ -2309,7 +2309,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-cap-other',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(capped.outcome).toBe('limit-exceeded');
   });
@@ -2332,7 +2332,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'none',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(result.outcome).toBe('connection-removed');
 
@@ -2364,7 +2364,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-container',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(result.outcome).toBe('connection-removed');
 
@@ -2397,7 +2397,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-branch-mismatch',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(result.outcome).toBe('branch-mismatch');
 
@@ -2427,7 +2427,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-no-branch',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(result.outcome).toBe('created');
 
@@ -2459,7 +2459,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-rerun',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(attempt1.outcome).toBe('created');
     if (attempt1.outcome !== 'created') {
@@ -2476,7 +2476,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '2',
       installationId: 'inst-rerun',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(attempt2.outcome).toBe('created');
     if (attempt2.outcome !== 'created') {
@@ -2494,7 +2494,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '2',
       installationId: 'inst-rerun',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(repeat.outcome).toBe('reused');
     if (repeat.outcome !== 'reused') {
@@ -2528,7 +2528,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-rerun-supersede',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(attempt1.outcome).toBe('created');
     if (attempt1.outcome !== 'created') {
@@ -2545,7 +2545,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '2',
       installationId: 'inst-rerun-supersede',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(attempt2.outcome).toBe('created');
     if (attempt2.outcome !== 'created') {
@@ -2586,7 +2586,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-revoked-susp',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(result.outcome).toBe('install-revoked');
     expect(await getProjectBuilds(env.db, project.id)).toHaveLength(0);
@@ -2613,7 +2613,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-revoked-del',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(result.outcome).toBe('install-revoked');
     expect(await getProjectBuilds(env.db, project.id)).toHaveLength(0);
@@ -2645,7 +2645,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-revoked-sel',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(result.outcome).toBe('install-revoked');
     expect(await getProjectBuilds(env.db, project.id)).toHaveLength(0);
@@ -2677,7 +2677,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-revoked-ok',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(result.outcome).toBe('created');
     expect(await getProjectBuilds(env.db, project.id)).toHaveLength(1);
@@ -2727,7 +2727,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-replaced',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(replaced.outcome).toBe('connection-replaced');
     expect(await getProjectBuilds(env.db, project.id)).toHaveLength(0);
@@ -2741,7 +2741,7 @@ describe('createGithubActionsBuildWithinLimit', () => {
       githubRunAttempt: '1',
       installationId: 'inst-replaced',
       repositoryId: DEFAULT_REPO_ID,
-      expectedWorkflowPath: '.github/workflows/nosam-deploy.yml',
+      expectedWorkflowPath: '.github/workflows/bwf-deploy.yml',
     });
     expect(ok.outcome).toBe('created');
     expect(await getProjectBuilds(env.db, project.id)).toHaveLength(1);

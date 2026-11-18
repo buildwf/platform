@@ -59,7 +59,7 @@ export const finalize = procedure('deploy.finalize')
   .input(
     type({
       projectId: 'string',
-      /** The deployment's manifest, assets and Worker input: the body `nosam deploy` assembles. */
+      /** The deployment's manifest, assets and Worker input: the body `bwf deploy` assembles. */
       body: 'object',
       /** Retrying with the same key returns the same deployment. */
       'idempotencyKey?': /^[A-Za-z0-9_-]{1,128}$/,

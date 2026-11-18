@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
-import { PlatformApiError, PlatformClient } from '../../packages/nosam/src/cli/client.ts';
-import { validateSecretValues } from '../../packages/nosam/src/cli/env-validation.ts';
+import { PlatformApiError, PlatformClient } from '../../packages/bwf/src/cli/client.ts';
+import { validateSecretValues } from '../../packages/bwf/src/cli/env-validation.ts';
 import { initializeStagingEnv, STAGING_API } from './kitchen-sink-staging-env-setup.ts';
 
 const projectRoot = fileURLToPath(new URL('../../playground/kitchen-sink', import.meta.url));
@@ -9,14 +9,14 @@ if (import.meta.main) {
   let step = 'checking staging credentials';
   try {
     if (
-      process.env.NOSAM_API_URL !== STAGING_API ||
-      !process.env.NOSAM_TOKEN ||
+      process.env.BWF_API_URL !== STAGING_API ||
+      !process.env.BWF_TOKEN ||
       !process.env.CF_ACCESS_CLIENT_ID ||
       !process.env.CF_ACCESS_CLIENT_SECRET
     ) {
       throw new Error('Explicit staging credentials and API URL are required.');
     }
-    const client = new PlatformClient(process.env.NOSAM_TOKEN, { apiUrl: STAGING_API });
+    const client = new PlatformClient(process.env.BWF_TOKEN, { apiUrl: STAGING_API });
     const names = await initializeStagingEnv(
       client,
       (entries) => validateSecretValues(projectRoot, entries),

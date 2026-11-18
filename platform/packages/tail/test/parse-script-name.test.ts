@@ -11,7 +11,9 @@ describe('parseScriptName', () => {
     ).toEqual({ projectKey: 'user-my-app', deployId: 'dpl_abc123' });
     expect(parseScriptName('nosam-do-proj_example-hash')).toBeNull();
     expect(
-      parseScriptName('nosam-do-proj_example-hash', undefined, ['nosam-project:__platform-dispatch']),
+      parseScriptName('nosam-do-proj_example-hash', undefined, [
+        'nosam-project:__platform-dispatch',
+      ]),
     ).toBeNull();
   });
   it('parses versioned script name', () => {

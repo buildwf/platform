@@ -1,5 +1,5 @@
-import { sql } from 'nosam/db';
-import { sqliteTable, integer, text } from 'nosam/schema-d1';
+import { sql } from '@buildwf/bwf/db';
+import { sqliteTable, integer, text } from '@buildwf/bwf/schema-d1';
 
 export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),

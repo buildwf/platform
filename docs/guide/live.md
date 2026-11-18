@@ -5,9 +5,9 @@ outline: deep
 
 # Live Event Streams
 
-`nosam/live` lets a browser subscribe to several topics over one SSE connection. Publish an event from a route, scheduled job, or queue consumer, and Nosam delivers it to connected subscribers using Durable Objects.
+`@buildwf/bwf/live` lets a browser subscribe to several topics over one SSE connection. Publish an event from a route, scheduled job, or queue consumer, and bwf delivers it to connected subscribers using Durable Objects.
 
-For example, a page can subscribe to updates for a post and its comments, then change those subscriptions as the user navigates. If a single request produces the whole stream, such as an AI response, [`nosam/sse`](./sse.md) is enough.
+For example, a page can subscribe to updates for a post and its comments, then change those subscriptions as the user navigates. If a single request produces the whole stream, such as an AI response, [`@buildwf/bwf/sse`](./sse.md) is enough.
 
 ## Define A Stream
 
@@ -15,7 +15,7 @@ Define a stream in a server-only module:
 
 ```ts
 // src/live.ts
-import { defineLiveStream } from 'nosam/live';
+import { defineLiveStream } from '@buildwf/bwf/live';
 
 export const live = defineLiveStream({
   id: 'app',
@@ -25,13 +25,13 @@ export const live = defineLiveStream({
 
 This example accepts visitors who are not signed in. Without `onSubscribe`, any connection can subscribe to any topic, so read [Authorization](#authorization) before you publish private data.
 
-Nosam enables live streams when a [scanned file](../reference/resource-inference.md#scanned-directories) imports `nosam/live`, so keep this module in `src/` or another scanned directory. To keep it in an unscanned directory such as `lib/`, add that directory to [`inference.scanDirs`](../reference/resource-inference.md#custom-scan-directories) and list the default directories you still use, because `scanDirs` replaces them.
+bwf enables live streams when a [scanned file](../reference/resource-inference.md#scanned-directories) imports `@buildwf/bwf/live`, so keep this module in `src/` or another scanned directory. To keep it in an unscanned directory such as `lib/`, add that directory to [`inference.scanDirs`](../reference/resource-inference.md#custom-scan-directories) and list the default directories you still use, because `scanDirs` replaces them.
 
 Expose it from a normal route:
 
 ```ts
 // routes/live.ts
-import { defineHandler } from 'nosam';
+import { defineHandler } from '@buildwf/bwf';
 import { live } from '../src/live';
 
 export const GET = defineHandler((c) => live.connect(c));
@@ -43,10 +43,10 @@ operations for that connection.
 
 ## Subscribe From The Browser
 
-Use the browser helper from `nosam/live/client`:
+Use the browser helper from `@buildwf/bwf/live/client`:
 
 ```ts
-import { connectLiveStream } from 'nosam/live/client';
+import { connectLiveStream } from '@buildwf/bwf/live/client';
 
 const stream = connectLiveStream('/live', {
   withCredentials: true,
@@ -78,11 +78,11 @@ stream.close();
 
 Subscription IDs are scoped to a connection. Reusing an ID replaces its subscription. After reconnecting, the helper restores active subscriptions and sends their latest `eventId` as `lastEventId`.
 
-With [`routing.typedRoutes`](../reference/config.md#routing-typedroutes), TypeScript checks the URL against your routes. External `http://` and `https://` URLs also work. For a URL you validate at runtime, use `as RouteUrl` from `nosam/routes` to skip the type check.
+With [`routing.typedRoutes`](../reference/config.md#routing-typedroutes), TypeScript checks the URL against your routes. External `http://` and `https://` URLs also work. For a URL you validate at runtime, use `as RouteUrl` from `@buildwf/bwf/routes` to skip the type check.
 
 ## Publish
 
-Publish from any server-side code that has a Nosam runtime env:
+Publish from any server-side code that has a bwf runtime env:
 
 ```ts
 import { live } from '../src/live';
@@ -94,7 +94,7 @@ await live.publish(
 );
 ```
 
-Choose your own topic names and JSON payloads. Nosam includes `type` and `eventId` in the event envelope without interpreting or storing them. It doesn't use native SSE `id` fields.
+Choose your own topic names and JSON payloads. bwf includes `type` and `eventId` in the event envelope without interpreting or storing them. It doesn't use native SSE `id` fields.
 
 If you are outside an active request/runtime context, pass env explicitly:
 
@@ -104,7 +104,7 @@ await live.withEnv(env).publish('post:12', { title: 'Updated title' });
 
 ## Authorization
 
-Only a connection's owner can change its subscriptions. The example above allows anonymous connections; authenticated streams use the current Nosam user by default.
+Only a connection's owner can change its subscriptions. The example above allows anonymous connections; authenticated streams use the current bwf user by default.
 
 The owner decides who can change a connection's subscriptions, not which topics the connection can read.
 
@@ -129,7 +129,7 @@ export const live = defineLiveStream({
 });
 ```
 
-When `identifyConnection` returns `null` or `undefined`, Nosam falls back to the
+When `identifyConnection` returns `null` or `undefined`, bwf falls back to the
 current authenticated user and uses `user:${user.id}` when the user has a string
 `id`. If neither path produces an owner and `allowAnonymousControl` is not set,
 the request is rejected with `403`.
@@ -151,7 +151,7 @@ export const live = defineLiveStream({
 
 ## Limits
 
-`nosam/live` is designed for small and medium fanout. By default, a stream allows:
+`@buildwf/bwf/live` is designed for small and medium fanout. By default, a stream allows:
 
 - `256` active subscriptions per browser connection
 - `256` active subscriptions per topic
@@ -178,4 +178,4 @@ export const live = defineLiveStream({
 
 Events are ordered within a topic and delivered at most once. Deploys, rollbacks, restarts, and reconnects can drop live state, so clients may miss events. Raw HTTP clients must resubscribe after reconnecting.
 
-For replay, store events in your application and use `eventId` and `lastEventId` to resume. Nosam does not store events or manage client state.
+For replay, store events in your application and use `eventId` and `lastEventId` to resume. bwf does not store events or manage client state.

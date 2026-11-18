@@ -70,7 +70,7 @@ export async function createGitHubConnection(
     buildExecutor?: GitHubConnection['build_executor'];
     // The `.github/workflows/*.yml` file the OIDC exchange binds the deploy
     // token to. Optional: when omitted the column default applies (the
-    // scaffolded `nosam-deploy.yml`). Validated by the connect route before it
+    // scaffolded `bwf-deploy.yml`). Validated by the connect route before it
     // reaches here.
     workflowPath?: string;
   },

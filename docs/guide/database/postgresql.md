@@ -11,13 +11,13 @@ Connect your PostgreSQL database through [Cloudflare Hyperdrive](https://develop
 
 Hyperdrive pools connections between your Worker and PostgreSQL. Requests reuse an existing connection instead of opening a new TCP and TLS connection each time.
 
-Nosam can provision the Hyperdrive configuration from your connection string. Direct Cloudflare deploys also need an API token for first-time provisioning; see the [Cloudflare guide](../../integrations/cloudflare.md#databases-and-secrets).
+bwf can provision the Hyperdrive configuration from your connection string. Direct Cloudflare deploys also need an API token for first-time provisioning; see the [Cloudflare guide](../../integrations/cloudflare.md#databases-and-secrets).
 
 ## Configuration
 
 ### 1. Set the database
 
-Add to your `nosam.config.ts`:
+Add to your `bwf.config.ts`:
 
 ```json
 {
@@ -37,19 +37,19 @@ This connects directly to your Postgres database during local Vite development.
 
 ### 3. Deploy
 
-For a Nosam platform, deploy prompts for the connection string if needed. You can also set it with `nosam db set-url`. For direct Cloudflare deploys, export the production `DATABASE_URL` in your shell.
+For a bwf platform, deploy prompts for the connection string if needed. You can also set it with `bwf db set-url`. For direct Cloudflare deploys, export the production `DATABASE_URL` in your shell.
 
-Nosam provisions Hyperdrive without saving the connection string in project config. Both `postgres://` and `postgresql://` URLs are supported, including provider query strings such as `?sslmode=require`.
+bwf provisions Hyperdrive without saving the connection string in project config. Both `postgres://` and `postgresql://` URLs are supported, including provider query strings such as `?sslmode=require`.
 
-The Hyperdrive that Nosam creates connects with TLS in Cloudflare's default `require` mode. Hyperdrive does not use the `sslmode=verify-ca`, `sslmode=verify-full`, or `sslrootcert` settings from your connection string. To have Hyperdrive verify your database against a specific certificate authority on a direct Cloudflare deploy, [create the Hyperdrive in Cloudflare with that certificate](https://developers.cloudflare.com/hyperdrive/configuration/tls-ssl-certificates-for-hyperdrive/) and add its ID to [`cloudflare.hyperdrive`](../../integrations/cloudflare.md#databases-and-secrets).
+The Hyperdrive that bwf creates connects with TLS in Cloudflare's default `require` mode. Hyperdrive does not use the `sslmode=verify-ca`, `sslmode=verify-full`, or `sslrootcert` settings from your connection string. To have Hyperdrive verify your database against a specific certificate authority on a direct Cloudflare deploy, [create the Hyperdrive in Cloudflare with that certificate](https://developers.cloudflare.com/hyperdrive/configuration/tls-ssl-certificates-for-hyperdrive/) and add its ID to [`cloudflare.hyperdrive`](../../integrations/cloudflare.md#databases-and-secrets).
 
 ## Schema Definition
 
-Import schema helpers from `nosam/schema-pg`:
+Import schema helpers from `@buildwf/bwf/schema-pg`:
 
 ```ts
 // db/schema.ts
-import { pgTable, serial, text, timestamp, boolean } from 'nosam/schema-pg';
+import { pgTable, serial, text, timestamp, boolean } from '@buildwf/bwf/schema-pg';
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -62,7 +62,7 @@ export const users = pgTable('users', {
 });
 ```
 
-`nosam gen model` generates PostgreSQL-appropriate code when `database` is set to `"pg"`.
+`bwf gen model` generates PostgreSQL-appropriate code when `database` is set to `"pg"`.
 
 ## Migrations
 
@@ -70,25 +70,25 @@ The migration workflow is the same as D1:
 
 ```bash
 # Generate migration files from schema changes
-nosam db generate
+bwf db generate
 
 # Apply pending migrations locally
-nosam db migrate
+bwf db migrate
 
 # Check migration status
-nosam db status
+bwf db status
 ```
 
 The main difference is that PostgreSQL supports **transactional DDL**. Each migration is wrapped in `BEGIN` and `COMMIT`, so a failure rolls back the whole migration instead of leaving the database half-updated.
 
-`nosam deploy` applies pending migrations before making the new version live. See [Deployment](../deployment.md).
+`bwf deploy` applies pending migrations before making the new version live. See [Deployment](../deployment.md).
 
 ## Updating the Connection String
 
-To update a linked Nosam project's connection, for example after moving the database to another host:
+To update a linked bwf project's connection, for example after moving the database to another host:
 
 ```bash
-nosam db set-url
+bwf db set-url
 ```
 
 This prompts for the new connection string and updates the Hyperdrive configuration.

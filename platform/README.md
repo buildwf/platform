@@ -5,8 +5,8 @@ applications through the Nosam CLI. This repository contains its control plane,
 routing, proxy, log ingestion, and optional dashboard and build services.
 
 The API, dispatch, proxy, tail, and email gateway Workers are packaged into
-[`@nosam/platform`](../packages/platform/README.md). A released or source-built
-runtime can be installed and upgraded with `nosam platform`. The installer tracks
+[`@buildwf/platform`](../packages/platform/README.md). A released or source-built
+runtime can be installed and upgraded with `bwf platform`. The installer tracks
 resource ownership, applies compatible migrations, and preserves credentials
 across upgrades.
 
@@ -40,14 +40,14 @@ relative to `platform/` unless they begin with `../`.
 
 ## Quick Reference
 
-| Command                                      | Purpose                                                   |
-| -------------------------------------------- | --------------------------------------------------------- |
-| `vp run build:core`                          | Build shared packages, CLI, and packaged platform runtime |
-| `vp run build:platform`                      | Build the platform source apps                            |
+| Command                                       | Purpose                                                   |
+| --------------------------------------------- | --------------------------------------------------------- |
+| `vp run build:core`                           | Build shared packages, CLI, and packaged platform runtime |
+| `vp run build:platform`                       | Build the platform source apps                            |
 | `vp run --filter @nosamcloud/platform dev`    | Start the dashboard development server                    |
-| `vp run build:all`                           | Build all packages, platform apps, and playgrounds        |
-| `vp test run --project 'platform-*'`         | Run platform tests                                        |
-| `vp run check`                               | Typecheck the workspace                                   |
+| `vp run build:all`                            | Build all packages, platform apps, and playgrounds        |
+| `vp test run --project 'platform-*'`          | Run platform tests                                        |
+| `vp run check`                                | Typecheck the workspace                                   |
 | `vp run --filter @nosamcloud/platform health` | Check the selected platform using operator authentication |
 
 The workspace `dev` and `build` scripts in `platform/package.json` apply to the
@@ -84,10 +84,10 @@ Platform source lives in `platform/packages/`; public SDK packages live in the r
 
 ## Operations
 
-For an installed platform, use `nosam platform` lifecycle and administrator
+For an installed platform, use `bwf platform` lifecycle and administrator
 commands. `vp run --filter @nosamcloud/platform health` forwards to
-`nosam platform system health`, using the selected connection and operator login.
-Automation supplies `NOSAM_OPERATOR_TOKEN` and an explicit `NOSAM_API_URL`.
+`bwf platform system health`, using the selected connection and operator login.
+Automation supplies `NOSAM_OPERATOR_TOKEN` and an explicit `BWF_API_URL`.
 
 Nosam Cloud maintains an existing deployment that predates the installer. Its
 `platform/package.json` deployment scripts and `platform/deployments/nosam-cloud.json`
@@ -96,8 +96,8 @@ explains its environments and credentials without storing account-specific
 inventories or personal access assignments in the repository.
 
 The hosted deploy/smoke workflows target the existing Nosam Cloud deployment.
-Forks build their own runtime and use `nosam platform install` or
-`nosam platform upgrade --runtime`, as shown in the development guide.
+Forks build their own runtime and use `bwf platform install` or
+`bwf platform upgrade --runtime`, as shown in the development guide.
 
 ## Implementation Notes
 

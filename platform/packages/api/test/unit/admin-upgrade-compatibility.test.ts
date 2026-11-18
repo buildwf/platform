@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { platformDatabaseSchemaDigest } from '@buildwf/platform/installer';
 import { PGlite } from '@electric-sql/pglite';
-import { platformDatabaseSchemaDigest } from '@nosam/platform/installer';
 import { expect, it } from 'vite-plus/test';
 
 it('upgrades the OAuth schema without elevating existing grants or changing production projects', async () => {

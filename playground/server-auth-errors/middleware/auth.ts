@@ -1,5 +1,5 @@
-import { defineMiddleware } from 'nosam';
-import { getUser, requireAuth } from 'nosam/auth';
+import { defineMiddleware } from '@buildwf/bwf';
+import { getUser, requireAuth } from '@buildwf/bwf/auth';
 import { requirePageUser } from '../src/require-page-user.ts';
 
 export default defineMiddleware(async (c, next) => {

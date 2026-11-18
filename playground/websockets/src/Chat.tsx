@@ -1,8 +1,8 @@
+import type { WebSocketRouteMap } from '@buildwf/bwf/routes';
+import { connect, type BwfSocket } from '@buildwf/bwf/ws';
 import { startTransition, useEffect, useEffectEvent, useRef, useState } from 'react';
-import type { WebSocketRouteMap } from 'nosam/routes';
-import { connect, type NosamSocket } from 'nosam/ws';
 
-type ChatSocket = NosamSocket<'/ws/chat/:room'>;
+type ChatSocket = BwfSocket<'/ws/chat/:room'>;
 type ChatClientEvent = WebSocketRouteMap['/ws/chat/:room']['client'];
 type ChatServerEvent = WebSocketRouteMap['/ws/chat/:room']['server'];
 

@@ -3,7 +3,7 @@ import {
   platformWorkersDevAliasKey,
   PLATFORM_APPLICATION_KEY,
   resolvePlatformApplicationEnvironment,
-} from '@nosam/platform';
+} from '@buildwf/platform';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { Env } from '../../src/env.ts';
 import app from '../../src/index.ts';

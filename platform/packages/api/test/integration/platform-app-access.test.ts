@@ -4,7 +4,7 @@ import {
   PLATFORM_APP_ACCESS_SETUP_PROOF_PREFIX,
   PLATFORM_APP_ACCESS_TURN_OFF_PROOF_PREFIX,
   type PlatformAppAccessSetup,
-} from '@nosam/platform';
+} from '@buildwf/platform';
 import { sql } from 'drizzle-orm';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import {

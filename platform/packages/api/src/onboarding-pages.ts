@@ -1,4 +1,8 @@
-import { browserPageLead, escapeBrowserHtml, renderBrowserPage } from '@nosam/platform/browser-page';
+import {
+  browserPageLead,
+  escapeBrowserHtml,
+  renderBrowserPage,
+} from '@buildwf/platform/browser-page';
 import { platformConnectCommand } from './platform-identity.ts';
 
 export function platformWelcomePage(platformName: string, apiUrl: string): string {
@@ -20,7 +24,7 @@ export function platformWelcomePage(platformName: string, apiUrl: string): strin
 <p>The CLI opens your browser to sign in when needed. If access is restricted, ask your platform administrator for an invitation and sign in with the invited email address.</p>
 </div>
 <div class="nosam-auth-section">
-<p>Ready to deploy? Run <code>nosam deploy</code> from your application's directory. To create a new application, follow the <a href="https://void.cloud/guide/quickstart">Nosam quickstart</a>, then connect it to this platform before deploying.</p>
+<p>Ready to deploy? Run <code>bwf deploy</code> from your application's directory. To create a new application, follow the <a href="https://void.cloud/guide/quickstart">Nosam quickstart</a>, then connect it to this platform before deploying.</p>
 </div>
 <div class="nosam-auth-section">
 <h2>Administration</h2>
@@ -37,7 +41,7 @@ export function platformInvitationPage(
 ): string {
   const command = escapeBrowserHtml(platformConnectCommand(apiUrl));
   const invitationCommand = invitationId
-    ? escapeBrowserHtml(`nosam project team accept ${invitationId}`)
+    ? escapeBrowserHtml(`bwf project team accept ${invitationId}`)
     : null;
   return renderBrowserPage({
     title: invitationCommand ? 'Accept Project Invitation' : 'Get Started',
@@ -55,7 +59,7 @@ ${
     : ''
 }
 <p>The CLI opens your browser to sign in when needed. Invitation commands use your connected platform account and can run from any directory.</p>
-<p>To work on an application on this platform, open its directory and run <code>nosam project link</code> if it is not linked yet. If that directory is already linked to another project, use a separate checkout without a <code>.nosam/project.json</code> file, connect to this platform there, and run <code>nosam project link</code>. Accepting an invitation keeps existing project links.</p>
+<p>To work on an application on this platform, open its directory and run <code>bwf project link</code> if it is not linked yet. If that directory is already linked to another project, use a separate checkout without a <code>.bwf/project.json</code> file, connect to this platform there, and run <code>bwf project link</code>. Accepting an invitation keeps existing project links.</p>
 <p>Need to create an application? Read the <a href="https://void.cloud/guide/quickstart">Nosam quickstart</a>, then return here to connect to this platform before deploying.</p>`,
   });
 }

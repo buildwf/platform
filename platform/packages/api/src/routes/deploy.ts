@@ -32,7 +32,7 @@ import { presignAssetPut } from '../r2-presign.ts';
 import { listR2Objects, type WorkerModule } from '../worker-upload.ts';
 import { requireProjectRouteCapability } from './project-access.ts';
 
-export { MAX_ROUTING_RULES, validateManifestShape } from '@nosam/deploy-core';
+export { MAX_ROUTING_RULES, validateManifestShape } from '@buildwf/deploy-core';
 
 export async function executeQueuedDeployment(
   env: ApiEnv['Bindings'],

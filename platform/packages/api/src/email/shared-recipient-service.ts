@@ -1,4 +1,4 @@
-import type { DeployManifest } from '@nosam/deploy-core';
+import type { DeployManifest } from '@buildwf/deploy-core';
 import { and, asc, eq, ne, notInArray, sql } from 'drizzle-orm';
 import type { Db, DbOrTx } from '../db.ts';
 import type { ApiEnv } from '../env.ts';

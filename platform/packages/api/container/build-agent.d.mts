@@ -18,7 +18,7 @@ export function builderCacheEnv(): Record<string, string>;
 /** `CI=true` for every build child, so interactive CLIs render CI-safe (non-animated) output. */
 export function nonInteractiveEnv(): Record<string, string>;
 
-/** Fallback `nosam` CLI version when BuildManager injects no `NOSAM_CLI_VERSION`. */
+/** Fallback `nosam` CLI version when BuildManager injects no `BWF_CLI_VERSION`. */
 export const DEFAULT_NOSAM_CLI_VERSION: string;
 
 /**
@@ -239,12 +239,12 @@ export interface RunBuildDeps {
     opts?: { env?: Record<string, string | undefined> },
   ) => Promise<number>;
   reportStatus?: (status: string) => Promise<void>;
-  hasLocalNosam?: () => boolean;
-  resolveSourceNosamCli?: () => string | null;
+  hasLocalBwf?: () => boolean;
+  resolveSourceBwfCli?: () => string | null;
   chownWorkDir?: () => Promise<void>;
   killBuilderProcesses?: () => Promise<void>;
 }
 
 /** Runs the build pipeline and always resolves to a process exit code. */
 export function runBuild(deps?: RunBuildDeps): Promise<number>;
-export function resolveSourceNosamCli(root?: string): string | null;
+export function resolveSourceBwfCli(root?: string): string | null;

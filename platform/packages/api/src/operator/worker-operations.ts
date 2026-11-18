@@ -21,7 +21,7 @@ export function requireHostedPlatform(env: ApiEnv['Bindings']) {
   if (env.PLATFORM_INSTALLATION_ID) {
     throw new OperatorError(
       501,
-      'Manage this self-hosted Nosam platform with `nosam platform upgrade`.',
+      'Manage this self-hosted Nosam platform with `bwf platform upgrade`.',
       'capability_unavailable',
       { capability: 'hosted-platform-operations' },
     );

@@ -3,11 +3,11 @@ description: 'Change the platform in this repository, test it locally, and deplo
 outline: deep
 ---
 
-# Developing a Nosam Platform
+# Developing a bwf Platform
 
 The framework, CLI, and platform live in one repository. You can change the platform, test it locally, and deploy a runtime built from your fork into your own Cloudflare account.
 
-If you want to run the released platform without changing its implementation, start with [Install a Nosam Platform](/guide/self-hosted-platform). Use [Platform Administration](/guide/platform-administration) for managing an installed platform.
+If you want to run the released platform without changing its implementation, start with [Install a bwf Platform](/guide/self-hosted-platform). Use [Platform Administration](/guide/platform-administration) for managing an installed platform.
 
 ## Development Guides
 

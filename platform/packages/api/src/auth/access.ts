@@ -1,4 +1,4 @@
-import { parsePlatformAccessProtection, type PlatformAccessProtection } from '@nosam/platform';
+import { parsePlatformAccessProtection, type PlatformAccessProtection } from '@buildwf/platform';
 import { createRemoteJWKSet, customFetch, jwtVerify } from 'jose';
 import { boundedIdentityResponse } from './identity-network.ts';
 import type { CompanyIdentity } from './sessions.ts';

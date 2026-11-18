@@ -1,5 +1,5 @@
 {
-  "extends": "./.nosam/tsconfig.json",
+  "extends": "./.bwf/tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
     "module": "NodeNext",
@@ -8,7 +8,7 @@
     "noUnusedLocals": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["nosam/env"],
+    "types": ["@buildwf/bwf/env"],
     "allowImportingTsExtensions": true
   },
   "include": ["routes", "db"]

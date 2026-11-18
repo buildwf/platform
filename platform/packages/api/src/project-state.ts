@@ -20,7 +20,7 @@ export class ProjectRequiresNormalizationError extends Error {
 
   constructor(projectId: string, reason: string) {
     super(
-      `${reason} Ask a platform operator to run nosam platform project normalize ${projectId} --plan, then apply it with --yes.`,
+      `${reason} Ask a platform operator to run bwf platform project normalize ${projectId} --plan, then apply it with --yes.`,
     );
   }
 }

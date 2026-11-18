@@ -74,7 +74,7 @@ async function snapshot(context: Context<ApiEnv>, deploymentId: string, db = con
     }
   }
   for (const [path, value] of Object.entries(entries)) {
-    if (path.startsWith('/.nosam-deploy/')) {
+    if (path.startsWith('/.bwf-deploy/')) {
       continue;
     }
     if (!path.startsWith('/') || !value || typeof value !== 'object' || Array.isArray(value)) {
@@ -393,7 +393,7 @@ export async function assetMigrationInventory(
         }
       }
       for (const [path, value] of Object.entries(entries)) {
-        if (path.startsWith('/.nosam-deploy/')) {
+        if (path.startsWith('/.bwf-deploy/')) {
           continue;
         }
         assets++;

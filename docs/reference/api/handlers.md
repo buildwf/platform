@@ -5,14 +5,14 @@ outline: deep
 
 # Handlers and Middleware {#handlers}
 
-Imported from `"nosam"` or `"nosam/handler"`.
+Imported from `"nosam"` or `"@buildwf/bwf/handler"`.
 
 ## `defineHandler(handler)` {#definehandler-handler}
 
 Wraps a route handler function. The handler receives a [`CloudContext`](./types.md#cloudcontext) and can return a plain value (auto-converted to a Response) or use the Hono `c.json()` / `c.text()` APIs directly.
 
 ```ts
-import { defineHandler } from 'nosam';
+import { defineHandler } from '@buildwf/bwf';
 
 export const GET = defineHandler((c) => {
   return { message: 'hello' };
@@ -42,8 +42,8 @@ Creates a handler with input validation using any [Standard Schema](https://gith
 Validated input is passed as the second argument to the handler.
 
 ```ts
+import { defineHandler } from '@buildwf/bwf';
 import * as v from 'valibot';
-import { defineHandler } from 'nosam';
 
 export const POST = defineHandler.withValidator({
   body: v.object({
@@ -82,7 +82,7 @@ The inferred output types of each validator slot. For a `ValidatorSlots` with `b
 Type-safe wrapper for Hono middleware.
 
 ```ts
-import { defineMiddleware } from 'nosam';
+import { defineMiddleware } from '@buildwf/bwf';
 
 export default defineMiddleware(async (c, next) => {
   console.log(`${c.req.method} ${c.req.path}`);
@@ -98,11 +98,11 @@ function defineMiddleware(handler: MiddlewareHandler<CloudEnv>): MiddlewareHandl
 
 ## `basicAuth(options)` {#basicauth-options}
 
-Built-in Basic authentication middleware for temporary site gates and pre-launch protection. Use it from `middleware/` with credentials from `nosam/env` to protect the whole app, or pass it to `defineHandler()` for a single route.
+Built-in Basic authentication middleware for temporary site gates and pre-launch protection. Use it from `middleware/` with credentials from `@buildwf/bwf/env` to protect the whole app, or pass it to `defineHandler()` for a single route.
 
-Nosam’s reserved `/__nosam` endpoints use their own authentication and are excluded from Basic auth.
+bwf’s reserved `/__nosam` endpoints use their own authentication and are excluded from Basic auth.
 
-When credentials come from `nosam/env`, wrap the reads in functions so they are resolved per request after Nosam has bound the runtime env.
+When credentials come from `@buildwf/bwf/env`, wrap the reads in functions so they are resolved per request after bwf has bound the runtime env.
 
 If `password` resolves to an empty value, requests fail with a server error instead of passing the gate.
 
@@ -110,7 +110,7 @@ For app-specific bypasses such as health checks or public webhooks, compose that
 
 ```ts
 // env.ts
-import { defineEnv, string } from 'nosam/env';
+import { defineEnv, string } from '@buildwf/bwf/env';
 
 export default defineEnv({
   BASIC_AUTH_USERNAME: string(),
@@ -120,8 +120,8 @@ export default defineEnv({
 
 ```ts
 // middleware/01.basic-auth.ts
-import { basicAuth } from 'nosam';
-import { env } from 'nosam/env';
+import { basicAuth } from '@buildwf/bwf';
+import { env } from '@buildwf/bwf/env';
 
 export default basicAuth({
   username: () => env.BASIC_AUTH_USERNAME,
@@ -146,7 +146,7 @@ function basicAuth(options: {
 Wraps a Cloudflare [Scheduled handler](https://developers.cloudflare.com/workers/runtime-apis/handlers/scheduled/) with type inference.
 
 ```ts
-import { defineScheduled } from 'nosam';
+import { defineScheduled } from '@buildwf/bwf';
 
 export default defineScheduled(async (controller, env, ctx) => {
   const { results } = await env.DB.prepare('SELECT * FROM stale').all();
@@ -171,7 +171,7 @@ function defineScheduled(
 Wraps a [queue](../../guide/queues.md) consumer handler with typed message bodies. The generic `<T>` defines the message body type, which flows through to the typed `queues` proxy for `send()` calls.
 
 ```ts
-import { defineQueue } from 'nosam';
+import { defineQueue } from '@buildwf/bwf';
 
 export default defineQueue<{ to: string; subject: string }>(async (batch, env) => {
   for (const msg of batch.messages) {

@@ -27,7 +27,7 @@
     "test": "vp test run"
   },
   "devDependencies": {
-    "@nosam/platform": "workspace:*",
+    "@buildwf/platform": "workspace:*",
     "playwright": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:"

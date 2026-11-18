@@ -3,15 +3,15 @@ import footerBg from '@assets/viteplus/footer-background.jpg';
 import BaseTheme, { themeContextKey } from '@voidzero-dev/vitepress-theme';
 import type { Theme } from 'vitepress';
 import { h } from 'vue';
-import CodeGroupSync from './CodeGroupSync.vue';
+import BwfAppFileTree from './BwfAppFileTree.vue';
 import 'virtual:group-icons.css';
 import './styles.css';
+import CodeGroupSync from './CodeGroupSync.vue';
 import DocFooter from './DocFooter.vue';
 import FileTree from './FileTree.vue';
-import RoutesFileTree from './RoutesFileTree.vue';
 import logoDark from './nosam-dark.svg';
 import logoLight from './nosam-light.svg';
-import NosamAppFileTree from './NosamAppFileTree.vue';
+import RoutesFileTree from './RoutesFileTree.vue';
 import voidzeroLogoDark from './voidzero-logo-dark.svg';
 import voidzeroLogoLight from './voidzero-logo-light.svg';
 
@@ -64,7 +64,7 @@ export default {
   enhanceApp({ app }) {
     app.component('FileTree', FileTree);
     app.component('RoutesFileTree', RoutesFileTree);
-    app.component('NosamAppFileTree', NosamAppFileTree);
+    app.component('BwfAppFileTree', BwfAppFileTree);
     app.provide(themeContextKey, {
       logoDark,
       logoLight,

@@ -102,11 +102,11 @@ describe('reserved binding names cover every platform-injected binding', () => {
     }
   });
 
-  it('does NOT reserve a bare NOSAM_PROJECT_SLUG', () => {
+  it('does NOT reserve a bare BWF_PROJECT_SLUG', () => {
     // There is exactly one project-slug binding and it is `__NOSAM_PROJECT_SLUG`
-    // (what the framework reads). Reserving an undotted `NOSAM_PROJECT_SLUG`
+    // (what the framework reads). Reserving an undotted `BWF_PROJECT_SLUG`
     // nothing injects would only take a usable name away from users.
-    expect(isReservedBindingName('NOSAM_PROJECT_SLUG')).toBe(false);
+    expect(isReservedBindingName('BWF_PROJECT_SLUG')).toBe(false);
   });
 
   it('is exposed as a set so callers cannot mutate it into disagreement', () => {

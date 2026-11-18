@@ -1,4 +1,4 @@
-import { defineScheduled } from 'nosam';
+import { defineScheduled } from '@buildwf/bwf';
 
 export const cron = '* * * * *';
 

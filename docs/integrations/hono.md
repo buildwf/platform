@@ -1,11 +1,11 @@
 ---
-description: 'Nosam route handlers run on Hono. Add hono to your app when your code imports from it directly.'
+description: 'bwf route handlers run on Hono. Add hono to your app when your code imports from it directly.'
 outline: deep
 ---
 
 # Hono
 
-Nosam handlers run on [Hono](https://hono.dev). Nosam depends on Hono internally, but if your app imports from `hono/*` directly, add `hono` to your app's dependencies first.
+bwf handlers run on [Hono](https://hono.dev). bwf depends on Hono internally, but if your app imports from `hono/*` directly, add `hono` to your app's dependencies first.
 
 ```bash
 npm install hono
@@ -18,17 +18,17 @@ Once `hono` is installed in your app, you can use built-in middleware, helpers, 
 Use Hono's built-in middleware in your global middleware files or per-route:
 
 ```ts
+import { defineMiddleware } from '@buildwf/bwf';
 // middleware/01.cors.ts
 import { cors } from 'hono/cors';
-import { defineMiddleware } from 'nosam';
 
 export default defineMiddleware(cors({ origin: 'https://example.com' }));
 ```
 
 ```ts
+import { defineHandler } from '@buildwf/bwf';
 // routes/api/products.ts (per-route cache)
 import { cache } from 'hono/cache';
-import { defineHandler } from 'nosam';
 import { listProducts } from '../../lib/products';
 
 export const GET = defineHandler(
@@ -42,9 +42,9 @@ export const GET = defineHandler(
 :::
 
 ```ts
+import { defineHandler } from '@buildwf/bwf';
 // routes/api/webhooks/stripe.ts (per-route usage)
 import { bearerAuth } from 'hono/bearer-auth';
-import { defineHandler } from 'nosam';
 
 export const POST = defineHandler(bearerAuth({ token: 'webhook-secret' }), async (c) => {
   const body = await c.req.json();
@@ -57,9 +57,9 @@ export const POST = defineHandler(bearerAuth({ token: 'webhook-secret' }), async
 Hono's context helpers are available on `c` in every handler:
 
 ```ts
+import { defineHandler } from '@buildwf/bwf';
 // routes/api/download.ts
 import { stream } from 'hono/streaming';
-import { defineHandler } from 'nosam';
 
 export const GET = defineHandler((c) => {
   return stream(c, async (stream) => {
@@ -71,7 +71,7 @@ export const GET = defineHandler((c) => {
 
 ```ts
 // routes/api/data.ts
-import { defineHandler } from 'nosam';
+import { defineHandler } from '@buildwf/bwf';
 
 export const GET = defineHandler((c) => {
   c.header('X-Custom', 'value');
@@ -85,9 +85,9 @@ export const GET = defineHandler((c) => {
 Any `hono/*` or `@hono/*` package works. Install the package in your app, then use it directly:
 
 ```ts
+import { defineMiddleware } from '@buildwf/bwf';
 // middleware/01.rate-limit.ts
 import { rateLimiter } from 'hono-rate-limiter';
-import { defineMiddleware } from 'nosam';
 
 export default defineMiddleware(rateLimiter({ windowMs: 60_000, limit: 100 }));
 ```
@@ -110,10 +110,10 @@ For the full list of built-in middleware, see the [Hono documentation](https://h
 Return `c.redirect()` from a handler to redirect. From a shared helper, throw an `HTTPException` with the redirect response in `res`. This works in handlers and middleware:
 
 ```ts
+import type { CloudContext } from '@buildwf/bwf';
+import { getUser } from '@buildwf/bwf/auth';
 // lib/require-page-user.ts
 import { HTTPException } from 'hono/http-exception';
-import type { CloudContext } from 'nosam';
-import { getUser } from 'nosam/auth';
 
 export function requirePageUser(c: CloudContext) {
   const user = getUser();

@@ -33,7 +33,7 @@ export function deployTokenTtlSecondsForBuildMinutes(timeoutMinutes: number): nu
  * The token authenticates as the project owner (`sub: userId`) but is pinned
  * to a single project via the `project` claim, so the deploy endpoint guard
  * rejects any attempt to deploy a different project with it. Used by remote
- * builds (CF Containers and GitHub Actions) running the real `nosam deploy` CLI.
+ * builds (CF Containers and GitHub Actions) running the real `bwf deploy` CLI.
  *
  * The token also carries a `build` claim binding it to that specific build's
  * row. The deploy endpoint rejects the token once the build is no longer

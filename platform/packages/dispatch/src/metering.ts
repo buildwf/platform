@@ -117,7 +117,7 @@ export function truncateUtf8(value: string, maxBytes: number): string {
  * of its own worth reading: the runtime records the invocation as `canceled`,
  * which is indistinguishable from a real client hang-up. Only dispatch knows it
  * was the one that hung up, so only dispatch can say so. Without this row
- * `nosam project logs` is empty for exactly the failure the user most needs
+ * `bwf project logs` is empty for exactly the failure the user most needs
  * explained.
  *
  * The row is the same seven-blob/two-double shape `packages/tail/src/index.ts`

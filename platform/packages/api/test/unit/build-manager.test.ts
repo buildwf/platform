@@ -305,7 +305,7 @@ vi.mock('../../src/github/check-run.ts', async (importOriginal) => ({
 }));
 
 // eslint-disable-next-line import/no-relative-packages -- intentional cross-package contract reference
-import nosamPackageJson from '../../../../../packages/nosam/package.json' with { type: 'json' };
+import bwfPackageJson from '../../../../../packages/bwf/package.json' with { type: 'json' };
 // Helpers from the container build agent. Importing the .mjs only pulls in its
 // exported helpers — the entrypoint guard keeps `main()` from running the
 // control server / spawning anything on import. Types come from the sibling
@@ -664,18 +664,18 @@ describe('BuildManager.startBuild', () => {
     expect(envVars.BUILD_ID).toBe('b1');
     expect(envVars.PROJECT_ID).toBe('p1');
     expect(envVars.PROJECT_SLUG).toBe('my-app');
-    expect(envVars.NOSAM_PROJECT).toBe('my-app');
-    expect(envVars.NOSAM_TOKEN).toBe('deploy-token');
+    expect(envVars.BWF_PROJECT).toBe('my-app');
+    expect(envVars.BWF_TOKEN).toBe('deploy-token');
     expect(envVars.SOURCE_TOKEN).toBe('install-token');
     expect(envVars.SOURCE_TARBALL_URL).toBe('https://api.github.com/repos/owner/repo/tarball/sha1');
-    expect(envVars.NOSAM_API_URL).toBe('https://nosam.buildwithfriends.dev');
+    expect(envVars.BWF_API_URL).toBe('https://nosam.buildwithfriends.dev');
     // The fallback Nosam CLI version is PINNED (never `latest`) so a moving npm
     // dist-tag can't change deploy behavior with no repo diff.
-    expect(envVars.NOSAM_CLI_VERSION).toBeDefined();
-    expect(envVars.NOSAM_CLI_VERSION).not.toBe('latest');
-    expect(envVars.NOSAM_CLI_VERSION).toMatch(/^\d+\.\d+\.\d+/);
+    expect(envVars.BWF_CLI_VERSION).toBeDefined();
+    expect(envVars.BWF_CLI_VERSION).not.toBe('latest');
+    expect(envVars.BWF_CLI_VERSION).toMatch(/^\d+\.\d+\.\d+/);
     expect(envVars.DO_LOG_URL).toBe('https://manager/logs');
-    // Commit/source metadata forwarded so `nosam deploy` stamps the deployment's
+    // Commit/source metadata forwarded so `bwf deploy` stamps the deployment's
     // commit (the tarball has no `.git`; the CLI reads GITHUB_SHA first). Without
     // these the deployment records a NULL commit and onStop can't link the build.
     expect(envVars.GITHUB_SHA).toBe('sha1');
@@ -720,7 +720,7 @@ describe('BuildManager.startBuild', () => {
     const m = makeManager(ctx, env);
     await m.startBuild(makeConfig());
     const envVars = (m as unknown as { envVars: Record<string, string> }).envVars;
-    expect(envVars.NOSAM_API_URL).toBe('https://api.staging.void.cloud');
+    expect(envVars.BWF_API_URL).toBe('https://api.staging.void.cloud');
   });
 
   it('forwards the staging CF Access service token into the container (staging hosts are Access-gated)', async () => {
@@ -951,7 +951,7 @@ describe('BuildManager.startBuild', () => {
 
   // A failure AFTER a successful this.start() (arming the timeout schedule) must stop
   // the already-running container before finalizing — otherwise it keeps running
-  // the real `nosam deploy` CLI with a live token and can publish a deployment
+  // the real `bwf deploy` CLI with a live token and can publish a deployment
   // while Postgres records the build as `failed`. The row must still be marked
   // failed and the scheduler poked, and stop() must not mask the original error.
   it('stops the container when a step AFTER start() throws, then still fails + pokes', async () => {
@@ -1124,7 +1124,7 @@ describe('BuildManager.startBuild', () => {
   // Hyperdrive/Postgres write) throws — so the base start() rejects AFTER the
   // container is already live (modeled by the stub start() running onStart before
   // resolving). The catch must FORCE the live container down (SIGTERM→SIGKILL),
-  // not leak it running the real `nosam deploy` CLI with a live token while
+  // not leak it running the real `bwf deploy` CLI with a live token while
   // Postgres records the build `failed` and a fleet slot is pinned until the idle
   // net. If `containerStarted` only flipped after a resolved start(), this
   // onStart-reject would be treated as pre-launch and skip the teardown
@@ -1621,7 +1621,7 @@ describe('BuildManager.startBuild source-token scoping', () => {
 // with NO freshness recheck. The push webhook checks at ENQUEUE, but a
 // missed/delayed newer-push webhook can leave a stale queued build the scheduler
 // runs and publishes. startBuild must do a JIT branch-head recheck BEFORE
-// minting NOSAM_TOKEN (mirroring the OIDC path): only 'identical' proceeds;
+// minting BWF_TOKEN (mirroring the OIDC path): only 'identical' proceeds;
 // ahead/behind/diverged cancels; null requeues (or age-fails) — and in every
 // non-identical case NO token is minted and NO container is started.
 describe('BuildManager.startBuild freshness recheck', () => {
@@ -1951,7 +1951,7 @@ describe('BuildManager.onStop', () => {
   });
 
   // The exit-0 deployment lookup is BEST-EFFORT and runs AFTER
-  // `nosam deploy` has already exited 0. A transient Hyperdrive/Postgres throw on
+  // `bwf deploy` has already exited 0. A transient Hyperdrive/Postgres throw on
   // it must NOT strand the build — onStop must still finalize 'complete' (with a
   // null link) and poke the scheduler. Otherwise the row stays ACTIVE and the
   // slot is pinned until the 75m idle reaper while the deploy is already live.
@@ -3628,7 +3628,7 @@ describe('BuildManager.pollLogs (DO log pull-loop)', () => {
   // build-bound token while the row is in ACTIVE_BUILD_STATUSES, and
   // `routes/deploy.ts` re-checks the same set inside its go-live transaction. The
   // drain pull put up to 2x LOG_DRAIN_BUDGET_MS in front of the SIGTERM, so leaving
-  // the row ACTIVE across it lets a `nosam deploy` at its go-live step write routing
+  // the row ACTIVE across it lets a `bwf deploy` at its go-live step write routing
   // KV and commit the deployment 'live', to then be recorded 'build timed out'.
   it('revokes the build row in Postgres BEFORE draining logs, so the deploy token cannot outlive the timeout', async () => {
     const ctx = makeStubCtx();
@@ -3718,7 +3718,7 @@ describe('BuildManager.pollLogs (DO log pull-loop)', () => {
       (m as unknown as { _containerRunning: boolean })._containerRunning = false;
       return new RealResponse(
         JSON.stringify({
-          lines: [{ seq: 1, line: 'nosam deploy exited with code 0', stream: 'stdout', ts: 1 }],
+          lines: [{ seq: 1, line: 'bwf deploy exited with code 0', stream: 'stdout', ts: 1 }],
           lastSeq: 1,
         }),
         {
@@ -3734,7 +3734,7 @@ describe('BuildManager.pollLogs (DO log pull-loop)', () => {
     expect(fetchFn).toHaveBeenCalledOnce();
     expect(containerCalls.stopped).toBe(0);
     expect(containerCalls.destroyed).toBe(0);
-    expect(ctx._logs.map((row) => row.line)).toEqual(['nosam deploy exited with code 0']);
+    expect(ctx._logs.map((row) => row.line)).toEqual(['bwf deploy exited with code 0']);
   });
 
   // The agent's own `[build-agent] received SIGTERM…` line is generated only once
@@ -6240,7 +6240,7 @@ describe('BuildManager agent-control auth + transition guards', () => {
 });
 
 // Env scrub: the build agent must NOT hand the control-plane secrets to
-// untrusted repo child processes (install / `nosam deploy`), or a malicious
+// untrusted repo child processes (install / `bwf deploy`), or a malicious
 // postinstall could read DO_LOG_URL/AGENT_TOKEN and forge build status.
 describe('build-agent sanitizeChildEnv (env scrub)', () => {
   const fullEnv = {
@@ -6249,12 +6249,12 @@ describe('build-agent sanitizeChildEnv (env scrub)', () => {
     DO_LOG_URL: 'https://manager/logs',
     SOURCE_TOKEN: 'ghs_secret',
     AGENT_TOKEN: 'agent-secret',
-    NOSAM_TOKEN: 'deploy-jwt',
+    BWF_TOKEN: 'deploy-jwt',
     CF_ACCESS_CLIENT_ID: 'svc-id.access',
     CF_ACCESS_CLIENT_SECRET: 'svc-secret',
     NOSAM_ACCESS_CREDENTIALS: '{"https://proxy.example.com":{"CF_ACCESS_TOKEN":"private"}}',
-    NOSAM_API_URL: 'https://nosam.buildwithfriends.dev',
-    NOSAM_PROJECT: 'my-app',
+    BWF_API_URL: 'https://nosam.buildwithfriends.dev',
+    BWF_PROJECT: 'my-app',
   };
 
   it('drops every control-plane + credential secret from the (install) child env', () => {
@@ -6266,7 +6266,7 @@ describe('build-agent sanitizeChildEnv (env scrub)', () => {
     // scripts — a postinstall could exfiltrate it or publish to the scoped
     // project within the TTL. It's scrubbed by default; only the deploy step
     // re-injects it (see the next test).
-    expect(child.NOSAM_TOKEN).toBeUndefined();
+    expect(child.BWF_TOKEN).toBeUndefined();
     // The shared staging CF Access service token is equally sensitive — a leaked
     // pair reaches every Access-gated staging host — so it's scrubbed too.
     expect(child.CF_ACCESS_CLIENT_ID).toBeUndefined();
@@ -6279,21 +6279,21 @@ describe('build-agent sanitizeChildEnv (env scrub)', () => {
       'CF_ACCESS_CLIENT_SECRET',
       'DO_LOG_URL',
       'NOSAM_ACCESS_CREDENTIALS',
-      'NOSAM_TOKEN',
+      'BWF_TOKEN',
       'SOURCE_TOKEN',
     ]);
   });
 
-  it('re-injects NOSAM_TOKEN + CF Access creds only for the trusted deploy step (via extra overrides)', () => {
+  it('re-injects BWF_TOKEN + CF Access creds only for the trusted deploy step (via extra overrides)', () => {
     // The deploy spawn passes the captured deploy token + CF Access pair as extra
     // (runBuild captures them into locals and deletes them from process.env before
     // any child spawns — see the parent-process scrub tests below).
     const deployEnv = sanitizeChildEnv(fullEnv, {
-      NOSAM_TOKEN: fullEnv.NOSAM_TOKEN,
+      BWF_TOKEN: fullEnv.BWF_TOKEN,
       CF_ACCESS_CLIENT_ID: fullEnv.CF_ACCESS_CLIENT_ID,
       CF_ACCESS_CLIENT_SECRET: fullEnv.CF_ACCESS_CLIENT_SECRET,
     });
-    expect(deployEnv.NOSAM_TOKEN).toBe('deploy-jwt');
+    expect(deployEnv.BWF_TOKEN).toBe('deploy-jwt');
     expect(deployEnv.CF_ACCESS_CLIENT_ID).toBe('svc-id.access');
     expect(deployEnv.CF_ACCESS_CLIENT_SECRET).toBe('svc-secret');
     // Still scrubbed of the DO control-plane secrets.
@@ -6307,19 +6307,19 @@ describe('build-agent sanitizeChildEnv (env scrub)', () => {
     // as extra must not resurrect an empty/garbage value — sanitizeChildEnv treats
     // an undefined override as a delete.
     const deployEnv = sanitizeChildEnv(fullEnv, {
-      NOSAM_TOKEN: fullEnv.NOSAM_TOKEN,
+      BWF_TOKEN: fullEnv.BWF_TOKEN,
       CF_ACCESS_CLIENT_ID: undefined,
       CF_ACCESS_CLIENT_SECRET: undefined,
     });
-    expect(deployEnv.NOSAM_TOKEN).toBe('deploy-jwt');
+    expect(deployEnv.BWF_TOKEN).toBe('deploy-jwt');
     expect(deployEnv.CF_ACCESS_CLIENT_ID).toBeUndefined();
     expect(deployEnv.CF_ACCESS_CLIENT_SECRET).toBeUndefined();
   });
 
   it('keeps non-secret deploy + system vars the build legitimately needs', () => {
     const child = sanitizeChildEnv(fullEnv);
-    expect(child.NOSAM_API_URL).toBe('https://nosam.buildwithfriends.dev');
-    expect(child.NOSAM_PROJECT).toBe('my-app');
+    expect(child.BWF_API_URL).toBe('https://nosam.buildwithfriends.dev');
+    expect(child.BWF_PROJECT).toBe('my-app');
     expect(child.PATH).toBe('/usr/bin');
     expect(child.HOME).toBe('/root');
   });
@@ -6334,14 +6334,14 @@ describe('build-agent sanitizeChildEnv (env scrub)', () => {
 // Parent-process secret scrub (heap env). The agent deletes the control-plane +
 // credential secrets from its OWN `process.env` at the right lifecycle points —
 // AGENT_TOKEN/DO_LOG_URL at module load (captured into module consts first), and
-// SOURCE_TOKEN/NOSAM_TOKEN inside runBuild (captured into locals, deleted before
+// SOURCE_TOKEN/BWF_TOKEN inside runBuild (captured into locals, deleted before
 // any child spawns). This is defense-in-depth for the spawn-inheritance path
 // only: `sanitizeChildEnv` already strips the COPY handed to every untrusted
 // child. It does NOT scrub `/proc/self/environ` — `unsetenv()` only mutates the
 // heap `environ`, while `/proc/<pid>/environ` keeps the initial-stack block — so
 // a same-uid child can still recover these via `/proc/<ppid>/environ`, which is
 // why untrusted children run under a non-root uid. This does not cover the
-// deploy-child→vite-build NOSAM_TOKEN inheritance.
+// deploy-child→vite-build BWF_TOKEN inheritance.
 describe('build-agent shutdown handlers (PID-1 SIGTERM delivery)', () => {
   it('registers SIGTERM + SIGINT listeners so the DO stop() SIGTERM is not dropped by PID 1', () => {
     // The agent is PID 1 in the container; Linux delivers a signal to PID 1 only
@@ -6397,17 +6397,17 @@ describe('build-agent parent-process secret scrub', () => {
     }
   });
 
-  it('deletes NOSAM_TOKEN and SOURCE_TOKEN from process.env during runBuild — while the deploy child still receives NOSAM_TOKEN', async () => {
+  it('deletes BWF_TOKEN and SOURCE_TOKEN from process.env during runBuild — while the deploy child still receives BWF_TOKEN', async () => {
     const saved = {
-      NOSAM_TOKEN: process.env.NOSAM_TOKEN,
+      BWF_TOKEN: process.env.BWF_TOKEN,
       SOURCE_TOKEN: process.env.SOURCE_TOKEN,
-      NOSAM_API_URL: process.env.NOSAM_API_URL,
-      NOSAM_PROJECT: process.env.NOSAM_PROJECT,
+      BWF_API_URL: process.env.BWF_API_URL,
+      BWF_PROJECT: process.env.BWF_PROJECT,
     };
-    process.env.NOSAM_TOKEN = 'deploy-jwt';
+    process.env.BWF_TOKEN = 'deploy-jwt';
     process.env.SOURCE_TOKEN = 'ghs_secret';
-    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
-    process.env.NOSAM_PROJECT = 'my-app';
+    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_PROJECT = 'my-app';
     try {
       const seen: Array<{ cmd: string; env: NodeJS.ProcessEnv | undefined }> = [];
       const code = await runBuild({
@@ -6420,26 +6420,26 @@ describe('build-agent parent-process secret scrub', () => {
           },
         ),
         reportStatus: vi.fn(async () => {}),
-        hasLocalNosam: () => true,
+        hasLocalBwf: () => true,
       });
       expect(code).toBe(0);
 
       // After runBuild, the parent's HEAP env no longer holds either secret (the
       // spawn-inheritance vector is closed; the `/proc/self/environ` block is
       // NOT scrubbed — see this describe's preamble).
-      expect(process.env.NOSAM_TOKEN).toBeUndefined();
+      expect(process.env.BWF_TOKEN).toBeUndefined();
       expect(process.env.SOURCE_TOKEN).toBeUndefined();
 
       // The install child saw neither (sanitizeChildEnv scrubs the copy AND the
       // parent already deleted them).
       const install = seen.find((s) => s.cmd === 'npm');
-      expect(install?.env?.NOSAM_TOKEN).toBeUndefined();
+      expect(install?.env?.BWF_TOKEN).toBeUndefined();
       expect(install?.env?.SOURCE_TOKEN).toBeUndefined();
 
       // The trusted deploy child STILL receives the token (captured into a local
       // before the parent-env delete and re-injected via the extra overrides).
       const deploy = [...seen].reverse().find((s) => s.cmd === 'npx');
-      expect(deploy?.env?.NOSAM_TOKEN).toBe('deploy-jwt');
+      expect(deploy?.env?.BWF_TOKEN).toBe('deploy-jwt');
     } finally {
       for (const [key, value] of Object.entries(saved)) {
         if (value === undefined) {
@@ -6462,12 +6462,12 @@ describe('build-agent parent-process secret scrub', () => {
 describe('PINNED_NOSAM_CLI_VERSION (fallback CLI ↔ SDK package contract)', () => {
   it('matches the workspace SDK package the platform deploys against', () => {
     // The Worker bundle must use the exact SDK version from the release commit.
-    expect(PINNED_NOSAM_CLI_VERSION).toBe(nosamPackageJson.version);
+    expect(PINNED_NOSAM_CLI_VERSION).toBe(bwfPackageJson.version);
   });
 
   it('matches the container agent’s own backstop default', () => {
     // Both import the same release manifest, including when the agent receives
-    // no NOSAM_CLI_VERSION override from the manager.
+    // no BWF_CLI_VERSION override from the manager.
     expect(DEFAULT_NOSAM_CLI_VERSION).toBe(PINNED_NOSAM_CLI_VERSION);
   });
 });
@@ -6485,15 +6485,15 @@ describe('build-agent nonInteractiveEnv (CI-safe child output)', () => {
     // runBuild requireEnv()s the token pair up front (and deletes both from
     // process.env as it runs) — save/restore covers that too.
     const saved = {
-      NOSAM_TOKEN: process.env.NOSAM_TOKEN,
+      BWF_TOKEN: process.env.BWF_TOKEN,
       SOURCE_TOKEN: process.env.SOURCE_TOKEN,
-      NOSAM_API_URL: process.env.NOSAM_API_URL,
-      NOSAM_PROJECT: process.env.NOSAM_PROJECT,
+      BWF_API_URL: process.env.BWF_API_URL,
+      BWF_PROJECT: process.env.BWF_PROJECT,
     };
-    process.env.NOSAM_TOKEN = 'deploy-jwt';
+    process.env.BWF_TOKEN = 'deploy-jwt';
     process.env.SOURCE_TOKEN = 'ghs_secret';
-    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
-    process.env.NOSAM_PROJECT = 'my-app';
+    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_PROJECT = 'my-app';
     try {
       const seen: Array<{ cmd: string; env: NodeJS.ProcessEnv | undefined }> = [];
       const code = await runBuild({
@@ -6506,7 +6506,7 @@ describe('build-agent nonInteractiveEnv (CI-safe child output)', () => {
           },
         ),
         reportStatus: vi.fn(async () => {}),
-        hasLocalNosam: () => true,
+        hasLocalBwf: () => true,
       });
       expect(code).toBe(0);
       expect(seen.map((s) => s.cmd)).toEqual(['npm', 'npx', 'npx']);
@@ -6563,15 +6563,15 @@ describe('build-agent non-root child isolation', () => {
 
   it('the install AND deploy children run with the builder cache env (HOME=/home/builder)', async () => {
     const saved = {
-      NOSAM_TOKEN: process.env.NOSAM_TOKEN,
+      BWF_TOKEN: process.env.BWF_TOKEN,
       SOURCE_TOKEN: process.env.SOURCE_TOKEN,
-      NOSAM_API_URL: process.env.NOSAM_API_URL,
-      NOSAM_PROJECT: process.env.NOSAM_PROJECT,
+      BWF_API_URL: process.env.BWF_API_URL,
+      BWF_PROJECT: process.env.BWF_PROJECT,
     };
-    process.env.NOSAM_TOKEN = 'deploy-jwt';
+    process.env.BWF_TOKEN = 'deploy-jwt';
     process.env.SOURCE_TOKEN = 'ghs_secret';
-    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
-    process.env.NOSAM_PROJECT = 'my-app';
+    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_PROJECT = 'my-app';
     try {
       const seen: Array<{ cmd: string; env: NodeJS.ProcessEnv | undefined }> = [];
       const code = await runBuild({
@@ -6584,7 +6584,7 @@ describe('build-agent non-root child isolation', () => {
           },
         ),
         reportStatus: vi.fn(async () => {}),
-        hasLocalNosam: () => true,
+        hasLocalBwf: () => true,
       });
       expect(code).toBe(0);
 
@@ -6596,7 +6596,7 @@ describe('build-agent non-root child isolation', () => {
       const deploy = [...seen].reverse().find((s) => s.cmd === 'npx');
       expect(deploy?.env?.HOME).toBe('/home/builder');
       // The builder cache env must NOT clobber the re-injected deploy token.
-      expect(deploy?.env?.NOSAM_TOKEN).toBe('deploy-jwt');
+      expect(deploy?.env?.BWF_TOKEN).toBe('deploy-jwt');
     } finally {
       for (const [key, value] of Object.entries(saved)) {
         if (value === undefined) {
@@ -6610,15 +6610,15 @@ describe('build-agent non-root child isolation', () => {
 
   it('hands the extracted tree to the builder (chown) after download, before the install child', async () => {
     const saved = {
-      NOSAM_TOKEN: process.env.NOSAM_TOKEN,
+      BWF_TOKEN: process.env.BWF_TOKEN,
       SOURCE_TOKEN: process.env.SOURCE_TOKEN,
-      NOSAM_API_URL: process.env.NOSAM_API_URL,
-      NOSAM_PROJECT: process.env.NOSAM_PROJECT,
+      BWF_API_URL: process.env.BWF_API_URL,
+      BWF_PROJECT: process.env.BWF_PROJECT,
     };
-    process.env.NOSAM_TOKEN = 'deploy-jwt';
+    process.env.BWF_TOKEN = 'deploy-jwt';
     process.env.SOURCE_TOKEN = 'ghs_secret';
-    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
-    process.env.NOSAM_PROJECT = 'my-app';
+    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_PROJECT = 'my-app';
     try {
       const order: Array<string> = [];
       const code = await runBuild({
@@ -6634,7 +6634,7 @@ describe('build-agent non-root child isolation', () => {
           return 0;
         }),
         reportStatus: vi.fn(async () => {}),
-        hasLocalNosam: () => true,
+        hasLocalBwf: () => true,
       });
       expect(code).toBe(0);
       // chown must sit between the source download and the first untrusted child,
@@ -6655,18 +6655,18 @@ describe('build-agent non-root child isolation', () => {
 
   // a dependency lifecycle script that daemonizes during install survives as
   // a same-uid sibling of the deploy child and could read its
-  // /proc/<deploy-pid>/environ (NOSAM_TOKEN + staging CF Access). runBuild must
+  // /proc/<deploy-pid>/environ (BWF_TOKEN + staging CF Access). runBuild must
   // reap all BUILDER_UID processes AFTER the install child closes and BEFORE the
   // deploy child spawns.
   it('reaps leftover builder processes between install and the deploy spawn', async () => {
     const saved = {
-      NOSAM_TOKEN: process.env.NOSAM_TOKEN,
-      NOSAM_API_URL: process.env.NOSAM_API_URL,
-      NOSAM_PROJECT: process.env.NOSAM_PROJECT,
+      BWF_TOKEN: process.env.BWF_TOKEN,
+      BWF_API_URL: process.env.BWF_API_URL,
+      BWF_PROJECT: process.env.BWF_PROJECT,
     };
-    process.env.NOSAM_TOKEN = 'deploy-jwt';
-    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
-    process.env.NOSAM_PROJECT = 'my-app';
+    process.env.BWF_TOKEN = 'deploy-jwt';
+    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_PROJECT = 'my-app';
     try {
       const order: Array<string> = [];
       const code = await runBuild({
@@ -6684,7 +6684,7 @@ describe('build-agent non-root child isolation', () => {
         reportStatus: vi.fn(async (status: string) => {
           order.push(`status:${status}`);
         }),
-        hasLocalNosam: () => true,
+        hasLocalBwf: () => true,
       });
       expect(code).toBe(0);
       // The reap runs strictly after the install child closes and strictly before
@@ -6705,13 +6705,13 @@ describe('build-agent non-root child isolation', () => {
 
   it('does NOT reap (or deploy) when the install fails', async () => {
     const saved = {
-      NOSAM_TOKEN: process.env.NOSAM_TOKEN,
-      NOSAM_API_URL: process.env.NOSAM_API_URL,
-      NOSAM_PROJECT: process.env.NOSAM_PROJECT,
+      BWF_TOKEN: process.env.BWF_TOKEN,
+      BWF_API_URL: process.env.BWF_API_URL,
+      BWF_PROJECT: process.env.BWF_PROJECT,
     };
-    process.env.NOSAM_TOKEN = 'deploy-jwt';
-    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
-    process.env.NOSAM_PROJECT = 'my-app';
+    process.env.BWF_TOKEN = 'deploy-jwt';
+    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_PROJECT = 'my-app';
     try {
       const reap = vi.fn(async () => {});
       const runChild = vi.fn(async () => 19); // install fails
@@ -6722,7 +6722,7 @@ describe('build-agent non-root child isolation', () => {
         runChild,
         killBuilderProcesses: reap,
         reportStatus: vi.fn(async () => {}),
-        hasLocalNosam: () => true,
+        hasLocalBwf: () => true,
       });
       expect(code).toBe(19);
       // A failed install returns before the deploy phase, so there is no
@@ -6765,9 +6765,9 @@ describe('parseProcStatusUid', () => {
 // `server.close`.
 describe('build-agent lifecycle (container must always exit)', () => {
   const REQUIRED_ENV = [
-    'NOSAM_TOKEN',
-    'NOSAM_API_URL',
-    'NOSAM_PROJECT',
+    'BWF_TOKEN',
+    'BWF_API_URL',
+    'BWF_PROJECT',
     'NOSAM_PROXY_URL',
     'CF_ACCESS_CLIENT_ID',
     'CF_ACCESS_CLIENT_SECRET',
@@ -6779,9 +6779,9 @@ describe('build-agent lifecycle (container must always exit)', () => {
     for (const key of REQUIRED_ENV) {
       savedEnv[key] = process.env[key];
     }
-    process.env.NOSAM_TOKEN = 'deploy-jwt';
-    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
-    process.env.NOSAM_PROJECT = 'my-app';
+    process.env.BWF_TOKEN = 'deploy-jwt';
+    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_PROJECT = 'my-app';
   });
 
   afterEach(() => {
@@ -6809,7 +6809,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
       resolveInstall: () => ({ manager: 'npm', cmd: 'npm', args: ['ci'] }),
       runChild,
       reportStatus: vi.fn(async () => {}),
-      hasLocalNosam: () => true,
+      hasLocalBwf: () => true,
     });
 
     expect(code).toBe(17);
@@ -6831,7 +6831,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
         resolveInstall: () => ({ manager: 'npm', cmd: 'npm', args: ['ci'] }),
         runChild,
         reportStatus: vi.fn(async () => {}),
-        hasLocalNosam: () => true,
+        hasLocalBwf: () => true,
       });
       expect(code).toBe(connectExit);
       const calls = runChild.mock.calls;
@@ -6842,7 +6842,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
         'https://nosam.buildwithfriends.dev',
         '--no-login',
       ]);
-      expect(calls[1]?.[2]?.env?.NOSAM_TOKEN).toBeUndefined();
+      expect(calls[1]?.[2]?.env?.BWF_TOKEN).toBeUndefined();
       expect(calls[1]?.[2]?.env?.NOSAM_ACCESS_ORIGIN).toBe('https://nosam.buildwithfriends.dev');
       expect(calls.some(([, args]) => args.includes('deploy'))).toBe(connectExit === 0);
     },
@@ -6861,7 +6861,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
         resolveInstall: () => ({ manager: 'npm', cmd: 'npm', args: ['ci'] }),
         runChild,
         reportStatus: vi.fn(async () => {}),
-        hasLocalNosam: () => true,
+        hasLocalBwf: () => true,
       }),
     ).toBe(0);
     const [install, connect, deploy] = runChild.mock.calls;
@@ -6879,7 +6879,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
     });
   });
 
-  it('passes NOSAM_TOKEN to the DEPLOY child but NOT the INSTALL child', async () => {
+  it('passes BWF_TOKEN to the DEPLOY child but NOT the INSTALL child', async () => {
     // Capture the env each spawned child receives. runChild is called first for
     // the install (cmd !== 'npx'), then for the deploy (cmd === 'npx').
     const seen: Array<{ cmd: string; env: NodeJS.ProcessEnv | undefined }> = [];
@@ -6895,7 +6895,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
       resolveInstall: () => ({ manager: 'npm', cmd: 'npm', args: ['ci'] }),
       runChild,
       reportStatus: vi.fn(async () => {}),
-      hasLocalNosam: () => true,
+      hasLocalBwf: () => true,
     });
     expect(code).toBe(0);
 
@@ -6904,16 +6904,16 @@ describe('build-agent lifecycle (container must always exit)', () => {
     expect(install).toBeDefined();
     expect(deploy).toBeDefined();
     // The untrusted install (postinstall scripts) must NOT see the deploy token.
-    expect(install?.env?.NOSAM_TOKEN).toBeUndefined();
+    expect(install?.env?.BWF_TOKEN).toBeUndefined();
     // The trusted deploy step still authenticates with it.
-    expect(deploy?.env?.NOSAM_TOKEN).toBe('deploy-jwt');
+    expect(deploy?.env?.BWF_TOKEN).toBe('deploy-jwt');
   });
 
   it('falls back to the PINNED void@<version> (never @latest) when the repo has no local void', async () => {
-    // BuildManager injects NOSAM_CLI_VERSION; the agent must spawn that exact
+    // BuildManager injects BWF_CLI_VERSION; the agent must spawn that exact
     // pinned version, never a moving `nosam@latest` dist-tag.
-    const savedCliVersion = process.env.NOSAM_CLI_VERSION;
-    process.env.NOSAM_CLI_VERSION = '0.9.1';
+    const savedCliVersion = process.env.BWF_CLI_VERSION;
+    process.env.BWF_CLI_VERSION = '0.9.1';
     try {
       const seen: Array<{ cmd: string; args: ReadonlyArray<string> }> = [];
       const runChild = vi.fn(async (cmd: string, args: ReadonlyArray<string>) => {
@@ -6927,7 +6927,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
         runChild,
         reportStatus: vi.fn(async () => {}),
         // No local `nosam` binary → take the npx fallback path.
-        hasLocalNosam: () => false,
+        hasLocalBwf: () => false,
       });
       expect(code).toBe(0);
 
@@ -6937,9 +6937,9 @@ describe('build-agent lifecycle (container must always exit)', () => {
       expect(deploy?.args.some((a) => a === 'nosam@latest')).toBe(false);
     } finally {
       if (savedCliVersion === undefined) {
-        delete process.env.NOSAM_CLI_VERSION;
+        delete process.env.BWF_CLI_VERSION;
       } else {
-        process.env.NOSAM_CLI_VERSION = savedCliVersion;
+        process.env.BWF_CLI_VERSION = savedCliVersion;
       }
     }
   });
@@ -6951,7 +6951,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
       resolveInstall: () => ({ manager: 'npm', cmd: 'npm', args: ['ci'] }),
       runChild,
       reportStatus: vi.fn(async () => {}),
-      hasLocalNosam: () => true,
+      hasLocalBwf: () => true,
     });
     expect(code).toBe(1);
   });
@@ -6963,7 +6963,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
       resolveInstall: () => ({ manager: 'npm', cmd: 'npm', args: ['ci'] }),
       runChild,
       reportStatus: vi.fn(async () => {}),
-      hasLocalNosam: () => true,
+      hasLocalBwf: () => true,
     });
     expect(code).toBe(0);
   });
@@ -7000,7 +7000,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
 // process, and the DO's own `container.running` guard early-outs before it ever
 // fetches. Without a barrier every line between the last successful poll and
 // exit is lost, including the failing build's actual error output and the closing
-// `[build-agent] nosam deploy exited with code N`. With `waitForLogDrain` the
+// `[build-agent] bwf deploy exited with code N`. With `waitForLogDrain` the
 // agent holds the control server open at exit until the DO has ACKNOWLEDGED
 // every recorded line. The ack is the `since` cursor on a subsequent
 // `GET /logs?since=N` — the DO advances that cursor only after a successful
@@ -7142,12 +7142,12 @@ describe('build-agent exit-time log drain barrier', () => {
 });
 
 // End-to-end over the agent's REAL HTTP control server: the lines recorded AFTER
-// the build child closes (the `nosam deploy exited with code N` line is emitted
+// the build child closes (the `bwf deploy exited with code N` line is emitted
 // after `child.on('close')` resolves) must still be retrievable while the server
 // is open — that is exactly what the drain barrier buys, and those lines were
 // missing from every real container build's check run.
 describe('build-agent GET /logs serves post-child-close lines', () => {
-  const REQUIRED_ENV = ['NOSAM_TOKEN', 'NOSAM_API_URL', 'NOSAM_PROJECT'] as const;
+  const REQUIRED_ENV = ['BWF_TOKEN', 'BWF_API_URL', 'BWF_PROJECT'] as const;
   let savedEnv: Record<string, string | undefined>;
   let server: import('node:http').Server | null = null;
 
@@ -7156,9 +7156,9 @@ describe('build-agent GET /logs serves post-child-close lines', () => {
     for (const key of REQUIRED_ENV) {
       savedEnv[key] = process.env[key];
     }
-    process.env.NOSAM_TOKEN = 'deploy-jwt';
-    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
-    process.env.NOSAM_PROJECT = 'my-app';
+    process.env.BWF_TOKEN = 'deploy-jwt';
+    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_PROJECT = 'my-app';
   });
 
   afterEach(async () => {
@@ -7265,7 +7265,7 @@ describe('build-agent GET /logs serves post-child-close lines', () => {
     expect(start).toBeLessThan(finalSeq);
   });
 
-  it("serves the post-close `nosam deploy exited with code N` line, and releases the barrier only on the DO's ACK, not on serving it", async () => {
+  it("serves the post-close `bwf deploy exited with code N` line, and releases the barrier only on the DO's ACK, not on serving it", async () => {
     // The module-level ring is shared across this file's suites, so poll from the
     // current high-water mark rather than 0.
     const before = getBufferedLogLines();
@@ -7284,7 +7284,7 @@ describe('build-agent GET /logs serves post-child-close lines', () => {
       // The child "closes" here; the agent's closing line is recorded AFTER it.
       runChild: vi.fn(async () => 0),
       reportStatus: vi.fn(async () => {}),
-      hasLocalNosam: () => true,
+      hasLocalBwf: () => true,
     });
     expect(code).toBe(0);
 
@@ -7297,7 +7297,7 @@ describe('build-agent GET /logs serves post-child-close lines', () => {
 
     // Without the drain barrier the container exits before the DO's next ~1s
     // poll, so this line would never reach the DO's store or the check run.
-    expect(body.lines.map((l) => l.line)).toContain('[build-agent] nosam deploy exited with code 0');
+    expect(body.lines.map((l) => l.line)).toContain('[build-agent] bwf deploy exited with code 0');
     // The handler stamps the served high-water mark — diagnostic only.
     expect(body.lastSeq).toBeGreaterThan(since);
     expect(getServedLogSeq()).toBe(body.lastSeq);
@@ -7337,7 +7337,7 @@ describe('build-agent GET /logs serves post-child-close lines', () => {
     expect(forged.status).toBe(200);
 
     // Recorded AFTER the forgery — exactly the line a suppressed tail would lose.
-    record('[build-agent] nosam deploy exited with code 1', 'stdout');
+    record('[build-agent] bwf deploy exited with code 1', 'stdout');
 
     // If broken: resolves true, because the forged mark already covers this
     // line's seq. The honest DO is unaffected — its cursor is always a previously
@@ -7356,7 +7356,7 @@ describe('build-agent GET /logs serves post-child-close lines', () => {
 // test's deploy-command branch (which keys off `existsSync('.pnp.cjs')`).
 describe('build-agent install + deploy resolution', () => {
   const WORK_DIR = '/tmp/build/src';
-  const REQUIRED_ENV = ['NOSAM_TOKEN', 'NOSAM_API_URL', 'NOSAM_PROJECT'] as const;
+  const REQUIRED_ENV = ['BWF_TOKEN', 'BWF_API_URL', 'BWF_PROJECT'] as const;
   let savedEnv: Record<string, string | undefined>;
 
   function resetWorkDir(): void {
@@ -7366,7 +7366,7 @@ describe('build-agent install + deploy resolution', () => {
 
   /** Run the real install + deploy resolution, capturing every spawned command. */
   async function runAndCapture(
-    hasLocalNosam: () => boolean,
+    hasLocalBwf: () => boolean,
   ): Promise<Array<{ cmd: string; args: ReadonlyArray<string> }>> {
     const seen: Array<{ cmd: string; args: ReadonlyArray<string> }> = [];
     const code = await runBuild({
@@ -7377,7 +7377,7 @@ describe('build-agent install + deploy resolution', () => {
         return 0;
       }),
       reportStatus: vi.fn(async () => {}),
-      hasLocalNosam,
+      hasLocalBwf,
     });
     expect(code).toBe(0);
     return seen;
@@ -7388,9 +7388,9 @@ describe('build-agent install + deploy resolution', () => {
     for (const key of REQUIRED_ENV) {
       savedEnv[key] = process.env[key];
     }
-    process.env.NOSAM_TOKEN = 'deploy-jwt';
-    process.env.NOSAM_API_URL = 'https://nosam.buildwithfriends.dev';
-    process.env.NOSAM_PROJECT = 'my-app';
+    process.env.BWF_TOKEN = 'deploy-jwt';
+    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_PROJECT = 'my-app';
     resetWorkDir();
   });
 
@@ -7466,7 +7466,7 @@ describe('build-agent install + deploy resolution', () => {
         return 0;
       }),
       reportStatus: vi.fn(async () => {}),
-      hasLocalNosam: () => true,
+      hasLocalBwf: () => true,
     });
     expect(code).toBe(1);
     expect(seen.some((s) => s.cmd === 'corepack' && s.args[0] === 'yarn')).toBe(false);
@@ -7540,13 +7540,13 @@ describe('build-agent install + deploy resolution', () => {
 
   // a Yarn Berry PnP repo (`.pnp.cjs` present, no node_modules) must run the
   // deploy THROUGH the package manager so PnP is active and the build children
-  // `nosam deploy` spawns inherit it — `corepack yarn ... deploy`, NOT bare npx.
+  // `bwf deploy` spawns inherit it — `corepack yarn ... deploy`, NOT bare npx.
   it('PnP repo (.pnp.cjs present) runs deploy via corepack yarn, not bare npx', async () => {
     writeFileSync(`${WORK_DIR}/yarn.lock`, '');
     writeFileSync(`${WORK_DIR}/.pnp.cjs`, '');
     writeFileSync(`${WORK_DIR}/package.json`, JSON.stringify({ packageManager: 'yarn@4.3.1' }));
 
-    // void resolves in the PnP graph → `yarn nosam deploy`.
+    // void resolves in the PnP graph → `yarn bwf deploy`.
     const seen = await runAndCapture(() => true);
 
     const deploy = seen.find((s) => s.cmd === 'corepack' && s.args.includes('deploy'));
@@ -7561,7 +7561,7 @@ describe('build-agent install + deploy resolution', () => {
     writeFileSync(`${WORK_DIR}/.pnp.cjs`, '');
     writeFileSync(`${WORK_DIR}/package.json`, JSON.stringify({ packageManager: 'yarn@4.3.1' }));
 
-    // void does NOT resolve → `yarn dlx nosam@<ver> deploy`.
+    // void does NOT resolve → `yarn dlx bwf@<ver> deploy`.
     const seen = await runAndCapture(() => false);
 
     const deploy = seen.find((s) => s.cmd === 'corepack' && s.args.includes('deploy'));
@@ -7570,12 +7570,12 @@ describe('build-agent install + deploy resolution', () => {
     expect(seen.some((s) => s.cmd === 'npx')).toBe(false);
   });
 
-  // The default `hasLocalNosam` must NOT treat a present `.pnp.cjs` as proof
+  // The default `hasLocalBwf` must NOT treat a present `.pnp.cjs` as proof
   // that `nosam` is locally resolvable — under PnP (no `node_modules/.bin/nosam`)
   // it checks whether the repo DECLARES `nosam`. A PnP repo that declares void →
-  // `yarn nosam deploy`; one that does not → the `yarn dlx nosam@<ver>` fetch
+  // `yarn bwf deploy`; one that does not → the `yarn dlx bwf@<ver>` fetch
   // fallback.
-  it('default hasLocalNosam: PnP repo that DECLARES void → corepack yarn nosam deploy', async () => {
+  it('default hasLocalBwf: PnP repo that DECLARES void → corepack yarn bwf deploy', async () => {
     writeFileSync(`${WORK_DIR}/yarn.lock`, '');
     writeFileSync(`${WORK_DIR}/.pnp.cjs`, '');
     writeFileSync(
@@ -7591,7 +7591,7 @@ describe('build-agent install + deploy resolution', () => {
         return 0;
       }),
       reportStatus: vi.fn(async () => {}),
-      // hasLocalNosam intentionally NOT injected — exercise the real default.
+      // hasLocalBwf intentionally NOT injected — exercise the real default.
     });
     expect(code).toBe(0);
 
@@ -7600,7 +7600,7 @@ describe('build-agent install + deploy resolution', () => {
     expect(seen.some((s) => s.cmd === 'npx')).toBe(false);
   });
 
-  it('default hasLocalNosam: PnP repo that does NOT declare void → corepack yarn dlx', async () => {
+  it('default hasLocalBwf: PnP repo that does NOT declare void → corepack yarn dlx', async () => {
     writeFileSync(`${WORK_DIR}/yarn.lock`, '');
     writeFileSync(`${WORK_DIR}/.pnp.cjs`, '');
     writeFileSync(`${WORK_DIR}/package.json`, JSON.stringify({ packageManager: 'yarn@4.3.1' }));
@@ -7613,7 +7613,7 @@ describe('build-agent install + deploy resolution', () => {
         return 0;
       }),
       reportStatus: vi.fn(async () => {}),
-      // hasLocalNosam intentionally NOT injected — the real default must FETCH
+      // hasLocalBwf intentionally NOT injected — the real default must FETCH
       // because the repo does not declare `nosam`.
     });
     expect(code).toBe(0);
@@ -7626,7 +7626,7 @@ describe('build-agent install + deploy resolution', () => {
 
   // `pnpPresent` must be computed AFTER download() populates WORK_DIR; at runBuild
   // entry WORK_DIR is still empty, and a false reading sends a PnP repo down the
-  // bare-`npx` path (which can't resolve PnP-managed deps during `nosam deploy`).
+  // bare-`npx` path (which can't resolve PnP-managed deps during `bwf deploy`).
   // The PnP tests above pre-write `.pnp.cjs` BEFORE runBuild — here it appears
   // only when download() runs, exactly like a real container.
   it('detects PnP created by download() (not pre-existing) → corepack yarn', async () => {
@@ -7644,7 +7644,7 @@ describe('build-agent install + deploy resolution', () => {
         return 0;
       }),
       reportStatus: vi.fn(async () => {}),
-      hasLocalNosam: () => true,
+      hasLocalBwf: () => true,
     });
     expect(code).toBe(0);
 
@@ -7658,7 +7658,7 @@ describe('build-agent install + deploy resolution', () => {
   // after download(). A Yarn Berry PnP repo can gitignore `.pnp.cjs` and let
   // `yarn install` GENERATE it — a snapshot taken before install reads false, so
   // the deploy wrongly takes the bare-`npx` path (no node_modules, no active PnP
-  // runtime → the build children `nosam deploy` spawns can't resolve deps). Here
+  // runtime → the build children `bwf deploy` spawns can't resolve deps). Here
   // `.pnp.cjs` appears only when the install command runs.
   it('detects PnP created by yarn install (not committed) → corepack yarn', async () => {
     const seen: Array<{ cmd: string; args: ReadonlyArray<string> }> = [];
@@ -7678,7 +7678,7 @@ describe('build-agent install + deploy resolution', () => {
         return 0;
       }),
       reportStatus: vi.fn(async () => {}),
-      hasLocalNosam: () => true,
+      hasLocalBwf: () => true,
     });
     expect(code).toBe(0);
 
@@ -7890,7 +7890,7 @@ describe('build-agent pipeStream line splitting + tail cap', () => {
         'dependencies:',
         '+ vue 3.5.44',
         '+ void 1.1.11',
-        '[build-agent] $ nosam deploy --project example',
+        '[build-agent] $ bwf deploy --project example',
         '\x1b[32m✓ built in 119ms\x1b[0m',
         'dist/client/index.html  0.57 kB',
         '  at build (build.ts:10:2)',

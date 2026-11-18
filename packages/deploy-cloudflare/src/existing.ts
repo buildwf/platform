@@ -1,11 +1,11 @@
 import { isDeepStrictEqual } from 'node:util';
-import { isRecord } from '@nosam/deploy-core';
+import { isRecord } from '@buildwf/deploy-core';
 import { parseRootWranglerConfig } from './config.ts';
 import { isCleanCommandExit, isWorkerNotFound, type CloudflareCommandRunner } from './execute.ts';
 import type { CloudflareOperation } from './operations.ts';
 import {
-  isNosamSecretDraftHeader,
-  isNosamSecretOnlyDraft,
+  isBwfSecretDraftHeader,
+  isBwfSecretOnlyDraft,
   isWranglerSecretOnlyDraft,
 } from './secret-draft.ts';
 
@@ -119,11 +119,11 @@ async function readCloudflareWorker(
     ((isRecord(version.annotations) &&
       Object.keys(version.annotations).length === 1 &&
       version.annotations['workers/triggered_by'] === 'secret') ||
-      isNosamSecretDraftHeader(version))
+      isBwfSecretDraftHeader(version))
   ) {
     const source = await read({ type: 'versions.view', versionId, includeSource: true, ...target });
     if (source?.id === versionId) {
-      isSecretOnlyDraft = isNosamSecretOnlyDraft(source);
+      isSecretOnlyDraft = isBwfSecretOnlyDraft(source);
     }
   }
   const after = options.versionId
@@ -309,7 +309,7 @@ export async function assertCloudflareDurableObjectLifecycleSupported(options: {
     [
       'deploy: this Durable Object class migration needs an atomic Cloudflare deployment.',
       `Pending migration tag${pending.length === 1 ? '' : 's'}: ${pending.map((migration) => migration.tag).join(', ')}.`,
-      'Review the migration, then run `nosam deploy --platform cloudflare --atomic`. The Worker will receive traffic before readiness is checked.',
+      'Review the migration, then run `bwf deploy --platform cloudflare --atomic`. The Worker will receive traffic before readiness is checked.',
       'No database migration or Worker secret was changed.',
     ].join('\n'),
   );

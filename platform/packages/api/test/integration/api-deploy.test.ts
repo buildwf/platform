@@ -1,4 +1,4 @@
-import { createDefaultPlanCatalog } from '@nosam/platform/plans';
+import { createDefaultPlanCatalog } from '@buildwf/platform/plans';
 import { desc, eq, sql } from 'drizzle-orm';
 import {
   describe,
@@ -5079,7 +5079,10 @@ describe('ambiguous go-live commit outcomes', () => {
     const source = await createTestDeployment(env.db, project.id, 'live');
     await env.db
       .update(deployments)
-      .set({ retained: true, manifest: JSON.stringify({ version: 3, type: 'nosam', bindings: {} }) })
+      .set({
+        retained: true,
+        manifest: JSON.stringify({ version: 3, type: 'nosam', bindings: {} }),
+      })
       .where(eq(deployments.id, source.id));
     await env.db
       .update(projects)

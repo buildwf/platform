@@ -293,7 +293,7 @@ export function validateManifestShape(manifest: unknown): string | null {
     }
   }
 
-  // Per-project worker limit overrides (nosam.json `worker.limits`). Shape-only
+  // Per-project worker limit overrides (bwf.json `worker.limits`). Shape-only
   // here; the plan ceiling (`maxCpuMsPerRequest`) is enforced by the deploy
   // handler once the authenticated user's plan is in scope.
   if (manifest.limits !== undefined) {

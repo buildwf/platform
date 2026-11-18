@@ -726,7 +726,7 @@ describe('configured platform login routes', () => {
     expect(html).toContain('GitHub rejected this platform’s client ID or client secret.');
     expect(html).toContain('Error code: github_incorrect_client_credentials');
     expect(html).toContain(`Callback URL: ${origin}/auth/callback`);
-    expect(html).not.toContain('nosam platform repair');
+    expect(html).not.toContain('bwf platform repair');
     expect(errors).toHaveBeenCalledWith('[auth] login failed', {
       code: 'github_incorrect_client_credentials',
       purpose: 'login',
@@ -875,9 +875,9 @@ describe('configured platform login routes', () => {
 
   it('does not consume a legitimate flow when another browser sends its state', async () => {
     const flow = await start();
-    expect((await callback({ ...flow, cookie: 'nosam_platform_auth=another-browser' })).status).toBe(
-      400,
-    );
+    expect(
+      (await callback({ ...flow, cookie: 'nosam_platform_auth=another-browser' })).status,
+    ).toBe(400);
     expect(await env.db.select().from(platformAuthAttempts)).toHaveLength(1);
     expect((await callback(flow)).status).toBe(302);
   });

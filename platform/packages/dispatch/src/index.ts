@@ -1,10 +1,10 @@
-import { matchLiteralPattern, redirectToHttps, type ProjectZeroTrustRouting } from '@nosam/edge';
+import { matchLiteralPattern, redirectToHttps, type ProjectZeroTrustRouting } from '@buildwf/edge';
 import {
   PLATFORM_HEALTH_HOSTNAME_LABEL,
   platformHealthHostname,
   readPlatformApplication,
   resolvePlatformApplicationEnvironment,
-} from '@nosam/platform';
+} from '@buildwf/platform';
 import { WorkerEntrypoint } from 'cloudflare:workers';
 import { projectAccessVerifier } from './access.ts';
 import type { Env } from './env.ts';

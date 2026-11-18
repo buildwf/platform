@@ -211,7 +211,7 @@ const companyLinks = {
 export default extendConfig(
   defineConfig({
     title: 'Nosam',
-    description: 'Build with Vite. Deploy with Nosam.',
+    description: 'Build with Vite. Deploy with bwf.',
     cleanUrls: true,
     lastUpdated: true,
     sitemap: {

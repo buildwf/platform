@@ -252,7 +252,9 @@ describe('per-deploy sandbox integration', () => {
     const v1Namespace = cf.state.hostScripts
       .get(sandboxControllerWorkerName(project.id, v1Id))!
       .classes.get('SandboxController')!;
-    const v1ContainerName = `${project.id}-${v1Id}-nosam-sandbox`.toLowerCase().replaceAll('_', '-');
+    const v1ContainerName = `${project.id}-${v1Id}-nosam-sandbox`
+      .toLowerCase()
+      .replaceAll('_', '-');
 
     // Deploy v2 with the same manifest.
     const res2 = await deploy(project.id, user.jwt);
@@ -277,7 +279,9 @@ describe('per-deploy sandbox integration', () => {
     expect(v2Namespace).not.toBe(v1Namespace);
 
     // Brand-new container app bound to the new namespace.
-    const v2ContainerName = `${project.id}-${v2Id}-nosam-sandbox`.toLowerCase().replaceAll('_', '-');
+    const v2ContainerName = `${project.id}-${v2Id}-nosam-sandbox`
+      .toLowerCase()
+      .replaceAll('_', '-');
     expect(v2ContainerName).not.toBe(v1ContainerName);
     const v2App = Array.from(cf.state.containerApps.values()).find(
       (a) => a.name === v2ContainerName,
@@ -367,7 +371,9 @@ describe('per-deploy sandbox integration', () => {
     expect(done1).toBeDefined();
     const v1Id = done1!.deployment;
     const v1WorkerName = `user-${project.slug}-${v1Id}`;
-    const v1ContainerName = `${project.id}-${v1Id}-nosam-sandbox`.toLowerCase().replaceAll('_', '-');
+    const v1ContainerName = `${project.id}-${v1Id}-nosam-sandbox`
+      .toLowerCase()
+      .replaceAll('_', '-');
 
     // Model a retained deployment created before Worker bundle storage stopped.
     await env.STATIC_ASSETS_R2.put(
@@ -747,7 +753,9 @@ describe('per-deploy sandbox integration', () => {
     const done1 = getDoneEvent(await readAllEvents(res1));
     expect(done1).toBeDefined();
     const v1Id = done1!.deployment;
-    const v1ContainerName = `${project.id}-${v1Id}-nosam-sandbox`.toLowerCase().replaceAll('_', '-');
+    const v1ContainerName = `${project.id}-${v1Id}-nosam-sandbox`
+      .toLowerCase()
+      .replaceAll('_', '-');
 
     // Deploy v2.
     const res2 = await deploy(project.id, user.jwt);
@@ -755,7 +763,9 @@ describe('per-deploy sandbox integration', () => {
     const done2 = getDoneEvent(await readAllEvents(res2));
     expect(done2).toBeDefined();
     const v2Id = done2!.deployment;
-    const v2ContainerName = `${project.id}-${v2Id}-nosam-sandbox`.toLowerCase().replaceAll('_', '-');
+    const v2ContainerName = `${project.id}-${v2Id}-nosam-sandbox`
+      .toLowerCase()
+      .replaceAll('_', '-');
 
     // Both retention-keepable container apps exist before teardown.
     expect(
@@ -820,7 +830,9 @@ describe('per-deploy sandbox integration', () => {
     expect(queueBindings).toHaveLength(0);
 
     // AI, revalidation, and email share one `__NOSAM_PROXY` service binding.
-    const proxyBindings = bindings.filter((b) => b.type === 'service' && b.name === '__NOSAM_PROXY');
+    const proxyBindings = bindings.filter(
+      (b) => b.type === 'service' && b.name === '__NOSAM_PROXY',
+    );
     expect(proxyBindings).toHaveLength(1);
 
     // Account identity stays in platform-owned routing state.

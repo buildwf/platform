@@ -14,24 +14,24 @@
   "dependencies": {
     "@astryxdesign/core": "catalog:",
     "@astryxdesign/theme-neutral": "catalog:",
+    "@buildwf/platform": "workspace:*",
     "@eeao/core": "link:../../../eeaao/typescript/packages/core",
     "@stylexjs/stylex": "catalog:",
-    "@nosam/platform": "workspace:*",
     "hono": "catalog:platform",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
   "devDependencies": {
+    "@buildwf/bwf": "workspace:*",
     "@cloudflare/workers-types": "catalog:platform",
+    "@nosamcloud/api": "workspace:*",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "catalog:",
-    "@nosamcloud/api": "workspace:*",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plus": "catalog:",
-    "nosam": "workspace:*",
     "wrangler": "catalog:platform"
   }
 }

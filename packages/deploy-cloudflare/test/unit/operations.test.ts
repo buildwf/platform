@@ -194,7 +194,7 @@ it.each(recoveries)(
       expect.not.objectContaining({ bypassDeploymentChecks: true }),
       expect.objectContaining({ bypassDeploymentChecks: true }),
     ]);
-    // Nosam checks that it still owns traffic between the refusal and the forced retry.
+    // bwf checks that it still owns traffic between the refusal and the forced retry.
     const refused = calls.indexOf(rollbacks[0]!);
     expect(
       calls.slice(refused, calls.indexOf(rollbacks[1]!)).map((operation) => operation.type),

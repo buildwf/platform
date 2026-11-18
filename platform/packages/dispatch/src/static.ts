@@ -5,4 +5,4 @@ export {
   safeDecodePathname,
   type AssetConfig,
   type ResolvedAsset,
-} from '@nosam/edge';
+} from '@buildwf/edge';

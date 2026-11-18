@@ -3,8 +3,8 @@ import {
   deployArtifactDigest,
   validateManifestShape,
   type DeployArtifact,
-} from '@nosam/deploy-core';
-import { browserPageLead, escapeBrowserHtml } from '@nosam/platform/browser-page';
+} from '@buildwf/deploy-core';
+import { browserPageLead, escapeBrowserHtml } from '@buildwf/platform/browser-page';
 import { and, eq, gt, isNull, desc, or } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';

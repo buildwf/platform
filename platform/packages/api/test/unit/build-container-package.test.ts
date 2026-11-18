@@ -19,13 +19,13 @@ it.each(['0.20.0', '0.20.1', '0.21.0-rc.2'])(
     const directory = mkdtempSync(join(tmpdir(), 'nosam-build-image-'));
     try {
       expect(copies.map((copy) => copy.source).sort()).toEqual([
-        'packages/nosam/package.json',
+        'packages/bwf/package.json',
         'platform/packages/api/container/build-agent.mjs',
       ]);
       for (const { source, destination } of copies) {
         const target = join(directory, destination);
         mkdirSync(dirname(target), { recursive: true });
-        if (source === 'packages/nosam/package.json') {
+        if (source === 'packages/bwf/package.json') {
           const manifest = JSON.parse(readFileSync(join(repositoryRoot, source), 'utf8'));
           writeFileSync(target, JSON.stringify({ ...manifest, version }));
         } else {
@@ -40,7 +40,7 @@ it.each(['0.20.0', '0.20.1', '0.21.0-rc.2'])(
       mkdirSync(untrusted);
       writeFileSync(
         join(untrusted, 'package.json'),
-        JSON.stringify({ name: 'nosam', version: '99.0.0' }),
+        JSON.stringify({ name: '@buildwf/bwf', version: '99.0.0' }),
       );
       const result = spawnSync(
         process.execPath,
@@ -89,7 +89,7 @@ it('allows only the public manifest and container sources into the root build co
     .filter((line) => line && !line.startsWith('#'));
   expect(patterns).toEqual([
     '**',
-    '!packages/nosam/package.json',
+    '!packages/bwf/package.json',
     '!platform/packages/api/container/build-agent.mjs',
     '!platform/packages/api/container/Dockerfile',
   ]);

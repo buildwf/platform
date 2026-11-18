@@ -1,11 +1,11 @@
 ---
-description: 'Redirect requests from nosam.config.ts. Map a source pattern to a destination and an optional status code.'
+description: 'Redirect requests from bwf.config.ts. Map a source pattern to a destination and an optional status code.'
 outline: deep
 ---
 
 # Redirects
 
-Define URL redirects in [`nosam.config.ts`](../../reference/config) using the `routing.redirects` field. Keys are source URL patterns, values are destination strings or objects with an explicit status.
+Define URL redirects in [`bwf.config.ts`](../../reference/config) using the `routing.redirects` field. Keys are source URL patterns, values are destination strings or objects with an explicit status.
 
 ```json
 {
@@ -51,14 +51,14 @@ https://www.example.com/*  https://example.com/:splat  301
 
 Path-only sources apply to every domain on the project. Host-prefixed sources apply only to the named domain.
 
-The source must use `https://` and a literal hostname without wildcards or a port. Add the domain to your project with `nosam domain add` before deploying the rule. A domain awaiting certificate verification starts redirecting once it becomes active.
+The source must use `https://` and a literal hostname without wildcards or a port. Add the domain to your project with `bwf domain add` before deploying the rule. A domain awaiting certificate verification starts redirecting once it becomes active.
 
 ## HTTP to HTTPS
 
 Set `routing.alwaysUseHttps` to redirect HTTP requests to HTTPS:
 
 ```ts
-import { defineConfig } from 'nosam/config';
+import { defineConfig } from '@buildwf/bwf/config';
 
 export default defineConfig({
   routing: {
@@ -67,19 +67,19 @@ export default defineConfig({
 });
 ```
 
-Nosam returns a permanent `308` redirect that preserves the path, query string, and request method. The option defaults to `false`. Localhost and loopback addresses stay on HTTP for local development and previews.
+bwf returns a permanent `308` redirect that preserves the path, query string, and request method. The option defaults to `false`. Localhost and loopback addresses stay on HTTP for local development and previews.
 
-This option requires the Cloudflare target and works for Nosam apps and static sites on either deployment platform.
+This option requires the Cloudflare target and works for bwf apps and static sites on either deployment platform.
 
 For direct Cloudflare deployments, also enable [Always Use HTTPS](https://developers.cloudflare.com/ssl/edge-certificates/additional-options/always-use-https/) on your zone to cover assets served directly by Cloudflare.
 
 ## `_redirects` files
 
-Nosam reads `_redirects` files produced by your build, such as a static site generator's output. You can also place one in Vite's `publicDir`:
+bwf reads `_redirects` files produced by your build, such as a static site generator's output. You can also place one in Vite's `publicDir`:
 
 ```text
 /old-page  /new-page     301
 /blog/*    /posts/:splat 301
 ```
 
-Rules in `nosam.config.ts` take precedence over file rules. Use `200` for a fallback or `200!` for a [rewrite](./rewrites#redirects-file). Redirects don't need the `!` suffix.
+Rules in `bwf.config.ts` take precedence over file rules. Use `200` for a fallback or `200!` for a [rewrite](./rewrites#redirects-file). Redirects don't need the `!` suffix.

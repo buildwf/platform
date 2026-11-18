@@ -1,4 +1,4 @@
-import type { DeployArtifact } from '@nosam/deploy-core';
+import type { DeployArtifact } from '@buildwf/deploy-core';
 import type { CompanyIdentity } from './identity-types.ts';
 import type { JwtPayload } from './jwt.ts';
 

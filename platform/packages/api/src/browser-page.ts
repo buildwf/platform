@@ -3,7 +3,7 @@ import {
   browserPageLead,
   browserPageStatus,
   renderBrowserPage,
-} from '@nosam/platform/browser-page';
+} from '@buildwf/platform/browser-page';
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { ApiEnv } from './env.ts';

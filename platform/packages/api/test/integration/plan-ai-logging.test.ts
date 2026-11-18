@@ -1,4 +1,4 @@
-import { createDefaultPlanCatalog, parsePlatformPlanCatalog } from '@nosam/platform/plans';
+import { createDefaultPlanCatalog, parsePlatformPlanCatalog } from '@buildwf/platform/plans';
 import { inArray } from 'drizzle-orm';
 import {
   afterAll,

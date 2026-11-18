@@ -3,7 +3,7 @@
 import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { Heading } from '@astryxdesign/core/Text';
-import type { PlatformLoginConfiguration } from '@nosam/platform';
+import type { PlatformLoginConfiguration } from '@buildwf/platform';
 import { useRequest, useView } from 'react-fate';
 import { AuthSettingsView, authSettingsRequest } from '../../fate/views.ts';
 import { type AdminPageProps } from '../page-utils.ts';
@@ -61,14 +61,14 @@ export function AuthSettingsPage({ path, platformName, username }: AdminPageProp
                     permission.
                   </p>
                   <CodeBlock
-                    code="nosam platform config auth protection enable --installation <id>"
+                    code="bwf platform config auth protection enable --installation <id>"
                     language="shellscript"
                   />
                 </AdminCard>
                 <AdminCard title="Disable Cloudflare Access" headingLevel={3}>
                   <p>First change any signup policy that relies on Access.</p>
                   <CodeBlock
-                    code="nosam platform config auth protection disable --installation <id>"
+                    code="bwf platform config auth protection disable --installation <id>"
                     language="shellscript"
                   />
                 </AdminCard>

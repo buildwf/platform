@@ -1,4 +1,4 @@
-import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from '@nosam/platform';
+import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from '@buildwf/platform';
 import { type CronFireMessage, processCronFiresBatch } from './cron-fires-queue.ts';
 import { processDeploymentBatch } from './deployment-execution.ts';
 import type { ApiEnv } from './env.ts';

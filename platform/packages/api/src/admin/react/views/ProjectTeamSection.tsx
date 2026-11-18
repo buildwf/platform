@@ -163,7 +163,7 @@ export function ProjectTeamSection({
           <h3>Pending invitations ({invitations.length})</h3>
           <p>
             If email delivery is unavailable, share the invitation ID and ask the user to run{' '}
-            <code>nosam project team accept &lt;invitation-id&gt;</code>.
+            <code>bwf project team accept &lt;invitation-id&gt;</code>.
           </p>
           <div className="nosam-admin-team-table-scroll">
             <Table>

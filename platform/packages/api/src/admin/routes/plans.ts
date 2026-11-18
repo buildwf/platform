@@ -2,7 +2,7 @@ import {
   PLAN_EDITABLE_LIMIT_KEYS,
   parsePlatformPlanId,
   type PlatformPlanCatalog,
-} from '@nosam/platform/plans';
+} from '@buildwf/platform/plans';
 import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import type { PlanAiLoggingPublishProgress } from '../../ai-logging-plans.ts';

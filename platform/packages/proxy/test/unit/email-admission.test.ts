@@ -201,7 +201,9 @@ describe('email admission payload digest', () => {
     const space = await digest(folded(' ', '=_nosam_alternative_AAAA'));
     expect(await digest(folded('\t', '=_nosam_alternative_BBBB'))).toBe(space);
     expect(await digest(folded('  \t ', '=_nosam_alternative_CCCC'))).toBe(space);
-    expect(await digest(folded(` ${ideographicSpace}`, '=_nosam_alternative_DDDD'))).not.toBe(space);
+    expect(await digest(folded(` ${ideographicSpace}`, '=_nosam_alternative_DDDD'))).not.toBe(
+      space,
+    );
   });
 
   it('normalizes deeply nested generated boundaries without normalizing dense body lines', async () => {

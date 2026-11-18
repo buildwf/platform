@@ -10,29 +10,29 @@ Use your administrator session for these commands. See [Platform Management](./p
 Configure the installation-wide Cloudflare Access policy and project overrides:
 
 ```sh
-nosam platform zero-trust status [--check]
-printf '%s' "$ACCESS_API_TOKEN" | nosam platform zero-trust configure \
+bwf platform zero-trust status [--check]
+printf '%s' "$ACCESS_API_TOKEN" | bwf platform zero-trust configure \
   --identity-providers <id[,id...]> \
   --policies <id[,id...]> \
   [--existing-projects <protected|public>] \
   [--protect-new-projects] \
   --token-stdin \
   --yes
-nosam platform zero-trust reconcile
-nosam platform zero-trust disable
+bwf platform zero-trust reconcile
+bwf platform zero-trust disable
 
-nosam platform zero-trust project-status <project-id>
-nosam platform zero-trust project-protect <project-id>
-nosam platform zero-trust project-public <project-id>
-nosam platform zero-trust project-reconcile <project-id>
+bwf platform zero-trust project-status <project-id>
+bwf platform zero-trust project-protect <project-id>
+bwf platform zero-trust project-public <project-id>
+bwf platform zero-trust project-reconcile <project-id>
 ```
 
-New installations configure app access in `nosam platform install`. Use these
+New installations configure app access in `bwf platform install`. Use these
 commands to inspect or change it later. To configure or renew public-only rules
 for a Default-Deny account, omit identity policies and use `--public-apps`:
 
 ```sh
-printf '%s' "$ACCESS_API_TOKEN" | nosam platform zero-trust configure \
+printf '%s' "$ACCESS_API_TOKEN" | bwf platform zero-trust configure \
   --public-apps --token-stdin --yes
 ```
 
@@ -49,12 +49,12 @@ by default. `--existing-projects` is required when you enable Zero Trust and
 rejected once it is enabled; later configuration changes keep each project's
 protection. `status` reports saved state; `--check` also compares it with
 Cloudflare Access. If status remains `configuring` or `disabling`, run
-`nosam platform zero-trust reconcile` to resume the saved operation. Protected
+`bwf platform zero-trust reconcile` to resume the saved operation. Protected
 projects support up to 100 custom domains.
 
 The token needs **Access: Apps and Policies Write** plus **Access:
 Organizations, Identity Providers, and Groups Read**, scoped to the platform's
 Cloudflare account. Select at least one Allow policy that matches people by
-identity; Nosam rejects Bypass and Service Auth policies and rules that allow
+identity; bwf rejects Bypass and Service Auth policies and rules that allow
 Everyone or any service token. See [Project Zero Trust](../../guide/platform/administration/zero-trust.md)
 for requirements and recovery.

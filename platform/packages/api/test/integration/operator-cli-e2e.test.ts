@@ -22,9 +22,7 @@ import {
 } from './helpers.ts';
 import { createUsageCounterFixture } from './usage-counter-fixture.ts';
 
-const cli = fileURLToPath(
-  new URL('../../../../../packages/nosam/dist/cli/cli.mjs', import.meta.url),
-);
+const cli = fileURLToPath(new URL('../../../../../packages/bwf/dist/cli/cli.mjs', import.meta.url));
 let env: TestEnv;
 let server: Server;
 let origin: string;
@@ -102,7 +100,7 @@ function run(args: Array<string>, input?: string) {
     const child = spawn(process.execPath, [cli, 'platform', ...args], {
       env: {
         ...process.env,
-        NOSAM_API_URL: origin,
+        BWF_API_URL: origin,
         NOSAM_OPERATOR_TOKEN: operatorToken,
         // `vp run` forces color; combining it with NO_COLOR emits a Node warning
         // on stderr and corrupts the JSON error response this fixture asserts.

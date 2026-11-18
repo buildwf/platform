@@ -1,12 +1,12 @@
 ---
-description: 'Build with Vite and deploy with Nosam: a CLI, platform, and full-stack SDK for apps on Cloudflare.'
+description: 'Build with Vite and deploy with bwf: a CLI, platform, and full-stack SDK for apps on Cloudflare.'
 layout: home
 theme: dark
 
 hero:
-  name: Nosam
-  text: Build with Vite. Deploy with Nosam.
-  tagline: Nosam is a CLI, platform, and full-stack SDK that unifies building & deploying apps.
+  name: bwf
+  text: Build with Vite. Deploy with bwf.
+  tagline: bwf is a CLI, platform, and full-stack SDK that unifies building & deploying apps.
   actions:
     - theme: brand
       text: Get Started
@@ -21,7 +21,7 @@ features:
   - iconify: lucide:layers
     visual: stack
     title: Full-Stack, Inferred
-    details: Import what you need. Nosam provides local resources and provisions them on deploy.
+    details: Import what you need. bwf provides local resources and provisions them on deploy.
     highlights:
       - Server routes and authentication
       - Databases, storage, and AI
@@ -77,11 +77,11 @@ platform_features:
     guide:
       text: Platform administration
       link: /guide/platform-administration
-    image_alt: List of Nosam platform commands for access, builds, invitations, and administration
+    image_alt: List of bwf platform commands for access, builds, invitations, and administration
   - id: platform-security
     iconify: lucide:shield-check
     title: Bring your Own Security
-    details: Fork and customize your own Nosam platform based on your team's security standards.
+    details: Fork and customize your own bwf platform based on your team's security standards.
     highlights:
       - Manage access through Cloudflare Access, Google, GitHub, or OIDC
       - Control who can sign in and deploy
@@ -91,7 +91,7 @@ platform_features:
       link: /guide/platform/administration/access
     visual: rive
     image_alt: Animated illustration of self-hosted platform security
-footer_heading: Build with Vite. Deploy with Nosam.
+footer_heading: Build with Vite. Deploy with bwf.
 footer_subheading: Server code, resources, and deployment in one workflow.
 ---
 

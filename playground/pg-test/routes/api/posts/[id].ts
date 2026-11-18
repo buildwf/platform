@@ -1,6 +1,6 @@
+import { defineHandler } from '@buildwf/bwf';
+import { db, eq } from '@buildwf/bwf/db';
 import { posts } from '@schema';
-import { defineHandler } from 'nosam';
-import { db, eq } from 'nosam/db';
 
 export const DELETE = defineHandler(async (c) => {
   const [deleted] = await db

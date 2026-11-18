@@ -1,4 +1,4 @@
-import type { AssetConfig, HeaderRule, RedirectRule } from '@nosam/deploy-core';
+import type { AssetConfig, HeaderRule, RedirectRule } from '@buildwf/deploy-core';
 import { applyHeaderRules } from './headers.ts';
 import { redirectToHttps } from './https.ts';
 import { applyRoutingRules, mergeQueryIntoLocation } from './routing-rules.ts';
@@ -17,7 +17,7 @@ export type StaticEdgeConfig = Readonly<{
   versionMetadataBinding?: string;
   /**
    * @deprecated Ignored. Cloudflare applies asset handling from the Worker's
-   * `assets` config (`not_found_handling`, `html_handling`), which `nosam deploy`
+   * `assets` config (`not_found_handling`, `html_handling`), which `bwf deploy`
    * writes. Removed in the next major version.
    */
   assetConfig?: AssetConfig;

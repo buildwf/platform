@@ -8,8 +8,8 @@ outline: deep
 Plans define the resource limits you assign to accounts on your platform. They do not bill users or purchase Cloudflare services. Sign in with an administrator account and open **Plans** in the administration dashboard, or use the CLI:
 
 ```sh
-nosam platform auth login
-nosam platform config plans
+bwf platform auth login
+bwf platform config plans
 ```
 
 Choose a plan to inspect or edit it, copy one into a new plan, or choose the default for new accounts. Changes require no app or platform redeploy.
@@ -29,15 +29,15 @@ Account updates continue automatically on the result page. If you leave the page
 Each plan has a stable ID and an editable display name. Copying a plan copies its limits, build instance size, and permission to use short project slugs:
 
 ```sh
-nosam platform config plans add team --copy pro --name "Team" --plan
-nosam platform config plans add team --copy pro --name "Team" --yes
+bwf platform config plans add team --copy pro --name "Team" --plan
+bwf platform config plans add team --copy pro --name "Team" --yes
 ```
 
 Assign it to an existing account or make it the default for new accounts:
 
 ```sh
-nosam platform user plan <user-id> team --yes
-nosam platform config plans default team --yes
+bwf platform user plan <user-id> team --yes
+bwf platform config plans default team --yes
 ```
 
 Changing the default does not move existing accounts. Renaming a plan does not change its ID or assignments.
@@ -61,8 +61,8 @@ The interactive menu lets you change one limit at a time. For scripts or several
 Omitted settings keep their current values. Preview, then apply:
 
 ```sh
-nosam platform config plans set team --file team-plan.json --plan
-nosam platform config plans set team --file team-plan.json --yes
+bwf platform config plans set team --file team-plan.json --plan
+bwf platform config plans set team --file team-plan.json --yes
 ```
 
 Limits are nonnegative whole numbers; `0` means unlimited by the plan. Build timeouts always have a platform maximum of 60 minutes; `0` uses that maximum. You can configure:
@@ -93,7 +93,7 @@ The preview shows the affected account count and checks a sample for accounts al
 
 Each plan can set how AI Gateway logs AI requests for its accounts' projects: `inherit`, `off`, `metadata`, or `full`. See [AI Gateway logging](../../../reference/cli/platform-users.md#ai-gateway-logging) for what each mode stores. Plans start with `inherit`, which follows the gateway's own setting.
 
-A project's own setting from `nosam platform project ai-logging` always wins over the plan default. Accounts whose plan is not in the catalog use the signup default plan's setting.
+A project's own setting from `bwf platform project ai-logging` always wins over the plan default. Accounts whose plan is not in the catalog use the signup default plan's setting.
 
 In the dashboard, choose **Edit** on a plan and pick its **AI Gateway logging default**. In a plan file, set `aiLogging`:
 
@@ -104,8 +104,8 @@ In the dashboard, choose **Edit** on a plan and pick its **AI Gateway logging de
 ```
 
 ```sh
-nosam platform config plans set team --file team-plan.json --plan
-nosam platform config plans set team --file team-plan.json --yes
+bwf platform config plans set team --file team-plan.json --plan
+bwf platform config plans set team --file team-plan.json --yes
 ```
 
 `"aiLogging": "inherit"` clears the plan default. Leaving `aiLogging` out keeps the current value. The interactive menu also offers **AI Gateway logging**. The preview shows the change, such as `AI Gateway logging: inherit → metadata`, and how many projects will receive it.
@@ -116,29 +116,29 @@ After applying, the CLI publishes the default to every project it affects, then 
 AI logging published to 120 projects; expected by 14:03:20 UTC (normally within 2 minutes).
 ```
 
-A plan default applies to a project once the command prints this line, then normally within 2 minutes. Until then, projects keep their previous behavior and `nosam platform project show <project-id>` reports `pending_plan_publish`. If publishing stops, the command exits with a nonzero status. Continue it with `nosam platform config plans sync --yes`, or choose **Continue AI logging publish** on the **Plans** page. The platform also continues it every hour.
+A plan default applies to a project once the command prints this line, then normally within 2 minutes. Until then, projects keep their previous behavior and `bwf platform project show <project-id>` reports `pending_plan_publish`. If publishing stops, the command exits with a nonzero status. Continue it with `bwf platform config plans sync --yes`, or choose **Continue AI logging publish** on the **Plans** page. The platform also continues it every hour.
 
 Copying a plan copies its AI logging default. Changing the signup default also changes the setting for accounts whose plan is not in the catalog. When you remove a plan with a replacement, its accounts use the replacement plan's default. Moving a user to another plan, or transferring a project to a new owner, applies the new plan's default.
 
-`nosam platform config plans show <plan-id>` and the user detail page in the dashboard show the plan's AI Gateway logging default. Plan defaults need a platform release that supports them. On an older platform, the CLI stops and asks you to run `nosam platform upgrade` first.
+`bwf platform config plans show <plan-id>` and the user detail page in the dashboard show the plan's AI Gateway logging default. Plan defaults need a platform release that supports them. On an older platform, the CLI stops and asks you to run `bwf platform upgrade` first.
 
 ## Archive or Remove a Plan
 
 Archive a plan to stop assigning it to new accounts while preserving its current accounts:
 
 ```sh
-nosam platform config plans archive team --yes
-nosam platform config plans restore team --yes
+bwf platform config plans archive team --yes
+bwf platform config plans restore team --yes
 ```
 
 Choose another default before archiving the current default. To remove a plan with accounts, choose a replacement and review the changes first:
 
 ```sh
-nosam platform config plans remove team --replacement pro --plan
-nosam platform config plans remove team --replacement pro --yes
+bwf platform config plans remove team --replacement pro --plan
+bwf platform config plans remove team --replacement pro --yes
 ```
 
-Removing the default also requires a replacement. An unused plan that is not the default can be removed without one. Accounts keep their usage when moved to a replacement plan. Restore the original limits and build size of a built-in plan with `nosam platform config plans reset <plan-id>`; custom plans have no built-in reset values.
+Removing the default also requires a replacement. An unused plan that is not the default can be removed without one. Accounts keep their usage when moved to a replacement plan. Restore the original limits and build size of a built-in plan with `bwf platform config plans reset <plan-id>`; custom plans have no built-in reset values.
 
 The removal review shows the replacement plan and any changes to its limits, build size, and short-slug permission before you confirm.
 
@@ -147,8 +147,8 @@ The removal review shows the replacement plan and any changes to its limits, bui
 After applying a change, the CLI continues account updates until complete. If an update fails or stops making progress, the configuration remains saved, the result reports pending work, and the command exits with a nonzero status. Inspect the catalog, then continue:
 
 ```sh
-nosam platform config plans show
-nosam platform config plans sync --yes
+bwf platform config plans show
+bwf platform config plans sync --yes
 ```
 
 `sync` continues the saved policy's account updates until completion. Finish pending updates before editing the catalog again. If a request loses its connection, inspect the catalog and [operator events](/guide/platform/administration/operations) before retrying it.

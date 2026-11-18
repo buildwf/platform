@@ -1,15 +1,15 @@
 {
-  "name": "@nosam/deploy-core",
+  "name": "@buildwf/deploy-core",
   "version": "1.9.1",
-  "description": "Shared deployment contracts, manifests, and resource plans for Nosam.",
-  "homepage": "https://void.cloud",
+  "description": "Shared deployment contracts, manifests, and resource plans for bwf.",
+  "homepage": "https://github.com/buildwf/fif-spa",
   "bugs": {
-    "url": "https://github.com/voidzero-dev/void/issues"
+    "url": "https://github.com/buildwf/fif-spa/issues"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/voidzero-dev/void.git",
+    "url": "git+https://github.com/buildwf/fif-spa.git",
     "directory": "packages/deploy-core"
   },
   "files": [

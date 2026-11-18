@@ -56,10 +56,10 @@ describe('sendErrorAlertEmail', () => {
 
     // `requests` is the only view that can show edge-generated / static 5xx,
     // which never reach a worker and so never produce log rows.
-    expect(sent[0].text).toContain('nosam project requests --status 5xx --range 2h');
-    expect(sent[0].html).toContain('nosam project requests --status 5xx --range 2h');
-    expect(sent[0].text).toContain('nosam project logs --level error --range 2h');
-    expect(sent[0].html).toContain('nosam project logs --level error --range 2h');
+    expect(sent[0].text).toContain('bwf project requests --status 5xx --range 2h');
+    expect(sent[0].html).toContain('bwf project requests --status 5xx --range 2h');
+    expect(sent[0].text).toContain('bwf project logs --level error --range 2h');
+    expect(sent[0].html).toContain('bwf project logs --level error --range 2h');
   });
 
   it('anchors the suggested range at send time, not at the last error', async () => {
@@ -103,7 +103,7 @@ describe('sendErrorAlertEmail', () => {
     await sendErrorAlertEmail(binding, 'u@example.com', 'recappi', 5, null, Date.now());
     const msg = sent[0];
     expect(msg.html).toContain('recently');
-    expect(msg.html).toContain('nosam project requests --status 5xx --range');
+    expect(msg.html).toContain('bwf project requests --status 5xx --range');
     expect(msg.text).toContain('recently');
   });
 
@@ -136,9 +136,9 @@ describe('platform email identity', () => {
       expect(msg.from).toBe(identity.EMAIL_FROM);
       expect(msg.html).toContain('Example &lt;Platform&gt;');
       expect(msg.html).not.toContain('Example <Platform>');
-      expect(msg.text).toContain("nosam connect 'api.example.com'");
-      expect(msg.html + msg.text).not.toContain('nosam auth login');
-      expect(msg.html + msg.text).not.toContain('nosam deploy');
+      expect(msg.text).toContain("bwf connect 'api.example.com'");
+      expect(msg.html + msg.text).not.toContain('bwf auth login');
+      expect(msg.html + msg.text).not.toContain('bwf deploy');
       expect(msg.html).toContain('https://api.example.com/invite');
       expect(msg.html + msg.text).not.toMatch(
         /nosam\.cloud|discord|private beta|source|early-access/i,
@@ -160,8 +160,8 @@ describe('platform email identity', () => {
       },
     );
 
-    expect(sent[0].html + sent[0].text).toContain("nosam connect 'api.example.com'");
-    expect(sent[0].html + sent[0].text).toContain('nosam project team accept pinv_a1b2c3d4e5f6');
+    expect(sent[0].html + sent[0].text).toContain("bwf connect 'api.example.com'");
+    expect(sent[0].html + sent[0].text).toContain('bwf project team accept pinv_a1b2c3d4e5f6');
     expect(sent[0].html + sent[0].text).toContain(
       'https://api.example.com/invite?project-invitation=pinv_a1b2c3d4e5f6',
     );
@@ -176,7 +176,7 @@ describe('platform email identity', () => {
     for (const msg of sent) {
       expect(msg.from).toBe(identity.EMAIL_FROM);
       expect(msg.html).toContain('Example &lt;Platform&gt;');
-      expect(msg.text).toContain("nosam connect 'api.example.com'");
+      expect(msg.text).toContain("bwf connect 'api.example.com'");
       expect(msg.html + msg.text).not.toContain('void.cloud');
       expect(msg.html).not.toContain('View Project');
     }
@@ -225,7 +225,7 @@ describe('platform email identity', () => {
     );
     expect(sent[0].subject).toBe("You're invited to Nosam Platform");
     expect(sent[0].html + sent[0].text).not.toContain('Nosam Cloud');
-    expect(sent[0].text).toContain("nosam connect 'api.example.com'");
+    expect(sent[0].text).toContain("bwf connect 'api.example.com'");
   });
 
   describe('default sender', () => {
@@ -288,6 +288,6 @@ describe('platform email identity', () => {
     await sendInvitationEmail(binding, 'member@example.com');
     expect(sent[0].from).toBe('Nosam <noreply@void.cloud>');
     expect(sent[0].subject).toBe("You're invited to Nosam Cloud");
-    expect(sent[0].text).toContain("nosam connect 'nosam.buildwithfriends.dev'");
+    expect(sent[0].text).toContain("bwf connect 'nosam.buildwithfriends.dev'");
   });
 });

@@ -1,5 +1,5 @@
-import type { PlatformApplication } from '@nosam/platform';
-import { platformProjectIngressPrefix, readPlatformApplication } from '@nosam/platform';
+import type { PlatformApplication } from '@buildwf/platform';
+import { platformProjectIngressPrefix, readPlatformApplication } from '@buildwf/platform';
 import { and, eq, sql } from 'drizzle-orm';
 import type { DbOrTx } from '../db.ts';
 import { getPlatformSetting, setPlatformSetting } from '../platform-settings.ts';

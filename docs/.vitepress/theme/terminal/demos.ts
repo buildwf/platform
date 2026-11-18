@@ -76,14 +76,14 @@ const deploy: TerminalDemo = {
   title: 'From your terminal to the world.',
   description: 'Build your app, apply migrations, and put it online on Cloudflare. One command.',
   directory: '~/blog',
-  command: 'nosam deploy',
+  command: 'bwf deploy',
   duration: 7500,
   context:
     'A React app with server routes and D1, already deployed directly to Cloudflare. Cloudflare is the saved deploy target; login and database setup are prepared. Build output is condensed.',
   link: '/guide/deployment',
   linkLabel: 'Explore deployment',
   events: [
-    command(0, 'command', 'nosam deploy'),
+    command(0, 'command', 'bwf deploy'),
     blank(530, 'gap'),
     write(530, 'intro', s('blog → ', 'muted'), s('Cloudflare', 'blue')),
     blank(680, 'intro-gap'),
@@ -127,14 +127,14 @@ const install: TerminalDemo = {
   title: 'Your cloud. Your platform.',
   description: 'Give your team a shared deployment environment in your own Cloudflare account.',
   directory: '~/orange-cloud',
-  command: 'nosam platform install',
+  command: 'bwf platform install',
   duration: 7500,
   context:
     'Sample Orange Cloud installation with masked credential entry. Cloudflare login, PostgreSQL/Hyperdrive, and GitHub/R2 setup are prepared; administrator identity, client/access IDs, and signing/encryption keys are supplied outside this recording. Setup output and timings are condensed.',
   link: '/guide/self-hosted-platform',
   linkLabel: 'Explore the platform',
   events: [
-    command(0, 'command', 'nosam platform install'),
+    command(0, 'command', 'bwf platform install'),
     blank(450, 'gap'),
     write(500, 'name', s('› ', 'blue'), s('Installation name:')),
     {
@@ -219,7 +219,7 @@ const install: TerminalDemo = {
     write(
       7090,
       'outro',
-      s('Run `nosam account login`, then deploy an app with `nosam deploy --platform nosam`.'),
+      s('Run `bwf account login`, then deploy an app with `bwf deploy --platform bwf`.'),
     ),
   ],
 };
@@ -231,14 +231,14 @@ const recover: TerminalDemo = {
   description:
     'Inspect a failed request and restore a previous deployment, without leaving your terminal.',
   directory: '~/orange-cloud/blog',
-  command: 'nosam project logs → nosam project rollback',
+  command: 'bwf project logs → bwf project rollback',
   duration: 7500,
   context:
     'A linked project on Orange Cloud. The previous retained deployment uses the same database schema; rollback restores the code, not database migrations.',
   link: '/reference/cli/project',
   linkLabel: 'Explore project commands',
   events: [
-    command(0, 'logs-command', 'nosam project logs --level error --range 15m'),
+    command(0, 'logs-command', 'bwf project logs --level error --range 15m'),
     blank(760, 'logs-gap'),
     write(900, 'request', s('14:32:07 ', 'muted'), s('POST /api/comments '), s('500', 'red')),
     write(1060, 'error', s('  [error] ', 'red'), s('Comment could not be saved')),
@@ -247,7 +247,7 @@ const recover: TerminalDemo = {
     blank(1420, 'logs-outro-gap'),
     write(1420, 'logs-outro', s('1 log entry', 'muted')),
     blank(1930, 'rollback-gap'),
-    command(1930, 'rollback-command', 'nosam project rollback'),
+    command(1930, 'rollback-command', 'bwf project rollback'),
     blank(2450, 'rollback-intro-gap'),
     write(2630, 'select-title', s('› ', 'blue'), s('Select a deployment to roll back to:')),
     write(2630, 'selected', s('  › dpl_7c42a1 18m ago', 'blue', true), s(': via cli', 'muted')),
@@ -268,7 +268,7 @@ const recover: TerminalDemo = {
     ),
     write(4570, 'traffic', s('Traffic is now serving the rolled-back deployment.', 'muted')),
     blank(5090, 'verify-gap'),
-    command(5090, 'verify-command', 'nosam project logs --range 1m'),
+    command(5090, 'verify-command', 'bwf project logs --range 1m'),
     blank(5780, 'verify-intro-gap'),
     write(5940, 'verify-request', s('14:33:21 ', 'muted'), s('POST /api/comments 201')),
     write(6180, 'verify-log', s('  [info] ', 'muted'), s('Comment saved')),

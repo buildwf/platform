@@ -22,7 +22,11 @@ export class BillingUnavailableError extends Error {}
 export function stripeSecretKey(env: StripeEnv): string {
   const key = env.STRIPE_SECRET_KEY;
   if (!key) throw new BillingUnavailableError('Billing is not set up.');
-  if (!key.startsWith('sk_test_') && !key.startsWith('rk_test_') && env.STRIPE_LIVE_ENABLED !== 'true') {
+  if (
+    !key.startsWith('sk_test_') &&
+    !key.startsWith('rk_test_') &&
+    env.STRIPE_LIVE_ENABLED !== 'true'
+  ) {
     throw new BillingUnavailableError('Live billing is switched off.');
   }
   return key;

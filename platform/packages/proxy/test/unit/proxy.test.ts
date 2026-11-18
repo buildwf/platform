@@ -1,4 +1,4 @@
-import { signEmailReceipt } from '@nosam/platform/email-protocol';
+import { signEmailReceipt } from '@buildwf/platform/email-protocol';
 import { deriveAiUsageTag, deriveProxyToken } from '@nosamcloud/api/proxy-token';
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vite-plus/test';
 import worker from '../../src/index.ts';

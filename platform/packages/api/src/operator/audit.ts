@@ -1,4 +1,4 @@
-import { PLAN_EDITABLE_LIMIT_KEYS } from '@nosam/platform/plans';
+import { PLAN_EDITABLE_LIMIT_KEYS } from '@buildwf/platform/plans';
 import { count, desc, eq } from 'drizzle-orm';
 import { Hono, type Context, type MiddlewareHandler } from 'hono';
 import { isAiLoggingMode } from '../ai-logging-policy.ts';

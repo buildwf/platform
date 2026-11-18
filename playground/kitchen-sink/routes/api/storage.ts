@@ -1,5 +1,5 @@
-import { defineHandler } from 'nosam';
-import { storage } from 'nosam/storage';
+import { defineHandler } from '@buildwf/bwf';
+import { storage } from '@buildwf/bwf/storage';
 
 export const GET = defineHandler(async () => {
   const list = await storage.list({ limit: 20 });

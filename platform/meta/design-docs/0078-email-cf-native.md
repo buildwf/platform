@@ -9,7 +9,7 @@ The repository implements two email hosting paths. Native Cloudflare deployments
 
 ## Native deployment
 
-The app's email.from setting selects the sender domain. Native deployment and nosam email setup/status share a credentialed Cloudflare preflight. Setup inspects routing, rules, Sending state, and configuration before changing account resources. It manages only the derived address rules and reports permission, DNS, or plan limits instead of assuming a Worker upload makes email ready. Apps without email use no email binding or entitlement probe. The [native setup implementation](../../../packages/nosam/src/cli/email-cloudflare.ts) owns this flow.
+The app's email.from setting selects the sender domain. Native deployment and bwf email setup/status share a credentialed Cloudflare preflight. Setup inspects routing, rules, Sending state, and configuration before changing account resources. It manages only the derived address rules and reports permission, DNS, or plan limits instead of assuming a Worker upload makes email ready. Apps without email use no email binding or entitlement probe. The [native setup implementation](../../../packages/bwf/src/cli/email-cloudflare.ts) owns this flow.
 
 Native inbound handlers run on the Worker's email event. Native sending uses the configured binding. The local development inbox and test harness do not imply live delivery. See the [email guide](../../../docs/guide/email.md).
 

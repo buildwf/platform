@@ -21,8 +21,8 @@ import {
 import { useEffect, useState, type ReactNode } from 'react';
 import { formatPlatformPageTitle } from '../../../platform-identity.ts';
 import { useNavigation, useRouter } from '../spa.tsx';
+import { BwfLogo } from './BwfLogo.tsx';
 import { PageStack } from './PageStack.tsx';
-import { NosamLogo } from './NosamLogo.tsx';
 
 let isSideNavCollapsed = false;
 
@@ -71,7 +71,7 @@ export function Layout({
           heading={
             <TopNavHeading
               className="nosam-admin-brand"
-              logo={<NosamLogo />}
+              logo={<BwfLogo />}
               heading={platformName}
             />
           }

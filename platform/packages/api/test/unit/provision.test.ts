@@ -443,7 +443,7 @@ describe('provisionBindings', () => {
   });
 
   it('always injects __NOSAM_PROJECT_SLUG, for sandbox and non-sandbox projects alike', async () => {
-    // `nosam/email` defaults an outbound `from` to `<slug>+noreply@<domain>` on
+    // `@buildwf/bwf/email` defaults an outbound `from` to `<slug>+noreply@<domain>` on
     // EVERY worker, so this is the single unconditional producer — and the
     // sandbox runtime reads the same name.
     const manifest: DeployManifest = { version: 1, bindings: {} };

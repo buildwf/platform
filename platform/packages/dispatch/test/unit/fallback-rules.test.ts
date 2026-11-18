@@ -275,7 +275,7 @@ describe('redirectRules entries (pre-asset phase)', () => {
         projectId: 'proj_1',
         assetConfig: { not_found_handling: 'none', html_handling: 'none' },
         // Status-200 entries in redirectRules come from `routing.rewrites` in
-        // nosam.json or `200!` in _redirects. Pre-asset phase is implicit in the
+        // bwf.json or `200!` in _redirects. Pre-asset phase is implicit in the
         // list identity — dispatch does not inspect any flag on the rule.
         redirectRules: [{ source: '/legacy/*', destination: '/new.html', status: 200 }],
       },

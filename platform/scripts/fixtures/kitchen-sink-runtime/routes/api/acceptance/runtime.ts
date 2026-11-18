@@ -1,6 +1,6 @@
-import { defineHandler } from 'nosam';
-import { ai } from 'nosam/ai';
-import { env } from 'nosam/env';
+import { defineHandler } from '@buildwf/bwf';
+import { ai } from '@buildwf/bwf/ai';
+import { env } from '@buildwf/bwf/env';
 
 // Root can change this literal between two disposable deployments for rollback proof.
 export const acceptanceVersion = 'void-runtime-acceptance-v1';

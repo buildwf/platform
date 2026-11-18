@@ -1,16 +1,16 @@
 ---
-description: 'Store files in Cloudflare R2, and upload, download, and read metadata through nosam/storage.'
+description: 'Store files in Cloudflare R2, and upload, download, and read metadata through bwf/storage.'
 outline: deep
 ---
 
 # Object Storage
 
-Store files in [Cloudflare R2](https://developers.cloudflare.com/r2/) with `storage` from `nosam/storage`. It gives you the typed R2 API for uploads, downloads, and metadata.
+Store files in [Cloudflare R2](https://developers.cloudflare.com/r2/) with `storage` from `@buildwf/bwf/storage`. It gives you the typed R2 API for uploads, downloads, and metadata.
 
 ## Basic Operations
 
 ```ts
-import { storage } from 'nosam/storage';
+import { storage } from '@buildwf/bwf/storage';
 
 // Upload
 await storage.put('uploads/photo.jpg', file, {
@@ -44,8 +44,8 @@ A common pattern is serving uploaded files from an API route:
 
 ```ts
 // routes/files/[key].ts
-import { defineHandler } from 'nosam';
-import { storage } from 'nosam/storage';
+import { defineHandler } from '@buildwf/bwf';
+import { storage } from '@buildwf/bwf/storage';
 
 export const GET = defineHandler(async (c) => {
   const object = await storage.get(`uploads/${c.req.param('key')}`);
@@ -69,11 +69,11 @@ Files your users upload can contain HTML or scripts. Store them under keys your 
 
 ## Custom bindings
 
-To use another R2 bucket, add it to `cloudflare.r2_buckets` in `nosam.config.ts`, for example `{ binding: 'MY_BUCKET', bucket_name: 'uploads' }`. Run `nosam prepare`, then pass the typed binding to `createStorage()`:
+To use another R2 bucket, add it to `cloudflare.r2_buckets` in `bwf.config.ts`, for example `{ binding: 'MY_BUCKET', bucket_name: 'uploads' }`. Run `bwf prepare`, then pass the typed binding to `createStorage()`:
 
 ```ts
-import { defineHandler } from 'nosam';
-import { createStorage } from 'nosam/storage';
+import { defineHandler } from '@buildwf/bwf';
+import { createStorage } from '@buildwf/bwf/storage';
 
 export const GET = defineHandler((c) => {
   const storage = createStorage(c.env.MY_BUCKET);

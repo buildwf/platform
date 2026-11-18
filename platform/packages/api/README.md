@@ -70,7 +70,7 @@ src/
     middleware/auth.ts        # Admin cookie auth + same-origin guard on every write
 container/
   Dockerfile                  # node:26.12.1-slim + pinned corepack + bun build image
-  build-agent.mjs             # Downloads source tarball, installs deps, runs `npx nosam deploy`
+  build-agent.mjs             # Downloads source tarball, installs deps, runs `npx bwf deploy`
 drizzle/
   0000_*.sql
   ...
@@ -120,7 +120,7 @@ The owner's plan, quota, and suspension state govern every role's work.
 - `GET /github/installations` (auth) — installations accessible to the user
 - `GET /github/callback` (public, HMAC-signed state) — App install callback
 - `POST /webhooks/github` (public, HMAC-verified) — `push` queues a container build and pokes the scheduler; `installation`/`installation_repositories` sync access; `workflow_run` completes GitHub Actions builds
-- `POST /auth/github-oidc` (public) — verify a GitHub Actions OIDC token, create the Actions build row, and mint a scoped `NOSAM_TOKEN` (`{ oidcToken, project }` -> `{ token, projectId, buildId }`)
+- `POST /auth/github-oidc` (public) — verify a GitHub Actions OIDC token, create the Actions build row, and mint a scoped `BWF_TOKEN` (`{ oidcToken, project }` -> `{ token, projectId, buildId }`)
 
 The webhook and OIDC endpoints return `503` when the GitHub App secrets are unset,
 so the worker runs without them. Do not add an Access `Everyone` or path bypass
@@ -176,7 +176,7 @@ owner and ownership periods atomically; usage counters and routing converge
 afterward, and retries repair an already-committed transfer without moving its
 billing boundary.
 
-Managed Sandbox disablement uses `nosam platform system sandbox-drain`. The
+Managed Sandbox disablement uses `bwf platform system sandbox-drain`. The
 preview inventories bounded pages of deployment manifests and container
 resources without writing. Apply closes the activation gate, cancels active
 Sandbox deployments, and deletes only container applications corroborated by a
@@ -221,7 +221,7 @@ their deployment-time GitHub/Google configuration. After callback, the API
 validates the signed state and provider identity, then signs in the linked
 account or applies the installation's signup policy to a new account. In a
 configurable installation, a matching email address does not automatically
-link another login method; users link it explicitly with `nosam account link` or
+link another login method; users link it explicitly with `bwf account link` or
 the optional dashboard's **Account** page.
 
 A successful login signs a JWT and redirects back:
@@ -230,7 +230,7 @@ A successful login signs a JWT and redirects back:
 - new CLI redirects with `code_challenge_method=S256` receive a short-lived `?code=...` for `POST /auth/cli/token`
 - legacy localhost CLI redirects still receive `?token=...`
 
-The CLI entrypoint is `nosam auth login`, not `nosam login`.
+The CLI entrypoint is `bwf auth login`, not `bwf login`.
 
 Dashboard auth uses the same JWT model, stored in the `nosam_token` cookie.
 
@@ -276,14 +276,14 @@ Connect a repo through a GitHub App; a `git push` then builds and deploys automa
 - **Trigger**: `POST /webhooks/github` verifies the HMAC signature, then on `push` writes a `builds` row and pokes the `BuildScheduler`.
 - **Executors** (per `github_connections.build_executor`, default `container`):
   - **CF Container** — `BuildScheduler` (global, alarm-driven queue with per-plan concurrency from the installation catalog) atomically claims a build and starts its configured instance size: `BuildManager` (`standard-3` = 2 vCPU / 8 GiB / 16 GB) or `BuildManagerLarge` (`standard-4` = 4 vCPU / 12 GiB / 20 GB). The class is routed by the persisted `builds.instance_type` (`standard-3` / `standard-4`, captured from the effective plan at admission) via `buildManagerNamespace` in `build-namespace.ts`; cancel and reaper paths use the same picker, so they address the same class the build started on. `BuildManagerLarge` extends `BuildManager`, which extends `@cloudflare/containers` `Container`, enforces a timeout alarm, and persists status to Postgres via Hyperdrive.
-  - **GitHub Actions** — `nosam init --github` scaffolds a workflow that calls `POST /auth/github-oidc`; the verified job runs `nosam deploy` and reports back via the `workflow_run` webhook.
-- **Build mechanism**: both executors run the real `nosam deploy` CLI with a short-lived, project-scoped deploy token (`aud: "deploy"`, minted by `auth/deploy-token.ts`). There is no artifact-upload endpoint; `routes/deploy.ts` is unchanged. The container agent (`container/build-agent.mjs`) downloads the source tarball, installs deps, and runs `npx nosam deploy --project <slug>` with `NOSAM_TOKEN` + `NOSAM_API_URL`.
+  - **GitHub Actions** — `bwf init --github` scaffolds a workflow that calls `POST /auth/github-oidc`; the verified job runs `bwf deploy` and reports back via the `workflow_run` webhook.
+- **Build mechanism**: both executors run the real `bwf deploy` CLI with a short-lived, project-scoped deploy token (`aud: "deploy"`, minted by `auth/deploy-token.ts`). There is no artifact-upload endpoint; `routes/deploy.ts` is unchanged. The container agent (`container/build-agent.mjs`) downloads the source tarball, installs deps, and runs `npx bwf deploy --project <slug>` with `BWF_TOKEN` + `BWF_API_URL`.
 - **Check Run**: container builds publish a "Nosam Build" GitHub Check Run (head SHA = the build's `commit_sha`/webhook `after`), created `in_progress` at build start and finalized `success`/`failure`/`cancelled` at every terminal site. Best-effort — a Check Run API error never fails or perturbs a build/deploy. `details_url` is the application URL derived from the configured `SITE_DOMAIN` for the in-progress/success/failure states (omitted on cancel). The helper (`github/check-run.ts`) is executor-agnostic; Actions check-runs are deferred (the native workflow check already covers them) and the helper is ready for a future PR. Configure Checks write permission and the relevant webhook subscriptions when enabling this integration. `builds.check_run_id` has no index (nothing queries by it — deferred).
 - **Build logs**: `BuildManager` pulls container stdout/stderr into the DO with a `pollLogs()` loop — a non-starting `getTcpPort().fetch()` against the agent's paged `GET /logs?since=N` (deliberately NOT `containerFetch`, which would auto-resurrect an exited container) on a ~1s cadence, advancing its cursor only after SQLite ingestion and feeding the SQLite `logs` table + WebSocket fan-out. On natural exit, the agent keeps its control server alive with an 8s idle deadline that resets only when the acknowledged cursor advances and a 120s non-resettable absolute cap. After a moving final page, the same pull callback sends one empty follow-up request so `since=<last ingested seq>` acknowledges durable ingestion without waiting another tick. Forced teardown instead single-flights the whole join, fresh bounded pull, liveness recheck, and signal sequence so concurrent callers cannot ingest after the termination marker. The DO also serves a read-only `GET /logs?since=N` -> `{ lines, lastSeq }`. The admin build views (below) consume this; `github_actions` builds have no DO log store and link out to their GitHub Actions run.
 
 ## Email
 
-Projects send and receive mail through `nosam/email`. The API authorizes routing, consent, suspension, and quota reservations in PostgreSQL. The proxy submits outbound mail, and the dedicated email gateway authenticates inbound zone traffic and dispatches it to the active project worker.
+Projects send and receive mail through `@buildwf/bwf/email`. The API authorizes routing, consent, suspension, and quota reservations in PostgreSQL. The proxy submits outbound mail, and the dedicated email gateway authenticates inbound zone traffic and dispatches it to the active project worker.
 
 ### Sender identity is per-environment
 
@@ -315,7 +315,7 @@ Only reservations that never started can be cancelled and refunded. Started or u
 Destinations are added through the owner/project-administrator `POST /projects/:id/email/destinations` consent flow. Operators cannot consent on a recipient’s behalf. Incomplete provider operations retain their operation ID and outcome for reconciliation or audited recovery; the page must not report them as completed.
 
 Shared inbound recipient creation has the same explicit recovery boundary:
-operators discover intents with `nosam platform email shared-recipients`, inspect
+operators discover intents with `bwf platform email shared-recipients`, inspect
 the exact provider resource, and use `shared-recipient-resolve --plan` before
 applying an attested outcome. Recovery waits at least 24 hours, requires the
 original execution to have ended, and pins the inspected identity and attempt.
@@ -497,7 +497,7 @@ installed Workers in the Cloudflare dashboard. The next lifecycle command stops
 until the operator lets Nosam replace that change; see
 [Platform Workers changed outside Nosam](../../../docs/guide/platform/installation/maintenance.md#workers-changed-outside-nosam).
 
-Administrators manage access with `nosam platform signup` and `nosam platform invitation`. Signup eligibility comes from the installation's own allowlist and bootstrap administrator configuration.
+Administrators manage access with `bwf platform signup` and `bwf platform invitation`. Signup eligibility comes from the installation's own allowlist and bootstrap administrator configuration.
 
 ## Tests
 

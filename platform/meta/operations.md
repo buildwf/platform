@@ -2,14 +2,14 @@
 
 This note describes the maintained Nosam Cloud deployment. A fork runs its own platform through [Self-host a Nosam Platform](../../docs/guide/self-hosted-platform.md). Use [Platform Administration](../../docs/guide/platform-administration.md) for access control, users, projects, logs, and health checks.
 
-Nosam Cloud's existing environments predate the installer. Their resources are managed by the checked-in Wrangler configurations and the workflows below. Do not adopt those resources with `nosam platform install`; the installer manages resources recorded as belonging to a self-hosted installation.
+Nosam Cloud's existing environments predate the installer. Their resources are managed by the checked-in Wrangler configurations and the workflows below. Do not adopt those resources with `bwf platform install`; the installer manages resources recorded as belonging to a self-hosted installation.
 
 ## Environments
 
-| Environment | API                              | Dashboard                         | App domains          |
-| ----------- | -------------------------------- | --------------------------------- | -------------------- |
-| Production  | `https://nosam.buildwithfriends.dev`         | `https://dash.void.cloud`         | `*.void.app`         |
-| Staging     | `https://api.staging.void.cloud` | `https://dash.staging.void.cloud` | `*.staging.void.app` |
+| Environment | API                                  | Dashboard                         | App domains          |
+| ----------- | ------------------------------------ | --------------------------------- | -------------------- |
+| Production  | `https://nosam.buildwithfriends.dev` | `https://dash.void.cloud`         | `*.void.app`         |
+| Staging     | `https://api.staging.void.cloud`     | `https://dash.staging.void.cloud` | `*.staging.void.app` |
 
 Each environment has a separate PostgreSQL database, Hyperdrive configuration, dispatch namespace, KV namespaces, R2 buckets, usage queue, and Analytics Engine datasets. Read the corresponding `env.production` or `env.staging` sections in each package's Wrangler configuration for the current resource bindings. Keep credentials and access assignments in the deployment owner's secret manager and identity provider.
 
@@ -26,7 +26,7 @@ vp test run
 
 The normal Nosam Cloud deployment script deploys the proxy first, then the email gateway, then applies PostgreSQL migrations and deploys the API, followed by the tail, dispatch, and dashboard Workers. The email gateway goes first so it can already relay requests from pages the new API serves, such as the email confirmation form. The first email rollout uses the separate order in [Configure the shared mail zone](#configure-the-shared-mail-zone). The API hosts the build scheduler and build-container Durable Objects. The optional dashboard uses the API for authentication and is deployed after the API it depends on.
 
-The `deploy` and `deploy:staging` scripts in `platform/package.json` target these existing hosted environments. Forks should use `nosam platform upgrade --runtime` as described in [source deployment](../../docs/guide/platform/development/runtime.md#deploying-source-builds-from-ci).
+The `deploy` and `deploy:staging` scripts in `platform/package.json` target these existing hosted environments. Forks should use `bwf platform upgrade --runtime` as described in [source deployment](../../docs/guide/platform/development/runtime.md#deploying-source-builds-from-ci).
 
 ### GitHub Actions
 
@@ -56,7 +56,7 @@ The release after 1.8.0 moves project AI logging settings to ROUTING KV; see [de
 SELECT count(*) FROM project_ai_logging;
 ```
 
-Expect 0: the 1.8.0 operator route always returned 503 on hosted. If it is not 0, list the rows with `SELECT project_id, mode FROM project_ai_logging ORDER BY project_id;` and, after the API deploy, run `nosam platform project ai-logging <project-id> <mode> --yes` for each one so the setting is published. Hosted AI works again as soon as the new proxy is live, because a missing key means `inherit`. Also check the `collect_logs` setting of the hosted `nosam` gateway in Cloudflare: it decides what `inherit` means on Nosam Cloud.
+Expect 0: the 1.8.0 operator route always returned 503 on hosted. If it is not 0, list the rows with `SELECT project_id, mode FROM project_ai_logging ORDER BY project_id;` and, after the API deploy, run `bwf platform project ai-logging <project-id> <mode> --yes` for each one so the setting is published. Hosted AI works again as soon as the new proxy is live, because a missing key means `inherit`. Also check the `collect_logs` setting of the hosted `nosam` gateway in Cloudflare: it decides what `inherit` means on Nosam Cloud.
 
 The production deploy workflow runs these read-only database queries before rolling out any Workers. Inspect its saved-setting count and any rows when monitoring this release. It also reports the gateway's `collect_logs` value when the deployment token has AI Gateway Read permission; otherwise check that setting in Cloudflare.
 
@@ -67,11 +67,11 @@ Never roll the hosted API back to 1.8.x. Its AI logging route returns 503 withou
 Nosam Cloud operators can inspect the platform's six Workers and their versions:
 
 ```sh
-nosam platform worker list
-nosam platform worker show <proxy|email-gateway|tail|api|dashboard|dispatch>
-nosam platform worker rollback <name> <version-id>
-nosam platform worker rollback-all
-nosam platform worker events [batch-id]
+bwf platform worker list
+bwf platform worker show <proxy|email-gateway|tail|api|dashboard|dispatch>
+bwf platform worker rollback <name> <version-id>
+bwf platform worker rollback-all
+bwf platform worker events [batch-id]
 ```
 
 Each command accepts `--environment production|staging`. By default, it uses the platform's environment; `events <batch-id>` uses the batch's environment. Worker event lists accept `--page` and `--limit` when no batch ID is given. `worker list` always returns the fixed Worker inventory.
@@ -82,11 +82,11 @@ These commands are for Nosam Cloud's Workers. Self-hosted installations use the 
 
 ### Proxy token rotation
 
-`nosam platform system rotate-proxy-tokens` replaces the project tokens tenant Workers use to call the proxy; see the [proxy README](../packages/proxy/README.md#project-tokens) for the token format and accept floor. Release order: the release whose API, proxy, and dispatch Workers accept token generations must be live on production first; then ship the release that adds rotation. After it reaches staging, rotate one canary project with `--project <id> --yes` and check AI, email, queues, crons, remote D1/KV/R2, and WebSocket reconnects.
+`bwf platform system rotate-proxy-tokens` replaces the project tokens tenant Workers use to call the proxy; see the [proxy README](../packages/proxy/README.md#project-tokens) for the token format and accept floor. Release order: the release whose API, proxy, and dispatch Workers accept token generations must be live on production first; then ship the release that adds rotation. After it reaches staging, rotate one canary project with `--project <id> --yes` and check AI, email, queues, crons, remote D1/KV/R2, and WebSocket reconnects.
 
 A deploy gives a project still on generation 0 a generation 1 token. Its older Workers keep the legacy token, which stays accepted until the project rotates. From that deploy on, a platform rollback to 0.26.0 or earlier breaks the project; see the rollback notes below.
 
-Only Workers named `user-<slug>`, from before per-deployment Worker names (2026-03-06), can still hold the legacy token in `__AI_TOKEN`, its name before the binding rename. Only AI calls used that binding: ISR revalidation then used `NOSAM_REVALIDATE_TOKEN`, and email did not exist yet. A project still served by a `user-<slug>` Worker has not been deployed since, so its `projects.active_deployment_id` is null while a `live` deployment exists. A rotation of such a project fails at START (`The active deployment is not recorded.`) and retries every 15 minutes. The issued generation and the floor never rise, so the app, AI included, keeps working, and after about an hour owners and admins see the stuck-rotation warning. A deploy would give the project a per-deployment Worker and let the rotation finish, but deploys are refused for the same reason (409 `project_requires_normalization`), and `nosam platform project normalize` refuses a route whose `workerName` is `user-<slug>`. Each of these projects needs an operator repair before it can deploy or rotate; until then its job stays failed in `--plan`. This query lists every project whose rotation stops at START this way; `used_ai` marks those with AI in a live deployment:
+Only Workers named `user-<slug>`, from before per-deployment Worker names (2026-03-06), can still hold the legacy token in `__AI_TOKEN`, its name before the binding rename. Only AI calls used that binding: ISR revalidation then used `NOSAM_REVALIDATE_TOKEN`, and email did not exist yet. A project still served by a `user-<slug>` Worker has not been deployed since, so its `projects.active_deployment_id` is null while a `live` deployment exists. A rotation of such a project fails at START (`The active deployment is not recorded.`) and retries every 15 minutes. The issued generation and the floor never rise, so the app, AI included, keeps working, and after about an hour owners and admins see the stuck-rotation warning. A deploy would give the project a per-deployment Worker and let the rotation finish, but deploys are refused for the same reason (409 `project_requires_normalization`), and `bwf platform project normalize` refuses a route whose `workerName` is `user-<slug>`. Each of these projects needs an operator repair before it can deploy or rotate; until then its job stays failed in `--plan`. This query lists every project whose rotation stops at START this way; `used_ai` marks those with AI in a live deployment:
 
 ```sql
 SELECT p.id, p.slug, max(d.created_at) AS last_live,
@@ -105,7 +105,7 @@ The API also requests a rotation when a collaborator or admin loses deploy acces
 
 Accept floors live in the ROUTING namespace. If it is ever recreated, every floor reads as 0 and old tokens work again: run `rotate-proxy-tokens --all --yes`.
 
-Do not roll the platform back to 0.26.0 or earlier, the releases before token generations, once a release with rotation has run. `nosam platform rollback` allows it, because `drizzle/compatibility.json` lists 0.25.0 and 0.26.0 for schema reasons, but their proxy accepts and sends only the legacy token. Every project deployed since the upgrade (its Worker holds a generation 1 or later token) and every rotated project then loses AI, email, remote D1/KV/R2 until the platform is upgraded again. Those releases also drop rotations that have not finished, and Workers deployed while they run carry the legacy token, which a rotated project rejects after the upgrade. If such a rollback happened, upgrade again, then run the recovery below.
+Do not roll the platform back to 0.26.0 or earlier, the releases before token generations, once a release with rotation has run. `bwf platform rollback` allows it, because `drizzle/compatibility.json` lists 0.25.0 and 0.26.0 for schema reasons, but their proxy accepts and sends only the legacy token. Every project deployed since the upgrade (its Worker holds a generation 1 or later token) and every rotated project then loses AI, email, remote D1/KV/R2 until the platform is upgraded again. Those releases also drop rotations that have not finished, and Workers deployed while they run carry the legacy token, which a rotated project rejects after the upgrade. If such a rollback happened, upgrade again, then run the recovery below.
 
 Before rolling the platform back, let running rotations finish (`--plan` shows nothing pending). After a rollback to the release before rotation, a project in the middle of a rotation gets 403 on remote D1/KV/R2, and so does a project deployed since the upgrade, until it is redeployed or the platform is upgraded again; unfinished rotations resume after the upgrade. A rotated project deployed while the release before rotation runs gets a deployment row with generation 0 for a Worker that holds a newer token, so it gets 403 after the upgrade until it is rotated or redeployed. After upgrading again from any rollback, run `rotate-proxy-tokens --all --yes` and check with `--plan` until nothing is pending or failed, apart from the projects above without an active deployment: every Worker gets a new token and every floor rises again. Keep the API and proxy on the same release: a proxy from before token generations cannot call the metadata routes of an API that has rotation.
 
@@ -144,7 +144,7 @@ GitHub issues a PKCS#1 private key. The API expects PKCS#8:
 openssl pkcs8 -topk8 -nocrypt -in github-app-pkcs1.pem -out github-app-pkcs8.pem
 ```
 
-Container builds use the configured `BuildManager` or `BuildManagerLarge` class for the project's plan. GitHub Actions builds run in the repository's Actions environment and authenticate through `/auth/github-oidc`. Follow build logs with `nosam platform build logs <build-id> --follow`.
+Container builds use the configured `BuildManager` or `BuildManagerLarge` class for the project's plan. GitHub Actions builds run in the repository's Actions environment and authenticate through `/auth/github-oidc`. Follow build logs with `bwf platform build logs <build-id> --follow`.
 
 ## Email
 
@@ -189,11 +189,11 @@ only catch-all rules still targeting those Workers, delete the obsolete Workers,
 and revoke unused test grants in Cloudflare. Preserve unrelated rules and MX
 records. The new reconciler does not migrate old `email_domains` records.
 
-Inspect all three readiness states and the operation ID with `nosam email domain status <domain>`. Use `sync` to reconcile recoverable steps and `rotate-secret` for explicit ingress-secret rotation. An uncertain provider write remains blocked until its outcome can be proved; neither a timeout nor a missing cache entry authorizes another write. Never erase the operation to force a retry.
+Inspect all three readiness states and the operation ID with `bwf email domain status <domain>`. Use `sync` to reconcile recoverable steps and `rotate-secret` for explicit ingress-secret rotation. An uncertain provider write remains blocked until its outcome can be proved; neither a timeout nor a missing cache entry authorizes another write. Never erase the operation to force a retry.
 
 If read-back cannot prove whether a routing, Worker, secret, catch-all, or Sending
 mutation applied, confirm that the original execution ended and wait at least 24
-hours before using `nosam platform email operation-resolve`. Its preview identifies
+hours before using `bwf platform email operation-resolve`. Its preview identifies
 the exact stored mutation. Record `applied` to continue without replaying it, or
 `not-applied` to retry only that fenced intent. Keep the same platform version and
 preserve staged secret state until the operation completes.
@@ -202,7 +202,7 @@ Outbound-only domains (`domain-add --outbound-only`) need a release that knows t
 
 Project email aliases (`projects.email_alias`, migration 0062) need a release that knows the column. After a rollback to an earlier release, alias addresses stop sending and receiving and the next shared-recipient reconcile removes their routing rules; slug addresses keep working. The column and its values stay, and the first reconcile after upgrading again recreates the alias rules. While the older release runs, creating a project whose slug equals an existing alias (CLI, API, or OAuth deploy) fails with a 500 instead of `slug already taken`, because the 0062 trigger still refuses it; pick another slug or upgrade again.
 
-PostgreSQL is authoritative for consent, policy, suspension, and recipient-attempt quotas. Cache publication retries independently. `nosam email logs` exposes receipt and action metadata: provider acceptance is not proof of delivery, and an unknown result must not be retried with a new idempotency key. Removing one domain or project must preserve sibling routes and unresolved cleanup records.
+PostgreSQL is authoritative for consent, policy, suspension, and recipient-attempt quotas. Cache publication retries independently. `bwf email logs` exposes receipt and action metadata: provider acceptance is not proof of delivery, and an unknown result must not be retried with a new idempotency key. Removing one domain or project must preserve sibling routes and unresolved cleanup records.
 
 Before production enablement, complete the [email acceptance checks](./release-acceptance.md#email-acceptance), including live Cloudflare routing, forwarding/reply, scoped-token, rotation, and failure-recovery checks.
 
@@ -234,24 +234,24 @@ These CLI Access helpers recognize Nosam Cloud staging hosts. They are not a gen
 Select the environment explicitly and use an administrator session:
 
 ```sh
-nosam platform system health --connection https://api.staging.void.cloud
+bwf platform system health --connection https://api.staging.void.cloud
 ```
 
-`vp run --filter @nosamcloud/platform health` runs the same operator health command against the selected connection. It requires a built SDK and `nosam platform auth login` or `NOSAM_OPERATOR_TOKEN`. The `health:staging` shortcut explicitly selects Nosam Cloud staging.
+`vp run --filter @nosamcloud/platform health` runs the same operator health command against the selected connection. It requires a built SDK and `bwf platform auth login` or `NOSAM_OPERATOR_TOKEN`. The `health:staging` shortcut explicitly selects Nosam Cloud staging.
 
 The [kitchen-sink smoke checklist](../scripts/kitchen-sink-smoke-test.md) works with a disposable deployment on any platform. Its automated script requires `SMOKE_URL` and resets that app's data. The hosted smoke-test workflow provides the staging URL explicitly.
 
 ## Documentation Site
 
 The documentation site deploys from `main` through the Nosam GitHub App using the
-`container` executor. The root [`nosam.config.ts`](../../nosam.config.ts) configures the monorepo
+`container` executor. The root [`bwf.config.ts`](../../bwf.config.ts) configures the monorepo
 as a static project that builds `docs` and publishes `docs/.vitepress/dist`.
-There is no documentation deploy workflow or `NOSAM_TOKEN` repository secret.
+There is no documentation deploy workflow or `BWF_TOKEN` repository secret.
 
 Connect the repository once with:
 
 ```sh
-nosam github connect nosam-docs \
+bwf github connect nosam-docs \
   --repo voidzero-dev/void \
   --branch main \
   --executor container

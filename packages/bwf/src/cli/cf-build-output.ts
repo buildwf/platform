@@ -1,0 +1,608 @@
+import { randomBytes } from 'node:crypto';
+import {
+  cpSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import {
+  getWorkerBundleDir,
+  getWorkerAssetsDir,
+  getWorkerConfigPath,
+  getRootConfigPath,
+  normalizeDirectoryName,
+  readBuildOutput,
+  writeAssets,
+  writeContainerConfig,
+  writeRootConfig,
+  writeWorkerConfig,
+} from '@cloudflare/build-output-utils';
+import { type ModuleType, OutputContainerSchema } from '@cloudflare/config';
+import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'pathslash';
+import type { Plugin } from 'vite';
+import { migrateBuiltWranglerConfig, record } from './cf-config-migrate.ts';
+import { buildContainerImage } from './container-image.ts';
+import { WORKER_CONDITIONS } from './worker-conditions.ts';
+
+export interface CfBuildOutput {
+  directory: string;
+  assetsDirectory?: string;
+  activeSecrets?: {
+    versionId: string;
+    bindings: ReadonlyArray<{ name: string; type: 'secret_text' | 'secret_key' }>;
+  };
+  dispose(): Promise<void>;
+}
+
+// Match the additional modules emitted by the Cloudflare Vite plugin. A complete
+// manifest keeps cf from treating text, binary, and Wasm imports as JavaScript.
+const moduleTypes: Record<string, ModuleType> = {
+  '.js': 'esm',
+  '.mjs': 'esm',
+  '.cjs': 'cjs',
+  '.wasm': 'wasm',
+  '.bin': 'data',
+  '.woff': 'data',
+  '.woff2': 'data',
+  '.ttf': 'data',
+  '.otf': 'data',
+  '.eot': 'data',
+  '.txt': 'text',
+  '.html': 'text',
+  '.sql': 'text',
+  '.json': 'json',
+  '.map': 'sourcemap',
+};
+
+/** Whether `path` resolves strictly inside `directory`. */
+function isInside(directory: string, path: string): boolean {
+  const child = relative(directory, path);
+  return child !== '' && child !== '..' && !child.startsWith('../') && !isAbsolute(child);
+}
+
+/** Asset copies follow symlinks, so a link may not reach outside the asset directory. */
+function assertAssetSymlinksInside(directory: string): void {
+  const realDirectory = realpathSync(directory);
+  for (const entry of readdirSync(directory, { recursive: true, withFileTypes: true })) {
+    if (
+      entry.isSymbolicLink() &&
+      !isInside(realDirectory, realpathSync(join(entry.parentPath, entry.name)))
+    ) {
+      throw new Error('The Worker assets contain a symlink outside the asset directory.');
+    }
+  }
+}
+
+function copyBundle(source: string, destination: string): Record<string, { type: ModuleType }> {
+  const modules: Record<string, { type: ModuleType }> = {};
+  for (const entry of readdirSync(source, { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile() && !entry.isSymbolicLink()) {
+      continue;
+    }
+    const absolute = join(entry.parentPath, entry.name);
+    if (entry.isSymbolicLink() && !isInside(realpathSync(source), realpathSync(absolute))) {
+      throw new Error('The built Worker contains a symlink outside its output directory.');
+    }
+    const name = relative(source, absolute);
+    if (
+      name === 'wrangler.json' ||
+      name === '.dev.vars' ||
+      name === join('.vite', 'manifest.json') ||
+      // Vite extracts side-effect CSS imports into the Worker output, but they
+      // are static build assets rather than Worker modules. Wrangler's module
+      // rules do not upload CSS, and a complete cf manifest must omit it too.
+      name.endsWith('.css') ||
+      name.endsWith('.css.map')
+    ) {
+      continue;
+    }
+    const type = moduleTypes[extname(entry.name).toLowerCase()];
+    if (!type) {
+      throw new Error(
+        `The built Worker contains an unsupported module ${JSON.stringify(name)}. Emit public assets into the client output or configure the plugin that produced this file to run only in the client environment.`,
+      );
+    }
+
+    const destinationPath = join(destination, name);
+    mkdirSync(dirname(destinationPath), { recursive: true });
+    if (entry.isSymbolicLink()) {
+      copyFileSync(realpathSync(absolute), destinationPath);
+    } else {
+      cpSync(absolute, destinationPath);
+    }
+    modules[name] = { type };
+  }
+  return modules;
+}
+
+function stagePackageContext(directory: string, projectRoot: string): void {
+  const root = resolve(projectRoot);
+  const manifest = join(root, 'package.json');
+  if (!existsSync(manifest)) {
+    return;
+  }
+  // cf reads package.json and resolves installed versions from its working directory.
+  // Keep both outside the Worker bundle and assets so they are never uploaded as files.
+  copyFileSync(manifest, join(directory, 'package.json'));
+  for (let parent = root; ; parent = dirname(parent)) {
+    const modules = join(parent, 'node_modules');
+    if (existsSync(modules)) {
+      symlinkSync(
+        modules,
+        join(directory, 'node_modules'),
+        process.platform === 'win32' ? 'junction' : 'dir',
+      );
+      break;
+    }
+    if (parent === dirname(parent)) {
+      break;
+    }
+  }
+}
+
+/** Create a disposable cf Build Output tree from an existing Cloudflare Worker build. */
+export async function prepareCfBuildOutput(
+  workerDirectory: string,
+  accountId?: string,
+  mode?: string,
+  projectRoot: string = workerDirectory,
+): Promise<CfBuildOutput | null> {
+  const source = resolve(workerDirectory);
+  if (existsSync(getRootConfigPath(source))) {
+    const deferredContainers = join(dirname(getRootConfigPath(source)), 'nosam-containers.json');
+    if (existsSync(deferredContainers)) {
+      const built = await readBuildOutput(source);
+      if (
+        (accountId !== undefined &&
+          built.rootConfig.accountId !== undefined &&
+          accountId !== built.rootConfig.accountId) ||
+        (mode !== undefined && mode !== built.rootConfig.buildContext.mode)
+      ) {
+        return null;
+      }
+      const metadata = record(JSON.parse(readFileSync(deferredContainers, 'utf8')));
+      const path = metadata?.workerDirectory;
+      if (
+        typeof path !== 'string' ||
+        isAbsolute(path) ||
+        path.includes('\\') ||
+        path.includes(':') ||
+        !isInside(source, resolve(source, path)) ||
+        resolve(source, path) === source
+      ) {
+        throw new Error('Invalid bwf Container build output directory.');
+      }
+      const directory = realpathSync(resolve(source, path));
+      const canonicalRoot = realpathSync(source);
+      if (directory === canonicalRoot || !isInside(canonicalRoot, directory)) {
+        throw new Error('bwf Container output must stay inside the project.');
+      }
+      const prepared = await prepareCfBuildOutput(
+        directory,
+        accountId,
+        mode ?? built.rootConfig.buildContext.mode,
+        projectRoot,
+      );
+      if (!prepared) {
+        return null;
+      }
+      let native: CfBuildOutput | null = null;
+      try {
+        // Stage native Workers through the same manifest/path validation as
+        // ordinary native output before combining them with deferred Containers.
+        native = await prepareNativeBuildOutput(source, accountId, mode, projectRoot);
+        if (!native) {
+          await prepared.dispose();
+          return null;
+        }
+        const staged = await readBuildOutput(native.directory);
+        // Container preparation replaces only the entry Worker. Auxiliary Workers
+        // remain part of the native build and must travel with the final upload.
+        for (const [name, worker] of Object.entries(staged.workers)) {
+          if (name !== 'default') {
+            cpSync(
+              dirname(worker.configPath),
+              dirname(getWorkerConfigPath(prepared.directory, name)),
+              { recursive: true },
+            );
+          }
+        }
+        await readBuildOutput(prepared.directory);
+        return prepared;
+      } catch (error) {
+        await prepared.dispose();
+        throw error;
+      } finally {
+        await native?.dispose();
+      }
+    }
+    return prepareNativeBuildOutput(source, accountId, mode, projectRoot);
+  }
+  if (!existsSync(join(source, 'wrangler.json'))) {
+    throw new Error(
+      `No Cloudflare Worker build found in ${source}. Pass the project root that contains .cloudflare/output/v0, or the Worker output directory that contains wrangler.json.`,
+    );
+  }
+  const raw = record(JSON.parse(readFileSync(join(source, 'wrangler.json'), 'utf8')));
+  if (!raw) {
+    return null;
+  }
+  if (
+    typeof raw.account_id === 'string' &&
+    accountId !== undefined &&
+    raw.account_id !== accountId
+  ) {
+    return null;
+  }
+  const config = migrateBuiltWranglerConfig(raw);
+  if (!config.worker) {
+    throw new Error('cf did not produce a Worker configuration.');
+  }
+  if (typeof raw.main !== 'string' || !raw.main) {
+    throw new Error('The built Worker configuration is missing its main entry. Rebuild the app.');
+  }
+  const entry = raw.main.replaceAll('\\', '/');
+  const main = relative(source, resolve(source, entry));
+  if (isAbsolute(entry) || /^[a-z]:/i.test(entry) || !isInside(source, resolve(source, entry))) {
+    throw new Error('The built Worker main entry must be inside its output directory.');
+  }
+  if (!existsSync(join(source, main))) {
+    throw new Error(
+      `The built Worker main entry ${JSON.stringify(main)} is missing. Rebuild the app.`,
+    );
+  }
+
+  const assetsDirectory = record(raw.assets)?.directory;
+  if (assetsDirectory !== undefined && typeof assetsDirectory !== 'string') {
+    return null;
+  }
+  const images: Array<{ dispose(): Promise<void> }> = [];
+  const directory = mkdtempSync(join(tmpdir(), 'nosam-cf-deploy-'));
+  const dispose = async () => {
+    rmSync(directory, { recursive: true, force: true });
+    await Promise.all(images.map((image) => image.dispose()));
+  };
+  try {
+    stagePackageContext(directory, projectRoot);
+    const bundle = getWorkerBundleDir(directory);
+    mkdirSync(bundle, { recursive: true });
+    const modules = copyBundle(source, bundle);
+    const configuredAccountId = accountId ?? raw.account_id;
+    await writeRootConfig(
+      directory,
+      typeof configuredAccountId === 'string' ? { accountId: configuredAccountId } : {},
+      { isPreview: false, mode: mode ?? 'production' },
+    );
+    await writeWorkerConfig({
+      root: directory,
+      config: config.worker,
+      manifest: { type: 'complete', mainModule: main, modules },
+    });
+    for (const container of config.containers ?? []) {
+      const builtContainer: Record<string, unknown> = { ...container };
+      if ('images' in container && container.images) {
+        const prepared: Record<string, unknown> = {};
+        for (const [name, image] of Object.entries(container.images)) {
+          if ('dockerfile' in image) {
+            const built = await buildContainerImage(
+              resolve(source, image.dockerfile),
+              image.buildContext ? resolve(source, image.buildContext) : undefined,
+            );
+            images.push(built);
+            prepared[name] = { localReference: built.localReference };
+          } else {
+            prepared[name] = image;
+          }
+        }
+        builtContainer.images = prepared;
+      }
+      await writeContainerConfig({
+        root: directory,
+        config: OutputContainerSchema.parse(builtContainer),
+        directoryName: normalizeDirectoryName(container.name),
+      });
+    }
+    if (typeof assetsDirectory === 'string') {
+      const assetPath = resolve(source, assetsDirectory);
+      if (!existsSync(assetPath)) {
+        await dispose();
+        return null;
+      }
+      assertAssetSymlinksInside(assetPath);
+      await writeAssets({ root: directory, sourceDirectory: assetPath });
+    }
+    await readBuildOutput(directory);
+    return {
+      directory,
+      ...(typeof assetsDirectory === 'string'
+        ? { assetsDirectory: resolve(source, assetsDirectory) }
+        : {}),
+      dispose,
+    };
+  } catch (error) {
+    await dispose();
+    throw error;
+  }
+}
+
+/** Copy and complete the native artifact without changing the Vite build's inputs or metadata. */
+async function prepareNativeBuildOutput(
+  source: string,
+  accountId?: string,
+  mode?: string,
+  projectRoot: string = source,
+): Promise<CfBuildOutput | null> {
+  const built = await readBuildOutput(source);
+  if (
+    (accountId !== undefined &&
+      built.rootConfig.accountId !== undefined &&
+      accountId !== built.rootConfig.accountId) ||
+    (mode !== undefined && mode !== built.rootConfig.buildContext.mode)
+  ) {
+    return null;
+  }
+  const directory = mkdtempSync(join(tmpdir(), 'nosam-cf-native-'));
+  const dispose = async () => {
+    rmSync(directory, { recursive: true, force: true });
+  };
+  try {
+    stagePackageContext(directory, projectRoot);
+    await writeRootConfig(
+      directory,
+      {
+        accountId: accountId ?? built.rootConfig.accountId,
+        complianceRegion: built.rootConfig.complianceRegion,
+      },
+      { ...built.rootConfig.buildContext, mode: built.rootConfig.buildContext.mode },
+    );
+    for (const [name, worker] of Object.entries(built.workers)) {
+      if (
+        worker.bundleDir &&
+        (!worker.config.manifest ||
+          worker.config.manifest.modules[worker.config.manifest.mainModule]?.type !== 'esm')
+      ) {
+        throw new Error('The native Worker build must declare its main ES module.');
+      }
+      const configPath = getWorkerConfigPath(directory, name);
+      mkdirSync(dirname(configPath), { recursive: true });
+      writeFileSync(configPath, JSON.stringify(worker.config));
+      if (worker.bundleDir && worker.config.manifest) {
+        const bundle = getWorkerBundleDir(directory, name);
+        for (const module of Object.keys(worker.config.manifest.modules)) {
+          const destination = join(bundle, module);
+          if (
+            // A backslash or a colon (a Windows drive) has no place in a bundle path.
+            module.includes('\\') ||
+            module.includes(':') ||
+            !isInside(bundle, resolve(bundle, module)) ||
+            !isInside(worker.bundleDir, resolve(worker.bundleDir, module))
+          ) {
+            throw new Error('Native Worker modules must stay inside the build bundle.');
+          }
+          if (!existsSync(join(worker.bundleDir, module))) {
+            throw new Error(`Native Worker module ${module} is missing from the build bundle.`);
+          }
+          mkdirSync(dirname(destination), { recursive: true });
+          copyFileSync(join(worker.bundleDir, module), destination);
+        }
+      }
+      if (worker.assetsDir) {
+        cpSync(worker.assetsDir, getWorkerAssetsDir(directory, name), { recursive: true });
+      }
+    }
+    for (const container of built.containers) {
+      await writeContainerConfig({
+        root: directory,
+        config: container.config,
+        directoryName: basename(dirname(container.configPath)),
+      });
+    }
+    await readBuildOutput(directory);
+    return {
+      directory,
+      ...(built.workers.default.assetsDir
+        ? { assetsDirectory: built.workers.default.assetsDir }
+        : {}),
+      dispose,
+    };
+  } catch (error) {
+    await dispose();
+    throw error;
+  }
+}
+
+// The additional module rules of the Cloudflare Vite plugin, which does not export them.
+// Hook filters need a RegExp; `additionalModulePath` applies the same rules.
+const ADDITIONAL_MODULE_FILTER = /\.(?:wasm(?:\?module)?|bin|txt|html|sql)$/;
+const ADDITIONAL_MODULE_EXTENSIONS = new Set(['.wasm', '.bin', '.txt', '.html', '.sql']);
+
+/** Keep letters, digits, `.`, `_` and `-`: the name ends up inside a JS import string. */
+function safeFileStem(stem: string): string {
+  let safe = '';
+  for (const char of stem) {
+    const code = char.charCodeAt(0);
+    const allowed =
+      (code >= 48 && code <= 57) ||
+      (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122) ||
+      char === '.' ||
+      char === '_' ||
+      char === '-';
+    safe += allowed ? char : '_';
+  }
+  return safe || 'module';
+}
+
+/** The file behind a resolved id that is uploaded as a Worker module, if it is one. */
+function additionalModulePath(id: string): string | undefined {
+  const query = id.indexOf('?');
+  const path = query === -1 ? id : id.slice(0, query);
+  if (query !== -1 && !(id.slice(query) === '?module' && path.endsWith('.wasm'))) {
+    return undefined;
+  }
+  return ADDITIONAL_MODULE_EXTENSIONS.has(extname(path)) ? path : undefined;
+}
+
+/**
+ * Keep Wasm, data and text imports out of the bundle and emit each file beside it, as
+ * `@cloudflare/vite-plugin` does, so `copyBundle` uploads them as Worker modules.
+ */
+function additionalModulesPlugin(): Plugin {
+  // The external id carries a key, not the path: Rolldown escapes ids in the output.
+  // The random marker keeps app strings that look like an id from being rewritten.
+  const marker = `__NOSAM_MODULE_${randomBytes(8).toString('hex')}__`;
+  const paths: Array<string> = [];
+  const keys = new Map<string, number>();
+  // Each file keeps its own name and extension. Assets with the same bytes would
+  // otherwise be merged, and the extension picks the module type.
+  const fileNames = new Map<string, string>();
+  const usedFileNames = new Set<string>();
+  return {
+    name: 'nosam:additional-modules',
+    enforce: 'pre',
+    resolveId: {
+      filter: { id: [ADDITIONAL_MODULE_FILTER, /^#/] },
+      async handler(source, importer, options) {
+        const resolved = await this.resolve(source, importer, options);
+        const path = resolved ? additionalModulePath(resolved.id) : undefined;
+        if (!path) {
+          return resolved;
+        }
+        let key = keys.get(path);
+        if (key === undefined) {
+          key = paths.push(path) - 1;
+          keys.set(path, key);
+        }
+        return { id: `${marker}${key}${marker}`, external: true };
+      },
+    },
+    renderChunk: {
+      filter: { code: marker },
+      handler(code, chunk) {
+        const emit = (path: string): string => {
+          let fileName = fileNames.get(path);
+          if (fileName === undefined) {
+            const extension = extname(path);
+            const stem = safeFileStem(basename(path, extension));
+            fileName = stem + extension;
+            for (let count = 2; usedFileNames.has(fileName); count++) {
+              fileName = `${stem}${count}${extension}`;
+            }
+            usedFileNames.add(fileName);
+            fileNames.set(path, fileName);
+            this.emitFile({
+              type: 'asset',
+              fileName,
+              originalFileName: path,
+              source: readFileSync(path),
+            });
+          }
+          return fileName;
+        };
+        let output = '';
+        let cursor = 0;
+        let start = code.indexOf(marker);
+        while (start !== -1) {
+          const keyStart = start + marker.length;
+          const end = code.indexOf(marker, keyStart);
+          if (end === -1) {
+            break;
+          }
+          const keyText = code.slice(keyStart, end);
+          const path = keyText === String(Number(keyText)) ? paths[Number(keyText)] : undefined;
+          if (path === undefined) {
+            start = code.indexOf(marker, keyStart);
+            continue;
+          }
+          const importPath = relative(dirname(chunk.fileName), emit(path));
+          output +=
+            code.slice(cursor, start) +
+            (importPath.startsWith('.') ? importPath : `./${importPath}`);
+          cursor = end + marker.length;
+          start = code.indexOf(marker, cursor);
+        }
+        return output + code.slice(cursor);
+      },
+    },
+  };
+}
+
+/** Bundle a generated Worker entry with Vite, then hand the result to `prepareCfBuildOutput`. */
+async function prepareBundledBuildOutput(options: {
+  projectRoot: string;
+  entry: string;
+  scratchPrefix: string;
+  config: Record<string, unknown>;
+  assets: Record<string, unknown>;
+  accountId: string;
+  external?: Array<RegExp>;
+}): Promise<CfBuildOutput | null> {
+  const scratch = mkdtempSync(join(tmpdir(), options.scratchPrefix));
+  try {
+    const { build } = await import('vite');
+    await build({
+      configFile: false,
+      root: options.projectRoot,
+      publicDir: false,
+      // `.env` is local-only. The framework build drops its client values, but modules it left
+      // as imports (an installed `@buildwf/bwf/env`) are compiled here, and Vite
+      // would fill their `import.meta.env` from the project's `.env`. Shell values still apply.
+      envDir: false,
+      logLevel: 'error',
+      plugins: [additionalModulesPlugin()],
+      // Like @cloudflare/vite-plugin: Worker conditions plus the build mode. A deploy
+      // bundle is always a production build, whatever NODE_ENV says.
+      resolve: { conditions: [...WORKER_CONDITIONS, 'production'] },
+      build: {
+        outDir: scratch,
+        emptyOutDir: true,
+        lib: { entry: options.entry, formats: ['es'], fileName: 'index' },
+        ...(options.external ? { rollupOptions: { external: options.external } } : {}),
+        target: 'es2022',
+      },
+    });
+    writeFileSync(
+      join(scratch, 'wrangler.json'),
+      JSON.stringify({ ...options.config, main: 'index.js', assets: options.assets }),
+      { mode: 0o600 },
+    );
+    return await prepareCfBuildOutput(scratch, options.accountId, undefined, options.projectRoot);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+}
+
+/** Bundle bwf's generated thin static Worker before handing it to cf as prebuilt output. */
+export async function prepareCfStaticBuildOutput(options: {
+  projectRoot: string;
+  configPath: string;
+  assetsDirectory: string;
+  accountId: string;
+}): Promise<CfBuildOutput | null> {
+  const raw = record(JSON.parse(readFileSync(options.configPath, 'utf8')));
+  if (!raw || typeof raw.main !== 'string' || basename(raw.main) !== raw.main) {
+    return null;
+  }
+  const entry = join(dirname(options.configPath), raw.main);
+  if (!existsSync(entry)) {
+    return null;
+  }
+  return prepareBundledBuildOutput({
+    projectRoot: options.projectRoot,
+    entry,
+    scratchPrefix: 'nosam-cf-static-',
+    config: raw,
+    assets: { ...record(raw.assets), directory: resolve(options.assetsDirectory) },
+    accountId: options.accountId,
+  });
+}
+
+/** Bundle an adapter-produced Worker and copy only its public framework assets. */

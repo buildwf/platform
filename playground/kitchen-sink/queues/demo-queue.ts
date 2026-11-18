@@ -1,4 +1,4 @@
-import { defineQueue } from 'nosam';
+import { defineQueue } from '@buildwf/bwf';
 
 export const maxBatchTimeout = 1;
 

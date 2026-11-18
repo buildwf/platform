@@ -15,7 +15,7 @@ import {
 } from '../../src/existing.ts';
 import type { CloudflareOperation } from '../../src/operations.ts';
 import { operationFixture } from '../operation-fixture.ts';
-import { apiSecretDraftVersion, nosamSecretDraftVersion } from '../secret-draft-fixture.ts';
+import { apiSecretDraftVersion, bwfSecretDraftVersion } from '../secret-draft-fixture.ts';
 
 const worker: ExistingCloudflareWorker = {
   versionId: 'original',
@@ -400,7 +400,7 @@ describe('existing Worker preservation', () => {
     'verifies immutable SDK secret-draft proof before its first DO migration: %s',
     async (scenario) => {
       const source =
-        scenario === 'api-placeholder' ? apiSecretDraftVersion() : nosamSecretDraftVersion();
+        scenario === 'api-placeholder' ? apiSecretDraftVersion() : bwfSecretDraftVersion();
       if (scenario === 'real-code') {
         source.modules[0]!.content_base64 = Buffer.from(
           'export default { fetch() { return new Response("app"); } };',

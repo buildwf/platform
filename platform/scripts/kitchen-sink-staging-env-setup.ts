@@ -72,7 +72,7 @@ export async function initializeStagingEnv(
   if (entries.length === 0) {
     return [];
   }
-  // Validate the whole batch before any write, like `nosam secret sync`.
+  // Validate the whole batch before any write, like `bwf secret sync`.
   onStep('validating env.ts');
   await validate(entries);
   for (const { name, value } of entries) {

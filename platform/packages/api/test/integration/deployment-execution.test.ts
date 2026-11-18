@@ -1,4 +1,4 @@
-import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from '@nosam/platform';
+import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from '@buildwf/platform';
 import { eq, sql } from 'drizzle-orm';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import {

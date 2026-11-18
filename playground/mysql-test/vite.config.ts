@@ -1,6 +1,6 @@
+import { bwfPlugin } from '@buildwf/bwf';
 import { defineConfig } from 'vite-plus';
-import { nosamPlugin } from 'nosam';
 
 export default defineConfig({
-  plugins: [nosamPlugin()],
+  plugins: [bwfPlugin()],
 });

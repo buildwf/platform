@@ -1,5 +1,5 @@
 {
-  "name": "@nosam/docs",
+  "name": "@buildwf/docs",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,13 +9,13 @@
     "preview": "vitepress preview"
   },
   "devDependencies": {
+    "@buildwf/bwf": "workspace:*",
     "@iconify/vue": "catalog:",
     "@voidzero-dev/vitepress-theme": "catalog:",
     "reka-ui": "catalog:",
     "vitepress": "2.0.0-alpha.20",
     "vitepress-plugin-group-icons": "catalog:",
     "vitepress-plugin-llms": "catalog:",
-    "nosam": "workspace:*",
     "vue": "catalog:",
     "wrangler": "catalog:"
   }

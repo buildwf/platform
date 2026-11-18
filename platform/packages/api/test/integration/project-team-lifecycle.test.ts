@@ -104,7 +104,7 @@ describe('project team lifecycle', () => {
     await createGitHubConnection(env.db, {
       projectId: project.id,
       installationId: 'member-authorized-installation',
-      repoFullName: 'nosam/member-authorized',
+      repoFullName: '@buildwf/bwf/member-authorized',
       repositoryId: '101',
       authorizedByUserId: member.id,
     });
