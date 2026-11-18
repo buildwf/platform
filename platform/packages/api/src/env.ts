@@ -54,6 +54,12 @@ export type ApiEnv = Env & {
     /** App private key in PKCS#8 PEM form (`openssl pkcs8 -topk8 -nocrypt`). */
     GITHUB_APP_PRIVATE_KEY?: string;
     GITHUB_WEBHOOK_SECRET?: string;
+    /** Stripe billing. A test key (sk_test_) works as is; a live key also needs STRIPE_LIVE_ENABLED="true". */
+    STRIPE_SECRET_KEY?: string;
+    STRIPE_WEBHOOK_SECRET?: string;
+    STRIPE_PRICE_SOLO?: string;
+    STRIPE_PRICE_PRO?: string;
+    STRIPE_LIVE_ENABLED?: string;
     /** Dedicated HMAC shared only with the optional, path-isolated GitHub ingress Worker. */
     GITHUB_WEBHOOK_INGRESS_SECRET?: string;
     GITHUB_APP_SLUG?: string;
