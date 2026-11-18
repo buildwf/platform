@@ -209,6 +209,8 @@ export type ApiEnv = Env & {
   };
   Variables: {
     platformTrafficPaused: boolean;
+    /** The connected application whose client credentials signed this request (app billing routes). */
+    billingClient: string;
     user: User;
     db: Db;
     operatorSession: { id: string; expiresAt: string };

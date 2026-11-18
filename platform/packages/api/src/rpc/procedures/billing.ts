@@ -19,7 +19,8 @@ export const checkout = procedure('billing.checkout')
     }
     try {
       const url = await createCheckoutSession(env, {
-        userId: ctx.user.id,
+        reference: ctx.user.id,
+        metadata: { userId: ctx.user.id },
         email: ctx.user.email,
         plan: input.plan,
         returnUrl: input.returnUrl,

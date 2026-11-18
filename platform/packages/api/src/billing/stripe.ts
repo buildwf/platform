@@ -34,26 +34,62 @@ export function priceFor(env: StripeEnv, plan: PaidPlan): string {
   return price;
 }
 
-/** Starts a subscription Checkout for a plan. The account id rides along so the webhook knows whose plan to change. */
+/**
+ * Starts a subscription Checkout for a plan. `metadata` rides along on the session and the
+ * subscription, so the webhook knows whose plan to change.
+ */
 export async function createCheckoutSession(
   env: StripeEnv,
-  input: { userId: string; email: string | null; plan: PaidPlan; returnUrl: string },
+  input: {
+    reference: string;
+    metadata: Record<string, string>;
+    email: string | null;
+    plan: PaidPlan;
+    returnUrl: string;
+  },
   fetcher: typeof fetch = fetch,
 ): Promise<string> {
   const form = new URLSearchParams({
     mode: 'subscription',
     'line_items[0][price]': priceFor(env, input.plan),
     'line_items[0][quantity]': '1',
-    client_reference_id: input.userId,
-    'metadata[userId]': input.userId,
-    'metadata[plan]': input.plan,
-    'subscription_data[metadata][userId]': input.userId,
-    'subscription_data[metadata][plan]': input.plan,
+    client_reference_id: input.reference,
     success_url: input.returnUrl,
     cancel_url: input.returnUrl,
   });
+  for (const [key, value] of Object.entries({ ...input.metadata, plan: input.plan })) {
+    form.set(`metadata[${key}]`, value);
+    form.set(`subscription_data[metadata][${key}]`, value);
+  }
   if (input.email) form.set('customer_email', input.email);
-  const response = await fetcher('https://api.stripe.com/v1/checkout/sessions', {
+  const body = await stripePost(env, 'checkout/sessions', form, fetcher);
+  if (!body.url) throw new BillingUnavailableError('Stripe refused the checkout.');
+  return body.url;
+}
+
+/** A link to Stripe's customer portal, where a person changes or cancels their subscription. */
+export async function createPortalSession(
+  env: StripeEnv,
+  input: { customerId: string; returnUrl: string },
+  fetcher: typeof fetch = fetch,
+): Promise<string> {
+  const body = await stripePost(
+    env,
+    'billing_portal/sessions',
+    new URLSearchParams({ customer: input.customerId, return_url: input.returnUrl }),
+    fetcher,
+  );
+  if (!body.url) throw new BillingUnavailableError('Stripe refused the portal link.');
+  return body.url;
+}
+
+async function stripePost(
+  env: StripeEnv,
+  path: string,
+  form: URLSearchParams,
+  fetcher: typeof fetch,
+): Promise<{ url?: string }> {
+  const response = await fetcher(`https://api.stripe.com/v1/${path}`, {
     method: 'POST',
     headers: {
       authorization: `Bearer ${stripeSecretKey(env)}`,
@@ -62,8 +98,8 @@ export async function createCheckoutSession(
     body: form,
   });
   const body = (await response.json().catch(() => null)) as { url?: string } | null;
-  if (!response.ok || !body?.url) throw new BillingUnavailableError('Stripe refused the checkout.');
-  return body.url;
+  if (!response.ok || !body) throw new BillingUnavailableError('Stripe refused the request.');
+  return body;
 }
 
 const TOLERANCE_SECONDS = 300;
