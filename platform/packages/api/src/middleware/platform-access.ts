@@ -20,7 +20,9 @@ function internallyAuthenticated(method: string, path: string): boolean {
         /^\/internal\/email\/actions\/(?:admit|receipts(?:\/(?:claim|complete))?|[^/]+\/(?:start|finish|status))$/.test(
           path,
         ) ||
-        path === '/internal/github-webhook'))
+        path === '/internal/github-webhook' ||
+        // Stripe signs this itself; the handler checks the signature.
+        path === '/billing/stripe'))
   );
 }
 

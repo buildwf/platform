@@ -121,6 +121,7 @@ import oauth, { oauthMetadata } from './routes/oauth.ts';
 import platformBootstrapRoutes from './routes/platform-bootstrap.ts';
 import projectZeroTrustRoutes from './routes/project-zero-trust.ts';
 import projects from './routes/projects.ts';
+import { stripeWebhookRoutes } from './routes/stripe-webhook.ts';
 import { webhookRoutes } from './routes/webhooks.ts';
 import { setProjectsRoutingSuspension } from './routing.ts';
 import { appRpcRoutes } from './rpc/app-route.ts';
@@ -563,6 +564,7 @@ const app = new Hono<ApiEnv>()
   .route('/internal/ai-logging', internalAiLogging)
   .route('/internal/resolve-worker', internalResolveWorker)
   .route('/internal/verify-owner', internalVerifyOwner)
+  .route('/billing/stripe', stripeWebhookRoutes)
   .use('/webhooks/*', capabilityMiddleware('managedBuilds'))
   .route('/webhooks', webhookRoutes)
   .use('/github/*', capabilityMiddleware('managedBuilds'))

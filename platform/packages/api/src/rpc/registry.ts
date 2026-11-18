@@ -5,6 +5,7 @@ import * as deploy from './procedures/deploy.ts';
 import * as deployments from './procedures/deployments.ts';
 import * as domains from './procedures/domains.ts';
 import * as finalize from './procedures/finalize.ts';
+import * as billing from './procedures/billing.ts';
 import * as me from './procedures/me.ts';
 import * as projects from './procedures/projects.ts';
 import * as secrets from './procedures/secrets.ts';
@@ -14,6 +15,7 @@ import * as usage from './procedures/usage.ts';
 
 /** Every platform procedure. The API Worker serves it at `/rpc`; clients import only its type. */
 export const registry = defineRegistry([
+  billing.checkout,
   me.get,
   projects.create,
   projects.list,
