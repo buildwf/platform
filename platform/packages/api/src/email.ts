@@ -43,7 +43,7 @@ function platformSender(
   hosted: boolean,
   name: string,
 ): string | EmailAddress {
-  const from = env.EMAIL_FROM?.trim() || (hosted ? 'Nosam <noreply@void.cloud>' : '');
+  const from = env.EMAIL_FROM?.trim() || (hosted ? 'Nosam <no-reply@buildwf.dev>' : '');
   const domain = env.EMAIL_SENDER_DOMAIN?.trim();
   if ((!from && !domain) || /[\r\n]/.test(from)) {
     throw new Error(
