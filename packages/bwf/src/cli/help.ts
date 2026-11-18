@@ -1497,7 +1497,7 @@ function lifecycleHelp(
   return {
     summary,
     usage: [
-      `bwf platform ${command} [id] [--plan]${command === 'disable' ? '' : ' [--runtime <path>]'}${command === 'upgrade' || command === 'repair' ? ' [--dashboard-url <origin>] [--custom-domains]' : ''}${command === 'upgrade' ? ' [--runtime-logs <full|minimal>] [--storage-location <hint|automatic>]' : ''}${command === 'repair' ? ' [--auth-config <path>]' : ''} [--yes]`,
+      `bwf platform ${command} [id] [--plan]${command === 'disable' ? '' : ' [--runtime <path>]'}${command === 'upgrade' || command === 'repair' ? ' [--dashboard-url <origin>] [--custom-domains] [--accept-outside-changes]' : ''}${command === 'upgrade' ? ' [--runtime-logs <full|minimal>] [--storage-location <hint|automatic>]' : ''}${command === 'repair' ? ' [--auth-config <path>]' : ''} [--yes]`,
     ],
     options: [
       { command: '--plan', description: 'Print the exact plan without making changes' },
@@ -1519,6 +1519,11 @@ function lifecycleHelp(
             {
               command: '--custom-domains',
               description: 'Turn on project custom domains; omission keeps the saved setting',
+            },
+            {
+              command: '--accept-outside-changes',
+              description:
+                'Replace changes made to the platform Workers outside bwf, without a terminal. It prints them first. Use it only after you reviewed them',
             },
           ]
         : []),

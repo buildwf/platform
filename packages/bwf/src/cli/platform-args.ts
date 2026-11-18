@@ -101,6 +101,8 @@ export type PlatformArgs =
     }
   | {
       subcommand: 'upgrade' | 'repair' | 'disable' | 'enable';
+      /** upgrade and repair: the operator already agreed to replace changes made outside bwf. */
+      acceptOutsideChanges?: true;
       /** repair only: replaces the login settings while first administrator setup is pending. */
       authConfig?: string;
       dashboardUrl?: string;
@@ -184,6 +186,7 @@ function parseLifecycleSelector(
   runtime: string;
   fromRuntime: string;
   yes: boolean;
+  acceptOutsideChanges?: true;
   authConfig?: string;
   dashboardUrl?: string;
   customDomains?: true;
@@ -191,6 +194,7 @@ function parseLifecycleSelector(
   storageLocation?: PlatformStorageLocation;
 } {
   const positional: Array<string> = [];
+  let acceptOutsideChanges = false;
   let runtimeLogs: PlatformRuntimeLogsChoice | undefined;
   let storageLocation: PlatformStorageLocation | undefined;
   let runtime = '';
@@ -216,6 +220,11 @@ function parseLifecycleSelector(
       (subcommand === 'upgrade' || subcommand === 'repair')
     ) {
       customDomains = true;
+    } else if (
+      arg === '--accept-outside-changes' &&
+      (subcommand === 'upgrade' || subcommand === 'repair')
+    ) {
+      acceptOutsideChanges = true;
     } else if (arg === '--storage-location' && subcommand === 'upgrade') {
       const [value, next] = readValue(rest, index, arg);
       storageLocation = parsePlatformStorageLocation(value);
@@ -247,6 +256,7 @@ function parseLifecycleSelector(
     ...(authConfig !== undefined ? { authConfig } : {}),
     ...(dashboardUrl !== undefined ? { dashboardUrl } : {}),
     ...(customDomains ? { customDomains: true as const } : {}),
+    ...(acceptOutsideChanges ? { acceptOutsideChanges: true as const } : {}),
     ...(runtimeLogs !== undefined ? { runtimeLogs } : {}),
     ...(storageLocation !== undefined ? { storageLocation } : {}),
   };
@@ -365,6 +375,7 @@ export function parsePlatformArgs(args: Array<string>): PlatformArgs {
       runtime,
       fromRuntime,
       yes,
+      acceptOutsideChanges,
       authConfig,
       dashboardUrl,
       customDomains,
@@ -379,6 +390,7 @@ export function parsePlatformArgs(args: Array<string>): PlatformArgs {
           plan,
           runtime,
           yes,
+          ...(acceptOutsideChanges ? { acceptOutsideChanges } : {}),
           ...(authConfig !== undefined ? { authConfig } : {}),
           ...(dashboardUrl !== undefined ? { dashboardUrl } : {}),
           ...(customDomains ? { customDomains } : {}),

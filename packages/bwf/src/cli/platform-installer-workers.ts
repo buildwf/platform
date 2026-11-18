@@ -988,6 +988,11 @@ export async function uploadPlatformWorkerForReview(
   options: Readonly<{
     readCloudflare: (path: string) => Promise<unknown>;
     runner: typeof runPlatformWrangler;
+    /**
+     * False when the operator agreed in advance. The Cloudflare CLI then runs without a
+     * terminal and continues without asking.
+     */
+    interactive?: boolean;
   }>,
 ): Promise<CloudflareCommandResult> {
   const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-review-'));
@@ -1026,7 +1031,7 @@ export async function uploadPlatformWorkerForReview(
         type: 'versions.upload',
         configPath,
         message: 'bwf: replace changes made outside bwf',
-        interactive: true,
+        interactive: options.interactive ?? true,
       },
       accountId,
       directory,

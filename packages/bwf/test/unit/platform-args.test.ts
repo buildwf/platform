@@ -88,6 +88,18 @@ describe('platform args', () => {
       ).toThrow();
     }
   });
+  it('accepts changes made outside bwf only in upgrade and repair', () => {
+    for (const command of ['upgrade', 'repair']) {
+      expect(parsePlatformArgs([command, '--yes', '--accept-outside-changes'])).toMatchObject({
+        acceptOutsideChanges: true,
+        yes: true,
+      });
+      expect(parsePlatformArgs([command, '--yes'])).not.toHaveProperty('acceptOutsideChanges');
+    }
+    for (const command of ['install', 'enable', 'disable', 'rollback', 'uninstall']) {
+      expect(() => parsePlatformArgs([command, '--accept-outside-changes'])).toThrow();
+    }
+  });
   it('turns on custom domains only in install, upgrade, and repair', () => {
     for (const command of ['install', 'upgrade', 'repair']) {
       expect(parsePlatformArgs([command, '--custom-domains'])).toMatchObject({
