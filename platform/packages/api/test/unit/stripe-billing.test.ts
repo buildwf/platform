@@ -47,7 +47,7 @@ describe('stripe billing', () => {
     });
     const url = await createCheckoutSession(
       { STRIPE_SECRET_KEY: 'sk_test_x', STRIPE_PRICE_SOLO: 'price_solo' },
-      { userId: 'usr_1', email: null, plan: 'solo', returnUrl: 'https://app.example/billing' },
+      { reference: 'usr_1', metadata: { userId: 'usr_1' }, email: null, plan: 'solo', returnUrl: 'https://app.example/billing' },
       fetcher as never,
     );
     expect(url).toBe('https://checkout.stripe.com/c/1');

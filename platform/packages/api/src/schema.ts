@@ -88,6 +88,56 @@ export const oauthClients = pgTable('oauth_clients', {
     .defaultNow(),
 });
 
+/** The plan of one person of a connected application, which bills them itself. */
+export const appPeople = pgTable(
+  'app_people',
+  {
+    client_id: text('client_id')
+      .notNull()
+      .references(() => oauthClients.id),
+    /** The application's own id for the person. */
+    person_id: text('person_id').notNull(),
+    plan: text('plan').$type<PlanId>().notNull(),
+    stripe_customer_id: text('stripe_customer_id'),
+    stripe_subscription_id: text('stripe_subscription_id'),
+    updated_at: timestamp('updated_at', { mode: 'string', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.client_id, table.person_id] })],
+);
+
+/** What one person of a connected application used in one calendar month (UTC), as the application reports it. */
+export const appUsage = pgTable(
+  'app_usage',
+  {
+    client_id: text('client_id')
+      .notNull()
+      .references(() => oauthClients.id),
+    person_id: text('person_id').notNull(),
+    /** First day of the month, `YYYY-MM-01`. */
+    period: text('period').notNull(),
+    ai_neurons: integer('ai_neurons').notNull().default(0),
+    sandbox_seconds: integer('sandbox_seconds').notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.client_id, table.person_id, table.period] })],
+);
+
+/** Reports already counted, so an application can send one again after a timeout. */
+export const appUsageEvents = pgTable(
+  'app_usage_events',
+  {
+    client_id: text('client_id')
+      .notNull()
+      .references(() => oauthClients.id),
+    event_id: text('event_id').notNull(),
+    created_at: timestamp('created_at', { mode: 'string', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.client_id, table.event_id] })],
+);
+
 export const oauthGrants = pgTable(
   'oauth_grants',
   {

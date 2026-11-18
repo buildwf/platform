@@ -121,6 +121,7 @@ import oauth, { oauthMetadata } from './routes/oauth.ts';
 import platformBootstrapRoutes from './routes/platform-bootstrap.ts';
 import projectZeroTrustRoutes from './routes/project-zero-trust.ts';
 import projects from './routes/projects.ts';
+import { appBillingRoutes } from './routes/app-billing.ts';
 import { stripeWebhookRoutes } from './routes/stripe-webhook.ts';
 import { webhookRoutes } from './routes/webhooks.ts';
 import { setProjectsRoutingSuspension } from './routing.ts';
@@ -552,6 +553,7 @@ const app = new Hono<ApiEnv>()
   .get('/.well-known/oauth-authorization-server', oauthMetadata)
   .route('/oauth', oauth)
   .route('/app-rpc', appRpcRoutes)
+  .route('/app-billing', appBillingRoutes)
   .route('/auth', oidcRoutes)
   .use('/internal/email/*', capabilityMiddleware('email'))
   .route('/internal/email/domain-credential', internalEmailDomainCredential)
