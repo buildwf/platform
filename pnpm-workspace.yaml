@@ -36,10 +36,11 @@ catalog:
   '@astryxdesign/core': 0.7.13
   '@astryxdesign/theme-neutral': 0.7.13
   '@stylexjs/stylex': 0.19.1
-  '@cloudflare/build-output-utils': ^0.9.13
+  # Exact: a range lets apps pick up the 2.0 release candidates, which write build output 0.9 can't read.
+  '@cloudflare/build-output-utils': 0.9.13
   '@cloudflare/codemods': ^0.7.7
   '@cloudflare/config': ^0.32.0
-  '@cloudflare/vite-plugin': ^2.0.0-beta.v.15
+  '@cloudflare/vite-plugin': 2.0.0-beta.v.15
   '@cloudflare/workers-auth': ^0.18.1
   '@nkzw/fate': 2.0.1
   '@vitejs/plugin-react': ^6.3.0
