@@ -15,7 +15,7 @@
     "@astryxdesign/core": "catalog:",
     "@astryxdesign/theme-neutral": "catalog:",
     "@buildwf/platform": "workspace:*",
-    "@eeao/core": "link:../../../eeaao/typescript/packages/core",
+    "@buildwf/realtime": "^0.1.0",
     "@stylexjs/stylex": "catalog:",
     "hono": "catalog:platform",
     "lucide-react": "catalog:",

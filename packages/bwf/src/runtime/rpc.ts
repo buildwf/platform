@@ -1,5 +1,5 @@
-import type { ErrorsOf, InputOf, OutputOf } from '@eeao/core';
-import { createClient, RpcError } from '@eeao/http/client';
+import type { ErrorsOf, InputOf, OutputOf } from '@buildwf/realtime';
+import { createClient, RpcError } from '@buildwf/realtime-http/client';
 
 export { RpcError };
 

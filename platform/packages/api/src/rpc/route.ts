@@ -1,5 +1,5 @@
-import { rpcHandler } from '@eeao/http';
-import { mcpHandler } from '@eeao/mcp';
+import { rpcHandler } from '@buildwf/realtime-http';
+import { mcpHandler } from '@buildwf/realtime-mcp';
 import { Hono, type Context } from 'hono';
 import type { ApiEnv } from '../env.ts';
 import { rememberCaller } from './procedure.ts';

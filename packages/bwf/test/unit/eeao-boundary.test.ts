@@ -2,9 +2,9 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vite-plus/test';
 
-// eeao is a separate project (the `eeaao` submodule). bwf talks to it only through the
+// Realtime is a separate project (the @buildwf/realtime packages on npm). bwf talks to it only through the
 // procedures adapter: runtime/procedure.ts, runtime/procedures.ts and the client runtime/rpc.ts. Nothing else in the
-// framework imports an @eeao package, so the framework stays usable and testable without it.
+// framework imports a Realtime package, so the framework stays usable and testable without it.
 const src = join(import.meta.dirname, '..', '..', 'src');
 const adapter = new Set(['runtime/procedure.ts', 'runtime/procedures.ts', 'runtime/rpc.ts']);
 
@@ -16,11 +16,13 @@ function files(dir: string): Array<string> {
 }
 
 describe('eeao boundary', () => {
-  it('only the procedures adapter imports @eeao packages', () => {
+  it('only the procedures adapter imports Realtime packages', () => {
     const offenders = files(src)
       .map((f) => relative(src, f))
       .filter((f) => !adapter.has(f))
-      .filter((f) => /['"]@eeao\//.test(readFileSync(join(src, f), 'utf8')));
+      .filter((f) =>
+        /['"]@buildwf\/realtime(?:-[a-z]+)?['"/]/.test(readFileSync(join(src, f), 'utf8')),
+      );
     expect(offenders).toEqual([]);
   });
 });

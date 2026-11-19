@@ -1,4 +1,4 @@
-import { anyOf, bearerAuth, createProcedures, type AuthProvider } from '@eeao/core';
+import { anyOf, bearerAuth, createProcedures, type AuthProvider } from '@buildwf/realtime';
 import { getUser, type AuthUser } from './auth.ts';
 import type { CloudBindings } from './handler.ts';
 

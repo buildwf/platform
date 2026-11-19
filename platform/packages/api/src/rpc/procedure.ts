@@ -1,4 +1,4 @@
-import { createProcedures, type AuthProvider } from '@eeao/core';
+import { createProcedures, type AuthProvider } from '@buildwf/realtime';
 import type { Db } from '../db.ts';
 import type { ApiEnv } from '../env.ts';
 import type { User } from '../types.ts';
