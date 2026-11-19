@@ -353,7 +353,7 @@ ${indent(description, 8)}
       <p>Join the bwf community</p>
       <ul>
         <li>
-          <a href="https://github.com/buildwf/fif-spa" target="_blank" rel="noreferrer">
+          <a href="https://github.com/buildwf/platform" target="_blank" rel="noreferrer">
             <svg class="button-icon" role="presentation" aria-hidden="true">
               <use href="/icons.svg#github-icon"></use>
             </svg>

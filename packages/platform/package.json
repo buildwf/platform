@@ -2,14 +2,14 @@
   "name": "@buildwf/platform",
   "version": "1.9.1",
   "description": "Packaged runtime and installation contracts for self-hosted bwf platforms.",
-  "homepage": "https://github.com/buildwf/fif-spa",
+  "homepage": "https://github.com/buildwf/platform",
   "bugs": {
-    "url": "https://github.com/buildwf/fif-spa/issues"
+    "url": "https://github.com/buildwf/platform/issues"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/buildwf/fif-spa.git",
+    "url": "git+https://github.com/buildwf/platform.git",
     "directory": "packages/platform"
   },
   "files": [
