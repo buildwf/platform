@@ -1,20 +1,23 @@
 # bwf
 
-Forked from [Void](https://github.com/voidzero-dev/void) by Cloudflare.
+bwf builds and deploys React single-page apps to Cloudflare Workers. An app can have a backend too.
 
-Build and deploy React single-page apps with an optional backend using [Vite](https://vite.dev), running on Cloudflare Workers.
+bwf is a fork of [Void](https://void.cloud) by Cloudflare. We forked it for two reasons:
 
-bwf brings together three open-source tools for you and your coding agents:
+- We wanted Void's base for the Build platform. We also want to see if the principles and design patterns of UI-SDK work for infrastructure too.
+- Void is very good. If we started again and tried to make our own clean solution, we don't think it'd be better than Void or much different.
 
-- **bwf SDK:** Build a React single-page app and its backend together with file-based API routes and typed APIs for databases, storage, and AI. Carry types from database queries to the UI.
-- **bwf CLI:** Build your app, provision the Cloudflare resources it uses, apply migrations, and deploy with one command. Manage resources, inspect logs, and roll back through the same CLI.
-- **bwf Platform:** Install a shared deployment environment in your Cloudflare account for your team or customers, with access controls, resource limits, usage reporting, and [connected applications](./docs/guide/platform/administration/connected-apps.md) that request user-approved deployments.
+## What's in it
 
-The SDK's features are optional and composable. Start with a plain React SPA and add API routes, a database, auth, jobs, or other features when you need them.
+- **SDK:** Write the app and its backend together. API routes come from files, and the APIs for databases, storage and AI are typed. Types carry from a database query to the UI.
+- **CLI:** Build the app, make the Cloudflare resources it uses, apply migrations and deploy, all with one command. The same CLI manages resources, shows logs and rolls back.
+- **Platform:** A shared deploy environment that you install in your Cloudflare account for your team or your customers. It has access controls, resource limits and usage reports.
 
-## Getting Started
+You don't need all of the SDK. You can start with a plain React app and add API routes, a database, auth or jobs later.
 
-Use Node.js 24.22+ or 26.12+. In an empty directory, run:
+## Get started
+
+You need Node.js 24.22 or newer. In an empty folder, run:
 
 ```sh
 npm install -D @buildwf/bwf
@@ -22,39 +25,29 @@ npx bwf init
 npm run dev
 ```
 
-Vite+ is the default toolchain; setup installs it for you and keeps your existing package-manager configuration. Choose a starter, then select Cloudflare to deploy to your account:
+To deploy to your Cloudflare account, run:
 
 ```sh
 npx bwf deploy
 ```
 
-bwf builds the app, provisions resources, applies database migrations, and prints your deployed URL. Follow the Quickstart for your first app or to add bwf to an existing Vite project.
+bwf builds the app, makes the resources, applies migrations and prints the URL. To deploy to a team platform, run `npx bwf connect <url>` first.
 
-To deploy to a team platform, run `npx bwf connect <url>` first, then use the same deploy command. See Install a bwf Platform to host one in your Cloudflare account or customize its open-source runtime.
+## Docs
 
-## Documentation
+The guides are in [`docs/guide/`](./docs/guide/index.md). Start with the [quickstart](./docs/guide/quickstart.md). The package also has a copy in `node_modules/@buildwf/bwf/docs/`.
 
-Read the bwf documentation online or use the Markdown guides and references in `node_modules/@buildwf/bwf/docs/`, included with the `bwf` package.
-
-`bwf init` adds a minimal `AGENTS.md` in new projects and asks before changing instructions in existing projects. It also links bundled skills for detected coding agents.
-
-- Server routes and app types
-- Database and type safety
-- Deployment
-- API and CLI reference
-- Coding agents
-
-## Contributing
+## Work on bwf
 
 ```sh
-git clone https://github.com/voidzero-dev/void.git
-cd void
+git clone --recurse-submodules https://github.com/buildwf/platform.git
+cd platform
 vp install
-vp run build:all
+vp run build
 ```
 
-Use `vp run dev:docs` to preview the docs. See [TESTING.md](./TESTING.md) for verification, Platform Development for platform changes, and [operations](./platform/meta/operations.md) for repository deployments.
+`vp run dev:docs` shows the docs locally. [TESTING.md](./TESTING.md) has the checks to run.
 
 ## License
 
-[MIT](./LICENSE). bwf is a fork of [Void](https://github.com/voidzero-dev/void), and the original Cloudflare copyright notice is kept in the license and in [NOTICE](./NOTICE).
+[MIT](./LICENSE). The original Cloudflare copyright notice stays in the license and in [NOTICE](./NOTICE).
