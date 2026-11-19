@@ -24,7 +24,7 @@ export function collectProcedures(modules: ReadonlyArray<ProcedureModule>): Arra
   const found: Array<AnyProcedure> = [];
   for (const [prefix, exports] of modules) {
     for (const [exportName, value] of Object.entries(exports)) {
-      const kind = (value as { '~eeao'?: unknown } | null)?.['~eeao'];
+      const kind = (value as { '~realtime'?: unknown } | null)?.['~realtime'];
       if (kind !== 'procedure' && kind !== 'builder') {
         continue;
       }
