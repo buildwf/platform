@@ -24,7 +24,7 @@ describe('names that an earlier install stored', () => {
   it('names resources the way that install did', () => {
     const { resources } = createPlatformDeploymentManifest({
       application: { baseDomain: 'apps.example.com', zoneName: 'example.com' },
-      displayName: 'Nosam',
+      displayName: 'Platform',
       installationSlug: 'nosam',
     });
     expect(resources.assetsBucket).toBe('void-nosam-assets');

@@ -106,7 +106,7 @@ Visitors who went through the sign-in page normally never see it. They can see i
 
 - for a short time while the project is switching between protected and public;
 - while a Zero Trust change is still being applied to the project;
-- when a Nosam-managed Access application was deleted, or its hostnames were changed, in the Cloudflare dashboard. See [Editing Applications in the Dashboard](#editing-applications-in-the-dashboard).
+- when a Platform-managed Access application was deleted, or its hostnames were changed, in the Cloudflare dashboard. See [Editing Applications in the Dashboard](#editing-applications-in-the-dashboard).
 
 #### Every Path Is Covered
 

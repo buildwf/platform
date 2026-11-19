@@ -333,7 +333,7 @@ ${indent(description, 8)}
       <p>Your questions, answered</p>
       <ul>
         <li>
-          <a href="https://void.cloud/guide/quickstart" target="_blank" rel="noreferrer">
+          <a href="https://github.com/builtbyfriends/platform/blob/main/docs/guide/quickstart.md" target="_blank" rel="noreferrer">
             Quickstart
           </a>
         </li>

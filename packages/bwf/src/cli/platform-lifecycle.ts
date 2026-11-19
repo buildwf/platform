@@ -1302,7 +1302,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
         `bwf generated the ${generatedKeys.join(' and ')} and keeps ${generatedKeys.length > 1 ? 'them' : 'it'} in this machine’s encrypted recovery data. ` +
           platformSetupLink({
             title: 'About these keys',
-            url: 'https://void.cloud/guide/platform/installation/credentials#signing-and-encryption-keys',
+            url: 'https://github.com/builtbyfriends/platform/blob/main/docs/guide/platform/installation/credentials.md#signing-and-encryption-keys',
           }),
       );
     }

@@ -265,7 +265,7 @@ export class ZeroTrustCloudflareClient {
     };
     for (const policy of policies) {
       if (policy.decision === 'bypass' || policy.decision === 'non_identity') {
-        throw new Error('Bypass and non-identity policies cannot protect Nosam projects.');
+        throw new Error('Bypass and non-identity policies cannot protect Platform projects.');
       }
       if (policy.decision !== 'allow' && policy.decision !== 'deny') {
         throw new Error('Unsupported Cloudflare Access policy decision.');
@@ -326,7 +326,7 @@ export class ZeroTrustCloudflareClient {
       const parsed = result.map((entry) => object(entry, 'Access application'));
       if (page === 6 && parsed.length > 0) {
         throw new Error(
-          'Cloudflare Access has more than 500 applications; Nosam cannot safely reconcile this installation within provider limits.',
+          'Cloudflare Access has more than 500 applications; Platform cannot safely reconcile this installation within provider limits.',
         );
       }
       entries.push(...parsed);
@@ -375,10 +375,10 @@ export class ZeroTrustCloudflareClient {
   }
 
   /**
-   * Find the application Nosam recorded: by id first, then by its Nosam-owned
+   * Find the application Platform recorded: by id first, then by its Platform-owned
    * name. The name carries a random nonce committed before any create, so when
    * the recorded id is gone, the single application holding that name is
-   * Nosam's own replacement whose create response was lost. `inventory` is
+   * Platform's own replacement whose create response was lost. `inventory` is
    * set when the name lookup ran.
    */
   private async locateOwnedApplication(
@@ -388,7 +388,7 @@ export class ZeroTrustCloudflareClient {
     const application = id ? await this.application(id) : null;
     if (application) {
       if (name && application.name !== name) {
-        throw new Error('The recorded Access application no longer has its Nosam-owned name.');
+        throw new Error('The recorded Access application no longer has its Platform-owned name.');
       }
       return { application };
     }
@@ -408,7 +408,7 @@ export class ZeroTrustCloudflareClient {
     current?: Readonly<{ id?: string | null; name?: string | null }>,
   ): Promise<ManagedAccessApplication> {
     if (current?.name && current.name !== spec.name) {
-      throw new Error('The recorded Access application no longer has its Nosam-owned name.');
+      throw new Error('The recorded Access application no longer has its Platform-owned name.');
     }
     let application: ObjectValue | null = null;
     let inventory: Map<string, ObjectValue> | undefined;
@@ -419,7 +419,7 @@ export class ZeroTrustCloudflareClient {
       inventory = await this.applications();
       if ([...inventory.values()].some((entry) => entry.name === spec.name)) {
         throw new Error(
-          `A Cloudflare Access application named ${spec.name} exists without a recorded Nosam creation intent.`,
+          `A Cloudflare Access application named ${spec.name} exists without a recorded Platform creation intent.`,
         );
       }
     }
@@ -630,7 +630,7 @@ export function healthCheckApplication(name: string, hostname: string): AccessAp
   return {
     name,
     destinations: [`${hostname}/health`],
-    policies: bypassPolicy('Nosam platform health check'),
+    policies: bypassPolicy('Platform health check'),
   };
 }
 

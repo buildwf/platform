@@ -54,7 +54,7 @@ export const loader = defineHandler<Props>(async (context) => {
   }
   const callbackWithNonce = callback.href;
   let methods: Props['methods'] = [];
-  let platformName = 'Nosam Cloud';
+  let platformName = 'Platform';
   let unavailable = false;
   try {
     const response = await fetchApi(context, '/.well-known/nosam-platform');

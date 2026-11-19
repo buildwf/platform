@@ -34,7 +34,7 @@ export function isAllowedRedirect(
   }
 }
 
-/** Nosam's own OAuth browser callback. External apps never receive an account token. */
+/** Platform's own OAuth browser callback. External apps never receive an account token. */
 export function isAuthorizationRedirect(value: string, authenticationCallback?: string): boolean {
   if (!authenticationCallback) {
     return false;

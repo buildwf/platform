@@ -1,6 +1,6 @@
 /** Shared, dependency-free presentation for browser onboarding and authentication pages. */
 export const browserPageLogo: string =
-  '<svg role="img" aria-label="Nosam" viewBox="0 0 270 58" fill="none" xmlns="http://www.w3.org/2000/svg">\n<circle cx="262" cy="48.96" r="8" fill="currentColor"/>\n<text x="0" y="56" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="78" font-weight="800" letter-spacing="-2" textLength="244" lengthAdjust="spacingAndGlyphs" fill="currentColor">bwf</text>\n</svg>';
+  '<svg role="img" aria-label="Platform" viewBox="0 0 270 58" fill="none" xmlns="http://www.w3.org/2000/svg">\n<circle cx="262" cy="48.96" r="8" fill="currentColor"/>\n<text x="0" y="56" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="78" font-weight="800" letter-spacing="-2" textLength="244" lengthAdjust="spacingAndGlyphs" fill="currentColor">bwf</text>\n</svg>';
 
 // Scoped so dashboard and admin application styles remain independent of these pages.
 export const browserPageStyles: string = `
@@ -108,7 +108,7 @@ export function browserPageStatus(status: 'success' | 'error'): string {
 /** content is trusted markup; escape every dynamic value before composing it. */
 export function renderBrowserPage({
   title,
-  platformName = 'Nosam',
+  platformName = 'Platform',
   content,
 }: {
   title: string;

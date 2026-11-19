@@ -249,7 +249,7 @@ describe('internal route blocking', () => {
     expect(response.status).toBe(503);
   });
 
-  it('preserves the legacy Nosam Cloud admin health probe', async () => {
+  it('preserves the legacy Platform admin health probe', async () => {
     const response = await app.fetch(
       new Request('https://test.buildwf.dev/health', {
         headers: { 'X-Health-Check': 'nosam-admin' },
@@ -261,7 +261,7 @@ describe('internal route blocking', () => {
     expect(await response.json()).toEqual({ ok: true });
   });
 
-  it('does not add a lifecycle routing read for hosted Nosam Cloud', async () => {
+  it('does not add a lifecycle routing read for hosted Platform', async () => {
     const env = createEnv();
     const response = await app.fetch(
       new Request('https://my-app.buildwf.dev/normal-path'),

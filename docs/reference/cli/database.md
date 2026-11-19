@@ -15,7 +15,7 @@ Use this for quick schema iteration while prototyping. Before deploying, generat
 
 Generate SQL migration files from schema changes.
 
-Compares your schema with the last Drizzle snapshot and writes migrations under `db/migrations/`. It includes Nosam-managed auth tables and configured auth plugins, even without an application schema. Review and commit the generated files before deploying.
+Compares your schema with the last Drizzle snapshot and writes migrations under `db/migrations/`. It includes Platform-managed auth tables and configured auth plugins, even without an application schema. Review and commit the generated files before deploying.
 
 For SQLite, bwf checks that the migration history applies to a fresh database. If generation fails this check, the previous SQL, snapshots, and journal are restored. If an existing migration fails, repair that unapplied migration first: rerunning generation compares snapshots and does not repair existing SQL. This check does not verify that a migration preserves existing data; review table rebuilds and foreign-key actions carefully.
 

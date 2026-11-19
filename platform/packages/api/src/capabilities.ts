@@ -50,7 +50,7 @@ export function capabilityMiddleware(
         {
           error: 'platform capability unavailable',
           capability,
-          message: `This Nosam platform does not enable ${capability}.`,
+          message: `This Platform does not enable ${capability}.`,
         },
         501,
       );

@@ -2562,7 +2562,7 @@ describe('Cloudflare version activation', () => {
   });
 
   it('replays the previous snapshot addresses when managed-queue cleanup rebuilds it', async () => {
-    // `queueConsumerCleanup` is non-empty on EVERY deploy of a project with Nosam-managed
+    // `queueConsumerCleanup` is non-empty on EVERY deploy of a project with Platform-managed
     // consumers (`readWranglerManagedQueueCleanupCandidates` includes the current consumers
     // for schema-1 upgrades), so the rebuilt previous config is what `stabilize…` replays when
     // a concurrent rollback returns traffic to the previous version. Wrangler's Email Routing
@@ -5007,7 +5007,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
       restoreSkipped: 'placeholder',
     },
     {
-      kind: "Nosam's zero-binding secret placeholder",
+      kind: "Platform's zero-binding secret placeholder",
       previous: {
         id: CURRENT,
         number: 1,

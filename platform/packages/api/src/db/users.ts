@@ -35,7 +35,7 @@ export async function createUser(
  * Creates a user and grants the first account on a self-hosted installation
  * the admin role. Call this inside the same transaction that links the OAuth
  * identity. The table lock makes concurrent first logins observe one winner.
- * Hosted Nosam Cloud retains its existing user default. Both paths reject an
+ * Hosted Platform retains its existing user default. Both paths reject an
  * old callback racing the migration to configurable authentication.
  */
 export async function createUserForPlatform(
@@ -195,7 +195,7 @@ export async function createOAuthAccount(
 
 /**
  * Thrown by {@link linkGitHubIdentity} when the requested GitHub identity is
- * already linked to a *different* Nosam user. Routes map this to HTTP 409 — it
+ * already linked to a *different* Platform user. Routes map this to HTTP 409 — it
  * is the stable contract for that mapping.
  */
 export class GitHubIdentityConflictError extends Error {
@@ -206,14 +206,14 @@ export class GitHubIdentityConflictError extends Error {
 }
 
 /**
- * Thrown by {@link linkGitHubIdentity} when *this* Nosam user already has a
+ * Thrown by {@link linkGitHubIdentity} when *this* Platform user already has a
  * DIFFERENT GitHub identity linked. RFC 0074 models a single GitHub identity per
- * Nosam account; routes map this to HTTP 409 with a code distinct from
+ * Platform account; routes map this to HTTP 409 with a code distinct from
  * {@link GitHubIdentityConflictError} (which is the other-user case).
  */
 export class GitHubIdentityAlreadyLinkedError extends Error {
   constructor() {
-    super('Nosam account already has a different GitHub identity linked');
+    super('Platform account already has a different GitHub identity linked');
     this.name = 'GitHubIdentityAlreadyLinkedError';
   }
 }
@@ -230,14 +230,14 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 /**
- * Link a GitHub OAuth identity to an *already-authenticated* Nosam user
+ * Link a GitHub OAuth identity to an *already-authenticated* Platform user
  * (RFC 0074 — decouple GitHub-for-deploys from the login provider).
  *
  * Returns `'linked'` when a new row was created and `'already_linked'` when the
  * identity is already owned by `userId` (idempotent no-op). Throws
  * {@link GitHubIdentityConflictError} when the identity belongs to a different
  * user, and {@link GitHubIdentityAlreadyLinkedError} when this user already has a
- * DIFFERENT github identity (RFC 0074: one GitHub identity per Nosam account).
+ * DIFFERENT github identity (RFC 0074: one GitHub identity per Platform account).
  *
  * Concurrency: the whole check-then-insert runs in a transaction that first
  * takes a `SELECT … FOR UPDATE` lock on the `userId` row. That serializes
@@ -276,7 +276,7 @@ export async function linkGitHubIdentity(
         throw new GitHubIdentityConflictError();
       }
 
-      // Enforce one github identity per Nosam account: a pre-existing github row
+      // Enforce one github identity per Platform account: a pre-existing github row
       // for this user must be a DIFFERENT provider_id (the same-id case is the
       // `owner.id === userId` short-circuit above), so reject.
       if ((await getGitHubAccountIdForUser(tx, userId)) !== null) {
@@ -352,7 +352,7 @@ export async function countUserDeploymentsToday(db: Db, userId: string): Promise
 }
 
 /**
- * Resolve a Nosam user's linked GitHub account id (the numeric provider id, as
+ * Resolve a Platform user's linked GitHub account id (the numeric provider id, as
  * text), or null when the user has no linked GitHub identity. Used for the audit
  * column on membership rows and the connect-authz caller-identity bind.
  */

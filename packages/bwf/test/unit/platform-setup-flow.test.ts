@@ -1414,7 +1414,7 @@ describe('platform credential onboarding', () => {
       info.mock.calls.map(([message]) => message).join('\n'),
     );
     expect(descriptions).toContain(
-      'https://void.cloud/guide/platform/installation/prerequisites#platform-database',
+      'https://github.com/builtbyfriends/platform/blob/main/docs/guide/platform/installation/prerequisites.md#platform-database',
     );
     expect(descriptions).toContain(
       'bwf generated the JWT signing key and project encryption key and keeps them in this machine’s encrypted recovery data.',

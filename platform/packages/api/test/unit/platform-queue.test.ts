@@ -107,7 +107,7 @@ describe('platform queue lifecycle', () => {
     },
   );
 
-  it('keeps hosted Nosam Cloud cron delivery unchanged', async () => {
+  it('keeps hosted Platform cron delivery unchanged', async () => {
     const input = batch('cron');
     const bindings = env();
     const handlers = processors();

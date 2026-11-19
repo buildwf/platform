@@ -76,7 +76,7 @@ describe('managed Sandbox capability disablement', () => {
     expect(response.status).toBe(501);
     expect(await response.json()).toEqual({
       event: 'error',
-      message: 'This Nosam platform does not enable sandbox deployments.',
+      message: 'This Platform does not enable sandbox deployments.',
     });
   });
 
@@ -116,7 +116,7 @@ describe('managed Sandbox capability disablement', () => {
 
     expect(response.status).toBe(501);
     expect(await response.json()).toEqual({
-      error: 'This Nosam platform does not enable rollback to Sandbox deployments.',
+      error: 'This Platform does not enable rollback to Sandbox deployments.',
     });
   });
 });

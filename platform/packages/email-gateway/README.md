@@ -19,7 +19,7 @@ confirmation links pass through the gateway to the API.
 
 For a self-hosted installation, use `bwf platform install` or `upgrade` rather
 than deploying this package on its own. The repository's Wrangler configuration
-and deployment scripts target Nosam Cloud production and staging. Their rollout
+and deployment scripts target Platform production and staging. Their rollout
 order and required bindings and secrets are described in the
 [operations runbook](../../meta/operations.md#email).
 

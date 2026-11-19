@@ -12,8 +12,8 @@ export function ProjectOwnerTransferSection({ projectId }: { projectId: string }
     <SectionStack id="owner-transfer" className="nosam-admin-owner-transfer">
       <h2>Transfer Ownership</h2>
       <p>
-        Transfer this project to an existing Nosam Platform user. You will review the ownership,
-        plan, suspension, active-work, routing, and usage-counter changes before applying them.
+        Transfer this project to an existing Platform user. You will review the ownership, plan,
+        suspension, active-work, routing, and usage-counter changes before applying them.
       </p>
       <SectionStack
         as="form"

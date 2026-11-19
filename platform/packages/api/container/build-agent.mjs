@@ -1993,7 +1993,7 @@ function redactUrl(raw) {
 
 // --- main ---------------------------------------------------------------------
 
-/** Resolve the CLI when deploying the Nosam source repository or a fork. */
+/** Resolve the CLI when deploying the Platform source repository or a fork. */
 export function resolveSourceBwfCli(root = WORK_DIR) {
   const packageRoot = `${root}/packages/bwf`;
   let manifest;
@@ -2008,7 +2008,7 @@ export function resolveSourceBwfCli(root = WORK_DIR) {
   const cli = `${packageRoot}/${manifest.bin.nosam}`;
   if (!existsSync(cli)) {
     throw new Error(
-      'The workspace Nosam CLI is not built. Run build:core during dependency installation.',
+      'The workspace bwf CLI is not built. Run build:core during dependency installation.',
     );
   }
   return cli;
@@ -2165,7 +2165,7 @@ export async function runBuild(deps = {}) {
     // 3. Tell the DO we're past install and into the deploy phase.
     await status('deploying');
 
-    // 4. Run the REAL deploy via the built CLI in Nosam source checkouts or the
+    // 4. Run the REAL deploy via the built CLI in Platform source checkouts or the
     //    repo-local CLI in consumer projects. `npx` resolves the
     //    version pinned in the repo's package.json (installed in step 2); if
     //    the repo has no local `nosam`, npx fetches the pinned fallback. The
@@ -2207,7 +2207,7 @@ export async function runBuild(deps = {}) {
     if (sourceCli) {
       deployCmd = process.execPath;
       deployArgs = [sourceCli, 'deploy', '--project', project];
-      agentLog('using the built workspace Nosam CLI');
+      agentLog('using the built workspace bwf CLI');
     } else if (pnpPresent) {
       deployCmd = 'corepack';
       deployArgs = localBwf

@@ -31,7 +31,7 @@ describe('dashboard login discovery', () => {
     });
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(platformPageTitle('Sign in', 'Example Platform')).toBe(
-      'Sign in · Example Platform · Nosam',
+      'Sign in · Example Platform · Platform',
     );
   });
   it('binds localhost dashboard login to a complete PKCE code flow', async () => {

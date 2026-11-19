@@ -7,10 +7,10 @@ import { registry } from './registry.ts';
 
 const rpc = rpcHandler(registry, {
   basePath: '/rpc',
-  openapi: { title: 'Nosam platform', version: '1' },
+  openapi: { title: 'Platform', version: '1' },
 });
 
-const mcp = mcpHandler(registry, { name: 'Nosam platform', version: '1' });
+const mcp = mcpHandler(registry, { name: 'Platform', version: '1' });
 
 /** Hand the caller `authMiddleware` resolved to the procedures that run for this request. */
 function rememberRequestCaller(context: Context<ApiEnv>): void {

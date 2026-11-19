@@ -1,5 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { cloudflareCommandDiagnostic, readBindingFieldPresence } from '@builtbyfriends/deploy-cloudflare';
+import {
+  cloudflareCommandDiagnostic,
+  readBindingFieldPresence,
+} from '@builtbyfriends/deploy-cloudflare';
 import { Minimatch } from 'minimatch';
 import { dirname, join, normalize, resolve } from 'pathslash';
 import type { BwfAuthMigrationSchema } from '../auth/drizzle.ts';
@@ -574,7 +577,7 @@ export async function checkWranglerMigrationApplySet(
       lines.push(`  • content differs between bwf's copy and wrangler's: ${changed.join(', ')}`);
     }
     lines.push(
-      `Only Nosam-managed ${displayDir}/*.sql may be applied. Remove stray .sql (e.g. seed.sql) ` +
+      `Only Platform-managed ${displayDir}/*.sql may be applied. Remove stray .sql (e.g. seed.sql) ` +
         'from migrations_dir, then rerun.',
     );
     return { ok: false, reason: lines.join('\n') };

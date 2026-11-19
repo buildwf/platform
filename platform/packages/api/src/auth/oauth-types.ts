@@ -19,6 +19,6 @@ export type OAuthRequestData = {
   projectId?: string;
 };
 export type OAuthSession = Pick<JwtPayload, 'sub' | 'aud' | 'sid' | 'exp'> & {
-  // Attested by Nosam's Access middleware during consent, never by the client.
+  // Attested by Platform's Access middleware during consent, never by the client.
   companyIdentity?: CompanyIdentity;
 };

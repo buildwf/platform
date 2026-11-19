@@ -163,7 +163,7 @@ describe('email disabled on this platform', () => {
     expect(html).toContain('Authentication');
     expect(html).toContain('Email is not enabled on this platform.');
     expect(html).toContain(
-      'https://void.cloud/guide/platform/installation/credentials#enable-email',
+      'https://github.com/builtbyfriends/platform/blob/main/docs/guide/platform/installation/credentials.md#enable-email',
     );
 
     for (const path of ['/admin/email', `/admin/email/${projectId}`]) {

@@ -473,7 +473,7 @@ describe('MySQL migration runner', () => {
         [
           "migration 002_comments.sql failed: Key column 'nope' doesn't exist in table",
           'MySQL commits schema changes immediately, so earlier statements in 002_comments.sql may already be applied. Undo them, fix the file, then run the command again.',
-          'See https://void.cloud/guide/database/mysql#failed-migrations',
+          'See https://github.com/builtbyfriends/platform/blob/main/docs/guide/database/mysql.md#failed-migrations',
         ].join('\n'),
       );
     },

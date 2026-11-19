@@ -182,7 +182,7 @@ export async function buildCloudflareWorker(input: {
     } catch (err) {
       log.error(
         [
-          'deploy: --platform cloudflare cannot verify the Nosam-managed Better Auth schema.',
+          'deploy: --platform cloudflare cannot verify the Platform-managed Better Auth schema.',
           'The managed platform creates these tables at runtime (POST /__nosam/migrate/auth)',
           'after deploy; this self-host backend only applies checked-in db/migrations/*.sql, so',
           'they must already produce the Better Auth schema — tables, columns, and the primary',

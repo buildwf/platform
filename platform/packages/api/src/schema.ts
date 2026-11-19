@@ -1446,7 +1446,7 @@ export const githubConnections = pgTable(
 // github_installation_members — cached org co-membership for the org-shared
 // GitHub App installation flow.
 //
-// Each row records that a Nosam user (`user_id`) was verified as a member of the
+// Each row records that a Platform user (`user_id`) was verified as a member of the
 // GitHub account behind a numeric installation (`installation_id`). It is a TTL
 // cache (`expires_at`): NO GitHub token is stored — access is re-verified
 // per-repo, and this table only short-circuits the org-membership check while
@@ -1498,17 +1498,17 @@ export const githubInstallationMembers = pgTable(
 // a legit re-join AFTER re-add mints a fresh artifact with `iat > revoked_at` and
 // is allowed.
 //
-// The tombstone keys on the GitHub ACCOUNT id (X), NOT a Nosam user id: X is the
+// The tombstone keys on the GitHub ACCOUNT id (X), NOT a Platform user id: X is the
 // durable identity the stateless artifacts carry, and it is the ONLY identity
 // `member_removed` reliably knows from the webhook payload (`membership.user.id`).
 // A soon-to-be-removed member can pre-mint a join_code + connect_grant while still
-// in the org WITHOUT any Nosam user / membership / oauth-link, so a user-keyed
+// in the org WITHOUT any Platform user / membership / oauth-link, so a user-keyed
 // tombstone would find no user to key on and write nothing — leaving a
 // post-removal replay path. Keying by X closes that hole. `installation_id` keys
 // on GitHub's NUMERIC installation id as text with NO FK (mirrors
 // `github_installation_members`); `github_account_id` is the NUMERIC GitHub
-// account id as text with NO FK — it is not a Nosam user id and the tombstone must
-// outlive Nosam user deletion.
+// account id as text with NO FK — it is not a Platform user id and the tombstone must
+// outlive Platform user deletion.
 // ---------------------------------------------------------------------------
 export const githubInstallationRevocations = pgTable(
   'github_installation_revocations',

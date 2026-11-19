@@ -527,7 +527,7 @@ const app = new Hono<ApiEnv>()
       const manifest = JSON.parse(preCheck.manifest) as DeployManifest;
       if (manifest.sandbox && !getPlatformCapabilities(context.env).sandbox) {
         return context.json(
-          { error: 'This Nosam platform does not enable rollback to Sandbox deployments.' },
+          { error: 'This Platform does not enable rollback to Sandbox deployments.' },
           501,
         );
       }
@@ -727,7 +727,7 @@ const app = new Hono<ApiEnv>()
             if (manifest.sandbox && !getPlatformCapabilities(context.env).sandbox) {
               throw new RollbackError(
                 501,
-                'This Nosam platform does not enable rollback to Sandbox deployments.',
+                'This Platform does not enable rollback to Sandbox deployments.',
               );
             }
             if (manifest.sandbox) {
@@ -2695,7 +2695,7 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
       zeroTrust = await initializeNewProjectZeroTrust(context.env, context.db, project.id);
     } catch (error) {
       zeroTrustWarning =
-        'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Nosam retries within an hour. To retry now, a project owner or admin can run `bwf project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.';
+        'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Platform retries within an hour. To retry now, a project owner or admin can run `bwf project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.';
       console.error('[zero-trust] new project initialization failed', {
         projectId: project.id,
         error,

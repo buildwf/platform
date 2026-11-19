@@ -518,7 +518,7 @@ export function bwfPlugin(options?: {
     },
   };
 
-  // Nosam-managed auth uses native node:crypto password hashing.
+  // Platform-managed auth uses native node:crypto password hashing.
   // PostgreSQL needs nodejs_compat for the `pg` driver (events, net, tls, dns, etc.).
   // Cloudflare's Sandbox SDK also imports Node built-ins.
   // Other apps only need nodejs_als for AsyncLocalStorage (isomorphic fetch context threading).

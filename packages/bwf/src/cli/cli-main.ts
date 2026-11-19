@@ -68,7 +68,7 @@ async function runSubcommandGroup<T>(
         log.info(
           'A bwf platform lets a team deploy bwf apps to a shared Cloudflare account.\n' +
             'This command sets up and manages platforms. Join with `bwf connect <url>`.\n' +
-            `Docs: ${formatUrl('https://void.cloud/guide/self-hosted-platform')}`,
+            `Docs: ${formatUrl('https://github.com/builtbyfriends/platform/blob/main/docs/guide/self-hosted-platform.md')}`,
         );
       }
       const result = await promptSubcommand(command, subcommands);

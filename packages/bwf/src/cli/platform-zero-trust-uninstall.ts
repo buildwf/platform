@@ -56,7 +56,7 @@ export type PlatformProjectZeroTrustState = Readonly<{
   active: boolean;
   /** Hostname patterns of the shared project application, when it is recorded. */
   destinations: ReadonlyArray<string>;
-  /** Nosam-managed Access applications that may still exist in Cloudflare. */
+  /** Platform-managed Access applications that may still exist in Cloudflare. */
   applications: ReadonlyArray<PlatformZeroTrustApplication>;
   /** Projects whose deletion stopped before it removed their applications. */
   unfinishedDeletions: ReadonlyArray<string>;
@@ -222,7 +222,7 @@ export async function readPlatformProjectZeroTrustStateConnection(
 
 /**
  * Take the Zero Trust configuration lock exclusively on this session. Every
- * API path that records or creates a Nosam-managed Access application or
+ * API path that records or creates a Platform-managed Access application or
  * creates a project holds the same lock, so none can commit until the
  * returned release runs.
  */
@@ -342,7 +342,10 @@ export async function assertProjectZeroTrustAllowsUninstall(
           : 'Run `bwf platform zero-trust disable`, rerun it until `bwf platform zero-trust status` reports Zero Trust disabled with no operation running, then retry the uninstall.',
         'If the platform API does not answer, bring it back with `bwf platform enable` or `bwf platform repair` first.',
         ...(state.applications.length
-          ? ['Nosam-managed Access applications:', formatZeroTrustApplications(state.applications)]
+          ? [
+              'Platform-managed Access applications:',
+              formatZeroTrustApplications(state.applications),
+            ]
           : []),
         ...unfinishedDeletionLines(state),
         DASHBOARD_HINT,
@@ -352,9 +355,9 @@ export async function assertProjectZeroTrustAllowsUninstall(
   if (state.applications.length) {
     throw new Error(
       [
-        'platform: Refusing to uninstall while Nosam-managed Access applications from project Zero Trust remain.',
+        'platform: Refusing to uninstall while Platform-managed Access applications from project Zero Trust remain.',
         'Zero Trust is disabled, but it could not remove the applications of some projects. Retry the uninstall once they are gone.',
-        'Nosam-managed Access applications:',
+        'Platform-managed Access applications:',
         formatZeroTrustApplications(state.applications),
         ...(state.applications.some((application) => !application.deleting)
           ? [

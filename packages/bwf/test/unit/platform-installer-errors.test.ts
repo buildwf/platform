@@ -202,7 +202,7 @@ it('replaces the Analytics Engine APIError token advice with account activation 
     'platform: Cloudflare could not bootstrap nosam-team-tail: Analytics Engine is not enabled for this account (code 10089). ' +
       `Open ${dashboard}, then select Enable. ` +
       'Analytics Engine is available on Workers Free. After enabling it, use the printed recovery command if one is shown; otherwise retry this command. ' +
-      'If Enable is unavailable, see https://void.cloud/guide/platform/installation/prerequisites#if-cloudflare-rejects-analytics-engine.',
+      'If Enable is unavailable, see https://github.com/builtbyfriends/platform/blob/main/docs/guide/platform/installation/prerequisites.md#if-cloudflare-rejects-analytics-engine.',
   );
   expect(upload).not.toThrow(/API token|403 Forbidden|Wrangler/);
 });

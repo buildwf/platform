@@ -1577,7 +1577,7 @@ async function promptDeploymentPlatform(
       },
       {
         value: 'nosam',
-        label: current === 'nosam' ? 'bwf [current]' : 'Nosam',
+        label: current === 'nosam' ? 'bwf [current]' : 'Platform',
         hint: "Deploy to your company's bwf Platform.",
       },
       {

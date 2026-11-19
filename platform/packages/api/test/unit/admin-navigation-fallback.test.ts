@@ -4,10 +4,10 @@ import { expect, it } from 'vite-plus/test';
 import { AdminNavigationFallback } from '../../src/admin/react/AdminNavigationFallback.tsx';
 import { SpaContext, type PageObject } from '../../src/admin/react/spa.tsx';
 
-it('renders the destination skeleton outside the Nosam page context', () => {
+it('renders the destination skeleton outside the Platform page context', () => {
   const initialPageData: PageObject = {
     component: 'dashboard',
-    props: { platformName: 'e2e Nosam', username: 'admin' },
+    props: { platformName: 'e2e Platform', username: 'admin' },
     shared: {},
     url: '/admin/',
   };
@@ -44,7 +44,7 @@ it('renders the Zero Trust skeleton for client navigation', () => {
       createElement(AdminNavigationFallback, {
         initialPageData: {
           component: 'dashboard',
-          props: { platformName: 'e2e Nosam', username: 'admin' },
+          props: { platformName: 'e2e Platform', username: 'admin' },
           shared: {},
           url: '/admin/',
         },

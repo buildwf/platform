@@ -7,24 +7,13 @@ type PlatformIdentityEnv = Pick<
 
 export function getPlatformDisplayName(
   env: PlatformIdentityEnv | undefined,
-  requestUrl?: string,
+  _requestUrl?: string,
 ): string {
-  const bindings = env ?? {};
-  const name = bindings.PLATFORM_DISPLAY_NAME?.trim();
-  if (name) {
-    return name;
-  }
-  if (bindings.PLATFORM_INSTALLATION_ID) {
-    return 'Nosam Platform';
-  }
-  const apiUrl = getPlatformApiUrl(bindings, requestUrl);
-  return ['https://nosam.buildwithfriends.dev', 'https://api.staging.void.cloud'].includes(apiUrl)
-    ? 'Nosam Cloud'
-    : 'Nosam Platform';
+  return env?.PLATFORM_DISPLAY_NAME?.trim() || 'Platform';
 }
 
 export function formatPlatformPageTitle(page: string, platformName: string): string {
-  return `${page} · ${platformName}${/\bnosam\b/i.test(platformName) ? '' : ' · Nosam'}`;
+  return `${page} · ${platformName}${/\bplatform\b/i.test(platformName) ? '' : ' · Platform'}`;
 }
 
 /** Use configured deployment identity or the actual request URL, never forwarded headers. */

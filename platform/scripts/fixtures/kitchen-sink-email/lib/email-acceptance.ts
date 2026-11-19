@@ -20,11 +20,11 @@ export function acceptEmail(route: string) {
       { ttl: 3_600 },
     );
     if (subject.startsWith('REJECT ')) {
-      message.setReject('Nosam email acceptance reject');
+      message.setReject('Platform email acceptance reject');
       return;
     }
     if (subject.startsWith('REPLY ')) {
-      await replyEmail(message, { text: `Nosam email acceptance reply: ${subject}` });
+      await replyEmail(message, { text: `Platform email acceptance reply: ${subject}` });
     }
     if (subject.startsWith('FORWARD ')) {
       const destination = parsed.headers.find(({ key }) => key === 'x-nosam-e2e-forward')?.value;

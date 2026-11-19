@@ -1626,7 +1626,7 @@ export function printGlobalHelp(): void {
     sectionTitle('Environment'),
   );
 
-  outro(formatUrl('https://void.cloud'));
+  outro(formatUrl('https://github.com/builtbyfriends/platform'));
 }
 
 export function printBwfHeader(): void {

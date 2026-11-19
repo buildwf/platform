@@ -2671,7 +2671,7 @@ describe('email platform capability', () => {
   const UNAVAILABLE = {
     error: 'platform capability unavailable',
     capability: 'email',
-    message: 'This Nosam platform does not enable email.',
+    message: 'This Platform does not enable email.',
   };
 
   async function get(path: string, jwt: string, bindings: TestEnv): Promise<Response> {

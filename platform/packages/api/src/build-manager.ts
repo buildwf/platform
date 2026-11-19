@@ -264,7 +264,7 @@ export function withDeadline<T>(work: Promise<T>, ms: number, reason: string): P
 }
 
 // Bundled from the release's SDK manifest. Used only when the application has
-// no local Nosam dependency; never resolve the moving npm "latest" channel.
+// no local Platform dependency; never resolve the moving npm "latest" channel.
 export const PINNED_NOSAM_CLI_VERSION = bwfPackageJson.version;
 
 // Ceiling on how long a queued build may wait for the just-in-time branch-head
@@ -1556,7 +1556,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
       //       WITHOUT terminalizing, the scheduler re-queues, and startBuild re-runs
       //       on the SAME DO. We reuse the id from DO storage, or — if that best-effort
       //       cache write was lost — from the persisted `builds.check_run_id` on the
-      //       `row` already read above, so a requeue never POSTs a SECOND `Nosam Build`
+      //       `row` already read above, so a requeue never POSTs a SECOND `Platform Build`
       //       run (which would orphan the first one `in_progress`).
       //   (b) SHA guard — config.commitSha is `build.commit_sha ?? ''`; a check-run
       //       POST with head_sha:'' is a guaranteed GitHub 422, so skip creation when
@@ -1575,7 +1575,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
           headSha: config.commitSha,
           externalId: config.buildId,
           detailsUrl: this.projectUrl(config),
-          title: 'Nosam build in progress',
+          title: 'Platform build in progress',
           summary: `Building \`${config.branch}\` @ ${config.commitSha.slice(0, 7)}`,
         });
         if (checkRunId) {
@@ -1946,7 +1946,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
           if (won) {
             await this.finalizeCheckRun(config, 'failure', {
               detailsUrl: this.projectUrl(config),
-              title: 'Nosam build failed',
+              title: 'Platform build failed',
               summary: message,
             });
           } else {
@@ -2085,7 +2085,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
       conclusion as CheckRunConclusion,
       {
         detailsUrl: this.projectUrl(config),
-        title: `Nosam build ${conclusion === 'success' ? 'succeeded' : conclusion}`,
+        title: `Platform build ${conclusion === 'success' ? 'succeeded' : conclusion}`,
         summary: `Build ${status}.`,
       },
       explicitId,
@@ -2356,7 +2356,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
         if (won) {
           await this.finalizeCheckRun(config, 'success', {
             detailsUrl: this.projectUrl(config),
-            title: 'Nosam build succeeded',
+            title: 'Platform build succeeded',
             summary: deploymentId ? 'Deployment is live.' : 'Build complete.',
           });
         } else {
@@ -2384,7 +2384,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
           // investigations, and the check run is the only surface most people see.
           await this.finalizeCheckRun(config, 'failure', {
             detailsUrl: this.projectUrl(config),
-            title: 'Nosam build failed',
+            title: 'Platform build failed',
             summary: `Build exited with code ${params.exitCode} (${params.reason}).`,
           });
         } else {
@@ -2440,7 +2440,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
         if (won) {
           await this.finalizeCheckRun(config, 'failure', {
             detailsUrl: this.projectUrl(config),
-            title: 'Nosam build failed',
+            title: 'Platform build failed',
             summary: message,
           });
         } else {
@@ -2843,7 +2843,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
         if (terminal.won) {
           await this.finalizeCheckRun(config, 'failure', {
             detailsUrl: this.projectUrl(config),
-            title: 'Nosam build failed',
+            title: 'Platform build failed',
             summary: 'build timed out',
           });
         } else {
@@ -3016,7 +3016,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
         if (terminal.won) {
           await this.finalizeCheckRun(terminal.config, 'cancelled', {
             detailsUrl: this.projectUrl(terminal.config),
-            title: 'Nosam build cancelled',
+            title: 'Platform build cancelled',
             summary: reason,
           });
         } else {

@@ -42,7 +42,7 @@ export default defineQueue<AcceptanceMessage>(async (batch, env) => {
         message.retry({ delaySeconds: 1 });
         break;
       case 'throw-once':
-        throw new Error('Nosam queue acceptance deliberate first-attempt failure');
+        throw new Error('Platform queue acceptance deliberate first-attempt failure');
       case 'ack-then-retry':
         message.ack();
         message.retry({ delaySeconds: 1 });

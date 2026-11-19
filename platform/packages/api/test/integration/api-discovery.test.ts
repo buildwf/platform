@@ -14,7 +14,7 @@ afterAll(async () => {
 });
 
 describe('GET /.well-known/nosam-platform', () => {
-  it('describes existing Nosam Cloud without exposing resource ids or credentials', async () => {
+  it('describes existing Platform without exposing resource ids or credentials', async () => {
     const response = await app.fetch(
       new Request('https://nosam.buildwithfriends.dev/.well-known/nosam-platform'),
       env,
@@ -24,7 +24,7 @@ describe('GET /.well-known/nosam-platform', () => {
     expect(document).toMatchObject({
       apiUrl: 'https://nosam.buildwithfriends.dev',
       applicationDomain: 'buildwf.dev',
-      displayName: 'Nosam Cloud',
+      displayName: 'Platform',
       proxyUrl: 'https://void-nosam-proxy.buildwithfriends.workers.dev',
       schemaVersion: 1,
       usageProtocolVersion: 2,

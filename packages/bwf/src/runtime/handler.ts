@@ -27,7 +27,7 @@ export class BwfAssetRewriteError extends Error {
   override name = 'BwfAssetRewriteError';
   constructor(destination: string) {
     super(
-      `c.rewrite() cannot re-dispatch to a static asset path (${JSON.stringify(destination)}). Runtime rewrites only reach routes inside the worker — static asset handlers run in front of the worker. To rewrite into an asset, use a static \`routing.rewrites\` rule in bwf.config.ts or a \`200!\` entry in _redirects. See https://void.cloud/guide/edge/rewrites#runtime-rewrites-cannot-reach-static-assets`,
+      `c.rewrite() cannot re-dispatch to a static asset path (${JSON.stringify(destination)}). Runtime rewrites only reach routes inside the worker — static asset handlers run in front of the worker. To rewrite into an asset, use a static \`routing.rewrites\` rule in bwf.config.ts or a \`200!\` entry in _redirects. See https://github.com/builtbyfriends/platform/blob/main/docs/guide/edge/rewrites.md#runtime-rewrites-cannot-reach-static-assets`,
     );
   }
 }
@@ -109,7 +109,7 @@ declare module 'hono' {
      * Returns the URL the client actually requested — the pre-rewrite URL as
      * a `URL` object — or `null` when the current request was not rewritten.
      *
-     * Set on every Nosam-managed request, whether the rewrite came from a
+     * Set on every Platform-managed request, whether the rewrite came from a
      * static rule (`routing.rewrites`, `routing.fallbacks`, `_redirects`
      * `200`/`200!`) or `c.rewrite()` in middleware. Useful for canonical
      * link generation and locale negotiation that must reference the URL

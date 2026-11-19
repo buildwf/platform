@@ -85,7 +85,7 @@ describe('linkGitHubIdentity', () => {
   });
 
   it('throws GitHubIdentityAlreadyLinkedError when the same user links a different identity', async () => {
-    // RFC 0074: one GitHub identity per Nosam account. A user who already linked
+    // RFC 0074: one GitHub identity per Platform account. A user who already linked
     // 'A' must not be able to link a second, different id 'B'.
     const user = await createTestUser(env.db, 'alice', 'google', 'google-alice');
 

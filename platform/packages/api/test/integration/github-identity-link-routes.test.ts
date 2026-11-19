@@ -221,7 +221,7 @@ describe('GET /github/link-url', () => {
     expect(state.redirect).toBe(redirect);
     expect(typeof state.exp).toBe('number');
     expect((state.exp as number) > Date.now()).toBe(true);
-    // The crux: state carries NO Nosam user id.
+    // The crux: state carries NO Platform user id.
     expect('userId' in state).toBe(false);
   });
 
@@ -592,7 +592,7 @@ describe('POST /github/link/complete', () => {
   // the COMPLETING bearer token, never a state/initiator notion — so an attacker
   // can only ever link their own id.
   it('binds the link_code to the COMPLETING token-holder, not the flow initiator', async () => {
-    // Two distinct Nosam accounts, both logged in via a non-github provider so
+    // Two distinct Platform accounts, both logged in via a non-github provider so
     // neither has a github oauth row yet.
     const attacker = await createTestUser(env.db, 'attacker', 'google', 'google-attacker');
     const completer = await createTestUser(env.db, 'completer', 'google', 'google-completer');
@@ -628,7 +628,7 @@ describe('POST /github/link/complete', () => {
   });
 
   // The caller already has a DIFFERENT github identity. RFC 0074
-  // allows one github identity per Nosam account, so this is github_already_linked
+  // allows one github identity per Platform account, so this is github_already_linked
   // (a DISTINCT 409 code from the other-user github_identity_conflict).
   it('returns 409 github_already_linked when the caller already linked a different github id', async () => {
     // Alice signed in via google, then already linked github id 'A'.

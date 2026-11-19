@@ -178,7 +178,7 @@ export const operatorCommands: Array<OperatorCommand> = [
   {
     group: 'zero-trust',
     action: 'disable',
-    description: 'Remove Nosam-managed Access applications and make projects public',
+    description: 'Remove Platform-managed Access applications and make projects public',
     path: '/zero-trust/disable',
     method: 'POST',
   },

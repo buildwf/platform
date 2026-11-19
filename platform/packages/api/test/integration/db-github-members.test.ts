@@ -370,7 +370,7 @@ describe('github_installations account queries', () => {
 });
 
 describe('github_installation_revocations — monotonic revocation tombstone', () => {
-  // The tombstone is keyed by the GitHub ACCOUNT id (X), NOT a Nosam user id.
+  // The tombstone is keyed by the GitHub ACCOUNT id (X), NOT a Platform user id.
   // These helpers take that github account id as their third arg.
   const X = 'gh-acct-42';
   const Y = 'gh-acct-99';
