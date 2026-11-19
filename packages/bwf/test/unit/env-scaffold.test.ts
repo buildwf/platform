@@ -79,7 +79,7 @@ describe('renderEnvTs', () => {
 
 describe('maybeScaffoldEnvTs', () => {
   function tmpProject(): string {
-    return mkdtempSync(join(tmpdir(), 'nosam-env-scaffold-'));
+    return mkdtempSync(join(tmpdir(), 'platform-env-scaffold-'));
   }
 
   it('is a no-op when env.ts already exists', () => {

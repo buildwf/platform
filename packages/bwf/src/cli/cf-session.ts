@@ -17,7 +17,7 @@ const logger = {
 function session(root: string) {
   const auth = createCfAuth({
     logger,
-    userAgent: 'nosam',
+    userAgent: 'platform',
     prompt: async () => {
       throw new Error('Cloudflare session reads cannot prompt.');
     },

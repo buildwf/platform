@@ -3,15 +3,15 @@ import { resolve } from 'node:path';
 import { createApplicationRoutes, parsePlatformDeploymentManifest } from '@builtbyfriends/platform';
 import { describe, expect, it } from 'vite-plus/test';
 
-const manifestPath = resolve(import.meta.dirname, '../../../../deployments/nosam-cloud.json');
+const manifestPath = resolve(import.meta.dirname, '../../../../deployments/platform-cloud.json');
 
 describe('Platform deployment manifest', () => {
   it('captures the public production topology without deployment credentials or resource ids', () => {
     const raw = readFileSync(manifestPath, 'utf8');
     const manifest = parsePlatformDeploymentManifest(JSON.parse(raw));
-    expect(manifest.resources.apiWorker).toBe('nosam-api');
-    expect(manifest.resources.dispatchNamespace).toBe('nosam-users');
-    expect(manifest.resources.tailWorker).toBe('nosam-tail');
+    expect(manifest.resources.apiWorker).toBe('platform-api');
+    expect(manifest.resources.dispatchNamespace).toBe('platform-users');
+    expect(manifest.resources.tailWorker).toBe('platform-tail');
     expect(createApplicationRoutes(manifest.application)).toEqual([
       { pattern: '*.void.app/*', zoneName: 'void.app' },
       { pattern: '*.void.app', zoneName: 'void.app' },

@@ -228,7 +228,7 @@ export default defineMiddleware(async (c, next) => {
 });
 ```
 
-Use `basicAuth()` for a temporary site gate. bwf's reserved `/__nosam` endpoints remain accessible for deployment and development tooling. Read credentials through callbacks:
+Use `basicAuth()` for a temporary site gate. bwf's reserved `/__platform` endpoints remain accessible for deployment and development tooling. Read credentials through callbacks:
 
 ```ts
 // env.ts

@@ -27,7 +27,7 @@ afterEach(() => {
 });
 
 async function generate(resolved: Record<string, unknown>, command: 'build' | 'serve' = 'build') {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-version-binding-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-version-binding-'));
   roots.push(root);
   mkdirSync(join(root, 'routes'), { recursive: true });
   writeFileSync(join(root, 'package.json'), JSON.stringify({ type: 'module' }));
@@ -39,7 +39,7 @@ async function generate(resolved: Record<string, unknown>, command: 'build' | 's
   vi.spyOn(process, 'cwd').mockReturnValue(root);
   const { bwfPlugin } = await import('../../src/index.ts');
   const plugins = bwfPlugin();
-  const hook = plugins.find((plugin) => plugin.name === 'nosam:env')?.config;
+  const hook = plugins.find((plugin) => plugin.name === 'platform:env')?.config;
   const configure = typeof hook === 'function' ? hook : hook?.handler;
   if (!configure) {
     throw new Error('bwf environment hook missing');
@@ -53,7 +53,7 @@ async function generate(resolved: Record<string, unknown>, command: 'build' | 's
     throw new Error('Cloudflare configuration callback missing');
   }
   const patch = (cloudflare.api as { pluginConfig: Config }).pluginConfig.config(resolved);
-  const routingHook = plugins.find((plugin) => plugin.name === 'nosam:routing')?.buildStart;
+  const routingHook = plugins.find((plugin) => plugin.name === 'platform:routing')?.buildStart;
   const buildStart = typeof routingHook === 'function' ? routingHook : routingHook?.handler;
   if (!buildStart) {
     throw new Error('bwf routing hook missing');
@@ -64,7 +64,7 @@ async function generate(resolved: Record<string, unknown>, command: 'build' | 's
 
 async function readiness(entry: string, env: Record<string, unknown>): Promise<Response> {
   const source = entry.match(
-    /const __nosamFetch = (__createWorkerFetch\([\s\S]*?\n {2}\}\));/,
+    /const __platformFetch = (__createWorkerFetch\([\s\S]*?\n {2}\}\));/,
   )?.[1];
   expect(source).toBeDefined();
   const fetch = new Function(
@@ -74,9 +74,9 @@ async function readiness(entry: string, env: Record<string, unknown>): Promise<R
     '__withRawEnv',
     'withRuntimeEnv',
     '__filterInternalBindings',
-    '__nosamHandleInternalRoute',
-    '__nosamCollectPrerenderPaths',
-    '__nosamRenderStaticNotFound',
+    '__platformHandleInternalRoute',
+    '__platformCollectPrerenderPaths',
+    '__platformRenderStaticNotFound',
     `return (${source});`,
   )(
     createWorkerFetch,
@@ -90,7 +90,7 @@ async function readiness(entry: string, env: Record<string, unknown>): Promise<R
     async () => new Response(null, { status: 204 }),
   ) as ReturnType<typeof createWorkerFetch>;
   return fetch(
-    new Request('https://app.test/__nosam/ready', {
+    new Request('https://app.test/__platform/ready', {
       headers: { 'Cloudflare-Workers-Version-Overrides': 'app="requested-candidate"' },
     }),
     env,

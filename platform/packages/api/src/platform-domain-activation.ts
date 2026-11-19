@@ -12,7 +12,7 @@ export async function platformDomainActivation(context: Context<ApiEnv>): Promis
   const token = context.env.PLATFORM_HEALTH_PROBE_TOKEN;
   if (
     !token ||
-    context.req.header('X-Nosam-Platform-Probe') !== token ||
+    context.req.header('X-Platform-Probe') !== token ||
     !context.env.PLATFORM_APPLICATION ||
     !context.env.PLATFORM_INSTALLATION_ID
   ) {

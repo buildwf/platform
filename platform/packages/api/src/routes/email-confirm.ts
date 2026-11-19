@@ -145,10 +145,10 @@ app.post('/destinations/confirm', async (context) => {
 });
 
 function consentPage(slug: string, address: string, token: string): string {
-  return `<div class="nosam-auth-lead"><h1 id="nosam-auth-title">Allow ${escapeHtml(slug)} to email ${escapeHtml(address)}?</h1>
+  return `<div class="platform-auth-lead"><h1 id="platform-auth-title">Allow ${escapeHtml(slug)} to email ${escapeHtml(address)}?</h1>
 <p>The Platform project <strong>${escapeHtml(slug)}</strong> wants permission to send email to <strong>${escapeHtml(address)}</strong>.</p></div>
-<form method="post" action="?token=${escapeHtml(token)}"><button class="nosam-auth-button nosam-auth-button-primary" type="submit">Confirm</button></form>
-<p class="nosam-auth-note">If you didn't expect this, close this page. No permission is granted until you select Confirm.</p>`;
+<form method="post" action="?token=${escapeHtml(token)}"><button class="platform-auth-button platform-auth-button-primary" type="submit">Confirm</button></form>
+<p class="platform-auth-note">If you didn't expect this, close this page. No permission is granted until you select Confirm.</p>`;
 }
 
 function successPage(slug: string, address: string, alreadyVerified: boolean): string {
@@ -158,9 +158,9 @@ function successPage(slug: string, address: string, alreadyVerified: boolean): s
     : `You've authorized <strong>${escapeHtml(slug)}</strong> to send email to <strong>${escapeHtml(address)}</strong>.`;
   return (
     browserPageStatus('success') +
-    `<div class="nosam-auth-lead"><h1 id="nosam-auth-title">${heading}</h1>
+    `<div class="platform-auth-lead"><h1 id="platform-auth-title">${heading}</h1>
 <p>${lead}</p></div>
-<p class="nosam-auth-note">If you didn't expect this, ignore future emails from this project — no further permission will be granted without your action.</p>`
+<p class="platform-auth-note">If you didn't expect this, ignore future emails from this project — no further permission will be granted without your action.</p>`
   );
 }
 

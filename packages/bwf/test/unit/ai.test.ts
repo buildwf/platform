@@ -40,14 +40,14 @@ describe('runtime ai', () => {
       const env =
         transport === 'service'
           ? {
-              __NOSAM_PROXY: { fetch: request },
+              __PLATFORM_PROXY: { fetch: request },
               __PROJECT_ID: 'project',
-              __NOSAM_PROXY_TOKEN: 'token',
+              __PLATFORM_PROXY_TOKEN: 'token',
             }
           : {
-              __NOSAM_TOKEN: 'token',
-              __NOSAM_PROJECT_ID: 'project',
-              __NOSAM_PROXY_URL: 'https://proxy.test',
+              __PLATFORM_TOKEN: 'token',
+              __PLATFORM_PROJECT_ID: 'project',
+              __PLATFORM_PROXY_URL: 'https://proxy.test',
             };
       await envContext.run(env, async () => {
         const stream = (await ai.run(
@@ -63,7 +63,7 @@ describe('runtime ai', () => {
         const reason = new Error('Turn cancelled');
         controller.abort(reason);
         const terminal = await reading;
-        expect(new TextDecoder().decode(terminal.value)).toContain('event: nosam:error');
+        expect(new TextDecoder().decode(terminal.value)).toContain('event: platform:error');
         expect(await reader.read()).toEqual({ done: true, value: undefined });
       });
       expect(request).toHaveBeenCalledOnce();
@@ -76,7 +76,7 @@ describe('runtime ai', () => {
     const { ai } = await import('../../src/runtime/ai.ts');
     const request = vi.fn();
     vi.stubGlobal('fetch', request);
-    await envContext.run({ __NOSAM_TOKEN: 'token', __NOSAM_PROJECT_ID: 'project' }, async () => {
+    await envContext.run({ __PLATFORM_TOKEN: 'token', __PLATFORM_PROJECT_ID: 'project' }, async () => {
       await expect(ai.run('@cf/meta/llama', {})).rejects.toThrow('No connected platform proxy');
     });
     expect(request).not.toHaveBeenCalled();
@@ -112,9 +112,9 @@ describe('runtime ai', () => {
 
     await envContext.run(
       {
-        __NOSAM_TOKEN: 'nosam-token',
-        __NOSAM_PROJECT_ID: 'proj_1',
-        __NOSAM_PROXY_URL: 'https://proxy.test',
+        __PLATFORM_TOKEN: 'platform-token',
+        __PLATFORM_PROJECT_ID: 'proj_1',
+        __PLATFORM_PROXY_URL: 'https://proxy.test',
       },
       async () => {
         const result = await ai.run('google/gemini-2.5-flash', {
@@ -128,7 +128,7 @@ describe('runtime ai', () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock.mock.calls[0][0]).toBe('https://proxy.test/ai/run');
     const init = fetchMock.mock.calls[0][1]!;
-    expect(new Headers(init.headers).get('authorization')).toBe('Bearer nosam-token');
+    expect(new Headers(init.headers).get('authorization')).toBe('Bearer platform-token');
     expect(JSON.parse(init.body as string)).toEqual({
       action: 'run',
       model: 'google/gemini-2.5-flash',
@@ -152,9 +152,9 @@ describe('runtime ai', () => {
 
     await envContext.run(
       {
-        __NOSAM_TOKEN: 'nosam-token',
-        __NOSAM_PROJECT_ID: 'proj_1',
-        __NOSAM_PROXY_URL: 'https://proxy.test',
+        __PLATFORM_TOKEN: 'platform-token',
+        __PLATFORM_PROJECT_ID: 'proj_1',
+        __PLATFORM_PROXY_URL: 'https://proxy.test',
         OPENAI_API_KEY: 'sk-test',
       },
       async () => {
@@ -173,7 +173,7 @@ describe('runtime ai', () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock.mock.calls[0][0]).toBe('https://proxy.test/ai/provider');
     const init = fetchMock.mock.calls[0][1]!;
-    expect(new Headers(init.headers).get('authorization')).toBe('Bearer nosam-token');
+    expect(new Headers(init.headers).get('authorization')).toBe('Bearer platform-token');
     expect(JSON.parse(init.body as string)).toEqual({
       action: 'provider',
       provider: 'openai',
@@ -206,9 +206,9 @@ describe('runtime ai', () => {
 
     await envContext.run(
       {
-        __NOSAM_PROXY: { fetch: proxyFetch },
+        __PLATFORM_PROXY: { fetch: proxyFetch },
         __PROJECT_ID: 'proj_1',
-        __NOSAM_PROXY_TOKEN: 'proxy-token',
+        __PLATFORM_PROXY_TOKEN: 'proxy-token',
         OPENAI_API_KEY: 'sk-test',
       },
       async () => {
@@ -246,9 +246,9 @@ describe('runtime ai', () => {
 
     await envContext.run(
       {
-        __NOSAM_TOKEN: 'nosam-token',
-        __NOSAM_PROJECT_ID: 'proj_1',
-        __NOSAM_PROXY_URL: 'https://proxy.test',
+        __PLATFORM_TOKEN: 'platform-token',
+        __PLATFORM_PROJECT_ID: 'proj_1',
+        __PLATFORM_PROXY_URL: 'https://proxy.test',
         CUSTOM_AI_KEY: 'custom-key',
       },
       async () => {
@@ -287,9 +287,9 @@ describe('runtime ai', () => {
 
     await envContext.run(
       {
-        __NOSAM_TOKEN: 'nosam-token',
-        __NOSAM_PROJECT_ID: 'proj_1',
-        __NOSAM_PROXY_URL: 'https://proxy.test',
+        __PLATFORM_TOKEN: 'platform-token',
+        __PLATFORM_PROJECT_ID: 'proj_1',
+        __PLATFORM_PROXY_URL: 'https://proxy.test',
         OPENAI_API_KEY: 'sk-test',
       },
       async () => {
@@ -316,7 +316,7 @@ describe('runtime ai', () => {
           {
             name: 'image',
             value: {
-              __nosamFile: true,
+              __platformFile: true,
               data: 'cG5nLWJ5dGVz',
               name: 'source.png',
               type: 'image/png',
@@ -345,9 +345,9 @@ describe('runtime ai', () => {
     };
     await envContext.run(
       {
-        __NOSAM_TOKEN: 'nosam-token',
-        __NOSAM_PROJECT_ID: 'proj_1',
-        __NOSAM_PROXY_URL: 'https://proxy.test',
+        __PLATFORM_TOKEN: 'platform-token',
+        __PLATFORM_PROJECT_ID: 'proj_1',
+        __PLATFORM_PROXY_URL: 'https://proxy.test',
         OPENAI_API_KEY: 'sk-test',
       },
       async () => {
@@ -376,9 +376,9 @@ describe('runtime ai', () => {
 
     await envContext.run(
       {
-        __NOSAM_TOKEN: 'nosam-token',
-        __NOSAM_PROJECT_ID: 'proj_1',
-        __NOSAM_PROXY_URL: 'https://proxy.test',
+        __PLATFORM_TOKEN: 'platform-token',
+        __PLATFORM_PROJECT_ID: 'proj_1',
+        __PLATFORM_PROXY_URL: 'https://proxy.test',
       },
       async () => {
         const result = await ai.run(
@@ -429,7 +429,7 @@ describe('runtime ai', () => {
       const { ai } = await import('../../src/runtime/ai.ts');
       const direct = makeDirectAi();
 
-      await envContext.run({ MY_AI: direct.AI, __NOSAM_AI_BINDING: 'MY_AI' }, async () => {
+      await envContext.run({ MY_AI: direct.AI, __PLATFORM_AI_BINDING: 'MY_AI' }, async () => {
         expect(await ai.run('@cf/meta/llama', { prompt: 'Hi' })).toEqual({ ok: true });
       });
 
@@ -456,7 +456,7 @@ describe('runtime ai', () => {
       const direct = makeDirectAi();
 
       await envContext.run(
-        { AI: direct.AI, __NOSAM_AI_GATEWAY: 'my-gw', OPENAI_API_KEY: 'sk-test' },
+        { AI: direct.AI, __PLATFORM_AI_GATEWAY: 'my-gw', OPENAI_API_KEY: 'sk-test' },
         async () => {
           const response = await ai.provider('openai').fetch('/chat/completions', {
             body: { model: 'gpt-4o', messages: [{ role: 'user', content: 'Hello' }] },
@@ -504,7 +504,7 @@ describe('runtime ai', () => {
         const direct = makeDirectAi();
 
         await envContext.run(
-          { AI: direct.AI, __NOSAM_AI_GATEWAY: 'my-gw', [keyEnv]: 'sk-test' },
+          { AI: direct.AI, __PLATFORM_AI_GATEWAY: 'my-gw', [keyEnv]: 'sk-test' },
           async () => {
             await ai.provider(provider).fetch('/v1/test', { body: { input: 'Hi' } });
           },
@@ -556,7 +556,7 @@ describe('runtime ai', () => {
 
       const direct = makeDirectAi();
 
-      await envContext.run({ AI: direct.AI, __NOSAM_AI_GATEWAY: 'my-gw' }, async () => {
+      await envContext.run({ AI: direct.AI, __PLATFORM_AI_GATEWAY: 'my-gw' }, async () => {
         const response = await ai.provider('openai').fetch('/chat/completions', {
           body: { model: 'gpt-4o' },
         });
@@ -586,7 +586,7 @@ describe('runtime ai', () => {
       });
 
       await envContext.run(
-        { AI: direct.AI, __NOSAM_AI_GATEWAY: 'my-gw', OPENAI_API_KEY: 'sk-test' },
+        { AI: direct.AI, __PLATFORM_AI_GATEWAY: 'my-gw', OPENAI_API_KEY: 'sk-test' },
         async () => {
           const response = await ai.provider('openai').fetch('/chat/completions', {
             body: { model: 'gpt-4o' },
@@ -614,7 +614,7 @@ describe('runtime ai', () => {
       const direct = makeDirectAi();
 
       await envContext.run(
-        { AI: direct.AI, __NOSAM_AI_GATEWAY: 'my-gw', OPENAI_API_KEY: 'sk-test' },
+        { AI: direct.AI, __PLATFORM_AI_GATEWAY: 'my-gw', OPENAI_API_KEY: 'sk-test' },
         async () => {
           const response = await ai
             .provider('openai')
@@ -642,7 +642,7 @@ describe('runtime ai', () => {
       const direct = makeDirectAi();
 
       await envContext.run(
-        { AI: direct.AI, __NOSAM_AI_GATEWAY: 'my-gw', OPENAI_API_KEY: 'sk-test' },
+        { AI: direct.AI, __PLATFORM_AI_GATEWAY: 'my-gw', OPENAI_API_KEY: 'sk-test' },
         async () => {
           const form = new FormData();
           form.set('model', 'gpt-image-1.5');
@@ -736,9 +736,9 @@ describe('AI usage-limit rejections', () => {
       );
       await envContext.run(
         {
-          __NOSAM_PROXY: { fetch },
+          __PLATFORM_PROXY: { fetch },
           __PROJECT_ID: 'p',
-          __NOSAM_PROXY_TOKEN: 't',
+          __PLATFORM_PROXY_TOKEN: 't',
           OPENAI_API_KEY: 'test',
         },
         async () => {
@@ -777,7 +777,7 @@ it('preserves a quota interruption after streaming has started in a terminal eve
   await envContext.run({ AI: makeDirectAi({ run: () => body }).AI }, async () => {
     const response = await ai.stream('model', {});
     const text = await response.text();
-    expect(text).toContain('event: nosam:limit');
+    expect(text).toContain('event: platform:limit');
     expect(text).toContain('Provider limit');
     expect(text).toContain('"reason":"rate_limit"');
   });

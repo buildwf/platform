@@ -40,7 +40,7 @@ export type EmailSink = (message: CapturedMessage) => void;
 // ---------------------------------------------------------------------------
 
 /** Mount point of the dev inbox on the Vite dev server. */
-export const DEV_INBOX_PREFIX: string = '/__nosam/inbox';
+export const DEV_INBOX_PREFIX: string = '/__platform/inbox';
 /** Capture endpoint, relative to {@link DEV_INBOX_PREFIX} (connect strips the mount). */
 export const DEV_INBOX_CAPTURE_PATH: string = '/_capture';
 /** Absolute path the worker POSTs a captured message to. */
@@ -50,26 +50,26 @@ export const DEV_INBOX_CAPTURE_URL: string = `${DEV_INBOX_PREFIX}${DEV_INBOX_CAP
  * Serve-only var naming the binding that loops back to the Vite dev server.
  * Its presence is the dev gate (`shouldInjectEmailDevInboxVar` in index.ts).
  */
-export const DEV_INBOX_ENV_VAR: string = '__NOSAM_EMAIL_DEV_INBOX';
+export const DEV_INBOX_ENV_VAR: string = '__PLATFORM_EMAIL_DEV_INBOX';
 
 /**
  * Serve-only var carrying the dev-trigger token for the capture POST: the
  * router's token const is not importable from `@builtbyfriends/bwf/email`.
  */
-export const DEV_INBOX_TOKEN_ENV_VAR: string = '__NOSAM_EMAIL_DEV_INBOX_TOKEN';
+export const DEV_INBOX_TOKEN_ENV_VAR: string = '__PLATFORM_EMAIL_DEV_INBOX_TOKEN';
 
 /**
  * Every inbox route requires the dev-trigger token, as this header or, for
  * browser links, this query parameter.
  */
-export const DEV_INBOX_TOKEN_HEADER: string = 'x-nosam-dev-trigger';
+export const DEV_INBOX_TOKEN_HEADER: string = 'x-platform-dev-trigger';
 export const DEV_INBOX_TOKEN_QUERY: string = 'token';
 
 /**
  * Marks a capture response: over the assets binding, a plain 200 could also
  * be a static asset.
  */
-export const DEV_INBOX_ACK_HEADER: string = 'x-nosam-email-inbox';
+export const DEV_INBOX_ACK_HEADER: string = 'x-platform-email-inbox';
 export const DEV_INBOX_ACK_VALUE: string = 'captured';
 
 /**
@@ -181,8 +181,8 @@ export function parseCapturedMessage(value: unknown): CapturedMessage | undefine
   };
 }
 
-const SINK_KEY = '__nosamEmailSinks__';
-const BUFFER_KEY = '__nosamEmailDevBuffer__';
+const SINK_KEY = '__platformEmailSinks__';
+const BUFFER_KEY = '__platformEmailDevBuffer__';
 const DEFAULT_BUFFER_LIMIT = 100;
 
 /** Retained-byte budget: 100 messages of up to 5 MiB each would fill the dev server's heap. */

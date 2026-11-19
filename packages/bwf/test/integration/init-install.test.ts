@@ -34,7 +34,7 @@ function calls(): Array<{ command: string; args: Array<string>; cwd: string }> {
 }
 
 beforeEach(() => {
-  root = realpathSync(mkdtempSync(join(tmpdir(), 'nosam-init-install-')));
+  root = realpathSync(mkdtempSync(join(tmpdir(), 'platform-init-install-')));
   bin = join(root, 'bin');
   callsFile = join(root, 'calls.jsonl');
   mkdirSync(bin);

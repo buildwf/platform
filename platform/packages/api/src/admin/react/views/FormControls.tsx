@@ -109,7 +109,7 @@ export function FormTextArea({
   return (
     <TextArea
       ref={textareaRef}
-      containerClassName="nosam-admin-autogrow-textarea"
+      containerClassName="platform-admin-autogrow-textarea"
       label={label}
       htmlName={name}
       value={value}

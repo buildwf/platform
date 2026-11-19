@@ -784,9 +784,9 @@ describe('POST /github/join/complete', () => {
 
   it('excludes installs outside the caller accessible set and installs Platform does not track', async () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
-    // 700: accessible AND Nosam-known → eligible.
-    // 800: Nosam-known but NOT in the accessible set → excluded.
-    // 999: accessible but NOT Nosam-known → excluded.
+    // 700: accessible AND Platform-known → eligible.
+    // 800: Platform-known but NOT in the accessible set → excluded.
+    // 999: accessible but NOT Platform-known → excluded.
     await seedInstall({ installationId: '700' });
     await seedInstall({ installationId: '800' });
 

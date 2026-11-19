@@ -35,7 +35,7 @@ afterAll(async () => {
 
 describe('applyPgMigrations', () => {
   it('adopts an existing Drizzle database using the documented procedure without replaying SQL', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-drizzle-adoption-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-drizzle-adoption-'));
     const old = [
       {
         name: '0000_create_users.sql',
@@ -68,7 +68,7 @@ describe('applyPgMigrations', () => {
         join(import.meta.dirname, '../../../../docs/guide/database.md'),
         'utf8',
       );
-      const sql = guide.match(/```sql \[adopt-nosam.sql\]\n([\s\S]*?)```/)?.[1];
+      const sql = guide.match(/```sql \[adopt-platform.sql\]\n([\s\S]*?)```/)?.[1];
       expect(sql, 'the guide must provide the adoption SQL').toBeDefined();
       await pglite.exec(sql!);
       await pglite.exec(sql!);

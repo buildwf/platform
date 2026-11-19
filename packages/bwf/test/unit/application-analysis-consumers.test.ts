@@ -16,7 +16,7 @@ vi.mock('../../src/plugin-cloudflare.ts', () => import('../helpers/cloudflare-vi
 const roots: Array<string> = [];
 
 function project(config: BwfConfig, files: Record<string, string>, framework = false): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-analysis-consumers-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-analysis-consumers-'));
   roots.push(root);
   const allFiles = {
     'package.json': JSON.stringify({
@@ -45,7 +45,7 @@ async function pluginConfig(root: string): Promise<Record<string, unknown>> {
       .config;
     return config({});
   }
-  const hook = plugins.find((plugin) => plugin.name === 'nosam:wrangler-sync')?.configResolved;
+  const hook = plugins.find((plugin) => plugin.name === 'platform:wrangler-sync')?.configResolved;
   const handler = typeof hook === 'function' ? hook : hook?.handler;
   if (!handler) {
     throw new Error('Expected the Cloudflare config or framework Wrangler sync plugin.');
@@ -100,7 +100,7 @@ export const live = defineLiveStream({ id: 'app' });`,
       expect(manifest.bindings.d1).toEqual(['DB']);
       expect(manifest.bindings.r2).toEqual(['STORAGE']);
       expect(manifest.bindings.kv).toEqual(kv ? ['CACHE'] : undefined);
-      expect(manifest.live?.className).toBe('NosamLiveStreamDurableObject');
+      expect(manifest.live?.className).toBe('PlatformLiveStreamDurableObject');
       expect(emitted.d1_databases).toEqual([
         { binding: 'DB', database_name: 'default', database_id: 'local' },
       ]);
@@ -110,7 +110,7 @@ export const live = defineLiveStream({ id: 'app' });`,
         bindings: [
           expect.objectContaining({
             name: expect.stringMatching(/^BWF_LIVE/),
-            class_name: expect.stringMatching(/^NosamLiveStreamDurableObject/),
+            class_name: expect.stringMatching(/^PlatformLiveStreamDurableObject/),
           }),
         ],
       });

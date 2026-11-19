@@ -46,16 +46,16 @@ const directories: Array<string> = [];
 const servers: Array<Server> = [];
 
 beforeEach(() => {
-  process.env.NOSAM_PLATFORM_RECOVERY_KEY = Buffer.alloc(32, 7).toString('base64');
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-install-cutover-'));
+  process.env.PLATFORM_RECOVERY_KEY = Buffer.alloc(32, 7).toString('base64');
+  const directory = mkdtempSync(join(tmpdir(), 'platform-install-cutover-'));
   directories.push(directory);
-  process.env.NOSAM_PLATFORM_REGISTRY_DIR = directory;
+  process.env.PLATFORM_REGISTRY_DIR = directory;
 });
 
 afterEach(async () => {
   wrangler.run = null;
-  delete process.env.NOSAM_PLATFORM_RECOVERY_KEY;
-  delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+  delete process.env.PLATFORM_RECOVERY_KEY;
+  delete process.env.PLATFORM_REGISTRY_DIR;
   for (const server of servers.splice(0)) {
     await new Promise<void>((resolve) => {
       server.close(() => resolve());
@@ -430,7 +430,7 @@ async function runInstall(
 }
 
 function currentManifest(): PlatformInstallationManifest {
-  return listInstallationManifests(process.env.NOSAM_PLATFORM_REGISTRY_DIR!)[0]!;
+  return listInstallationManifests(process.env.PLATFORM_REGISTRY_DIR!)[0]!;
 }
 
 function workerStepKeys(manifest: PlatformInstallationManifest) {

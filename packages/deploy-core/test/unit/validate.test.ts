@@ -90,7 +90,7 @@ describe('custom Durable Object declarations', () => {
     { script_name: 'another-project' },
     { namespace_id: 'foreign' },
     { storage: 'legacy-kv' },
-    { bindingName: '__NOSAM_PROXY' },
+    { bindingName: '__PLATFORM_PROXY' },
     { bindingName: 'ASSETS' },
     { className: 'Invalid-name' },
   ])('rejects unsafe binding fields %j', (fields) => {

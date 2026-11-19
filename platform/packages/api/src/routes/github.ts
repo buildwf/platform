@@ -365,7 +365,7 @@ async function resolveRepositoryId(
     headers: {
       Accept: 'application/vnd.github+json',
       Authorization: `Bearer ${token}`,
-      'User-Agent': 'nosam-api',
+      'User-Agent': 'platform-api',
       'X-GitHub-Api-Version': GITHUB_API_VERSION,
     },
   });

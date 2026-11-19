@@ -35,7 +35,7 @@ export default defineMiddleware(async (context, next) => {
     path.startsWith('/api/')
       ? context.json({ error: 'Sign in required' }, 401)
       : context.redirect('/login');
-  const token = getCookie(context, 'nosam_token');
+  const token = getCookie(context, 'platform_token');
   if (!token) {
     return signIn();
   }
@@ -43,7 +43,7 @@ export default defineMiddleware(async (context, next) => {
   context.set('token', token);
   const user = await getCurrentUser(context);
   if (!user) {
-    deleteCookie(context, 'nosam_token', { path: '/' });
+    deleteCookie(context, 'platform_token', { path: '/' });
     return signIn();
   }
 

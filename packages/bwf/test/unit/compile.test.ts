@@ -23,10 +23,10 @@ const testOptions = {
   honoPath: '/resolved/hono/index.mjs',
   honoRoutePath: '/resolved/hono/route.mjs',
 
-  runtimeEnvPath: '/resolved/nosam/runtime/env.mjs',
+  runtimeEnvPath: '/resolved/platform/runtime/env.mjs',
   projectRoot: '/project',
   homeDir: '/Users/test',
-  webSocketRuntimePath: '/resolved/nosam/runtime/ws-server.mjs',
+  webSocketRuntimePath: '/resolved/platform/runtime/ws-server.mjs',
   auth: null,
 };
 
@@ -67,11 +67,11 @@ describe('compileRouteTable', () => {
     expect(code).toContain('export default app');
   });
 
-  it('omits /__nosam/queue route when no queues defined', () => {
-    expect(compile()).not.toContain('/__nosam/queue');
+  it('omits /__platform/queue route when no queues defined', () => {
+    expect(compile()).not.toContain('/__platform/queue');
   });
 
-  it('exports __NOSAM_BUILD_KEY as a unique UUID for build-time auth', () => {
+  it('exports __PLATFORM_BUILD_KEY as a unique UUID for build-time auth', () => {
     const scan: ScanResult = {
       ...emptyScan,
       jobs: [{ filePath: 'sync.ts', name: 'sync', crons: ['0 * * * *'] }],
@@ -80,9 +80,9 @@ describe('compileRouteTable', () => {
     const code1 = compile({}, scan);
     const code2 = compile({}, scan);
 
-    expect(code1).toContain('export const __NOSAM_BUILD_KEY =');
-    const match1 = code1.match(/__NOSAM_BUILD_KEY = "([^"]+)"/);
-    const match2 = code2.match(/__NOSAM_BUILD_KEY = "([^"]+)"/);
+    expect(code1).toContain('export const __PLATFORM_BUILD_KEY =');
+    const match1 = code1.match(/__PLATFORM_BUILD_KEY = "([^"]+)"/);
+    const match2 = code2.match(/__PLATFORM_BUILD_KEY = "([^"]+)"/);
     expect(match1).toBeTruthy();
     expect(match2).toBeTruthy();
     expect(match1![1]).not.toBe(match2![1]);
@@ -103,12 +103,12 @@ describe('compileRouteTable', () => {
   it('generates the shared live durable object export when live is enabled', () => {
     const code = compile({
       hasLive: true,
-      liveRuntimePath: '/resolved/nosam/runtime/live-server.mjs',
+      liveRuntimePath: '/resolved/platform/runtime/live-server.mjs',
     });
 
     expect(code).toContain('createLiveDurableObject');
     expect(code).toContain(
-      'export const NosamLiveStreamDurableObject = __createLiveDurableObject();',
+      'export const PlatformLiveStreamDurableObject = __createLiveDurableObject();',
     );
   });
 
@@ -148,7 +148,7 @@ describe('compileRouteTable', () => {
     expect(code).toContain('import websocket0 from "/routes/chat/[room].ws.ts"');
     expect(code).toContain('createWebSocketDurableObject');
     expect(code).toContain('export const ChatRoomWs = __createWebSocketDurableObject');
-    expect(code).toContain('const __nosamWebSocketRoutes = [{"pattern":"/chat/:room"');
+    expect(code).toContain('const __platformWebSocketRoutes = [{"pattern":"/chat/:room"');
     expect(code).toContain('app.all("/chat/:room"');
     expect(code).toContain(
       'if (c.req.raw.headers.get("upgrade")?.toLowerCase() !== "websocket") return next()',
@@ -280,7 +280,7 @@ describe('c.rewrite runtime wrapper', () => {
     expect(res.headers.get('X-Is-Rewritten')).toBe('1');
   });
 
-  it('c.isRewritten() is true when dispatch sets X-Nosam-Original-URL (platform edge rewrite)', async () => {
+  it('c.isRewritten() is true when dispatch sets X-Platform-Original-URL (platform edge rewrite)', async () => {
     const app = new Hono();
     installBwfWrappers(app);
 
@@ -294,7 +294,7 @@ describe('c.rewrite runtime wrapper', () => {
     });
 
     const dispatchForwarded = new Request('http://localhost/en/docs', {
-      headers: { 'X-Nosam-Original-URL': 'http://localhost/docs' },
+      headers: { 'X-Platform-Original-URL': 'http://localhost/docs' },
     });
     const res = await app.fetch(dispatchForwarded);
 
@@ -556,9 +556,9 @@ describe('compileWorkerEntry', () => {
       ],
     });
 
-    expect(code).toContain('import __nosamDurableObject0 from "/app/durable-objects/counter.ts";');
-    expect(code).toContain('__nosamDurableObject0.__bind("COUNTER");');
-    expect(code).toContain('export const CounterDurableObject = __nosamDurableObject0.class;');
+    expect(code).toContain('import __platformDurableObject0 from "/app/durable-objects/counter.ts";');
+    expect(code).toContain('__platformDurableObject0.__bind("COUNTER");');
+    expect(code).toContain('export const CounterDurableObject = __platformDurableObject0.class;');
   });
 
   it('re-exports the live Durable Object class when enabled', () => {
@@ -572,8 +572,8 @@ describe('compileWorkerEntry', () => {
       live: true,
     });
 
-    expect(code).toContain('NosamLiveStreamDurableObject');
-    expect(code).toContain('export { NosamLiveStreamDurableObject };');
+    expect(code).toContain('PlatformLiveStreamDurableObject');
+    expect(code).toContain('export { PlatformLiveStreamDurableObject };');
     expect(code).toContain('__setLiveBindingName("BWF_LIVE");');
   });
 
@@ -587,12 +587,12 @@ describe('compileWorkerEntry', () => {
       serveSpaFallback: false,
       live: {
         bindingName: 'BWF_LIVE_abcd1234',
-        className: 'NosamLiveStreamDurableObject_abcd1234',
+        className: 'PlatformLiveStreamDurableObject_abcd1234',
       },
     });
 
     expect(code).toContain(
-      'export { NosamLiveStreamDurableObject as NosamLiveStreamDurableObject_abcd1234 };',
+      'export { PlatformLiveStreamDurableObject as PlatformLiveStreamDurableObject_abcd1234 };',
     );
     expect(code).toContain('__setLiveBindingName("BWF_LIVE_abcd1234");');
   });
@@ -634,10 +634,10 @@ describe('compileWorkerEntry', () => {
 
     // BwfPlatformSandbox carries the metering/gate hooks, so user subclasses inherit them.
     expect(code).toContain(
-      'import { BwfPlatformSandbox as __NosamSandbox, __setSandboxBindingName } from "@builtbyfriends/bwf/sandbox"',
+      'import { BwfPlatformSandbox as __PlatformSandbox, __setSandboxBindingName } from "@builtbyfriends/bwf/sandbox"',
     );
     expect(code).not.toContain('from "@cloudflare/sandbox"');
-    expect(code).toContain('export { __NosamSandbox as SandboxV1 };');
+    expect(code).toContain('export { __PlatformSandbox as SandboxV1 };');
     expect(code).toContain('__setSandboxBindingName("SANDBOX");');
   });
 
@@ -655,10 +655,10 @@ describe('compileWorkerEntry', () => {
     });
 
     expect(code).toContain(
-      'import { BwfPlatformSandbox as __NosamSandbox, __setSandboxBindingName } from "@builtbyfriends/bwf/sandbox"',
+      'import { BwfPlatformSandbox as __PlatformSandbox, __setSandboxBindingName } from "@builtbyfriends/bwf/sandbox"',
     );
     expect(code).not.toContain('from "@cloudflare/sandbox"');
-    expect(code).toContain('export class CodeSandbox extends __NosamSandbox {}');
+    expect(code).toContain('export class CodeSandbox extends __PlatformSandbox {}');
     expect(code).toContain('__setSandboxBindingName("CODE");');
   });
 
@@ -674,14 +674,14 @@ describe('compileWorkerEntry', () => {
     });
 
     expect(code).toContain(
-      'import { BwfPlatformSandbox as __NosamSandbox, __setSandboxBindingName } from "/abs/path/to/sandbox.mjs"',
+      'import { BwfPlatformSandbox as __PlatformSandbox, __setSandboxBindingName } from "/abs/path/to/sandbox.mjs"',
     );
   });
 
   it('omits the sandbox import and export when sandbox is disabled', () => {
     const code = compileWorkerEntry();
 
-    expect(code).not.toContain('__NosamSandbox');
+    expect(code).not.toContain('__PlatformSandbox');
     expect(code).not.toContain('BwfPlatformSandbox');
     expect(code).not.toContain('__setSandboxBindingName');
     expect(code).not.toContain('from "@cloudflare/sandbox"');
@@ -690,11 +690,11 @@ describe('compileWorkerEntry', () => {
   it('generates queue() export in worker entry when hasQueues=true', () => {
     const code = compileWorkerEntry({ hasQueues: true });
 
-    expect(code).toContain('async function __nosamQueue(batch, env, ctx)');
+    expect(code).toContain('async function __platformQueue(batch, env, ctx)');
     expect(code).toContain('async function handleScheduled(controller, env, ctx)');
     expect(code).toContain('serveWithAssets');
     expect(code).toContain(
-      'async queue(batch) { return __nosamQueue(batch, this.env, this.ctx); }',
+      'async queue(batch) { return __platformQueue(batch, this.env, this.ctx); }',
     );
     expect(code).toContain('__processQueue');
     expect(code).toContain('batch.queue');
@@ -892,7 +892,7 @@ describe('typed runtime metadata wiring', () => {
     );
     expect(dev).toContain('app.get("/hello", __createHttpRouteHandler(_load_hello_ts, "GET"))');
     expect(dev).toContain('app.post("/hello", __createHttpRouteHandler(_load_hello_ts, "POST"))');
-    expect(dev).not.toContain('function __nosamAnnotateRouting');
+    expect(dev).not.toContain('function __platformAnnotateRouting');
     expect(dev).not.toContain('c.rewrite =');
   });
   it('gives route files that differ only in punctuation their own loaders', () => {
@@ -949,9 +949,9 @@ describe('typed runtime metadata wiring', () => {
     const code = compileWorkerEntry({
       envSchemaModule: { importPath: '/env.ts', helperPath: '/env-helpers.ts' },
     });
-    expect(code).toContain('const __nosamFetch = __createWorkerFetch({');
+    expect(code).toContain('const __platformFetch = __createWorkerFetch({');
     expect(code).toContain('validateEnv: _validateEnvOnce');
-    expect(code).toContain('internalRoute: __nosamHandleInternalRoute');
+    expect(code).toContain('internalRoute: __platformHandleInternalRoute');
     expect(code).toContain(
       'const serveWithAssets = __createAssetFallback({"assetsDir":"assets","serveSpaFallback":false,"notFound":"none"})',
     );
@@ -1045,7 +1045,7 @@ describe('default-target dev parity', () => {
     expect(code).not.toContain('const __fallbackRules =');
   });
 
-  it('reads inbound X-Nosam-Original-URL only behind managed dispatch', async () => {
+  it('reads inbound X-Platform-Original-URL only behind managed dispatch', async () => {
     const permutations: Array<{
       label: string;
       opts: { dev: boolean; managedDispatch?: boolean };
@@ -1070,7 +1070,7 @@ describe('default-target dev parity', () => {
       });
       const res = await app.fetch(
         new Request('http://localhost/probe', {
-          headers: { 'X-Nosam-Original-URL': 'http://localhost/spoof' },
+          headers: { 'X-Platform-Original-URL': 'http://localhost/spoof' },
         }),
         {},
         executionContext,

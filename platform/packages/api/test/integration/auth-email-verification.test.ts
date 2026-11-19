@@ -780,8 +780,8 @@ describe('email verification gating on account linking', () => {
     // has fully committed before the auto-add gets its answer.
     const emailEnv = () => ({
       ...env,
-      EMAIL_GATEWAY_ORIGIN: 'https://nosam-email-gateway-staging.voidzer0.workers.dev',
-      EMAIL_SENDER_DOMAIN: 'mail.voidcloud.dev',
+      EMAIL_GATEWAY_ORIGIN: 'https://platform-email-gateway-staging.voidzer0.workers.dev',
+      EMAIL_SENDER_DOMAIN: 'mail.staging.buildwf.dev',
     });
 
     function stubEmailRoutingOver(

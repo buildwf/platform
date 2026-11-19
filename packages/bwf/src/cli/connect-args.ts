@@ -2,7 +2,7 @@ import { parseArgs } from 'node:util';
 
 export type ConnectArgs = {
   url: string;
-  platform: 'cloudflare' | 'nosam' | null;
+  platform: 'cloudflare' | 'platform' | null;
   noLogin: boolean;
 };
 
@@ -20,7 +20,7 @@ export function parseConnectArgs(args: Array<string>): ConnectArgs {
     throw new Error('connect: Expected at most one platform URL.');
   }
   const platform = values.platform ?? null;
-  if (platform !== null && platform !== 'cloudflare' && platform !== 'nosam') {
+  if (platform !== null && platform !== 'cloudflare' && platform !== 'platform') {
     throw new Error('connect: --platform must be cloudflare or bwf.');
   }
   if (platform === 'cloudflare' && (positionals.length > 0 || values['no-login'])) {

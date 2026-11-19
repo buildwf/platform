@@ -18,11 +18,11 @@ import {
  * → `manifest.assetConfig`) and applies it to the uploaded script, so settings the
  * Vite plugin cannot safely write into the built wrangler config — `routing.notFound`
  * for a Class A framework, which needs an `assets` policy bwf does not own there —
- * are still honored on this path. `nosam:framework-build-wrapper` warns about exactly
+ * are still honored on this path. `platform:framework-build-wrapper` warns about exactly
  * those when this flag is ABSENT, i.e. on a self-hosted `vite build && wrangler deploy`.
  *
  * Passed through the CHILD env only (never `process.env`), the same way
- * `NOSAM_DEPLOY_PROJECT_ID` is, so it cannot leak into an unrelated child process or a
+ * `PLATFORM_DEPLOY_PROJECT_ID` is, so it cannot leak into an unrelated child process or a
  * later `bwf dev` in the same shell.
  *
  * Deliberately NOT set by `runCloudflareDeploy` (`--platform cloudflare`): that flow
@@ -33,7 +33,7 @@ export const MANAGED_DEPLOY_BUILD_ENV = { BWF_DEPLOY_BUILD: '1' } as const;
 
 /** Remove managed-only build markers from an explicit native Cloudflare child. */
 export function scrubManagedDeployBuildMarkers(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  deleteEnvVarCaseAware(env, 'NOSAM_DEPLOY_PROJECT_ID');
+  deleteEnvVarCaseAware(env, 'PLATFORM_DEPLOY_PROJECT_ID');
   deleteEnvVarCaseAware(env, CLOUDFLARE_PRESERVE_BINDINGS_BUILD_ENV);
   for (const name of Object.keys(MANAGED_DEPLOY_BUILD_ENV)) {
     deleteEnvVarCaseAware(env, name);

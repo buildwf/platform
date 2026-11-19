@@ -13,7 +13,7 @@ vi.mock('../../src/cli/preset.ts', () => ({
 
 let root: string;
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'nosam-platform-auth-process-'));
+  root = mkdtempSync(join(tmpdir(), 'platform-auth-process-'));
   vi.stubEnv('CLOUDFLARE_API_TOKEN', '');
   vi.stubEnv('CF_API_TOKEN', '');
 });
@@ -25,13 +25,13 @@ afterEach(() => {
 
 describe('non-blocking platform auth processes', () => {
   it('captures credential output and scrubs unrelated secrets from command environments', async () => {
-    vi.stubEnv('NOSAM_PLATFORM_RECOVERY_KEY', 'synthetic-recovery-secret');
+    vi.stubEnv('PLATFORM_RECOVERY_KEY', 'synthetic-recovery-secret');
     vi.stubEnv('DATABASE_URL', 'synthetic-database-secret');
     fixture.source = `
       process.stdout.write(JSON.stringify({ operationResult: 1, data: {
         operation: JSON.parse(process.argv[1]),
         sanitize: process.env.WRANGLER_LOG_SANITIZE,
-        recovery: process.env.NOSAM_PLATFORM_RECOVERY_KEY,
+        recovery: process.env.PLATFORM_RECOVERY_KEY,
         database: process.env.DATABASE_URL,
       }}));
     `;

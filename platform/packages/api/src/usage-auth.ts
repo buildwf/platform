@@ -17,7 +17,7 @@ export type SignedUsageEnvelope<T = unknown> = Readonly<{
 }>;
 
 const encoder = new TextEncoder();
-const DERIVATION_CONTEXT = 'nosam-platform:usage-events:v1';
+const DERIVATION_CONTEXT = 'platform:usage-events:v1';
 
 function base64url(bytes: ArrayBuffer): string {
   let binary = '';

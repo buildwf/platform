@@ -4,7 +4,7 @@ import { getSandbox, type SandboxClient } from '@builtbyfriends/bwf/sandbox';
 import { sampleRequests } from '../../lib/sandbox-demo.ts';
 
 const MAX_CODE_LENGTH = 8_000;
-const WORKDIR = '/workspace/nosam-kitchen-sink-code-lab';
+const WORKDIR = '/workspace/platform-kitchen-sink-code-lab';
 
 const RUNNER = `import { readFile, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";

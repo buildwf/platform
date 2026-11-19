@@ -228,12 +228,12 @@ describe('Sandbox migration storage identity', () => {
           durable_objects: { bindings: [{ name: 'SANDBOX', class_name: 'Sandbox' }] },
           containers: [
             {
-              name: 'nosam-sandbox',
+              name: 'platform-sandbox',
               class_name: 'Sandbox',
               image: 'docker.io/cloudflare/sandbox:0.12.10',
             },
           ],
-          migrations: [{ tag: 'void-sandbox-v1', new_sqlite_classes: ['Sandbox'] }],
+          migrations: [{ tag: 'platform-sandbox-v1', new_sqlite_classes: ['Sandbox'] }],
         },
         sandbox,
       ),

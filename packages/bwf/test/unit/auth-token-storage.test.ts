@@ -18,7 +18,7 @@ describe('auth token storage', () => {
     process.env.BWF_API_URL = 'https://other.example.com';
     savePlatformToken('secret-token', 'https://platform.example.com');
     expect(keyringWrite).toHaveBeenCalledWith(
-      'dev.nosam.cli',
+      'dev.platform.cli',
       platformCredentialAccount('https://platform.example.com'),
       'secret-token',
     );

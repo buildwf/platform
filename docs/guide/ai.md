@@ -71,7 +71,7 @@ export const POST = defineHandler(async (c) => {
 });
 ```
 
-Streaming responses end with a `nosam:error` SSE event if generation is interrupted after the response starts, or `nosam:limit` for a usage limit. `fetchStream()` from `@builtbyfriends/bwf/client` throws `UsageLimit` for limits before or during streaming and `StreamError` for other terminal errors. Catch the error in your UI to stop its generating state, retain partial output, and offer retry. This also applies to streaming provider responses and `ai.run()` with `stream: true`.
+Streaming responses end with a `platform:error` SSE event if generation is interrupted after the response starts, or `platform:limit` for a usage limit. `fetchStream()` from `@builtbyfriends/bwf/client` throws `UsageLimit` for limits before or during streaming and `StreamError` for other terminal errors. Catch the error in your UI to stop its generating state, retain partial output, and offer retry. This also applies to streaming provider responses and `ai.run()` with `stream: true`.
 
 ## Listing Models
 

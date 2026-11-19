@@ -102,7 +102,7 @@ describe('playground/websockets', () => {
           stdio: ['ignore', 'pipe', 'pipe'],
           env: {
             ...process.env,
-            VITE_NOSAM_NOTIFICATION_STREAM_DELAY_MS: '10',
+            VITE_PLATFORM_NOTIFICATION_STREAM_DELAY_MS: '10',
             BWF_INSPECTOR_PORT: 'false',
           },
         },
@@ -123,7 +123,7 @@ describe('playground/websockets', () => {
       ]),
     );
     expect(config.migrations).toContainEqual({
-      tag: 'void-ws-v1',
+      tag: 'platform-ws-v1',
       new_sqlite_classes: ['WsChatRoomWs', 'WsNotificationsWs'],
     });
     expect(

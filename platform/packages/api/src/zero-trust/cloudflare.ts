@@ -640,7 +640,7 @@ export function publicAppManagementDestination(apiUrl: string): string {
   if (url.protocol !== 'https:' || url.username || url.password) {
     throw new Error('Public app management requires an HTTPS dispatch origin.');
   }
-  return url.host + '/__nosam/app-access-management';
+  return url.host + '/__platform/app-access-management';
 }
 
 export function publicAppManagementApplication(

@@ -10,7 +10,7 @@ export type Props = Readonly<{
 export const loader = defineHandler<Props>(async (context) => {
   let platformName = 'Platform';
   try {
-    const response = await fetchApi(context, '/.well-known/nosam-platform');
+    const response = await fetchApi(context, '/.well-known/platform');
     if (response.ok) {
       platformName = discoveryDisplayName((await response.json()) as { displayName?: unknown });
     }

@@ -1,8 +1,8 @@
 import { DropdownMenu } from '@astryxdesign/core/DropdownMenu';
 import { CircleUserRound } from 'lucide-react';
 import type { ReactNode } from 'react';
-import logoDark from '../assets/logos/nosam-dark.svg';
-import logoLight from '../assets/logos/nosam-light.svg';
+import logoDark from '../assets/logos/platform-dark.svg';
+import logoLight from '../assets/logos/platform-light.svg';
 
 const EXTERNAL_URL_RE = /^(?:[a-z]+:|\/\/)/i;
 

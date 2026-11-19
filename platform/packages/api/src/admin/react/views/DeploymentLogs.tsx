@@ -263,7 +263,7 @@ export function DeploymentLogs({
   return (
     <SectionStack>
       <h2>Runtime Logs</h2>
-      <div className="nosam-admin-inline-form">
+      <div className="platform-admin-inline-form">
         <Selector
           id="log-since"
           label="Time"

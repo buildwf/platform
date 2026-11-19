@@ -197,7 +197,7 @@ export function isDevTriggerSecretRequest(url: string | undefined): boolean {
  */
 export function devTriggerSecretGuardPlugin(): Plugin {
   return {
-    name: 'nosam:dev-trigger-secret-guard',
+    name: 'platform:dev-trigger-secret-guard',
     apply: 'serve',
     enforce: 'pre',
     configureServer(server) {

@@ -11,7 +11,7 @@ These commands apply to a platform that enables email. Every project can send fr
 
 Shared inbound mail uses one exact routing rule per receiving project and enables Cloudflare’s per-zone plus addressing. Creating a project or deploying an app that only sends mail consumes no inbound rule. Existing rules and the apex catch-all remain in place. Cloudflare normally allows [200 routing rules per domain](https://developers.cloudflare.com/email-service/platform/limits/); remove unused rules or request a higher limit if the shared domain reaches capacity. An unrelated rule for a project’s base address or a plus address blocks its setup until that conflict is removed.
 
-A project owner can set a permanent, shorter address with [`bwf email alias <name>`](../../../reference/cli/email.md#nosam-email-alias). Receiving mail at both the slug and alias uses two routing rules. Resolve conflicting rules and check the domain's rule limit before adding an alias.
+A project owner can set a permanent, shorter address with [`bwf email alias <name>`](../../../reference/cli/email.md#platform-email-alias). Receiving mail at both the slug and alias uses two routing rules. Resolve conflicting rules and check the domain's rule limit before adding an alias.
 
 If recipient creation is interrupted, inspect its retained intent:
 

@@ -15,7 +15,7 @@ import type { ApiEnv } from '../env.ts';
 const app = new Hono<ApiEnv>();
 
 app.use('*', async (context, next) => {
-  const signature = context.req.header('x-nosam-internal');
+  const signature = context.req.header('x-platform-internal');
   if (!signature) {
     return context.json({ error: 'invalid internal auth' }, 403);
   }

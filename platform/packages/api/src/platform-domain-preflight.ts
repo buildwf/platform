@@ -7,7 +7,7 @@ export async function platformDomainPreflight(context: Context<ApiEnv>): Promise
   const token = context.env.PLATFORM_HEALTH_PROBE_TOKEN;
   if (
     !token ||
-    context.req.header('X-Nosam-Platform-Probe') !== token ||
+    context.req.header('X-Platform-Probe') !== token ||
     !context.env.PLATFORM_APPLICATION ||
     !context.env.PLATFORM_INSTALLATION_ID
   ) {
@@ -36,7 +36,7 @@ export async function platformDomainPreflight(context: Context<ApiEnv>): Promise
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          files: [`https://${domain}/.well-known/nosam-domain-check/${crypto.randomUUID()}`],
+          files: [`https://${domain}/.well-known/platform-domain-check/${crypto.randomUUID()}`],
         }),
       },
     );

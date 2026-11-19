@@ -9,12 +9,12 @@ import { withPlatformDiscovery } from '../helpers/platform-discovery.ts';
 const roots: Array<string> = [];
 
 afterEach(() => {
-  delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+  delete process.env.PLATFORM_REGISTRY_DIR;
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   delete process.env.BWF_TOKEN;
   delete process.env.BWF_API_URL;
-  delete process.env.NOSAM_ACCESS_ORIGIN;
+  delete process.env.PLATFORM_ACCESS_ORIGIN;
   delete process.env.CF_ACCESS_CLIENT_ID;
   delete process.env.CF_ACCESS_CLIENT_SECRET;
   for (const root of roots.splice(0)) {
@@ -23,9 +23,9 @@ afterEach(() => {
 });
 
 function projectRoot() {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-project-token-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-project-token-'));
   roots.push(root);
-  process.env.NOSAM_PLATFORM_REGISTRY_DIR = join(root, 'registry');
+  process.env.PLATFORM_REGISTRY_DIR = join(root, 'registry');
   savePlatformConnection({
     accountId: null,
     apiUrl: 'https://api.example.test',
@@ -39,7 +39,7 @@ function projectRoot() {
   writeFileSync(
     join(root, '.bwf/project.json'),
     JSON.stringify({
-      platform: 'nosam',
+      platform: 'platform',
       platformUrl: 'https://api.example.test',
       projectId: 'project-1',
       slug: 'app',
@@ -53,7 +53,7 @@ describe('project token command', () => {
     const root = projectRoot();
     process.env.BWF_TOKEN = 'human-token';
     process.env.BWF_API_URL = 'https://api.example.test';
-    process.env.NOSAM_ACCESS_ORIGIN = 'https://api.example.test';
+    process.env.PLATFORM_ACCESS_ORIGIN = 'https://api.example.test';
     process.env.CF_ACCESS_CLIENT_ID = 'access-id';
     process.env.CF_ACCESS_CLIENT_SECRET = 'access-secret';
     const request = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>

@@ -26,7 +26,7 @@ vi.mock('@voidzero-dev/vite-plus-prompts', async (importOriginal) => {
   };
 });
 
-const DOMAIN = 'mail.nosam.test';
+const DOMAIN = 'mail.platform.test';
 
 function settings(overrides: Partial<EmailSettingsResponse> = {}): EmailSettingsResponse {
   return {

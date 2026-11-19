@@ -11,7 +11,7 @@ import { defineEnv } from '../../src/runtime/env-public.ts';
 const roots: Array<string> = [];
 
 function createTempProject(opts?: { withEnvTs?: boolean }): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-deploy-env-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-deploy-env-'));
   roots.push(root);
   if (opts?.withEnvTs !== false) {
     writeFileSync(join(root, 'env.ts'), 'export default {};\n');
@@ -143,22 +143,22 @@ describe('validateProdEnv — deploy-time schema enforcement', () => {
     expect(formatted).toContain('VITE_PORT');
   });
 
-  it('rejects reserved __NOSAM_ names in .env for a local check, with or without env.ts', async () => {
+  it('rejects reserved __PLATFORM_ names in .env for a local check, with or without env.ts', async () => {
     for (const withEnvTs of [true, false]) {
       const root = createTempProject({ withEnvTs });
       writeDotenv(
         root,
         '.env',
-        'API_URL=http://localhost\n__NOSAM_PROXY_TOKEN=x\n__NOSAM_EMAIL_FROM=y\n',
+        'API_URL=http://localhost\n__PLATFORM_PROXY_TOKEN=x\n__PLATFORM_EMAIL_FROM=y\n',
       );
 
       const error = await validateProdEnv(root, { productionOnly: false }).catch((e: Error) => e);
       expect(error).toBeInstanceOf(Error);
       expect((error as Error).message).toContain(
-        '.env defines names reserved for bwf: __NOSAM_PROXY_TOKEN, __NOSAM_EMAIL_FROM.',
+        '.env defines names reserved for bwf: __PLATFORM_PROXY_TOKEN, __PLATFORM_EMAIL_FROM.',
       );
       expect((error as Error).message).toContain('bwf sets these itself');
-      expect((error as Error).message).toContain('x-nosam-dev-trigger header printed at dev start');
+      expect((error as Error).message).toContain('x-platform-dev-trigger header printed at dev start');
     }
   });
 
@@ -167,17 +167,17 @@ describe('validateProdEnv — deploy-time schema enforcement', () => {
     writeDotenv(
       root,
       '.env',
-      'API_URL=http://localhost\nexport __NOSAM_PROXY_TOKEN=x\n__NOSAM_EMAIL_FROM: a@b.c\n',
+      'API_URL=http://localhost\nexport __PLATFORM_PROXY_TOKEN=x\n__PLATFORM_EMAIL_FROM: a@b.c\n',
     );
 
     await expect(validateProdEnv(root, { productionOnly: false })).rejects.toThrow(
-      '.env defines names reserved for bwf: __NOSAM_PROXY_TOKEN, __NOSAM_EMAIL_FROM.',
+      '.env defines names reserved for bwf: __PLATFORM_PROXY_TOKEN, __PLATFORM_EMAIL_FROM.',
     );
   });
 
-  it('ignores __NOSAM_ in a .env comment or value', async () => {
+  it('ignores __PLATFORM_ in a .env comment or value', async () => {
     const root = createTempProject({ withEnvTs: false });
-    writeDotenv(root, '.env', '# __NOSAM_X=1\nAPI_URL=http://localhost/__NOSAM_X\n');
+    writeDotenv(root, '.env', '# __PLATFORM_X=1\nAPI_URL=http://localhost/__PLATFORM_X\n');
 
     await expect(validateProdEnv(root, { productionOnly: false })).resolves.toMatchObject({
       hasSchema: false,
@@ -186,7 +186,7 @@ describe('validateProdEnv — deploy-time schema enforcement', () => {
 
   it('does not read .env names during production validation', async () => {
     const root = createTempProject({ withEnvTs: false });
-    writeDotenv(root, '.env', '__NOSAM_PROXY_TOKEN=x\n');
+    writeDotenv(root, '.env', '__PLATFORM_PROXY_TOKEN=x\n');
 
     await expect(validateProdEnv(root, { productionOnly: true })).resolves.toMatchObject({
       hasSchema: false,
@@ -197,20 +197,20 @@ describe('validateProdEnv — deploy-time schema enforcement', () => {
     const root = createTempProject();
     defineEnv({ STRIPE_KEY: string() });
     writeDotenv(root, '.env', 'STRIPE_KEY=sk_dev\n');
-    vi.stubEnv('__NOSAM_PROXY_TOKEN', 'shell');
+    vi.stubEnv('__PLATFORM_PROXY_TOKEN', 'shell');
 
     const { report } = await validateProdEnv(root, { productionOnly: false });
     expect(report.valid).toBe(true);
   });
 
   it.each([false, true])(
-    'rejects reserved __NOSAM_ names declared in env.ts (productionOnly: %s)',
+    'rejects reserved __PLATFORM_ names declared in env.ts (productionOnly: %s)',
     async (productionOnly) => {
       const root = createTempProject();
-      defineEnv({ STRIPE_KEY: string(), __NOSAM_TOKEN: string().optional() });
+      defineEnv({ STRIPE_KEY: string(), __PLATFORM_TOKEN: string().optional() });
 
       await expect(validateProdEnv(root, { productionOnly })).rejects.toThrow(
-        'env.ts declares names reserved for bwf: __NOSAM_TOKEN.',
+        'env.ts declares names reserved for bwf: __PLATFORM_TOKEN.',
       );
     },
   );

@@ -19,11 +19,11 @@ describe('resolveAssetConfig', () => {
   const NONE = { not_found_handling: 'none' as const, run_worker_first: ['/**'] };
   const SPA = {
     not_found_handling: 'single-page-application' as const,
-    run_worker_first: ['/__nosam', '/__nosam/*'],
+    run_worker_first: ['/__platform', '/__platform/*'],
   };
   const SPA_API = {
     not_found_handling: 'single-page-application' as const,
-    run_worker_first: ['/api', '/api/*', '/__nosam', '/__nosam/*'],
+    run_worker_first: ['/api', '/api/*', '/__platform', '/__platform/*'],
   };
 
   it('keeps SPA handling when the project only has API routes', () => {
@@ -169,7 +169,7 @@ describe('resolveAssetConfig', () => {
 
 // `routing.notFound` overrides only `not_found_handling`; worker-first routing stays inferred.
 describe('resolveAssetRoutingPolicy — routing.notFound override', () => {
-  const SPA_API_WORKER_FIRST = ['/api', '/api/*', '/__nosam', '/__nosam/*'];
+  const SPA_API_WORKER_FIRST = ['/api', '/api/*', '/__platform', '/__platform/*'];
 
   const ssgWithApi = {
     hasApiRoutes: true,
@@ -209,7 +209,7 @@ describe('resolveAssetRoutingPolicy — routing.notFound override', () => {
     } as const;
     expect(resolveAssetRoutingPolicy({ ...inputs, notFound: 'none' }).assetConfig).toEqual({
       not_found_handling: 'none',
-      run_worker_first: ['/__nosam', '/__nosam/*'],
+      run_worker_first: ['/__platform', '/__platform/*'],
     });
   });
 

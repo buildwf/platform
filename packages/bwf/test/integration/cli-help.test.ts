@@ -10,7 +10,7 @@ const CLI_ENTRY = join(PACKAGE_ROOT, 'dist', 'cli', 'cli.mjs');
 const roots: Array<string> = [];
 
 function createProject(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-cli-help-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-cli-help-'));
   roots.push(root);
   return root;
 }
@@ -65,7 +65,7 @@ describe('bwf help (subprocess)', () => {
     const account = runBwf(root, ['account', '--help']);
     expect(auth.status).toBe(0);
     expect(auth.output).toContain('bwf auth <login|status|logout>');
-    expect(auth.output).toContain('--platform <cloudflare|nosam>');
+    expect(auth.output).toContain('--platform <cloudflare|platform>');
     expect(account.status).toBe(0);
     expect(account.output).toContain('bwf account <command>');
     expect(account.output).toContain('link [connection-id]');

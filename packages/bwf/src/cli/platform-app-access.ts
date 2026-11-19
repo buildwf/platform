@@ -119,7 +119,7 @@ export async function prepareInstallationAppAccess(input: {
   const explicitToken =
     (input.authentication.file?.appAccess?.tokenEnv
       ? process.env[input.authentication.file.appAccess.tokenEnv]
-      : undefined) || process.env.NOSAM_PLATFORM_APP_ACCESS_TOKEN;
+      : undefined) || process.env.PLATFORM_APP_ACCESS_TOKEN;
   if (explicitToken && /\s/.test(explicitToken)) {
     throw new Error('platform: App access tokens must not contain whitespace.');
   }
@@ -153,7 +153,7 @@ export async function prepareInstallationAppAccess(input: {
   const setupAccount = setupSpec?.accountId ?? input.plan.account.id;
   const reusable =
     setupAccount === input.plan.account.id
-      ? process.env.NOSAM_PLATFORM_ACCESS_SETUP_TOKEN ||
+      ? process.env.PLATFORM_ACCESS_SETUP_TOKEN ||
         input.checkpoint.accessManagementToken ||
         input.managementToken
       : input.managementToken;
@@ -175,7 +175,7 @@ export async function prepareInstallationAppAccess(input: {
   const collectToken = async () => {
     if (!process.stdin.isTTY) {
       throw new Error(
-        'platform: App access requires NOSAM_PLATFORM_APP_ACCESS_TOKEN or appAccess.tokenEnv in --auth-config, scoped to the hosting account.',
+        'platform: App access requires PLATFORM_APP_ACCESS_TOKEN or appAccess.tokenEnv in --auth-config, scoped to the hosting account.',
       );
     }
     tokenPage();
@@ -389,8 +389,8 @@ export async function initializeInstalledAppAccess(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Nosam-Platform-Probe': input.probeToken,
-        'X-Nosam-App-Access-Setup': signature,
+        'X-Platform-Probe': input.probeToken,
+        'X-Platform-App-Access-Setup': signature,
         ...cfAccessHeaders(process.env, input.apiUrl),
       },
       body: input.setupJson,
@@ -456,8 +456,8 @@ export async function turnOffInstalledProjectZeroTrust(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Nosam-Platform-Probe': input.probeToken,
-      'X-Nosam-App-Access-Setup': signature,
+      'X-Platform-Probe': input.probeToken,
+      'X-Platform-App-Access-Setup': signature,
       ...cfAccessHeaders(process.env, input.apiUrl),
     },
     body,

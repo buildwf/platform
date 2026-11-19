@@ -29,7 +29,7 @@ const ttyDescriptor = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
 
 beforeEach(() => {
   vi.mocked(confirm).mockReset();
-  root = mkdtempSync(join(tmpdir(), 'nosam-init-git-'));
+  root = mkdtempSync(join(tmpdir(), 'platform-init-git-'));
   vi.stubEnv('CI', '');
   Object.defineProperty(process.stdin, 'isTTY', { configurable: true, get: () => true });
 });

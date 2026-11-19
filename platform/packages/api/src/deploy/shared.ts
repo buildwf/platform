@@ -10,7 +10,7 @@ import { isCfAssetPlainText } from './migrations.ts';
 // JSON-mode deploy share the same cap for symmetry.
 export const MAX_UPLOAD_URLS_BATCH = 5000;
 
-export const DEFAULT_TAIL_SERVICE_NAME = 'nosam-tail';
+export const DEFAULT_TAIL_SERVICE_NAME = 'platform-tail';
 
 /**
  * Observability metadata for a project Worker upload. Minimal runtime logs

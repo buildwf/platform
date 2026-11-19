@@ -83,7 +83,7 @@ const SCAFFOLD_STARTER_MODES: ReadonlyArray<ScaffoldStarterMode> = [
   'mysql',
   'spa',
 ];
-const DEPLOYMENT_PLATFORMS: ReadonlyArray<DeploymentPlatform> = ['cloudflare', 'nosam', 'none'];
+const DEPLOYMENT_PLATFORMS: ReadonlyArray<DeploymentPlatform> = ['cloudflare', 'platform', 'none'];
 
 function parseChoice<T extends string>(
   flag: string,
@@ -230,7 +230,7 @@ function isStarterScriptCommand(value: unknown): boolean {
   return typeof value === 'string' && EMPTY_PROJECT_STARTER_SCRIPT_COMMANDS.has(value);
 }
 
-// Only `nosam` and the React plugin may be a preinstall (`pnpm add -D void @vitejs/plugin-react`);
+// Only `platform` and the React plugin may be a preinstall (`pnpm add -D void @vitejs/plugin-react`);
 // other starter packages such as `vite` or `react` also require the plugin, which only the
 // starter adds, so an existing Vite app is not mistaken for a deleted starter.
 const EMPTY_PROJECT_STARTER_MARKER = '@vitejs/plugin-react';
@@ -625,7 +625,7 @@ async function resolveInitRoot(root: string): Promise<string> {
     return root;
   }
 
-  const defaultFolder = 'my-nosam-app';
+  const defaultFolder = 'my-platform-app';
   const folder = await text({
     message: 'New project folder name:',
     placeholder: defaultFolder,
@@ -729,7 +729,7 @@ function hasAncestorPnpmMarkers(start: string): boolean {
 }
 
 /**
- * Whether `nosam` resolves from `start`, through an ancestor `node_modules`
+ * Whether `platform` resolves from `start`, through an ancestor `node_modules`
  * (hoisted workspace installs) or an installed Yarn PnP runtime.
  */
 export function isBwfResolvableFrom(start: string): boolean {
@@ -1576,8 +1576,8 @@ async function promptDeploymentPlatform(
         hint: 'Deploy to your own Cloudflare account. (default)',
       },
       {
-        value: 'nosam',
-        label: current === 'nosam' ? 'bwf [current]' : 'Platform',
+        value: 'platform',
+        label: current === 'platform' ? 'bwf [current]' : 'Platform',
         hint: "Deploy to your company's bwf Platform.",
       },
       {
@@ -1719,7 +1719,7 @@ export function getWorkflowYaml(
   root: string,
   pm: ProjectState['packageManager'],
   slug: string | null,
-  platform: 'cloudflare' | 'nosam' = 'nosam',
+  platform: 'cloudflare' | 'platform' = 'platform',
   platformApiUrl?: string,
 ): string {
   const { setup, install, runner } = getWorkflowSetupSteps(root, pm);
@@ -1730,7 +1730,7 @@ on:
     branches: [main]
 
 concurrency:
-  group: nosam-cloudflare-deploy-\${{ github.repository }}-\${{ github.ref }}
+  group: platform-cloudflare-deploy-\${{ github.repository }}-\${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -1780,7 +1780,7 @@ on:
 # workflow-level concurrency cannot read the \`env\` context, so BWF_PROJECT is
 # not used here (one repo+branch deploys to one project in this scaffold).
 concurrency:
-  group: nosam-deploy-\${{ github.repository }}-\${{ github.ref }}
+  group: platform-deploy-\${{ github.repository }}-\${{ github.ref }}
   cancel-in-progress: true
 
 # id-token: write lets the job mint a GitHub OIDC token. No long-lived
@@ -1812,7 +1812,7 @@ ${install}
 function setupGithubActions(
   root: string,
   state: ProjectState,
-  platform: 'cloudflare' | 'nosam' = 'nosam',
+  platform: 'cloudflare' | 'platform' = 'platform',
   platformApiUrl?: string,
 ): void {
   const workflowDir = join(root, '.github', 'workflows');
@@ -2448,7 +2448,7 @@ function demoFiles(root: string): { schema: string; route: string; client: strin
 
 /**
  * Scaffolds the "SQL → types → handler → fetch" demo into an existing project.
- * `setupExistingProject` has already declared `nosam` in `package.json`.
+ * `setupExistingProject` has already declared `platform` in `package.json`.
  * The caller skips the demo when any of its files exists, so these writes never replace user code.
  */
 function scaffoldDemo(root: string, dialect: DatabaseDialect): void {
@@ -2506,9 +2506,9 @@ console.log(posts);
 const MARKER_VERSION_SOURCE =
   String.raw`\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?` +
   String.raw`(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?`;
-const MARKER_CLOSE = '<!--/injected-by-nosam-->';
+const MARKER_CLOSE = '<!--/injected-by-platform-->';
 const MARKER_BLOCK_RE = new RegExp(
-  String.raw`^<!--injected-by-nosam-v${MARKER_VERSION_SOURCE}-->\r?\n[\s\S]*?^<!--\/injected-by-nosam-->\r?$`,
+  String.raw`^<!--injected-by-platform-v${MARKER_VERSION_SOURCE}-->\r?\n[\s\S]*?^<!--\/injected-by-platform-->\r?$`,
   'm',
 );
 
@@ -2517,7 +2517,7 @@ async function injectAgentBlock(root: string, newProject: boolean): Promise<void
   const fullPath = join(root, filePath);
   const version = getOwnVersion();
   const template = readFileSync(join(getPackageDir(), 'AGENTS_TEMPLATE.md'), 'utf-8');
-  const openMarker = `<!--injected-by-nosam-v${version}-->`;
+  const openMarker = `<!--injected-by-platform-v${version}-->`;
   const block = `${openMarker}\n${template}\n${MARKER_CLOSE}`;
   const existing = existsSync(fullPath) ? readFileSync(fullPath, 'utf-8') : null;
   const managedBlock = existing?.match(MARKER_BLOCK_RE);
@@ -2759,7 +2759,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
   if (!targeted && deploymentPlatform === 'cloudflare') {
     await setupCloudflareDeployment(root);
   }
-  if (!targeted && deploymentPlatform === 'nosam') {
+  if (!targeted && deploymentPlatform === 'platform') {
     bwfPlatformDiscovery = await ensureBwfPlatformConnection(root);
   }
 
@@ -2791,7 +2791,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
       setupGithubActions(
         root,
         state,
-        deploymentPlatform === 'cloudflare' ? 'cloudflare' : 'nosam',
+        deploymentPlatform === 'cloudflare' ? 'cloudflare' : 'platform',
         bwfPlatformDiscovery?.apiUrl,
       );
     } else {
@@ -2806,7 +2806,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
         setupGithubActions(
           root,
           state,
-          deploymentPlatform === 'cloudflare' ? 'cloudflare' : 'nosam',
+          deploymentPlatform === 'cloudflare' ? 'cloudflare' : 'platform',
           bwfPlatformDiscovery?.apiUrl,
         );
       }
@@ -2836,7 +2836,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
     generateStarterMigration(root, scaffoldedStarterMode);
   }
 
-  if (!targeted && deploymentPlatform === 'nosam') {
+  if (!targeted && deploymentPlatform === 'platform') {
     const linked = await maybeSetupDeployProject(root);
     // The workflow was written before linking, with a placeholder slug.
     if (linked?.slug) {

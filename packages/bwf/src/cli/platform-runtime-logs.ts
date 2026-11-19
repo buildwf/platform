@@ -3,9 +3,9 @@ import type { PlatformCloudflareClient } from './platform-cloudflare.ts';
 
 /**
  * Namespace scripts that run project code: one `user-<slug>-<deployment>` per
- * deployment, and `void-do-<project>-<hash>` (or `nosam-do-`) hosts for custom Durable Objects.
+ * deployment, and `void-do-<project>-<hash>` (or `platform-do-`) hosts for custom Durable Objects.
  */
-const PROJECT_WORKER_PREFIXES = ['user-', 'void-do-', 'nosam-do-'];
+const PROJECT_WORKER_PREFIXES = ['user-', 'void-do-', 'platform-do-'];
 const CONCURRENCY = 4;
 
 /** Printed by log readers when the platform answers `runtimeLogs: 'minimal'`. */

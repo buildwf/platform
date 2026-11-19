@@ -12,7 +12,7 @@ const SANDBOX_SDK_IMPORT = '@cloudflare/sandbox';
 
 const SANDBOX_SDK_IMPORT_FILTER = /^@cloudflare\/sandbox$/;
 
-export const DEFAULT_WORKER_ENVIRONMENT_NAME = 'nosam_worker';
+export const DEFAULT_WORKER_ENVIRONMENT_NAME = 'platform_worker';
 
 const DEFAULT_WORKER_OUT_DIR = 'dist/ssr';
 
@@ -31,7 +31,7 @@ function resolveSandboxSdkEntry(): string {
 
 export function createCloudflareBuiltinsExternalPlugin(): Plugin {
   return {
-    name: 'nosam:cloudflare-builtins-external',
+    name: 'platform:cloudflare-builtins-external',
     config(_, env) {
       if (env.command !== 'build') {
         return;
@@ -49,13 +49,13 @@ export function createCloudflareBuiltinsExternalPlugin(): Plugin {
 }
 
 /**
- * Send a bare `nosam` import in server code to the handler helpers (`defineScheduled`,
+ * Send a bare `platform` import in server code to the handler helpers (`defineScheduled`,
  * `defineQueue`, ...), as bwf apps and the cron/queue deploy bundles do. The package entry is the
  * Vite plugin: loaded in a worker environment, it pulls Wrangler into the dependency optimizer.
  */
 export function createDefaultWorkerEnvironmentPlugin(): Plugin {
   return {
-    name: 'nosam:default-worker-environment',
+    name: 'platform:default-worker-environment',
     config(config) {
       const currentEnvironment = config.environments?.[DEFAULT_WORKER_ENVIRONMENT_NAME];
       return {
@@ -78,7 +78,7 @@ export function createWorkerEnvironmentSanitizerPlugin(
 ): Plugin {
   const names = new Set(environmentNames);
   return {
-    name: 'nosam:worker-environment-sanitizer',
+    name: 'platform:worker-environment-sanitizer',
     enforce: 'pre',
     configResolved(config) {
       for (const name of names) {
@@ -98,7 +98,7 @@ export function createSandboxSdkResolvePlugin(): Plugin {
   let resolved: string | undefined;
 
   return {
-    name: 'nosam:sandbox-sdk-resolve',
+    name: 'platform:sandbox-sdk-resolve',
     enforce: 'pre',
     resolveId: {
       filter: { id: SANDBOX_SDK_IMPORT_FILTER },
@@ -127,7 +127,7 @@ export function createWranglerCompatPersistPlugin(
   };
 
   return {
-    name: 'nosam:wrangler-compat-persist',
+    name: 'platform:wrangler-compat-persist',
     buildStart() {
       persist();
     },
@@ -145,7 +145,7 @@ const DATABASE_DRIVER_DEPS: Record<DatabaseDialect, Array<string>> = {
 };
 
 const NODE_BUILTIN = new RegExp(`^(?:node:)?(?:${builtinModules.join('|')})$`);
-const NODE_BUILTIN_REQUIRE_PREFIX = '\0nosam:node-require:';
+const NODE_BUILTIN_REQUIRE_PREFIX = '\0platform:node-require:';
 
 /**
  * The Node built-ins that workerd provides for the given compatibility settings, from the preset
@@ -179,7 +179,7 @@ export function createServerRuntimeOptimizerPlugin(
 ): Plugin {
   let workerdNodeBuiltins: Promise<Set<string>> | undefined;
   const serverRuntimeOptimizerPlugin: Plugin = {
-    name: 'nosam:server-runtime-optimizer',
+    name: 'platform:server-runtime-optimizer',
     configEnvironment(name, environment) {
       if (name === 'client') {
         return;
@@ -233,7 +233,7 @@ export function createServerRuntimeOptimizerPlugin(
     },
     load: {
       // oxlint-disable-next-line no-control-regex -- \0 prefix is Vite's virtual module convention
-      filter: { id: /^\0nosam:node-require:/ },
+      filter: { id: /^\0platform:node-require:/ },
       handler(id) {
         // A built-in's default export is its CommonJS exports, and `require` returns an ES
         // module's "module.exports" export.

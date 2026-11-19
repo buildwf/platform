@@ -9,7 +9,7 @@ import { bytesToBase64 } from './base64.ts';
 import { getRawRuntimeEnv, type RuntimeEnv } from './env-raw.ts';
 import { UsageLimit, limitFromResponse } from './limits.ts';
 
-const NOSAM_FILE_MARKER = '__nosamFile';
+const PLATFORM_FILE_MARKER = '__platformFile';
 
 // Per-provider auth header/prefix for the self-host direct gateway path. The
 // gateway passes provider auth through unchanged, so each entry mirrors the
@@ -30,7 +30,7 @@ const PROVIDER_AUTH_DEFAULTS: Record<string, { header: string; prefix: string }>
 };
 
 type SerializedFileInput = {
-  [NOSAM_FILE_MARKER]: true;
+  [PLATFORM_FILE_MARKER]: true;
   data: string;
   name?: string;
   type?: string;
@@ -123,7 +123,7 @@ async function serializeFormData(form: FormData): Promise<SerializedProviderBody
     entries.push({
       name,
       value: {
-        [NOSAM_FILE_MARKER]: true,
+        [PLATFORM_FILE_MARKER]: true,
         data: arrayBufferToBase64(await value.arrayBuffer()),
         name: fileNameFromBlob(value) ?? name,
         type: value.type || undefined,
@@ -242,7 +242,7 @@ function resolveProviderKey(
 }
 
 function getProxyUrl(runtimeEnv: RuntimeEnv): string {
-  const custom = runtimeEnv.__NOSAM_PROXY_URL;
+  const custom = runtimeEnv.__PLATFORM_PROXY_URL;
   if (typeof custom === 'string' && custom.length > 0) {
     return custom.replace(/\/+$/, '') + '/ai';
   }
@@ -309,14 +309,14 @@ function resolveBackend(): AiBackend {
   const runtimeEnv = getRawRuntimeEnv();
 
   // Priority 1: Service binding (production via bwf)
-  const proxy = runtimeEnv.__NOSAM_PROXY as Fetcher | undefined;
+  const proxy = runtimeEnv.__PLATFORM_PROXY as Fetcher | undefined;
   if (proxy) {
     return makeServiceBindingBackend(proxy, runtimeEnv);
   }
 
   // Priority 2: HTTPS to our proxy (local dev with bwf auth)
-  const token = runtimeEnv.__NOSAM_TOKEN;
-  const projectId = runtimeEnv.__NOSAM_PROJECT_ID;
+  const token = runtimeEnv.__PLATFORM_TOKEN;
+  const projectId = runtimeEnv.__PLATFORM_PROJECT_ID;
   if (typeof token === 'string' && typeof projectId === 'string') {
     return makeHttpBackend(token, projectId, runtimeEnv);
   }
@@ -325,13 +325,13 @@ function resolveBackend(): AiBackend {
   // wrangler config stamps custom binding names into a private runtime var;
   // default and managed deployments continue to use `AI`.
   const aiBindingName =
-    typeof runtimeEnv.__NOSAM_AI_BINDING === 'string' ? runtimeEnv.__NOSAM_AI_BINDING : 'AI';
+    typeof runtimeEnv.__PLATFORM_AI_BINDING === 'string' ? runtimeEnv.__PLATFORM_AI_BINDING : 'AI';
   const directAi = runtimeEnv[aiBindingName] as Ai | undefined;
   if (directAi) {
     return makeDirectBackend(
       directAi,
       runtimeEnv,
-      runtimeEnv.__NOSAM_AI_GATEWAY as string | undefined,
+      runtimeEnv.__PLATFORM_AI_GATEWAY as string | undefined,
     );
   }
 
@@ -437,7 +437,7 @@ function makeServiceBindingBackend(proxy: Fetcher, runtimeEnv: RuntimeEnv): AiBa
           action,
           ...payload,
           projectId: runtimeEnv.__PROJECT_ID,
-          aiToken: runtimeEnv.__NOSAM_PROXY_TOKEN,
+          aiToken: runtimeEnv.__PLATFORM_PROXY_TOKEN,
         }),
       }),
     runtimeEnv,
@@ -676,7 +676,7 @@ function streamResponse(body: ReadableStream): Response {
           }
           controller.enqueue(
             new TextEncoder().encode(
-              `event: ${limit ? 'nosam:limit' : 'nosam:error'}\ndata: ${JSON.stringify(data)}\n\n`,
+              `event: ${limit ? 'platform:limit' : 'platform:error'}\ndata: ${JSON.stringify(data)}\n\n`,
             ),
           );
           controller.close();

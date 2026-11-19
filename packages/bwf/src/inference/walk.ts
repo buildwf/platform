@@ -18,7 +18,7 @@ export type InferredBindings = {
 };
 
 // SEND_EMAIL is intentionally absent from inferred bindings: bwf owns that binding
-// (managed sends go through __NOSAM_PROXY/email/send; native Cloudflare deploys
+// (managed sends go through __PLATFORM_PROXY/email/send; native Cloudflare deploys
 // add SEND_EMAIL themselves), so the `@builtbyfriends/bwf/email` import (below) is the
 // sole driver of `needsEmail`.
 // Comments, bracket access and destructuring can separate env from a binding name.

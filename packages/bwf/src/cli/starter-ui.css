@@ -286,7 +286,7 @@ code {
   }
 }
 
-.message-form [data-nosam-form-error] {
+.message-form [data-platform-form-error] {
   color: var(--error);
   font-size: 14px;
 }

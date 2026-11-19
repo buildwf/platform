@@ -159,7 +159,7 @@ describe('email disabled on this platform', () => {
     );
     expect(document.status).toBe(200);
     const html = await adminHtml(document);
-    expect(html).toContain('nosam-admin-content');
+    expect(html).toContain('platform-admin-content');
     expect(html).toContain('Authentication');
     expect(html).toContain('Email is not enabled on this platform.');
     expect(html).toContain(
@@ -169,7 +169,7 @@ describe('email disabled on this platform', () => {
     for (const path of ['/admin/email', `/admin/email/${projectId}`]) {
       const page = await app.fetch(
         new Request(`http://localhost${path}`, {
-          headers: { ...headers, 'X-NosamPages': 'true' },
+          headers: { ...headers, 'X-PlatformPages': 'true' },
         }),
         bindings,
       );

@@ -128,7 +128,7 @@ describe('sendEmail (SEND_EMAIL binding)', () => {
     }
   });
 
-  it('is tried before __NOSAM_PROXY', async () => {
+  it('is tried before __PLATFORM_PROXY', async () => {
     const { binding, sent } = fakeSendBinding(() => ({ messageId: 'cf-1' }));
     const proxyCalls: Array<string> = [];
     const proxy = {
@@ -138,7 +138,7 @@ describe('sendEmail (SEND_EMAIL binding)', () => {
       },
     };
     const result = await withRuntimeEnv(
-      { SEND_EMAIL: binding, __NOSAM_PROXY: proxy, __NOSAM_PROXY_TOKEN: 't', __PROJECT_ID: 'p' },
+      { SEND_EMAIL: binding, __PLATFORM_PROXY: proxy, __PLATFORM_PROXY_TOKEN: 't', __PROJECT_ID: 'p' },
       () => sendEmail({ from: 'a@mail.acme.com', to: 'b@example.com', subject: 's', text: 't' }),
     );
     expect(result.ok).toBe(true);
@@ -161,10 +161,10 @@ describe('sendEmail (SEND_EMAIL binding)', () => {
     }
   });
 
-  it('defaults from to __NOSAM_EMAIL_FROM', async () => {
+  it('defaults from to __PLATFORM_EMAIL_FROM', async () => {
     const { binding, sent } = fakeSendBinding(() => ({ messageId: 'cf-1' }));
     const result = await withRuntimeEnv(
-      { SEND_EMAIL: binding, __NOSAM_EMAIL_FROM: 'noreply@mail.acme.com' },
+      { SEND_EMAIL: binding, __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' },
       () => sendEmail({ to: 'b@example.com', subject: 's', text: 't' }),
     );
     expect(result.ok).toBe(true);
@@ -368,7 +368,7 @@ describe('generated handleEmail on a native ForwardableEmailMessage', () => {
 
   it('enacts forward with its headers as a Headers instance', async () => {
     const handleEmail = buildHandleEmail(async (message) => {
-      await message.forward('ops@acme.com', new Headers({ 'X-Nosam-Trace': 'abc' }));
+      await message.forward('ops@acme.com', new Headers({ 'X-Platform-Trace': 'abc' }));
     });
     const { message, calls } = nativeMessage({
       from: 'sender@example.com',
@@ -381,7 +381,7 @@ describe('generated handleEmail on a native ForwardableEmailMessage', () => {
     expect(calls.forwards).toHaveLength(1);
     expect(calls.forwards[0].to).toBe('ops@acme.com');
     expect(calls.forwards[0].headers).toBeInstanceOf(Headers);
-    expect(calls.forwards[0].headers?.get('X-Nosam-Trace')).toBe('abc');
+    expect(calls.forwards[0].headers?.get('X-Platform-Trace')).toBe('abc');
   });
 
   it('enacts a forward recorded after parseEmail drained the native raw stream', async () => {
@@ -413,7 +413,7 @@ describe('generated handleEmail on a native ForwardableEmailMessage', () => {
       await message.forward('ops@acme.com');
       // The record form is a runtime affordance (JS handlers, or a cast):
       // `ForwardableEmailMessage.forward` is typed against `Headers`.
-      const record = { 'X-Nosam-Trace': 'abc\r\nBcc: leak@evil.test' } as unknown as Headers;
+      const record = { 'X-Platform-Trace': 'abc\r\nBcc: leak@evil.test' } as unknown as Headers;
       await message.forward('archive@acme.com', record);
     });
     const { message, calls } = nativeMessage({
@@ -447,7 +447,7 @@ describe('generated handleEmail on a native ForwardableEmailMessage', () => {
       mime: INBOUND_MIME,
     });
 
-    // No __NOSAM_PROJECT_SLUG: the reply sender is message.to itself.
+    // No __PLATFORM_PROJECT_SLUG: the reply sender is message.to itself.
     const actions = await handleEmail(message, {}, {});
 
     expect(calls.replies).toHaveLength(1);
@@ -470,18 +470,18 @@ describe('generated handleEmail on a native ForwardableEmailMessage', () => {
     });
     const { message, calls } = nativeMessage({
       from: 'sender@example.com',
-      to: 'acme+support@mail.void.cloud',
+      to: 'acme+support@mail.buildwf.dev',
       mime: INBOUND_MIME,
     });
 
     await handleEmail(
       message,
-      { __NOSAM_PROJECT_SLUG: 'acme', __NOSAM_EMAIL_DOMAIN: 'mail.void.cloud' },
+      { __PLATFORM_PROJECT_SLUG: 'acme', __PLATFORM_EMAIL_DOMAIN: 'mail.buildwf.dev' },
       {},
     );
 
     const reply = calls.replies[0] as InstanceType<typeof fake.FakeEmailMessage>;
-    expect(reply.from).toBe('acme+noreply@mail.void.cloud');
+    expect(reply.from).toBe('acme+noreply@mail.buildwf.dev');
   });
 
   it('hands the native setReject() the reason the platform router would send', async () => {
@@ -518,13 +518,13 @@ describe('generated handleEmail on a native ForwardableEmailMessage', () => {
     });
     const envelope = {
       from: 'sender@example.com',
-      to: 'acme+support@mail.void.cloud',
+      to: 'acme+support@mail.buildwf.dev',
       headers: {},
       raw: new TextEncoder().encode(INBOUND_MIME),
       rawSize: INBOUND_MIME.length,
     };
 
-    const actions = await handleEmail(envelope, { __NOSAM_PROJECT_SLUG: 'acme' }, {});
+    const actions = await handleEmail(envelope, { __PLATFORM_PROJECT_SLUG: 'acme' }, {});
 
     expect(actions).toEqual([{ type: 'reject', reason: 'spam' }]);
     expect(isForwardableEmailMessage(envelope)).toBe(false);
@@ -534,7 +534,7 @@ describe('generated handleEmail on a native ForwardableEmailMessage', () => {
 /**
  * A verified custom-domain receipt carries `viaDomain` and a recipient
  * without a `<slug>+` prefix, while
- * provisioning still injects `__NOSAM_PROJECT_SLUG` unconditionally. The
+ * provisioning still injects `__PLATFORM_PROJECT_SLUG` unconditionally. The
  * generated `handleEmail` must suppress the slug so the dispatcher runs in
  * no-prefix mode — left applied, the strip would take
  * everything up to the first `+` and `support+T-42@acme.com` would dispatch
@@ -558,13 +558,13 @@ describe('generated handleEmail on a verified custom-domain receipt', () => {
       seen.push({
         to: message.to,
         slug: opts?.slug,
-        platformTo: (message as { __nosamPlatformTo?: unknown }).__nosamPlatformTo,
+        platformTo: (message as { __platformTo?: unknown }).__platformTo,
       });
     });
 
     // The slug deliberately equals the local-part prefix: stripping keyed on
     // the slug alone would turn `support+T-42@` into `T-42@`.
-    const actions = await handleEmail(relayEnvelope(), { __NOSAM_PROJECT_SLUG: 'support' }, {});
+    const actions = await handleEmail(relayEnvelope(), { __PLATFORM_PROJECT_SLUG: 'support' }, {});
 
     expect(seen).toEqual([{ to: 'support+T-42@acme.com', slug: undefined, platformTo: undefined }]);
     expect(actions).toEqual([]);
@@ -577,15 +577,15 @@ describe('generated handleEmail on a verified custom-domain receipt', () => {
     });
     const envelope = {
       from: 'sender@example.com',
-      to: 'acme+support@mail.void.cloud',
+      to: 'acme+support@mail.buildwf.dev',
       headers: {},
       raw: new TextEncoder().encode(INBOUND_MIME),
       rawSize: INBOUND_MIME.length,
     };
 
-    await handleEmail(envelope, { __NOSAM_PROJECT_SLUG: 'acme' }, {});
+    await handleEmail(envelope, { __PLATFORM_PROJECT_SLUG: 'acme' }, {});
 
-    expect(seen).toEqual([{ to: 'support@mail.void.cloud', slug: 'acme' }]);
+    expect(seen).toEqual([{ to: 'support@mail.buildwf.dev', slug: 'acme' }]);
   });
 
   it('defaults replyEmail from to the receiving address on the customer domain', async () => {
@@ -595,7 +595,7 @@ describe('generated handleEmail on a verified custom-domain receipt', () => {
 
     const actions = (await handleEmail(
       relayEnvelope(),
-      { __NOSAM_PROJECT_SLUG: 'acme', __NOSAM_EMAIL_DOMAIN: 'mail.void.cloud' },
+      { __PLATFORM_PROJECT_SLUG: 'acme', __PLATFORM_EMAIL_DOMAIN: 'mail.buildwf.dev' },
       {},
     )) as Array<{ type: string; from: string; to: string }>;
 
@@ -614,7 +614,7 @@ describe('generated handleEmail on a verified custom-domain receipt', () => {
     });
     const envelope = {
       from: 'sender@example.com',
-      to: 'acme+support@mail.void.cloud',
+      to: 'acme+support@mail.buildwf.dev',
       headers: {},
       raw: new TextEncoder().encode(INBOUND_MIME),
       rawSize: INBOUND_MIME.length,
@@ -622,11 +622,11 @@ describe('generated handleEmail on a verified custom-domain receipt', () => {
 
     const actions = (await handleEmail(
       envelope,
-      { __NOSAM_PROJECT_SLUG: 'acme', __NOSAM_EMAIL_DOMAIN: 'mail.void.cloud' },
+      { __PLATFORM_PROJECT_SLUG: 'acme', __PLATFORM_EMAIL_DOMAIN: 'mail.buildwf.dev' },
       {},
     )) as Array<{ type: string; from: string }>;
 
-    expect(actions).toMatchObject([{ type: 'reply', from: 'acme+noreply@mail.void.cloud' }]);
+    expect(actions).toMatchObject([{ type: 'reply', from: 'acme+noreply@mail.buildwf.dev' }]);
   });
 });
 
@@ -634,7 +634,7 @@ describe('generated handleEmail on a verified custom-domain receipt', () => {
  * A project with an email alias receives on `<alias>@<domain>` as well as
  * `<slug>@<domain>`. The platform router already matched the prefix to this
  * project, so the generated `handleEmail` strips the name the recipient used,
- * not the injected `__NOSAM_PROJECT_SLUG`.
+ * not the injected `__PLATFORM_PROJECT_SLUG`.
  */
 describe('generated handleEmail on a project email alias', () => {
   function sharedEnvelope(to: string) {
@@ -652,14 +652,14 @@ describe('generated handleEmail on a project email alias', () => {
     const handleEmail = buildHandleEmail(async (message, _env, _ctx, opts) => {
       seen.push({ to: message.to, slug: opts?.slug });
     });
-    const env = { __NOSAM_PROJECT_SLUG: 'proj' };
+    const env = { __PLATFORM_PROJECT_SLUG: 'proj' };
 
-    await handleEmail(sharedEnvelope('alias+orders@mail.void.cloud'), env, {});
-    await handleEmail(sharedEnvelope('proj+orders@mail.void.cloud'), env, {});
+    await handleEmail(sharedEnvelope('alias+orders@mail.buildwf.dev'), env, {});
+    await handleEmail(sharedEnvelope('proj+orders@mail.buildwf.dev'), env, {});
 
     expect(seen).toEqual([
-      { to: 'orders@mail.void.cloud', slug: 'alias' },
-      { to: 'orders@mail.void.cloud', slug: 'proj' },
+      { to: 'orders@mail.buildwf.dev', slug: 'alias' },
+      { to: 'orders@mail.buildwf.dev', slug: 'proj' },
     ]);
   });
 
@@ -670,13 +670,13 @@ describe('generated handleEmail on a project email alias', () => {
     });
 
     await handleEmail(
-      sharedEnvelope('alias@mail.void.cloud'),
-      { __NOSAM_PROJECT_SLUG: 'proj' },
+      sharedEnvelope('alias@mail.buildwf.dev'),
+      { __PLATFORM_PROJECT_SLUG: 'proj' },
       {},
     );
 
     // Keyed on `proj`, the dispatcher would read `alias` as an address.
-    expect(seen).toEqual([{ to: 'alias@mail.void.cloud', slug: 'alias' }]);
+    expect(seen).toEqual([{ to: 'alias@mail.buildwf.dev', slug: 'alias' }]);
   });
 
   it('still strips nothing when no slug is injected', async () => {
@@ -685,9 +685,9 @@ describe('generated handleEmail on a project email alias', () => {
       seen.push({ to: message.to, slug: opts?.slug });
     });
 
-    await handleEmail(sharedEnvelope('alias+orders@mail.void.cloud'), {}, {});
+    await handleEmail(sharedEnvelope('alias+orders@mail.buildwf.dev'), {}, {});
 
-    expect(seen).toEqual([{ to: 'alias+orders@mail.void.cloud', slug: undefined }]);
+    expect(seen).toEqual([{ to: 'alias+orders@mail.buildwf.dev', slug: undefined }]);
   });
 
   it('keeps the slug shared-sender reply default when the alias received the message', async () => {
@@ -696,11 +696,11 @@ describe('generated handleEmail on a project email alias', () => {
     });
 
     const actions = (await handleEmail(
-      sharedEnvelope('alias+orders@mail.void.cloud'),
-      { __NOSAM_PROJECT_SLUG: 'proj', __NOSAM_EMAIL_DOMAIN: 'mail.void.cloud' },
+      sharedEnvelope('alias+orders@mail.buildwf.dev'),
+      { __PLATFORM_PROJECT_SLUG: 'proj', __PLATFORM_EMAIL_DOMAIN: 'mail.buildwf.dev' },
       {},
     )) as Array<{ type: string; from: string }>;
 
-    expect(actions).toMatchObject([{ type: 'reply', from: 'proj+noreply@mail.void.cloud' }]);
+    expect(actions).toMatchObject([{ type: 'reply', from: 'proj+noreply@mail.buildwf.dev' }]);
   });
 });

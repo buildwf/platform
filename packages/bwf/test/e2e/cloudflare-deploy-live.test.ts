@@ -8,26 +8,26 @@ import { renderBwfConfig } from '../../src/config-write.ts';
 import { readConfig } from '../../src/config.ts';
 
 // Gated live-account e2e for the `bwf deploy --platform cloudflare` path. Runs only when
-// NOSAM_E2E_CF_TOKEN and NOSAM_E2E_CF_ACCOUNT_ID are set, and skips each test otherwise. See
+// PLATFORM_E2E_CF_TOKEN and PLATFORM_E2E_CF_ACCOUNT_ID are set, and skips each test otherwise. See
 // README.md in this directory for prerequisites, CI wiring, and resource naming and retention.
 
 // Read env inside hooks and tests, never at module load: Vitest collects this file before the
 // runner injects the job env, so a top-level read sees empty credentials.
 function cfToken(): string {
-  return process.env.NOSAM_E2E_CF_TOKEN ?? '';
+  return process.env.PLATFORM_E2E_CF_TOKEN ?? '';
 }
 function cfAccountId(): string {
-  return process.env.NOSAM_E2E_CF_ACCOUNT_ID ?? '';
+  return process.env.PLATFORM_E2E_CF_ACCOUNT_ID ?? '';
 }
 // Live cf calls are unverified on Windows; cloudflare-deploy-build.test.ts covers the build there.
 function e2eEnabled(): boolean {
   return cfToken().length > 0 && cfAccountId().length > 0 && process.platform !== 'win32';
 }
 const NO_CREDS_NOTE =
-  'NOSAM_E2E_CF_TOKEN + NOSAM_E2E_CF_ACCOUNT_ID not set (or win32) — live deploy skipped';
+  'PLATFORM_E2E_CF_TOKEN + PLATFORM_E2E_CF_ACCOUNT_ID not set (or win32) — live deploy skipped';
 
 const ROOT = join(import.meta.dirname, '..', '..', '..', '..');
-const PACKAGE_ROOT = join(ROOT, 'packages', 'nosam');
+const PACKAGE_ROOT = join(ROOT, 'packages', 'platform');
 const CLI_ENTRY = join(PACKAGE_ROOT, 'dist', 'cli', 'cli.mjs');
 // `spawn.sync` blocks the event loop, so Vitest cannot time out a hung call.
 // Bound every spawn below its hook timeout.
@@ -68,7 +68,7 @@ function cloudEnv(): NodeJS.ProcessEnv {
     CLOUDFLARE_ACCOUNT_ID: cfAccountId(),
   };
   // The CLI receives only its standard token variable, which it strips from app builds.
-  delete env.NOSAM_E2E_CF_TOKEN;
+  delete env.PLATFORM_E2E_CF_TOKEN;
   // The direct fetches and the CLI must use the same public Cloudflare API.
   delete env.CLOUDFLARE_API_BASE_URL;
   delete env.CF_API_BASE_URL;
@@ -184,13 +184,13 @@ describe('bwf deploy --platform cloudflare (live account)', () => {
     if (!e2eEnabled()) {
       return;
     }
-    const namespace = process.env.NOSAM_E2E_NAMESPACE?.trim();
+    const namespace = process.env.PLATFORM_E2E_NAMESPACE?.trim();
     if (!namespace) {
       throw new Error(
-        'Set NOSAM_E2E_NAMESPACE to a stable namespace reserved for this test account.',
+        'Set PLATFORM_E2E_NAMESPACE to a stable namespace reserved for this test account.',
       );
     }
-    workerName = `nosam-e2e-cf-deploy-${namespace}`;
+    workerName = `platform-e2e-cf-deploy-${namespace}`;
     d1Name = `${workerName}-db`;
     kvTitle = `${workerName}-kv`;
     app = createIsolatedPlayground(ROOT, 'playground/spa').root;

@@ -1,4 +1,4 @@
-# @nosamcloud/proxy
+# @platform-service/proxy
 
 Shared proxy worker for platform-owned capabilities: AI metering, ISR revalidation, remote D1/KV/R2 access, and platform email submission. The dedicated email gateway owns inbound routing and reuses the proxy's admission and provider helpers.
 
@@ -6,7 +6,7 @@ Shared proxy worker for platform-owned capabilities: AI metering, ISR revalidati
 
 - **AI traffic** goes through AI Gateway so usage cannot bypass platform metering.
 - **ISR revalidation** forwards to the API worker over a service binding.
-- **Remote bindings** resolve the active deployment on every operation, then try its user worker via `DISPATCH` and `/__nosam/*`. Read operations can fall back to Cloudflare REST APIs when native dispatch is unavailable.
+- **Remote bindings** resolve the active deployment on every operation, then try its user worker via `DISPATCH` and `/__platform/*`. Read operations can fall back to Cloudflare REST APIs when native dispatch is unavailable.
 - **Resource resolution** happens through internal API endpoints, not direct DB reads inside the proxy.
 - **Email** submissions use the API’s PostgreSQL admission ledger. Shared senders use the platform `send_email` binding; custom senders use scoped credential leases. Inbound mail enters through the dedicated email gateway, which resolves exact-domain authority through the API before dispatch. Tenant workers hold neither mail bindings nor customer credentials.
 
@@ -14,7 +14,7 @@ Shared proxy worker for platform-owned capabilities: AI metering, ISR revalidati
 Deployed user worker            Proxy                       Downstream
 ┌────────────────────┐         ┌────────────────────┐      ┌────────────────────┐
 │ ai.run()           │────────▶│ /ai/*              │─────▶│ AI Gateway / AI    │
-│ revalidate()       │────────▶│ /revalidate        │─────▶│ nosam-api           │
+│ revalidate()       │────────▶│ /revalidate        │─────▶│ platform-api           │
 │ remote D1/KV/R2    │────────▶│ /d1/* /kv/* /r2/*  │─────▶│ user worker / CF   │
 │ sendEmail()        │────────▶│ /email/send        │─────▶│ CF email service  │
 └────────────────────┘         └────────────────────┘      └────────────────────┘
@@ -44,7 +44,7 @@ oversized bodies and 408 for timeouts.
 
 ### Project tokens
 
-Each deployed Worker holds its project token in the `__NOSAM_PROXY_TOKEN`
+Each deployed Worker holds its project token in the `__PLATFORM_PROXY_TOKEN`
 binding. Both forms are derived from `JWT_SECRET`:
 
 | Form          | Generation | Value                                                                                                                                                       |
@@ -67,12 +67,12 @@ seconds.
 Service-binding auth and `/email/verify-receipt` use this check. `/revalidate`
 forwards the token, and the API checks it against the same floor.
 
-When the proxy calls a tenant Worker's `/__nosam/*` handler, it sends the token
+When the proxy calls a tenant Worker's `/__platform/*` handler, it sends the token
 for the generation `resolve-worker` reports (`proxyTokenGen`): the generation
 recorded on the active deployment (`deployments.proxy_token_gen`), which is
 the token that Worker holds. When the API does not report one, it sends the
 token for the floor. It sends each call once. The Worker's own middleware runs
-before its `/__nosam/*` handler checks the token, so a 403
+before its `/__platform/*` handler checks the token, so a 403
 `{"error":"unauthorized"}` is returned to the caller and never replayed with
 another token. Cron fires and queue relays follow the same rule: each queue
 entry and the cron scheduler hold the one token their Worker holds.
@@ -84,7 +84,7 @@ calls to it get a clean 403: proxy calls fail, cron fires are dropped with
 `AUTH_DRIFT`, and queue batches are retried after 120 seconds.
 
 The proxy authenticates its own `resolve-worker` and `resolve-resource`
-calls with `x-nosam-proxy-internal`, an HMAC under a
+calls with `x-platform-proxy-internal`, an HMAC under a
 separate HKDF key (salt `void-proxy-internal`, info `proxy-internal`) bound to
 the route and project. That value never leaves the platform.
 
@@ -117,7 +117,7 @@ the body is checked. The API publishes it; the proxy never asks the API.
 Caller gateway logging options and `cf-aig-*` logging headers are always dropped,
 so an app cannot change this. `/ai/models` does not read the key.
 
-`/ai/provider` forwards to `AI.gateway("nosam").getUrl(provider)` plus the relative `path`. JSON, text, binary, and multipart bodies are serialized by the SDK and reconstructed before forwarding. OpenAI-style providers default to `Authorization: Bearer <providerKey>`; Google AI Studio uses `x-goog-api-key`. Non-JSON responses are returned without JSON coercion so provider-native binary and streaming responses can pass through.
+`/ai/provider` forwards to `AI.gateway("platform").getUrl(provider)` plus the relative `path`. JSON, text, binary, and multipart bodies are serialized by the SDK and reconstructed before forwarding. OpenAI-style providers default to `Authorization: Bearer <providerKey>`; Google AI Studio uses `x-goog-api-key`. Non-JSON responses are returned without JSON coercion so provider-native binary and streaming responses can pass through.
 
 ### Remote bindings
 
@@ -132,7 +132,7 @@ The remote-binding path is:
 
 1. resolve the active deployment's versioned worker or resource via internal API
 2. try the deployed worker's native binding handler through `DISPATCH`
-3. fall back to the Cloudflare REST API when the operation is safe to retry and the worker does not support `/__nosam/*`
+3. fall back to the Cloudflare REST API when the operation is safe to retry and the worker does not support `/__platform/*`
 
 `D1Database.batch()` has no REST fallback. It runs once through the active worker's native D1 binding, which preserves D1's atomic batch contract, or fails before executing any statement when that capability is unavailable. If a write dispatch fails after it may have committed, the proxy returns an unknown-result error and does not replay the operation through REST.
 
@@ -142,7 +142,7 @@ The remote-binding path is:
 | ------------------ | --------------------------------------------------------- |
 | `POST /revalidate` | `{ paths?: string[], all?: boolean, projectId, aiToken }` |
 
-The proxy forwards the request to `API.fetch("https://api/internal/revalidate/:projectId")` with the project token in `x-nosam-internal`. The API accepts it under the same floor as the proxy.
+The proxy forwards the request to `API.fetch("https://api/internal/revalidate/:projectId")` with the project token in `x-platform-internal`. The API accepts it under the same floor as the proxy.
 
 ### Email
 
@@ -166,7 +166,7 @@ All handler actions are validated again at the platform boundary. MIME is capped
 
 #### Sender domain
 
-`EMAIL_SENDER_DOMAIN` configures the shared mail domain for each installation. Deployed apps receive `__NOSAM_EMAIL_DOMAIN` and `__NOSAM_PROJECT_SLUG` to construct their default `<slug>+noreply@<domain>` sender. Missing configuration fails closed. Email-enabled installations provision the shared binding and verify gateway ingress before opening traffic.
+`EMAIL_SENDER_DOMAIN` configures the shared mail domain for each installation. Deployed apps receive `__PLATFORM_EMAIL_DOMAIN` and `__PLATFORM_PROJECT_SLUG` to construct their default `<slug>+noreply@<domain>` sender. Missing configuration fails closed. Email-enabled installations provision the shared binding and verify gateway ingress before opening traffic.
 
 ### Health
 
@@ -218,13 +218,13 @@ test/unit/
 ## Deploy
 
 ```bash
-vp run --filter @nosamcloud/proxy deploy --env production
-vp run --filter @nosamcloud/proxy deploy --env staging
+vp run --filter @platform-service/proxy deploy --env production
+vp run --filter @platform-service/proxy deploy --env staging
 ```
 
 For a full hosted-platform deployment from the repository root, run
-`vp run --filter @nosamcloud/platform deploy` or
-`vp run --filter @nosamcloud/platform deploy:staging`. The commands above deploy
+`vp run --filter @platform-service/platform deploy` or
+`vp run --filter @platform-service/platform deploy:staging`. The commands above deploy
 only the proxy Worker.
 
 ## Tests

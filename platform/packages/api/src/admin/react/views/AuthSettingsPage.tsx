@@ -32,8 +32,8 @@ export function AuthSettingsPage({ path, platformName, username }: AdminPageProp
   const { data, tested } = pageData;
   return (
     <Layout platformName={platformName} title="Authentication settings" username={username}>
-      <PageStack className="nosam-admin-auth-settings">
-        <SectionStack as="header" className="nosam-admin-auth-intro">
+      <PageStack className="platform-admin-auth-settings">
+        <SectionStack as="header" className="platform-admin-auth-intro">
           <Heading level={1}>Authentication</Heading>
           <p>Manage how people reach the platform and sign in.</p>
         </SectionStack>
@@ -52,8 +52,8 @@ export function AuthSettingsPage({ path, platformName, username }: AdminPageProp
               />
             }
           >
-            <SectionStack as="div" className="nosam-admin-auth-protection-details">
-              <div className="nosam-admin-auth-protection-steps">
+            <SectionStack as="div" className="platform-admin-auth-protection-details">
+              <div className="platform-admin-auth-protection-steps">
                 <AdminCard title="Enable Cloudflare Access" headingLevel={3}>
                   <p>
                     Create or connect an Access application and verify every platform origin. The
@@ -106,7 +106,7 @@ export function AuthSettingsPage({ path, platformName, username }: AdminPageProp
                   description="Review this identity before linking or enabling the tested method."
                   headerAccessory={<Badge label="Ready to review" variant="success" />}
                 >
-                  <dl className="nosam-admin-auth-identity">
+                  <dl className="platform-admin-auth-identity">
                     <div>
                       <dt>Account</dt>
                       <dd>{tested.login || tested.subject}</dd>
@@ -120,7 +120,7 @@ export function AuthSettingsPage({ path, platformName, username }: AdminPageProp
                       <dd>{tested.subject}</dd>
                     </div>
                   </dl>
-                  <div className="nosam-admin-auth-actions">
+                  <div className="platform-admin-auth-actions">
                     {(['link', 'enable'] as const).map((action) => (
                       <form
                         key={action}
@@ -156,11 +156,11 @@ export function AuthSettingsPage({ path, platformName, username }: AdminPageProp
                 }
               >
                 {data.methods.length ? (
-                  <div className="nosam-admin-auth-method-list">
+                  <div className="platform-admin-auth-method-list">
                     {data.methods.map((method) => (
-                      <div className="nosam-admin-auth-method" key={method.id}>
-                        <div className="nosam-admin-auth-method-info">
-                          <div className="nosam-admin-auth-method-title">
+                      <div className="platform-admin-auth-method" key={method.id}>
+                        <div className="platform-admin-auth-method-info">
+                          <div className="platform-admin-auth-method-title">
                             <strong>{method.label}</strong>
                             <Badge
                               label={method.enabled ? 'Enabled' : 'Disabled'}
@@ -171,12 +171,12 @@ export function AuthSettingsPage({ path, platformName, username }: AdminPageProp
                                 <Badge label="Pending configuration" variant="warning" />
                               )}
                           </div>
-                          <span className="nosam-admin-auth-method-type">
+                          <span className="platform-admin-auth-method-type">
                             {LOGIN_KINDS.find(({ kind }) => kind === method.kind)?.label ??
                               method.kind}
                           </span>
                         </div>
-                        <div className="nosam-admin-auth-actions">
+                        <div className="platform-admin-auth-actions">
                           <Button
                             href={`${HOME}/connections/${encodeURIComponent(method.id)}`}
                             label="Edit"
@@ -213,11 +213,11 @@ export function AuthSettingsPage({ path, platformName, username }: AdminPageProp
                     ))}
                   </div>
                 ) : (
-                  <p className="nosam-admin-auth-empty">No login methods configured yet.</p>
+                  <p className="platform-admin-auth-empty">No login methods configured yet.</p>
                 )}
-                <SectionStack as="div" className="nosam-admin-auth-add-methods">
+                <SectionStack as="div" className="platform-admin-auth-add-methods">
                   <h3>Add a login method</h3>
-                  <div className="nosam-admin-auth-actions">
+                  <div className="platform-admin-auth-actions">
                     {LOGIN_KINDS.map(({ kind, label }) => (
                       <Button
                         key={kind}

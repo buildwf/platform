@@ -6,7 +6,7 @@ import { string } from '../../src/runtime/env-helpers.ts';
 import { defineEnv } from '../../src/runtime/env-public.ts';
 
 const mocks = vi.hoisted(() => ({
-  getToken: vi.fn((): string | null => 'nosam-token'),
+  getToken: vi.fn((): string | null => 'platform-token'),
   listHostedSecrets: vi.fn(async () => [{ name: 'API_TOKEN' }]),
   listCloudflareSecrets: vi.fn(async () => ['API_TOKEN']),
   resolveCloudflareContext: vi.fn(() => ({ workerName: 'app' })),
@@ -32,8 +32,8 @@ import { runEnvCommand } from '../../src/cli/env.ts';
 
 const roots: Array<string> = [];
 
-function project(platform: 'cloudflare' | 'nosam' | 'none'): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-env-target-'));
+function project(platform: 'cloudflare' | 'platform' | 'none'): string {
+  const root = mkdtempSync(join(tmpdir(), 'platform-env-target-'));
   roots.push(root);
   mkdirSync(join(root, '.bwf'), { recursive: true });
   writeFileSync(
@@ -47,7 +47,7 @@ function project(platform: 'cloudflare' | 'nosam' | 'none'): string {
 beforeEach(() => {
   defineEnv({ API_TOKEN: string() });
   vi.clearAllMocks();
-  mocks.getToken.mockReturnValue('nosam-token');
+  mocks.getToken.mockReturnValue('platform-token');
   mocks.listHostedSecrets.mockResolvedValue([{ name: 'API_TOKEN' }]);
   mocks.listCloudflareSecrets.mockResolvedValue(['API_TOKEN']);
 });
@@ -72,12 +72,12 @@ describe('env check --remote target dispatch', () => {
   });
 
   it('retains hosted bwf secret lookup for bwf projects', async () => {
-    const root = project('nosam');
+    const root = project('platform');
 
     await runEnvCommand(root, { subcommand: 'check', useRemoteSecrets: true });
 
     expect(mocks.getToken).toHaveBeenCalledWith(root);
-    expect(mocks.platformClient).toHaveBeenCalledWith('nosam-token', { root });
+    expect(mocks.platformClient).toHaveBeenCalledWith('platform-token', { root });
     expect(mocks.listHostedSecrets).toHaveBeenCalledWith('project-1');
     expect(mocks.listCloudflareSecrets).not.toHaveBeenCalled();
   });

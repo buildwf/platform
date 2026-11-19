@@ -23,7 +23,7 @@ afterEach(async () => {
 
 describe('typed routing in generated Workers', () => {
   it.each([false, true])('preserves middleware, rewrites and fallbacks in dev=%s', async (dev) => {
-    directory = mkdtempSync(join(tmpdir(), 'nosam-typed-routing-'));
+    directory = mkdtempSync(join(tmpdir(), 'platform-typed-routing-'));
     const routes = join(directory, 'routes');
     const middleware = join(directory, 'middleware');
     const output = join(directory, 'output');
@@ -45,7 +45,7 @@ describe('typed routing in generated Workers', () => {
     );
     writeFileSync(
       join(routes, 'hello.ts'),
-      `export function GET(c) { return { path: c.req.path, original: c.originalUrl()?.pathname, rewritten: c.isRewritten(), public: c.env.PUBLIC, hidden: c.env.__NOSAM_PROXY_TOKEN }; }\n`,
+      `export function GET(c) { return { path: c.req.path, original: c.originalUrl()?.pathname, rewritten: c.isRewritten(), public: c.env.PUBLIC, hidden: c.env.__PLATFORM_PROXY_TOKEN }; }\n`,
     );
     writeFileSync(
       join(routes, 'move.ts'),
@@ -124,7 +124,7 @@ export { get as "GET", post as "POST", DELETE as "helper" };
             if (id.endsWith('/dist/runtime/routing.mjs')) {
               return source('routing.ts');
             }
-            if (id === 'virtual:nosam-routes') {
+            if (id === 'virtual:platform-routes') {
               return routeTable;
             }
             return null;
@@ -157,7 +157,7 @@ export { get as "GET", post as "POST", DELETE as "helper" };
         modules: true,
         modulesRoot: output,
         scriptPath: join(output, 'worker.mjs'),
-        bindings: { PUBLIC: 'public', __NOSAM_PROXY_TOKEN: 'secret' },
+        bindings: { PUBLIC: 'public', __PLATFORM_PROXY_TOKEN: 'secret' },
         assets: {
           directory: assets,
           binding: 'ASSETS',
@@ -222,15 +222,15 @@ export { get as "GET", post as "POST", DELETE as "helper" };
         public: 'public',
       });
       if (dev) {
-        expect(response.headers.get('X-Nosam-Routing')).toContain(trace);
+        expect(response.headers.get('X-Platform-Routing')).toContain(trace);
       } else {
-        expect(response.headers.has('X-Nosam-Routing')).toBe(false);
+        expect(response.headers.has('X-Platform-Routing')).toBe(false);
       }
     }
     const missing = await runtime.dispatchFetch('https://app.test/unknown');
     expect(missing.status).toBe(404);
-    expect(missing.headers.get('X-Nosam-No-Match')).toBe('1');
-    expect(await (await runtime.dispatchFetch('https://app.test/__nosam/ready')).json()).toEqual({
+    expect(missing.headers.get('X-Platform-No-Match')).toBe('1');
+    expect(await (await runtime.dispatchFetch('https://app.test/__platform/ready')).json()).toEqual({
       ready: true,
     });
   });

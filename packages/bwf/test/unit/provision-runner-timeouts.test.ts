@@ -171,7 +171,7 @@ describe('withListerDeadline — the deadline holds in a real process', () => {
       expect(stdout).toContain('exceeded the 500ms deadline');
       expect(stdout).toContain('REJECTED:');
       expect(stdout).not.toContain('RESOLVED');
-      expect(existsSync(join(appRoot, 'wrangler.jsonc.nosam-provision.lock.lock'))).toBe(false);
+      expect(existsSync(join(appRoot, 'wrangler.jsonc.platform-provision.lock.lock'))).toBe(false);
     } finally {
       clearTimeout(killTimer);
       try {

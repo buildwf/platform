@@ -14,7 +14,7 @@ import {
 const tempDirs: Array<string> = [];
 
 function createTempDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'nosam-auth-config-'));
+  const dir = mkdtempSync(join(tmpdir(), 'platform-auth-config-'));
   tempDirs.push(dir);
   return dir;
 }

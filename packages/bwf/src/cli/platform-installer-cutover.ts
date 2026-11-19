@@ -42,7 +42,7 @@ export function withoutCompletedPlatformWorkerMigrations(
 export function readTriggerConfigFromObject(
   config: Record<string, unknown>,
 ): CloudflareTriggerConfig {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-triggers-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-triggers-'));
   try {
     const path = join(directory, 'wrangler.json');
     writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
@@ -167,7 +167,7 @@ function parseWorkerCutoverSnapshot(value: string): PlatformWorkerCutoverSnapsho
       workerName?: unknown;
     };
     const metadata = parseCloudflareVersionMessage(
-      `nosam:${JSON.stringify({
+      `platform:${JSON.stringify({
         migrations: [],
         schema: 2,
         triggerConfig: parsed.previousTriggers,
@@ -297,7 +297,7 @@ export async function verifyPlatformWorkerCutoverVersions(
       `platform: Worker cutover generation ${generation} is missing a complete immutable-version checkpoint.`,
     );
   }
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-cutover-verify-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-cutover-verify-'));
   try {
     for (const key of workerKeys) {
       const snapshot = cutover.staged.get(key);

@@ -102,11 +102,11 @@ const MAX_SENDER_LENGTH = 320;
 /**
  * The platform mail domain for this environment. It is configured as the
  * `EMAIL_SENDER_DOMAIN` var and mirrored into deployed user workers as the
- * `__NOSAM_EMAIL_DOMAIN` plain-text binding so the framework builds its default
+ * `__PLATFORM_EMAIL_DOMAIN` plain-text binding so the framework builds its default
  * `from` against the same zone.
  *
  * There is deliberately NO baked-in default. A staging proxy that fell back
- * to `mail.void.cloud` would accept a `from` on the production zone, and the
+ * to `mail.buildwf.dev` would accept a `from` on the production zone, and the
  * production sender regex would reject every legitimate staging sender — the
  * exact reason the domain stopped being a constant. Missing configuration
  * fails the send CLOSED.

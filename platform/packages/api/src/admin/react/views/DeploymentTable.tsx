@@ -75,7 +75,7 @@ export function DeploymentTable({
       width: proportional(1, { minWidth: 115 }),
       renderCell: (d: DeploymentRow) => (
         <Link
-          className="nosam-admin-resource-link nosam-admin-deployment-link"
+          className="platform-admin-resource-link platform-admin-deployment-link"
           href={`/admin/deployments/${d.id}`}
           title={d.id}
         >
@@ -92,7 +92,7 @@ export function DeploymentTable({
       renderCell: (d: DeploymentRow) =>
         d.project_slug ? (
           <Link
-            className="nosam-admin-resource-link nosam-admin-deployment-link"
+            className="platform-admin-resource-link platform-admin-deployment-link"
             href={`/admin/projects/${d.project_id}`}
             title={d.project_slug}
           >
@@ -137,8 +137,8 @@ export function DeploymentTable({
       width: proportional(1.8, { minWidth: 180 }),
       renderCell: (d: DeploymentRow) =>
         d.error_message ? (
-          <div className="nosam-admin-deployment-error">
-            <Text className="nosam-admin-deployment-error-message" maxLines={1}>
+          <div className="platform-admin-deployment-error">
+            <Text className="platform-admin-deployment-error-message" maxLines={1}>
               {d.error_message}
             </Text>
             <CopyButton text={d.error_message} />
@@ -156,7 +156,7 @@ export function DeploymentTable({
   );
   return (
     <Table
-      className="nosam-admin-deployments-table"
+      className="platform-admin-deployments-table"
       data={[...deployments]}
       columns={columns}
       textOverflow="truncate"

@@ -58,7 +58,7 @@ it.each([false, true])(
       const commands: Array<{ args: Array<string>; bounds: unknown }> = [];
       const runner = createCfVersionRunner({
         output: prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         runCf: (args, options) => {
           commands.push({ args, bounds: options });
           return command(args, options);
@@ -71,7 +71,7 @@ it.each([false, true])(
         {
           type: 'versions.view',
           versionId: draft.id,
-          workerName: 'nosam-test',
+          workerName: 'platform-test',
           includeSource: true,
         },
         { capture: true },
@@ -80,7 +80,7 @@ it.each([false, true])(
       expect(result.data).toMatchObject(draft);
       expect(isBwfSecretOnlyDraft(result.data as Record<string, unknown>)).toBe(!large);
       expect(requests).toEqual([
-        `/client/v4/accounts/test-account/workers/workers/nosam-test/versions/${draft.id}?include=modules`,
+        `/client/v4/accounts/test-account/workers/workers/platform-test/versions/${draft.id}?include=modules`,
       ]);
       expect(commands).toHaveLength(1);
       expect(userAgents).toEqual([cfUserAgent]);
@@ -105,14 +105,14 @@ it.each([
   try {
     const runner = createCfVersionRunner({
       output: prepared,
-      workerName: 'nosam-test',
+      workerName: 'platform-test',
       runCf: () => ({ status: 0, stdout: JSON.stringify(version), stderr: '' }),
       verifyResources: async () => {
         throw new Error('A read must not provision or probe resources');
       },
     });
     const result = await runner(
-      { type: 'versions.view', versionId: 'version-id', workerName: 'nosam-test' },
+      { type: 'versions.view', versionId: 'version-id', workerName: 'platform-test' },
       { capture: true },
     );
     if (readable) {
@@ -133,7 +133,7 @@ it.each([
 it(
   'preserves real cf provider codes so a missing Worker can reach its first upload',
   async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-cf-missing-worker-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-cf-missing-worker-'));
     roots.push(root);
     const requests: Array<string> = [];
     const apiBaseUrl = await listen(
@@ -212,7 +212,7 @@ it(
       });
       // cf deliberately omits the API code from this local error.
       expect(result.errorCode).toBeUndefined();
-      expect(requests).toEqual(['/client/v4/accounts/account-id/workers/services/nosam-test']);
+      expect(requests).toEqual(['/client/v4/accounts/account-id/workers/services/platform-test']);
       expect(userAgents).toEqual([cfUserAgent]);
     } finally {
       prepared.dispose();
@@ -239,7 +239,7 @@ it(
             result: {
               default_environment: {
                 environment: 'production',
-                script: { id: 'nosam-test', last_deployed_from: 'api' },
+                script: { id: 'platform-test', last_deployed_from: 'api' },
               },
             },
           }),
@@ -259,7 +259,7 @@ it(
           'Aborting the upload operation because of conflicts. To override and upload anyway, remove the `--strict` flag',
       );
       expect(requests).toEqual([
-        { method: 'GET', path: '/client/v4/accounts/account-id/workers/services/nosam-test' },
+        { method: 'GET', path: '/client/v4/accounts/account-id/workers/services/platform-test' },
       ]);
     } finally {
       prepared.dispose();
@@ -282,11 +282,11 @@ it(
             success: true,
             errors: [],
             messages: [],
-            result: path.endsWith('/services/nosam-test')
+            result: path.endsWith('/services/platform-test')
               ? {
                   default_environment: {
                     environment: 'production',
-                    script: { id: 'nosam-test', last_deployed_from: 'dash' },
+                    script: { id: 'platform-test', last_deployed_from: 'dash' },
                   },
                 }
               : path.endsWith('/bindings')
@@ -327,7 +327,7 @@ it.each([false, true])(
     const apiBaseUrl = await listen(
       createServer((request, response) => {
         const path = request.url!.split('?')[0]!;
-        const upload = request.method === 'POST' && path.endsWith('/scripts/nosam-test/versions');
+        const upload = request.method === 'POST' && path.endsWith('/scripts/platform-test/versions');
         request.resume();
         response.writeHead(upload && rejected ? 400 : 200, {
           'Content-Type': 'application/json',
@@ -347,19 +347,19 @@ it.each([false, true])(
                   messages: [],
                   result: upload
                     ? { id: next, number: 2, metadata: { has_preview: true }, resources: {} }
-                    : path.endsWith('/workers/workers/nosam-test')
+                    : path.endsWith('/workers/workers/platform-test')
                       ? {
                           subdomain: {
                             enabled: true,
                             previews_enabled: true,
-                            preview_url_suffix: '-nosam-test.example.workers.dev',
+                            preview_url_suffix: '-platform-test.example.workers.dev',
                           },
                         }
-                      : path.endsWith('/services/nosam-test')
+                      : path.endsWith('/services/platform-test')
                         ? {
                             default_environment: {
                               environment: 'production',
-                              script: { id: 'nosam-test' },
+                              script: { id: 'platform-test' },
                             },
                           }
                         : path.endsWith('/settings')
@@ -373,12 +373,12 @@ it.each([false, true])(
     try {
       const runner = createCfVersionRunner({
         output: prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         runCf: pinnedCf(apiBaseUrl),
         verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
       });
       const result = await runner(
-        { type: 'versions.upload', workerName: 'nosam-test' },
+        { type: 'versions.upload', workerName: 'platform-test' },
         { capture: true },
       );
       // cf prints the binding table, with values, before it uploads.
@@ -393,7 +393,7 @@ it.each([false, true])(
           status: 0,
           data: {
             versionId: next,
-            previewUrl: `https://${next.slice(0, 8)}-nosam-test.example.workers.dev`,
+            previewUrl: `https://${next.slice(0, 8)}-platform-test.example.workers.dev`,
           },
         });
       }
@@ -461,10 +461,10 @@ it.each([
         expect(traffic).toEqual([{ version_id: next, percentage: 100 }]);
         events.push('settings');
         result = row.body;
-      } else if (row.method === 'POST' && path.endsWith('/workers/workers/nosam-test/versions')) {
+      } else if (row.method === 'POST' && path.endsWith('/workers/workers/platform-test/versions')) {
         uploaded = true;
         events.push('upload');
-        result = { id: next, urls: [`https://${next.slice(0, 8)}-nosam-test.example.workers.dev`] };
+        result = { id: next, urls: [`https://${next.slice(0, 8)}-platform-test.example.workers.dev`] };
       } else if (row.method === 'GET' && path.endsWith('/deployments')) {
         events.push('owner');
         result = { deployments: [{ versions: traffic }] };
@@ -483,11 +483,11 @@ it.each([
           bindings: [{ name: 'AUTH_SECRET', type: 'secret_text' }],
           annotations: { 'workers/message': message },
         };
-      } else if (row.method === 'GET' && path.endsWith('/services/nosam-test')) {
+      } else if (row.method === 'GET' && path.endsWith('/services/platform-test')) {
         result = {
           default_environment: {
             environment: 'production',
-            script: { id: 'nosam-test', last_deployed_from: 'api' },
+            script: { id: 'platform-test', last_deployed_from: 'api' },
           },
         };
       } else {
@@ -519,7 +519,7 @@ it.each([
       };
       const runner = createCfVersionRunner({
         output: prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         runCf,
         pinnedUpload: {
           accountId: 'account-id',
@@ -539,7 +539,7 @@ it.each([
       const result = await activateCloudflareVersion({
         runWrangler: runner,
         configPath: join(roots.at(-1)!, 'dist/ssr/wrangler.json'),
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         verifyUploader: () => true,
         verifyInheritedSecrets: true,
         expectedPreviousVersionId: current,
@@ -553,7 +553,7 @@ it.each([
         message,
         fetch: async (url) => {
           expect(String(url)).toBe(
-            `https://${next.slice(0, 8)}-nosam-test.example.workers.dev/__nosam/ready`,
+            `https://${next.slice(0, 8)}-platform-test.example.workers.dev/__platform/ready`,
           );
           expect(traffic).toEqual([{ version_id: current, percentage: 100 }]);
           events.push('ready');
@@ -572,7 +572,7 @@ it.each([
       const posts = requests.filter((row) => row.method === 'POST');
       expect(posts).toHaveLength(1);
       expect(posts[0]!.path).toBe(
-        '/client/v4/accounts/account-id/workers/workers/nosam-test/versions',
+        '/client/v4/accounts/account-id/workers/workers/platform-test/versions',
       );
       expect(posts[0]!.body.bindings).toContainEqual({
         name: 'AUTH_SECRET',
@@ -599,7 +599,7 @@ it.each([
       expect(requests.filter((row) => row.method === 'PATCH')).toEqual([
         {
           method: 'PATCH',
-          path: '/client/v4/accounts/account-id/workers/scripts/nosam-test/script-settings',
+          path: '/client/v4/accounts/account-id/workers/scripts/platform-test/script-settings',
           body: settings,
         },
       ]);
@@ -618,7 +618,7 @@ it.each([
 it(
   'captures a version list larger than Node’s default child-process buffer',
   async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-cf-large-version-list-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-cf-large-version-list-'));
     roots.push(root);
     const version = {
       id: '00000000-0000-0000-0000-000000000001',
@@ -725,7 +725,7 @@ it('treats a verified empty deployment list as missing but rejects malformed sta
       const calls: Array<Array<string>> = [];
       const runner = createCfVersionRunner({
         output: prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
         runCf: (args) => {
           calls.push(args);
@@ -735,7 +735,7 @@ it('treats a verified empty deployment list as missing but rejects malformed sta
         },
       });
       const result = await activateCloudflareVersion({
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         message: 'review',
         verifyUploader: () => true,
         runWrangler: runner,

@@ -8,13 +8,13 @@ const packageRoot = fileURLToPath(new URL('..', import.meta.url));
 
 /** Bundle independently so the API can upload identical trusted code for every app. */
 export function buildSandboxController(outputDirectory = join(packageRoot, 'dist')) {
-  const temporary = mkdtempSync(join(tmpdir(), 'nosam-sandbox-controller-'));
+  const temporary = mkdtempSync(join(tmpdir(), 'platform-sandbox-controller-'));
   try {
     const config = join(temporary, 'wrangler.json');
     writeFileSync(
       config,
       JSON.stringify({
-        name: 'nosam-sandbox-controller-build',
+        name: 'platform-sandbox-controller-build',
         main: join(packageRoot, 'src/sandbox-controller-runtime.ts'),
         compatibility_date: '2026-02-24',
         compatibility_flags: ['nodejs_compat'],

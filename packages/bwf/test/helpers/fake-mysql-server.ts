@@ -71,7 +71,7 @@ export async function startFakeMySqlServer(
     });
     connection.serverHandshake({
       protocolVersion: 10,
-      serverVersion: '8.4.0-nosam-test',
+      serverVersion: '8.4.0-platform-test',
       connectionId: 1,
       statusFlags: 2,
       characterSet: CHARSET,

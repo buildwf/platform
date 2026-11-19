@@ -188,7 +188,7 @@ finds API integration files that read `process.env.BWF_TEST_DATABASE_URL`, exclu
 in comments or strings. Each selected file runs against its own database clone, with two files
 in flight, using the same bounded runner as schema compatibility. This exercises real locks
 without repeating the entire API suite. To run it locally, migrate a disposable loopback
-`nosam_schema_compat` database as `nosam_ci`, then set `COMPAT_DATABASE_URL` and run
+`platform_schema_compat` database as `platform_ci`, then set `COMPAT_DATABASE_URL` and run
 `node .github/scripts/postgres-concurrency-tests.ts`.
 
 Staging CI on main also runs the production schema-compatibility gate, so its failures are caught
@@ -197,7 +197,7 @@ before checking out the deployed revision. It runs every deployed API test file 
 clone of the upgraded PostgreSQL database, with two files in flight. Separate databases
 prevent cross-project cleanup races and leaked fixture tables while preserving real multi-connection
 tests within each file. The original upgraded database and its seeded compatibility records remain
-untouched. The runner accepts only the disposable loopback `nosam_schema_compat` database as `nosam_ci`.
+untouched. The runner accepts only the disposable loopback `platform_schema_compat` database as `platform_ci`.
 It also repairs two legacy fixtures, each gated by its full file checksum: the email concurrency
 fixture must return the same zone ID for both lookups and model DNS for whichever request wins,
 and the oversized deploy-body fixture must
@@ -307,11 +307,11 @@ Pick a short namespace unique to the operator or test account, such as a team or
 stable names across runs:
 
 ```text
-nosam-e2e-<namespace>-static
-nosam-e2e-<namespace>-kitchen
-nosam-e2e-<namespace>-websockets
-nosam-e2e-<namespace>-framework
-nosam-e2e-<namespace>-sandbox
+platform-e2e-<namespace>-static
+platform-e2e-<namespace>-kitchen
+platform-e2e-<namespace>-websockets
+platform-e2e-<namespace>-framework
+platform-e2e-<namespace>-sandbox
 ```
 
 Use lowercase letters, numbers, and hyphens. Keep the namespace short because Cloudflare combines

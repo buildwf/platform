@@ -25,7 +25,7 @@ export function BuildDetailPage({ path, platformName, username }: AdminPageProps
       <SectionStack>
         <h1>Build {build.id}</h1>
 
-        <Table className="nosam-admin-detail-table">
+        <Table className="platform-admin-detail-table">
           <TableBody>
             <TableRow>
               <TableHeaderCell>Status</TableHeaderCell>
@@ -35,7 +35,7 @@ export function BuildDetailPage({ path, platformName, username }: AdminPageProps
               <TableHeaderCell>Project</TableHeaderCell>
               <TableCell>
                 <Link
-                  className="nosam-admin-resource-link"
+                  className="platform-admin-resource-link"
                   href={`/admin/projects/${build.project_id}`}
                 >
                   {build.project_id}
@@ -63,7 +63,7 @@ export function BuildDetailPage({ path, platformName, username }: AdminPageProps
               <TableCell>
                 {build.deployment_id ? (
                   <Link
-                    className="nosam-admin-resource-link"
+                    className="platform-admin-resource-link"
                     href={`/admin/deployments/${build.deployment_id}`}
                   >
                     {build.deployment_id}

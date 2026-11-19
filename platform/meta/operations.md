@@ -8,7 +8,7 @@ Platform's existing environments predate the installer. Their resources are mana
 
 | Environment | API                                  | Dashboard                         | App domains          |
 | ----------- | ------------------------------------ | --------------------------------- | -------------------- |
-| Production  | `https://nosam.buildwithfriends.dev` | `https://dash.void.cloud`         | `*.void.app`         |
+| Production  | `https://platform.buildwithfriends.dev` | `https://dash.void.cloud`         | `*.void.app`         |
 | Staging     | `https://api.staging.void.cloud`     | `https://dash.staging.void.cloud` | `*.staging.void.app` |
 
 Each environment has a separate PostgreSQL database, Hyperdrive configuration, dispatch namespace, KV namespaces, R2 buckets, usage queue, and Analytics Engine datasets. Read the corresponding `env.production` or `env.staging` sections in each package's Wrangler configuration for the current resource bindings. Keep credentials and access assignments in the deployment owner's secret manager and identity provider.
@@ -37,11 +37,11 @@ The `deploy` and `deploy:staging` scripts in `platform/package.json` target thes
 | `platform-deploy-staging.yml` | Staging deployment from `main`                               |
 | `platform-smoke-test.yml`     | Deploy and exercise a disposable kitchen-sink app in staging |
 
-These deployment and smoke-test workflows target Platform, from `prod` for production or `main` for staging, with `NOSAM_PLATFORM_DEPLOY_ENABLED=true`. They use the `Prod` and `Staging` GitHub environments. Restrict those environments to the same refs and appropriate reviewers, and keep deployment credentials in environment secrets. Forks use their own source-runtime release workflow.
+These deployment and smoke-test workflows target Platform, from `prod` for production or `main` for staging, with `PLATFORM_DEPLOY_ENABLED=true`. They use the `Prod` and `Staging` GitHub environments. Restrict those environments to the same refs and appropriate reviewers, and keep deployment credentials in environment secrets. Forks use their own source-runtime release workflow.
 
 Both deploy workflows serialize deployments without cancelling an active rollout. Advancing `prod` requests a production deployment. A failed or interrupted deployment needs inspection before another rollout, particularly when database migrations already ran.
 
-Hosted API and email gateway deploys report the release version from `packages/platform/package.json` as `PLATFORM_VERSION`. The `nosam` CLI refuses platforms older than its minimum platform version, so release in this order: advance `prod` and wait for the production deployment to succeed, then push the release tag that publishes the npm packages.
+Hosted API and email gateway deploys report the release version from `packages/platform/package.json` as `PLATFORM_VERSION`. The `platform` CLI refuses platforms older than its minimum platform version, so release in this order: advance `prod` and wait for the production deployment to succeed, then push the release tag that publishes the npm packages.
 
 Consult the workflow files for their current inputs. Store credentials in the
 selected GitHub environment and the deployment owner's secret manager. Keep
@@ -56,7 +56,7 @@ The release after 1.8.0 moves project AI logging settings to ROUTING KV; see [de
 SELECT count(*) FROM project_ai_logging;
 ```
 
-Expect 0: the 1.8.0 operator route always returned 503 on hosted. If it is not 0, list the rows with `SELECT project_id, mode FROM project_ai_logging ORDER BY project_id;` and, after the API deploy, run `bwf platform project ai-logging <project-id> <mode> --yes` for each one so the setting is published. Hosted AI works again as soon as the new proxy is live, because a missing key means `inherit`. Also check the `collect_logs` setting of the hosted `nosam` gateway in Cloudflare: it decides what `inherit` means on Platform.
+Expect 0: the 1.8.0 operator route always returned 503 on hosted. If it is not 0, list the rows with `SELECT project_id, mode FROM project_ai_logging ORDER BY project_id;` and, after the API deploy, run `bwf platform project ai-logging <project-id> <mode> --yes` for each one so the setting is published. Hosted AI works again as soon as the new proxy is live, because a missing key means `inherit`. Also check the `collect_logs` setting of the hosted `platform` gateway in Cloudflare: it decides what `inherit` means on Platform.
 
 The production deploy workflow runs these read-only database queries before rolling out any Workers. Inspect its saved-setting count and any rows when monitoring this release. It also reports the gateway's `collect_logs` value when the deployment token has AI Gateway Read permission; otherwise check that setting in Cloudflare.
 
@@ -86,7 +86,7 @@ These commands are for Platform's Workers. Self-hosted installations use the [pl
 
 A deploy gives a project still on generation 0 a generation 1 token. Its older Workers keep the legacy token, which stays accepted until the project rotates. From that deploy on, a platform rollback to 0.26.0 or earlier breaks the project; see the rollback notes below.
 
-Only Workers named `user-<slug>`, from before per-deployment Worker names (2026-03-06), can still hold the legacy token in `__AI_TOKEN`, its name before the binding rename. Only AI calls used that binding: ISR revalidation then used `NOSAM_REVALIDATE_TOKEN`, and email did not exist yet. A project still served by a `user-<slug>` Worker has not been deployed since, so its `projects.active_deployment_id` is null while a `live` deployment exists. A rotation of such a project fails at START (`The active deployment is not recorded.`) and retries every 15 minutes. The issued generation and the floor never rise, so the app, AI included, keeps working, and after about an hour owners and admins see the stuck-rotation warning. A deploy would give the project a per-deployment Worker and let the rotation finish, but deploys are refused for the same reason (409 `project_requires_normalization`), and `bwf platform project normalize` refuses a route whose `workerName` is `user-<slug>`. Each of these projects needs an operator repair before it can deploy or rotate; until then its job stays failed in `--plan`. This query lists every project whose rotation stops at START this way; `used_ai` marks those with AI in a live deployment:
+Only Workers named `user-<slug>`, from before per-deployment Worker names (2026-03-06), can still hold the legacy token in `__AI_TOKEN`, its name before the binding rename. Only AI calls used that binding: ISR revalidation then used `PLATFORM_REVALIDATE_TOKEN`, and email did not exist yet. A project still served by a `user-<slug>` Worker has not been deployed since, so its `projects.active_deployment_id` is null while a `live` deployment exists. A rotation of such a project fails at START (`The active deployment is not recorded.`) and retries every 15 minutes. The issued generation and the floor never rise, so the app, AI included, keeps working, and after about an hour owners and admins see the stuck-rotation warning. A deploy would give the project a per-deployment Worker and let the rotation finish, but deploys are refused for the same reason (409 `project_requires_normalization`), and `bwf platform project normalize` refuses a route whose `workerName` is `user-<slug>`. Each of these projects needs an operator repair before it can deploy or rotate; until then its job stays failed in `--plan`. This query lists every project whose rotation stops at START this way; `used_ai` marks those with AI in a live deployment:
 
 ```sql
 SELECT p.id, p.slug, max(d.created_at) AS last_live,
@@ -152,7 +152,7 @@ The dedicated email gateway receives inbound mail and dispatches bounded request
 
 ### Configure the shared mail zone
 
-For a managed installation, provide `NOSAM_EMAIL_SENDER_DOMAIN` and `NOSAM_EMAIL_SHARED_ZONE_ID` during installation or upgrade. These values are recorded in the installation; routine upgrades preserve them. The installer supplies the platform account and gateway identity separately from the application zone.
+For a managed installation, provide `PLATFORM_EMAIL_SENDER_DOMAIN` and `PLATFORM_EMAIL_SHARED_ZONE_ID` during installation or upgrade. These values are recorded in the installation; routine upgrades preserve them. The installer supplies the platform account and gateway identity separately from the application zone.
 
 For repository deployments, add the equivalent values to the selected `env.production.vars` or `env.staging.vars` blocks in the Workers' Wrangler configuration before enabling email. Do not rely on dashboard-only plain-text variables; the checked-in Wrangler files remain the deployment source of truth.
 
@@ -166,9 +166,9 @@ Store one stable, high-entropy `EMAIL_SIGNING_SECRET` in each deployment owner's
 For the first email rollout, configure and deploy the proxy and email gateway before adding the API's shared-email values. Verify both Workers, then add the API values and deploy the API so scheduled reconciliation cannot direct inbound mail at an unavailable gateway. From the repository root, the production sequence is:
 
 ```sh
-vp run --filter @nosamcloud/platform deploy:proxy
-vp run --filter @nosamcloud/platform deploy:email-gateway
-vp run --filter @nosamcloud/platform deploy:api
+vp run --filter @platform-service/platform deploy:proxy
+vp run --filter @platform-service/platform deploy:email-gateway
+vp run --filter @platform-service/platform deploy:api
 ```
 
 Use the corresponding `deploy:staging:*` commands for staging. After email is enabled and all three Workers exist, the normal platform deployment command can update them.
@@ -237,7 +237,7 @@ Select the environment explicitly and use an administrator session:
 bwf platform system health --connection https://api.staging.void.cloud
 ```
 
-`vp run --filter @nosamcloud/platform health` runs the same operator health command against the selected connection. It requires a built SDK and `bwf platform auth login` or `NOSAM_OPERATOR_TOKEN`. The `health:staging` shortcut explicitly selects Platform staging.
+`vp run --filter @platform-service/platform health` runs the same operator health command against the selected connection. It requires a built SDK and `bwf platform auth login` or `PLATFORM_OPERATOR_TOKEN`. The `health:staging` shortcut explicitly selects Platform staging.
 
 The [kitchen-sink smoke checklist](../scripts/kitchen-sink-smoke-test.md) works with a disposable deployment on any platform. Its automated script requires `SMOKE_URL` and resets that app's data. The hosted smoke-test workflow provides the staging URL explicitly.
 
@@ -251,7 +251,7 @@ There is no documentation deploy workflow or `BWF_TOKEN` repository secret.
 Connect the repository once with:
 
 ```sh
-bwf github connect nosam-docs \
+bwf github connect platform-docs \
   --repo voidzero-dev/void \
   --branch main \
   --executor container
@@ -260,7 +260,7 @@ bwf github connect nosam-docs \
 Release publishing uses `.github/workflows/publish.yml` in the `Release`
 GitHub environment with OIDC (`id-token: write`). Configure an
 [npm trusted publisher](https://docs.npmjs.com/trusted-publishers/) for each public
-package: organization `voidzero-dev`, repository `nosam`, workflow `publish.yml`,
+package: organization `voidzero-dev`, repository `platform`, workflow `publish.yml`,
 and environment `Release`. This workflow does not require an `NPM_TOKEN` secret.
 
 CI (`ci.yml`) runs on PRs to `main` and requires no secrets.

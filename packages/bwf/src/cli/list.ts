@@ -198,7 +198,7 @@ function formatDeploymentRow(
     }
   }
 
-  const appType = manifest?.type ?? (manifest?.framework ? 'framework' : 'nosam');
+  const appType = manifest?.type ?? (manifest?.framework ? 'framework' : 'platform');
   const source = d.source ?? '-';
   const commit = d.commit ? d.commit.slice(0, 7) : '-';
 

@@ -44,7 +44,7 @@ describe('worker packaging', () => {
         sandbox: {
           binding: 'SANDBOX',
           className: 'Sandbox',
-          containerName: 'nosam-sandbox',
+          containerName: 'platform-sandbox',
           image:
             'registry.cloudflare.com/account/code-sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           platformImage:

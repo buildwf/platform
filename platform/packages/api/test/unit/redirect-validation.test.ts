@@ -14,8 +14,8 @@ describe('isAllowedRedirect', () => {
   });
 
   it('allows exact dashboard origin', () => {
-    expect(isAllowedRedirect('https://nosam.buildwithfriends.dev/callback')).toBe(true);
-    expect(isAllowedRedirect('https://nosam.buildwithfriends.dev/login?next=/projects')).toBe(true);
+    expect(isAllowedRedirect('https://platform.buildwithfriends.dev/callback')).toBe(true);
+    expect(isAllowedRedirect('https://platform.buildwithfriends.dev/login?next=/projects')).toBe(true);
   });
 
   it('allows custom dashboard URL (staging)', () => {
@@ -27,7 +27,7 @@ describe('isAllowedRedirect', () => {
   it('does not inherit the hosted dashboard in a self-hosted installation', () => {
     expect(
       isAllowedRedirect(
-        'https://nosam.buildwithfriends.dev/auth/callback',
+        'https://platform.buildwithfriends.dev/auth/callback',
         undefined,
         'example-a1b2c3d4',
       ),
@@ -42,7 +42,7 @@ describe('isAllowedRedirect', () => {
   });
 
   it('admits only the configured self-hosted dashboard origin including its port', () => {
-    const dashboard = 'https://nosam-e2e-dashboard.readwise.dev:8443';
+    const dashboard = 'https://platform-e2e-dashboard.readwise.dev:8443';
     expect(
       isAllowedRedirect(
         `${dashboard}/auth/callback?login_nonce=real-browser-nonce`,
@@ -51,10 +51,10 @@ describe('isAllowedRedirect', () => {
       ),
     ).toBe(true);
     for (const callback of [
-      'https://nosam-e2e-dashboard.readwise.dev/auth/callback',
-      'https://nosam-e2e-dashboard.readwise.dev.attacker.example:8443/auth/callback',
+      'https://platform-e2e-dashboard.readwise.dev/auth/callback',
+      'https://platform-e2e-dashboard.readwise.dev.attacker.example:8443/auth/callback',
       'https://other.readwise.dev:8443/auth/callback',
-      'http://nosam-e2e-dashboard.readwise.dev:8443/auth/callback',
+      'http://platform-e2e-dashboard.readwise.dev:8443/auth/callback',
     ]) {
       expect(isAllowedRedirect(callback, dashboard, 'isolated-installation')).toBe(false);
     }
@@ -62,7 +62,7 @@ describe('isAllowedRedirect', () => {
 
   // Subdomain attack vectors
   it('rejects subdomain prefix attack', () => {
-    expect(isAllowedRedirect('https://nosam.buildwithfriends.dev.attacker.com/steal')).toBe(false);
+    expect(isAllowedRedirect('https://platform.buildwithfriends.dev.attacker.com/steal')).toBe(false);
   });
 
   it('rejects evil subdomain of dashboard', () => {

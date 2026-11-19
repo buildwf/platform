@@ -191,9 +191,27 @@ export function platformDashboardUrl(deployment: PlatformDeploymentManifest): st
   return url === null ? null : normalizePlatformDashboardUrl(url);
 }
 
-export function createPlatformResourceNames(installationSlug: string): PlatformResourceNames {
+/**
+ * Installs made before the rename named their resources `void-<slug>-<role>`.
+ * An upgrade that fills in a resource the old manifest didn't record keeps
+ * that prefix, so it finds the resource the old release made.
+ */
+export function legacyResourcePrefix(
+  resources: Readonly<Record<string, unknown>> | undefined,
+): 'void' | undefined {
+  return Object.values(resources ?? {}).some(
+    (name) => typeof name === 'string' && name.startsWith('void-'),
+  )
+    ? 'void'
+    : undefined;
+}
+
+export function createPlatformResourceNames(
+  installationSlug: string,
+  prefixBase: 'platform' | 'void' = 'platform',
+): PlatformResourceNames {
   const slug = normalizeInstallationSlug(installationSlug);
-  const prefix = `void-${slug}`;
+  const prefix = `${prefixBase}-${slug}`;
   const datasetPrefix = prefix.replaceAll('-', '_');
   return {
     aiGateway: prefix,
@@ -269,7 +287,10 @@ export function createPlatformDeploymentManifest(
   if (!zoneName && baseDomain !== `${workersDev!.subdomain}.workers.dev`) {
     throw new Error('workers.dev application domain must match its account subdomain.');
   }
-  const resources = { ...createPlatformResourceNames(installationSlug), ...input.resources };
+  const resources = {
+    ...createPlatformResourceNames(installationSlug, legacyResourcePrefix(input.resources)),
+    ...input.resources,
+  };
   const capabilities = { ...CORE_CAPABILITIES, ...input.capabilities };
   if (capabilities.managedBuilds && !capabilities.githubActions) {
     throw new Error('Managed builds require the GitHub Actions capability.');
@@ -486,6 +507,7 @@ export function parsePlatformDeploymentManifest(value: unknown): PlatformDeploym
   }
   const resourceDefaults = createPlatformResourceNames(
     requiredString(value.installationSlug, 'installationSlug'),
+    legacyResourcePrefix(rawResources),
   );
   const resources: Partial<Record<keyof PlatformResourceNames, string>> = {};
   for (const key of Object.keys(resourceDefaults) as Array<keyof PlatformResourceNames>) {

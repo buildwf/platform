@@ -36,8 +36,8 @@ export async function lockPlanCatalog(
 ): Promise<void> {
   await tx.execute(
     mode === 'shared'
-      ? sql`SELECT pg_advisory_xact_lock_shared(hashtextextended('nosam:platform:plans', 0))`
-      : sql`SELECT pg_advisory_xact_lock(hashtextextended('nosam:platform:plans', 0))`,
+      ? sql`SELECT pg_advisory_xact_lock_shared(hashtextextended('platform:platform:plans', 0))`
+      : sql`SELECT pg_advisory_xact_lock(hashtextextended('platform:platform:plans', 0))`,
   );
 }
 

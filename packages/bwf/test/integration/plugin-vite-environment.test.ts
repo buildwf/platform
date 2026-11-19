@@ -18,7 +18,7 @@ import { getHookHandler } from '../helpers/vite-hooks.ts';
 const roots: Array<string> = [];
 
 function createProjectRoot(): string {
-  const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'nosam-vite-env-')));
+  const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'platform-vite-env-')));
   roots.push(root);
   writeFileSync(
     join(root, 'package.json'),
@@ -82,7 +82,7 @@ describe('bwfPlugin Vite environments', () => {
       ),
     ).resolves.toMatchObject({
       environments: {
-        nosam_worker: {
+        platform_worker: {
           build: {
             outDir: getWorkerBundleDir(realpathSync.native(root)),
           },
@@ -100,7 +100,7 @@ describe('bwfPlugin Vite environments', () => {
         root,
         plugins: [bwfPlugin()],
         environments: {
-          nosam_worker: {
+          platform_worker: {
             resolve: {
               external: ['node:fs'],
               conditions: ['workerd'],
@@ -115,9 +115,9 @@ describe('bwfPlugin Vite environments', () => {
       'test',
     );
 
-    expect(config.environments.nosam_worker.resolve.external).toEqual([]);
-    expect(config.environments.nosam_worker.resolve.conditions).toContain('workerd');
-    expect(config.environments.nosam_worker.build).toMatchObject({
+    expect(config.environments.platform_worker.resolve.external).toEqual([]);
+    expect(config.environments.platform_worker.resolve.conditions).toContain('workerd');
+    expect(config.environments.platform_worker.build).toMatchObject({
       emptyOutDir: false,
       outDir: getWorkerBundleDir(realpathSync.native(root)),
     });
@@ -133,11 +133,11 @@ describe('bwfPlugin Vite environments', () => {
 
     const config = await resolveConfig({ root, plugins: [bwfPlugin()] }, 'serve', 'development');
 
-    expect(config.environments.nosam_worker.optimizeDeps.include).toEqual(
+    expect(config.environments.platform_worker.optimizeDeps.include).toEqual(
       expect.arrayContaining(['@builtbyfriends/bwf > email-validator', '@builtbyfriends/bwf > pg']),
     );
-    expect(config.environments.nosam_worker.optimizeDeps.exclude).toEqual(
-      expect.arrayContaining(['nosam', 'better-auth']),
+    expect(config.environments.platform_worker.optimizeDeps.exclude).toEqual(
+      expect.arrayContaining(['platform', 'better-auth']),
     );
     expect(config.environments.ssr.optimizeDeps.include).toEqual([]);
     expect(config.environments.ssr.optimizeDeps.exclude ?? []).not.toContain('better-auth');
@@ -206,10 +206,10 @@ describe('bwfPlugin Vite environments', () => {
     vi.spyOn(process, 'cwd').mockReturnValue(root);
 
     const config = await resolveConfig({ root, plugins: [bwfPlugin()] }, 'serve', 'development');
-    const plugin = config.plugins.find((candidate) => candidate.name === 'nosam:drizzle');
+    const plugin = config.plugins.find((candidate) => candidate.name === 'platform:drizzle');
     const load = getHookHandler(plugin?.load) as (this: object, id: string) => string;
 
-    expect(load.call({}, '\0virtual:nosam-db')).toContain(
+    expect(load.call({}, '\0virtual:platform-db')).toContain(
       'drizzle(connectionString, { schema, casing: "snake_case" })',
     );
   });
@@ -234,7 +234,7 @@ describe('deploy-build preview', () => {
     process.argv = [argv[0]!, 'vite', 'build'];
     try {
       const guard = bwfPlugin().find(
-        (plugin) => plugin.name === 'nosam:remove-implicit-cloudflare-deploy-pointer',
+        (plugin) => plugin.name === 'platform:remove-implicit-cloudflare-deploy-pointer',
       )!;
       const configure = getHookHandler(guard.config) as (
         config: object,

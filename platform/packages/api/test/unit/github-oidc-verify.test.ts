@@ -4,7 +4,7 @@ import { verifyGithubOidcToken } from '../../src/github/oidc-verify.ts';
 
 const ISSUER = 'https://token.actions.githubusercontent.com';
 const JWKS_URL = `${ISSUER}/.well-known/jwks`;
-const AUDIENCE = 'https://nosam.buildwithfriends.dev';
+const AUDIENCE = 'https://platform.buildwithfriends.dev';
 const KID = 'test-key-1';
 
 let privateKey: CryptoKey;
@@ -16,7 +16,7 @@ const baseClaims = {
   ref: 'refs/heads/main',
   sha: 'a'.repeat(40),
   run_id: '123456',
-  workflow: 'nosam-deploy',
+  workflow: 'platform-deploy',
 };
 
 function sign(
@@ -78,7 +78,7 @@ describe('verifyGithubOidcToken', () => {
     expect(claims!.ref).toBe('refs/heads/main');
     expect(claims!.sha).toBe('a'.repeat(40));
     expect(claims!.run_id).toBe('123456');
-    expect(claims!.workflow).toBe('nosam-deploy');
+    expect(claims!.workflow).toBe('platform-deploy');
   });
 
   it('enforces the audience when provided', async () => {

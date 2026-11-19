@@ -53,7 +53,7 @@ async function exchangeInstallCodeForUserToken(
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      'User-Agent': 'nosam-api',
+      'User-Agent': 'platform-api',
     },
     body: JSON.stringify({
       client_id: e.GITHUB_APP_CLIENT_ID,
@@ -94,7 +94,7 @@ async function fetchUserAccountId(userToken: string): Promise<string | null> {
     headers: {
       Accept: 'application/vnd.github+json',
       Authorization: `Bearer ${userToken}`,
-      'User-Agent': 'nosam-api',
+      'User-Agent': 'platform-api',
       'X-GitHub-Api-Version': GITHUB_API_VERSION,
     },
   });
@@ -155,7 +155,7 @@ async function listUserInstallationIds(userToken: string): Promise<Set<string>> 
       headers: {
         Accept: 'application/vnd.github+json',
         Authorization: `Bearer ${userToken}`,
-        'User-Agent': 'nosam-api',
+        'User-Agent': 'platform-api',
         'X-GitHub-Api-Version': GITHUB_API_VERSION,
       },
     });
@@ -315,7 +315,7 @@ export async function verifyUserRepoAccess(
         headers: {
           Accept: 'application/vnd.github+json',
           Authorization: `Bearer ${userToken}`,
-          'User-Agent': 'nosam-api',
+          'User-Agent': 'platform-api',
           'X-GitHub-Api-Version': GITHUB_API_VERSION,
         },
       },

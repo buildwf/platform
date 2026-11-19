@@ -32,16 +32,16 @@ const sdkPgliteUnitTests = [
   'packages/bwf/test/unit/runner-pg.test.ts',
 ];
 
-// Vitest forwards a FILTERED env to test workers — in CI only NOSAM_E2E_CF_TOKEN survives, while
-// NOSAM_E2E_CF_ACCOUNT_ID and NOSAM_E2E_NAMESPACE are dropped. The gated live Cloudflare deploy e2e
+// Vitest forwards a FILTERED env to test workers — in CI only PLATFORM_E2E_CF_TOKEN survives, while
+// PLATFORM_E2E_CF_ACCOUNT_ID and PLATFORM_E2E_NAMESPACE are dropped. The gated live Cloudflare deploy e2e
 // (packages/bwf/test/e2e/cloudflare-deploy-live.test.ts) needs all three, so forward them into the
 // core-markdown workers explicitly from this main config process (which has the runner's step env).
 // Absent credentials become empty strings so ordinary test runs skip the live suite.
 const e2eWorkerEnv = {
   BWF_TEST_BROWSER: process.env.BWF_TEST_BROWSER ?? 'chromium',
-  NOSAM_E2E_CF_TOKEN: process.env.NOSAM_E2E_CF_TOKEN ?? '',
-  NOSAM_E2E_CF_ACCOUNT_ID: process.env.NOSAM_E2E_CF_ACCOUNT_ID ?? '',
-  NOSAM_E2E_NAMESPACE: process.env.NOSAM_E2E_NAMESPACE ?? '',
+  PLATFORM_E2E_CF_TOKEN: process.env.PLATFORM_E2E_CF_TOKEN ?? '',
+  PLATFORM_E2E_CF_ACCOUNT_ID: process.env.PLATFORM_E2E_CF_ACCOUNT_ID ?? '',
+  PLATFORM_E2E_NAMESPACE: process.env.PLATFORM_E2E_NAMESPACE ?? '',
 };
 
 // Windows CI runners are 2-3x slower for builds and server startup.
@@ -53,7 +53,7 @@ const platformAlias = {
   '@builtbyfriends/bwf/_sandbox-container': fileURLToPath(
     new URL('packages/bwf/src/runtime/sandbox-container.ts', import.meta.url),
   ),
-  'nosam:sandbox-controller-source': fileURLToPath(
+  'platform:sandbox-controller-source': fileURLToPath(
     new URL('platform/packages/api/test/__mocks__/sandbox-controller-source.ts', import.meta.url),
   ),
   // cloudflare:workers is only available in the Workers runtime.
@@ -88,7 +88,7 @@ export default defineConfig({
         // skips even when the CI job injects them. `untrackedEnv` forwards them without folding them
         // into the task's cache fingerprint (credentials must not bust the cache).
         cache: {
-          untrackedEnv: ['NOSAM_E2E_CF_TOKEN', 'NOSAM_E2E_CF_ACCOUNT_ID', 'NOSAM_E2E_NAMESPACE'],
+          untrackedEnv: ['PLATFORM_E2E_CF_TOKEN', 'PLATFORM_E2E_CF_ACCOUNT_ID', 'PLATFORM_E2E_NAMESPACE'],
         },
       },
     },

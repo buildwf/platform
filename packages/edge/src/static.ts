@@ -29,7 +29,7 @@ export type ResolvedAsset = Readonly<{
  * `%2e%2e`→`..`), which a browser would never send and which would otherwise let
  * a request reconstruct a guarded path (`/assets%2Fx`, `/%61ssets/x`,
  * `/%5F%5Fvoid/x`) and serve the manifest entry while the raw-`url.pathname`
- * policy gates — the `/__nosam/*` reserved-route block, the hashed-asset prefix
+ * policy gates — the `/__platform/*` reserved-route block, the hashed-asset prefix
  * gate, and the header/redirect rules — never fire. The URL pathname setter
  * applies exactly the WHATWG "path percent-encode set", making it the canonical
  * re-encoder.
@@ -72,7 +72,7 @@ function normalizePercentCase(pathname: string): string {
  */
 function reencodePathname(pathname: string): string | null {
   try {
-    const encoder = new URL('https://nosam.invalid/');
+    const encoder = new URL('https://platform.invalid/');
     encoder.pathname = pathname;
     return encoder.pathname;
   } catch {

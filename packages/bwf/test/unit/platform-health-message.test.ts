@@ -19,7 +19,7 @@ it.each([
 it('shows the agreed dashboard instructions with the real installation details', () => {
   const error = new PlatformAccessBlockedError('https://api.example.workers.dev', {
     accountName: 'Example account',
-    workers: ['nosam-example-api', 'nosam-example-proxy', 'nosam-example-dispatch'],
+    workers: ['platform-example-api', 'platform-example-proxy', 'platform-example-dispatch'],
     resumeCommand: 'bwf-dev platform install --resume --name example-123',
   });
   expect(error.message)
@@ -31,7 +31,7 @@ To make this test platform publicly reachable:
 1. In account "Example account", open:
    Zero Trust → Access controls → Applications → Create new application.
 2. Choose Self-hosted. When adding destinations, choose Worker and select:
-   nosam-example-api, nosam-example-proxy, nosam-example-dispatch.
+   platform-example-api, platform-example-proxy, platform-example-dispatch.
 3. Add a policy: Action → Bypass; Include → Everyone.
 4. Save the policy and application, then resume:
 

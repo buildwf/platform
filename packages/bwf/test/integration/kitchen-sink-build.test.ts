@@ -63,7 +63,7 @@ describe('playground/kitchen-sink build', () => {
   it('does not emit deploy-blocking top-level await in env or db runtime chunks', () => {
     const jsFiles = collectFiles(join(dist, 'ssr')).filter((file) => file.endsWith('.js'));
     const runtimeFiles = jsFiles.filter(
-      (file) => /\/env-[^/]+\.js$/.test(file) || /\/_virtual_nosam-db-[^/]+\.js$/.test(file),
+      (file) => /\/env-[^/]+\.js$/.test(file) || /\/_virtual_platform-db-[^/]+\.js$/.test(file),
     );
 
     expect(runtimeFiles.length).toBeGreaterThan(0);
@@ -73,14 +73,14 @@ describe('playground/kitchen-sink build', () => {
     }
   });
 
-  it('does not leak __NOSAM_* credentials into dist/ssr/wrangler.json', () => {
+  it('does not leak __PLATFORM_* credentials into dist/ssr/wrangler.json', () => {
     const wranglerConfig = JSON.parse(readFileSync(join(dist, 'ssr', 'wrangler.json'), 'utf-8'));
     const vars = (wranglerConfig.vars ?? {}) as Record<string, unknown>;
     // These are legitimate, non-credential runtime routing vars for a custom Workers AI
     // binding / AI Gateway. Exclude them from the credential leak filter.
-    const allowedRuntimeMarkers = new Set(['__NOSAM_AI_BINDING', '__NOSAM_AI_GATEWAY']);
+    const allowedRuntimeMarkers = new Set(['__PLATFORM_AI_BINDING', '__PLATFORM_AI_GATEWAY']);
     const leakedKeys = Object.keys(vars).filter(
-      (key) => key.startsWith('__NOSAM_') && !allowedRuntimeMarkers.has(key),
+      (key) => key.startsWith('__PLATFORM_') && !allowedRuntimeMarkers.has(key),
     );
     expect(leakedKeys).toEqual([]);
   });
@@ -93,7 +93,7 @@ describe('playground/kitchen-sink build', () => {
     // `ai.gateway` in playground/kitchen-sink/bwf.config.ts becomes the runtime var
     // read by the direct Workers AI backend.
     const vars = (wranglerConfig.vars ?? {}) as Record<string, unknown>;
-    expect(vars.__NOSAM_AI_GATEWAY).toBe('kitchen-sink-gw');
+    expect(vars.__PLATFORM_AI_GATEWAY).toBe('kitchen-sink-gw');
   });
 
   it('does not ship local .env values and declares required server secrets', () => {
@@ -121,7 +121,7 @@ describe('playground/kitchen-sink build', () => {
     });
     expect(wranglerConfig.containers).toEqual([
       expect.objectContaining({
-        name: 'void-sandbox-v1',
+        name: 'platform-sandbox-v1',
         class_name: 'SandboxV1',
       }),
     ]);

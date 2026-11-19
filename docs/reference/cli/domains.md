@@ -5,7 +5,7 @@ outline: deep
 
 # Custom Domains {#custom-domains}
 
-## `bwf domain add` {#nosam-domain-add}
+## `bwf domain add` {#platform-domain-add}
 
 ```
 bwf domain add <hostname> [--project <name>]
@@ -15,7 +15,7 @@ Add a custom domain to the saved target. Hosted bwf projects print the DNS recor
 
 > Wildcard custom hostnames (`*.example.com`) are not supported — register each subdomain individually.
 
-## `bwf domain delete` {#nosam-domain-delete}
+## `bwf domain delete` {#platform-domain-delete}
 
 ```
 bwf domain delete <hostname> [--project <name>]
@@ -23,7 +23,7 @@ bwf domain delete <hostname> [--project <name>]
 
 Direct Cloudflare projects apply the change immediately. Deleting the final custom domain uses your browser session from `bwf cloudflare login` or an API token with Workers Scripts: Edit permission. If Cloudflare rejects the change, bwf attempts to restore the previous domain configuration and reports whether recovery succeeded.
 
-## `bwf domain list` {#nosam-domain-list}
+## `bwf domain list` {#platform-domain-list}
 
 ```
 bwf domain list [--project <name>]
@@ -31,7 +31,7 @@ bwf domain list [--project <name>]
 
 List all custom domains. Hosted projects show active/pending state from the platform; direct Cloudflare projects list the custom-domain routes currently configured in `bwf.config.ts`.
 
-## `bwf domain status` {#nosam-domain-status}
+## `bwf domain status` {#platform-domain-status}
 
 ```
 bwf domain status <hostname> [--project <name>] [--verbose]

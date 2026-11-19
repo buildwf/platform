@@ -17,7 +17,7 @@ describe('project path resolution', () => {
   beforeEach(() => {
     root = join(
       tmpdir(),
-      `nosam-project-paths-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      `platform-project-paths-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     );
     mkdirSync(root, { recursive: true });
   });

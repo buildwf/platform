@@ -67,6 +67,6 @@ Repository verification includes affected builds/server/browser tests, all
 playground builds and artifact checks, typechecking, lint and the full suite.
 
 The complete gate passed 632 files: 11,785 tests passed and 25 were skipped.
-The rebuilt CLI also built and deployed a Nosam Worker app to the existing e2e
+The rebuilt CLI also built and deployed a Platform Worker app to the existing e2e
 platform with a partial binding override. Its public route returned HTTP 200
 with the new body, and rollback restored the previous test deployment and body.

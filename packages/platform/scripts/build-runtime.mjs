@@ -9,7 +9,7 @@ import { buildSandboxController } from '../../../platform/packages/api/scripts/b
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = join(packageRoot, '..', '..');
 const runtimeRoot = join(packageRoot, 'dist', 'runtime');
-const temporaryRoot = mkdtempSync(join(tmpdir(), 'nosam-platform-runtime-'));
+const temporaryRoot = mkdtempSync(join(tmpdir(), 'platform-runtime-'));
 const wrangler = fileURLToPath(import.meta.resolve('wrangler'));
 const drizzleRoot = join(repositoryRoot, 'platform', 'packages', 'api', 'drizzle');
 const apiRoot = join(repositoryRoot, 'platform', 'packages', 'api');
@@ -71,11 +71,11 @@ try {
     writeFileSync(
       configPath,
       JSON.stringify({
-        name: `nosam-runtime-build-${name === 'emailGateway' ? 'email-gateway' : name}`,
+        name: `platform-runtime-build-${name === 'emailGateway' ? 'email-gateway' : name}`,
         main: entrypoint,
         alias: {
           ...sourceAliases,
-          ...(name === 'api' ? { 'nosam:sandbox-controller-source': controller.modulePath } : {}),
+          ...(name === 'api' ? { 'platform:sandbox-controller-source': controller.modulePath } : {}),
         },
         compatibility_date: '2026-02-24',
         compatibility_flags:

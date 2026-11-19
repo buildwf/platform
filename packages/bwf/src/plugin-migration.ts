@@ -33,7 +33,7 @@ export function migrationPlugin(
   auth?: { enabled: boolean; configPath?: string | null },
 ): Plugin {
   return {
-    name: 'nosam:migrations',
+    name: 'platform:migrations',
     // Not in Vitest's server: tests run in Node.js without the app's database bindings, and
     // running them must not change the local database or the one in `.env`.
     apply: (config, { command }) => command === 'serve' && !isVitestServer(config),

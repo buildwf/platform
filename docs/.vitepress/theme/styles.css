@@ -35,7 +35,7 @@
     .button--primary::after,
     .resource-code-window,
     .feature-visual,
-    .nosam-terminal:not(.nosam-terminal--home) {
+    .platform-terminal:not(.platform-terminal--home) {
       border-radius: var(--radius-lg);
     }
 
@@ -55,16 +55,16 @@
       border-radius: var(--radius-sm);
     }
 
-    .nosam-terminal-box-top::before {
+    .platform-terminal-box-top::before {
       border-radius: var(--radius-xs) var(--radius-xs) 0 0;
     }
 
-    .nosam-terminal-box-bottom::before {
+    .platform-terminal-box-bottom::before {
       border-radius: 0 0 var(--radius-xs) var(--radius-xs);
     }
 
     .rounded-full,
-    .nosam-terminal-dots i,
+    .platform-terminal-dots i,
     .VPSwitch .check,
     .VPSwitch::before {
       corner-shape: round;

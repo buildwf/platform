@@ -80,7 +80,7 @@ describe('browser authentication configuration', () => {
       for (const pageNavigation of [false, true]) {
         const response = await app.fetch(
           new Request(`${origin}${path}`, {
-            headers: { Cookie: cookie, ...(pageNavigation ? { 'X-NosamPages': 'true' } : {}) },
+            headers: { Cookie: cookie, ...(pageNavigation ? { 'X-PlatformPages': 'true' } : {}) },
           }),
           env,
         );

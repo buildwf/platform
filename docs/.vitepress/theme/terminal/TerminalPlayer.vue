@@ -209,33 +209,33 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="terminal"
-    class="nosam-terminal"
-    :class="{ 'nosam-terminal--home': appearance === 'home' }"
+    class="platform-terminal"
+    :class="{ 'platform-terminal--home': appearance === 'home' }"
     :data-demo="demo.id"
   >
-    <div v-if="appearance === 'studio'" class="nosam-terminal-bar" aria-hidden="true">
-      <span class="nosam-terminal-dots"><i /><i /><i /></span>
-      <span class="nosam-terminal-directory">{{ demo.directory }}</span>
-      <span class="nosam-terminal-wordmark">void</span>
+    <div v-if="appearance === 'studio'" class="platform-terminal-bar" aria-hidden="true">
+      <span class="platform-terminal-dots"><i /><i /><i /></span>
+      <span class="platform-terminal-directory">{{ demo.directory }}</span>
+      <span class="platform-terminal-wordmark">void</span>
     </div>
-    <div ref="viewport" class="nosam-terminal-viewport" aria-hidden="true">
-      <div class="nosam-terminal-output">
+    <div ref="viewport" class="platform-terminal-viewport" aria-hidden="true">
+      <div class="platform-terminal-output">
         <div
           v-for="line in renderedLines"
           :key="line.id"
-          class="nosam-terminal-line"
-          :class="line.box && ['nosam-terminal-box-line', 'nosam-terminal-box-' + line.box]"
+          class="platform-terminal-line"
+          :class="line.box && ['platform-terminal-box-line', 'platform-terminal-box-' + line.box]"
           :style="line.box ? { '--box-columns': line.columns } : undefined"
         >
           <span v-if="line.spinner" class="tone-blue">{{ spinnerFrame + ' ' }}</span
-          ><span class="nosam-terminal-content"
+          ><span class="platform-terminal-content"
             ><span
               v-for="(segment, index) in line.segments"
               :key="index"
               :class="['tone-' + (segment.tone || 'base'), { 'terminal-bold': segment.bold }]"
               >{{ segment.text }}</span
             ></span
-          ><span v-if="line.caret" class="nosam-terminal-caret" />
+          ><span v-if="line.caret" class="platform-terminal-caret" />
         </div>
       </div>
     </div>
@@ -247,7 +247,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.nosam-terminal {
+.platform-terminal {
   --terminal-base: #e5e7ef;
   --terminal-muted: #8c91a4;
   --terminal-blue: #8c9fff;
@@ -268,7 +268,7 @@ onBeforeUnmount(() => {
   font-variant-ligatures: none;
   -webkit-font-smoothing: antialiased;
 }
-.nosam-terminal-bar {
+.platform-terminal-bar {
   display: flex;
   align-items: center;
   gap: 18px;
@@ -279,38 +279,38 @@ onBeforeUnmount(() => {
   color: var(--terminal-muted);
   font-size: 11px;
 }
-.nosam-terminal-dots {
+.platform-terminal-dots {
   display: flex;
   gap: 7px;
 }
-.nosam-terminal-dots i {
+.platform-terminal-dots i {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: #454852;
 }
-.nosam-terminal-directory {
+.platform-terminal-directory {
   flex: 1;
 }
-.nosam-terminal-wordmark {
+.platform-terminal-wordmark {
   color: #c8ccd8;
   font-weight: 600;
   letter-spacing: -0.06em;
   font-size: 15px;
 }
-.nosam-terminal-viewport {
+.platform-terminal-viewport {
   height: 520px;
   overflow: auto;
   scrollbar-width: none;
   overscroll-behavior: contain;
 }
-.nosam-terminal-viewport::-webkit-scrollbar {
+.platform-terminal-viewport::-webkit-scrollbar {
   display: none;
 }
-.nosam-terminal-output {
+.platform-terminal-output {
   padding: 25px 30px 32px;
 }
-.nosam-terminal-line {
+.platform-terminal-line {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   min-height: 22px;
@@ -318,33 +318,33 @@ onBeforeUnmount(() => {
   font-size: 13px;
   letter-spacing: 0;
 }
-.nosam-terminal-box-line {
+.platform-terminal-box-line {
   position: relative;
   width: calc(var(--box-columns) * 1ch);
   white-space: pre;
 }
-.nosam-terminal-box-line::before {
+.platform-terminal-box-line::before {
   content: '';
   position: absolute;
   inset: 0 0.5ch;
   border-left: 1px solid var(--terminal-muted);
   border-right: 1px solid var(--terminal-muted);
 }
-.nosam-terminal-box-top::before {
+.platform-terminal-box-top::before {
   top: 50%;
   border-top: 1px solid var(--terminal-muted);
   border-radius: 4px 4px 0 0;
 }
-.nosam-terminal-box-bottom::before {
+.platform-terminal-box-bottom::before {
   bottom: 50%;
   border-bottom: 1px solid var(--terminal-muted);
   border-radius: 0 0 4px 4px;
 }
-.nosam-terminal-box-line .nosam-terminal-content {
+.platform-terminal-box-line .platform-terminal-content {
   position: relative;
   margin-left: 3ch;
 }
-.nosam-terminal-box-top .nosam-terminal-content {
+.platform-terminal-box-top .platform-terminal-content {
   margin-left: 2.5ch;
   padding: 0 0.5ch;
   background: #15171d;
@@ -370,7 +370,7 @@ onBeforeUnmount(() => {
 .terminal-bold {
   font-weight: 700;
 }
-.nosam-terminal-caret {
+.platform-terminal-caret {
   display: inline-block;
   width: 8px;
   height: 15px;
@@ -388,34 +388,34 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 @media (min-width: 1100px) {
-  .nosam-terminal-line {
+  .platform-terminal-line {
     font-size: 14px;
     line-height: 24px;
     min-height: 24px;
   }
-  .nosam-terminal-viewport {
+  .platform-terminal-viewport {
     height: 560px;
   }
 }
 @media (max-width: 640px) {
-  .nosam-terminal-bar {
+  .platform-terminal-bar {
     padding: 0 18px;
     height: 42px;
   }
-  .nosam-terminal-output {
+  .platform-terminal-output {
     padding: 20px 16px;
   }
-  .nosam-terminal-line {
+  .platform-terminal-line {
     font-size: 10px;
     line-height: 20px;
     min-height: 20px;
   }
-  .nosam-terminal-viewport {
+  .platform-terminal-viewport {
     height: 460px;
   }
 }
 
-.nosam-terminal--home {
+.platform-terminal--home {
   --terminal-base: #ffffff;
   --terminal-muted: #aaa6b2;
   --terminal-green: #22ff73;
@@ -426,27 +426,27 @@ onBeforeUnmount(() => {
   box-shadow: none;
   font-family: var(--font-mono);
 }
-.nosam-terminal--home .nosam-terminal-viewport {
+.platform-terminal--home .platform-terminal-viewport {
   height: 100%;
   overflow: hidden;
   overscroll-behavior: auto;
 }
-.nosam-terminal--home .nosam-terminal-output {
+.platform-terminal--home .platform-terminal-output {
   padding: 24px 32px;
 }
-.nosam-terminal--home .nosam-terminal-line {
+.platform-terminal--home .platform-terminal-line {
   font-size: 14px;
   line-height: 22px;
   min-height: 22px;
 }
-.nosam-terminal--home .nosam-terminal-box-top .nosam-terminal-content {
+.platform-terminal--home .platform-terminal-box-top .platform-terminal-content {
   background: #111111;
 }
 @media (max-width: 640px) {
-  .nosam-terminal--home .nosam-terminal-output {
+  .platform-terminal--home .platform-terminal-output {
     padding: 20px 16px;
   }
-  .nosam-terminal--home .nosam-terminal-line {
+  .platform-terminal--home .platform-terminal-line {
     font-size: 11px;
     line-height: 19px;
     min-height: 19px;

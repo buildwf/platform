@@ -6,7 +6,7 @@ import { build } from 'vite';
 import { expect, it } from 'vite-plus/test';
 
 it('transfers native Sandbox WebSockets through DO fetch and strips the routing header', async () => {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-sandbox-websocket-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-sandbox-websocket-'));
   const root = join(import.meta.dirname, '../..');
   const entry = join(directory, 'entry.ts');
   const sdk = join(directory, 'sdk.ts');
@@ -23,7 +23,7 @@ export class NativeBox extends SandboxContainer {
   get container() { return { running: false, getTcpPort(port) { return { fetch(request) {
     const [client, server] = Object.values(new WebSocketPair());
     server.accept();
-    server.addEventListener('message', event => server.send(JSON.stringify({data: event.data, port, routingHeader: request.headers.get('x-nosam-sandbox-port'), path: new URL(request.url).pathname})));
+    server.addEventListener('message', event => server.send(JSON.stringify({data: event.data, port, routingHeader: request.headers.get('x-platform-sandbox-port'), path: new URL(request.url).pathname})));
     return new Response(null, {status: 101, webSocket: client});
   } }; } }; }
   async ensureRunning() {}

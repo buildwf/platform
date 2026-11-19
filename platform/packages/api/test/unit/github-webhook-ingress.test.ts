@@ -135,14 +135,14 @@ describe('GitHub webhook ingress Worker', () => {
         Authorization: 'Bearer attacker',
         Cookie: 'session=attacker',
         'Cf-Access-Jwt-Assertion': 'attacker-access',
-        'X-Nosam-GitHub-Ingress-Proof': 'attacker-proof',
+        'X-Platform-GitHub-Ingress-Proof': 'attacker-proof',
       }),
       env(fetch),
     );
 
     expect(response.status).toBe(200);
     expect(response.headers.get('X-Internal-Only')).toBeNull();
-    expect(forwarded?.url).toBe('https://nosam-api.internal/internal/github-webhook');
+    expect(forwarded?.url).toBe('https://platform-api.internal/internal/github-webhook');
     expect(forwarded?.method).toBe('POST');
     expect(forwarded?.headers.get('Authorization')).toBeNull();
     expect(forwarded?.headers.get('Cookie')).toBeNull();
@@ -152,8 +152,8 @@ describe('GitHub webhook ingress Worker', () => {
     expect(
       await verifyGitHubWebhookIngressProof({
         secret: ingressSecret,
-        timestampHeader: forwarded!.headers.get('X-Nosam-GitHub-Ingress-Timestamp'),
-        proofHeader: forwarded!.headers.get('X-Nosam-GitHub-Ingress-Proof'),
+        timestampHeader: forwarded!.headers.get('X-Platform-GitHub-Ingress-Timestamp'),
+        proofHeader: forwarded!.headers.get('X-Platform-GitHub-Ingress-Proof'),
         deliveryId,
         event: 'push',
         body: forwardedBody,

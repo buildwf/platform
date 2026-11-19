@@ -26,7 +26,7 @@ function createRoute(root: string, path: string, source: string): string {
 }
 
 function createRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-websocket-scan-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-websocket-scan-'));
   roots.push(root);
   return root;
 }

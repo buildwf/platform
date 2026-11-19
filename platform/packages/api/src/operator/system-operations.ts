@@ -15,7 +15,7 @@ import { type ApiEnv, isDevBypass } from '../env.ts';
 import { getRequestsDataset, queryTopProjectTraffic } from '../routes/usage.ts';
 
 /** Derive the base cloud domain from the API request hostname.
- *  nosam.buildwithfriends.dev → void.cloud, api.staging.void.cloud → staging.void.cloud */
+ *  platform.buildwithfriends.dev → void.cloud, api.staging.void.cloud → staging.void.cloud */
 function cloudDomainFromHost(host: string): string {
   return host.replace(/^api\./, '');
 }
@@ -171,9 +171,9 @@ export async function systemHealth(
   }
   const dispatchHeaders: Record<string, string> | undefined = installed
     ? env.PLATFORM_HEALTH_PROBE_TOKEN
-      ? { 'X-Nosam-Platform-Probe': env.PLATFORM_HEALTH_PROBE_TOKEN }
+      ? { 'X-Platform-Probe': env.PLATFORM_HEALTH_PROBE_TOKEN }
       : undefined
-    : { 'X-Health-Check': 'nosam-admin' };
+    : { 'X-Health-Check': 'platform-admin' };
   const checks = [
     { name: 'api', ok: true, latencyMs: 0 },
     ...(await Promise.all([

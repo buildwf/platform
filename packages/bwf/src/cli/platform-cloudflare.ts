@@ -199,7 +199,7 @@ export async function verifyPlatformRuntimeTokenPermissions(
     return;
   }
 
-  const probeUrl = `https://${input.applicationDomain}/.well-known/nosam/runtime-token-preflight-${randomUUID()}`;
+  const probeUrl = `https://${input.applicationDomain}/.well-known/platform/runtime-token-preflight-${randomUUID()}`;
   try {
     await client.request(`/zones/${encodeURIComponent(input.zoneId)}/purge_cache`, {
       body: JSON.stringify({ files: [probeUrl] }),
@@ -273,8 +273,8 @@ export async function verifyPlatformRuntimeTokenEmailPermissions(
     const denied = `Cloudflare denied: ${missing.join(', ')} (HTTP ${denial.status}).`;
     throw new PlatformRuntimeTokenEmailPermissionError(
       input.savedToken
-        ? `platform: The runtime API token saved on this machine cannot use platform email. ${denied} bwf checked this token because NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN is not set. If the platform uses a different runtime token, set NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to that token, and bwf checks that token instead. Otherwise, check that the zone permissions of the saved token include the email zone ${input.zoneId}. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Then run the command again.`
-        : `platform: The runtime API token cannot use platform email. ${denied} Check that the token is valid and that its zone permissions include the email zone ${input.zoneId}. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Or set NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to a valid token that has these permissions. Then run the command again.`,
+        ? `platform: The runtime API token saved on this machine cannot use platform email. ${denied} bwf checked this token because PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN is not set. If the platform uses a different runtime token, set PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to that token, and bwf checks that token instead. Otherwise, check that the zone permissions of the saved token include the email zone ${input.zoneId}. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Then run the command again.`
+        : `platform: The runtime API token cannot use platform email. ${denied} Check that the token is valid and that its zone permissions include the email zone ${input.zoneId}. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Or set PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to a valid token that has these permissions. Then run the command again.`,
       tokenNotValid,
       { cause: denial },
     );

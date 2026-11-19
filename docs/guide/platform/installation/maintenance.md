@@ -36,7 +36,7 @@ application. This lets installation check routing while employee protection and
 account-wide Default-Deny remain enabled. It does not bypass Access for an entire
 Worker or for deployed apps.
 
-For externally supplied credentials, set `NOSAM_ACCESS_CREDENTIALS` from your
+For externally supplied credentials, set `PLATFORM_ACCESS_CREDENTIALS` from your
 secret manager to an object keyed by each exact API/proxy origin, with
 `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` in each entry. Then rerun
 `bwf platform install --resume --name <id>`. bwf retains the saved resources
@@ -85,7 +85,7 @@ stay as installed. Repair prints a new setup code and the callback URL.
 
 A GitHub-only installation signs in with the GitHub OAuth App from its
 installation settings. To replace its client ID and secret, set
-`NOSAM_PLATFORM_GITHUB_CLIENT_ID` and `NOSAM_PLATFORM_GITHUB_CLIENT_SECRET` when
+`PLATFORM_GITHUB_CLIENT_ID` and `PLATFORM_GITHUB_CLIENT_SECRET` when
 you run `bwf platform repair <id>`.
 
 ### Repair missing resources
@@ -103,7 +103,7 @@ Repair recreates missing infrastructure that the installer owns. It does not res
 
 Upgrade the platform before your team updates its CLI. Install the new CLI on the administrator's machine, run the upgrade below, then have the team update.
 
-For apps using `@builtbyfriends/bwf/sandbox`, add **Account → Containers → Edit** and **Account → Cloudchamber → Edit** to the runtime token. Edit its permissions in Cloudflare, or supply a replacement with `NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN`. See [Cloudflare API Tokens](/guide/platform/installation/credentials#runtime-token-permissions).
+For apps using `@builtbyfriends/bwf/sandbox`, add **Account → Containers → Edit** and **Account → Cloudchamber → Edit** to the runtime token. Edit its permissions in Cloudflare, or supply a replacement with `PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN`. See [Cloudflare API Tokens](/guide/platform/installation/credentials#runtime-token-permissions).
 
 Use the installed CLI's packaged runtime to upgrade:
 
@@ -127,7 +127,7 @@ Some upgrades pause application traffic until the new version passes health chec
 ::: details Migration safety, credential rotation, and rollback
 
 To update the runtime Cloudflare token, GitHub OAuth credentials when GitHub login is enabled, or R2 credentials,
-provide their `NOSAM_PLATFORM_*` environment variables when running the upgrade.
+provide their `PLATFORM_*` environment variables when running the upgrade.
 Only the supplied values replace live credentials. Recovery data from an older
 workstation does not overwrite them, and upgrades preserve the live signing keys
 and complete project-encryption keyring. Keep current credentials in your secret
@@ -167,7 +167,7 @@ If updating project logs fails, the platform upgrade still completes and prints 
 
 While runtime logs are minimal, `bwf platform rollback` refuses a runtime that does not support the setting. Run `bwf platform upgrade [id] --runtime-logs full` first.
 
-### Platform Workers changed outside bwf {#workers-changed-outside-nosam}
+### Platform Workers changed outside bwf {#workers-changed-outside-platform}
 
 Use bwf commands to manage the platform's Workers. If their configuration was changed in Cloudflare, or bwf cannot identify the active version, maintenance asks you to approve replacing it. Preview the affected Workers with `--plan`.
 
@@ -216,9 +216,9 @@ bwf platform discover --account <account-id> --installation <id-or-name>
 
 Discovery restores local installation records after verifying the resources belong to your platform. It also works for interrupted or disabled installations. If infrastructure is missing, run `bwf platform repair [id]` after discovery. If ownership cannot be verified, the command stops without changing resources.
 
-After discovery, provide `NOSAM_PLATFORM_DATABASE_URL` for migrations and to coordinate administrator commands. You don't need to re-enter the other secrets for an upgrade that preserves every deployed Worker. For an email-enabled installation without its encrypted recovery file, restore `NOSAM_PLATFORM_EMAIL_SIGNING_SECRET`; recreating only the email gateway needs that key and no Cloudflare runtime token or JWT signing key. Recreating the API or proxy also requires the email key when email is enabled, in addition to their normal secrets. Recreating the API requires its original runtime token (`NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN`), R2, JWT, and project-encryption values through the `NOSAM_PLATFORM_*` variables; a GitHub-only installation also needs its original GitHub OAuth values. Recreating the proxy requires the runtime token and JWT signing key. Cloudflare can't return these values, so keep them in your organization's secret manager.
+After discovery, provide `PLATFORM_DATABASE_URL` for migrations and to coordinate administrator commands. You don't need to re-enter the other secrets for an upgrade that preserves every deployed Worker. For an email-enabled installation without its encrypted recovery file, restore `PLATFORM_EMAIL_SIGNING_SECRET`; recreating only the email gateway needs that key and no Cloudflare runtime token or JWT signing key. Recreating the API or proxy also requires the email key when email is enabled, in addition to their normal secrets. Recreating the API requires its original runtime token (`PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN`), R2, JWT, and project-encryption values through the `PLATFORM_*` variables; a GitHub-only installation also needs its original GitHub OAuth values. Recreating the proxy requires the runtime token and JWT signing key. Cloudflare can't return these values, so keep them in your organization's secret manager.
 
-If you have not rotated the project-encryption key, restore it with `NOSAM_PLATFORM_PROJECT_SECRET_KEY`. After rotation, supply `NOSAM_PLATFORM_PROJECT_SECRET_KEYS_JSON` with all retained keys and `NOSAM_PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION` with the active key's name. Keep older keys needed to decrypt existing project secrets. These values are used to recreate a missing API Worker; they do not replace the live keys during an ordinary upgrade. Supply them from your secret manager.
+If you have not rotated the project-encryption key, restore it with `PLATFORM_PROJECT_SECRET_KEY`. After rotation, supply `PLATFORM_PROJECT_SECRET_KEYS_JSON` with all retained keys and `PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION` with the active key's name. Keep older keys needed to decrypt existing project secrets. These values are used to recreate a missing API Worker; they do not replace the live keys during an ordinary upgrade. Supply them from your secret manager.
 
 ### Prepare for disaster recovery
 
@@ -239,7 +239,7 @@ During a restore, keep platform and application traffic disabled before changing
 
 Installation records live in `~/.bwf/platforms/`. Credentials are stored separately in encrypted recovery files, with the encryption key in your operating system's keychain. Keep your original secrets in a password manager for recovery on another machine. Signing and encryption keys that bwf generated exist only in these files; to keep your own copy, [supply them when installing](/guide/platform/installation/credentials#signing-and-encryption-keys).
 
-If the keychain isn't available, bwf stops before writing secrets. Headless environments can supply `NOSAM_PLATFORM_RECOVERY_KEY`: a canonical base64-encoded 32-byte key from a secret manager. A temporary CI runner can use a new recovery-encryption key for each run only when every original credential remains available in protected CI secrets, including `NOSAM_PLATFORM_JWT_SECRET`, `NOSAM_PLATFORM_EMAIL_SIGNING_SECRET` for an email-enabled installation, and either the original `NOSAM_PLATFORM_PROJECT_SECRET_KEY` or the complete rotated keyring and active-version pair.
+If the keychain isn't available, bwf stops before writing secrets. Headless environments can supply `PLATFORM_RECOVERY_KEY`: a canonical base64-encoded 32-byte key from a secret manager. A temporary CI runner can use a new recovery-encryption key for each run only when every original credential remains available in protected CI secrets, including `PLATFORM_JWT_SECRET`, `PLATFORM_EMAIL_SIGNING_SECRET` for an email-enabled installation, and either the original `PLATFORM_PROJECT_SECRET_KEY` or the complete rotated keyring and active-version pair.
 
 ::: details Ownership and interrupted maintenance
 

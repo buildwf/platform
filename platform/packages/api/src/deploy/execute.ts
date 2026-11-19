@@ -187,7 +187,7 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
     }
     throw error;
   }
-  const cliVersion = context.req.header('x-nosam-cli-version') ?? null;
+  const cliVersion = context.req.header('x-platform-cli-version') ?? null;
 
   const actor = context.get('user');
   let owner = access.owner;
@@ -295,7 +295,7 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
         context.get('db'),
         context.get('oauthApproval')!,
         projectId,
-        context.req.header('x-nosam-deploy-idempotency-key'),
+        context.req.header('x-platform-deploy-idempotency-key'),
         body,
         context.get('companyIdentity'),
       );
@@ -676,7 +676,7 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
   }
   const durable = !execution && context.env.DEPLOYMENTS_QUEUE !== undefined;
   const idempotencyKey =
-    context.req.header('x-nosam-deploy-idempotency-key') ?? crypto.randomUUID();
+    context.req.header('x-platform-deploy-idempotency-key') ?? crypto.randomUUID();
   if (durable && !/^[A-Za-z0-9_-]{1,128}$/.test(idempotencyKey)) {
     return context.json({ error: 'invalid deployment idempotency key' }, 400);
   }

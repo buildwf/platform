@@ -29,7 +29,7 @@ afterEach(() => {
 
 describe('auth types prepare lifecycle', () => {
   it('writes auth.d.ts and updates tsconfig after prepare; removes both when auth.ts is gone', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-auth-prepare-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-auth-prepare-'));
     roots.push(root);
     writeFileSync(join(root, 'tsconfig.json'), '{ "extends": "./.bwf/tsconfig.json" }');
     writeFileSync(

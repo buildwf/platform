@@ -54,7 +54,7 @@ describe('PostgreSQL migration handler', () => {
     const handler = createMigrationHandler(
       {
         HYPERDRIVE: { connectionString: 'postgresql://localhost/app' },
-        __NOSAM_PROXY_TOKEN: 'token',
+        __PLATFORM_PROXY_TOKEN: 'token',
       },
       [
         { name: '0001_init.sql', sql: 'CREATE TABLE posts (id integer);' },
@@ -66,9 +66,9 @@ describe('PostgreSQL migration handler', () => {
     );
 
     const response = await handler(
-      new Request('http://localhost/__nosam/migrate', {
+      new Request('http://localhost/__platform/migrate', {
         method: 'POST',
-        headers: { 'x-nosam-internal': 'token' },
+        headers: { 'x-platform-internal': 'token' },
       }),
     );
 

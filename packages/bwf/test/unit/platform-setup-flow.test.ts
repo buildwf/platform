@@ -129,34 +129,34 @@ const args = [
   '--workers-dev',
 ];
 const environment = {
-  NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN: 'runtime-secret-value',
-  NOSAM_PLATFORM_ADMIN_GITHUB_LOGIN: 'octocat',
-  NOSAM_PLATFORM_ADMIN_GITHUB_ID: '12345',
-  NOSAM_PLATFORM_DATABASE_URL: 'postgres://user:password@database.example.com/platform',
-  NOSAM_PLATFORM_GITHUB_CLIENT_ID: 'github-id',
-  NOSAM_PLATFORM_GITHUB_CLIENT_SECRET: 'github-secret-value',
-  NOSAM_PLATFORM_R2_ACCESS_KEY_ID: 'r2-id',
-  NOSAM_PLATFORM_R2_SECRET_ACCESS_KEY: 'r2-secret-value',
-  NOSAM_PLATFORM_JWT_SECRET: 'a'.repeat(32),
-  NOSAM_PLATFORM_PROJECT_SECRET_KEY: Buffer.alloc(32, 7).toString('base64'),
+  PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN: 'runtime-secret-value',
+  PLATFORM_ADMIN_GITHUB_LOGIN: 'octocat',
+  PLATFORM_ADMIN_GITHUB_ID: '12345',
+  PLATFORM_DATABASE_URL: 'postgres://user:password@database.example.com/platform',
+  PLATFORM_GITHUB_CLIENT_ID: 'github-id',
+  PLATFORM_GITHUB_CLIENT_SECRET: 'github-secret-value',
+  PLATFORM_R2_ACCESS_KEY_ID: 'r2-id',
+  PLATFORM_R2_SECRET_ACCESS_KEY: 'r2-secret-value',
+  PLATFORM_JWT_SECRET: 'a'.repeat(32),
+  PLATFORM_PROJECT_SECRET_KEY: Buffer.alloc(32, 7).toString('base64'),
 };
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.database.mockReset();
   mocks.operatorCredential.mockResolvedValue({ source: 'oauth', token: 'operator-token' });
   mocks.multiselect.mockResolvedValue(['github']);
-  directory = mkdtempSync(join(tmpdir(), 'nosam-credential-flow-'));
-  vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', directory);
-  vi.stubEnv('NOSAM_PLATFORM_RECOVERY_KEY', Buffer.alloc(32, 3).toString('base64'));
+  directory = mkdtempSync(join(tmpdir(), 'platform-credential-flow-'));
+  vi.stubEnv('PLATFORM_REGISTRY_DIR', directory);
+  vi.stubEnv('PLATFORM_RECOVERY_KEY', Buffer.alloc(32, 3).toString('base64'));
   vi.stubEnv('DATABASE_URL', '');
   for (const key of [
     ...Object.keys(environment),
-    'NOSAM_PLATFORM_PROJECT_SECRET_KEYS_JSON',
-    'NOSAM_PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION',
+    'PLATFORM_PROJECT_SECRET_KEYS_JSON',
+    'PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION',
     'CLOUDFLARE_API_TOKEN',
     'CF_API_TOKEN',
-    'NOSAM_PLATFORM_ACCESS_SETUP_TOKEN',
-    'NOSAM_ACCESS_CREDENTIALS',
+    'PLATFORM_ACCESS_SETUP_TOKEN',
+    'PLATFORM_ACCESS_CREDENTIALS',
   ]) {
     vi.stubEnv(key, '');
   }
@@ -219,22 +219,22 @@ beforeEach(() => {
   );
   mocks.password.mockImplementation(async ({ message }) => {
     if (message.startsWith('Paste runtime')) {
-      return environment.NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN;
+      return environment.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN;
     }
     if (message.startsWith('PostgreSQL')) {
-      return environment.NOSAM_PLATFORM_DATABASE_URL;
+      return environment.PLATFORM_DATABASE_URL;
     }
     if (message.startsWith('GitHub OAuth')) {
-      return environment.NOSAM_PLATFORM_GITHUB_CLIENT_SECRET;
+      return environment.PLATFORM_GITHUB_CLIENT_SECRET;
     }
     if (message === 'Secret Access Key:') {
-      return environment.NOSAM_PLATFORM_R2_SECRET_ACCESS_KEY;
+      return environment.PLATFORM_R2_SECRET_ACCESS_KEY;
     }
     if (message.startsWith('JWT')) {
-      return environment.NOSAM_PLATFORM_JWT_SECRET;
+      return environment.PLATFORM_JWT_SECRET;
     }
     if (message.startsWith('Project encryption')) {
-      return environment.NOSAM_PLATFORM_PROJECT_SECRET_KEY;
+      return environment.PLATFORM_PROJECT_SECRET_KEY;
     }
     throw new Error('Unexpected prompt: ' + message);
   });
@@ -269,7 +269,7 @@ async function interruptedInstall() {
   writeInstallationManifest(manifest);
   writePendingInstallationSecrets(manifest, {
     cloudflareApiToken: 'saved-runtime-token',
-    databaseUrl: environment.NOSAM_PLATFORM_DATABASE_URL,
+    databaseUrl: environment.PLATFORM_DATABASE_URL,
     databaseClaimState: 'claimed',
   });
   return manifest;
@@ -438,7 +438,7 @@ describe('platform credential onboarding', () => {
     expect(access.apps.size).toBe(2);
     expect(access.tokens.size).toBe(1);
     expect(mocks.install.mock.calls[0]![1].cloudflareApiToken).toBe(
-      environment.NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN,
+      environment.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN,
     );
     const manifest = listInstallationManifests()[0]!;
     writePendingInstallationSecrets(manifest, {
@@ -733,7 +733,7 @@ describe('platform credential onboarding', () => {
     expect(mocks.open).toHaveBeenCalledWith(expect.stringContaining('name=Test+Management'));
     const secrets = readPendingInstallationSecrets(listInstallationManifests()[0]!);
     expect(secrets?.cloudflareApiToken).toBe(
-      environment.NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN,
+      environment.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN,
     );
     expect(secrets?.managementApiToken).toBe('management-secret');
     expect(mocks.install.mock.calls[0]![1].managementApiToken).toBe('management-secret');
@@ -759,7 +759,7 @@ describe('platform credential onboarding', () => {
         managementApiToken: 'saved-management-secret',
       });
       // An explicit runtime token would replace the saved one.
-      const { NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN: _runtime, ...resumeEnvironment } =
+      const { PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN: _runtime, ...resumeEnvironment } =
         environment;
       for (const [key, value] of Object.entries(resumeEnvironment)) {
         vi.stubEnv(key, value);
@@ -1079,7 +1079,7 @@ describe('platform credential onboarding', () => {
       }),
     );
     expect(mocks.database).toHaveBeenCalledWith(
-      environment.NOSAM_PLATFORM_DATABASE_URL,
+      environment.PLATFORM_DATABASE_URL,
       interrupted.id,
       interrupted.ownershipNonce,
     );
@@ -1220,9 +1220,9 @@ describe('platform credential onboarding', () => {
     expect(mocks.progress.stop).toHaveBeenCalledWith('Platform installed.');
     expect(mocks.progress.error).not.toHaveBeenCalled();
     expect(success).toHaveBeenCalledWith(
-      'Test is installed at https://nosam-test-setup-api.account.workers.dev/admin.',
+      'Test is installed at https://platform-test-setup-api.account.workers.dev/admin.',
     );
-    expect(info).toHaveBeenCalledWith('API URL: https://nosam-test-setup-api.account.workers.dev');
+    expect(info).toHaveBeenCalledWith('API URL: https://platform-test-setup-api.account.workers.dev');
     // Spinner cancellation must not swallow the CLI's cancellation signal.
     const emit = vi.spyOn(process, 'emit').mockReturnValueOnce(true);
     mocks.spinner.mock.calls[0]![0].onCancel();
@@ -1255,7 +1255,7 @@ describe('platform credential onboarding', () => {
   it('names the database variable while a refused database can still be replaced', async () => {
     const info = vi.spyOn(log, 'info').mockImplementation(() => {});
     const hint =
-      'To use another PostgreSQL database, set NOSAM_PLATFORM_DATABASE_URL to its URL first.';
+      'To use another PostgreSQL database, set PLATFORM_DATABASE_URL to its URL first.';
     const refused =
       'platform: This PostgreSQL database is already claimed by bwf platform installation old-team.';
     mocks.install.mockImplementationOnce(async (_plan, _secrets, manifest) => {
@@ -1289,7 +1289,7 @@ describe('platform credential onboarding', () => {
     expect(info).toHaveBeenCalledWith(hint);
 
     const replacement = 'postgres://user:password@replacement.example.com/platform';
-    vi.stubEnv('NOSAM_PLATFORM_DATABASE_URL', replacement);
+    vi.stubEnv('PLATFORM_DATABASE_URL', replacement);
     mocks.database.mockResolvedValueOnce(null);
     await runPlatformLifecycleCommand(resume);
     expect(mocks.database).toHaveBeenLastCalledWith(
@@ -1312,7 +1312,7 @@ describe('platform credential onboarding', () => {
     ).rejects.toThrow('Worker upload failed');
     expect(info.mock.calls.some(([message]) => message.startsWith('Continue with:'))).toBe(true);
     expect(
-      info.mock.calls.some(([message]) => message.includes('NOSAM_PLATFORM_DATABASE_URL')),
+      info.mock.calls.some(([message]) => message.includes('PLATFORM_DATABASE_URL')),
     ).toBe(false);
   });
 
@@ -1329,7 +1329,7 @@ describe('platform credential onboarding', () => {
     );
     expect(info.mock.calls.some(([message]) => message.startsWith('Continue with:'))).toBe(true);
     expect(
-      info.mock.calls.some(([message]) => message.includes('NOSAM_PLATFORM_DATABASE_URL')),
+      info.mock.calls.some(([message]) => message.includes('PLATFORM_DATABASE_URL')),
     ).toBe(false);
   });
 
@@ -1420,7 +1420,7 @@ describe('platform credential onboarding', () => {
       'bwf generated the JWT signing key and project encryption key and keeps them in this machine’s encrypted recovery data.',
     );
     expect(descriptions).not.toContain('openssl rand');
-    expect(descriptions).not.toContain(environment.NOSAM_PLATFORM_DATABASE_URL);
+    expect(descriptions).not.toContain(environment.PLATFORM_DATABASE_URL);
     expect(descriptions).not.toContain(secrets.jwtSecret);
     expect(descriptions).not.toContain(secrets.projectSecretKey);
   });
@@ -1428,7 +1428,7 @@ describe('platform credential onboarding', () => {
     const info = vi.spyOn(log, 'info').mockImplementation(() => {});
     const manifest = await interruptedInstall();
     for (const [key, value] of Object.entries(environment)) {
-      if (key !== 'NOSAM_PLATFORM_JWT_SECRET' && key !== 'NOSAM_PLATFORM_PROJECT_SECRET_KEY') {
+      if (key !== 'PLATFORM_JWT_SECRET' && key !== 'PLATFORM_PROJECT_SECRET_KEY') {
         vi.stubEnv(key, value);
       }
     }
@@ -1450,8 +1450,8 @@ describe('platform credential onboarding', () => {
     );
     expect(descriptions).not.toContain('bwf generated');
     expect(mocks.install.mock.calls[0]![1]).toMatchObject({
-      jwtSecret: environment.NOSAM_PLATFORM_JWT_SECRET,
-      projectSecretKey: environment.NOSAM_PLATFORM_PROJECT_SECRET_KEY,
+      jwtSecret: environment.PLATFORM_JWT_SECRET,
+      projectSecretKey: environment.PLATFORM_PROJECT_SECRET_KEY,
     });
   });
   describe('runtime token on an interrupted install resume', () => {
@@ -1464,7 +1464,7 @@ describe('platform credential onboarding', () => {
       for (const [key, value] of Object.entries(environment)) {
         vi.stubEnv(key, value);
       }
-      vi.stubEnv('NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN', runtimeToken);
+      vi.stubEnv('PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN', runtimeToken);
     };
 
     it('uses an explicit replacement and sends it to deployed Workers', async () => {
@@ -1474,8 +1474,8 @@ describe('platform credential onboarding', () => {
       expect(mocks.password).not.toHaveBeenCalled();
       expect(mocks.install.mock.calls[0]![1]).toMatchObject({
         cloudflareApiToken: replacement,
-        githubClientId: environment.NOSAM_PLATFORM_GITHUB_CLIENT_ID,
-        r2SecretAccessKey: environment.NOSAM_PLATFORM_R2_SECRET_ACCESS_KEY,
+        githubClientId: environment.PLATFORM_GITHUB_CLIENT_ID,
+        r2SecretAccessKey: environment.PLATFORM_R2_SECRET_ACCESS_KEY,
       });
       // Only the token is an update; the other values are not replacements.
       expect(mocks.install.mock.calls[0]![1].workerSecretUpdates).toEqual({
@@ -1546,7 +1546,7 @@ describe('platform credential onboarding', () => {
         emailSigningSecret,
       });
       stubEnvironment(replacement);
-      vi.stubEnv('NOSAM_PLATFORM_EMAIL_SIGNING_SECRET', emailSigningSecret);
+      vi.stubEnv('PLATFORM_EMAIL_SIGNING_SECRET', emailSigningSecret);
       await resume(emailManifest);
       expect(mocks.install.mock.calls[0]![1].emailSigningSecret).toBe(emailSigningSecret);
       expect(mocks.install.mock.calls[0]![1].workerSecretUpdates).toEqual({
@@ -1600,7 +1600,7 @@ describe('platform credential onboarding', () => {
   });
   it('requires identity keys from the environment on a non-interactive install', async () => {
     for (const [key, value] of Object.entries(environment)) {
-      if (key !== 'NOSAM_PLATFORM_JWT_SECRET' && key !== 'NOSAM_PLATFORM_PROJECT_SECRET_KEY') {
+      if (key !== 'PLATFORM_JWT_SECRET' && key !== 'PLATFORM_PROJECT_SECRET_KEY') {
         vi.stubEnv(key, value);
       }
     }
@@ -1632,7 +1632,7 @@ describe('platform credential onboarding', () => {
     expect(mocks.install).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        cloudflareApiToken: environment.NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN,
+        cloudflareApiToken: environment.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN,
       }),
       expect.objectContaining({ id: draft.id }),
       expect.anything(),
@@ -1698,7 +1698,7 @@ describe('platform credential onboarding', () => {
 
   it('does not replace an explicit environment token or clear a different saved token', async () => {
     const draft = await savedSetup();
-    vi.stubEnv('NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN', 'environment-token');
+    vi.stubEnv('PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN', 'environment-token');
     mocks.preflight.mockRejectedValueOnce(
       new PlatformCloudflareApiError('Authentication error', 403),
     );
@@ -1893,7 +1893,7 @@ describe('platform credential onboarding', () => {
     );
     mocks.plan.mockImplementation(actual.createPlatformInstallPlan);
     vi.spyOn(PlatformCloudflareClient.prototype, 'getWorkersSubdomain').mockResolvedValue(
-      'nosam-platform-e2e-test',
+      'platform-e2e-test',
     );
     for (const method of [
       'listAiGateways',
@@ -1909,9 +1909,9 @@ describe('platform credential onboarding', () => {
     const normalText = mocks.text.getMockImplementation()!;
     mocks.text.mockImplementation(async (input) =>
       input.message === 'Installation name:'
-        ? 'nosam-e2e'
+        ? 'platform-e2e'
         : input.message === 'Platform display name:'
-          ? 'nosam-e2e bwf'
+          ? 'platform-e2e bwf'
           : normalText(input),
     );
     const normalPassword = mocks.password.getMockImplementation()!;
@@ -1932,11 +1932,11 @@ describe('platform credential onboarding', () => {
       }),
     );
     const draft = listInstallationManifests()[0]!;
-    expect(draft.deployment.installationSlug).toBe('nosam-e2e');
-    expect(draft.deployment.resources.apiWorker).toBe('nosam-nosam-e2e-api');
+    expect(draft.deployment.installationSlug).toBe('platform-e2e');
+    expect(draft.deployment.resources.apiWorker).toBe('platform-e2e-api');
     expect(draft.deployment.resources).toEqual(preview.deployment.resources);
     expect(isPlatformSetupDraft(draft)).toBe(true);
-    const callback = `https://${draft.deployment.resources.apiWorker}.nosam-platform-e2e-test.workers.dev/auth/callback`;
+    const callback = `https://${draft.deployment.resources.apiWorker}.platform-e2e-test.workers.dev/auth/callback`;
     expect(info).toHaveBeenCalledWith(expect.stringContaining('Redirect URI: ' + callback));
     mocks.password.mockImplementation(normalPassword);
     mocks.open.mockClear();
@@ -1969,7 +1969,7 @@ describe('platform credential onboarding', () => {
       vi.spyOn(PlatformCloudflareClient.prototype, method).mockResolvedValue([]);
     }
     vi.spyOn(PlatformCloudflareClient.prototype, 'listWorkerNames').mockResolvedValue([
-      'nosam-test-setup-api',
+      'platform-test-setup-api',
     ]);
     await expect(runPlatformLifecycleCommand(parsePlatformArgs(args))).rejects.toThrow(
       'Resume the owning installation, or choose another installation name.',
@@ -2117,13 +2117,13 @@ describe('platform credential onboarding', () => {
     expect(mocks.install).not.toHaveBeenCalled();
     expect(mocks.database).not.toHaveBeenCalled();
     const saved = readPendingInstallationSecrets(first)!;
-    expect(saved.cloudflareApiToken).toBe(environment.NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN);
+    expect(saved.cloudflareApiToken).toBe(environment.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN);
     expect(saved.githubClientId).toBeUndefined();
     const serialized = readdirSync(directory, { recursive: true })
       .filter((entry): entry is string => typeof entry === 'string' && entry.endsWith('.enc'))
       .map((entry) => readFileSync(join(directory, entry), 'utf8'))
       .join('');
-    expect(serialized).not.toContain(environment.NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN);
+    expect(serialized).not.toContain(environment.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN);
     const initialApi = mocks.plan.mock.results[0]!.value;
     mocks.password.mockImplementation(normalPassword);
     mocks.open.mockClear();
@@ -2159,13 +2159,13 @@ describe('platform credential onboarding', () => {
     for (const [key, value] of Object.entries(environment)) {
       vi.stubEnv(key, value);
     }
-    vi.stubEnv('NOSAM_EMAIL_SHARED_ZONE_ID', '');
-    vi.stubEnv('NOSAM_EMAIL_SENDER_DOMAIN', '');
+    vi.stubEnv('PLATFORM_EMAIL_SHARED_ZONE_ID', '');
+    vi.stubEnv('PLATFORM_EMAIL_SENDER_DOMAIN', '');
     await runPlatformLifecycleCommand(parsePlatformArgs(args));
     expect(mocks.preflight.mock.calls[0]![1]).not.toHaveProperty('emailZoneId');
 
-    vi.stubEnv('NOSAM_EMAIL_SHARED_ZONE_ID', 'mail-zone');
-    vi.stubEnv('NOSAM_EMAIL_SENDER_DOMAIN', 'mail.example.com');
+    vi.stubEnv('PLATFORM_EMAIL_SHARED_ZONE_ID', 'mail-zone');
+    vi.stubEnv('PLATFORM_EMAIL_SENDER_DOMAIN', 'mail.example.com');
     const emailArgs = args.map((value) => (value === 'test-setup' ? 'email-setup' : value));
     await runPlatformLifecycleCommand(parsePlatformArgs(emailArgs));
 
@@ -2180,8 +2180,8 @@ describe('platform credential onboarding', () => {
     for (const [key, value] of Object.entries(environment)) {
       vi.stubEnv(key, value);
     }
-    vi.stubEnv('NOSAM_EMAIL_SHARED_ZONE_ID', 'mail-zone');
-    vi.stubEnv('NOSAM_EMAIL_SENDER_DOMAIN', 'mail.example.com');
+    vi.stubEnv('PLATFORM_EMAIL_SHARED_ZONE_ID', 'mail-zone');
+    vi.stubEnv('PLATFORM_EMAIL_SENDER_DOMAIN', 'mail.example.com');
 
     await runPlatformLifecycleCommand(parsePlatformArgs(args));
 
@@ -2191,10 +2191,10 @@ describe('platform credential onboarding', () => {
     expect(isPlatformSetupDraft(manifest)).toBe(false);
     expect(saved.emailSigningSecret).toBe(installSecrets.emailSigningSecret);
     expect(Buffer.byteLength(saved.emailSigningSecret, 'utf8')).toBeGreaterThanOrEqual(32);
-    expect(saved.emailSigningSecret).not.toBe(environment.NOSAM_PLATFORM_JWT_SECRET);
+    expect(saved.emailSigningSecret).not.toBe(environment.PLATFORM_JWT_SECRET);
   });
   it('does not persist an invalid signing key or begin provisioning', async () => {
-    vi.stubEnv('NOSAM_PLATFORM_JWT_SECRET', 'short');
+    vi.stubEnv('PLATFORM_JWT_SECRET', 'short');
     await expect(runPlatformLifecycleCommand(parsePlatformArgs(args))).rejects.toThrow(
       'at least 32 bytes',
     );

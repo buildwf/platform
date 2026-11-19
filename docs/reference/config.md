@@ -221,7 +221,7 @@ Enable and configure Cloudflare Sandboxes. Importing from `@builtbyfriends/bwf/s
 | `durableObject`     | `string` | None                        |
 | `binding`           | `string` | `SANDBOX`                   |
 | `className`         | `string` | `SandboxV1`                 |
-| `containerName`     | `string` | `void-sandbox-v1`           |
+| `containerName`     | `string` | `platform-sandbox-v1`           |
 | `image`             | `string` | Packaged Node.js Dockerfile |
 | `imageBuildContext` | `string` | Directory of `image`        |
 | `platformImage`     | `string` | `cloudflare/debian-trixie`  |
@@ -443,7 +443,7 @@ Custom binding names work with `@builtbyfriends/bwf/db`, `@builtbyfriends/bwf/kv
 
 #### `inference.build`
 
-Override the build command. Useful for static apps with custom build scripts. If omitted, the CLI uses the detected default build command for the current app type. It applies to every app type, including `"nosam"` (where the default is `vite build`).
+Override the build command. Useful for static apps with custom build scripts. If omitted, the CLI uses the detected default build command for the current app type. It applies to every app type, including `"platform"` (where the default is `vite build`).
 
 ```json
 { "inference": { "build": "vitepress build" } }
@@ -469,7 +469,7 @@ Override which directories are scanned for [binding inference](./resource-infere
 
 App type. If omitted, auto-detected on first deploy. See [Supported App Types](../guide/app-types.md).
 
-- `"nosam"`: React SPA assets plus a Worker for API routes, middleware, and jobs
+- `"platform"`: React SPA assets plus a Worker for API routes, middleware, and jobs
 - `"static"`: fully rendered HTML files from VitePress, plain HTML, or external tools. Non-matching paths return `404.html` or a 404 response.
 - `"spa"`: static output with SPA fallback. Non-file paths fall back to `index.html` with a `200` status so client-side routing works out of the box.
 

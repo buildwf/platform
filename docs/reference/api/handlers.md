@@ -5,7 +5,7 @@ outline: deep
 
 # Handlers and Middleware {#handlers}
 
-Imported from `"nosam"` or `"@builtbyfriends/bwf/handler"`.
+Imported from `"platform"` or `"@builtbyfriends/bwf/handler"`.
 
 ## `defineHandler(handler)` {#definehandler-handler}
 
@@ -100,7 +100,7 @@ function defineMiddleware(handler: MiddlewareHandler<CloudEnv>): MiddlewareHandl
 
 Built-in Basic authentication middleware for temporary site gates and pre-launch protection. Use it from `middleware/` with credentials from `@builtbyfriends/bwf/env` to protect the whole app, or pass it to `defineHandler()` for a single route.
 
-bwf’s reserved `/__nosam` endpoints use their own authentication and are excluded from Basic auth.
+bwf’s reserved `/__platform` endpoints use their own authentication and are excluded from Basic auth.
 
 When credentials come from `@builtbyfriends/bwf/env`, wrap the reads in functions so they are resolved per request after bwf has bound the runtime env.
 

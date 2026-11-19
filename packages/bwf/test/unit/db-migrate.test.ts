@@ -69,7 +69,7 @@ function infoMessagesWithoutColor(): Array<string> {
 }
 
 function createProjectRoot(migrations: Record<string, string>): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-db-migrate-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-db-migrate-'));
   const migrationsDir = join(root, 'db', 'migrations');
   mkdirSync(join(migrationsDir, 'meta'), { recursive: true });
 
@@ -168,7 +168,7 @@ describe('bwf db migrate', () => {
   beforeEach(async () => {
     vi.spyOn(output, 'printSuccess').mockImplementation(() => {});
     vi.clearAllMocks();
-    mockGetMiniflareDatabasePath.mockReturnValue(join(tmpdir(), 'nosam-db-migrate.sqlite'));
+    mockGetMiniflareDatabasePath.mockReturnValue(join(tmpdir(), 'platform-db-migrate.sqlite'));
     mockGetAppliedMigrations.mockResolvedValue([]);
     mockRunMigrations.mockResolvedValue([]);
     mockGetPgAppliedMigrations.mockResolvedValue([]);
@@ -206,7 +206,7 @@ describe('bwf db migrate', () => {
 
   it("allows a pragma'd destructive migration to apply locally", async () => {
     const root = createProjectRoot({
-      '001_drop_users.sql': '-- nosam:allow-destructive\nDROP TABLE users;',
+      '001_drop_users.sql': '-- platform:allow-destructive\nDROP TABLE users;',
     });
     mockRunMigrations.mockResolvedValue(['001_drop_users.sql']);
 
@@ -214,7 +214,7 @@ describe('bwf db migrate', () => {
 
     expect(mockRunMigrations).toHaveBeenCalledWith(
       toSlash(join(root, 'db', 'migrations')),
-      join(tmpdir(), 'nosam-db-migrate.sqlite'),
+      join(tmpdir(), 'platform-db-migrate.sqlite'),
       expect.any(Function),
     );
     expect(output.printSuccess).toHaveBeenCalledWith('Applied 1 migration.');
@@ -373,7 +373,7 @@ describe('bwf db migrate', () => {
   });
 
   it('names journal drift under sourceDir', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-db-migrate-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-db-migrate-'));
     roots.push(root);
     writeFileSync(join(root, 'bwf.json'), JSON.stringify({ sourceDir: 'src' }, null, 2) + '\n');
     const migrationsDir = join(root, 'src', 'db', 'migrations');
@@ -559,7 +559,7 @@ describe('bwf db restore', () => {
   function savedOnBwf(): string {
     const root = d1Project(false);
     mkdirSync(join(root, '.bwf'), { recursive: true });
-    writeFileSync(join(root, '.bwf', 'project.json'), JSON.stringify({ platform: 'nosam' }));
+    writeFileSync(join(root, '.bwf', 'project.json'), JSON.stringify({ platform: 'platform' }));
     return root;
   }
 

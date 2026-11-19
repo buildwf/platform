@@ -89,13 +89,13 @@ Enabling email lets administrators [register email domains for projects](/guide/
 
 The zone permissions must include each zone that will carry mail, including the mail zone. Email Sending onboarding for arbitrary recipients needs Workers Paid.
 
-For a new installation, set `NOSAM_EMAIL_SENDER_DOMAIN` and `NOSAM_EMAIL_SHARED_ZONE_ID` before `bwf platform install`. The runtime-token link then preselects these permissions.
+For a new installation, set `PLATFORM_EMAIL_SENDER_DOMAIN` and `PLATFORM_EMAIL_SHARED_ZONE_ID` before `bwf platform install`. The runtime-token link then preselects these permissions.
 
-For an existing installation, edit its runtime token's permissions in Cloudflare, or supply a replacement with `NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN`. Then run:
+For an existing installation, edit its runtime token's permissions in Cloudflare, or supply a replacement with `PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN`. Then run:
 
 ```sh
-NOSAM_EMAIL_SENDER_DOMAIN=mail.example.com \
-NOSAM_EMAIL_SHARED_ZONE_ID=your-zone-id \
+PLATFORM_EMAIL_SENDER_DOMAIN=mail.example.com \
+PLATFORM_EMAIL_SHARED_ZONE_ID=your-zone-id \
 bwf platform upgrade your-installation-id
 ```
 
@@ -103,7 +103,7 @@ bwf saves this domain and zone for later upgrades. Choose them for the lifetime 
 
 If setup reports a missing permission, add it to the runtime token and rerun the command. Select all permissions in the table, including Edit access and Email Sending.
 
-When maintaining the platform from another machine, set `NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN` to the current runtime token so the CLI checks its permissions.
+When maintaining the platform from another machine, set `PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN` to the current runtime token so the CLI checks its permissions.
 
 The installer configures the email gateway and shared mail route. If setup fails, fix the reported permission, DNS, or routing problem and rerun the command. Resume a fresh installation with `bwf platform install --resume --name <installation-id>`.
 
@@ -117,7 +117,7 @@ The installer opens the **R2 token creation** form with a token name based on yo
 
 The **JWT signing key** signs platform login tokens. The **Project encryption key** encrypts app secrets stored by your platform. An interactive install generates both and keeps them in this machine's encrypted recovery data. Lifecycle commands on this machine read them from there.
 
-To keep your own copy, for example to repair the platform from CI or another machine, create both keys before installing and set `NOSAM_PLATFORM_JWT_SECRET` and `NOSAM_PLATFORM_PROJECT_SECRET_KEY`. Non-interactive installs must set both. Generate a separate key for each by running this command twice:
+To keep your own copy, for example to repair the platform from CI or another machine, create both keys before installing and set `PLATFORM_JWT_SECRET` and `PLATFORM_PROJECT_SECRET_KEY`. Non-interactive installs must set both. Generate a separate key for each by running this command twice:
 
 ```sh
 openssl rand -base64 32
@@ -137,4 +137,4 @@ Paste it into your password manager as **JWT signing key**. Run the command agai
 
 :::
 
-When email is enabled, bwf also creates an independent **Email signing key** for confirmation links and service-to-service email requests. The installer keeps it in encrypted recovery state. Set `NOSAM_PLATFORM_EMAIL_SIGNING_SECRET` to a separate value of at least 32 random bytes when you need an externally custodied copy, including a headless installation whose local recovery files will not persist.
+When email is enabled, bwf also creates an independent **Email signing key** for confirmation links and service-to-service email requests. The installer keeps it in encrypted recovery state. Set `PLATFORM_EMAIL_SIGNING_SECRET` to a separate value of at least 32 random bytes when you need an externally custodied copy, including a headless installation whose local recovery files will not persist.

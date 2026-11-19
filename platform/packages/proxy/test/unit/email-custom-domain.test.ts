@@ -20,7 +20,7 @@ const { clearProxyTokenStateCache } = await import('../../src/proxy-token.ts');
 
 const JWT_SECRET = 'test-secret-key';
 const EMAIL_SIGNING_SECRET = 'test-email-signing-key-independent';
-const PROD_DOMAIN = 'mail.void.cloud';
+const PROD_DOMAIN = 'mail.buildwf.dev';
 const CUSTOM_DOMAIN = 'acme.com';
 const CUSTOM_FROM = `support@${CUSTOM_DOMAIN}`;
 /** Dummy fixture value for the leased credential — not a real token. */
@@ -275,7 +275,7 @@ describe('POST /email/send — custom sender domain', () => {
       projectId: 'proj_000000000001',
     });
     const leaseHeaders = new Headers(leaseInit.headers);
-    expect(leaseHeaders.get('x-nosam-internal')).toBe(
+    expect(leaseHeaders.get('x-platform-internal')).toBe(
       await signHmac(`email-lease-v1\nproj_000000000001\n${CUSTOM_DOMAIN}`, EMAIL_SIGNING_SECRET),
     );
 

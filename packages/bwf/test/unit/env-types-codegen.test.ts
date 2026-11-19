@@ -10,7 +10,7 @@ function withTempProject(setup: (root: string) => void): {
   outDir: string;
   cleanup: () => void;
 } {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-env-codegen-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-env-codegen-'));
   setup(root);
   const outDir = join(root, '.bwf');
   mkdirSync(outDir, { recursive: true });
@@ -90,14 +90,14 @@ describe('generateEnvTypes', () => {
       expect(dts).toContain('export {}');
       expect(dts).toContain('declare module "@builtbyfriends/bwf/env"');
       expect(dts).toContain('declare module "@builtbyfriends/bwf/handler"');
-      expect(dts).toContain('interface ValidatedEnv extends _NosamEnvShape');
-      expect(dts).toContain('interface CloudBindings extends _NosamEnvShape');
+      expect(dts).toContain('interface ValidatedEnv extends _PlatformEnvShape');
+      expect(dts).toContain('interface CloudBindings extends _PlatformEnvShape');
       // Path is relative to outDir and keeps the source extension for NodeNext.
       expect(dts).toContain('typeof import("../env.ts")');
       // Resolves both `export default defineEnv(...)` and
       // `export const env = defineEnv(...)` source forms.
       expect(dts).toContain(
-        'type _NosamEnvShape = _NosamEnvSchema extends { default: infer D } ? D : _NosamEnvSchema extends { env: infer E } ? E : {};',
+        'type _PlatformEnvShape = _PlatformEnvSchema extends { default: infer D } ? D : _PlatformEnvSchema extends { env: infer E } ? E : {};',
       );
     } finally {
       cleanup();

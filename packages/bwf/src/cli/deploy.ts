@@ -28,7 +28,7 @@ import {
   isGithubActionsOidcAvailable,
   maskGithubActionsSecret,
 } from './github-oidc.ts';
-import { assertInstalledBwfMatchesCli } from './installed-nosam.ts';
+import { assertInstalledBwfMatchesCli } from './installed-platform.ts';
 import { openDeployLog, type CliLogger } from './log-file.ts';
 import { buildDeployLogSummary } from './log-summary.ts';
 import { promptForLoginToken } from './login.ts';
@@ -49,7 +49,7 @@ export function resolveDeploymentPlatform(
   options?: RunDeployOptions,
 ): DeploymentPlatform {
   // Projects with no saved choice predate the init prompt and keep the bwf default.
-  return options?.platform ?? readDeploymentPlatform(root) ?? 'nosam';
+  return options?.platform ?? readDeploymentPlatform(root) ?? 'platform';
 }
 
 /** Run `bwf deploy`; a failure carries a summary of the deploy log in its message. */
@@ -120,13 +120,13 @@ const cloudflareDeployTarget: RunDeployTargetAdapter = {
 };
 
 const bwfDeployTarget: RunDeployTargetAdapter = {
-  target: 'nosam',
+  target: 'platform',
   deploy: runManagedDeploy,
 };
 
 const deployTargets: Record<DeployTarget, RunDeployTargetAdapter> = {
   cloudflare: cloudflareDeployTarget,
-  nosam: bwfDeployTarget,
+  platform: bwfDeployTarget,
 };
 
 async function runDeployInner(
@@ -326,7 +326,7 @@ async function runManagedDeploy(
         // and keep working without the guard.
         preset = detectPreset(root, { spa: options?.spa, strictBackend: true });
       }
-      // appType === "nosam" → full deploy.
+      // appType === "platform" → full deploy.
 
       if (preset) {
         preset = {

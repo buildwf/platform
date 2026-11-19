@@ -7,10 +7,10 @@ created: 2026-06-23
 # GitHub identity linking and shared organization installations
 
 Deploy-on-GitHub uses a GitHub identity independent of the provider used to
-sign in to Nosam. An authenticated user can run `bwf github link` to attach a
-GitHub account to their existing Nosam account. `bwf github install` starts that
+sign in to Platform. An authenticated user can run `bwf github link` to attach a
+GitHub account to their existing Platform account. `bwf github install` starts that
 flow automatically when the identity is missing. Linking does not rely on email
-equality and does not create another Nosam user.
+equality and does not create another Platform user.
 
 The GitHub App installation and repository connection are separate proofs.
 Linking an identity proves control of a GitHub account; it does not grant access
@@ -25,8 +25,8 @@ localhost redirect and PKCE. The public `/github/link-callback` exchanges the
 GitHub code and returns a short-lived, signed link code to that localhost
 callback. It does not change an account. The authenticated
 `POST /github/link/complete` verifies the link code and PKCE verifier, then binds
-the GitHub identity to the bearer of the Nosam token. A GitHub identity already
-linked to another Nosam user is rejected; repeating a link for the same user is
+the GitHub identity to the bearer of the Platform token. A GitHub identity already
+linked to another Platform user is rejected; repeating a link for the same user is
 idempotent. The transient GitHub user token is not stored.
 
 The public installation callback retains its signed-state continuity check:
@@ -34,7 +34,7 @@ the GitHub account that completes installation must match the account that
 started it. A personal installation can use the installation-account match when
 GitHub App user-OAuth is unavailable. An organization installation requires a
 successful GitHub user-token proof. This prevents someone from binding another
-person's installation to their Nosam account merely by sending that person an
+person's installation to their Platform account merely by sending that person an
 installation URL.
 
 The GitHub App must register the API's `/github/link-callback` URL. Shared
@@ -47,7 +47,7 @@ self-hosted installer does not set up GitHub builds.
 
 ## Shared organization installations
 
-An organization has one GitHub App installation, and multiple Nosam users can
+An organization has one GitHub App installation, and multiple Platform users can
 connect their own projects through it. `bwf github join` uses a fresh GitHub
 user-OAuth proof to discover installations visible to the caller. The platform
 caches that visibility in `github_installation_members` with an expiry. The
@@ -58,7 +58,7 @@ Every organization repository connection, including one made by the person who
 installed the App, requires a separate browser proof that the connecting GitHub
 user can access that specific repository. The signed connect grant carries the
 repository's immutable GitHub ID and is redeemed under the connecting user's
-Nosam identity. The platform records the authorizing Nosam user on the project
+Platform identity. The platform records the authorizing Platform user on the project
 connection. Organization installations have no owner. Personal installations
 retain their installation-owner path.
 
@@ -73,7 +73,7 @@ On `organization/member_removed`, the platform deletes the affected membership,
 severs the repository connections that member authorized,
 and cancels their active builds. A durable revocation mark keyed by the GitHub
 account and installation rejects join or connect artifacts minted before the
-removal, including artifacts created before a Nosam account was linked. The
+removal, including artifacts created before a Platform account was linked. The
 installation and connection paths serialize with removal so an in-flight
 connection cannot commit after the revocation without seeing it.
 
@@ -89,4 +89,4 @@ GitHub's user-installation APIs reflect the change.
 This design intentionally does not persist refreshable GitHub user tokens.
 Repository access is established at connect time; later removal is handled by
 the organization webhook and failed-delivery replay. Existing deployed sites
-remain owned by their Nosam projects when a GitHub connection is severed.
+remain owned by their Platform projects when a GitHub connection is severed.

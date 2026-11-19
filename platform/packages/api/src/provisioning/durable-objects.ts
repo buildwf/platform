@@ -38,9 +38,9 @@ type Snapshot = {
   files: Array<{ name: string; contentType: string; sha256: string }>;
 };
 type Credential = Awaited<ReturnType<typeof encryptPlatformCredential>>;
-const OWNER = '__NOSAM_DURABLE_OWNER';
-const RELEASE = '__NOSAM_DURABLE_DEPLOYMENT';
-const ENTRY = '__nosam_durable_entry.js';
+const OWNER = '__PLATFORM_DURABLE_OWNER';
+const RELEASE = '__PLATFORM_DURABLE_DEPLOYMENT';
+const ENTRY = '__platform_durable_entry.js';
 
 function namespace(env: Pick<Env, 'DISPATCH_NAMESPACE'>): string {
   return env.DISPATCH_NAMESPACE ?? DEFAULT_DISPATCH_NAMESPACE;
@@ -233,7 +233,7 @@ function idle(
       ...(create
         ? {
             migrations: {
-              new_tag: 'void-durable-v1',
+              new_tag: 'platform-durable-v1',
               steps: [{ new_sqlite_classes: [className] }],
             },
           }
@@ -499,7 +499,7 @@ async function restoreObject(
     const customClasses = snapshot.metadata.customClasses as Record<string, string>;
     const appBindings = await readBindings(env, snapshot.metadata.appWorker as string);
     const proxyToken = appBindings?.find(
-      (value) => value.name === '__NOSAM_PROXY_TOKEN' && value.type === 'plain_text',
+      (value) => value.name === '__PLATFORM_PROXY_TOKEN' && value.type === 'plain_text',
     );
     if (typeof proxyToken?.text !== 'string') {
       throw new Error('Application proxy token is missing.');
@@ -507,7 +507,7 @@ async function restoreObject(
     const bindings: Array<Binding> = [];
     for (const binding of snapshot.metadata.bindings) {
       if (binding.type !== 'durable_object_namespace') {
-        bindings.push(binding.name === '__NOSAM_PROXY_TOKEN' ? proxyToken : binding);
+        bindings.push(binding.name === '__PLATFORM_PROXY_TOKEN' ? proxyToken : binding);
         continue;
       }
       if (customClasses[binding.name] === resource.binding_name) {
@@ -594,7 +594,7 @@ async function restoreObject(
         observability: projectObservability(env),
         ...(assets ? { assets } : {}),
         main_module: ENTRY,
-        tags: [`nosam-project:${snapshot.metadata.logProject}`, `nosam-deployment:${deploymentId}`],
+        tags: [`platform-project:${snapshot.metadata.logProject}`, `platform-deployment:${deploymentId}`],
         bindings: [
           ...bindings,
           { type: 'plain_text', name: OWNER, text: marker(env, projectId, resource.binding_name) },

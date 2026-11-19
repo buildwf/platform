@@ -11,7 +11,7 @@
     "check:sdk": "vp run --filter './packages/**' --parallel typecheck",
     "deploy:docs": "vp run build:core && node packages/bwf/dist/cli/cli.mjs deploy",
     "dev:docs": "vp run --filter ./docs dev",
-    "dev:platform": "vp run --filter @nosamcloud/platform dev",
+    "dev:platform": "vp run --filter @platform-service/platform dev",
     "fmt": "vp fmt --write .",
     "install:bwf-dev": "vp run build:core && node scripts/bwf-dev-link.mjs install",
     "lint": "vp lint",

@@ -12,8 +12,8 @@ const SECRET = 'test-platform-secret';
  * Staging's value here on purpose: a test pinned to production's domain would
  * pass against code that ignored the var entirely.
  */
-const MAIL_DOMAIN = 'mail.voidcloud.dev';
-const GATEWAY_ORIGIN = 'https://nosam-email-gateway-staging.voidzer0.workers.dev';
+const MAIL_DOMAIN = 'mail.staging.buildwf.dev';
+const GATEWAY_ORIGIN = 'https://platform-email-gateway-staging.voidzer0.workers.dev';
 
 const DAY = 24 * 60 * 60;
 

@@ -29,7 +29,7 @@ export function deriveDurableResourceIdentity(name: string): {
   return {
     bindingName: parts.join('_').toUpperCase(),
     className: `${classBase}DurableObject`,
-    migrationTag: `void-durable-${parts.join('-').toLowerCase()}-v1`,
+    migrationTag: `platform-durable-${parts.join('-').toLowerCase()}-v1`,
   };
 }
 

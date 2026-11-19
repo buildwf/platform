@@ -217,7 +217,7 @@ describe('platform runtime manifest', () => {
         await miniflare.ready;
         if (name !== 'tail') {
           const response = await miniflare.dispatchFetch('http://localhost/health', {
-            headers: { 'X-Nosam-Platform-Probe': 'probe' },
+            headers: { 'X-Platform-Probe': 'probe' },
           });
           expect(response.status).toBe(200);
           expect(await response.json()).toMatchObject({ ok: true });
@@ -229,7 +229,7 @@ describe('platform runtime manifest', () => {
   );
 
   it('rejects a custom runtime whose artifacts changed after its manifest was built', () => {
-    const temporary = mkdtempSync(join(tmpdir(), 'nosam-custom-runtime-test-'));
+    const temporary = mkdtempSync(join(tmpdir(), 'platform-custom-runtime-test-'));
     const runtimeDirectory = join(temporary, 'runtime');
     try {
       cpSync(getPlatformRuntimeDirectory(), runtimeDirectory, { recursive: true });

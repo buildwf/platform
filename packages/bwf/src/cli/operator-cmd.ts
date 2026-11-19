@@ -414,8 +414,8 @@ async function runAuth(origin: string, args: OperatorArgs): Promise<void> {
       {
         origin,
         ok: true,
-        ...(process.env.NOSAM_OPERATOR_TOKEN
-          ? { message: 'Operator session revoked. Unset NOSAM_OPERATOR_TOKEN in your shell.' }
+        ...(process.env.PLATFORM_OPERATOR_TOKEN
+          ? { message: 'Operator session revoked. Unset PLATFORM_OPERATOR_TOKEN in your shell.' }
           : {}),
       },
       args.json,

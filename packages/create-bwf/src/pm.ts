@@ -4,7 +4,7 @@ import { join } from 'pathslash';
 
 export type PM = 'npm' | 'pnpm' | 'yarn' | 'bun';
 
-const NOSAM_PNPM_ALLOWED_BUILDS = ['esbuild', 'sharp', 'workerd'] as const;
+const PLATFORM_PNPM_ALLOWED_BUILDS = ['esbuild', 'sharp', 'workerd'] as const;
 
 /** Write the explicit build-script policy required by a new pnpm project. */
 export function writePnpmBuildPolicy(root: string, pm: PM): void {
@@ -15,7 +15,7 @@ export function writePnpmBuildPolicy(root: string, pm: PM): void {
     join(root, 'pnpm-workspace.yaml'),
     // better-sqlite3 13 ships Node-API binaries and declares gypfile:false.
     // Match the repository policy instead of invoking pnpm's implicit rebuild.
-    `allowBuilds:\n  better-sqlite3: false\n${NOSAM_PNPM_ALLOWED_BUILDS.map((name) => `  ${name}: true`).join('\n')}\n`,
+    `allowBuilds:\n  better-sqlite3: false\n${PLATFORM_PNPM_ALLOWED_BUILDS.map((name) => `  ${name}: true`).join('\n')}\n`,
   );
 }
 

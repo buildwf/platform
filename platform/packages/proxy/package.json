@@ -1,5 +1,5 @@
 {
-  "name": "@nosamcloud/proxy",
+  "name": "@platform-service/proxy",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,7 +11,7 @@
     "@builtbyfriends/deploy-core": "workspace:*",
     "@builtbyfriends/edge": "workspace:*",
     "@builtbyfriends/platform": "workspace:*",
-    "@nosamcloud/api": "workspace:*",
+    "@platform-service/api": "workspace:*",
     "email-validator": "^2.0.4",
     "hono": "catalog:platform"
   },

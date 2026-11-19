@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { runPty } from './packed-init.mjs';
 
 test('drives a real PTY and preserves quoted arguments', async () => {
-  const cwd = mkdtempSync(join(tmpdir(), "nosam-pty-'quoted'-"));
+  const cwd = mkdtempSync(join(tmpdir(), "platform-pty-'quoted'-"));
   let output = '';
   const literal = "a 'quoted' $(printf should-not-run) value";
   try {

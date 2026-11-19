@@ -337,7 +337,7 @@ export async function preflightCloudflareWorker(input: {
               `  • ${a} — still routed to worker "${workerName}", which no longer exports email(); inbound mail there will fail.`,
           ),
           ...(staleBinding ? [`  • send_email ${SEND_EMAIL_BINDING} binding`] : []),
-          'Deploying as-is. To detach: remove `addresses`, `send_email`, and `vars.__NOSAM_EMAIL_FROM` from `resolved` in bwf.lock.json (and any authored overrides in bwf.config.ts), then delete the rules in the Cloudflare dashboard (Email → Email Routing → Routing rules).',
+          'Deploying as-is. To detach: remove `addresses`, `send_email`, and `vars.__PLATFORM_EMAIL_FROM` from `resolved` in bwf.lock.json (and any authored overrides in bwf.config.ts), then delete the rules in the Cloudflare dashboard (Email → Email Routing → Routing rules).',
         ].join('\n'),
       );
     }

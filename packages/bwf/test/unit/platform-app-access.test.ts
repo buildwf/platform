@@ -199,13 +199,13 @@ describe('guided installation app access', () => {
   it('does not silently retain installer credentials in headless mode', async () => {
     const { input } = fixture();
     await expect(prepareInstallationAppAccess(input)).rejects.toThrow(
-      'NOSAM_PLATFORM_APP_ACCESS_TOKEN',
+      'PLATFORM_APP_ACCESS_TOKEN',
     );
     expect(input.checkpoint.appAccessToken).toBeUndefined();
   });
   it('selects hosting-account equivalents instead of reusing foreign-account policy IDs', async () => {
     tty(true);
-    vi.stubEnv('NOSAM_PLATFORM_APP_ACCESS_TOKEN', 'hosting-token');
+    vi.stubEnv('PLATFORM_APP_ACCESS_TOKEN', 'hosting-token');
     const { input, checkpoint, fetcher } = fixture();
     checkpoint.accessSetupSpecJson = JSON.stringify({
       mode: 'existing',
@@ -259,7 +259,7 @@ describe('guided installation app access', () => {
       ),
     );
     await expect(prepareInstallationAppAccess(input)).rejects.toThrow(
-      'NOSAM_PLATFORM_APP_ACCESS_TOKEN',
+      'PLATFORM_APP_ACCESS_TOKEN',
     );
   });
   it('prepares managed public rules under Default-Deny without asking for company policies', async () => {
@@ -283,7 +283,7 @@ describe('guided installation app access', () => {
       policyIds: ['employees'],
     });
     await prepareInstallationAppAccess(input);
-    vi.stubEnv('NOSAM_PLATFORM_APP_ACCESS_TOKEN', 'replacement');
+    vi.stubEnv('PLATFORM_APP_ACCESS_TOKEN', 'replacement');
     checkpoint.appAccessTokenRejected = 'true';
     expect(JSON.parse(await prepareInstallationAppAccess(input))).toMatchObject({
       apiToken: 'replacement',
@@ -317,7 +317,7 @@ describe('guided installation app access', () => {
     expect(fetcher.mock.calls).toHaveLength(2);
     expect(fetcher.mock.calls[0]?.[1]).toMatchObject({
       redirect: 'manual',
-      headers: { 'X-Nosam-Platform-Probe': 'proof' },
+      headers: { 'X-Platform-Probe': 'proof' },
     });
     await expect(
       initializeInstalledAppAccess(input, async () =>
@@ -349,8 +349,8 @@ describe('guided installation app access', () => {
       redirect: 'manual',
       body: '{"version":1}',
       headers: {
-        'X-Nosam-Platform-Probe': 'proof',
-        'X-Nosam-App-Access-Setup': createHmac('sha256', input.setupToken)
+        'X-Platform-Probe': 'proof',
+        'X-Platform-App-Access-Setup': createHmac('sha256', input.setupToken)
           .update(`${PLATFORM_APP_ACCESS_TURN_OFF_PROOF_PREFIX}\nteam\n{"version":1}`)
           .digest('base64url'),
       },

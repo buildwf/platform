@@ -7,7 +7,7 @@ import { findBwfAuthConfig } from '../../src/auth/config.ts';
 
 const roots: Array<string> = [];
 function rootWithAuth(source: string): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-auth-source-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-auth-source-'));
   roots.push(root);
   writeFileSync(join(root, 'auth.ts'), source);
   return root;

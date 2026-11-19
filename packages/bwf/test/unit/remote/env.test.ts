@@ -5,10 +5,10 @@ import { ProxyKVNamespace } from '../../../src/runtime/remote/kv.ts';
 import { ProxyR2Bucket } from '../../../src/runtime/remote/r2.ts';
 
 const BASE_ENV: Record<string, unknown> = {
-  __NOSAM_PROXY_URL: 'https://proxy.void.cloud',
-  __NOSAM_TOKEN: 'test-token',
-  __NOSAM_PROJECT_ID: 'proj_1',
-  __NOSAM_REMOTE: '1',
+  __PLATFORM_PROXY_URL: 'https://proxy.void.cloud',
+  __PLATFORM_TOKEN: 'test-token',
+  __PLATFORM_PROJECT_ID: 'proj_1',
+  __PLATFORM_REMOTE: '1',
 };
 
 describe('createRemoteEnv', () => {
@@ -22,7 +22,7 @@ describe('createRemoteEnv', () => {
   it('preserves other env properties', () => {
     const env = createRemoteEnv({ ...BASE_ENV, DB: {}, CUSTOM_VAR: 'hello' });
     expect(env.CUSTOM_VAR).toBe('hello');
-    expect(env.__NOSAM_PROXY_URL).toBe('https://proxy.void.cloud');
+    expect(env.__PLATFORM_PROXY_URL).toBe('https://proxy.void.cloud');
   });
 
   it('replaces all bindings when all are present', async () => {

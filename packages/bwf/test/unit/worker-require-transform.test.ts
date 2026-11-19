@@ -10,7 +10,7 @@ describe('PostgreSQL migration bundle transform', () => {
 var __require = /* bundler annotation */ (() => createRequire(import.meta.url))();
 const value = __require ( 'pgpass' );`;
     const transformed = transformWorkerRequireBundle(source, 'bundle.mjs', shim, 'PostgreSQL');
-    expect(transformed).toContain('const value = __nosamPgpassNoop;');
+    expect(transformed).toContain('const value = __platformPgpassNoop;');
     expect(transformed).toContain(shim);
     expect(transformed).not.toContain('createRequire');
     expect(() => parseSync('bundle.mjs', transformed)).not.toThrow();

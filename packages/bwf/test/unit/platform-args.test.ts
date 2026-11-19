@@ -219,9 +219,9 @@ describe('platform args', () => {
       yes: true,
     });
     expect(
-      parsePlatformArgs(['install', '--runtime', '/tmp/nosam-runtime', '--plan']),
-    ).toMatchObject({ runtime: '/tmp/nosam-runtime' });
-    expect(() => parsePlatformArgs(['disable', '--runtime', '/tmp/nosam-runtime'])).toThrow(
+      parsePlatformArgs(['install', '--runtime', '/tmp/platform-runtime', '--plan']),
+    ).toMatchObject({ runtime: '/tmp/platform-runtime' });
+    expect(() => parsePlatformArgs(['disable', '--runtime', '/tmp/platform-runtime'])).toThrow(
       "Unknown flag '--runtime'",
     );
     expect(

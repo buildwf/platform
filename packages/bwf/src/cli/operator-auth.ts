@@ -7,7 +7,7 @@ import {
   platformCredentialAccount,
 } from './platform-registry.ts';
 
-export const OPERATOR_KEYRING_SERVICE = 'dev.nosam.cli.operator';
+export const OPERATOR_KEYRING_SERVICE = 'dev.platform.cli.operator';
 
 /** Operator authority never comes from repository-controlled metadata. */
 export function resolveOperatorOrigin(connection = ''): string {
@@ -24,9 +24,9 @@ export function resolveOperatorOrigin(connection = ''): string {
   if (process.env.BWF_API_URL) {
     return normalizePlatformApiUrl(process.env.BWF_API_URL);
   }
-  if (process.env.NOSAM_OPERATOR_TOKEN) {
+  if (process.env.PLATFORM_OPERATOR_TOKEN) {
     throw new OperatorClientError(
-      'NOSAM_OPERATOR_TOKEN requires an explicit --connection or BWF_API_URL to select its recipient.',
+      'PLATFORM_OPERATOR_TOKEN requires an explicit --connection or BWF_API_URL to select its recipient.',
       'explicit_origin_required',
     );
   }
@@ -42,11 +42,11 @@ export function resolveOperatorOrigin(connection = ''): string {
 
 export function readOperatorToken(origin: string): string {
   const token =
-    process.env.NOSAM_OPERATOR_TOKEN ||
+    process.env.PLATFORM_OPERATOR_TOKEN ||
     readKeyringPassword(OPERATOR_KEYRING_SERVICE, platformCredentialAccount(origin));
   if (!token) {
     throw new OperatorClientError(
-      'No operator session. Run `bwf platform auth login` or set NOSAM_OPERATOR_TOKEN with an explicit origin.',
+      'No operator session. Run `bwf platform auth login` or set PLATFORM_OPERATOR_TOKEN with an explicit origin.',
       'authentication_required',
     );
   }
@@ -56,7 +56,7 @@ export function readOperatorToken(origin: string): string {
 export function saveOperatorToken(origin: string, token: string): void {
   if (!writeKeyringPassword(OPERATOR_KEYRING_SERVICE, platformCredentialAccount(origin), token)) {
     throw new OperatorClientError(
-      'The system keychain is unavailable. Use `bwf platform auth token --token-stdin` with a full API session to obtain a token for NOSAM_OPERATOR_TOKEN; plaintext credential storage is disabled.',
+      'The system keychain is unavailable. Use `bwf platform auth token --token-stdin` with a full API session to obtain a token for PLATFORM_OPERATOR_TOKEN; plaintext credential storage is disabled.',
       'keychain_unavailable',
     );
   }

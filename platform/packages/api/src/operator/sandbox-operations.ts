@@ -136,7 +136,7 @@ function sandboxTarget(row: DeploymentSandboxProjection): ManifestTarget | null 
     applicationName: perDeployContainerApplicationName(
       row.projectId,
       row.deploymentId,
-      row.containerName ?? 'nosam-sandbox',
+      row.containerName ?? 'platform-sandbox',
     ),
     bindingName: row.bindingName,
     className: row.className,

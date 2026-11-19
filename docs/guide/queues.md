@@ -134,7 +134,7 @@ In native bwf apps, sending a message through a queue binding automatically invo
 You can also manually dispatch a batch by POSTing to the dev endpoint bwf exposes:
 
 ```
-POST /__nosam/queue
+POST /__platform/queue
 Content-Type: application/json
 { "queue": "<queue-name>", "messages": [{ "id": "1", "timestamp": <unix_ms>, "body": <any>, "attempts": 1 }] }
 ```
@@ -142,8 +142,8 @@ Content-Type: application/json
 The endpoint requires a local dev trigger token. bwf prints a paste-ready curl command with the current token when the dev server starts.
 
 ```bash
-curl -X POST http://localhost:5173/__nosam/queue \
+curl -X POST http://localhost:5173/__platform/queue \
   -H "Content-Type: application/json" \
-  -H "x-nosam-dev-trigger: <printed-token>" \
+  -H "x-platform-dev-trigger: <printed-token>" \
   -d '{"queue":"my-queue","messages":[{"id":"1","timestamp":'"$(date +%s000)"',"body":{"hello":"world"},"attempts":1}]}'
 ```

@@ -39,7 +39,7 @@ const ttyDescriptors = terminalStreams.map((stream) =>
 );
 
 function project(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-cf-secret-validation-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-cf-secret-validation-'));
   roots.push(root);
   mkdirSync(join(root, '.bwf'), { recursive: true });
   writeFileSync(join(root, '.bwf/project.json'), '{"platform":"cloudflare"}\n');

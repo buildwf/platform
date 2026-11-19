@@ -36,7 +36,7 @@ function CopyValue({ label, value }: { label: string; value: string }) {
   const { copy, isCopied } = useClipboard({ announce: `${label} copied` });
   const [failed, setFailed] = useState(false);
   return (
-    <div className="nosam-admin-access-copy-value">
+    <div className="platform-admin-access-copy-value">
       <InputGroup label={label}>
         <TextInput
           label=""
@@ -104,8 +104,8 @@ export function SignupControlPage({ path, platformName, username }: AdminPagePro
 
   return (
     <Layout platformName={platformName} title="Access" username={username}>
-      <PageStack className="nosam-admin-access-page">
-        <SectionStack as="header" className="nosam-admin-access-intro">
+      <PageStack className="platform-admin-access-page">
+        <SectionStack as="header" className="platform-admin-access-intro">
           <Heading level={1}>Access</Heading>
           <p>Decide who can join this platform and manage invitations and individual grants.</p>
         </SectionStack>
@@ -133,7 +133,7 @@ export function SignupControlPage({ path, platformName, username }: AdminPagePro
                 as="form"
                 method="post"
                 action="/admin/signup-control/policy"
-                className="nosam-admin-access-form"
+                className="platform-admin-access-form"
               >
                 <input type="hidden" name="revision" defaultValue={revision ?? 0} />
                 <FormSelector
@@ -159,7 +159,7 @@ export function SignupControlPage({ path, platformName, username }: AdminPagePro
                   headingLevel={3}
                   description="Select which existing login checks qualify someone when company signup is chosen."
                 >
-                  <div className="nosam-admin-access-checkboxes">
+                  <div className="platform-admin-access-checkboxes">
                     {companyMethods.map((method) => (
                       <FormCheckbox
                         key={method.id}
@@ -195,7 +195,7 @@ export function SignupControlPage({ path, platformName, username }: AdminPagePro
                 <Button type="submit" label="Save signup policy" />
               </SectionStack>
             ) : (
-              <SectionStack as="div" className="nosam-admin-access-form">
+              <SectionStack as="div" className="platform-admin-access-form">
                 <p>
                   To use company-approved signup, first set up{' '}
                   <Link href="/admin/config/auth">Authentication settings</Link>.
@@ -204,7 +204,7 @@ export function SignupControlPage({ path, platformName, username }: AdminPagePro
                   as="form"
                   method="post"
                   action="/admin/signup-control/toggle"
-                  className="nosam-admin-access-form"
+                  className="platform-admin-access-form"
                 >
                   <p>
                     Signup is{' '}
@@ -243,7 +243,7 @@ export function SignupControlPage({ path, platformName, username }: AdminPagePro
             }
           >
             {result === 'invited' && (
-              <p role="status" className="nosam-admin-access-notice">
+              <p role="status" className="platform-admin-access-notice">
                 {emailEnabled
                   ? 'Invitations created. Check the history below to see whether email was sent.'
                   : 'Invitations created. Share the platform link below with each person.'}
@@ -254,7 +254,7 @@ export function SignupControlPage({ path, platformName, username }: AdminPagePro
                 as="form"
                 method="post"
                 action="/admin/invitations/send"
-                className="nosam-admin-access-form"
+                className="platform-admin-access-form"
               >
                 <FormTextArea
                   label="Email addresses"
@@ -273,7 +273,7 @@ export function SignupControlPage({ path, platformName, username }: AdminPagePro
                 />
               </SectionStack>
             )}
-            <SectionStack as="div" className="nosam-admin-access-share">
+            <SectionStack as="div" className="platform-admin-access-share">
               <h3>{emailEnabled ? 'Share connection details' : 'Share these details manually'}</h3>
               <CopyValue label="Platform invitation page" value={inviteUrl} />
               <CopyValue label="bwf CLI connection command" value={connectCommand} />
@@ -296,7 +296,7 @@ export function SignupControlPage({ path, platformName, username }: AdminPagePro
             <form
               method="post"
               action="/admin/signup-control/add"
-              className="nosam-admin-access-fields"
+              className="platform-admin-access-fields"
             >
               <FormSelector
                 label="Grant type"
@@ -322,7 +322,7 @@ export function SignupControlPage({ path, platformName, username }: AdminPagePro
               <form
                 method="post"
                 action="/admin/signup-control/add"
-                className="nosam-admin-access-fields"
+                className="platform-admin-access-fields"
               >
                 <input type="hidden" name="type" defaultValue="identity" />
                 <FormSelector
@@ -352,7 +352,7 @@ export function SignupControlPage({ path, platformName, username }: AdminPagePro
               Identity grants match the selected login connection and provider subject exactly,
               including case. Email is not inferred or linked.
             </p>
-            <div className="nosam-admin-access-table">
+            <div className="platform-admin-access-table">
               <Table hasHover>
                 <TableHeader>
                   <TableRow>
@@ -412,8 +412,8 @@ export function SignupControlPage({ path, platformName, username }: AdminPagePro
               ) : undefined
             }
           >
-            <div className="nosam-admin-access-table">
-              <Table hasHover className="nosam-admin-invitations-table">
+            <div className="platform-admin-access-table">
+              <Table hasHover className="platform-admin-invitations-table">
                 <TableHeader>
                   <TableRow>
                     <TableHeaderCell>Email</TableHeaderCell>

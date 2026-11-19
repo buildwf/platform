@@ -16,7 +16,7 @@ afterEach(() => {
 // A stand-in for the operation process: it writes a result envelope unless the
 // operation is interactive, which writes to the terminal instead.
 async function runWith(operation: CloudflareOperation) {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-runner-interactive-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-runner-interactive-'));
   directories.push(directory);
   const entry = join(directory, 'operation.mjs');
   writeFileSync(

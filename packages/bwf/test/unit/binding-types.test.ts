@@ -46,7 +46,7 @@ describe('custom Cloudflare binding types', () => {
   });
 
   it('includes types in the project config and removes stale types when bindings disappear', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-binding-types-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-binding-types-'));
     roots.push(root);
     syncBindingTypes(root, { cloudflare: { ai: { binding: 'CUSTOM_AI' } } });
     ensureProjectTsconfig(root);

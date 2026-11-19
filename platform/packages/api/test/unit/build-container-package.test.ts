@@ -16,7 +16,7 @@ const copies = Array.from(
 it.each(['0.20.0', '0.20.1', '0.21.0-rc.2'])(
   'packages the agent with the release manifest, without a checkout or node_modules (%s)',
   (version) => {
-    const directory = mkdtempSync(join(tmpdir(), 'nosam-build-image-'));
+    const directory = mkdtempSync(join(tmpdir(), 'platform-build-image-'));
     try {
       expect(copies.map((copy) => copy.source).sort()).toEqual([
         'packages/bwf/package.json',
@@ -47,7 +47,7 @@ it.each(['0.20.0', '0.20.1', '0.21.0-rc.2'])(
         [
           '--input-type=module',
           '--eval',
-          `const agent = await import(${JSON.stringify(agentUrl)}); process.stdout.write(agent.DEFAULT_NOSAM_CLI_VERSION);`,
+          `const agent = await import(${JSON.stringify(agentUrl)}); process.stdout.write(agent.DEFAULT_PLATFORM_CLI_VERSION);`,
         ],
         {
           cwd: untrusted,

@@ -16,7 +16,7 @@ describe('bindingRuntimePlugin', () => {
     const kvId = resolveId.call({ environment: { name: 'ssr' } }, '@builtbyfriends/bwf/kv', undefined, {
       isEntry: false,
     });
-    expect(kvId).toBe('\0virtual:nosam-kv');
+    expect(kvId).toBe('\0virtual:platform-kv');
     expect(
       resolveId.call({ environment: { name: 'client' } }, '@builtbyfriends/bwf/kv', undefined, {
         isEntry: false,
@@ -34,7 +34,7 @@ describe('bindingRuntimePlugin', () => {
         isEntry: false,
       },
     );
-    expect(storageId).toBe('\0virtual:nosam-storage');
+    expect(storageId).toBe('\0virtual:platform-storage');
     const storageCode = load.call({}, storageId!);
     expect(storageCode).toContain('requireRuntimeBinding("myapp_storage")');
     expect(storageCode).not.toContain('requireRuntimeBinding("STORAGE")');

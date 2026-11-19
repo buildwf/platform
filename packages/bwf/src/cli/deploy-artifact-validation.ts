@@ -18,7 +18,7 @@ import {
   DEPLOY_WHOLE_OBJECT_PINNED_FIELDS,
   isEmptyPassthroughValue,
   verifyNoInjectedExternalDurableObject,
-  DEFAULT_NOSAM_AI_BINDING,
+  DEFAULT_PLATFORM_AI_BINDING,
   verifyNoInjectedDestructiveMigration,
   normalizeContainerImagePaths,
   collectEmittedQueueGroupNames,
@@ -384,7 +384,7 @@ export function verifyGeneratedDeployConfig(
       }
     } else if (emittedAi !== undefined) {
       // Otherwise only bwf's own AI binding, and only when the source uses Workers AI.
-      const expectedAi = { binding: expected.aiBindingName ?? DEFAULT_NOSAM_AI_BINDING };
+      const expectedAi = { binding: expected.aiBindingName ?? DEFAULT_PLATFORM_AI_BINDING };
       if (!(expected.needsAI === true && deepEqual(emittedAi, expectedAi))) {
         return {
           ok: false,
@@ -499,7 +499,7 @@ export function verifyGeneratedDeployConfig(
           };
         }
       }
-      // Class-less containers — deepEqual multiset (never a Nosam-emitted shape).
+      // Class-less containers — deepEqual multiset (never a Platform-emitted shape).
       for (const emitted of emittedNoClass) {
         const matchIndex = expectedNoClass.findIndex((candidate) => deepEqual(emitted, candidate));
         if (matchIndex === -1) {

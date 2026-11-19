@@ -8,7 +8,7 @@ import { expect, it } from 'vite-plus/test';
 const exec = promisify(execFile);
 
 it('reuses a UTC database template across processes with different local timezones', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'nosam-api-template-timezone-'));
+  const directory = await mkdtemp(join(tmpdir(), 'platform-api-template-timezone-'));
   const script = `
     import { PGlite } from ${JSON.stringify(import.meta.resolve('@electric-sql/pglite'))};
     import {

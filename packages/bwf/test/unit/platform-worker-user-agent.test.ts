@@ -29,7 +29,7 @@ it.each(['api-worker', 'proxy-worker', 'dispatch-worker', 'tail-worker', 'email-
     const before = JSON.stringify(config);
     const attribution = platformWorkerUploadAttribution(config);
     expect(attribution).toBe(
-      `nosam-platform-install/0.27.0%20custom nosam-role/${role} nosam-installation/installation-one`,
+      `platform-install/0.27.0%20custom platform-role/${role} platform-installation/installation-one`,
     );
     expect(attribution).not.toContain('private-ownership-proof');
     expect(JSON.stringify(config)).toBe(before);

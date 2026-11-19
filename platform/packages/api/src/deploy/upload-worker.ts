@@ -241,7 +241,7 @@ export async function uploadDeploymentWorker(input: {
     context.env.CF_API_TOKEN,
     projectId,
     manifest,
-    context.env.NOSAM_PROXY_SERVICE ?? 'nosam-proxy',
+    context.env.PLATFORM_PROXY_SERVICE ?? 'platform-proxy',
     {
       projectSlug: project.slug,
       proxyToken: proxyToken.token,
@@ -441,7 +441,7 @@ export async function uploadDeploymentWorker(input: {
     await provisionSandboxController({
       accountId: context.env.CF_ACCOUNT_ID,
       apiToken: context.env.CF_API_TOKEN,
-      apiService: context.env.SANDBOX_CONTROL_SERVICE ?? 'nosam-api',
+      apiService: context.env.SANDBOX_CONTROL_SERVICE ?? 'platform-api',
       identity: {
         projectId: projectId,
         deploymentId: deployment.id,
@@ -458,7 +458,7 @@ export async function uploadDeploymentWorker(input: {
   );
   const liveBindings = buildLiveUploadBindings(manifest.live);
   // No per-project `send_email` binding is uploaded. The framework's
-  // `sendEmail()` POSTs MIME + recipients to `__NOSAM_PROXY/email/send`;
+  // `sendEmail()` POSTs MIME + recipients to `__PLATFORM_PROXY/email/send`;
   // the proxy holds the account-level send_email binding and enforces
   // the per-project verified-destination policy through SQL admission. See
   // `meta/design-docs/0078-email-cf-native.md` and `packages/proxy/src/email.ts`.

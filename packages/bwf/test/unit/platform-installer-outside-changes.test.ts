@@ -199,17 +199,17 @@ describe('Worker change source', () => {
         result: { default_environment: { script: { last_deployed_from: 'dash' } } },
       }),
     );
-    await expect(reader.client.getWorkerLastDeployedFrom('account', 'nosam-a-api')).resolves.toBe(
+    await expect(reader.client.getWorkerLastDeployedFrom('account', 'platform-a-api')).resolves.toBe(
       'dash',
     );
-    expect(reader.paths).toEqual(['/client/v4/accounts/account/workers/services/nosam-a-api']);
+    expect(reader.paths).toEqual(['/client/v4/accounts/account/workers/services/platform-a-api']);
   });
 
   it('returns null when Cloudflare does not report the source', async () => {
     const reader = client(() =>
       Response.json({ success: true, result: { default_environment: { script: {} } } }),
     );
-    await expect(reader.client.getWorkerLastDeployedFrom('account', 'nosam-a-api')).resolves.toBe(
+    await expect(reader.client.getWorkerLastDeployedFrom('account', 'platform-a-api')).resolves.toBe(
       null,
     );
   });
@@ -225,7 +225,7 @@ describe('Worker change source', () => {
         { status: 404 },
       ),
     );
-    await expect(reader.client.getWorkerLastDeployedFrom('account', 'nosam-a-api')).resolves.toBe(
+    await expect(reader.client.getWorkerLastDeployedFrom('account', 'platform-a-api')).resolves.toBe(
       null,
     );
   });
@@ -238,7 +238,7 @@ describe('Worker change source', () => {
       ),
     );
     await expect(
-      reader.client.getWorkerLastDeployedFrom('account', 'nosam-a-api'),
+      reader.client.getWorkerLastDeployedFrom('account', 'platform-a-api'),
     ).rejects.toBeInstanceOf(PlatformCloudflareApiError);
   });
 });
@@ -273,7 +273,7 @@ describe('platform Workers changed outside bwf', () => {
     const plan = installPlan([
       ...allWorkers.slice(0, 4),
       worker('dispatch-worker', names.dispatchWorker, 'reuse'),
-      worker('extra-worker', 'nosam-example-other', 'create'),
+      worker('extra-worker', 'platform-example-other', 'create'),
     ]);
 
     await expect(
@@ -301,7 +301,7 @@ describe('platform Workers changed outside bwf', () => {
     activeMessages.set(names.proxyWorker, undefined);
     // bwf wrote this older record, which has no triggers. The upgrade refuses it too.
     sources.set(names.tailWorker, null);
-    activeMessages.set(names.tailWorker, 'nosam:{"schema":1,"migrations":[]}');
+    activeMessages.set(names.tailWorker, 'platform:{"schema":1,"migrations":[]}');
     // The marker already shows the change, so the version is not read. The
     // deployments are read: the deploy needs one active version.
     sources.set(names.apiWorker, 'dash');
@@ -903,16 +903,16 @@ describe('installer upload after the operator agrees', () => {
     replaceOutsideChanges: boolean,
     readCloudflare?: (path: string) => Promise<unknown>,
   ) {
-    const directory = mkdtempSync(join(tmpdir(), 'nosam-outside-change-'));
+    const directory = mkdtempSync(join(tmpdir(), 'platform-outside-change-'));
     const commands: Array<string> = [];
     try {
       const main = join(directory, 'worker.js');
-      writeFileSync(main, 'export default { fetch() { return new Response("nosam"); } };');
+      writeFileSync(main, 'export default { fetch() { return new Response("platform"); } };');
       const config = {
         account_id: 'account',
         compatibility_date: '2026-09-30',
         main,
-        name: 'nosam-test-api',
+        name: 'platform-test-api',
         vars: { PLATFORM_OWNERSHIP_MARKER: 'owned-by-test' },
         workers_dev: true,
       };
@@ -1011,13 +1011,13 @@ describe('installer upload after the operator agrees', () => {
     const results = [];
     for (const message of [undefined, 'Edited', recordedMessage]) {
       // The check and the upgrade read the same Cloudflare API answers.
-      const reads = activeVersionReads('nosam-test-api', message);
+      const reads = activeVersionReads('platform-test-api', message);
       const changes = await findPlatformWorkerOutsideChanges(
         {
           getWorkerLastDeployedFrom: async () => 'cf_cli',
           request: async <T>(path: string) => (await reads(path)) as T,
         },
-        installPlan([worker('api-worker', 'nosam-test-api')]),
+        installPlan([worker('api-worker', 'platform-test-api')]),
         runtime,
         installed,
       );

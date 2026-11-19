@@ -15,7 +15,7 @@ export function platformWelcomePage(platformName: string, apiUrl: string): strin
         `Welcome to ${platformName}`,
         'This is a Platform. Connect the bwf CLI to deploy and manage your applications here.',
       ) +
-      `<div class="nosam-auth-section">
+      `<div class="platform-auth-section">
 <h2>Connect to this platform</h2>
 <p>Install the bwf CLI if you haven't already:</p>
 <pre><code>npm install -g void</code></pre>
@@ -23,13 +23,13 @@ export function platformWelcomePage(platformName: string, apiUrl: string): strin
 <pre><code>${command}</code></pre>
 <p>The CLI opens your browser to sign in when needed. If access is restricted, ask your platform administrator for an invitation and sign in with the invited email address.</p>
 </div>
-<div class="nosam-auth-section">
+<div class="platform-auth-section">
 <p>Ready to deploy? Run <code>bwf deploy</code> from your application's directory. To create a new application, follow the <a href="https://github.com/builtbyfriends/platform/blob/main/docs/guide/quickstart.md">Platform quickstart</a>, then connect it to this platform before deploying.</p>
 </div>
-<div class="nosam-auth-section">
+<div class="platform-auth-section">
 <h2>Administration</h2>
 <p>Platform administrators can manage this instance from the administrator dashboard.</p>
-<a class="nosam-auth-button" href="/admin/">Open Admin Dashboard</a>
+<a class="platform-auth-button" href="/admin/">Open Admin Dashboard</a>
 </div>`,
   });
 }
@@ -54,7 +54,7 @@ export function platformInvitationPage(
       `<pre><code>${command}</code></pre>
 ${
   invitationCommand
-    ? `<div class="nosam-auth-section"><p>Then accept the project invitation. The CLI checks that it is still valid and addressed to your signed-in account:</p>
+    ? `<div class="platform-auth-section"><p>Then accept the project invitation. The CLI checks that it is still valid and addressed to your signed-in account:</p>
 <pre><code>${invitationCommand}</code></pre></div>`
     : ''
 }
@@ -74,6 +74,6 @@ export function platformRestrictedSignupPage(platformName: string): string {
         `New accounts on ${platformName} require administrator approval.`,
       ) +
       '<p>Ask your platform administrator for an invitation, then sign in with an account whose verified email address matches that invitation.</p>' +
-      '<a class="nosam-auth-button" href="/">Back to welcome</a>',
+      '<a class="platform-auth-button" href="/">Back to welcome</a>',
   });
 }

@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vite-plus/test';
 const CLI_ENTRY = join(import.meta.dirname, '../../dist/cli/cli.mjs');
 const roots: Array<string> = [];
 function project(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-info-cli-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-info-cli-'));
   roots.push(root);
   mkdirSync(join(root, 'routes/chat'), { recursive: true });
   writeFileSync(

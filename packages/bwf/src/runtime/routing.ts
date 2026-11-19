@@ -173,7 +173,7 @@ export function createRoutingRuntime(
       return response;
     }
     const headers = new Headers(response.headers);
-    headers.set('X-Nosam-Routing', trace);
+    headers.set('X-Platform-Routing', trace);
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
@@ -275,7 +275,7 @@ export function createRoutingRuntime(
       };
     }
     if (options.managedDispatch && !originalUrls.has(c.req.raw)) {
-      const original = c.req.raw.headers.get('X-Nosam-Original-URL');
+      const original = c.req.raw.headers.get('X-Platform-Original-URL');
       if (original != null) {
         try {
           originalUrls.set(c.req.raw, new URL(original));
@@ -357,9 +357,9 @@ export function createRoutingRuntime(
         return response;
       }
       await next();
-      if (options.dev && c.res && !c.res.headers.has('X-Nosam-Routing')) {
+      if (options.dev && c.res && !c.res.headers.has('X-Platform-Routing')) {
         try {
-          c.res.headers.set('X-Nosam-Routing', 'pass-through');
+          c.res.headers.set('X-Platform-Routing', 'pass-through');
         } catch {
           /* Headers may be immutable. */
         }
@@ -448,7 +448,7 @@ export function markNoMatch(request: Request, response: Response): Response {
     return response;
   }
   const headers = new Headers(response.headers);
-  headers.set('X-Nosam-No-Match', '1');
+  headers.set('X-Platform-No-Match', '1');
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

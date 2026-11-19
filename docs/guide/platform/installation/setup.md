@@ -78,7 +78,7 @@ that purpose, or guides you to create a dedicated token. Public apps without
 Default-Deny need no ongoing Access-management credential.
 
 For scripts, use `--app-access public|platform|custom`. Supply
-`NOSAM_PLATFORM_APP_ACCESS_TOKEN` when app rules are needed, or add an `appAccess`
+`PLATFORM_APP_ACCESS_TOKEN` when app rules are needed, or add an `appAccess`
 section to your `--auth-config` file:
 
 ```json
@@ -216,7 +216,7 @@ these permissions. bwf checks Access reads before provisioning and reuses that
 management token during Access setup, so you do not need a second API token.
 For applications in another account, provide a token scoped to that identity
 account when asked. Scripts can supply an explicit override through
-`NOSAM_PLATFORM_ACCESS_SETUP_TOKEN`. The platform's runtime token does not need
+`PLATFORM_ACCESS_SETUP_TOKEN`. The platform's runtime token does not need
 Access management permissions. See Cloudflare's
 [Access API](https://developers.cloudflare.com/api/resources/zero_trust/subresources/access/subresources/applications/)
 and [service-token permissions](https://developers.cloudflare.com/api/resources/zero_trust/subresources/access/subresources/service_tokens/methods/create/).
@@ -295,6 +295,6 @@ Resume restores your selected Hyperdrive. If that selection is missing from the 
 
 If Cloudflare rejects a saved runtime token, bwf opens the token page and asks for a replacement. For a missing [email permission](/guide/platform/installation/credentials#enable-email), update the existing token's permissions and resume. If you supplied a token through an environment variable, update that variable.
 
-To replace a revoked runtime token, set `NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN` to its replacement and resume. bwf saves it and updates any platform Workers deployed by the interrupted run.
+To replace a revoked runtime token, set `PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN` to its replacement and resume. bwf saves it and updates any platform Workers deployed by the interrupted run.
 
 :::

@@ -203,15 +203,15 @@ export function createWorkerFetch(
       await options.validateEnv(originalEnv);
     }
     const env =
-      options.remoteEnv && originalEnv.__NOSAM_REMOTE === '1'
+      options.remoteEnv && originalEnv.__PLATFORM_REMOTE === '1'
         ? options.remoteEnv(originalEnv)
         : originalEnv;
     return options.withRawEnv(env, () =>
       options.withRuntimeEnv(env, async () => {
-        if (options.emailReceipt && url.pathname === '/__nosam/email/receipt/v1') {
+        if (options.emailReceipt && url.pathname === '/__platform/email/receipt/v1') {
           return options.emailReceipt(request, env, ctx);
         }
-        if (request.method === 'GET' && url.pathname === '/__nosam/ready') {
+        if (request.method === 'GET' && url.pathname === '/__platform/ready') {
           const metadata = options.versionMetadataBinding
             ? (env[options.versionMetadataBinding] as { id?: unknown } | undefined)
             : undefined;

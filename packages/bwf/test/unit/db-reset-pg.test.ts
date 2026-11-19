@@ -64,7 +64,7 @@ afterEach(() => {
 });
 
 function project(statements: Array<string>): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-reset-pg-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-reset-pg-'));
   roots.push(root);
   mkdirSync(join(root, 'db', 'migrations'), { recursive: true });
   writeFileSync(join(root, 'bwf.json'), JSON.stringify({ database: 'pg' }));

@@ -122,7 +122,7 @@ describe('vectors', () => {
   });
 
   it('names the proxy internal header', () => {
-    expect(PROXY_INTERNAL_AUTH_HEADER).toBe('x-nosam-proxy-internal');
+    expect(PROXY_INTERNAL_AUTH_HEADER).toBe('x-platform-proxy-internal');
   });
 });
 

@@ -163,14 +163,14 @@ describe('deployment compensation during Zero Trust changes', () => {
           retained: true,
           manifest: JSON.stringify({
             version: 3,
-            type: type === 'static' ? 'static' : 'nosam',
+            type: type === 'static' ? 'static' : 'platform',
             bindings: {},
           }),
         })
         .where(eq(deployments.id, source.id));
       await env.db
         .update(projects)
-        .set({ type: type === 'static' ? 'static' : 'nosam' })
+        .set({ type: type === 'static' ? 'static' : 'platform' })
         .where(eq(projects.id, project.id));
       const sourceRoute = JSON.stringify({
         ...(type === 'static'

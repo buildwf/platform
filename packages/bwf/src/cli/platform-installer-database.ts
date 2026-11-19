@@ -141,7 +141,7 @@ export function assertBwfCreatedHyperdriveTrustsDatabase(databaseUrl: string): v
   const sslrootcert = new URL(databaseUrl).searchParams.getAll('sslrootcert').at(-1);
   if (sslrootcert && sslrootcert !== 'system') {
     throw new Error(
-      'platform: A Hyperdrive created by bwf trusts only public certificate authorities, so it cannot use the certificate authority in DATABASE_URL sslrootcert. If the database certificate comes from a public certificate authority, use sslrootcert=system. Otherwise create a separately managed Hyperdrive that trusts it, then select it with "Use an existing Hyperdrive" when you start a new installation, or set NOSAM_PLATFORM_HYPERDRIVE_ID, NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_HOST, and NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_USER.',
+      'platform: A Hyperdrive created by bwf trusts only public certificate authorities, so it cannot use the certificate authority in DATABASE_URL sslrootcert. If the database certificate comes from a public certificate authority, use sslrootcert=system. Otherwise create a separately managed Hyperdrive that trusts it, then select it with "Use an existing Hyperdrive" when you start a new installation, or set PLATFORM_HYPERDRIVE_ID, PLATFORM_HYPERDRIVE_ORIGIN_HOST, and PLATFORM_HYPERDRIVE_ORIGIN_USER.',
     );
   }
 }

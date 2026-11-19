@@ -10,7 +10,7 @@ describe('ensureProjectTsconfig', () => {
   beforeEach(() => {
     root = join(
       tmpdir(),
-      `nosam-tsconfig-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      `platform-tsconfig-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     );
     mkdirSync(join(root, '.bwf'), { recursive: true });
   });

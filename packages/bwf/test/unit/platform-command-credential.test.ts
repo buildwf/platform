@@ -50,7 +50,7 @@ it.each(['linux', 'win32'] as const)(
 );
 
 it('passes the selected token to the real subprocess without putting it in argv or output', async () => {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-credential-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-credential-'));
   try {
     const launcher = join(directory, 'inspect.mjs');
     writeFileSync(
@@ -78,7 +78,7 @@ process.stdout.write(JSON.stringify({operationResult: 1, data: {matches, isolate
 });
 
 it('keeps the operator credential through the guarded new-Worker create proxy', async () => {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-create-credential-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-create-credential-'));
   const received: Array<{ authorization: string | undefined; path: string | undefined }> = [];
   const server = createServer((request, response) => {
     received.push({ authorization: request.headers.authorization, path: request.url });

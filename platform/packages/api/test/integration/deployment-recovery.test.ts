@@ -144,7 +144,7 @@ test('removes the candidate service binding before its sandbox controller, prese
   cf.state.hostScripts.set(workerName, {
     classes: new Map(),
     metadata: {},
-    bindings: [{ type: 'service', name: '__NOSAM_SANDBOX', service: controllerName }],
+    bindings: [{ type: 'service', name: '__PLATFORM_SANDBOX', service: controllerName }],
   });
   cf.state.hostScripts.set(controllerName, {
     classes: new Map(),
@@ -152,12 +152,12 @@ test('removes the candidate service binding before its sandbox controller, prese
     bindings: [
       {
         type: 'plain_text',
-        name: '__NOSAM_SANDBOX_OWNER',
+        name: '__PLATFORM_SANDBOX_OWNER',
         text: JSON.stringify({ protocol: 1, projectId: project.id, deploymentId: candidate.id }),
       },
       {
         type: 'plain_text',
-        name: '__NOSAM_USER_ID',
+        name: '__PLATFORM_USER_ID',
         text: (await getProject(env.db, project.id))!.user_id,
       },
       {
@@ -381,7 +381,7 @@ test.each([
       .set({
         manifest: JSON.stringify({
           version: 3,
-          type: 'nosam',
+          type: 'platform',
           bindings: {},
           schedules: [{ cron: '*/5 * * * *', filePath: 'crons/tick.ts' }],
           queues: [{ name: 'emails', bindingName: 'QUEUE_EMAILS' }],
@@ -398,7 +398,7 @@ test.each([
     const heldToken = await deriveProxyToken(env.JWT_SECRET, project.id, held);
     mockCfApi({
       listWorkerBindings: () =>
-        cfSuccess([{ type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: heldToken }]),
+        cfSuccess([{ type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: heldToken }]),
     });
     const syncBodies: Array<string> = [];
     const originalGet = env.CRON_SCHEDULER.get.bind(env.CRON_SCHEDULER);

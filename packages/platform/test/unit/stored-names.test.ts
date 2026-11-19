@@ -26,8 +26,18 @@ describe('names that an earlier install stored', () => {
       application: { baseDomain: 'apps.example.com', zoneName: 'example.com' },
       displayName: 'Platform',
       installationSlug: 'nosam',
+      resources: { apiWorker: 'void-nosam-api' },
     });
     expect(resources.assetsBucket).toBe('void-nosam-assets');
     expect(resources.apiWorker).toBe('void-nosam-api');
+  });
+
+  it('names a new install platform-<slug>-<role>', () => {
+    const { resources } = createPlatformDeploymentManifest({
+      application: { baseDomain: 'apps.example.com', zoneName: 'example.com' },
+      displayName: 'Platform',
+      installationSlug: 'team',
+    });
+    expect(resources.apiWorker).toBe('platform-team-api');
   });
 });

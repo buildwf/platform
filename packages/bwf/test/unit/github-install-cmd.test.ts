@@ -34,7 +34,7 @@ describe('runInstall', () => {
     const getGithubInstallUrl = vi
       .fn()
       .mockRejectedValueOnce(identityRequired())
-      .mockResolvedValueOnce({ url: 'https://github.com/apps/nosam/installations/new' });
+      .mockResolvedValueOnce({ url: 'https://github.com/apps/platform/installations/new' });
     const client = { getGithubInstallUrl } as unknown as PlatformClient;
     const linkIdentity = vi.fn(async () => {});
 

@@ -6,7 +6,7 @@
     "moduleResolution": "NodeNext",
     "paths": {
       "*": ["./*"],
-      "nosam": ["./src/index.ts"],
+      "platform": ["./src/index.ts"],
       "bwf/*": ["./src/*"],
       "@builtbyfriends/bwf/routes": ["./src/routes-stub.ts"]
     },

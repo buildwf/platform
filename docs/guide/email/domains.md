@@ -29,7 +29,7 @@ If setup is interrupted, use `bwf email domain status <domain>` to inspect the s
 - **Outbound**: whether sending is ready, restricted to verified destinations, pending, or blocked.
 - **Management**: whether the stored Cloudflare credential can manage the connection.
 
-Use `bwf email domain sync <domain>` to finish setup and refresh readiness. The status lists any dashboard or credential steps still needed. Use `rotate-secret` to rotate the connection secret after inbound is ready, or `remove` to detach the domain. Revoke unused API tokens in Cloudflare. See [Email domain commands](../../reference/cli/email.md#nosam-email-domain).
+Use `bwf email domain sync <domain>` to finish setup and refresh readiness. The status lists any dashboard or credential steps still needed. Use `rotate-secret` to rotate the connection secret after inbound is ready, or `remove` to detach the domain. Revoke unused API tokens in Cloudflare. See [Email domain commands](../../reference/cli/email.md#platform-email-domain).
 
 Once inbound is ready, mail to any address on that domain reaches your `email/` handlers. Sending to arbitrary recipients also needs outbound readiness; a domain limited to verified destinations still requires recipient verification. Platform quotas and suspension apply to both shared and custom senders.
 
@@ -99,7 +99,7 @@ Existing rules owned by another Worker or forwarding service are left in place. 
 
 After deleting a handler, review the reported stale address and set the desired `cloudflare.addresses`. Deleting a routing rule requires confirmation in an interactive terminal.
 
-To remove all email setup, remove `addresses`, `send_email`, and `vars.__NOSAM_EMAIL_FROM` from `resolved` in `bwf.lock.json`, remove corresponding overrides in `bwf.config.ts`, and delete the routing rules in Cloudflare.
+To remove all email setup, remove `addresses`, `send_email`, and `vars.__PLATFORM_EMAIL_FROM` from `resolved` in `bwf.lock.json`, remove corresponding overrides in `bwf.config.ts`, and delete the routing rules in Cloudflare.
 
 ### CI {#ci}
 

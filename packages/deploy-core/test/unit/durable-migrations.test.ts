@@ -35,18 +35,18 @@ describe('Durable Object migration planning', () => {
   it('does not reclassify a legacy Wrangler migration', () => {
     expect(
       appendSqliteClassMigration(
-        [{ tag: 'void-ws-v1', new_classes: ['LegacyRoom'] }],
+        [{ tag: 'platform-ws-v1', new_classes: ['LegacyRoom'] }],
         ['LegacyRoom'],
-        'void-ws-v1',
+        'platform-ws-v1',
       ),
     ).toEqual({
-      migrations: [{ tag: 'void-ws-v1', new_classes: ['LegacyRoom'] }],
+      migrations: [{ tag: 'platform-ws-v1', new_classes: ['LegacyRoom'] }],
       added: false,
     });
   });
 
   it('grandfathers a configured class whose legacy migration history is unavailable', () => {
-    expect(appendSqliteClassMigration([], ['LegacyRoom'], 'void-ws-v1', ['LegacyRoom'])).toEqual({
+    expect(appendSqliteClassMigration([], ['LegacyRoom'], 'platform-ws-v1', ['LegacyRoom'])).toEqual({
       migrations: [],
       added: false,
     });
@@ -55,13 +55,13 @@ describe('Durable Object migration planning', () => {
   it('uses an append-only tag when a migration tag is occupied', () => {
     expect(
       appendSqliteClassMigration(
-        [{ tag: 'void-ws-v1', new_classes: ['LegacyRoom'] }],
+        [{ tag: 'platform-ws-v1', new_classes: ['LegacyRoom'] }],
         ['LegacyRoom', 'ChatRoom'],
-        'void-ws-v1',
+        'platform-ws-v1',
       ).migrations,
     ).toEqual([
-      { tag: 'void-ws-v1', new_classes: ['LegacyRoom'] },
-      { tag: 'void-ws-v1-2', new_sqlite_classes: ['ChatRoom'] },
+      { tag: 'platform-ws-v1', new_classes: ['LegacyRoom'] },
+      { tag: 'platform-ws-v1-2', new_sqlite_classes: ['ChatRoom'] },
     ]);
   });
 
@@ -79,7 +79,7 @@ describe('Durable Object migration planning', () => {
           },
         ],
         ['RenamedRoom', 'TransferredRoom'],
-        'void-ws-v1',
+        'platform-ws-v1',
       ),
     ).toEqual({
       migrations: [

@@ -103,7 +103,7 @@ describe('Access installer setup', () => {
     'provisions only selected capabilities: $login / $protection and resumes without duplicate resources',
     async ({ login, protection, applications, tokens }) => {
       vi.spyOn(console, 'log').mockImplementation(() => {});
-      vi.stubEnv('NOSAM_ACCESS_CREDENTIALS', '');
+      vi.stubEnv('PLATFORM_ACCESS_CREDENTIALS', '');
       const env = platformAccessFixture();
       const checkpoint: Record<string, string> = {};
       const input = {
@@ -139,7 +139,7 @@ describe('Access installer setup', () => {
         expect(env.calls).toHaveLength(0);
       }
       if (protection) {
-        expect(Object.keys(JSON.parse(process.env.NOSAM_ACCESS_CREDENTIALS!))).toEqual([
+        expect(Object.keys(JSON.parse(process.env.PLATFORM_ACCESS_CREDENTIALS!))).toEqual([
           plan.apiUrl,
           plan.proxyUrl,
         ]);
@@ -162,7 +162,7 @@ describe('Access installer setup', () => {
   });
 
   it('rejects recovery credentials for unrelated origins without activating any of them', () => {
-    vi.stubEnv('NOSAM_ACCESS_CREDENTIALS', '{}');
+    vi.stubEnv('PLATFORM_ACCESS_CREDENTIALS', '{}');
     expect(() =>
       activatePlatformAccessCredentials(
         JSON.stringify({
@@ -175,7 +175,7 @@ describe('Access installer setup', () => {
         [plan.apiUrl, plan.proxyUrl],
       ),
     ).toThrow('scoped');
-    expect(process.env.NOSAM_ACCESS_CREDENTIALS).toBe('{}');
+    expect(process.env.PLATFORM_ACCESS_CREDENTIALS).toBe('{}');
   });
 });
 

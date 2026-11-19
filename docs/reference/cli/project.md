@@ -5,7 +5,7 @@ outline: deep
 
 # Projects {#project-commands}
 
-## `bwf project status [name]` {#nosam-project-status-name}
+## `bwf project status [name]` {#platform-project-status-name}
 
 Show deployments for the configured target.
 
@@ -13,15 +13,15 @@ Show deployments for the configured target.
 - Cloudflare targets list Worker Versions, identify the active version, and show the recorded migration count. A project name is not accepted because the Worker name comes from `cloudflare.name` in `bwf.config.ts`.
 - Owners and admins also see a warning when the platform cannot finish [replacing the project's credentials](../../guide/project-collaboration.md#change-or-remove-access).
 
-## `bwf project link [name]` {#nosam-project-link-name}
+## `bwf project link [name]` {#platform-project-link-name}
 
 Link current directory to an existing hosted bwf project by slug, or select interactively if omitted. State is stored in `.bwf/project.json`. Direct Cloudflare apps use `cloudflare.name` in `bwf.config.ts` and do not need linking.
 
-## `bwf project list` {#nosam-project-list}
+## `bwf project list` {#platform-project-list}
 
 List all accessible hosted projects (slug, role, type, URL). Shared projects are included and the role column distinguishes them from projects you own. For a saved Cloudflare target, this displays the current Worker's versions instead because there is no bwf project registry.
 
-## `bwf project team` {#nosam-project-team}
+## `bwf project team` {#platform-project-team}
 
 Manage access to a project hosted on a bwf platform:
 
@@ -51,7 +51,7 @@ platform, and accepting an invitation leaves directory links intact. To link
 the invited application, run `bwf project link` in an unlinked checkout of
 that application.
 
-## `bwf project zero-trust` {#nosam-project-zero-trust}
+## `bwf project zero-trust` {#platform-project-zero-trust}
 
 Inspect or override protection for a project on a bwf platform:
 
@@ -72,7 +72,7 @@ protection change is finished; if one is refused, the owner or a project
 administrator can run `bwf project zero-trust reconcile` before you retry.
 These commands do not apply to direct Cloudflare deployments.
 
-## `bwf project token <create|list|renew|revoke>` {#nosam-project-token-create-list-renew-revoke}
+## `bwf project token <create|list|renew|revoke>` {#platform-project-token-create-list-renew-revoke}
 
 Manage revocable `aud: deploy` credentials for one bwf platform project. The
 credential can only call the endpoints used by `bwf deploy`; it cannot access
@@ -94,28 +94,28 @@ method disablement does not revoke these independent deploy credentials.
 Store the printed `BWF_TOKEN` and `BWF_API_URL` in the CI secret manager. The
 Access pair passes the perimeter; the scoped bwf credential authorizes only
 this project's deploy workflow. When remote proxy bindings are
-used on an Access-protected platform, store `NOSAM_ACCESS_CREDENTIALS` as an
+used on an Access-protected platform, store `PLATFORM_ACCESS_CREDENTIALS` as an
 origin-keyed JSON secret containing both exact HTTPS origins, even if both use
 the same service-token pair:
 
 ```json
 {
-  "https://nosam-company-api.example.workers.dev": {
+  "https://platform-company-api.example.workers.dev": {
     "CF_ACCESS_CLIENT_ID": "<service-token client ID>",
     "CF_ACCESS_CLIENT_SECRET": "<service-token client secret>"
   },
-  "https://nosam-company-proxy.example.workers.dev": {
+  "https://platform-company-proxy.example.workers.dev": {
     "CF_ACCESS_CLIENT_ID": "<service-token client ID>",
     "CF_ACCESS_CLIENT_SECRET": "<service-token client secret>"
   }
 }
 ```
 
-`NOSAM_ACCESS_ORIGIN` scopes a pair to one origin, so selecting only the API
+`PLATFORM_ACCESS_ORIGIN` scopes a pair to one origin, so selecting only the API
 origin is insufficient for a workflow that calls the proxy. Use distinct pairs
 in the two entries when the Access policies require them.
 
-## `bwf project logs` {#nosam-project-logs}
+## `bwf project logs` {#platform-project-logs}
 
 ```
 bwf project logs [--level <level>] [--filter <text>] [--range <duration>] [--deployment <id>]
@@ -145,7 +145,7 @@ For errors that never reach your Worker, such as edge routing errors or static s
 
 On a direct Cloudflare target, `--filter` becomes Cloudflare's live search, `--deployment` selects a Worker Version, and `--level error` selects error invocations. Other individual console levels cannot be filtered, and `--range` does not select history. `bwf project requests` is hosted-only.
 
-## `bwf project requests` {#nosam-project-requests}
+## `bwf project requests` {#platform-project-requests}
 
 ```
 bwf project requests [--status <filter>] [--range <duration>]
@@ -167,7 +167,7 @@ bwf project requests --status 5xx
 bwf project requests --range 24h
 ```
 
-## `bwf project rollback [deployId]` {#nosam-project-rollback-deployid}
+## `bwf project rollback [deployId]` {#platform-project-rollback-deployid}
 
 ```
 bwf project rollback [deployId] [--platform cloudflare]
@@ -182,9 +182,9 @@ On a bwf platform, you can select a retained deployment. On Cloudflare, use a co
 
 Pass `--platform cloudflare` to roll back a one-off Cloudflare deployment.
 
-Database recovery is separate from code rollback. bwf asks for confirmation when the earlier code may be incompatible with the current schema. For D1 on Cloudflare, use [`bwf db restore`](./database.md#nosam-db-restore) with the restore point printed during deployment.
+Database recovery is separate from code rollback. bwf asks for confirmation when the earlier code may be incompatible with the current schema. For D1 on Cloudflare, use [`bwf db restore`](./database.md#platform-db-restore) with the restore point printed during deployment.
 
-## `bwf project cancel [deployId]` {#nosam-project-cancel-deployid}
+## `bwf project cancel [deployId]` {#platform-project-cancel-deployid}
 
 ```
 bwf project cancel [deployId]
@@ -199,7 +199,7 @@ bwf asks for confirmation before it requests cancellation.
 
 This command is hosted-only. Direct Cloudflare deploys are local operations and do not expose a remote build to cancel.
 
-## `bwf project delete [name]` {#nosam-project-delete-name}
+## `bwf project delete [name]` {#platform-project-delete-name}
 
 Permanently delete a hosted bwf project and all its resources (databases, KV namespaces, R2 buckets, deployments). Requires typing the project slug to confirm; `--force` (`-f`) skips the prompt.
 

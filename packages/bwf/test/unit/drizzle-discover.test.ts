@@ -9,7 +9,7 @@ describe('discoverSchema', () => {
   let root: string;
 
   beforeEach(() => {
-    root = join(tmpdir(), `nosam-test-${Date.now()}`);
+    root = join(tmpdir(), `platform-test-${Date.now()}`);
     mkdirSync(root, { recursive: true });
   });
 

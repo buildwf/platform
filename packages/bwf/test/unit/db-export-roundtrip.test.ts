@@ -54,7 +54,7 @@ afterEach(() => {
   }
 });
 function project(pg = false) {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-export-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-export-'));
   roots.push(root);
   writeFileSync(join(root, 'bwf.json'), JSON.stringify(pg ? { database: 'pg' } : {}));
   writeFileSync(join(root, '.env'), 'DATABASE_URL=postgres://unused:unused@localhost/isolated');
@@ -191,7 +191,7 @@ describe('SQL export restore', () => {
 
   it('writes an export to an absolute --output path', async () => {
     const root = project();
-    const outDir = mkdtempSync(join(tmpdir(), 'nosam-export-out-'));
+    const outDir = mkdtempSync(join(tmpdir(), 'platform-export-out-'));
     roots.push(outDir);
     const { databasePath } = getLocalD1Target(root);
     mkdirSync(join(databasePath, '..'), { recursive: true });

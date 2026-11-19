@@ -190,7 +190,7 @@ it('rejects a terminal interruption instead of displaying it as generated text',
   vi.mocked(ofetch.raw).mockResolvedValue({
     _data: makeSSEStream([
       'data: {"response":"partial"}\n\n',
-      'event: nosam:error\ndata: {"message":"Generation was interrupted."}\n\n',
+      'event: platform:error\ndata: {"message":"Generation was interrupted."}\n\n',
     ]),
   } as never);
   const stream = fetchStream('/api/stream');
@@ -211,7 +211,7 @@ it.each([false, true])(
     vi.mocked(ofetch.raw).mockResolvedValue({
       _data: makeSSEStream([
         'data: {"response":"partial"}\n\n',
-        `event: nosam:limit\ndata: ${JSON.stringify(limit)}${unterminated ? '' : '\n\n'}`,
+        `event: platform:limit\ndata: ${JSON.stringify(limit)}${unterminated ? '' : '\n\n'}`,
       ]),
     } as never);
     const stream = fetchStream('/api/stream');

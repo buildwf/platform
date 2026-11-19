@@ -95,7 +95,7 @@ deployed `email/` handlers without per-project DNS setup once the platform has v
 handlers once its inbound readiness is `ready`. Use `bwf email domain status`
 to check current provider routing and any remaining setup steps.
 
-A project with an [email alias](../../reference/cli/email.md#nosam-email-alias) also receives at `<alias>+anything@<mail domain>`. For example, both `acme-store+support@…` and its alias `acme+support@…` reach `email/support.ts`.
+A project with an [email alias](../../reference/cli/email.md#platform-email-alias) also receives at `<alias>+anything@<mail domain>`. For example, both `acme-store+support@…` and its alias `acme+support@…` reach `email/support.ts`.
 
 For direct deployments, follow [Your own Cloudflare account](./domains.md#your-own-cloudflare-account) to configure inbound addresses.
 

@@ -40,7 +40,7 @@ function encodeRoutePattern(pattern: string): string {
       if (segment.startsWith(':') || segment === '*' || /^\[.*\]$/.test(segment)) {
         return segment;
       }
-      const url = new URL('https://nosam.invalid');
+      const url = new URL('https://platform.invalid');
       url.pathname = `/${segment}`;
       return url.pathname.slice(1);
     })

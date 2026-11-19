@@ -256,7 +256,7 @@ type EmailStepRoute = Pick<
 >;
 
 export function emailInstallationId(env: Bindings): string {
-  return env.PLATFORM_INSTALLATION_ID ?? 'nosam-hosted';
+  return env.PLATFORM_INSTALLATION_ID ?? 'platform-hosted';
 }
 async function lockEmailZoneConnectionIdentity(
   tx: Tx,
@@ -338,12 +338,12 @@ async function probeDeployedRelay(
     : await readConnectionSecret(env, connection);
   const challenge = randomSecret();
   const response = await fetch(
-    `https://${connection.ingress_worker_name}.${subdomain}.workers.dev/__nosam/email/probe`,
+    `https://${connection.ingress_worker_name}.${subdomain}.workers.dev/__platform/email/probe`,
     {
       method: 'POST',
       headers: {
-        'X-Nosam-Probe-Challenge': challenge,
-        'X-Nosam-Probe-Generation': String(generation),
+        'X-Platform-Probe-Challenge': challenge,
+        'X-Platform-Probe-Generation': String(generation),
       },
       signal: AbortSignal.timeout(10_000),
     },
@@ -449,7 +449,7 @@ function ingressName(installationId: string, zoneId: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '-')
     .slice(-48);
-  return `nosam-email-${suffix}`;
+  return `platform-email-${suffix}`;
 }
 function isCloudflareEmailRoutingMx(exchange: string): boolean {
   return /\.mx\.cloudflare\.net$/i.test(exchange);

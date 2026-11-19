@@ -13,7 +13,7 @@ export class PlatformDisabledError extends Error {
   }
 }
 
-/** Validates a `GET /.well-known/nosam-platform` response from `apiUrl`. */
+/** Validates a `GET /.well-known/platform` response from `apiUrl`. */
 export async function readPlatformDiscoveryResponse(
   apiUrl: string,
   response: Response,

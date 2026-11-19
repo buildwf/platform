@@ -1,5 +1,5 @@
 {
-  "name": "@nosamcloud/email-gateway",
+  "name": "@platform-service/email-gateway",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,8 +9,8 @@
   },
   "dependencies": {
     "@builtbyfriends/platform": "workspace:*",
-    "@nosamcloud/api": "workspace:*",
-    "@nosamcloud/proxy": "workspace:*",
+    "@platform-service/api": "workspace:*",
+    "@platform-service/proxy": "workspace:*",
     "email-validator": "^2.0.4"
   },
   "devDependencies": {

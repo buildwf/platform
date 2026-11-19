@@ -18,7 +18,7 @@ let root: string;
 const logger = { debug() {}, info() {}, log() {}, warn() {}, error() {} };
 const authContext = {
   logger,
-  userAgent: 'nosam-test',
+  userAgent: 'platform-test',
   prompt: async () => {
     throw new Error('Unexpected prompt');
   },
@@ -29,7 +29,7 @@ const authContext = {
 };
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'nosam-cf-session-'));
+  root = mkdtempSync(join(tmpdir(), 'platform-cf-session-'));
   for (const key of ['HOME', 'USERPROFILE', 'XDG_CONFIG_HOME', 'APPDATA', 'LOCALAPPDATA']) {
     vi.stubEnv(key, root);
   }

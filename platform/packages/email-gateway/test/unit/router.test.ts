@@ -53,7 +53,7 @@ async function routeInbound(
 // Fixtures
 // -----------------------------------------------------------------------
 
-const PROD_DOMAIN = 'mail.void.cloud';
+const PROD_DOMAIN = 'mail.buildwf.dev';
 
 /**
  * Reply bytes the way `replyEmail()` renders them: a `From:` header naming
@@ -606,7 +606,7 @@ describe('routeInbound — message size guards', () => {
       const result = routeInbound(message, env, ctx);
       await vi.advanceTimersByTimeAsync(15_001);
       await result;
-      expect(rejectCalls).toEqual(['mail.void.cloud: could not read inbound message body']);
+      expect(rejectCalls).toEqual(['mail.buildwf.dev: could not read inbound message body']);
       expect(emailFn).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();

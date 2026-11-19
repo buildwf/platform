@@ -11,7 +11,7 @@ import { getHookHandler } from '../helpers/vite-hooks.ts';
 const tempDirs: Array<string> = [];
 
 function createTempRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-inference-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-inference-'));
   tempDirs.push(root);
   mkdirSync(join(root, 'src'), { recursive: true });
   return root;
@@ -351,7 +351,7 @@ describe('inferProjectBindings', () => {
     try {
       const plugins = bwfPlugin();
       const externalPlugin = plugins.find(
-        (plugin) => plugin.name === 'nosam:cloudflare-builtins-external',
+        (plugin) => plugin.name === 'platform:cloudflare-builtins-external',
       );
       const config = getHookHandler(externalPlugin?.config) as (
         this: object,
@@ -403,7 +403,7 @@ describe('detectFramework', () => {
     try {
       const plugins = bwfPlugin();
       const persistPlugin = plugins.find(
-        (plugin) => plugin.name === 'nosam:wrangler-compat-persist',
+        (plugin) => plugin.name === 'platform:wrangler-compat-persist',
       );
       const buildStart = getHookHandler(persistPlugin?.buildStart) as (this: object) => void;
 
@@ -426,7 +426,7 @@ describe('detectFramework', () => {
 
     try {
       const plugins = bwfPlugin();
-      const stubsPlugin = plugins.find((plugin) => plugin.name === 'nosam:client-stubs');
+      const stubsPlugin = plugins.find((plugin) => plugin.name === 'platform:client-stubs');
       const resolveId = getHookHandler(stubsPlugin?.resolveId) as (
         this: { environment?: { name?: string }; error(message: string): never },
         id: string,
@@ -486,8 +486,8 @@ describe('detectFramework', () => {
     try {
       bwfPlugin();
       const entry = readFileSync(join(root, '.bwf', 'entry.ts'), 'utf-8');
-      expect(entry).toContain('NosamLiveStreamDurableObject');
-      expect(entry).toContain('export { NosamLiveStreamDurableObject };');
+      expect(entry).toContain('PlatformLiveStreamDurableObject');
+      expect(entry).toContain('export { PlatformLiveStreamDurableObject };');
       expect(entry).toContain('__setLiveBindingName("BWF_LIVE");');
     } finally {
       cwd.mockRestore();
@@ -508,11 +508,11 @@ describe('detectFramework', () => {
     try {
       bwfPlugin();
       const entry = readFileSync(join(root, '.bwf', 'entry.ts'), 'utf-8');
-      expect(entry).toContain('import __nosamDurableObject0 from');
+      expect(entry).toContain('import __platformDurableObject0 from');
       expect(entry).toContain('/durable-objects/shopping-cart.ts');
-      expect(entry).toContain('__nosamDurableObject0.__bind("SHOPPING_CART")');
+      expect(entry).toContain('__platformDurableObject0.__bind("SHOPPING_CART")');
       expect(entry).toContain(
-        'export const ShoppingCartDurableObject = __nosamDurableObject0.class',
+        'export const ShoppingCartDurableObject = __platformDurableObject0.class',
       );
     } finally {
       cwd.mockRestore();

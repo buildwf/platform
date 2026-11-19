@@ -37,7 +37,7 @@ export function CodeBlock({ code, language = 'text' }: { code: string; language?
   const lines =
     highlighted?.code === code && highlighted.language === language ? highlighted.lines : null;
   return (
-    <pre className="nosam-admin-code-block" data-language={language} tabIndex={0}>
+    <pre className="platform-admin-code-block" data-language={language} tabIndex={0}>
       <code>
         {lines
           ? lines.map((line, index) => (

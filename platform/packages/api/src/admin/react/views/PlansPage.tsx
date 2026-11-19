@@ -138,7 +138,7 @@ export function PlansPage({ path, platformName, username }: AdminPageProps) {
   return (
     <Layout platformName={platformName} username={username} title="Plans">
       <SectionStack>
-        <div className="nosam-admin-plan-heading">
+        <div className="platform-admin-plan-heading">
           <h1>Plans</h1>
           <Button href={`${HOME}/new`} label="Add plan" />
         </div>
@@ -194,7 +194,7 @@ export function PlansPage({ path, platformName, username }: AdminPageProps) {
           {catalog.plans.map((plan) => (
             <TableRow key={plan.id}>
               <TableCell>
-                <Link className="nosam-admin-resource-link" href={`${HOME}/${plan.id}/edit`}>
+                <Link className="platform-admin-resource-link" href={`${HOME}/${plan.id}/edit`}>
                   {plan.name}
                 </Link>
                 <div>
@@ -253,7 +253,7 @@ export function PlanEditPage({ path, platformName, username }: AdminPageProps) {
             as="form"
             method="post"
             action={`${HOME}/preview`}
-            className="nosam-admin-plan-form"
+            className="platform-admin-plan-form"
           >
             <SectionStack as="div">
               <input type="hidden" name="action" defaultValue={plan ? 'set' : 'add'} />
@@ -291,7 +291,7 @@ export function PlanEditPage({ path, platformName, username }: AdminPageProps) {
                 {fields.map((group) => (
                   <SectionStack key={group.title}>
                     <h2>{group.title}</h2>
-                    <div className="nosam-admin-plan-fields">
+                    <div className="platform-admin-plan-fields">
                       {group.keys.map((key) => (
                         <FormNumberInput
                           key={`${plan.id}:${key}`}
@@ -366,7 +366,7 @@ export function PlanEditPage({ path, platformName, username }: AdminPageProps) {
             <PageStack>
               <SectionStack>
                 <h2>Plan management</h2>
-                <div className="nosam-admin-plan-actions">
+                <div className="platform-admin-plan-actions">
                   {!plan.archived && plan.id !== catalog.defaultPlanId && (
                     <PlanAction
                       action="default"
@@ -404,7 +404,7 @@ export function PlanEditPage({ path, platformName, username }: AdminPageProps) {
                   as="form"
                   method="post"
                   action={`${HOME}/preview`}
-                  className="nosam-admin-plan-form"
+                  className="platform-admin-plan-form"
                 >
                   <input type="hidden" name="action" defaultValue="remove" />
                   <input type="hidden" name="id" defaultValue={plan.id} />
@@ -554,7 +554,7 @@ export function PlanPreviewPage({
           <ul>
             {preview.overLimitAccounts.map((a) => (
               <li key={a.id}>
-                <Link className="nosam-admin-resource-link" href={`/admin/users/${a.id}`}>
+                <Link className="platform-admin-resource-link" href={`/admin/users/${a.id}`}>
                   {a.login}
                 </Link>
                 : {a.reasons.map((key) => labels[key as EditablePlanLimit] ?? key).join(', ')}
@@ -568,7 +568,7 @@ export function PlanPreviewPage({
           Recorded usage and billing periods are preserved. Lowering quotas can restrict existing
           apps. Raising quotas leaves manual administrator suspensions in place.
         </p>
-        <form method="post" action={`${HOME}/apply`} className="nosam-admin-plan-actions">
+        <form method="post" action={`${HOME}/apply`} className="platform-admin-plan-actions">
           <input type="hidden" name="action" defaultValue={preview.action} />
           <input type="hidden" name="id" defaultValue={target} />
           <input type="hidden" name="revision" defaultValue={preview.expectedRevision} />

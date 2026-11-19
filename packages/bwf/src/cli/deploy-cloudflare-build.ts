@@ -70,7 +70,7 @@ export async function buildCloudflareWorker(input: {
   const buildChildEnv = scrubManagedDeployBuildMarkers(
     scrubWranglerAuthCredentials(deployChildEnv(accountId, apiBaseUrl)),
   );
-  // Tell nosam:env to build Worker vars from portable production dotenv files
+  // Tell platform:env to build Worker vars from portable production dotenv files
   // only. Outside this deploy path Vite keeps its standard dotenv behavior,
   // but local files cannot be serialized into the artifact this command uploads.
   deleteEnvVarCaseAware(buildChildEnv, CLOUDFLARE_DEPLOY_BUILD_ENV);
@@ -183,7 +183,7 @@ export async function buildCloudflareWorker(input: {
       log.error(
         [
           'deploy: --platform cloudflare cannot verify the Platform-managed Better Auth schema.',
-          'The managed platform creates these tables at runtime (POST /__nosam/migrate/auth)',
+          'The managed platform creates these tables at runtime (POST /__platform/migrate/auth)',
           'after deploy; this self-host backend only applies checked-in db/migrations/*.sql, so',
           'they must already produce the Better Auth schema — tables, columns, and the primary',
           'keys, unique constraints and foreign keys it declares:',

@@ -26,7 +26,7 @@ afterEach(() => {
 });
 
 async function loadAuthDatabase(d1BindingName: string) {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-auth-d1-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-auth-d1-'));
   roots.push(root);
   mkdirSync(join(root, 'db'));
   const schemaPath = join(root, 'db', 'schema.mjs');
@@ -45,7 +45,7 @@ async function loadAuthDatabase(d1BindingName: string) {
   const load = getHookHandler(plugin.load) as (id: string) => string;
   writeFileSync(
     dbPath,
-    load('\0virtual:nosam-db').replace(
+    load('\0virtual:platform-db').replace(
       JSON.stringify(fileURLToPath(import.meta.resolve('#self/_env'))),
       JSON.stringify(envUrl),
     ),
@@ -65,14 +65,14 @@ async function loadAuthDatabase(d1BindingName: string) {
         .replace('"@builtbyfriends/bwf/_env"', JSON.stringify(envUrl)),
     ),
   );
-  const { __nosamAuthDatabase } = (await import(pathToFileURL(authPath).href)) as {
-    __nosamAuthDatabase: ReturnType<typeof drizzleAdapter>;
+  const { __platformAuthDatabase } = (await import(pathToFileURL(authPath).href)) as {
+    __platformAuthDatabase: ReturnType<typeof drizzleAdapter>;
   };
   const { db } = (await import(pathToFileURL(dbPath).href)) as { db: DrizzleD1Database };
   const { sessionTable } = (await import(pathToFileURL(schemaPath).href)) as {
     sessionTable: SQLiteTable;
   };
-  return { adapter: __nosamAuthDatabase({}), db, sessionTable };
+  return { adapter: __platformAuthDatabase({}), db, sessionTable };
 }
 
 describe('Better Auth D1 consistency', () => {

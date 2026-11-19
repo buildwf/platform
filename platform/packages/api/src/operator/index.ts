@@ -42,7 +42,7 @@ operatorApi.onError((error, context) => {
 });
 operatorApi.use('*', async (context, next) => {
   context.header('Cache-Control', 'no-store');
-  context.header('X-Nosam-Operator-Api-Version', '1');
+  context.header('X-Platform-Operator-Api-Version', '1');
   await next();
 });
 operatorApi.use(

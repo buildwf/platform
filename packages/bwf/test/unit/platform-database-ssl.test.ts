@@ -116,7 +116,7 @@ describe('platform PostgreSQL SSL mode', () => {
   ] as const)('normalizes only the %s client copy, not the saved URL', async (_name, operation) => {
     const original = 'postgresql://owner:pw@db.example.com/platform?sslmode=require';
     vi.stubEnv('DATABASE_URL', original);
-    vi.stubEnv('NOSAM_PLATFORM_DATABASE_URL', '');
+    vi.stubEnv('PLATFORM_DATABASE_URL', '');
     const checkpoint = { databaseUrl: original, databaseClaimState: 'claimed' };
     const url = resolvePlatformInstallDatabaseUrl(checkpoint);
     await expect(operation(url, 'installation', 'nonce')).rejects.toThrow(

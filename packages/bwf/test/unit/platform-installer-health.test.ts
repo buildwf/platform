@@ -24,7 +24,7 @@ const check = (fetcher: typeof fetch) =>
   );
 const healthy = (url: string) =>
   Response.json(
-    url.endsWith('/.well-known/nosam-platform')
+    url.endsWith('/.well-known/platform')
       ? { installationId: 'installation', platformVersion: '1.2.1', usageProtocolVersion: 2 }
       : { ok: true },
   );
@@ -34,7 +34,7 @@ it('retries a transient transport failure without repeating successful health pr
   const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
     calls.push(url);
-    expect(new Headers(init?.headers).get('X-Nosam-Platform-Probe')).toBe('private-probe');
+    expect(new Headers(init?.headers).get('X-Platform-Probe')).toBe('private-probe');
     expect(init?.redirect).toBe('manual');
     if (url === `${proxy}/health` && calls.filter((value) => value === url).length === 1) {
       throw new TypeError('fetch failed');

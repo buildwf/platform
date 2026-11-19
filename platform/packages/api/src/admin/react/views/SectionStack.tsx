@@ -13,7 +13,7 @@ export function SectionStack({ as = 'section', gap = 4, className, ...props }: S
       {...props}
       as={as}
       gap={gap}
-      className={['nosam-admin-stack', className].filter(Boolean).join(' ')}
+      className={['platform-admin-stack', className].filter(Boolean).join(' ')}
     />
   );
 }

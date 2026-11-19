@@ -68,7 +68,7 @@ function buildSandboxManifest(overrides?: {
       controllerProtocol: 2,
       bindingName: 'SANDBOX',
       className: 'Sandbox',
-      containerName: overrides?.containerName ?? 'nosam-sandbox',
+      containerName: overrides?.containerName ?? 'platform-sandbox',
       image: overrides?.image ?? SANDBOX_IMAGE_V1,
       instanceType: 'lite',
       maxInstances: 20,
@@ -184,19 +184,19 @@ describe('per-deploy sandbox integration', () => {
     expect(userWorker!.metadata.containers).toBeUndefined();
     expect(userWorker!.bindings).toContainEqual({
       type: 'service',
-      name: '__NOSAM_SANDBOX',
+      name: '__PLATFORM_SANDBOX',
       service: controllerName,
     });
     expect(
       userWorker!.bindings.some((binding) => binding.type === 'durable_object_namespace'),
     ).toBe(false);
-    expect(userWorker!.bindings.some((binding) => binding.name === '__NOSAM_SANDBOX_CONTROL')).toBe(
+    expect(userWorker!.bindings.some((binding) => binding.name === '__PLATFORM_SANDBOX_CONTROL')).toBe(
       false,
     );
     expect(controller.bindings).toContainEqual({
       type: 'service',
-      name: '__NOSAM_SANDBOX_CONTROL',
-      service: 'nosam-api',
+      name: '__PLATFORM_SANDBOX_CONTROL',
+      service: 'platform-api',
       entrypoint: 'SandboxControl',
       props: { projectId: project.id, deploymentId: deployId, userId: user.id, slug: project.slug },
     });
@@ -209,9 +209,9 @@ describe('per-deploy sandbox integration', () => {
       { method: 'PUT', url: '/scripts/' + userWorkerName },
     );
 
-    // Per-deploy container app exists: `${projectId}-${deployId}-nosam-sandbox`
+    // Per-deploy container app exists: `${projectId}-${deployId}-platform-sandbox`
     // (lowercased, `_`→`-`), bound to the user worker's namespace_id.
-    const containerAppName = `${project.id}-${deployId}-nosam-sandbox`
+    const containerAppName = `${project.id}-${deployId}-platform-sandbox`
       .toLowerCase()
       .replaceAll('_', '-');
     const containerApp = Array.from(cf.state.containerApps.values()).find(
@@ -252,7 +252,7 @@ describe('per-deploy sandbox integration', () => {
     const v1Namespace = cf.state.hostScripts
       .get(sandboxControllerWorkerName(project.id, v1Id))!
       .classes.get('SandboxController')!;
-    const v1ContainerName = `${project.id}-${v1Id}-nosam-sandbox`
+    const v1ContainerName = `${project.id}-${v1Id}-platform-sandbox`
       .toLowerCase()
       .replaceAll('_', '-');
 
@@ -279,7 +279,7 @@ describe('per-deploy sandbox integration', () => {
     expect(v2Namespace).not.toBe(v1Namespace);
 
     // Brand-new container app bound to the new namespace.
-    const v2ContainerName = `${project.id}-${v2Id}-nosam-sandbox`
+    const v2ContainerName = `${project.id}-${v2Id}-platform-sandbox`
       .toLowerCase()
       .replaceAll('_', '-');
     expect(v2ContainerName).not.toBe(v1ContainerName);
@@ -371,7 +371,7 @@ describe('per-deploy sandbox integration', () => {
     expect(done1).toBeDefined();
     const v1Id = done1!.deployment;
     const v1WorkerName = `user-${project.slug}-${v1Id}`;
-    const v1ContainerName = `${project.id}-${v1Id}-nosam-sandbox`
+    const v1ContainerName = `${project.id}-${v1Id}-platform-sandbox`
       .toLowerCase()
       .replaceAll('_', '-');
 
@@ -493,7 +493,7 @@ describe('per-deploy sandbox integration', () => {
 
     // The per-deploy container app should also be gone.
     const sandboxApps = Array.from(cf.state.containerApps.values()).filter((a) =>
-      a.name.endsWith('-nosam-sandbox'),
+      a.name.endsWith('-platform-sandbox'),
     );
     expect(sandboxApps).toHaveLength(0);
 
@@ -583,7 +583,7 @@ describe('per-deploy sandbox integration', () => {
     expect(userWorkerKey).toBeUndefined();
 
     const sandboxApps = Array.from(cf.state.containerApps.values()).filter((a) =>
-      a.name.endsWith('-nosam-sandbox'),
+      a.name.endsWith('-platform-sandbox'),
     );
     expect(sandboxApps).toHaveLength(0);
 
@@ -633,7 +633,7 @@ describe('per-deploy sandbox integration', () => {
     );
 
     const res = await fetch(
-      'https://api.cloudflare.com/client/v4/accounts/test-account-id/workers/dispatch/namespaces/nosam-users/scripts/user-some-test-dpl_test',
+      'https://api.cloudflare.com/client/v4/accounts/test-account-id/workers/dispatch/namespaces/platform-users/scripts/user-some-test-dpl_test',
       { method: 'PUT', headers: { Authorization: 'Bearer test' }, body: formData },
     );
 
@@ -685,7 +685,7 @@ describe('per-deploy sandbox integration', () => {
     );
 
     const res = await fetch(
-      'https://api.cloudflare.com/client/v4/accounts/test-account-id/workers/dispatch/namespaces/nosam-users/scripts/user-x-dpl_test',
+      'https://api.cloudflare.com/client/v4/accounts/test-account-id/workers/dispatch/namespaces/platform-users/scripts/user-x-dpl_test',
       { method: 'PUT', headers: { Authorization: 'Bearer test' }, body: formData },
     );
 
@@ -753,7 +753,7 @@ describe('per-deploy sandbox integration', () => {
     const done1 = getDoneEvent(await readAllEvents(res1));
     expect(done1).toBeDefined();
     const v1Id = done1!.deployment;
-    const v1ContainerName = `${project.id}-${v1Id}-nosam-sandbox`
+    const v1ContainerName = `${project.id}-${v1Id}-platform-sandbox`
       .toLowerCase()
       .replaceAll('_', '-');
 
@@ -763,7 +763,7 @@ describe('per-deploy sandbox integration', () => {
     const done2 = getDoneEvent(await readAllEvents(res2));
     expect(done2).toBeDefined();
     const v2Id = done2!.deployment;
-    const v2ContainerName = `${project.id}-${v2Id}-nosam-sandbox`
+    const v2ContainerName = `${project.id}-${v2Id}-platform-sandbox`
       .toLowerCase()
       .replaceAll('_', '-');
 
@@ -807,7 +807,7 @@ describe('per-deploy sandbox integration', () => {
   // ----------------------------------------------------------------------
   // Sandbox tenant uploads exclude platform usage and account authority.
   // ----------------------------------------------------------------------
-  it('sandbox deploy keeps the usage queue and account identity out of the tenant while injecting one __NOSAM_PROXY', async () => {
+  it('sandbox deploy keeps the usage queue and account identity out of the tenant while injecting one __PLATFORM_PROXY', async () => {
     const user = await createTestUser(env.db, 'sb-p6-user', 'github', undefined, 'pro');
     const project = await createTestProject(env.db, user.id, 'sb-p6');
     const cf = mockCfApi();
@@ -829,14 +829,14 @@ describe('per-deploy sandbox integration', () => {
     );
     expect(queueBindings).toHaveLength(0);
 
-    // AI, revalidation, and email share one `__NOSAM_PROXY` service binding.
+    // AI, revalidation, and email share one `__PLATFORM_PROXY` service binding.
     const proxyBindings = bindings.filter(
-      (b) => b.type === 'service' && b.name === '__NOSAM_PROXY',
+      (b) => b.type === 'service' && b.name === '__PLATFORM_PROXY',
     );
     expect(proxyBindings).toHaveLength(1);
 
     // Account identity stays in platform-owned routing state.
-    const userIdBinding = bindings.find((b) => b.name === '__NOSAM_USER_ID');
+    const userIdBinding = bindings.find((b) => b.name === '__PLATFORM_USER_ID');
     expect(userIdBinding).toBeUndefined();
 
     const projectIdBinding = bindings.find((b) => b.name === '__PROJECT_ID');
@@ -845,9 +845,9 @@ describe('per-deploy sandbox integration', () => {
     expect((projectIdBinding as { text?: string }).text).toBe(project.id);
 
     // Email uses the slug identity on every application Worker.
-    const slugBindings = bindings.filter((b) => b.name === '__NOSAM_PROJECT_SLUG');
+    const slugBindings = bindings.filter((b) => b.name === '__PLATFORM_PROJECT_SLUG');
     expect(slugBindings).toEqual([
-      { type: 'plain_text', name: '__NOSAM_PROJECT_SLUG', text: project.slug },
+      { type: 'plain_text', name: '__PLATFORM_PROJECT_SLUG', text: project.slug },
     ]);
   });
 
@@ -927,7 +927,7 @@ describe('per-deploy sandbox integration', () => {
             sandbox: {
               bindingName: 'SANDBOX',
               className: 'Sandbox',
-              containerName: 'nosam-sandbox',
+              containerName: 'platform-sandbox',
               image: SANDBOX_IMAGE_V1,
             },
           },

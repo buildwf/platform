@@ -8,7 +8,7 @@ import { resolvePlatformInstallDatabaseUrl } from '../../src/cli/platform-lifecy
 
 afterEach(() => {
   delete process.env.DATABASE_URL;
-  delete process.env.NOSAM_PLATFORM_DATABASE_URL;
+  delete process.env.PLATFORM_DATABASE_URL;
 });
 
 describe('platform lifecycle', () => {
@@ -18,7 +18,7 @@ describe('platform lifecycle', () => {
     process.env.DATABASE_URL = 'postgres://corrected.example/void';
     expect(resolvePlatformInstallDatabaseUrl(checkpoint)).toBe('postgres://corrected.example/void');
 
-    process.env.NOSAM_PLATFORM_DATABASE_URL = 'postgres://explicit.example/void';
+    process.env.PLATFORM_DATABASE_URL = 'postgres://explicit.example/void';
     expect(resolvePlatformInstallDatabaseUrl(checkpoint)).toBe('postgres://explicit.example/void');
   });
 
@@ -57,7 +57,7 @@ describe('platform lifecycle', () => {
         id: 'hyperdrive-id',
         key: 'hyperdrive',
         kind: 'hyperdrive',
-        name: 'nosam-example-api',
+        name: 'platform-example-api',
         ownership: 'created',
         state: 'ready',
       },
@@ -72,9 +72,9 @@ describe('platform lifecycle', () => {
 
     delete process.env.DATABASE_URL;
     expect(() => resolvePlatformInstallDatabaseUrl(null, manifest)).toThrow(
-      'Export NOSAM_PLATFORM_DATABASE_URL',
+      'Export PLATFORM_DATABASE_URL',
     );
-    process.env.NOSAM_PLATFORM_DATABASE_URL = 'postgres://recorded.example/void';
+    process.env.PLATFORM_DATABASE_URL = 'postgres://recorded.example/void';
     expect(resolvePlatformInstallDatabaseUrl(null, manifest)).toBe(
       'postgres://recorded.example/void',
     );

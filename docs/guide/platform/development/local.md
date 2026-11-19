@@ -10,7 +10,7 @@ outline: deep
 Clone your fork and install the workspace dependencies with Vite+:
 
 ```sh
-git clone https://github.com/your-org/nosam.git
+git clone https://github.com/your-org/platform.git
 cd void
 vp install
 vpr install:bwf-dev
@@ -35,7 +35,7 @@ Use the Node.js version recorded in `.node-version`.
 | `platform/packages/tail`                             | Runtime log ingestion                                                |
 | `platform/packages/dashboard`                        | Dashboard source and local UI components in `ui/`                    |
 
-The `@nosamcloud/*` names identify workspace implementation packages. Their `private: true` flags prevent publishing those packages to npm. Deployable core Workers are bundled into the public `@builtbyfriends/platform` package.
+The `@platform-service/*` names identify workspace implementation packages. Their `private: true` flags prevent publishing those packages to npm. Deployable core Workers are bundled into the public `@builtbyfriends/platform` package.
 
 The core installer creates the API, dispatch, proxy, tail, and email gateway Workers. The dashboard and managed GitHub build services are available in the source tree but are not included in that installation. Adding an optional service requires its infrastructure, bindings, authentication, and capability configuration together.
 
@@ -44,8 +44,8 @@ The core installer creates the API, dispatch, proxy, tail, and email gateway Wor
 Start a local PostgreSQL server and make `psql` and `pg_isready` available on your path. Then create the development database, apply its migrations, and seed an administrator:
 
 ```sh
-vp run --filter @nosamcloud/api setup --admin-email dev@example.com
-vp run --filter @nosamcloud/api dev:admin
+vp run --filter @platform-service/api setup --admin-email dev@example.com
+vp run --filter @platform-service/api dev:admin
 ```
 
 The command disables the optional build containers, so basic API and admin work
@@ -63,7 +63,7 @@ The API's development bypass lets you work on the browser admin UI without setti
 The dashboard is a separate source app. After API setup, start it in another terminal:
 
 ```sh
-vp run --filter @nosamcloud/dashboard dev
+vp run --filter @platform-service/dashboard dev
 ```
 
 Setup points the dashboard's local `.env` at the API you started:

@@ -18,7 +18,7 @@ function unsignedJwt(payload: Record<string, unknown>): string {
 it.each(['none', 'batch', 'single-file'] as const)(
   'keeps the create-only precondition on the bundled uploader query (assets: %s)',
   async (assets) => {
-    const directory = mkdtempSync(join(tmpdir(), 'nosam-worker-upload-contract-'));
+    const directory = mkdtempSync(join(tmpdir(), 'platform-worker-upload-contract-'));
     const sessionJwt = unsignedJwt({
       exp: Math.floor(Date.now() / 1000) + 3600,
       ...(assets === 'single-file' ? { wrangler_single_asset_uploads: true } : {}),
@@ -99,7 +99,7 @@ it.each(['none', 'batch', 'single-file'] as const)(
       writeFileSync(
         config,
         JSON.stringify({
-          name: 'nosam-contract',
+          name: 'platform-contract',
           account_id: 'account',
           main: 'worker.mjs',
           compatibility_date: '2026-02-24',
@@ -115,7 +115,7 @@ it.each(['none', 'batch', 'single-file'] as const)(
       let output = '';
       const failure = await withConditionalPlatformWorkerCreate(
         'account',
-        'nosam-contract',
+        'platform-contract',
         async (apiBase) => {
           await new Promise<void>((resolve) => {
             const child = execFile(
@@ -156,7 +156,7 @@ it.each(['none', 'batch', 'single-file'] as const)(
       expect(String(failure), trace).toContain('created concurrently (HTTP 412)');
       const create = {
         request:
-          'PUT /client/v4/accounts/account/workers/scripts/nosam-contract?excludeScript=true&bindings_inherit=strict',
+          'PUT /client/v4/accounts/account/workers/scripts/platform-contract?excludeScript=true&bindings_inherit=strict',
         authorization: 'Bearer synthetic-token',
         precondition: '*',
       };
@@ -169,7 +169,7 @@ it.each(['none', 'batch', 'single-file'] as const)(
           : [
               {
                 request:
-                  'POST /client/v4/accounts/account/workers/scripts/nosam-contract/assets-upload-session',
+                  'POST /client/v4/accounts/account/workers/scripts/platform-contract/assets-upload-session',
                 authorization: 'Bearer synthetic-token',
                 precondition: undefined,
               },

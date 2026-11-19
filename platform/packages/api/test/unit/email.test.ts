@@ -141,7 +141,7 @@ describe('platform email identity', () => {
       expect(msg.html + msg.text).not.toContain('bwf deploy');
       expect(msg.html).toContain('https://api.example.com/invite');
       expect(msg.html + msg.text).not.toMatch(
-        /nosam\.cloud|discord|private beta|source|early-access/i,
+        /platform\.cloud|discord|private beta|source|early-access/i,
       );
     }
     expect(sent[1].html).toContain('&lt;new-member&gt;');
@@ -287,6 +287,6 @@ describe('platform email identity', () => {
     await sendInvitationEmail(binding, 'member@example.com');
     expect(sent[0].from).toBe('Platform <no-reply@buildwf.dev>');
     expect(sent[0].subject).toBe("You're invited to Platform");
-    expect(sent[0].text).toContain("bwf connect 'nosam.buildwithfriends.dev'");
+    expect(sent[0].text).toContain("bwf connect 'platform.buildwithfriends.dev'");
   });
 });

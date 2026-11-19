@@ -83,7 +83,7 @@ async function output(
   config: Record<string, unknown> = {},
   additionalAsset = false,
 ): Promise<NonNullable<Awaited<ReturnType<typeof prepareCfBuildOutput>>>> {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-cf-runner-test-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-cf-runner-test-'));
   roots.push(root);
   const worker = join(root, 'dist', 'ssr');
   mkdirSync(worker, { recursive: true });
@@ -105,7 +105,7 @@ async function output(
   writeFileSync(
     join(worker, 'wrangler.json'),
     JSON.stringify({
-      name: 'nosam-test',
+      name: 'platform-test',
       compatibility_date: '2026-09-29',
       main: 'index.js',
       workers_dev: true,

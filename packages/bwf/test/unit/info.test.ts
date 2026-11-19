@@ -15,7 +15,7 @@ import { formatProjectInfo, getProjectInfo, runInfoCommand } from '../../src/cli
 
 const roots: Array<string> = [];
 function project(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-info-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-info-'));
   roots.push(root);
   return root;
 }
@@ -132,7 +132,7 @@ describe('bwf info', () => {
           vars: { API_TOKEN: 'not-for-output' },
           migrations: [
             {
-              tag: 'void-durable-counter-store-v1',
+              tag: 'platform-durable-counter-store-v1',
               new_sqlite_classes: ['CounterStoreDurableObject'],
             },
           ],

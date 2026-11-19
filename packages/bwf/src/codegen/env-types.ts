@@ -55,26 +55,26 @@ export function generateEnvTypes(envFileAbs: string, outDir: string): EnvTypesRe
   // (rather than replaces) bwf/env and bwf/handler.
   lines.push('export {}');
   lines.push('');
-  lines.push(`type _NosamEnvSchema = typeof import("${importPath}");`);
+  lines.push(`type _PlatformEnvSchema = typeof import("${importPath}");`);
   // The user's env.ts may either `export default defineEnv({...})` or
   // `export const env = defineEnv({...})`. Both return the typed `env` proxy;
   // using either export here gives us the inferred shape directly — no schema
   // introspection required.
   lines.push(
-    'type _NosamEnvShape = _NosamEnvSchema extends { default: infer D } ? D : _NosamEnvSchema extends { env: infer E } ? E : {};',
+    'type _PlatformEnvShape = _PlatformEnvSchema extends { default: infer D } ? D : _PlatformEnvSchema extends { env: infer E } ? E : {};',
   );
   lines.push('');
   lines.push('declare module "@builtbyfriends/bwf/env" {');
-  lines.push('  interface ValidatedEnv extends _NosamEnvShape {}');
+  lines.push('  interface ValidatedEnv extends _PlatformEnvShape {}');
   lines.push('}');
   lines.push('');
   lines.push('declare global {');
-  lines.push('  interface BwfGeneratedEnvBindings extends _NosamEnvShape {}');
+  lines.push('  interface BwfGeneratedEnvBindings extends _PlatformEnvShape {}');
   lines.push('}');
   lines.push('');
   // Augment Hono c.env via the CloudBindings interface re-exported from bwf/handler.
   lines.push('declare module "@builtbyfriends/bwf/handler" {');
-  lines.push('  interface CloudBindings extends _NosamEnvShape {}');
+  lines.push('  interface CloudBindings extends _PlatformEnvShape {}');
   lines.push('}');
   lines.push('');
 

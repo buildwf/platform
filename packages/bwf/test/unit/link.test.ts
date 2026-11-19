@@ -42,7 +42,7 @@ vi.mock('../../src/cli/auth', () => ({
 vi.mock('../../src/cli/client', () => ({
   PlatformApiError: class extends Error {},
   PlatformClient: class {
-    readonly apiUrl = 'https://nosam.buildwithfriends.dev';
+    readonly apiUrl = 'https://platform.buildwithfriends.dev';
 
     listProjects(...args: Array<unknown>) {
       return mockListProjects(...args);
@@ -76,12 +76,12 @@ describe('runLink', () => {
   let root: string;
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'nosam-link-'));
-    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'viteconf-nosam' }));
-    process.env.NOSAM_PLATFORM_REGISTRY_DIR = join(root, 'registry');
+    root = mkdtempSync(join(tmpdir(), 'platform-link-'));
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'viteconf-platform' }));
+    process.env.PLATFORM_REGISTRY_DIR = join(root, 'registry');
     savePlatformConnection({
       accountId: null,
-      apiUrl: 'https://nosam.buildwithfriends.dev',
+      apiUrl: 'https://platform.buildwithfriends.dev',
       applicationDomain: 'void.app',
       displayName: 'bwf Cloud',
       installationId: null,
@@ -99,7 +99,7 @@ describe('runLink', () => {
   });
 
   afterEach(() => {
-    delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+    delete process.env.PLATFORM_REGISTRY_DIR;
     vi.restoreAllMocks();
     rmSync(root, { recursive: true, force: true });
   });
@@ -119,8 +119,8 @@ describe('runLink', () => {
     });
     expect(JSON.parse(readFileSync(join(root, '.bwf', 'project.json'), 'utf-8'))).toEqual({
       applicationDomain: 'void.app',
-      platform: 'nosam',
-      platformUrl: 'https://nosam.buildwithfriends.dev',
+      platform: 'platform',
+      platformUrl: 'https://platform.buildwithfriends.dev',
       proxyUrl: 'https://proxy.void.cloud',
       projectId: 'proj_1',
       slug: 'existing-app',
@@ -151,14 +151,14 @@ describe('runLink', () => {
     mockGetToken.mockReturnValue('token_123');
     mockListProjects.mockResolvedValue([]);
     mockSelect.mockResolvedValue('__create__');
-    mockText.mockResolvedValue('viteconf-nosam');
-    mockCreateProject.mockResolvedValue({ id: 'proj_new', slug: 'viteconf-nosam' });
+    mockText.mockResolvedValue('viteconf-platform');
+    mockCreateProject.mockResolvedValue({ id: 'proj_new', slug: 'viteconf-platform' });
 
     await runLink(root);
 
-    expect(mockCreateProject).toHaveBeenCalledExactlyOnceWith('viteconf-nosam');
+    expect(mockCreateProject).toHaveBeenCalledExactlyOnceWith('viteconf-platform');
     expect(mockOutro).toHaveBeenCalledExactlyOnceWith(
-      '\n✓ Created and linked to viteconf-nosam.void.app',
+      '\n✓ Created and linked to viteconf-platform.void.app',
       { withGuide: false },
     );
     expect(JSON.parse(readFileSync(join(root, '.bwf', 'project.json'), 'utf8')).projectId).toBe(
@@ -184,7 +184,7 @@ describe('runLink', () => {
     mockGetToken.mockReturnValue('token_123');
     mockListProjects.mockResolvedValue([]);
     mockSelect.mockResolvedValue('__create__');
-    mockText.mockResolvedValue('viteconf-nosam');
+    mockText.mockResolvedValue('viteconf-platform');
     mockCreateProject.mockRejectedValue(new Error('Connection lost'));
 
     await expect(runLink(root)).rejects.toThrow('Connection lost');

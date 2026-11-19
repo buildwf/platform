@@ -1,4 +1,4 @@
-import { deriveProxyInternalAuth, PROXY_INTERNAL_AUTH_HEADER } from '@nosamcloud/api/proxy-token';
+import { deriveProxyInternalAuth, PROXY_INTERNAL_AUTH_HEADER } from '@platform-service/api/proxy-token';
 import { Hono } from 'hono';
 import { asRecord, asString } from './body.ts';
 import type { ProxyEnv } from './types.ts';
@@ -73,7 +73,7 @@ github.post('/request', async (context) => {
       authorization: `Bearer ${credential.token}`,
       accept: 'application/vnd.github+json',
       'x-github-api-version': '2022-11-28',
-      'user-agent': 'nosam-platform-proxy',
+      'user-agent': 'platform-proxy',
       ...(payload ? { 'content-type': 'application/json' } : {}),
     },
     ...(payload && method !== 'GET' ? { body: payload } : {}),

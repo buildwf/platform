@@ -44,7 +44,7 @@ export function InvitationsPage({ path, platformName, username }: AdminPageProps
       <SectionStack>
         <Heading level={1}>Invitations</Heading>
 
-        <form method="post" action="/admin/invitations/send" className="nosam-admin-inline-form">
+        <form method="post" action="/admin/invitations/send" className="platform-admin-inline-form">
           <FormTextArea
             label="Email addresses"
             name="email"

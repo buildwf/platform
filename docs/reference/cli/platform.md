@@ -60,7 +60,7 @@ Browser login offers the platform's enabled methods; `--provider <connection-id>
 
 `auth token` prints your current operator token. With `--token-stdin`, it exchanges a full administrator API login session from standard input for a new operator token. `auth login --token-stdin` saves the exchanged token to the keychain instead of printing it.
 
-For automation, supply `NOSAM_OPERATOR_TOKEN` with an explicit `BWF_API_URL` or `--connection`. Operator tokens are stored separately from application deployment credentials. The API checks your current administrator access on every request. See [Using Scripts](../../guide/platform/administration/operations.md#using-scripts) for an example.
+For automation, supply `PLATFORM_OPERATOR_TOKEN` with an explicit `BWF_API_URL` or `--connection`. Operator tokens are stored separately from application deployment credentials. The API checks your current administrator access on every request. See [Using Scripts](../../guide/platform/administration/operations.md#using-scripts) for an example.
 
 ## Pagination and JSON {#pagination-and-json}
 

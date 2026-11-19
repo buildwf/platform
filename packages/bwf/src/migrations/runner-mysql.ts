@@ -94,8 +94,8 @@ async function acquireMySqlMigrationLock(client: MySqlClient): Promise<string> {
  */
 async function isTransactionOpen(client: MySqlClient): Promise<boolean> {
   try {
-    await client.query('SAVEPOINT `nosam_migration`');
-    await client.query('ROLLBACK TO SAVEPOINT `nosam_migration`');
+    await client.query('SAVEPOINT `platform_migration`');
+    await client.query('ROLLBACK TO SAVEPOINT `platform_migration`');
     return true;
   } catch {
     return false;

@@ -294,7 +294,7 @@ vi.mock('../../src/github/installation-token.ts', () => ({
 // created → finalizers no-op).
 // The real create/finalize wiring is covered by test/integration/api-check-runs.test.ts.
 // Partial mock: stub the two network calls, keep everything else REAL. The module
-// also exports `NOSAM_BUILD_CHECK_RUN_NAME`, which `startBuild` reads — spelling it
+// also exports `PLATFORM_BUILD_CHECK_RUN_NAME`, which `startBuild` reads — spelling it
 // out again here would let the check-run name drift from the one
 // `check_run:rerequested` matches on, and that name is the only thing making
 // GitHub's "Re-run" button work.
@@ -316,7 +316,7 @@ import {
   BUILDER_UID,
   builderCacheEnv,
   childSpawnOptions,
-  DEFAULT_NOSAM_CLI_VERSION,
+  DEFAULT_PLATFORM_CLI_VERSION,
   clearBufferedLogLines,
   closeControlServer,
   getAckedLogSeq,
@@ -357,7 +357,7 @@ import {
   MAX_LOG_PULL_PAGES,
   MAX_LOG_SINK_OPS_PER_DRAIN,
   MAX_STORED_LOG_LINES,
-  PINNED_NOSAM_CLI_VERSION,
+  PINNED_PLATFORM_CLI_VERSION,
   TERMINAL_RENDER_COLUMNS,
   TERMINAL_RENDER_MAX_INPUT_CODE_UNITS,
   TERMINAL_RENDER_MAX_PARAMETER_WORK,
@@ -668,7 +668,7 @@ describe('BuildManager.startBuild', () => {
     expect(envVars.BWF_TOKEN).toBe('deploy-token');
     expect(envVars.SOURCE_TOKEN).toBe('install-token');
     expect(envVars.SOURCE_TARBALL_URL).toBe('https://api.github.com/repos/owner/repo/tarball/sha1');
-    expect(envVars.BWF_API_URL).toBe('https://nosam.buildwithfriends.dev');
+    expect(envVars.BWF_API_URL).toBe('https://platform.buildwithfriends.dev');
     // The fallback bwf CLI version is PINNED (never `latest`) so a moving npm
     // dist-tag can't change deploy behavior with no repo diff.
     expect(envVars.BWF_CLI_VERSION).toBeDefined();
@@ -738,10 +738,10 @@ describe('BuildManager.startBuild', () => {
     // The CLI reads the un-suffixed names; the worker holds the *_STAGING secrets.
     expect(envVars.CF_ACCESS_CLIENT_ID).toBe('svc-id.access');
     expect(envVars.CF_ACCESS_CLIENT_SECRET).toBe('svc-secret');
-    expect(envVars.NOSAM_PROXY_URL).toBe('https://proxy.staging.void.cloud');
+    expect(envVars.PLATFORM_PROXY_URL).toBe('https://proxy.staging.void.cloud');
   });
 
-  it('does NOT forward CF Access creds on production builds (nosam.buildwithfriends.dev is not Access-gated)', async () => {
+  it('does NOT forward CF Access creds on production builds (platform.buildwithfriends.dev is not Access-gated)', async () => {
     const ctx = makeStubCtx();
     const env = makeEnv();
     // Production env, but the secrets happen to be set: they must NOT leak in.
@@ -6252,8 +6252,8 @@ describe('build-agent sanitizeChildEnv (env scrub)', () => {
     BWF_TOKEN: 'deploy-jwt',
     CF_ACCESS_CLIENT_ID: 'svc-id.access',
     CF_ACCESS_CLIENT_SECRET: 'svc-secret',
-    NOSAM_ACCESS_CREDENTIALS: '{"https://proxy.example.com":{"CF_ACCESS_TOKEN":"private"}}',
-    BWF_API_URL: 'https://nosam.buildwithfriends.dev',
+    PLATFORM_ACCESS_CREDENTIALS: '{"https://proxy.example.com":{"CF_ACCESS_TOKEN":"private"}}',
+    BWF_API_URL: 'https://platform.buildwithfriends.dev',
     BWF_PROJECT: 'my-app',
   };
 
@@ -6271,14 +6271,14 @@ describe('build-agent sanitizeChildEnv (env scrub)', () => {
     // pair reaches every Access-gated staging host — so it's scrubbed too.
     expect(child.CF_ACCESS_CLIENT_ID).toBeUndefined();
     expect(child.CF_ACCESS_CLIENT_SECRET).toBeUndefined();
-    expect(child.NOSAM_ACCESS_CREDENTIALS).toBeUndefined();
+    expect(child.PLATFORM_ACCESS_CREDENTIALS).toBeUndefined();
     // The scrub list is exactly these secrets.
     expect([...SCRUBBED_ENV_VARS].sort()).toEqual([
       'AGENT_TOKEN',
       'CF_ACCESS_CLIENT_ID',
       'CF_ACCESS_CLIENT_SECRET',
       'DO_LOG_URL',
-      'NOSAM_ACCESS_CREDENTIALS',
+      'PLATFORM_ACCESS_CREDENTIALS',
       'BWF_TOKEN',
       'SOURCE_TOKEN',
     ]);
@@ -6318,7 +6318,7 @@ describe('build-agent sanitizeChildEnv (env scrub)', () => {
 
   it('keeps non-secret deploy + system vars the build legitimately needs', () => {
     const child = sanitizeChildEnv(fullEnv);
-    expect(child.BWF_API_URL).toBe('https://nosam.buildwithfriends.dev');
+    expect(child.BWF_API_URL).toBe('https://platform.buildwithfriends.dev');
     expect(child.BWF_PROJECT).toBe('my-app');
     expect(child.PATH).toBe('/usr/bin');
     expect(child.HOME).toBe('/root');
@@ -6406,7 +6406,7 @@ describe('build-agent parent-process secret scrub', () => {
     };
     process.env.BWF_TOKEN = 'deploy-jwt';
     process.env.SOURCE_TOKEN = 'ghs_secret';
-    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_API_URL = 'https://platform.buildwithfriends.dev';
     process.env.BWF_PROJECT = 'my-app';
     try {
       const seen: Array<{ cmd: string; env: NodeJS.ProcessEnv | undefined }> = [];
@@ -6459,16 +6459,16 @@ describe('build-agent parent-process secret scrub', () => {
 // (`createSpinner()` falls back to plain `log.step` output) behind clack's
 // `isCI`. `github_actions` builds got `CI=true` free from the runner; container
 // builds set nothing, which is why only they rendered broken.
-describe('PINNED_NOSAM_CLI_VERSION (fallback CLI ↔ SDK package contract)', () => {
+describe('PINNED_PLATFORM_CLI_VERSION (fallback CLI ↔ SDK package contract)', () => {
   it('matches the workspace SDK package the platform deploys against', () => {
     // The Worker bundle must use the exact SDK version from the release commit.
-    expect(PINNED_NOSAM_CLI_VERSION).toBe(bwfPackageJson.version);
+    expect(PINNED_PLATFORM_CLI_VERSION).toBe(bwfPackageJson.version);
   });
 
   it('matches the container agent’s own backstop default', () => {
     // Both import the same release manifest, including when the agent receives
     // no BWF_CLI_VERSION override from the manager.
-    expect(DEFAULT_NOSAM_CLI_VERSION).toBe(PINNED_NOSAM_CLI_VERSION);
+    expect(DEFAULT_PLATFORM_CLI_VERSION).toBe(PINNED_PLATFORM_CLI_VERSION);
   });
 });
 
@@ -6492,7 +6492,7 @@ describe('build-agent nonInteractiveEnv (CI-safe child output)', () => {
     };
     process.env.BWF_TOKEN = 'deploy-jwt';
     process.env.SOURCE_TOKEN = 'ghs_secret';
-    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_API_URL = 'https://platform.buildwithfriends.dev';
     process.env.BWF_PROJECT = 'my-app';
     try {
       const seen: Array<{ cmd: string; env: NodeJS.ProcessEnv | undefined }> = [];
@@ -6570,7 +6570,7 @@ describe('build-agent non-root child isolation', () => {
     };
     process.env.BWF_TOKEN = 'deploy-jwt';
     process.env.SOURCE_TOKEN = 'ghs_secret';
-    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_API_URL = 'https://platform.buildwithfriends.dev';
     process.env.BWF_PROJECT = 'my-app';
     try {
       const seen: Array<{ cmd: string; env: NodeJS.ProcessEnv | undefined }> = [];
@@ -6617,7 +6617,7 @@ describe('build-agent non-root child isolation', () => {
     };
     process.env.BWF_TOKEN = 'deploy-jwt';
     process.env.SOURCE_TOKEN = 'ghs_secret';
-    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_API_URL = 'https://platform.buildwithfriends.dev';
     process.env.BWF_PROJECT = 'my-app';
     try {
       const order: Array<string> = [];
@@ -6665,7 +6665,7 @@ describe('build-agent non-root child isolation', () => {
       BWF_PROJECT: process.env.BWF_PROJECT,
     };
     process.env.BWF_TOKEN = 'deploy-jwt';
-    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_API_URL = 'https://platform.buildwithfriends.dev';
     process.env.BWF_PROJECT = 'my-app';
     try {
       const order: Array<string> = [];
@@ -6710,7 +6710,7 @@ describe('build-agent non-root child isolation', () => {
       BWF_PROJECT: process.env.BWF_PROJECT,
     };
     process.env.BWF_TOKEN = 'deploy-jwt';
-    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_API_URL = 'https://platform.buildwithfriends.dev';
     process.env.BWF_PROJECT = 'my-app';
     try {
       const reap = vi.fn(async () => {});
@@ -6768,7 +6768,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
     'BWF_TOKEN',
     'BWF_API_URL',
     'BWF_PROJECT',
-    'NOSAM_PROXY_URL',
+    'PLATFORM_PROXY_URL',
     'CF_ACCESS_CLIENT_ID',
     'CF_ACCESS_CLIENT_SECRET',
   ] as const;
@@ -6780,7 +6780,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
       savedEnv[key] = process.env[key];
     }
     process.env.BWF_TOKEN = 'deploy-jwt';
-    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_API_URL = 'https://platform.buildwithfriends.dev';
     process.env.BWF_PROJECT = 'my-app';
   });
 
@@ -6837,19 +6837,19 @@ describe('build-agent lifecycle (container must always exit)', () => {
       const calls = runChild.mock.calls;
       expect(calls[1]?.[1]).toEqual([
         '--yes',
-        'nosam',
+        'platform',
         'connect',
-        'https://nosam.buildwithfriends.dev',
+        'https://platform.buildwithfriends.dev',
         '--no-login',
       ]);
       expect(calls[1]?.[2]?.env?.BWF_TOKEN).toBeUndefined();
-      expect(calls[1]?.[2]?.env?.NOSAM_ACCESS_ORIGIN).toBe('https://nosam.buildwithfriends.dev');
+      expect(calls[1]?.[2]?.env?.PLATFORM_ACCESS_ORIGIN).toBe('https://platform.buildwithfriends.dev');
       expect(calls.some(([, args]) => args.includes('deploy'))).toBe(connectExit === 0);
     },
   );
 
   it('scopes captured Access credentials to the configured API and proxy only for deployment', async () => {
-    process.env.NOSAM_PROXY_URL = 'https://proxy.example.com';
+    process.env.PLATFORM_PROXY_URL = 'https://proxy.example.com';
     process.env.CF_ACCESS_CLIENT_ID = 'service-id';
     process.env.CF_ACCESS_CLIENT_SECRET = 'service-secret';
     const runChild = vi.fn(
@@ -6865,10 +6865,10 @@ describe('build-agent lifecycle (container must always exit)', () => {
       }),
     ).toBe(0);
     const [install, connect, deploy] = runChild.mock.calls;
-    expect(install?.[2]?.env?.NOSAM_ACCESS_CREDENTIALS).toBeUndefined();
-    expect(connect?.[2]?.env?.NOSAM_ACCESS_CREDENTIALS).toBeUndefined();
-    expect(JSON.parse(deploy?.[2]?.env?.NOSAM_ACCESS_CREDENTIALS ?? 'null')).toEqual({
-      'https://nosam.buildwithfriends.dev': {
+    expect(install?.[2]?.env?.PLATFORM_ACCESS_CREDENTIALS).toBeUndefined();
+    expect(connect?.[2]?.env?.PLATFORM_ACCESS_CREDENTIALS).toBeUndefined();
+    expect(JSON.parse(deploy?.[2]?.env?.PLATFORM_ACCESS_CREDENTIALS ?? 'null')).toEqual({
+      'https://platform.buildwithfriends.dev': {
         CF_ACCESS_CLIENT_ID: 'service-id',
         CF_ACCESS_CLIENT_SECRET: 'service-secret',
       },
@@ -6911,7 +6911,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
 
   it('falls back to the PINNED void@<version> (never @latest) when the repo has no local void', async () => {
     // BuildManager injects BWF_CLI_VERSION; the agent must spawn that exact
-    // pinned version, never a moving `nosam@latest` dist-tag.
+    // pinned version, never a moving `platform@latest` dist-tag.
     const savedCliVersion = process.env.BWF_CLI_VERSION;
     process.env.BWF_CLI_VERSION = '0.9.1';
     try {
@@ -6926,15 +6926,15 @@ describe('build-agent lifecycle (container must always exit)', () => {
         resolveInstall: () => ({ manager: 'npm', cmd: 'npm', args: ['ci'] }),
         runChild,
         reportStatus: vi.fn(async () => {}),
-        // No local `nosam` binary → take the npx fallback path.
+        // No local `platform` binary → take the npx fallback path.
         hasLocalBwf: () => false,
       });
       expect(code).toBe(0);
 
       const deploy = [...seen].reverse().find((s) => s.cmd === 'npx');
       expect(deploy).toBeDefined();
-      expect(deploy?.args).toContain('nosam@0.9.1');
-      expect(deploy?.args.some((a) => a === 'nosam@latest')).toBe(false);
+      expect(deploy?.args).toContain('platform@0.9.1');
+      expect(deploy?.args.some((a) => a === 'platform@latest')).toBe(false);
     } finally {
       if (savedCliVersion === undefined) {
         delete process.env.BWF_CLI_VERSION;
@@ -7157,7 +7157,7 @@ describe('build-agent GET /logs serves post-child-close lines', () => {
       savedEnv[key] = process.env[key];
     }
     process.env.BWF_TOKEN = 'deploy-jwt';
-    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_API_URL = 'https://platform.buildwithfriends.dev';
     process.env.BWF_PROJECT = 'my-app';
   });
 
@@ -7389,7 +7389,7 @@ describe('build-agent install + deploy resolution', () => {
       savedEnv[key] = process.env[key];
     }
     process.env.BWF_TOKEN = 'deploy-jwt';
-    process.env.BWF_API_URL = 'https://nosam.buildwithfriends.dev';
+    process.env.BWF_API_URL = 'https://platform.buildwithfriends.dev';
     process.env.BWF_PROJECT = 'my-app';
     resetWorkDir();
   });
@@ -7551,7 +7551,7 @@ describe('build-agent install + deploy resolution', () => {
 
     const deploy = seen.find((s) => s.cmd === 'corepack' && s.args.includes('deploy'));
     expect(deploy).toBeDefined();
-    expect(deploy?.args).toEqual(['yarn', 'nosam', 'deploy', '--project', 'my-app']);
+    expect(deploy?.args).toEqual(['yarn', 'platform', 'deploy', '--project', 'my-app']);
     // The deploy did NOT go through bare npx.
     expect(seen.some((s) => s.cmd === 'npx')).toBe(false);
   });
@@ -7566,13 +7566,13 @@ describe('build-agent install + deploy resolution', () => {
 
     const deploy = seen.find((s) => s.cmd === 'corepack' && s.args.includes('deploy'));
     expect(deploy?.args.slice(0, 2)).toEqual(['yarn', 'dlx']);
-    expect(deploy?.args.some((a) => a.startsWith('nosam@'))).toBe(true);
+    expect(deploy?.args.some((a) => a.startsWith('platform@'))).toBe(true);
     expect(seen.some((s) => s.cmd === 'npx')).toBe(false);
   });
 
   // The default `hasLocalBwf` must NOT treat a present `.pnp.cjs` as proof
-  // that `nosam` is locally resolvable — under PnP (no `node_modules/.bin/nosam`)
-  // it checks whether the repo DECLARES `nosam`. A PnP repo that declares void →
+  // that `platform` is locally resolvable — under PnP (no `node_modules/.bin/platform`)
+  // it checks whether the repo DECLARES `platform`. A PnP repo that declares void →
   // `yarn bwf deploy`; one that does not → the `yarn dlx bwf@<ver>` fetch
   // fallback.
   it('default hasLocalBwf: PnP repo that DECLARES void → corepack yarn bwf deploy', async () => {
@@ -7580,7 +7580,7 @@ describe('build-agent install + deploy resolution', () => {
     writeFileSync(`${WORK_DIR}/.pnp.cjs`, '');
     writeFileSync(
       `${WORK_DIR}/package.json`,
-      JSON.stringify({ packageManager: 'yarn@4.3.1', dependencies: { nosam: '^0.9.0' } }),
+      JSON.stringify({ packageManager: 'yarn@4.3.1', dependencies: { platform: '^0.9.0' } }),
     );
 
     const seen: Array<{ cmd: string; args: ReadonlyArray<string> }> = [];
@@ -7596,7 +7596,7 @@ describe('build-agent install + deploy resolution', () => {
     expect(code).toBe(0);
 
     const deploy = seen.find((s) => s.cmd === 'corepack' && s.args.includes('deploy'));
-    expect(deploy?.args).toEqual(['yarn', 'nosam', 'deploy', '--project', 'my-app']);
+    expect(deploy?.args).toEqual(['yarn', 'platform', 'deploy', '--project', 'my-app']);
     expect(seen.some((s) => s.cmd === 'npx')).toBe(false);
   });
 
@@ -7614,13 +7614,13 @@ describe('build-agent install + deploy resolution', () => {
       }),
       reportStatus: vi.fn(async () => {}),
       // hasLocalBwf intentionally NOT injected — the real default must FETCH
-      // because the repo does not declare `nosam`.
+      // because the repo does not declare `platform`.
     });
     expect(code).toBe(0);
 
     const deploy = seen.find((s) => s.cmd === 'corepack' && s.args.includes('deploy'));
     expect(deploy?.args.slice(0, 2)).toEqual(['yarn', 'dlx']);
-    expect(deploy?.args.some((a) => a.startsWith('nosam@'))).toBe(true);
+    expect(deploy?.args.some((a) => a.startsWith('platform@'))).toBe(true);
     expect(seen.some((s) => s.cmd === 'npx')).toBe(false);
   });
 
@@ -7650,7 +7650,7 @@ describe('build-agent install + deploy resolution', () => {
 
     const deploy = seen.find((s) => s.args.includes('deploy'));
     expect(deploy?.cmd).toBe('corepack');
-    expect(deploy?.args).toEqual(['yarn', 'nosam', 'deploy', '--project', 'my-app']);
+    expect(deploy?.args).toEqual(['yarn', 'platform', 'deploy', '--project', 'my-app']);
     expect(seen.some((s) => s.cmd === 'npx')).toBe(false);
   });
 
@@ -7684,7 +7684,7 @@ describe('build-agent install + deploy resolution', () => {
 
     const deploy = seen.find((s) => s.args.includes('deploy'));
     expect(deploy?.cmd).toBe('corepack');
-    expect(deploy?.args).toEqual(['yarn', 'nosam', 'deploy', '--project', 'my-app']);
+    expect(deploy?.args).toEqual(['yarn', 'platform', 'deploy', '--project', 'my-app']);
     expect(seen.some((s) => s.cmd === 'npx')).toBe(false);
   });
 });

@@ -86,7 +86,7 @@ You can send to at most 50 recipients across `to`, `cc`, and `bcc`. Use standard
 
 `Address` accepts either a string (`"hello@acme.dev"` or `"Name <hello@acme.dev>"`) or an object (`{ email, name? }`). Unicode display names are supported.
 
-On the platform the sender is pinned to your project. `from` must be your project's own platform address — `<project-slug>@<mail-domain>` or `<project-slug>+<tag>@<mail-domain>`, optionally with a display name — or any address on a domain registered with `bwf email domain add` (see [Your own domain on the platform](./domains.md#your-own-domain-on-the-platform)). For example, if your platform's mail domain is `mail.example.com`, you can use `Acme <acme+noreply@mail.example.com>`. Anything else is rejected with `INVALID_FROM`. Omit `from` and bwf fills in `<project-slug>+noreply@<mail-domain>` for you. If the project owner set an [email alias](../../reference/cli/email.md#nosam-email-alias), `<alias>@<mail-domain>` and `<alias>+<tag>@<mail-domain>` are accepted too; the default stays the slug address.
+On the platform the sender is pinned to your project. `from` must be your project's own platform address — `<project-slug>@<mail-domain>` or `<project-slug>+<tag>@<mail-domain>`, optionally with a display name — or any address on a domain registered with `bwf email domain add` (see [Your own domain on the platform](./domains.md#your-own-domain-on-the-platform)). For example, if your platform's mail domain is `mail.example.com`, you can use `Acme <acme+noreply@mail.example.com>`. Anything else is rejected with `INVALID_FROM`. Omit `from` and bwf fills in `<project-slug>+noreply@<mail-domain>` for you. If the project owner set an [email alias](../../reference/cli/email.md#platform-email-alias), `<alias>@<mail-domain>` and `<alias>+<tag>@<mail-domain>` are accepted too; the default stays the slug address.
 
 On your own Cloudflare account, `from` defaults to `email.from` from `bwf.config.ts` and must be on a domain your account can send from; Cloudflare rejects any other sender and `sendEmail` reports it as `INVALID_FROM`.
 
@@ -207,21 +207,21 @@ The default platform allowance is 200 recipient attempts per UTC month and 10 pe
 During local development, sends are captured to an in-memory inbox instead of going to Cloudflare. The dev server prints the inbox URL when it starts:
 
 ```
-[void] Email inbox: http://localhost:5173/__nosam/inbox?token=<printed-token>
+[void] Email inbox: http://localhost:5173/__platform/inbox?token=<printed-token>
 ```
 
 Open a message to preview its HTML, inspect attachments, or download it as an `.eml` file.
 
-Every inbox route requires a local access token. bwf includes it in the printed inbox URL and browser links. For command-line requests, send it in the `x-nosam-dev-trigger` header as shown below; requests without it return `401`. The token is stored in `.bwf/dev-trigger-token`. Treat inbox URLs as credentials, especially when exposing your dev server to a network.
+Every inbox route requires a local access token. bwf includes it in the printed inbox URL and browser links. For command-line requests, send it in the `x-platform-dev-trigger` header as shown below; requests without it return `401`. The token is stored in `.bwf/dev-trigger-token`. Treat inbox URLs as credentials, especially when exposing your dev server to a network.
 
 ```bash
 # download a message as .eml
-curl http://localhost:5173/__nosam/inbox/<id>/raw \
-  -H "x-nosam-dev-trigger: <printed-token>" -o message.eml
+curl http://localhost:5173/__platform/inbox/<id>/raw \
+  -H "x-platform-dev-trigger: <printed-token>" -o message.eml
 
 # clear the inbox
-curl -X DELETE http://localhost:5173/__nosam/inbox \
-  -H "x-nosam-dev-trigger: <printed-token>"
+curl -X DELETE http://localhost:5173/__platform/inbox \
+  -H "x-platform-dev-trigger: <printed-token>"
 ```
 
 The inbox keeps the most recent 100 messages through HMR and clears on a full server restart.

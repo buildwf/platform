@@ -12,7 +12,7 @@ import {
 const roots: Array<string> = [];
 
 function createModule(filename: string, source: string): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-durable-scan-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-durable-scan-'));
   roots.push(root);
   mkdirSync(join(root, 'durable-objects'));
   writeFileSync(join(root, 'durable-objects', filename), source);
@@ -39,7 +39,7 @@ describe('scanDurableObjectModules', () => {
     });
   });
   it('derives stable binding, class, and migration names from filenames', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-durable-scan-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-durable-scan-'));
     roots.push(root);
     mkdirSync(join(root, 'durable-objects'));
     writeFileSync(join(root, 'durable-objects', 'shopping-cart.ts'), 'export default class {}');
@@ -49,13 +49,13 @@ describe('scanDurableObjectModules', () => {
         filePath: toSlash(join(root, 'durable-objects', 'shopping-cart.ts')),
         bindingName: 'SHOPPING_CART',
         className: 'ShoppingCartDurableObject',
-        migrationTag: 'void-durable-shopping-cart-v1',
+        migrationTag: 'platform-durable-shopping-cart-v1',
       },
     ]);
   });
 
   it('rejects filenames that normalize to the same generated names', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-durable-scan-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-durable-scan-'));
     roots.push(root);
     mkdirSync(join(root, 'durable-objects'));
     writeFileSync(join(root, 'durable-objects', 'shopping-cart.ts'), 'export default {}');

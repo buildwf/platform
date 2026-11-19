@@ -129,7 +129,7 @@ try {
     ];
   }
   if (emailSigningSecret) {
-    secretsDirectory = mkdtempSync(join(tmpdir(), 'nosam-platform-secrets-'));
+    secretsDirectory = mkdtempSync(join(tmpdir(), 'platform-secrets-'));
     const secretsPath = join(secretsDirectory, 'secrets.json');
     writeFileSync(secretsPath, JSON.stringify({ [EMAIL_SIGNING_SECRET]: emailSigningSecret }), {
       mode: 0o600,

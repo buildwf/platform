@@ -44,11 +44,11 @@ relative to `platform/` unless they begin with `../`.
 | --------------------------------------------- | --------------------------------------------------------- |
 | `vp run build:core`                           | Build shared packages, CLI, and packaged platform runtime |
 | `vp run build:platform`                       | Build the platform source apps                            |
-| `vp run --filter @nosamcloud/platform dev`    | Start the dashboard development server                    |
+| `vp run --filter @platform-service/platform dev`    | Start the dashboard development server                    |
 | `vp run build:all`                            | Build all packages, platform apps, and playgrounds        |
 | `vp test run --project 'platform-*'`          | Run platform tests                                        |
 | `vp run check`                                | Typecheck the workspace                                   |
-| `vp run --filter @nosamcloud/platform health` | Check the selected platform using operator authentication |
+| `vp run --filter @platform-service/platform health` | Check the selected platform using operator authentication |
 
 The workspace `dev` and `build` scripts in `platform/package.json` apply to the
 dashboard. They do not start the API or install a platform. Deployment scripts
@@ -64,14 +64,14 @@ With a local PostgreSQL server running, build the shared packages and set up the
 
 ```sh
 vp run build:core
-vp run --filter @nosamcloud/api setup --admin-email dev@example.com
-vp run --filter @nosamcloud/api dev --local --enable-containers=false --host localhost --port 8787
+vp run --filter @platform-service/api setup --admin-email dev@example.com
+vp run --filter @platform-service/api dev --local --enable-containers=false --host localhost --port 8787
 ```
 
 Open `http://localhost:8787/admin/`. To work on the dashboard, start it separately:
 
 ```sh
-vp run --filter @nosamcloud/dashboard dev
+vp run --filter @platform-service/dashboard dev
 ```
 
 The [development guide](../docs/guide/platform-development.md) explains the local
@@ -85,12 +85,12 @@ Platform source lives in `platform/packages/`; public SDK packages live in the r
 ## Operations
 
 For an installed platform, use `bwf platform` lifecycle and administrator
-commands. `vp run --filter @nosamcloud/platform health` forwards to
+commands. `vp run --filter @platform-service/platform health` forwards to
 `bwf platform system health`, using the selected connection and operator login.
-Automation supplies `NOSAM_OPERATOR_TOKEN` and an explicit `BWF_API_URL`.
+Automation supplies `PLATFORM_OPERATOR_TOKEN` and an explicit `BWF_API_URL`.
 
 Platform maintains an existing deployment that predates the installer. Its
-`platform/package.json` deployment scripts and `platform/deployments/nosam-cloud.json`
+`platform/package.json` deployment scripts and `platform/deployments/platform-cloud.json`
 descriptor belong to that deployment. The [Platform operations note](./meta/operations.md)
 explains its environments and credentials without storing account-specific
 inventories or personal access assignments in the repository.

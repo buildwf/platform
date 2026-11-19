@@ -16,7 +16,7 @@ const resource: InstallationResource = {
   key: 'hyperdrive',
   kind: 'hyperdrive',
   id: 'database',
-  name: 'nosam-platform-db',
+  name: 'platform-db',
   ownership: 'created',
   state: 'ready',
   configHash: 'hash',

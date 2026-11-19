@@ -6,7 +6,7 @@ import { build } from 'vite';
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 const root = join(import.meta.dirname, '..', '..', '..', '..');
-const temporary = mkdtempSync(join(tmpdir(), 'nosam-sandbox-rpc-'));
+const temporary = mkdtempSync(join(tmpdir(), 'platform-sandbox-rpc-'));
 const output = join(temporary, 'dist');
 type Runtime = { dispatchFetch(url: string): Promise<Response>; dispose(): Promise<void> };
 let runtime: Runtime;
@@ -25,7 +25,7 @@ class Process extends RpcTarget {
   #exit; #resolve;
   constructor(background, limited) { super(); this.limited = limited; this.#exit = background ? new Promise(resolve => {this.#resolve = resolve;}) : Promise.resolve(0); }
   async invoke(operation, args) {
-    if (operation === 'exitCode') { if (this.limited) throw new Error('NOSAM_SANDBOX_runtime_budget'); return this.#exit; }
+    if (operation === 'exitCode') { if (this.limited) throw new Error('PLATFORM_SANDBOX_runtime_budget'); return this.#exit; }
     if (operation === 'kill') { this.#resolve?.(137); return; }
     if (operation === 'resize') return;
     throw new TypeError('process operation denied');
@@ -37,7 +37,7 @@ class Capability extends RpcTarget {
     if (operation === 'files' && args[0] === 'readFile') return new Response(bytes(file));
     if (operation === 'exec') {
       if (args[0][0] === 'denied') throw new Error('admission failed');
-      if (args[0][0] === 'limited') throw new Error('NOSAM_SANDBOX_concurrency');
+      if (args[0][0] === 'limited') throw new Error('PLATFORM_SANDBOX_concurrency');
       const background = args[0][0] === 'sleep';
       const process = new Process(background, args[0][0] === 'budget');
       if (args[1]?.abort) {
@@ -144,7 +144,7 @@ export default { async fetch(request) {
             modulesRoot: output,
             scriptPath: join(output, 'application.mjs'),
             routes: ['*/*'],
-            serviceBindings: { __NOSAM_SANDBOX: 'controller' },
+            serviceBindings: { __PLATFORM_SANDBOX: 'controller' },
           },
           {
             name: 'controller',

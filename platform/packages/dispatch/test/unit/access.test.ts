@@ -20,11 +20,11 @@ const routing = {
   teamDomain,
   audiences: [
     { hostname: '*.apps.example.com', audience: 'wildcard-aud' },
-    { hostname: 'nosam-123456abcdef-*.my-account.workers.dev', audience: 'workers-dev-aud' },
+    { hostname: 'platform-123456abcdef-*.my-account.workers.dev', audience: 'workers-dev-aud' },
     { hostname: 'custom.example.net', audience: 'custom-aud' },
     { hostname: 'custom.apps.example.com', audience: 'custom-aud' },
     {
-      hostname: 'nosam-123456abcdef-custom-123456abcdef.my-account.workers.dev',
+      hostname: 'platform-123456abcdef-custom-123456abcdef.my-account.workers.dev',
       audience: 'custom-aud',
     },
   ],
@@ -50,7 +50,7 @@ describe('project Access verification', () => {
     expect(resolveAccessAudience('custom.apps.example.com', routing)).toBe('custom-aud');
     expect(
       resolveAccessAudience(
-        'nosam-123456abcdef-custom-123456abcdef.my-account.workers.dev',
+        'platform-123456abcdef-custom-123456abcdef.my-account.workers.dev',
         routing,
       ),
     ).toBe('custom-aud');
@@ -61,36 +61,36 @@ describe('project Access verification', () => {
 
   it('matches the installation project prefix case-insensitively', () => {
     expect(
-      resolveAccessAudience('nosam-123456abcdef-blog-789abc.my-account.workers.dev', routing),
+      resolveAccessAudience('platform-123456abcdef-blog-789abc.my-account.workers.dev', routing),
     ).toBe('workers-dev-aud');
     expect(
-      resolveAccessAudience('NOSAM-123456ABCDEF-BLOG-789ABC.MY-ACCOUNT.WORKERS.DEV', routing),
+      resolveAccessAudience('PLATFORM-123456ABCDEF-BLOG-789ABC.MY-ACCOUNT.WORKERS.DEV', routing),
     ).toBe('workers-dev-aud');
   });
 
   it.each([
-    'nosam-team-api.my-account.workers.dev',
-    'nosam-team-proxy.my-account.workers.dev',
+    'platform-team-api.my-account.workers.dev',
+    'platform-team-proxy.my-account.workers.dev',
     'unrelated-worker.my-account.workers.dev',
-    'nosam-fedcba654321-blog-789abc.my-account.workers.dev',
-    'nosam-123456abcdefother-blog-789abc.my-account.workers.dev',
-    'other-nosam-123456abcdef-blog-789abc.my-account.workers.dev',
-    'nested.nosam-123456abcdef-blog-789abc.my-account.workers.dev',
-    'nosam-123456abcdef-blog.nested.my-account.workers.dev',
-    'nosam-123456abcdef-blog-789abc.other-account.workers.dev',
-    'nosam-123456abcdef-blog-789abc.my-account.workers.dev.attacker.test',
+    'platform-fedcba654321-blog-789abc.my-account.workers.dev',
+    'platform-123456abcdefother-blog-789abc.my-account.workers.dev',
+    'other-platform-123456abcdef-blog-789abc.my-account.workers.dev',
+    'nested.platform-123456abcdef-blog-789abc.my-account.workers.dev',
+    'platform-123456abcdef-blog.nested.my-account.workers.dev',
+    'platform-123456abcdef-blog-789abc.other-account.workers.dev',
+    'platform-123456abcdef-blog-789abc.my-account.workers.dev.attacker.test',
     'my-account.workers.dev',
   ])('excludes hosts outside the project wildcard: %s', (hostname) => {
     expect(resolveAccessAudience(hostname, routing)).toBeNull();
   });
 
   it.each([
-    'nosam-*-*.my-account.workers.dev',
-    'nosam-*.nested.*.workers.dev',
+    'platform-*-*.my-account.workers.dev',
+    'platform-*.nested.*.workers.dev',
     'void.*.my-account.workers.dev',
   ])('does not accept unsupported wildcard patterns: %s', (hostname) => {
     expect(
-      resolveAccessAudience('nosam-123456abcdef-blog.my-account.workers.dev', {
+      resolveAccessAudience('platform-123456abcdef-blog.my-account.workers.dev', {
         teamDomain,
         audiences: [{ hostname, audience: 'invalid-aud' }],
       }),
@@ -100,7 +100,7 @@ describe('project Access verification', () => {
   it('verifies the scoped workers.dev audience', async () => {
     const request = vi.fn(async () => Response.json({ keys: [jwk] }));
     const verifier = new ProjectAccessVerifier(request as typeof fetch);
-    const hostname = 'nosam-123456abcdef-blog-789abc.my-account.workers.dev';
+    const hostname = 'platform-123456abcdef-blog-789abc.my-account.workers.dev';
 
     await expect(
       verifier.verify(hostname, await assertion('workers-dev-aud'), routing),

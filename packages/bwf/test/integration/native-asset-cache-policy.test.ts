@@ -52,7 +52,7 @@ let customAsset: string;
 let uncachedAsset: string;
 
 beforeAll(async () => {
-  directory = mkdtempSync(join(tmpdir(), 'nosam-native-asset-policy-'));
+  directory = mkdtempSync(join(tmpdir(), 'platform-native-asset-policy-'));
   const assets = join(directory, 'client');
   const output = join(directory, 'output');
   const clientRoot = join(directory, 'app');
@@ -202,7 +202,7 @@ beforeAll(async () => {
       if (mode === 'headers') {
         app.use(routing.headerMiddleware([{ pattern: '/static/*', headers: [
           ['Cache-Control', 'public, max-age=31536000, immutable'],
-          ['X-Nosam-Header', 'configured'],
+          ['X-Platform-Header', 'configured'],
         ] }]));
         app.get('/health', (c) => c.text('healthy', 200, { 'cache-control': 'private, no-store' }));
       }
@@ -362,7 +362,7 @@ describe('native asset cache policy in real Workers', () => {
       const response = await runtime!.dispatchFetch(`https://app.test/${file}?mode=headers`);
       expect(response.status).toBe(200);
       expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
-      expect(response.headers.get('x-nosam-header')).toBe('configured');
+      expect(response.headers.get('x-platform-header')).toBe('configured');
       expect(response.headers.get('content-type')).toContain(
         kind === 'css' ? 'text/css' : 'javascript',
       );
@@ -376,13 +376,13 @@ describe('native asset cache policy in real Workers', () => {
     );
     expect(missing.status).toBe(404);
     expect(missing.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
-    expect(missing.headers.get('x-nosam-header')).toBe('configured');
+    expect(missing.headers.get('x-platform-header')).toBe('configured');
     await missing.arrayBuffer();
 
     const unmatched = await runtime!.dispatchFetch('https://app.test/health?mode=headers');
     expect(unmatched.status).toBe(200);
     expect(unmatched.headers.get('cache-control')).toBe('private, no-store');
-    expect(unmatched.headers.has('x-nosam-header')).toBe(false);
+    expect(unmatched.headers.has('x-platform-header')).toBe(false);
     await expect(unmatched.text()).resolves.toBe('healthy');
   });
 
@@ -405,7 +405,7 @@ describe('native asset Worker bypass in real Workers', () => {
   let bypass: Miniflare | undefined;
 
   beforeAll(async () => {
-    bypassDirectory = mkdtempSync(join(tmpdir(), 'nosam-native-asset-bypass-'));
+    bypassDirectory = mkdtempSync(join(tmpdir(), 'platform-native-asset-bypass-'));
     const assets = join(bypassDirectory, 'client');
     mkdirSync(join(assets, 'static', 'nested'), { recursive: true });
     for (const file of ['client-abcdefgh.js', 'client.js', 'nested/chunk-abcdefgh.js']) {
@@ -431,7 +431,7 @@ describe('native asset Worker bypass in real Workers', () => {
         script: `export default { async fetch(request, env) {
           const asset = await env.ASSETS.fetch(request);
           const response = new Response(asset.body, asset);
-          response.headers.set('x-nosam-worker', '1');
+          response.headers.set('x-platform-worker', '1');
           return response;
         } };`,
         assets: {
@@ -460,7 +460,7 @@ describe('native asset Worker bypass in real Workers', () => {
       expect(response.status).toBe(200);
       expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
       expect(response.headers.get('etag')).toBeTruthy();
-      expect(response.headers.has('x-nosam-worker')).toBe(false);
+      expect(response.headers.has('x-platform-worker')).toBe(false);
       await response.arrayBuffer();
     }
   });
@@ -468,13 +468,13 @@ describe('native asset Worker bypass in real Workers', () => {
   it('sends unlisted files and misses in the assets folder to the Worker', async () => {
     const unlisted = await bypass!.dispatchFetch('https://app.test/static/client.js');
     expect(unlisted.headers.get('cache-control')).toBe('public, max-age=0, must-revalidate');
-    expect(unlisted.headers.get('x-nosam-worker')).toBe('1');
+    expect(unlisted.headers.get('x-platform-worker')).toBe('1');
     await unlisted.arrayBuffer();
     for (const path of ['/static/gone-abcdefgh.js', '/static/42', '/static/']) {
       const missing = await bypass!.dispatchFetch(`https://app.test${path}`);
       expect(missing.status, path).toBe(404);
       expect(missing.headers.get('cache-control') ?? '').not.toContain('immutable');
-      expect(missing.headers.get('x-nosam-worker'), path).toBe('1');
+      expect(missing.headers.get('x-platform-worker'), path).toBe('1');
       await missing.arrayBuffer();
     }
   });
@@ -482,7 +482,7 @@ describe('native asset Worker bypass in real Workers', () => {
   it('still sends other paths to the Worker', async () => {
     for (const path of ['/', '/api/x', '/static']) {
       const response = await bypass!.dispatchFetch(`https://app.test${path}`);
-      expect(response.headers.get('x-nosam-worker')).toBe('1');
+      expect(response.headers.get('x-platform-worker')).toBe('1');
       await response.arrayBuffer();
     }
   });
@@ -537,7 +537,7 @@ describe('native static edge Worker routing in real Workers', () => {
       export default { async fetch(request, env, context) {
         const response = await edge.fetch(request, env, context);
         const marked = new Response(response.body, response);
-        marked.headers.set('x-nosam-worker', '1');
+        marked.headers.set('x-platform-worker', '1');
         return marked;
       } };`,
     );
@@ -584,16 +584,16 @@ describe('native static edge Worker routing in real Workers', () => {
 
   async function expectReadiness(runtime: Miniflare): Promise<void> {
     for (const headers of [{}, { 'sec-fetch-mode': 'navigate' }]) {
-      const ready = await runtime.dispatchFetch('https://site.test/__nosam/ready', { headers });
+      const ready = await runtime.dispatchFetch('https://site.test/__platform/ready', { headers });
       expect(ready.status).toBe(200);
-      expect(ready.headers.get('x-nosam-worker')).toBe('1');
+      expect(ready.headers.get('x-platform-worker')).toBe('1');
       expect(ready.headers.get('cache-control')).toBe('no-store');
       await expect(ready.json()).resolves.toEqual({ ready: true, versionId: 'version-1' });
     }
   }
 
   beforeAll(async () => {
-    staticDirectory = mkdtempSync(join(tmpdir(), 'nosam-native-static-edge-'));
+    staticDirectory = mkdtempSync(join(tmpdir(), 'platform-native-static-edge-'));
     const [plain, redirected] = await Promise.all([
       deployStaticSite('site'),
       deployStaticSite('https', { alwaysUseHttps: true }),
@@ -618,7 +618,7 @@ describe('native static edge Worker routing in real Workers', () => {
     ]) {
       const page = await site!.dispatchFetch(`https://site.test${path}`);
       expect(page.status, path).toBe(200);
-      expect(page.headers.has('x-nosam-worker'), path).toBe(false);
+      expect(page.headers.has('x-platform-worker'), path).toBe(false);
       expect(await page.text()).toBe(body);
     }
     for (const [path, policy] of [
@@ -627,16 +627,16 @@ describe('native static edge Worker routing in real Workers', () => {
     ]) {
       const file = await site!.dispatchFetch(`https://site.test${path}`);
       expect(file.headers.get('cache-control'), path).toBe(policy);
-      expect(file.headers.has('x-nosam-worker'), path).toBe(false);
+      expect(file.headers.has('x-platform-worker'), path).toBe(false);
       await file.arrayBuffer();
     }
     const missing = await site!.dispatchFetch('https://site.test/missing');
     expect(missing.status).toBe(404);
-    expect(missing.headers.has('x-nosam-worker')).toBe(false);
+    expect(missing.headers.has('x-platform-worker')).toBe(false);
     expect(await missing.text()).toBe('<h1>Not found</h1>');
     const post = await site!.dispatchFetch('https://site.test/', { method: 'POST' });
     expect(post.status).toBe(405);
-    expect(post.headers.has('x-nosam-worker')).toBe(false);
+    expect(post.headers.has('x-platform-worker')).toBe(false);
     await post.arrayBuffer();
     await expectReadiness(site!);
   });
@@ -645,7 +645,7 @@ describe('native static edge Worker routing in real Workers', () => {
     for (const headers of [{}, { 'sec-fetch-mode': 'navigate' }]) {
       const link = await spa!.dispatchFetch('https://site.test/deep/link', { headers });
       expect(link.status).toBe(200);
-      expect(link.headers.has('x-nosam-worker')).toBe(false);
+      expect(link.headers.has('x-platform-worker')).toBe(false);
       expect(await link.text()).toBe('<h1>Home</h1>');
     }
     await expectReadiness(spa!);
@@ -655,15 +655,15 @@ describe('native static edge Worker routing in real Workers', () => {
     const redirect = await https!.dispatchFetch('http://site.test/about', { redirect: 'manual' });
     expect(redirect.status).toBe(308);
     expect(redirect.headers.get('location')).toBe('https://site.test/about');
-    expect(redirect.headers.get('x-nosam-worker')).toBe('1');
+    expect(redirect.headers.get('x-platform-worker')).toBe('1');
     for (const path of ['/', '/assets/plain.js']) {
       const response = await https!.dispatchFetch(`https://site.test${path}`);
-      expect(response.headers.get('x-nosam-worker'), path).toBe('1');
+      expect(response.headers.get('x-platform-worker'), path).toBe('1');
       await response.arrayBuffer();
     }
     const chunk = await https!.dispatchFetch('https://site.test/assets/app-abcdefgh.js');
     expect(chunk.headers.get('cache-control')).toBe(immutable);
-    expect(chunk.headers.get('x-nosam-worker')).toBe('1');
+    expect(chunk.headers.get('x-platform-worker')).toBe('1');
     await chunk.arrayBuffer();
     await expectReadiness(https!);
   });

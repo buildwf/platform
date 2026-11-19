@@ -81,7 +81,7 @@ export async function verifyInstalledPlatformAccessProtection(input: {
     );
   }
   const token =
-    process.env.NOSAM_PLATFORM_ACCESS_SETUP_TOKEN || input.checkpoint.accessManagementToken;
+    process.env.PLATFORM_ACCESS_SETUP_TOKEN || input.checkpoint.accessManagementToken;
   const management = token
     ? new PlatformCloudflareClient(token, { apiBase: input.client.apiBaseUrl })
     : { request: input.client.request.bind(input.client) };
@@ -150,7 +150,7 @@ export async function verifyInstalledPlatformAccessProtection(input: {
   for (const origin of origins) {
     const headers = cfAccessHeaders(
       input.checkpoint.accessCredentialsJson
-        ? { NOSAM_ACCESS_CREDENTIALS: input.checkpoint.accessCredentialsJson }
+        ? { PLATFORM_ACCESS_CREDENTIALS: input.checkpoint.accessCredentialsJson }
         : process.env,
       origin,
     );

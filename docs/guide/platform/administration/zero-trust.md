@@ -21,7 +21,7 @@ choose to protect apps. To renew their token in Admin, leave the policy fields b
 
 - A Cloudflare Zero Trust organization in the account that hosts the platform, with the identity providers and reusable Access policies you want to use. Select at least one Allow policy that matches people by identity. bwf rejects Bypass and Service Auth policies, and rules that allow Everyone or any service token.
 - A Cloudflare API token for that account with **Access: Apps and Policies Write** and **Access: Organizations, Identity Providers, and Groups Read**. bwf keeps it separate from the platform runtime token, stores it encrypted, and never shows it again.
-- Free Access applications in the account. Cloudflare's default limit is 500 per account. Count the applications you already manage outside bwf, then add the ones bwf needs, as described in [Access Applications bwf Creates](#access-applications-nosam-creates).
+- Free Access applications in the account. Cloudflare's default limit is 500 per account. Count the applications you already manage outside bwf, then add the ones bwf needs, as described in [Access Applications bwf Creates](#access-applications-platform-creates).
 - Platform API, proxy, and email gateway hostnames outside the project application domain. Configuration is rejected when project protection would cover one of them. Any other hostname under the project application domain also asks for sign-in, except the `/health` path of `void-platform-health.<your domain>`, which bwf keeps open for its health checks and never serves from a project. New projects cannot use that name. A project that already uses it keeps every other path, protected or public like any other project.
 
 ## Enable Zero Trust

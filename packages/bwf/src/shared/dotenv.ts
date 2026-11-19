@@ -179,7 +179,7 @@ function expandValue(value: string, resolve: (key: string) => string): string {
  * Wrangler's bundled `dotenv` LINE regex (verbatim; checked against wrangler 4.147), used
  * ONLY to detect the declared KEYS wrangler would load — including the OPTIONAL `export `
  * prefix, the `KEY: val` form, and single/double/backtick quoting — so a transport-redirect /
- * config-override fence and the reserved `__NOSAM_` name check see exactly what wrangler's
+ * config-override fence and the reserved `__PLATFORM_` name check see exactly what wrangler's
  * dotenv load would. We read keys, never values.
  */
 const WRANGLER_DOTENV_LINE =

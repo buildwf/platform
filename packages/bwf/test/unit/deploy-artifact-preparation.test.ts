@@ -7,7 +7,7 @@ import { prepareDeployArtifact } from '../../src/deploy.ts';
 
 let root: string;
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'nosam-prepared-artifact-'));
+  root = mkdtempSync(join(tmpdir(), 'platform-prepared-artifact-'));
   mkdirSync(join(root, 'dist/ssr'), { recursive: true });
   mkdirSync(join(root, 'dist/client'), { recursive: true });
   writeFileSync(
@@ -167,7 +167,7 @@ it('keeps SPA plus API apps on the Worker deployment path', async () => {
   mkdirSync(join(root, 'routes'));
   writeFileSync(join(root, 'routes/api.ts'), 'export const GET = () => ({ ok: true });');
   const result = await prepareDeployArtifact(root);
-  expect(result.artifact.manifest.type).toBe('nosam');
+  expect(result.artifact.manifest.type).toBe('platform');
   expect(result.artifact.workerFiles).toHaveProperty('index.js');
   expect(fetch).not.toHaveBeenCalled();
 });

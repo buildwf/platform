@@ -29,7 +29,7 @@ describe('platform onboarding pages', () => {
     expect(response.headers.get('Content-Type')).toContain('text/html');
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     const html = await adminHtml(response);
-    expect(html).toContain('<h1 id="nosam-auth-title">Welcome to &lt;Example Platform&gt;</h1>');
+    expect(html).toContain('<h1 id="platform-auth-title">Welcome to &lt;Example Platform&gt;</h1>');
     expect(html).toContain('<title>Welcome · &lt;Example Platform&gt; · Platform</title>');
     expect(html).toContain('npm install -g void');
     expect(html).toContain('bwf connect &#39;api.example.com&#39;');
@@ -150,8 +150,8 @@ describe('platform onboarding pages', () => {
       const response = await app.fetch(
         new Request(`https://api.example.com${path}`, {
           headers: {
-            Host: 'nosam.buildwithfriends.dev',
-            'X-Forwarded-Host': 'nosam.buildwithfriends.dev',
+            Host: 'platform.buildwithfriends.dev',
+            'X-Forwarded-Host': 'platform.buildwithfriends.dev',
           },
         }),
         env,
@@ -166,7 +166,7 @@ describe('platform onboarding pages', () => {
     },
   );
 
-  it.each(['https://nosam.buildwithfriends.dev', 'https://api.staging.void.cloud'])(
+  it.each(['https://platform.buildwithfriends.dev', 'https://api.staging.void.cloud'])(
     'preserves the hosted name at %s',
     async (origin) => {
       const response = await app.fetch(new Request(`${origin}/signup-restricted`), env);

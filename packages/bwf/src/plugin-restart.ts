@@ -30,9 +30,9 @@ const RESTARTING_HTML_MIDDLE = `;
     var token=`;
 
 const RESTARTING_HTML_TAIL = `;
-    fetch("/__nosam/restart",{method:"POST",headers:{"x-nosam-restart":token}}).catch(function(){});
+    fetch("/__platform/restart",{method:"POST",headers:{"x-platform-restart":token}}).catch(function(){});
     setTimeout(function p(){
-      fetch("/__nosam/ping").then(function(r){
+      fetch("/__platform/ping").then(function(r){
         if(r.ok)location.href=target;
         else setTimeout(p,150);
       }).catch(function(){setTimeout(p,150)});
@@ -56,7 +56,7 @@ export function sanitizeReturnPath(value: string | null | undefined): string {
   if (CONTROL_CHARS.test(value)) {
     return '/';
   }
-  const base = 'http://nosam.invalid';
+  const base = 'http://platform.invalid';
   try {
     if (new URL(value, base).origin !== base) {
       return '/';
@@ -68,11 +68,11 @@ export function sanitizeReturnPath(value: string | null | undefined): string {
 }
 
 /** Header the restarting page sends the per-server restart token in. */
-export const RESTART_TOKEN_HEADER = 'x-nosam-restart';
+export const RESTART_TOKEN_HEADER = 'x-platform-restart';
 
 /**
  * `token` is the `t` query value the toast navigated with. The page sends it
- * back with its POST; `/__nosam/restart` checks it, not this page.
+ * back with its POST; `/__platform/restart` checks it, not this page.
  */
 export function renderRestartingPage(
   returnPath: string | null | undefined,
@@ -131,20 +131,20 @@ export function isSameOriginNavigation(req: IncomingMessage): boolean {
 }
 
 /**
- * The toast is the only in-app way to reach `/__nosam/restarting`, so it is
+ * The toast is the only in-app way to reach `/__platform/restarting`, so it is
  * the only place that knows the restart token. Vite's default `server.cors`
  * lets only localhost origins read this module, the same exposure as the
  * HMR token in `/@vite/client`.
  */
 const clientModule = (token: string): string => `if (import.meta.hot) {
   const token = ${JSON.stringify(token)};
-  import.meta.hot.on("nosam:new-binding", (d) => {
-    if (document.getElementById("nosam-binding-hint")) return;
+  import.meta.hot.on("platform:new-binding", (d) => {
+    if (document.getElementById("platform-binding-hint")) return;
     const e = document.createElement("div");
-    e.id = "nosam-binding-hint";
+    e.id = "platform-binding-hint";
     e.style.cssText = "position:fixed;top:16px;right:16px;z-index:99999;padding:12px 16px;background:rgba(26,26,46,0.95);color:#e0def4;font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;border-radius:8px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 8px 32px rgba(0,0,0,0.4);backdrop-filter:blur(8px);cursor:pointer;max-width:300px;transform:translateX(calc(100% + 16px));transition:transform .3s ease";
     e.innerHTML = "<strong style=\\"color:#c4a7e7\\">[bwf]</strong> " + d.message + " Click to restart.";
-    e.onclick = () => { location.href = "/__nosam/restarting?return=" + encodeURIComponent(location.pathname + location.search) + "&t=" + encodeURIComponent(token); };
+    e.onclick = () => { location.href = "/__platform/restarting?return=" + encodeURIComponent(location.pathname + location.search) + "&t=" + encodeURIComponent(token); };
     document.body.appendChild(e);
     requestAnimationFrame(() => requestAnimationFrame(() => {
       e.style.transform = "translateX(0)";
@@ -156,25 +156,25 @@ const clientModule = (token: string): string => `if (import.meta.hot) {
  * Vite plugin that provides controlled dev-server restart via the browser.
  *
  * Serves three endpoints:
- * - `/__nosam/restarting` — standalone loading page (no Vite HMR client);
+ * - `/__platform/restarting` — standalone loading page (no Vite HMR client);
  *                          same-origin navigation only
- * - `/__nosam/restart`    — same-origin POST carrying this server's restart
+ * - `/__platform/restart`    — same-origin POST carrying this server's restart
  *                          token triggers `server.restart()` after a short delay
- * - `/__nosam/ping`       — health check; returns 503 on the old server instance
+ * - `/__platform/ping`       — health check; returns 503 on the old server instance
  *                          (after restart is triggered) and 200 on the new one
  *
  * Also injects a virtual module (`virtual:bwf/binding-hint`) that listens for
- * `nosam:new-binding` HMR events and shows a toast with a click-to-restart action.
+ * `platform:new-binding` HMR events and shows a toast with a click-to-restart action.
  */
 export function restartPlugin(): Plugin {
   // Browsers omit Fetch Metadata for plain-HTTP non-localhost origins
   // (`bwf dev --host` on a LAN IP), so the navigation check alone lets any
-  // page open `/__nosam/restarting`, whose POST then carries our own Origin.
+  // page open `/__platform/restarting`, whose POST then carries our own Origin.
   // The token proves the navigation came from the toast. Each server instance
   // (including the one `server.restart()` creates) gets a fresh one.
   let restartToken = '';
   return {
-    name: 'nosam:restart',
+    name: 'platform:restart',
     apply: 'serve',
 
     resolveId: {
@@ -198,12 +198,12 @@ export function restartPlugin(): Plugin {
       const token = randomBytes(16).toString('base64url');
       restartToken = token;
 
-      server.middlewares.use('/__nosam/ping', (_req, res) => {
+      server.middlewares.use('/__platform/ping', (_req, res) => {
         res.writeHead(restartPending ? 503 : 200);
         res.end();
       });
 
-      server.middlewares.use('/__nosam/restart', (req, res) => {
+      server.middlewares.use('/__platform/restart', (req, res) => {
         if (req.method !== 'POST') {
           res.writeHead(405);
           res.end();
@@ -223,7 +223,7 @@ export function restartPlugin(): Plugin {
         setTimeout(() => server.restart(), 50);
       });
 
-      server.middlewares.use('/__nosam/restarting', (req, res) => {
+      server.middlewares.use('/__platform/restarting', (req, res) => {
         if (!isSameOriginNavigation(req)) {
           res.writeHead(403, { 'Content-Type': 'text/plain' });
           res.end('Restart the dev server from its own page.');
@@ -232,7 +232,7 @@ export function restartPlugin(): Plugin {
         let returnPath: string | null = null;
         let presented: string | null = null;
         try {
-          const params = new URL(req.url ?? '/', 'http://nosam.invalid').searchParams;
+          const params = new URL(req.url ?? '/', 'http://platform.invalid').searchParams;
           returnPath = params.get('return');
           presented = params.get('t');
         } catch {

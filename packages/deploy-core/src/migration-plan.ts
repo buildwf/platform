@@ -1,7 +1,7 @@
 import { tokenizeSql } from './sql-tokenize.ts';
 
 export const MIGRATION_CLASSIFIER_VERSION = 1;
-export const UNSPLIT_MULTI_STATEMENT_PRAGMA = '-- nosam:allow-unsplit-multi-statement';
+export const UNSPLIT_MULTI_STATEMENT_PRAGMA = '-- platform:allow-unsplit-multi-statement';
 
 export type SqlMigrationClassification =
   | { kind: 'single-statement'; stability: 'stable' }

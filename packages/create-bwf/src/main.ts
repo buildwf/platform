@@ -69,7 +69,7 @@ async function main() {
   await run(pmInstall(pm), targetDir);
 
   p.log.step('Scaffolding starter...');
-  await run([...pmExec(pm), 'nosam', 'init', ...createArgs.initArgs], targetDir);
+  await run([...pmExec(pm), 'platform', 'init', ...createArgs.initArgs], targetDir);
 
   p.log.step('Installing starter dependencies...');
   await run(pmInstall(pm), targetDir);

@@ -25,7 +25,7 @@ import { initializeNewProjectZeroTrust } from '../zero-trust/project.ts';
 
 const app = new Hono<ApiEnv>();
 const expiry = (seconds: number) => new Date(Date.now() + seconds * 1000).toISOString();
-const cookieName = '__Host-nosam-preview';
+const cookieName = '__Host-platform-preview';
 
 async function permittedGrant(context: Context<ApiEnv>) {
   const result = await oauthBearer(
@@ -269,7 +269,7 @@ export async function launchPreview({ db, env, grant }: PreviewScope, id: string
     expires_at: expiry(60),
   });
   const url = new URL(projectUrl(project, env));
-  url.searchParams.set('__nosam_preview', ticket);
+  url.searchParams.set('__platform_preview', ticket);
   return { url: url.href };
 }
 
@@ -289,7 +289,7 @@ app.post('/previews/:id/launch', async (context) =>
 );
 
 app.all('/preview-serve/:id', async (context) => {
-  const original = context.req.header('X-Nosam-Preview-URL');
+  const original = context.req.header('X-Platform-Preview-URL');
   if (!original || !context.env.PREVIEW_DISPATCH) {
     throw new OAuthError('access_denied', 'Preview unavailable.', 404);
   }
@@ -302,7 +302,7 @@ app.all('/preview-serve/:id', async (context) => {
   ) {
     throw new OAuthError('access_denied', 'Preview unavailable.', 404);
   }
-  const ticket = url.searchParams.get('__nosam_preview');
+  const ticket = url.searchParams.get('__platform_preview');
   if (ticket && context.req.method === 'GET') {
     const [receipt] = await context
       .get('db')
@@ -368,7 +368,7 @@ app.all('/preview-serve/:id', async (context) => {
       key === 'cookie' ||
       key === 'authorization' ||
       key.startsWith('cf-access-') ||
-      key.startsWith('x-nosam-')
+      key.startsWith('x-platform-')
     ) {
       headers.delete(key);
     }

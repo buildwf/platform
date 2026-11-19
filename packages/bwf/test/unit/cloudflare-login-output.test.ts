@@ -38,7 +38,7 @@ it('extracts only the complete verification URL supplied by cf', () => {
 });
 
 it('hides cf login chatter and prints the code before the child exits', async () => {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-login-output-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-login-output-'));
   try {
     const preload = join(directory, 'mock-login.mjs');
     writeFileSync(

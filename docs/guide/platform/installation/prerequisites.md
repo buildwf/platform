@@ -58,7 +58,7 @@ For a domain installation, use these answers. Testing mode skips the application
 | Optional custom API hostname           | Leave empty to use `workers.dev`                    |
 | Dedicate all unmatched traffic to bwf? | Yes only if this whole zone belongs to the platform |
 
-Choose an unused installation name in your account. For example, `team` creates resources such as `nosam-team-api` and `nosam-team-proxy`.
+Choose an unused installation name in your account. For example, `team` creates resources such as `platform-team-api` and `platform-team-proxy`.
 
 The preview lists the credentials you will need. Review [Credentials](/guide/platform/installation/credentials), then run the install command printed at the end. The guided installation provides setup links and the login callback when needed.
 
@@ -88,7 +88,7 @@ Use any PostgreSQL provider that accepts connections from your computer and Clou
 
 When sizing your database, include the connection pools for every platform installation and application sharing that server. Adjust each Hyperdrive's [origin connection limit](https://developers.cloudflare.com/hyperdrive/configuration/tune-connection-pool/) to fit the server's capacity, leaving room for migrations, administration, provider-reserved connections, and temporary bursts.
 
-Once installation claims the database, continue using that same database for resume and maintenance commands. If installation stops because it cannot use the database, for example because the database is not empty, set `NOSAM_PLATFORM_DATABASE_URL` to another database's URL before you resume. Uninstall never deletes external PostgreSQL.
+Once installation claims the database, continue using that same database for resume and maintenance commands. If installation stops because it cannot use the database, for example because the database is not empty, set `PLATFORM_DATABASE_URL` to another database's URL before you resume. Uninstall never deletes external PostgreSQL.
 
 ### Use a provider CLI
 
@@ -115,14 +115,14 @@ pscale size cluster list --org <organization> --engine postgresql --region <regi
 Create a dedicated Postgres database with your chosen cluster size, then create a role with permission to create and migrate bwf's tables:
 
 ```sh
-pscale database create nosam-platform \
+pscale database create platform \
   --org <organization> \
   --engine postgresql \
   --region <region> \
   --cluster-size <cluster-size> \
   --wait
 
-pscale role create nosam-platform main nosam_owner \
+pscale role create platform main platform_owner \
   --org <organization> \
   --inherited-roles postgres
 ```
@@ -145,9 +145,9 @@ neon login
 Create a dedicated project, database, and owner role. Replace `<region-id>` with one of Neon's [supported regions](https://neon.com/docs/cli/projects#create), such as `aws-us-east-2`:
 
 ```sh
-neon projects create --name nosam-platform \
-  --database nosam_platform \
-  --role nosam_owner \
+neon projects create --name platform \
+  --database platform \
+  --role platform_owner \
   --region-id <region-id>
 ```
 
@@ -155,8 +155,8 @@ Use the project ID from the output to retrieve a direct primary connection URL w
 
 ```sh
 neon connection-string --project-id <project-id> \
-  --database-name nosam_platform \
-  --role-name nosam_owner \
+  --database-name platform \
+  --role-name platform_owner \
   --endpoint-type read_write \
   --ssl verify-full
 ```

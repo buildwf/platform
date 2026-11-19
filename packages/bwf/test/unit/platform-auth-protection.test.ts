@@ -180,7 +180,7 @@ beforeEach(() => {
   state.revision = 1;
   state.prepareAccess.mockReset().mockImplementation(async (input) => {
     input.save({ accessProvisioningJson: '{"version":1}' });
-    process.env.NOSAM_ACCESS_CREDENTIALS = JSON.stringify({
+    process.env.PLATFORM_ACCESS_CREDENTIALS = JSON.stringify({
       [origins[0]!]: {
         CF_ACCESS_CLIENT_ID: 'machine-client',
         CF_ACCESS_CLIENT_SECRET: 'machine-secret',
@@ -291,7 +291,7 @@ describe('platform protection configuration', () => {
     const humanCredentials = JSON.stringify({
       [origins[0]!]: { CF_ACCESS_TOKEN: 'human-access-token' },
     });
-    vi.stubEnv('NOSAM_ACCESS_CREDENTIALS', humanCredentials);
+    vi.stubEnv('PLATFORM_ACCESS_CREDENTIALS', humanCredentials);
     state.raceArmed = true;
     const args = parsePlatformConfigArgs([
       'auth',
@@ -316,7 +316,7 @@ describe('platform protection configuration', () => {
     expect(maintenance).toBeLessThan(rejectedProof);
     expect(state.originVerificationRuns).toBe(2);
     expect(state.previewOpen).toBe(true);
-    expect(process.env.NOSAM_ACCESS_CREDENTIALS).toBe(humanCredentials);
+    expect(process.env.PLATFORM_ACCESS_CREDENTIALS).toBe(humanCredentials);
 
     await expect(runPlatformProtectionConfig(args)).resolves.toBeUndefined();
 
@@ -324,7 +324,7 @@ describe('platform protection configuration', () => {
     expect(state.events).toContain('post:lifecycle-v3-maintenance:dry-run');
     expect(state.events).toContain('post:lifecycle-v3-maintenance:apply');
     expect(state.previewOpen).toBe(false);
-    expect(process.env.NOSAM_ACCESS_CREDENTIALS).toBe(humanCredentials);
+    expect(process.env.PLATFORM_ACCESS_CREDENTIALS).toBe(humanCredentials);
   });
 
   it('parses independent protection and owner recovery actions with no secret-bearing flags', () => {

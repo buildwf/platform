@@ -28,7 +28,7 @@ Skills point your agent to the commands and docs it needs for the task. They lin
 bwf ships two skills:
 
 - **`bwf`:** commands and docs for app development.
-- **`migrate-vite-cloudflare-to-nosam`:** migration skill for converting existing `@cloudflare/vite-plugin` apps to bwf.
+- **`migrate-vite-cloudflare-to-platform`:** migration skill for converting existing `@cloudflare/vite-plugin` apps to bwf.
 
 Skills are linked automatically by `bwf init` when it detects a supported
 agent's configuration. For example, Claude Code uses `.claude/skills/` and Codex

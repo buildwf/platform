@@ -63,7 +63,7 @@ function context(runWrangler: CloudflareOperationRunner): CloudflareOperationCon
 }
 
 function project(config?: string): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-cf-operations-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-cf-operations-'));
   writeFileSync(
     join(root, 'wrangler.jsonc'),
     config ??
@@ -156,7 +156,7 @@ describe('Cloudflare operational parsing', () => {
           id: 'version-1',
           metadata: { created_on: '2026-09-11T00:00:00.000Z' },
           annotations: {
-            'workers/message': 'nosam:{"schema":1,"migrations":["0000_init.sql"]}',
+            'workers/message': 'platform:{"schema":1,"migrations":["0000_init.sql"]}',
           },
         },
       ]),
@@ -164,7 +164,7 @@ describe('Cloudflare operational parsing', () => {
       {
         id: 'version-1',
         createdAt: '2026-09-11T00:00:00.000Z',
-        message: 'nosam:{"schema":1,"migrations":["0000_init.sql"]}',
+        message: 'platform:{"schema":1,"migrations":["0000_init.sql"]}',
         metadata: { schema: 1, migrations: ['0000_init.sql'] },
       },
     ]);
@@ -320,7 +320,7 @@ describe('Cloudflare version operations', () => {
         args.versions.some((version) => version.versionId === 'v1' && version.percentage === 100),
     )!;
     expect(activation[0].type === 'versions.deploy' ? activation[0].message : undefined).toBe(
-      'nosam:{"schema":2,"migrations":["0000_init.sql"],"triggerConfig":{"workers_dev":true,"preview_urls":true,"routes":[],"crons":["0 * * * *"],"queueConsumers":[],"workflows":[]}}',
+      'platform:{"schema":2,"migrations":["0000_init.sql"],"triggerConfig":{"workers_dev":true,"preview_urls":true,"routes":[],"crons":["0 * * * *"],"queueConsumers":[],"workflows":[]}}',
     );
     expect(activation[0]).not.toHaveProperty('bypassDeploymentChecks');
     expect(runner.mock.calls.some(([args]) => args.type === 'triggers.deploy')).toBe(true);

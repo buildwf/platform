@@ -130,7 +130,7 @@ describe('basicAuth', () => {
   it('skips bwf internal endpoints', async () => {
     const app = createApp({ username: 'guest', password: 'wedding' });
 
-    const res = await app.request('http://localhost/__nosam/migrate', { method: 'POST' });
+    const res = await app.request('http://localhost/__platform/migrate', { method: 'POST' });
 
     expect(res.status).toBe(200);
     expect(await res.text()).toBe('ok');
@@ -139,7 +139,7 @@ describe('basicAuth', () => {
   it('skips bwf internal endpoints when the password is empty', async () => {
     const app = createApp({ username: 'guest', password: '' });
 
-    const res = await app.request('http://localhost/__nosam/migrate', { method: 'POST' });
+    const res = await app.request('http://localhost/__platform/migrate', { method: 'POST' });
 
     expect(res.status).toBe(200);
     expect(await res.text()).toBe('ok');
@@ -185,11 +185,11 @@ describe('basicAuth', () => {
     expect(await res.text()).toBe('ok');
   });
 
-  it('does not trust x-nosam-internal on public paths', async () => {
+  it('does not trust x-platform-internal on public paths', async () => {
     const app = createApp({ username: 'guest', password: 'wedding' });
 
     const res = await app.request('http://localhost/', {
-      headers: { 'x-nosam-internal': 'spoofed' },
+      headers: { 'x-platform-internal': 'spoofed' },
     });
 
     expect(res.status).toBe(401);

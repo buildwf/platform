@@ -659,9 +659,9 @@ describe('Zero Trust operation failures', () => {
           dedicatedZone: false,
           workersDev: { installationId: 'team-123456abcdef', subdomain: 'test' },
         }),
-        PROXY_URL: 'https://nosam-123456abcdef-proxy.test.workers.dev',
+        PROXY_URL: 'https://platform-123456abcdef-proxy.test.workers.dev',
       },
-      'nosam-123456abcdef-proxy.test.workers.dev',
+      'platform-123456abcdef-proxy.test.workers.dev',
     ],
   ] as const)(
     'rejects a wildcard that would cover the control plane on %s',

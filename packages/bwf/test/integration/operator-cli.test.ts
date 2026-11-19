@@ -26,7 +26,7 @@ const requests: Array<{
 let reply: (path: string, body: Record<string, unknown>) => { status?: number; body: unknown };
 
 beforeEach(async () => {
-  directory = mkdtempSync(join(tmpdir(), 'nosam-operator-subprocess-'));
+  directory = mkdtempSync(join(tmpdir(), 'platform-operator-subprocess-'));
   requests.length = 0;
   reply = (path, body) =>
     body.dryRun
@@ -75,9 +75,9 @@ function run(
         PATH: process.env.PATH,
         HOME: directory,
         USERPROFILE: directory,
-        NOSAM_PLATFORM_REGISTRY_DIR: join(directory, 'registry'),
+        PLATFORM_REGISTRY_DIR: join(directory, 'registry'),
         BWF_API_URL: origin,
-        NOSAM_OPERATOR_TOKEN: 'test-operator',
+        PLATFORM_OPERATOR_TOKEN: 'test-operator',
         ...options.env,
       },
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -114,9 +114,9 @@ function runPty(args: Array<string>): Promise<{ output: string; code: number }> 
         PATH: process.env.PATH,
         HOME: directory,
         USERPROFILE: directory,
-        NOSAM_PLATFORM_REGISTRY_DIR: join(directory, 'registry'),
+        PLATFORM_REGISTRY_DIR: join(directory, 'registry'),
         BWF_API_URL: origin,
-        NOSAM_OPERATOR_TOKEN: 'test-operator',
+        PLATFORM_OPERATOR_TOKEN: 'test-operator',
       },
       stdio: [input, 'pipe', 'pipe'],
     });
@@ -340,7 +340,7 @@ describe('operator CLI (real subprocess and HTTP)', () => {
     });
     const result = await run(['auth', 'token', '--token-stdin', '--json'], {
       input: 'full-api-session\n',
-      env: { NOSAM_OPERATOR_TOKEN: '' },
+      env: { PLATFORM_OPERATOR_TOKEN: '' },
     });
     expect(result.code).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({ token: 'new-operator-token', origin });

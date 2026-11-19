@@ -34,7 +34,7 @@ export function UsersListPage({ path, platformName, username }: AdminPageProps) 
       width: proportional(1, { minWidth: 110 }),
       renderCell: (user: UserRow) => (
         <Link
-          className="nosam-admin-resource-link nosam-admin-user-link"
+          className="platform-admin-resource-link platform-admin-user-link"
           href={`/admin/users/${user.id}`}
           title={user.login}
         >
@@ -92,7 +92,7 @@ export function UsersListPage({ path, platformName, username }: AdminPageProps) 
           initialSelection={selectedUser}
         />
         <Table
-          className="nosam-admin-users-table"
+          className="platform-admin-users-table"
           data={[...users]}
           columns={columns}
           idKey="id"

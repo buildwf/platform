@@ -35,7 +35,7 @@ type RoutingEntry = {
   workerName: string;
   projectId: string;
   userId?: string;
-  type?: 'nosam' | 'spa' | 'static' | 'framework';
+  type?: 'platform' | 'spa' | 'static' | 'framework';
   ssr?: boolean;
   revalidate?: number | Record<string, number>;
   pages?: ReadonlyArray<{ pattern: string; revalidate?: number }>;
@@ -1584,7 +1584,7 @@ describe('queue relay', () => {
     expect(batch.ackAll).toHaveBeenCalledOnce();
   });
 
-  it('forwards x-nosam-internal header to user worker when proxyToken is in routing entry', async () => {
+  it('forwards x-platform-internal header to user worker when proxyToken is in routing entry', async () => {
     const routing = JSON.stringify({
       workerName: 'user-app',
       projectId: 'proj-1',
@@ -1601,10 +1601,10 @@ describe('queue relay', () => {
 
     expect(workerFetch).toHaveBeenCalledOnce();
     const req = workerFetch.mock.calls[0][0] as Request;
-    expect(req.headers.get('x-nosam-internal')).toBe('super-secret-token');
+    expect(req.headers.get('x-platform-internal')).toBe('super-secret-token');
   });
 
-  it('omits x-nosam-internal header when proxyToken is missing (backward-compat)', async () => {
+  it('omits x-platform-internal header when proxyToken is missing (backward-compat)', async () => {
     const routing = JSON.stringify({
       workerName: 'user-app',
       projectId: 'proj-1',
@@ -1619,7 +1619,7 @@ describe('queue relay', () => {
     await app.queue(batch, env);
 
     const req = workerFetch.mock.calls[0][0] as Request;
-    expect(req.headers.get('x-nosam-internal')).toBeNull();
+    expect(req.headers.get('x-platform-internal')).toBeNull();
   });
 
   it('logs a structured error when the user worker returns non-2xx', async () => {
@@ -1756,7 +1756,7 @@ describe('queue relay', () => {
     expect(batch.retryAll).toHaveBeenCalledWith();
   });
 
-  it('forwards x-nosam-internal on legacy /__queue fallback too', async () => {
+  it('forwards x-platform-internal on legacy /__queue fallback too', async () => {
     const routing = JSON.stringify({
       workerName: 'user-app',
       projectId: 'proj-1',
@@ -1767,8 +1767,8 @@ describe('queue relay', () => {
     const calls: Array<{ path: string; header: string | null }> = [];
     const workerFetch = vi.fn(async (req: Request) => {
       const url = new URL(req.url);
-      calls.push({ path: url.pathname, header: req.headers.get('x-nosam-internal') });
-      if (url.pathname === '/__nosam/queue') {
+      calls.push({ path: url.pathname, header: req.headers.get('x-platform-internal') });
+      if (url.pathname === '/__platform/queue') {
         return new Response('not found', { status: 404 });
       }
       return Response.json({ ok: true });
@@ -1785,7 +1785,7 @@ describe('queue relay', () => {
     await app.queue(batch, env);
 
     expect(calls).toEqual([
-      { path: '/__nosam/queue', header: 'legacy-token' },
+      { path: '/__platform/queue', header: 'legacy-token' },
       { path: '/__queue', header: 'legacy-token' },
     ]);
   });
@@ -1970,7 +1970,7 @@ describe('rewrite rules', () => {
     expect(new URL(forwarded.url).pathname).toBe('/posts/jane/first-post');
   });
 
-  it('sets X-Nosam-Original-URL header on rewritten requests', async () => {
+  it('sets X-Platform-Original-URL header on rewritten requests', async () => {
     const { env, workerFetch } = createEnv({
       routing: {
         workerName: 'test-worker',
@@ -1984,7 +1984,7 @@ describe('rewrite rules', () => {
 
     expect(response.status).toBe(200);
     const forwarded = workerFetch.mock.calls[0]![0] as Request;
-    expect(forwarded.headers.get('X-Nosam-Original-URL')).toBe('https://test.void.app/docs');
+    expect(forwarded.headers.get('X-Platform-Original-URL')).toBe('https://test.void.app/docs');
   });
 
   it('preserves query string on rewritten requests', async () => {
@@ -2027,7 +2027,7 @@ describe('rewrite rules', () => {
 
     const forwarded = workerFetch.mock.calls[0]![0] as Request;
     expect(new URL(forwarded.url).pathname).toBe('/other');
-    expect(forwarded.headers.has('X-Nosam-Original-URL')).toBe(false);
+    expect(forwarded.headers.has('X-Platform-Original-URL')).toBe(false);
   });
 
   // Host-scoped redirects: dispatch passes `url.hostname` into
@@ -2106,10 +2106,10 @@ describe('rewrite rules', () => {
     expect(new URL(forwarded.url).pathname).toBe('/en/page');
   });
 
-  // Dispatch owns X-Nosam-Original-URL. A client-supplied value on a request
+  // Dispatch owns X-Platform-Original-URL. A client-supplied value on a request
   // with no matching rewrite must not leak through to the user worker —
-  // otherwise a non-Nosam worker that trusts the header could be spoofed.
-  it('strips client-supplied X-Nosam-Original-URL when no rewrite fires', async () => {
+  // otherwise a non-Platform worker that trusts the header could be spoofed.
+  it('strips client-supplied X-Platform-Original-URL when no rewrite fires', async () => {
     const { env, workerFetch } = createEnv({
       routing: {
         workerName: 'test-worker',
@@ -2120,7 +2120,7 @@ describe('rewrite rules', () => {
 
     const response = await app.fetch(
       new Request('https://test.void.app/plain', {
-        headers: { 'X-Nosam-Original-URL': 'https://evil/attacker' },
+        headers: { 'X-Platform-Original-URL': 'https://evil/attacker' },
       }),
       env,
       createCtx(),
@@ -2129,12 +2129,12 @@ describe('rewrite rules', () => {
     expect(response.status).toBe(200);
     expect(workerFetch).toHaveBeenCalledOnce();
     const forwarded = workerFetch.mock.calls[0]![0] as Request;
-    expect(forwarded.headers.has('X-Nosam-Original-URL')).toBe(false);
+    expect(forwarded.headers.has('X-Platform-Original-URL')).toBe(false);
   });
 
   // On a rewrite, dispatch must overwrite any client value with the true
   // original URL, not concatenate or pass the spoofed value through.
-  it('overrides client-supplied X-Nosam-Original-URL with the true original URL on rewrite', async () => {
+  it('overrides client-supplied X-Platform-Original-URL with the true original URL on rewrite', async () => {
     const { env, workerFetch } = createEnv({
       routing: {
         workerName: 'test-worker',
@@ -2146,7 +2146,7 @@ describe('rewrite rules', () => {
 
     const response = await app.fetch(
       new Request('https://test.void.app/docs', {
-        headers: { 'X-Nosam-Original-URL': 'https://evil/attacker' },
+        headers: { 'X-Platform-Original-URL': 'https://evil/attacker' },
       }),
       env,
       createCtx(),
@@ -2154,12 +2154,12 @@ describe('rewrite rules', () => {
 
     expect(response.status).toBe(200);
     const forwarded = workerFetch.mock.calls[0]![0] as Request;
-    expect(forwarded.headers.get('X-Nosam-Original-URL')).toBe('https://test.void.app/docs');
+    expect(forwarded.headers.get('X-Platform-Original-URL')).toBe('https://test.void.app/docs');
   });
 
-  // Pin the full original URL (including query) on the X-Nosam-Original-URL
+  // Pin the full original URL (including query) on the X-Platform-Original-URL
   // header after a 200-status redirectRule rewrite — not just its presence.
-  it('sets X-Nosam-Original-URL to the full original URL (with query) on redirectRules rewrite', async () => {
+  it('sets X-Platform-Original-URL to the full original URL (with query) on redirectRules rewrite', async () => {
     const { env, workerFetch } = createEnv({
       routing: {
         workerName: 'test-worker',
@@ -2175,15 +2175,15 @@ describe('rewrite rules', () => {
     expect(response.status).toBe(200);
     const forwarded = workerFetch.mock.calls[0]![0] as Request;
     expect(new URL(forwarded.url).pathname).toBe('/new');
-    expect(forwarded.headers.get('X-Nosam-Original-URL')).toBe(originalUrl);
+    expect(forwarded.headers.get('X-Platform-Original-URL')).toBe(originalUrl);
   });
 
   // When the inbound body is already consumed (e.g. middleware upstream of
   // dispatch drained it), the rewrite-request builder must: avoid throwing
   // in the Request ctor; forward no body; strip content-length and
   // transfer-encoding so the downstream worker doesn't see stale framing;
-  // and still set X-Nosam-Original-URL on the rewritten URL.
-  it('forwards a body-less rewrite request with X-Nosam-Original-URL when POST body is consumed', async () => {
+  // and still set X-Platform-Original-URL on the rewritten URL.
+  it('forwards a body-less rewrite request with X-Platform-Original-URL when POST body is consumed', async () => {
     const { env, workerFetch } = createEnv({
       routing: {
         workerName: 'test-worker',
@@ -2206,7 +2206,7 @@ describe('rewrite rules', () => {
     expect(forwarded.body).toBeNull();
     expect(forwarded.headers.has('content-length')).toBe(false);
     expect(forwarded.headers.has('transfer-encoding')).toBe(false);
-    expect(forwarded.headers.get('X-Nosam-Original-URL')).toBe(originalUrl);
+    expect(forwarded.headers.get('X-Platform-Original-URL')).toBe(originalUrl);
     expect(new URL(forwarded.url).pathname).toBe('/en/submit');
   });
 
@@ -2252,7 +2252,7 @@ describe('rewrite rules', () => {
     expect(workerFetch).toHaveBeenCalledOnce();
     const forwarded = workerFetch.mock.calls[0]![0] as Request;
     expect(new URL(forwarded.url).pathname).toBe('/en/docs/intro');
-    expect(forwarded.headers.get('X-Nosam-Original-URL')).toBe(originalUrl);
+    expect(forwarded.headers.get('X-Platform-Original-URL')).toBe(originalUrl);
   });
 });
 
@@ -3016,7 +3016,7 @@ describe('static deployment caching (KV/R2)', () => {
 
       const response = await responsePromise;
       expect(response.status).toBe(503);
-      expect(response.headers.get('X-Nosam-Timeout')).toBe('static-asset');
+      expect(response.headers.get('X-Platform-Timeout')).toBe('static-asset');
       expect(response.headers.get('Retry-After')).toBe('5');
       expect(r2Get).toHaveBeenCalledTimes(2);
       await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
@@ -3057,7 +3057,7 @@ describe('static deployment caching (KV/R2)', () => {
       const response = await app.fetch(new Request('https://test.void.app/'), env, ctx);
 
       expect(response.status).toBe(503);
-      expect(response.headers.get('X-Nosam-Storage-Error')).toBe('static-asset-read');
+      expect(response.headers.get('X-Platform-Storage-Error')).toBe('static-asset-read');
       expect(r2Get).toHaveBeenCalledTimes(2);
       await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
       expect(usageSend).toHaveBeenCalledWith(
@@ -3094,7 +3094,7 @@ describe('static deployment caching (KV/R2)', () => {
       const response = await app.fetch(new Request('https://test.void.app/'), env, ctx);
 
       expect(response.status).toBe(503);
-      expect(response.headers.get('X-Nosam-Storage-Error')).toBe('static-asset-missing');
+      expect(response.headers.get('X-Platform-Storage-Error')).toBe('static-asset-missing');
       expect(r2Get).toHaveBeenNthCalledWith(1, 'assets/proj-1/hash1');
       expect(r2Get).toHaveBeenNthCalledWith(2, 'assets/hash1');
       await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
@@ -3316,7 +3316,7 @@ describe('foreground worker duration', () => {
       routing: {
         workerName: 'user-app-dpl_1',
         projectId: 'proj_1',
-        type: 'nosam',
+        type: 'platform',
         ssr: true,
         revalidate,
       },
@@ -3349,14 +3349,14 @@ describe('foreground worker duration', () => {
         routing: {
           workerName: 'user-app-dpl_1',
           projectId: 'proj_1',
-          type: 'nosam',
+          type: 'platform',
           ssr: true,
           revalidate,
           fallbackRules: [{ source: '/missing', destination: '/slow', status: 200 }],
         },
         workerFetchImpl: async () => {
           if (++calls === 1) {
-            return new Response('missing', { status: 404, headers: { 'X-Nosam-No-Match': '1' } });
+            return new Response('missing', { status: 404, headers: { 'X-Platform-No-Match': '1' } });
           }
           await new Promise((resolve) => setTimeout(resolve, 11_000));
           return new Response('fallback', { headers: { 'Content-Type': 'text/html' } });
@@ -3385,7 +3385,7 @@ describe('foreground worker duration', () => {
         routing: {
           workerName: 'user-app-dpl_1',
           projectId: 'proj_1',
-          type: 'nosam',
+          type: 'platform',
           ssr: true,
           assetManifestId: 'deploy-1',
           assetConfig: { run_worker_first: true },
@@ -3422,7 +3422,7 @@ describe('foreground worker duration', () => {
 
       const response = await responsePromise;
       expect(response.status).toBe(503);
-      expect(response.headers.get('X-Nosam-Timeout')).toBe('static-asset');
+      expect(response.headers.get('X-Platform-Timeout')).toBe('static-asset');
       expect(get).toHaveBeenCalledTimes(2);
       expect(logWrites).toHaveLength(0);
     } finally {
@@ -3438,7 +3438,7 @@ describe('worker timeout explains itself in the project log stream', () => {
   // tail worker keys its rows so the existing read path finds it.
   function createHangingEnv(workerName: string) {
     const { env, logWrites, analyticsWrites } = createEnv({
-      routing: { workerName, projectId: 'proj_1', type: 'nosam', ssr: true },
+      routing: { workerName, projectId: 'proj_1', type: 'platform', ssr: true },
       // Never settles — `withTimeout` wins the race.
       workerFetchImpl: () => new Promise<Response>(() => {}),
     });
@@ -3459,7 +3459,7 @@ describe('worker timeout explains itself in the project log stream', () => {
     );
 
     expect(response.status).toBe(503);
-    expect(response.headers.get('X-Nosam-Timeout')).toBe('dispatch');
+    expect(response.headers.get('X-Platform-Timeout')).toBe('dispatch');
 
     expect(logWrites).toHaveLength(1);
     const dp = logWrites[0] as { indexes: Array<string>; blobs: Array<string> };
@@ -3480,7 +3480,7 @@ describe('worker timeout explains itself in the project log stream', () => {
 
     await app.fetch(new Request('https://my-app.void.app/api/slow'), env, createCtx());
 
-    // One `nosam_requests` row, unchanged, plus the new `nosam_logs` row.
+    // One `platform_requests` row, unchanged, plus the new `platform_logs` row.
     expect(analyticsWrites).toHaveLength(1);
     expect(logWrites).toHaveLength(1);
     const dp = analyticsWrites[0] as { blobs: Array<string> };
@@ -3565,7 +3565,7 @@ describe('request type metering for SSR routes with a file extension', () => {
   const routing: RoutingEntry = {
     workerName: 'user-app-dpl_1',
     projectId: 'proj_1',
-    type: 'nosam',
+    type: 'platform',
     ssr: true,
     version: 'deploy-1',
     assetManifestId: 'deploy-1',
@@ -3574,7 +3574,7 @@ describe('request type metering for SSR routes with a file extension', () => {
   const routingWithoutManifest: RoutingEntry = {
     workerName: 'user-app-dpl_1',
     projectId: 'proj_1',
-    type: 'nosam',
+    type: 'platform',
     ssr: true,
     version: 'deploy-1',
   };
@@ -3767,7 +3767,7 @@ describe('request type metering for SSR routes with a file extension', () => {
       );
 
       expect(response.status).toBe(503);
-      expect(response.headers.get('X-Nosam-Storage-Error')).toBe('static-asset-missing');
+      expect(response.headers.get('X-Platform-Storage-Error')).toBe('static-asset-missing');
       expect(meteredRequestType(analyticsWrites)).toBe('static');
       expect((analyticsWrites[0] as { blobs: Array<string> }).blobs[5]).toBe(
         'platform-static-asset-missing',
@@ -3813,13 +3813,13 @@ describe('request type metering when Cloudflare serves assets before the worker'
   const spaWithApiRouting: RoutingEntry = {
     workerName: 'user-app-dpl_1',
     projectId: 'proj_1',
-    type: 'nosam',
+    type: 'platform',
     ssr: true,
     version: 'deploy-1',
     assetManifestId: 'deploy-1',
     assetConfig: {
       not_found_handling: 'single-page-application',
-      run_worker_first: ['/api', '/api/*', '/__nosam', '/__nosam/*'],
+      run_worker_first: ['/api', '/api/*', '/__platform', '/__platform/*'],
     },
   };
   const assetManifest = { '/index.html': 'shell-hash', '/robots.txt': 'robots-hash' };

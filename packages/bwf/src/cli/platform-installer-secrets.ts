@@ -93,10 +93,10 @@ export function createPlatformInstallationSecrets(input: {
     (generateIdentityKeys ? randomBytes(32).toString('base64') : '');
   const resolvedJwtSecret = input.existingInstallation
     ? jwtSecret
-    : required(jwtSecret, 'NOSAM_PLATFORM_JWT_SECRET');
+    : required(jwtSecret, 'PLATFORM_JWT_SECRET');
   if (!existingInstallation && Buffer.byteLength(resolvedJwtSecret, 'utf8') < 32) {
     throw new Error(
-      'platform: NOSAM_PLATFORM_JWT_SECRET must contain at least 32 bytes of secret material unique to this installation.',
+      'platform: PLATFORM_JWT_SECRET must contain at least 32 bytes of secret material unique to this installation.',
     );
   }
   const emailEnabled = input.emailEnabled === true;
@@ -108,7 +108,7 @@ export function createPlatformInstallationSecrets(input: {
   if (emailEnabled && !emailSigningSecret) {
     if (existingInstallation && existingEmailEnabled) {
       throw new Error(
-        'platform: NOSAM_PLATFORM_EMAIL_SIGNING_SECRET is required to maintain an email-enabled installation without its encrypted recovery state.',
+        'platform: PLATFORM_EMAIL_SIGNING_SECRET is required to maintain an email-enabled installation without its encrypted recovery state.',
       );
     }
     emailSigningSecret = randomBytes(32).toString('base64');
@@ -119,12 +119,12 @@ export function createPlatformInstallationSecrets(input: {
     Buffer.byteLength(emailSigningSecret, 'utf8') < 32
   ) {
     throw new Error(
-      'platform: NOSAM_PLATFORM_EMAIL_SIGNING_SECRET must contain at least 32 bytes of secret material unique to this installation.',
+      'platform: PLATFORM_EMAIL_SIGNING_SECRET must contain at least 32 bytes of secret material unique to this installation.',
     );
   }
   if (emailSigningSecretInScope && emailSigningSecret && emailSigningSecret === resolvedJwtSecret) {
     throw new Error(
-      'platform: NOSAM_PLATFORM_EMAIL_SIGNING_SECRET must be different from NOSAM_PLATFORM_JWT_SECRET.',
+      'platform: PLATFORM_EMAIL_SIGNING_SECRET must be different from PLATFORM_JWT_SECRET.',
     );
   }
   const projectSecretKeyring = resolveProjectSecretKeyring({
@@ -201,21 +201,21 @@ export function createPlatformInstallationSecrets(input: {
     ),
     bootstrapGitHubLogin: resolve(
       'bootstrapGitHubLogin',
-      'NOSAM_PLATFORM_ADMIN_GITHUB_LOGIN',
+      'PLATFORM_ADMIN_GITHUB_LOGIN',
       githubOptional,
     ),
     cloudflareApiToken: resolve(
       'cloudflareApiToken',
-      'NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN',
+      'PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN',
       existingInstallation,
     ),
     databaseUrl: required(input.databaseUrl || checkpoint.databaseUrl || '', 'DATABASE_URL'),
     emailEnabled,
     emailSigningSecret,
-    githubClientId: resolve('githubClientId', 'NOSAM_PLATFORM_GITHUB_CLIENT_ID', githubOptional),
+    githubClientId: resolve('githubClientId', 'PLATFORM_GITHUB_CLIENT_ID', githubOptional),
     githubClientSecret: resolve(
       'githubClientSecret',
-      'NOSAM_PLATFORM_GITHUB_CLIENT_SECRET',
+      'PLATFORM_GITHUB_CLIENT_SECRET',
       githubOptional,
     ),
     jwtSecret: resolvedJwtSecret,
@@ -224,12 +224,12 @@ export function createPlatformInstallationSecrets(input: {
     projectSecretKeysJson: projectSecretKeyring.keysJson,
     r2AccessKeyId: resolve(
       'r2AccessKeyId',
-      'NOSAM_PLATFORM_R2_ACCESS_KEY_ID',
+      'PLATFORM_R2_ACCESS_KEY_ID',
       existingInstallation,
     ),
     r2SecretAccessKey: resolve(
       'r2SecretAccessKey',
-      'NOSAM_PLATFORM_R2_SECRET_ACCESS_KEY',
+      'PLATFORM_R2_SECRET_ACCESS_KEY',
       existingInstallation,
     ),
   };
@@ -251,12 +251,12 @@ function resolveProjectSecretKeyring(input: {
     (!input.projectSecretKeysJson || !input.projectSecretActiveKeyVersion)
   ) {
     throw new Error(
-      'platform: NOSAM_PLATFORM_PROJECT_SECRET_KEYS_JSON and NOSAM_PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION must be supplied together.',
+      'platform: PLATFORM_PROJECT_SECRET_KEYS_JSON and PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION must be supplied together.',
     );
   }
   if (explicitFullKeyring && !input.existingInstallation) {
     throw new Error(
-      'platform: Fresh installations use NOSAM_PLATFORM_PROJECT_SECRET_KEY to initialize key version v1. The full project-secret keyring inputs are for restoring an existing installation.',
+      'platform: Fresh installations use PLATFORM_PROJECT_SECRET_KEY to initialize key version v1. The full project-secret keyring inputs are for restoring an existing installation.',
     );
   }
 
@@ -276,8 +276,8 @@ function resolveProjectSecretKeyring(input: {
     return normalizeProjectSecretKeyring(
       input.projectSecretKeysJson,
       input.projectSecretActiveKeyVersion,
-      'NOSAM_PLATFORM_PROJECT_SECRET_KEYS_JSON',
-      'NOSAM_PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION',
+      'PLATFORM_PROJECT_SECRET_KEYS_JSON',
+      'PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION',
     );
   }
   if (checkpointKeysJson) {
@@ -295,12 +295,12 @@ function resolveProjectSecretKeyring(input: {
         input.projectSecretKey ||
           input.checkpoint.projectSecretKey ||
           (input.generateIdentityKeys ? randomBytes(32).toString('base64') : ''),
-        'NOSAM_PLATFORM_PROJECT_SECRET_KEY',
+        'PLATFORM_PROJECT_SECRET_KEY',
       );
   if (!v1Key) {
     return { activeVersion: '', keysJson: '', v1Key: '' };
   }
-  assertCanonicalProjectSecretKey(v1Key, 'NOSAM_PLATFORM_PROJECT_SECRET_KEY', true);
+  assertCanonicalProjectSecretKey(v1Key, 'PLATFORM_PROJECT_SECRET_KEY', true);
   return {
     activeVersion: 'v1',
     keysJson: JSON.stringify({ v1: v1Key }),
@@ -562,14 +562,14 @@ export async function resolveBootstrapGitHubId(
 ): Promise<string> {
   const normalizedLogin = login.trim();
   if (!normalizedLogin) {
-    throw new Error('platform: NOSAM_PLATFORM_ADMIN_GITHUB_LOGIN is required.');
+    throw new Error('platform: PLATFORM_ADMIN_GITHUB_LOGIN is required.');
   }
   const response = await fetcher(
     `https://api.github.com/users/${encodeURIComponent(normalizedLogin)}`,
     {
       headers: {
         Accept: 'application/vnd.github+json',
-        'User-Agent': 'nosam-platform-installer',
+        'User-Agent': 'platform-installer',
       },
       redirect: 'follow',
       signal: AbortSignal.timeout(15_000),
@@ -635,8 +635,8 @@ export function assertRequiredPlatformSecrets(
     !plan.deployment.authentication.configurable &&
     !manifest.steps.some((step) => step.key === 'bootstrap-access:v1')
   ) {
-    requireSecret(secrets.bootstrapGitHubId, 'NOSAM_PLATFORM_ADMIN_GITHUB_ID');
-    requireSecret(secrets.bootstrapGitHubLogin, 'NOSAM_PLATFORM_ADMIN_GITHUB_LOGIN');
+    requireSecret(secrets.bootstrapGitHubId, 'PLATFORM_ADMIN_GITHUB_ID');
+    requireSecret(secrets.bootstrapGitHubLogin, 'PLATFORM_ADMIN_GITHUB_LOGIN');
   }
   if (
     plan.actions.some(
@@ -644,25 +644,25 @@ export function assertRequiredPlatformSecrets(
         action.key === 'api-worker' && action.kind === 'worker' && action.action === 'create',
     )
   ) {
-    requireSecret(secrets.cloudflareApiToken, 'NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN');
+    requireSecret(secrets.cloudflareApiToken, 'PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN');
     if (!plan.deployment.authentication.configurable) {
-      requireSecret(secrets.githubClientId, 'NOSAM_PLATFORM_GITHUB_CLIENT_ID');
-      requireSecret(secrets.githubClientSecret, 'NOSAM_PLATFORM_GITHUB_CLIENT_SECRET');
+      requireSecret(secrets.githubClientId, 'PLATFORM_GITHUB_CLIENT_ID');
+      requireSecret(secrets.githubClientSecret, 'PLATFORM_GITHUB_CLIENT_SECRET');
     }
-    requireSecret(secrets.jwtSecret, 'NOSAM_PLATFORM_JWT_SECRET');
+    requireSecret(secrets.jwtSecret, 'PLATFORM_JWT_SECRET');
     if (plan.deployment.capabilities.email) {
-      requireSecret(secrets.emailSigningSecret, 'NOSAM_PLATFORM_EMAIL_SIGNING_SECRET');
+      requireSecret(secrets.emailSigningSecret, 'PLATFORM_EMAIL_SIGNING_SECRET');
     }
     requireSecret(
       secrets.projectSecretKeysJson,
-      'NOSAM_PLATFORM_PROJECT_SECRET_KEYS_JSON (or NOSAM_PLATFORM_PROJECT_SECRET_KEY for v1)',
+      'PLATFORM_PROJECT_SECRET_KEYS_JSON (or PLATFORM_PROJECT_SECRET_KEY for v1)',
     );
     requireSecret(
       secrets.projectSecretActiveKeyVersion,
-      'NOSAM_PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION (or NOSAM_PLATFORM_PROJECT_SECRET_KEY for v1)',
+      'PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION (or PLATFORM_PROJECT_SECRET_KEY for v1)',
     );
-    requireSecret(secrets.r2AccessKeyId, 'NOSAM_PLATFORM_R2_ACCESS_KEY_ID');
-    requireSecret(secrets.r2SecretAccessKey, 'NOSAM_PLATFORM_R2_SECRET_ACCESS_KEY');
+    requireSecret(secrets.r2AccessKeyId, 'PLATFORM_R2_ACCESS_KEY_ID');
+    requireSecret(secrets.r2SecretAccessKey, 'PLATFORM_R2_SECRET_ACCESS_KEY');
   }
   if (
     plan.actions.some(
@@ -670,10 +670,10 @@ export function assertRequiredPlatformSecrets(
         action.key === 'proxy-worker' && action.kind === 'worker' && action.action === 'create',
     )
   ) {
-    requireSecret(secrets.cloudflareApiToken, 'NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN');
-    requireSecret(secrets.jwtSecret, 'NOSAM_PLATFORM_JWT_SECRET');
+    requireSecret(secrets.cloudflareApiToken, 'PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN');
+    requireSecret(secrets.jwtSecret, 'PLATFORM_JWT_SECRET');
     if (plan.deployment.capabilities.email) {
-      requireSecret(secrets.emailSigningSecret, 'NOSAM_PLATFORM_EMAIL_SIGNING_SECRET');
+      requireSecret(secrets.emailSigningSecret, 'PLATFORM_EMAIL_SIGNING_SECRET');
     }
   }
   if (
@@ -685,7 +685,7 @@ export function assertRequiredPlatformSecrets(
     )
   ) {
     if (plan.deployment.capabilities.email) {
-      requireSecret(secrets.emailSigningSecret, 'NOSAM_PLATFORM_EMAIL_SIGNING_SECRET');
+      requireSecret(secrets.emailSigningSecret, 'PLATFORM_EMAIL_SIGNING_SECRET');
     }
   }
   if (missing.size > 0) {

@@ -154,7 +154,7 @@ c.rewrite(post.path as RouteUrl);
 c.redirect(user.website as Href);
 ```
 
-The dev server keeps route types up to date. After changing `routing.typedRoutes`, restart it or run `bwf prepare`. For CI and standalone typechecking, follow [Setup](#setup). See the [API reference](../reference/api/types.md#nosam-routes) for the URL helper and route types.
+The dev server keeps route types up to date. After changing `routing.typedRoutes`, restart it or run `bwf prepare`. For CI and standalone typechecking, follow [Setup](#setup). See the [API reference](../reference/api/types.md#platform-routes) for the URL helper and route types.
 
 ## What Gets Checked
 

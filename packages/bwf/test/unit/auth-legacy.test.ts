@@ -46,18 +46,18 @@ vi.mock('@napi-rs/keyring', () => ({
 const directories: Array<string> = [];
 
 beforeEach(() => {
-  state.home = mkdtempSync(join(tmpdir(), 'nosam-auth-legacy-home-'));
+  state.home = mkdtempSync(join(tmpdir(), 'platform-auth-legacy-home-'));
   directories.push(state.home);
   state.passwords.clear();
   state.keyringUnavailable = false;
-  process.env.NOSAM_PLATFORM_REGISTRY_DIR = join(state.home, 'registry');
+  process.env.PLATFORM_REGISTRY_DIR = join(state.home, 'registry');
   vi.resetModules();
 });
 
 afterEach(() => {
   delete process.env.BWF_API_URL;
-  delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
-  delete process.env.NOSAM_PROXY_URL;
+  delete process.env.PLATFORM_REGISTRY_DIR;
+  delete process.env.PLATFORM_PROXY_URL;
   delete process.env.BWF_TOKEN;
   for (const directory of directories.splice(0)) {
     rmSync(directory, { force: true, recursive: true });
@@ -95,24 +95,24 @@ describe('retired unscoped credentials', () => {
   it.each([{ account: 'token' }, { account: 'stagingToken' }])(
     'ignores the $account keychain destination until explicitly connected',
     async ({ account }) => {
-      const root = mkdtempSync(join(tmpdir(), 'nosam-auth-retired-project-'));
+      const root = mkdtempSync(join(tmpdir(), 'platform-auth-retired-project-'));
       directories.push(root);
-      state.passwords.set(`dev.nosam.cli:${account}`, 'retired-token');
+      state.passwords.set(`dev.platform.cli:${account}`, 'retired-token');
       const { getAccountCredential, getApiUrl, getToken } = await import('../../src/cli/auth.ts');
 
       expect(() => getAccountCredential()).toThrow('bwf connect');
       expect(() => getApiUrl(root)).toThrow('bwf connect');
       expect(getToken(root)).toBeNull();
-      expect(state.passwords).toEqual(new Map([[`dev.nosam.cli:${account}`, 'retired-token']]));
+      expect(state.passwords).toEqual(new Map([[`dev.platform.cli:${account}`, 'retired-token']]));
     },
   );
 
   it.each([
-    { account: 'token', apiUrl: 'https://nosam.buildwithfriends.dev' },
+    { account: 'token', apiUrl: 'https://platform.buildwithfriends.dev' },
     { account: 'stagingToken', apiUrl: 'https://api.staging.void.cloud' },
     { account: 'token', apiUrl: 'https://legacy-platform.example.test' },
   ])('ignores the old file credential and $apiUrl selection', async ({ account, apiUrl }) => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-auth-retired-project-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-auth-retired-project-'));
     directories.push(root);
     const configDirectory = join(state.home, '.bwf');
     mkdirSync(configDirectory, { recursive: true });
@@ -129,27 +129,27 @@ describe('retired unscoped credentials', () => {
   });
 
   it('uses and removes only the modern credential for the selected origin', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-auth-retired-project-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-auth-retired-project-'));
     directories.push(root);
     const apiUrl = 'https://api.staging.void.cloud';
     process.env.BWF_API_URL = apiUrl;
     await connect(apiUrl);
     const { platformCredentialAccount } = await import('../../src/cli/platform-registry.ts');
-    const account = `dev.nosam.cli:${platformCredentialAccount(apiUrl)}`;
-    const productionAccount = `dev.nosam.cli:${platformCredentialAccount('https://nosam.buildwithfriends.dev')}`;
+    const account = `dev.platform.cli:${platformCredentialAccount(apiUrl)}`;
+    const productionAccount = `dev.platform.cli:${platformCredentialAccount('https://platform.buildwithfriends.dev')}`;
     state.passwords.set(account, 'current-token');
     state.passwords.set(productionAccount, 'production-token');
-    state.passwords.set('dev.nosam.cli:stagingToken', 'retired-token');
+    state.passwords.set('dev.platform.cli:stagingToken', 'retired-token');
     const { getToken, removeToken } = await import('../../src/cli/auth.ts');
     expect(getToken(root)).toBe('current-token');
     expect(removeToken(root)).toBe(true);
     expect(getToken(root)).toBeNull();
     expect(state.passwords.get(productionAccount)).toBe('production-token');
-    expect(state.passwords.get('dev.nosam.cli:stagingToken')).toBe('retired-token');
+    expect(state.passwords.get('dev.platform.cli:stagingToken')).toBe('retired-token');
   });
 
   it('rejects token-only CI on clean runners', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-auth-legacy-ci-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-auth-legacy-ci-'));
     directories.push(root);
     process.env.BWF_TOKEN = 'ci-token';
     const { getApiUrl, getProxyUrl, getSiteDomain, getToken } =
@@ -195,7 +195,7 @@ describe('retired unscoped credentials', () => {
     const { platformCredentialAccount } = await import('../../src/cli/platform-registry.ts');
 
     expect(readPlatformToken(`${origin}/`)).toBe('origin-file-token');
-    expect(state.passwords.get(`dev.nosam.cli:${platformCredentialAccount(origin)}`)).toBe(
+    expect(state.passwords.get(`dev.platform.cli:${platformCredentialAccount(origin)}`)).toBe(
       'origin-file-token',
     );
     expect(JSON.parse(readFileSync(configPath, 'utf8'))).toEqual({});
@@ -203,13 +203,13 @@ describe('retired unscoped credentials', () => {
   });
 
   it('lets an explicit platform connection supersede a legacy hosted selection', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-auth-platform-selection-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-auth-platform-selection-'));
     directories.push(root);
     const configDirectory = join(state.home, '.bwf');
     mkdirSync(configDirectory, { recursive: true });
     writeFileSync(
       join(configDirectory, 'config.json'),
-      JSON.stringify({ api: 'https://nosam.buildwithfriends.dev', token: 'legacy-token' }),
+      JSON.stringify({ api: 'https://platform.buildwithfriends.dev', token: 'legacy-token' }),
     );
     const { getAccountCredential, getApiUrl, getSiteDomain } =
       await import('../../src/cli/auth.ts');
@@ -244,7 +244,7 @@ describe('retired unscoped credentials', () => {
 
 describe('environment token destinations', () => {
   async function connectedProject(withProject: boolean) {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-auth-origin-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-auth-origin-'));
     directories.push(root);
     const origin = 'https://other-platform.example.test';
     const { savePlatformConnection, platformCredentialAccount } =
@@ -259,7 +259,7 @@ describe('environment token destinations', () => {
       proxyUrl: 'https://proxy.example.test',
     });
     state.passwords.set(
-      `dev.nosam.cli:${platformCredentialAccount(origin)}`,
+      `dev.platform.cli:${platformCredentialAccount(origin)}`,
       'other-platform-saved-token',
     );
     if (withProject) {
@@ -269,7 +269,7 @@ describe('environment token destinations', () => {
         JSON.stringify({
           projectId: 'project',
           slug: 'app',
-          platform: 'nosam',
+          platform: 'platform',
           platformUrl: origin,
         }),
       );
@@ -328,7 +328,7 @@ describe('environment token destinations', () => {
   });
 
   it('does not send an unscoped production token to a staging project', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-auth-staging-origin-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-auth-staging-origin-'));
     directories.push(root);
     mkdirSync(join(root, '.bwf'));
     writeFileSync(join(root, '.bwf', 'project.json'), JSON.stringify({ bwfInternalStaging: true }));

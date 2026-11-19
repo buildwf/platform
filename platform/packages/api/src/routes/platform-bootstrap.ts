@@ -92,7 +92,7 @@ app.post(
     if (!secret || !installationId) {
       return context.json({ error: 'not_found' }, 404);
     }
-    const signature = context.req.header('X-Nosam-Auth-Setup');
+    const signature = context.req.header('X-Platform-Auth-Setup');
     if (!signature || context.req.header('Content-Type')?.split(';')[0] !== 'application/json') {
       return context.json({ error: 'setup_authority_required' }, 403);
     }
@@ -169,7 +169,7 @@ app.get('/setup', async (context) => {
         '<pre><code>bwf platform repair ' +
         escapeHtml(pending.installation_id) +
         '</code></pre>' +
-        '<p class="nosam-auth-note">If installation was interrupted, resume the original install command instead.</p>',
+        '<p class="platform-auth-note">If installation was interrupted, resume the original install command instead.</p>',
       410,
     );
   }
@@ -180,7 +180,7 @@ app.get('/setup', async (context) => {
       'Set up your administrator',
       'Enter the setup code printed by the installer. You’ll sign in and review the account before it becomes the first administrator.',
     ) +
-      '<form class="nosam-auth-form" method="post" action="/auth/bootstrap"><label for="setup-code">Setup code</label><input id="setup-code" name="code" type="password" autocomplete="one-time-code" placeholder="Enter your setup code" required><button class="nosam-auth-button nosam-auth-button-primary" type="submit">Continue with ' +
+      '<form class="platform-auth-form" method="post" action="/auth/bootstrap"><label for="setup-code">Setup code</label><input id="setup-code" name="code" type="password" autocomplete="one-time-code" placeholder="Enter your setup code" required><button class="platform-auth-button platform-auth-button-primary" type="submit">Continue with ' +
       escapeHtml(revision?.configuration.label ?? pending.connection_id) +
       '</button></form>',
   );
@@ -201,14 +201,14 @@ app.post('/auth/bootstrap/confirm', bodyLimit({ maxSize: 4096 }), async (context
   if (body.confirm !== 'yes') {
     return context.json({ error: 'confirmation_required' }, 400);
   }
-  const proof = getCookie(context, 'nosam_bootstrap_confirm') ?? '';
+  const proof = getCookie(context, 'platform_bootstrap_confirm') ?? '';
   const result = await confirmBootstrapIdentity(
     context.get('db'),
     context.env,
     proof,
     context.get('companyIdentity'),
   );
-  deleteCookie(context, 'nosam_bootstrap_confirm', { path: '/auth/bootstrap/confirm' });
+  deleteCookie(context, 'platform_bootstrap_confirm', { path: '/auth/bootstrap/confirm' });
   setCookie(context, 'admin_token', result.token, {
     httpOnly: true,
     secure: true,

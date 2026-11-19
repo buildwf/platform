@@ -8,7 +8,7 @@ import { devTriggersHintPlugin } from '../../src/plugin-dev-triggers-hint.ts';
 const tempDirs: Array<string> = [];
 
 function createTempRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-dev-hint-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-dev-hint-'));
   tempDirs.push(root);
   return root;
 }
@@ -70,8 +70,8 @@ describe('devTriggersHintPlugin', () => {
 
     const output = log.mock.calls.map((c) => String(c[0] ?? '')).join('\n');
     expect(output).toContain('Detected 1 cron');
-    expect(output).toContain('/__nosam/scheduled');
-    expect(output).toContain('x-nosam-dev-trigger: dev-token-test');
+    expect(output).toContain('/__platform/scheduled');
+    expect(output).toContain('x-platform-dev-trigger: dev-token-test');
     expect(output).toContain('"cron":"0 * * * *"');
   });
 
@@ -94,8 +94,8 @@ describe('devTriggersHintPlugin', () => {
 
     const output = log.mock.calls.map((c) => String(c[0] ?? '')).join('\n');
     expect(output).toContain('Detected 2 crons and 1 queue');
-    expect(output).toContain('/__nosam/queue');
-    expect(output).toContain('x-nosam-dev-trigger: dev-token-test');
+    expect(output).toContain('/__platform/queue');
+    expect(output).toContain('x-platform-dev-trigger: dev-token-test');
     expect(output).toContain('"queue":"emails"');
   });
 });

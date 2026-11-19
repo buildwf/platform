@@ -31,7 +31,7 @@ import { getHookHandler } from '../helpers/vite-hooks.ts';
 const tempDirs: Array<string> = [];
 
 function createTempRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-routing-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-routing-'));
   tempDirs.push(root);
   mkdirSync(join(root, 'routes'), { recursive: true });
   mkdirSync(join(root, 'src'), { recursive: true });
@@ -39,7 +39,7 @@ function createTempRoot(): string {
 }
 
 function createBareTempRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-routing-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-routing-'));
   tempDirs.push(root);
   return root;
 }
@@ -96,7 +96,7 @@ function fakeDevServer(
     },
     environments: {
       ...extraEnvironments,
-      nosam_worker: {
+      platform_worker: {
         moduleGraph: {
           getModuleById(id: string) {
             return modules.get(id);
@@ -129,9 +129,9 @@ async function startDevServer(
 }
 
 const PAGE_MODULE_IDS = [
-  '\0virtual:nosam-pages-renderer',
-  '\0virtual:nosam-pages-client',
-  'virtual:nosam-routes',
+  '\0virtual:platform-pages-renderer',
+  '\0virtual:platform-pages-client',
+  'virtual:platform-routes',
 ];
 
 describe('routingPlugin', () => {
@@ -294,17 +294,17 @@ describe('routingPlugin', () => {
     resolveConfig(plugin, 'serve');
 
     expect(resolveId.call({ environment: { name: 'client' } }, '@builtbyfriends/bwf/client/react')).toBe(
-      'virtual:nosam-client-browser:react',
+      'virtual:platform-client-browser:react',
     );
     expect(
-      resolveId.call({ environment: { name: 'nosam_worker' } }, '@builtbyfriends/bwf/client/react'),
-    ).toBe('virtual:nosam-client-worker:react');
+      resolveId.call({ environment: { name: 'platform_worker' } }, '@builtbyfriends/bwf/client/react'),
+    ).toBe('virtual:platform-client-worker:react');
 
-    const browserCode = await load('virtual:nosam-client-browser:react');
+    const browserCode = await load('virtual:platform-client-browser:react');
     expect(browserCode).toContain('auth-client-react.mjs');
     expect(browserCode).not.toContain('cloudflare:workers');
 
-    const workerCode = await load('virtual:nosam-client-worker:react');
+    const workerCode = await load('virtual:platform-client-worker:react');
     expect(workerCode).toContain('auth-client-react.mjs');
     expect(workerCode).toContain('cloudflare:workers');
   });
@@ -324,10 +324,10 @@ describe('routingPlugin', () => {
     await runBuildStart(plugin);
 
     await expect(
-      load.call({ environment: { name: 'client' } }, 'virtual:nosam-routes'),
+      load.call({ environment: { name: 'client' } }, 'virtual:platform-routes'),
     ).rejects.toThrow('server-only');
     await expect(
-      load.call({ environment: { name: 'nosam_worker' } }, 'virtual:nosam-routes'),
+      load.call({ environment: { name: 'platform_worker' } }, 'virtual:platform-routes'),
     ).resolves.toContain('secret-dev-token');
   });
 
@@ -349,7 +349,7 @@ describe('routingPlugin', () => {
         apiWorkerFirst: true,
         assetConfig: expect.objectContaining({
           not_found_handling: 'single-page-application',
-          run_worker_first: ['/api', '/api/*', '/__nosam', '/__nosam/*'],
+          run_worker_first: ['/api', '/api/*', '/__platform', '/__platform/*'],
         }),
         workerFirst: false,
       },
@@ -425,7 +425,7 @@ describe('routingPlugin', () => {
     );
     await emit('change', routePath);
 
-    expect(invalidated).toEqual(['virtual:nosam-routes']);
+    expect(invalidated).toEqual(['virtual:platform-routes']);
   });
 
   it.each([
@@ -453,7 +453,7 @@ describe('routingPlugin', () => {
     const typesPath = join(root, '.bwf', 'routes.d.ts');
     const previousTypes = readFileSync(typesPath, 'utf-8');
     const { server, emit, invalidated, logError } = await startDevServer(plugin, [
-      'virtual:nosam-routes',
+      'virtual:platform-routes',
     ]);
 
     expect(previousTypes).not.toContain('POST: {');
@@ -467,7 +467,7 @@ describe('routingPlugin', () => {
       );
     } else {
       vi.spyOn(
-        server.environments.nosam_worker.moduleGraph,
+        server.environments.platform_worker.moduleGraph,
         'invalidateModule',
       ).mockImplementationOnce(() => {
         throw new Error('Transient module invalidation failure');
@@ -494,7 +494,7 @@ describe('routingPlugin', () => {
     writeFileSync(routePath, 'export const GET = () => new Response("updated");' + postExport);
     await emit('change', routePath);
 
-    expect(invalidated).toEqual(['virtual:nosam-routes']);
+    expect(invalidated).toEqual(['virtual:platform-routes']);
     expect(readFileSync(typesPath, 'utf-8').includes('POST: {')).toBe(changesExports);
 
     writeFileSync(
@@ -503,7 +503,7 @@ describe('routingPlugin', () => {
     );
     await emit('change', routePath);
 
-    expect(invalidated).toEqual(['virtual:nosam-routes']);
+    expect(invalidated).toEqual(['virtual:platform-routes']);
   });
 
   it('regenerates for an environment file save that leaves the scan unchanged', async () => {
@@ -516,16 +516,16 @@ describe('routingPlugin', () => {
     const plugin = createRoutingPlugin(root, { isAuthEnabled: () => false });
     resolveConfig(plugin, 'serve');
     await runBuildStart(plugin);
-    const { emit, invalidated } = await startDevServer(plugin, ['virtual:nosam-routes']);
+    const { emit, invalidated } = await startDevServer(plugin, ['virtual:platform-routes']);
 
     writeFileSync(envPath, 'export default { example: true };');
     await emit('change', envPath);
-    expect(invalidated).toEqual(['virtual:nosam-routes']);
+    expect(invalidated).toEqual(['virtual:platform-routes']);
 
     // A later body save is back on the fast path.
     writeFileSync(routePath, 'export const GET = () => new Response("updated");');
     await emit('change', routePath);
-    expect(invalidated).toEqual(['virtual:nosam-routes']);
+    expect(invalidated).toEqual(['virtual:platform-routes']);
   });
 
   it('regenerates a reverted edit after the update before it failed', async () => {
@@ -538,10 +538,10 @@ describe('routingPlugin', () => {
     resolveConfig(plugin, 'serve');
     await runBuildStart(plugin);
     const { server, emit, invalidated, logError } = await startDevServer(plugin, [
-      'virtual:nosam-routes',
+      'virtual:platform-routes',
     ]);
     vi.spyOn(
-      server.environments.nosam_worker.moduleGraph,
+      server.environments.platform_worker.moduleGraph,
       'invalidateModule',
     ).mockImplementationOnce(() => {
       throw new Error('Transient module invalidation failure');
@@ -556,7 +556,7 @@ describe('routingPlugin', () => {
     writeFileSync(routePath, get);
     await emit('change', routePath);
     expect(readFileSync(join(root, '.bwf', 'routes.d.ts'), 'utf8')).not.toContain('POST: {');
-    expect(invalidated).toEqual(['virtual:nosam-routes']);
+    expect(invalidated).toEqual(['virtual:platform-routes']);
   });
 
   it('repairs a generated file another process rewrote', async () => {
@@ -567,7 +567,7 @@ describe('routingPlugin', () => {
     const plugin = createRoutingPlugin(root, { isAuthEnabled: () => false });
     resolveConfig(plugin, 'serve');
     await runBuildStart(plugin);
-    const { emit, invalidated } = await startDevServer(plugin, ['virtual:nosam-routes']);
+    const { emit, invalidated } = await startDevServer(plugin, ['virtual:platform-routes']);
     const typesPath = join(root, '.bwf', 'routes.d.ts');
     const types = readFileSync(typesPath, 'utf8');
 
@@ -577,9 +577,9 @@ describe('routingPlugin', () => {
     await emit('change', routePath);
 
     expect(readFileSync(typesPath, 'utf8')).toBe(types);
-    expect(invalidated).toEqual(['virtual:nosam-routes']);
+    expect(invalidated).toEqual(['virtual:platform-routes']);
     await emit('change', routePath);
-    expect(invalidated).toEqual(['virtual:nosam-routes']);
+    expect(invalidated).toEqual(['virtual:platform-routes']);
   });
 
   it.each(['startup', 'another save'])('serializes regeneration with %s', async (overlap) => {
@@ -595,7 +595,7 @@ describe('routingPlugin', () => {
     );
     const plugin = routingPlugin(root, { isAuthEnabled: () => true, getApplicationAnalysis });
     resolveConfig(plugin, 'serve');
-    const { emit, invalidated } = await startDevServer(plugin, ['virtual:nosam-routes']);
+    const { emit, invalidated } = await startDevServer(plugin, ['virtual:platform-routes']);
     if (overlap === 'another save') {
       await runBuildStart(plugin);
     }
@@ -636,7 +636,7 @@ describe('routingPlugin', () => {
     await emit('change', routePath);
     expect(readFileSync(typesPath, 'utf8')).toContain('POST: {');
     expect(readFileSync(typesPath, 'utf8')).not.toContain('DELETE: {');
-    expect(invalidated).toEqual(['virtual:nosam-routes']);
+    expect(invalidated).toEqual(['virtual:platform-routes']);
   });
 
   it.each([
@@ -662,16 +662,16 @@ describe('routingPlugin', () => {
     const plugin = createRoutingPlugin(root, { isAuthEnabled: () => true });
     resolveConfig(plugin, 'serve');
     await runBuildStart(plugin);
-    const { emit, invalidated } = await startDevServer(plugin, ['virtual:nosam-routes']);
+    const { emit, invalidated } = await startDevServer(plugin, ['virtual:platform-routes']);
     writeFileSync(configPath, 'export default ' + JSON.stringify(config));
     writeFileSync(routePath, 'export const GET = () => new Response("updated");');
     await emit('change', routePath);
 
     const load = getHookHandler(plugin.load) as (id: string) => Promise<string>;
-    expect(await load('virtual:nosam-routes')).toContain(expected);
-    expect(invalidated).toEqual(['virtual:nosam-routes']);
+    expect(await load('virtual:platform-routes')).toContain(expected);
+    expect(invalidated).toEqual(['virtual:platform-routes']);
     await emit('change', routePath);
-    expect(invalidated).toEqual(['virtual:nosam-routes']);
+    expect(invalidated).toEqual(['virtual:platform-routes']);
   });
 
   it.each([
@@ -684,7 +684,7 @@ describe('routingPlugin', () => {
     const plugin = createRoutingPlugin(root, { isAuthEnabled: () => auth });
     resolveConfig(plugin, 'serve');
     await runBuildStart(plugin);
-    const { emit, invalidated } = await startDevServer(plugin, ['virtual:nosam-routes']);
+    const { emit, invalidated } = await startDevServer(plugin, ['virtual:platform-routes']);
     const outputs = files.map((file) => {
       const path = join(root, '.bwf', file);
       const content = readFileSync(path, 'utf8');
@@ -696,9 +696,9 @@ describe('routingPlugin', () => {
     for (const { path, content } of outputs) {
       expect(readFileSync(path, 'utf8')).toBe(content);
     }
-    expect(invalidated).toEqual(['virtual:nosam-routes']);
+    expect(invalidated).toEqual(['virtual:platform-routes']);
     await emit('change', routePath);
-    expect(invalidated).toEqual(['virtual:nosam-routes']);
+    expect(invalidated).toEqual(['virtual:platform-routes']);
   });
 
   it.each([
@@ -713,7 +713,7 @@ describe('routingPlugin', () => {
         getHookHandler(plugin.config) as (config: UserConfig, env: ConfigEnv) => UserConfig | void
       )({}, { command, mode: 'development', isPreview });
       expect(Object.keys(config?.environments ?? {})).toEqual(
-        declared ? ['nosam_auth_config'] : [],
+        declared ? ['platform_auth_config'] : [],
       );
     },
   );
@@ -723,8 +723,8 @@ describe('routingPlugin', () => {
     const hotUpdate = getHookHandler(plugin.hotUpdate) as (this: {
       environment: { name: string };
     }) => unknown;
-    expect(hotUpdate.call({ environment: { name: 'nosam_auth_config' } })).toEqual([]);
-    expect(hotUpdate.call({ environment: { name: 'nosam_worker' } })).toBeUndefined();
+    expect(hotUpdate.call({ environment: { name: 'platform_auth_config' } })).toEqual([]);
+    expect(hotUpdate.call({ environment: { name: 'platform_worker' } })).toBeUndefined();
   });
 
   it('resolves deeper better-auth subpaths past the dev client aliases', async () => {
@@ -799,7 +799,7 @@ describe('routingPlugin', () => {
     });
     try {
       const logError = vi.spyOn(server.config.logger, 'error');
-      const environment = server.environments.nosam_auth_config as RunnableDevEnvironment;
+      const environment = server.environments.platform_auth_config as RunnableDevEnvironment;
       const imports = vi.spyOn(environment.runner, 'import');
       const schemaPath = join(root, '.bwf', 'better-auth-schema.ts');
       const schema = () => readFileSync(schemaPath, 'utf8');
@@ -857,14 +857,14 @@ describe('routingPlugin', () => {
       isAuthEnabled: () => false,
       onDevAssetRoutingPolicyChange: onPolicyChange,
     });
-    const { emit, invalidated } = await startDevServer(plugin, ['virtual:nosam-routes']);
+    const { emit, invalidated } = await startDevServer(plugin, ['virtual:platform-routes']);
 
     const routePath = join(root, 'src', 'routes', 'api.ts');
     writeFileSync(routePath, 'export const GET = () => new Response("ok");\n');
     await emit('add', routePath);
 
     expect(onPolicyChange).toHaveBeenCalled();
-    expect(invalidated).toEqual(['virtual:nosam-routes']);
+    expect(invalidated).toEqual(['virtual:platform-routes']);
     expect(readFileSync(join(root, '.bwf', 'routes.d.ts'), 'utf-8')).toContain(
       '../src/routes/api.ts',
     );
@@ -897,9 +897,9 @@ describe('routingPlugin', () => {
       });
       resolveConfig(plugin, command);
 
-      const code = await load('virtual:nosam-routes');
-      expect(code).toContain('app.post("/__nosam/scheduled"');
-      expect(code).toContain(`const __NOSAM_SERVE = ${serve};`);
+      const code = await load('virtual:platform-routes');
+      expect(code).toContain('app.post("/__platform/scheduled"');
+      expect(code).toContain(`const __PLATFORM_SERVE = ${serve};`);
     },
   );
 
@@ -914,7 +914,7 @@ describe('routingPlugin', () => {
       const root = createTempRoot();
       const plugin = createRoutingPlugin(root, {
         isAuthEnabled: () => false,
-        live: { bindingName: 'BWF_LIVE', className: 'NosamLiveStreamDurableObject' },
+        live: { bindingName: 'BWF_LIVE', className: 'PlatformLiveStreamDurableObject' },
       });
       const entryPath = join(root, '.bwf', 'entry.ts');
       expect(readFileSync(entryPath, 'utf-8')).not.toContain('__setLiveDev');
@@ -941,7 +941,7 @@ describe('routingPlugin', () => {
   ])('writes the HTTPS redirect into the Worker entry for $name', async (testCase) => {
     const { command, enabled, managed, emitted = false } = testCase;
     if (managed) {
-      vi.stubEnv('NOSAM_DEPLOY_PROJECT_ID', 'project-id');
+      vi.stubEnv('PLATFORM_DEPLOY_PROJECT_ID', 'project-id');
     }
     try {
       const root = createTempRoot();
@@ -957,7 +957,7 @@ describe('routingPlugin', () => {
       expect(entry.includes('alwaysUseHttps: true')).toBe(emitted);
       // The app itself never redirects, so in-process `fetch` stays on HTTP.
       const load = getHookHandler(plugin.load) as (id: string) => Promise<string | undefined>;
-      expect(await load('virtual:nosam-routes')).not.toContain('alwaysUseHttps');
+      expect(await load('virtual:platform-routes')).not.toContain('alwaysUseHttps');
     } finally {
       vi.unstubAllEnvs();
     }
@@ -1087,7 +1087,7 @@ describe('routingPlugin native asset Worker bypass', () => {
   });
 
   it.each<[string, (root: string) => void, Parameters<typeof runClientBuild>[1]?, string?]>([
-    ['managed builds', () => vi.stubEnv('NOSAM_DEPLOY_PROJECT_ID', 'project-id')],
+    ['managed builds', () => vi.stubEnv('PLATFORM_DEPLOY_PROJECT_ID', 'project-id')],
     [
       'global middleware',
       (root) => {

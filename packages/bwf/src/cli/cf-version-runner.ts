@@ -816,7 +816,7 @@ export function createCfVersionRunner(options: {
       if (!record(raw) || raw.name !== workerName) {
         return failed('The Cloudflare trigger snapshot was not readable.');
       }
-      const directory = mkdtempSync(join(tmpdir(), 'nosam-cf-triggers-'));
+      const directory = mkdtempSync(join(tmpdir(), 'platform-cf-triggers-'));
       try {
         cpSync(join(output.directory, '.cloudflare'), join(directory, '.cloudflare'), {
           recursive: true,

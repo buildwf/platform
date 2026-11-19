@@ -1,4 +1,4 @@
-import { deriveProxyInternalAuth, PROXY_INTERNAL_AUTH_HEADER } from '@nosamcloud/api/proxy-token';
+import { deriveProxyInternalAuth, PROXY_INTERNAL_AUTH_HEADER } from '@platform-service/api/proxy-token';
 import { hmacSign } from './hmac.ts';
 
 // In-memory cache: resource mappings are stable (only change on deploy).
@@ -73,7 +73,7 @@ export async function verifyProjectDeployAccess(
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-nosam-internal': token,
+        'x-platform-internal': token,
       },
       body: JSON.stringify({
         userId,

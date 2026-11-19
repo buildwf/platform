@@ -36,8 +36,8 @@ import { createProjectForUser, ProjectCreateError, scheduleAfterResponse } from 
 const app = new Hono<ApiEnv>();
 const FLOW_SECONDS = 300;
 const TOKEN_SECONDS = 3600;
-const browserCookie = 'nosam_oauth_browser';
-const userCookie = 'nosam_oauth_user';
+const browserCookie = 'platform_oauth_browser';
+const userCookie = 'platform_oauth_user';
 const until = (seconds: number) => new Date(Date.now() + seconds * 1000).toISOString();
 const h = escapeBrowserHtml;
 export function oauthMetadata(context: Context<ApiEnv>) {
@@ -188,11 +188,11 @@ async function loginPage(context: Context<ApiEnv>, id: string) {
     context,
     'Sign in to Platform',
     browserPageLead('Sign in to Platform', 'Choose your platform login method.') +
-      '<div class="nosam-auth-actions">' +
+      '<div class="platform-auth-actions">' +
       methods
         .map(
           (method) =>
-            `<a class="nosam-auth-button nosam-auth-button-primary" href="/oauth/login?request=${h(id)}&amp;provider=${h(encodeURIComponent(method.id))}">${h(method.label)}</a>`,
+            `<a class="platform-auth-button platform-auth-button-primary" href="/oauth/login?request=${h(id)}&amp;provider=${h(encodeURIComponent(method.id))}">${h(method.label)}</a>`,
         )
         .join('') +
       '</div>',
@@ -241,7 +241,7 @@ async function consentPage(context: Context<ApiEnv>, request: typeof oauthReques
       deploy ? 'Approve publish' : 'Connect application',
       `${client.name} by ${client.operator}`,
     ) +
-      `<p>${h(new URL(request.data.redirectUri).origin)}</p><p>Signed in as ${h(context.get('user').login)}.</p><p>${h(details)}</p>${summary}<form class="nosam-auth-actions" method="post" action="/oauth/approve"><input type="hidden" name="request" value="${h(request.id)}"><button class="nosam-auth-button nosam-auth-button-primary" name="decision" value="approve">${deploy ? 'Approve publish' : 'Connect'}</button><button class="nosam-auth-button" name="decision" value="deny">Cancel</button></form>`,
+      `<p>${h(new URL(request.data.redirectUri).origin)}</p><p>Signed in as ${h(context.get('user').login)}.</p><p>${h(details)}</p>${summary}<form class="platform-auth-actions" method="post" action="/oauth/approve"><input type="hidden" name="request" value="${h(request.id)}"><button class="platform-auth-button platform-auth-button-primary" name="decision" value="approve">${deploy ? 'Approve publish' : 'Connect'}</button><button class="platform-auth-button" name="decision" value="deny">Cancel</button></form>`,
   );
 }
 app.use('*', async (context, next) => {
@@ -926,7 +926,7 @@ app.get('/connections', async (context) => {
       grants
         .map(
           ({ grant, client }) =>
-            `<form method="post" action="/oauth/connections/revoke"><p>${h(client.name)} by ${h(client.operator)}</p><p>${grant.scopes.includes('preview:deploy') ? 'Identity access and private previews.' : 'Identity access.'} Each publish requires approval.</p><input type="hidden" name="grant" value="${h(grant.id)}"><button class="nosam-auth-button" type="submit">Disconnect</button></form>`,
+            `<form method="post" action="/oauth/connections/revoke"><p>${h(client.name)} by ${h(client.operator)}</p><p>${grant.scopes.includes('preview:deploy') ? 'Identity access and private previews.' : 'Identity access.'} Each publish requires approval.</p><input type="hidden" name="grant" value="${h(grant.id)}"><button class="platform-auth-button" type="submit">Disconnect</button></form>`,
         )
         .join('') +
       (grants.length ? '' : '<p>No connected apps.</p>'),

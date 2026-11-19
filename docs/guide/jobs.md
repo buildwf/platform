@@ -55,7 +55,7 @@ Jobs sharing a cron expression each run once per invocation. bwf waits for all m
 Schedules don't fire automatically in local development. Test a job by sending a request to bwf's development endpoint:
 
 ```
-POST /__nosam/scheduled
+POST /__platform/scheduled
 Content-Type: application/json
 { "cron": "<expression>", "scheduledTime": <unix_ms> }
 ```
@@ -65,9 +65,9 @@ Set `cron` to an expression exported by your job. A successful call returns `{ "
 The endpoint requires a local dev trigger token. bwf prints a paste-ready curl command with the current token when the dev server starts.
 
 ```bash
-curl -X POST http://localhost:5173/__nosam/scheduled \
+curl -X POST http://localhost:5173/__platform/scheduled \
   -H "Content-Type: application/json" \
-  -H "x-nosam-dev-trigger: <printed-token>" \
+  -H "x-platform-dev-trigger: <printed-token>" \
   -d '{"cron":"0 * * * *","scheduledTime":'"$(date +%s000)"'}'
 ```
 

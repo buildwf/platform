@@ -41,7 +41,7 @@ const skipCloudflareRequireConversion: Plugin = {
 
 it('serves the Node built-ins that CommonJS requires in a MySQL Worker build from imports', async () => {
   // Windows runners report a short-name temp path, which Vite refuses to serve.
-  const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'nosam-worker-require-')));
+  const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'platform-worker-require-')));
   roots.push(root);
   writeFileSync(join(root, 'package.json'), JSON.stringify({ type: 'module' }));
   writeFileSync(
@@ -57,7 +57,7 @@ it('serves the Node built-ins that CommonJS requires in a MySQL Worker build fro
   mkdirSync(join(root, 'routes/api'), { recursive: true });
   writeFileSync(
     join(root, 'routes/api/size.ts'),
-    "import { size } from '../../lib/size.cjs';\nexport const GET = () => Response.json({ size: size('nosam') });\n",
+    "import { size } from '../../lib/size.cjs';\nexport const GET = () => Response.json({ size: size('platform') });\n",
   );
   vi.spyOn(process, 'cwd').mockReturnValue(root);
 

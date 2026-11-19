@@ -66,7 +66,7 @@ describe('Cloudflare queue names', () => {
   });
 
   it('reads the queue name map only inside a deploy build', () => {
-    vi.stubEnv('NOSAM_CLOUDFLARE_QUEUE_NAMES', '{"jobs":"app-jobs"}');
+    vi.stubEnv('PLATFORM_CLOUDFLARE_QUEUE_NAMES', '{"jobs":"app-jobs"}');
     vi.stubEnv('BWF_CLOUDFLARE_DEPLOY_BUILD', '');
     expect(readDeployBuildQueueNames()).toBeUndefined();
     vi.stubEnv('BWF_CLOUDFLARE_DEPLOY_BUILD', '1');
@@ -77,9 +77,9 @@ describe('Cloudflare queue names', () => {
     'rejects the queue name map %s',
     (raw) => {
       vi.stubEnv('BWF_CLOUDFLARE_DEPLOY_BUILD', '1');
-      vi.stubEnv('NOSAM_CLOUDFLARE_QUEUE_NAMES', raw);
+      vi.stubEnv('PLATFORM_CLOUDFLARE_QUEUE_NAMES', raw);
       expect(() => readDeployBuildQueueNames()).toThrow(
-        'queue: NOSAM_CLOUDFLARE_QUEUE_NAMES is not a valid queue name map.',
+        'queue: PLATFORM_CLOUDFLARE_QUEUE_NAMES is not a valid queue name map.',
       );
     },
   );

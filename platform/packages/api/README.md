@@ -1,4 +1,4 @@
-# @nosamcloud/api
+# @platform-service/api
 
 Control-plane API and administrator UI for a Platform.
 
@@ -141,7 +141,7 @@ HMAC. See [Platform Development](../../../docs/guide/platform/development/runtim
 - `POST /internal/verify-owner/:projectId` — legacy URL that live-checks the caller's project deploy capability
 
 `resolve-resource` and `resolve-worker` authenticate
-the proxy with its own key (`x-nosam-proxy-internal`) and do not accept project
+the proxy with its own key (`x-platform-proxy-internal`) and do not accept project
 tokens. `revalidate` checks the project token forwarded by the proxy against
 the project's accept floor (see the proxy README).
 
@@ -232,14 +232,14 @@ A successful login signs a JWT and redirects back:
 
 The CLI entrypoint is `bwf auth login`, not `bwf login`.
 
-Dashboard auth uses the same JWT model, stored in the `nosam_token` cookie.
+Dashboard auth uses the same JWT model, stored in the `platform_token` cookie.
 
 ## Deploy Flow
 
 `POST /projects/:id/deploy` handles both worker and static deploys. Before either branch runs, the deploy endpoint validates the manifest wire-shape — including `redirectRules` / `fallbackRules` structure and destination constraints (path-absolute, no embedded query on `status: 200` entries) — so malformed routing rules are rejected before any resources are provisioned. See [`src/routes/deploy.ts`](./src/routes/deploy.ts).
 
 Queued deployment input uses the existing R2 staging marker
-`deployment-inputs/<projectId>/<attemptId>/receipt-nosam-platform-<kind>`, where
+`deployment-inputs/<projectId>/<attemptId>/receipt-platform-<kind>`, where
 `kind` is `spa` for SPA manifests, `worker` for apps with Worker modules, or
 `static` for other apps without Worker modules. The marker
 identifies prepared deployment attempts, including cached redeploys and attempts
@@ -257,7 +257,7 @@ older `receipt` markers. No additional R2 write or analytics binding is needed.
 3. upload worker modules and assets to CF via `assets-upload-session`
 4. also mirror assets to platform `STATIC_ASSETS`/`STATIC_ASSETS_R2` and write a serving manifest to `ROUTING` (safety net for CF asset dedupe poisoning — see `meta/design-docs/0066`)
 5. upload a versioned worker: `user-{slug}-{deploymentId}`
-6. call `POST /__nosam/migrate` on that new worker
+6. call `POST /__platform/migrate` on that new worker
 7. update routing KV (with `assetManifestId`) and active domains only after migrations succeed
 8. mark the deployment live and run retention cleanup (evicts mirrored assets + serving manifests for deployments dropped from the retention window)
 
@@ -287,12 +287,12 @@ Projects send and receive mail through `@builtbyfriends/bwf/email`. The API auth
 
 ### Sender identity is per-environment
 
-The platform mail domain is a configured var, `EMAIL_SENDER_DOMAIN` — never a literal in code. Production and staging run different domains (`mail.void.cloud` / `mail.voidcloud.dev`), and the proxy builds its sender regex from the same var, so a hard-coded domain would make a staging send unroutable.
+The platform mail domain is a configured var, `EMAIL_SENDER_DOMAIN` — never a literal in code. Production and staging run different domains (`mail.buildwf.dev` / `mail.staging.buildwf.dev`), and the proxy builds its sender regex from the same var, so a hard-coded domain would make a staging send unroutable.
 
 A project's sender address is `<slug>+noreply@<EMAIL_SENDER_DOMAIN>`. Deployed user workers receive the two halves as plain-text bindings:
 
-- `__NOSAM_EMAIL_DOMAIN` — the value of `EMAIL_SENDER_DOMAIN`
-- `__NOSAM_PROJECT_SLUG` — the project slug, injected for **every** project (it predates this feature but used to be sandbox-only)
+- `__PLATFORM_EMAIL_DOMAIN` — the value of `EMAIL_SENDER_DOMAIN`
+- `__PLATFORM_PROJECT_SLUG` — the project slug, injected for **every** project (it predates this feature but used to be sandbox-only)
 
 The runtime defaults `from` from those two bindings and refuses to send when either is missing, rather than falling back to a baked-in domain.
 
@@ -437,8 +437,8 @@ From the repository root, with PostgreSQL and its client tools available:
 
 ```sh
 vp run build:core
-vp run --filter @nosamcloud/api setup --admin-email dev@example.com
-vp run --filter @nosamcloud/api dev --local --enable-containers=false --host localhost --port 8787
+vp run --filter @platform-service/api setup --admin-email dev@example.com
+vp run --filter @platform-service/api dev --local --enable-containers=false --host localhost --port 8787
 ```
 
 Open `http://localhost:8787/admin/`. Setup creates the local database, applies
@@ -474,9 +474,9 @@ Optional vars:
 - `DASHBOARD_URL` — optional frontend origin for project links
 - `PLATFORM_DISPLAY_NAME` — name shown on onboarding pages and emails
 - `EMAIL_FROM` — optional sender override for the `EMAIL` binding. Without it, an installation sends from `noreply@<EMAIL_SENDER_DOMAIN>` with `PLATFORM_DISPLAY_NAME` as the name
-- `NOSAM_PROXY_SERVICE`
+- `PLATFORM_PROXY_SERVICE`
 - `SITE_DOMAIN`
-- `EMAIL_SENDER_DOMAIN` — platform mail domain for this environment (`buildwf.dev` in production). Set on the proxy worker too, and handed to deployed user workers as `__NOSAM_EMAIL_DOMAIN`. See [Email](#email).
+- `EMAIL_SENDER_DOMAIN` — platform mail domain for this environment (`buildwf.dev` in production). Set on the proxy worker too, and handed to deployed user workers as `__PLATFORM_EMAIL_DOMAIN`. See [Email](#email).
 - `GITHUB_APP_ID` — Deploy-on-GitHub App identifier
 - `GITHUB_APP_PRIVATE_KEY` — PKCS#8 PEM (convert GitHub's PKCS#1 with `openssl pkcs8 -topk8 -nocrypt`)
 - `GITHUB_APP_SLUG` — App slug, used to build the install URL
@@ -487,7 +487,7 @@ Optional vars:
 The GitHub App secrets are optional: when unset, `/webhooks/github` and `/auth/github-oidc` return `503` and the rest of the worker runs normally. They are the App for Deploy-on-GitHub, separate from the sign-in OAuth app above. The ingress secret is also optional and does not enable any route unless the standalone Worker and service binding are configured.
 
 The core installer includes the email gateway and enables platform email when
-both `NOSAM_EMAIL_SENDER_DOMAIN` and `NOSAM_EMAIL_SHARED_ZONE_ID` are configured.
+both `PLATFORM_EMAIL_SENDER_DOMAIN` and `PLATFORM_EMAIL_SHARED_ZONE_ID` are configured.
 It sets `AUTH_REDIRECT_URI` to the platform's OAuth callback URL, and it sets
 `PLATFORM_DISPLAY_NAME` and `EMAIL_SENDER_DOMAIN`. Platform mail uses the origin
 of `AUTH_REDIRECT_URI` for links and comes from
@@ -495,7 +495,7 @@ of `AUTH_REDIRECT_URI` for links and comes from
 Cloud senders or dashboard links. Do not set these values or `EMAIL_FROM` on
 installed Workers in the Cloudflare dashboard. The next lifecycle command stops
 until the operator lets Platform replace that change; see
-[Platform Workers changed outside Platform](../../../docs/guide/platform/installation/maintenance.md#workers-changed-outside-nosam).
+[Platform Workers changed outside Platform](../../../docs/guide/platform/installation/maintenance.md#workers-changed-outside-platform).
 
 Administrators manage access with `bwf platform signup` and `bwf platform invitation`. Signup eligibility comes from the installation's own allowlist and bootstrap administrator configuration.
 

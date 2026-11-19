@@ -88,8 +88,8 @@ let env: TestEnv;
  * that hard-coded production's would pass against a route that ignored the
  * var entirely.
  */
-const MAIL_DOMAIN = 'mail.voidcloud.dev';
-const EMAIL_GATEWAY_ORIGIN = 'https://nosam-email-gateway-staging.voidzer0.workers.dev';
+const MAIL_DOMAIN = 'mail.staging.buildwf.dev';
+const EMAIL_GATEWAY_ORIGIN = 'https://platform-email-gateway-staging.voidzer0.workers.dev';
 
 type VerificationSend = {
   from: string;

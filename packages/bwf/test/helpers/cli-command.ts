@@ -36,10 +36,10 @@ export function captureOutput(): { output: () => string; restore: () => void } {
  * connected platform. Returns the directory so the caller can remove it.
  */
 export function setIsolatedHome(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'nosam-home-'));
+  const dir = mkdtempSync(join(tmpdir(), 'platform-home-'));
   process.env.HOME = dir;
   process.env.USERPROFILE = dir;
-  process.env.NOSAM_PLATFORM_REGISTRY_DIR = join(dir, 'registry');
+  process.env.PLATFORM_REGISTRY_DIR = join(dir, 'registry');
   savePlatformConnection({
     accountId: null,
     apiUrl: 'https://api.example.test',

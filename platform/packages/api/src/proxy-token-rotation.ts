@@ -154,7 +154,7 @@ export type RotationRunSummary = {
   retryAfterSeconds: number | null;
 };
 
-const PROXY_TOKEN_BINDING = '__NOSAM_PROXY_TOKEN';
+const PROXY_TOKEN_BINDING = '__PLATFORM_PROXY_TOKEN';
 const CLAIM_LEASE = sql`interval '15 minutes'`;
 const BUSY_RETRY_SECONDS = 120;
 
@@ -671,7 +671,7 @@ async function patchNext(tx: DbOrTx, ctx: StepContext, locked: LockedStep): Prom
       if (
         !native.some(
           (binding) =>
-            binding.name === '__NOSAM_DURABLE_DEPLOYMENT' && binding.text === row.deploymentId,
+            binding.name === '__PLATFORM_DURABLE_DEPLOYMENT' && binding.text === row.deploymentId,
         )
       ) {
         throw new Error('Active custom Durable Object release differs.');

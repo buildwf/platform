@@ -118,7 +118,7 @@ export function bwfPlugin(options?: {
     }
   };
   const implicitDeployGuard: Plugin = {
-    name: 'nosam:remove-implicit-cloudflare-deploy-pointer',
+    name: 'platform:remove-implicit-cloudflare-deploy-pointer',
     enforce: 'pre',
     config(_config, environment) {
       previewing = environment.isPreview === true;
@@ -166,7 +166,7 @@ export function bwfPlugin(options?: {
   const clientStubsPlugin = createClientStubsPlugin();
 
   // Generated server entries import the env module by its resolved file path.
-  // Prebundling a bare `nosam` runtime subpath creates another package module
+  // Prebundling a bare `platform` runtime subpath creates another package module
   // graph and therefore another envContext, so request bindings disappear for
   // the prebundled copy.
   const serverRuntimeOptimizerPlugin = createServerRuntimeOptimizerPlugin(dialect, () =>
@@ -311,7 +311,7 @@ export function bwfPlugin(options?: {
   // local dev and preview only. Production values come from remote secrets;
   // builds never turn local dotenv entries into deployable Worker vars.
   const envPlugin: Plugin = {
-    name: 'nosam:env',
+    name: 'platform:env',
     config(userConfig, { command, isPreview }) {
       viteCommand = command;
       // `dev` is the Vite dev server only. Every build, `bwf deploy`, and
@@ -321,7 +321,7 @@ export function bwfPlugin(options?: {
       bindings = application.bindings;
       authEnabled = application.authEnabled;
       // Re-resolve for the real environment.
-      managedCloudflareBuild = command === 'build' && Boolean(process.env.NOSAM_DEPLOY_PROJECT_ID);
+      managedCloudflareBuild = command === 'build' && Boolean(process.env.PLATFORM_DEPLOY_PROJECT_ID);
       assetRoutingPublicDir =
         userConfig.publicDir === false
           ? null
@@ -338,7 +338,7 @@ export function bwfPlugin(options?: {
         // Keep the dev Worker on the same values that env-schema validation
         // sees. Shell values override .env, and shell-only values are included
         // only when declared by the schema. Never copy unrelated host secrets.
-        // envSchemaPlugin rejects `__NOSAM_*` names in .env and env.ts, so no
+        // envSchemaPlugin rejects `__PLATFORM_*` names in .env and env.ts, so no
         // reserved key can enter here.
         const env = { ...local };
         for (const key of new Set([...Object.keys(local), ...(envSchemaFacts?.keys ?? [])])) {
@@ -447,7 +447,7 @@ export function bwfPlugin(options?: {
   // notifies the developer via terminal log + browser toast.
   const autoDetectAuth = !authEnabled;
   const bindingWatchPlugin: Plugin = {
-    name: 'nosam:binding-watch',
+    name: 'platform:binding-watch',
     apply: 'serve',
     configureServer(server) {
       const effectiveDirs = config.inference?.scanDirs ?? DEFAULT_SCAN_DIRS;
@@ -496,7 +496,7 @@ export function bwfPlugin(options?: {
             }, 300);
             server.hot.send({
               type: 'custom',
-              event: 'nosam:new-binding',
+              event: 'platform:new-binding',
               data: { message: `New ${detected} binding detected.` },
             });
           }

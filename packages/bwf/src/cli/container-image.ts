@@ -23,7 +23,7 @@ export async function buildContainerImage(
   dockerfile: string,
   buildContext: string = dirname(dockerfile),
 ): Promise<{ localReference: string; dispose(): Promise<void> }> {
-  const localReference = `nosam-sandbox-build:${randomUUID()}`;
+  const localReference = `platform-sandbox-build:${randomUUID()}`;
   await docker([
     'build',
     '--platform',

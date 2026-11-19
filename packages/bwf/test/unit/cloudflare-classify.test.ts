@@ -25,7 +25,7 @@ afterEach(() => {
 
 describe('classifyCloudflareDeployApp', () => {
   it('describes an unresolved static output without claiming static deploys are unsupported', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-cloudflare-classify-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-cloudflare-classify-'));
     roots.push(root);
 
     const result = classify(root, { inference: { appType: 'static' } } as BwfConfig);

@@ -45,14 +45,14 @@ At the edge, the resolution order is:
 
 If you add API routes to a static site generator, tell bwf whether to deploy the backend too. Auto-detection sees both the SSG dependency and backend files, and stops until you set `inference.appType`.
 
-To deploy both, set `appType` to `"nosam"` and build the static site before the bwf app:
+To deploy both, set `appType` to `"platform"` and build the static site before the bwf app:
 
 ```ts
 import { defineConfig } from '@builtbyfriends/bwf/config';
 
 export default defineConfig({
   inference: {
-    appType: 'nosam',
+    appType: 'platform',
     build: 'vitepress build && vite build',
   },
 });
@@ -97,5 +97,5 @@ To lock the app type and skip auto-detection, set `inference.appType` in [`bwf.c
 }
 ```
 
-- `inference.appType`: `"nosam"`, `"spa"`, or `"static"`
+- `inference.appType`: `"platform"`, `"spa"`, or `"static"`
 - `inference.outputDir`: output directory for static app types (relative to project root, defaults to `"dist"`)

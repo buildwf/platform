@@ -505,7 +505,7 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
     void it('13 — Sandbox runtime acceptance', { skip: !acceptanceToken }, async () => {
       const response = await fetch(`${BASE}/api/acceptance/sandbox`, {
         method: 'POST',
-        headers: { ...CF_ACCESS, 'x-nosam-e2e-token': acceptanceToken! },
+        headers: { ...CF_ACCESS, 'x-platform-e2e-token': acceptanceToken! },
         signal: AbortSignal.timeout(180_000),
       });
       const body = await response.json();
@@ -527,9 +527,9 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
     assert.ok(acceptanceToken, 'Runtime acceptance requires the configured app secret');
     const { ctx, page } = await freshPage();
     try {
-      await ctx.setExtraHTTPHeaders({ ...CF_ACCESS, 'x-nosam-e2e-token': acceptanceToken });
+      await ctx.setExtraHTTPHeaders({ ...CF_ACCESS, 'x-platform-e2e-token': acceptanceToken });
       await goto(page, '/');
-      const marker = `nosam-e2e-${randomBytes(8).toString('hex')}`;
+      const marker = `platform-e2e-${randomBytes(8).toString('hex')}`;
       const echoed = await page.evaluate(
         ({ origin, marker }) =>
           new Promise<unknown>((resolve, reject) => {

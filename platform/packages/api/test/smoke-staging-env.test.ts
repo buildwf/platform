@@ -73,7 +73,7 @@ describe('staging kitchen-sink fixture env', () => {
 
   it('rejects a non-staging API before even listing projects', async () => {
     const { client } = fixture();
-    client.apiUrl = 'https://nosam.buildwithfriends.dev';
+    client.apiUrl = 'https://platform.buildwithfriends.dev';
     await expect(initializeStagingEnv(client, async () => {})).rejects.toThrow(
       'requires the staging API',
     );
@@ -225,8 +225,8 @@ describe('staging kitchen-sink fixture env', () => {
             BWF_API_URL: 'https://api.staging.void.cloud',
             BWF_TOKEN: 'fake-token',
             // Scope fixture credentials so no personal Access session is consulted.
-            NOSAM_ACCESS_ORIGIN: 'https://api.staging.void.cloud',
-            NOSAM_ACCESS_CREDENTIALS: '',
+            PLATFORM_ACCESS_ORIGIN: 'https://api.staging.void.cloud',
+            PLATFORM_ACCESS_CREDENTIALS: '',
             CF_ACCESS_CLIENT_ID: 'fake-access-id',
             CF_ACCESS_CLIENT_SECRET: 'fake-access-secret',
           },

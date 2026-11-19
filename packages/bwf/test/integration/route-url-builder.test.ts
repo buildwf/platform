@@ -151,7 +151,7 @@ async function createFixture({
   typedRoutes = false,
   extraFiles = {},
 }: { typedRoutes?: boolean; extraFiles?: Record<string, string> } = {}) {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-route-util-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-route-util-'));
   roots.push(root);
   const files: Record<string, string> = {
     'check-typed.ts': typedCheck,
@@ -398,7 +398,7 @@ void loose;
   it('checks URL strings through the package types alone with routing.typedRoutes', () => {
     // The generated declarations repeat the route URL types, so check the
     // package's own copy without a generated .bwf/routes.d.ts.
-    const root = mkdtempSync(join(tmpdir(), 'nosam-route-stub-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-route-stub-'));
     roots.push(root);
     mkdirSync(join(root, 'node_modules'));
     symlinkSync(packageRoot, join(root, 'node_modules/@builtbyfriends/bwf'), 'junction');

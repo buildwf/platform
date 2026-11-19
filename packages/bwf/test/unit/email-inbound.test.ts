@@ -388,7 +388,7 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
     const { message } = createMessageProxy(
       {
         from: 'sender@example.com',
-        to: 'acme+support@mail.void.cloud',
+        to: 'acme+support@mail.buildwf.dev',
         headers: {},
         raw: new Uint8Array(),
         rawSize: 0,
@@ -397,11 +397,11 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
     );
 
     // The user-visible address has the slug removed - that is the DX contract.
-    expect(message.to).toBe('support@mail.void.cloud');
+    expect(message.to).toBe('support@mail.buildwf.dev');
 
     await dispatch(message, {}, {}, { slug: 'acme' });
 
-    expect(calls).toEqual([{ to: 'support@mail.void.cloud', params: {} }]);
+    expect(calls).toEqual([{ to: 'support@mail.buildwf.dev', params: {} }]);
   });
 
   it('captures the tag parameter from the wire recipient, not the stripped one', async () => {
@@ -417,7 +417,7 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
     const { message } = createMessageProxy(
       {
         from: 'sender@example.com',
-        to: 'acme+support+T-42@mail.void.cloud',
+        to: 'acme+support+T-42@mail.buildwf.dev',
         headers: {},
         raw: new Uint8Array(),
         rawSize: 0,
@@ -484,7 +484,7 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
 
   it('runs a verified custom-domain recipient in no-prefix mode even when a slug is passed', async () => {
     // A verified receipt carries `viaDomain` and no `<slug>+` prefix. A platform
-    // deployment still injects `__NOSAM_PROJECT_SLUG`, and the generated
+    // deployment still injects `__PLATFORM_PROJECT_SLUG`, and the generated
     // handleEmail suppresses it for this lane — and createMessageProxy
     // itself ignores a slug passed alongside viaDomain, so a slug equal to
     // the local-part prefix cannot strip `support+` off the address either.
@@ -511,10 +511,10 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
     );
 
     // Unstripped: the address IS the one the handler author wrote, and no
-    // wire-form `__nosamPlatformTo` was preserved because nothing was stripped.
+    // wire-form `__platformTo` was preserved because nothing was stripped.
     expect(message.to).toBe('support+T-42@acme.com');
-    expect((message as { __nosamPlatformTo?: string }).__nosamPlatformTo).toBeUndefined();
-    expect((message as { __nosamRelayDomain?: string }).__nosamRelayDomain).toBe('acme.com');
+    expect((message as { __platformTo?: string }).__platformTo).toBeUndefined();
+    expect((message as { __platformRelayDomain?: string }).__platformRelayDomain).toBe('acme.com');
 
     await dispatch(message, {}, {}, { slug: undefined });
 
@@ -544,7 +544,7 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
 
   it('still strips the platform prefix when a slug was removed and no tag follows', async () => {
     // `<slug>+@<domain>` with the slug injected: the prefix is recorded as
-    // `__nosamPlatformTo`, the tag after it is empty, and the empty string
+    // `__platformTo`, the tag after it is empty, and the empty string
     // must fall through to `_default` rather than match `support`.
     const hits: Array<string> = [];
     const dispatch = buildEmailDispatcher(compile({ ...SUPPORT, defaultHandler: '_default.ts' }), {
@@ -556,7 +556,7 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
     const { message } = createMessageProxy(
       {
         from: 'sender@example.com',
-        to: 'acme+@mail.void.cloud',
+        to: 'acme+@mail.buildwf.dev',
         headers: {},
         raw: new Uint8Array(),
         rawSize: 0,
@@ -572,7 +572,7 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
   it('reads a bare <slug>@<domain> on the platform as an EMPTY tag, never as the slug itself', async () => {
     // The platform router forwards a `+`-less recipient (the bare project address) with the
     // slug configured but nothing to strip, so `createMessageProxy` records no
-    // `__nosamPlatformTo`. Keyed on the marker, the dispatcher would match the full local part
+    // `__platformTo`. Keyed on the marker, the dispatcher would match the full local part
     // and hand `email/[user].ts` `user = acme`; keyed on the configured slug, it is `_default`.
     const hits: Array<string> = [];
     const withDynamic = {
@@ -599,14 +599,14 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
     const bare = createMessageProxy(
       {
         from: 'sender@example.com',
-        to: 'acme@mail.void.cloud',
+        to: 'acme@mail.buildwf.dev',
         headers: {},
         raw: new Uint8Array(),
         rawSize: 0,
       },
       { slug: 'acme' },
     ).message;
-    expect((bare as { __nosamPlatformTo?: string }).__nosamPlatformTo).toBeUndefined();
+    expect((bare as { __platformTo?: string }).__platformTo).toBeUndefined();
 
     await dispatch(bare, {}, {}, { slug: 'acme' });
     expect(hits).toEqual(['default']);
@@ -651,7 +651,7 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
     const { message } = createMessageProxy(
       {
         from: 'sender@example.com',
-        to: 'acme+billing@mail.void.cloud',
+        to: 'acme+billing@mail.buildwf.dev',
         headers: {},
         raw: new Uint8Array(),
         rawSize: 0,
@@ -694,7 +694,7 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
     const { message } = createMessageProxy(
       {
         from: 'sender@example.com',
-        to: 'acme+support+vip@mail.void.cloud',
+        to: 'acme+support+vip@mail.buildwf.dev',
         headers: {},
         raw: new Uint8Array(),
         rawSize: 0,
@@ -707,7 +707,7 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
     const { message: other } = createMessageProxy(
       {
         from: 'sender@example.com',
-        to: 'acme+support+T-42@mail.void.cloud',
+        to: 'acme+support+T-42@mail.buildwf.dev',
         headers: {},
         raw: new Uint8Array(),
         rawSize: 0,
@@ -725,7 +725,7 @@ describe('compileWorkerEntry (email)', () => {
     expect(code).toContain(', __emailHandler');
     expect(code).toContain('async email(message)');
     expect(code).toContain(
-      'this.env.__NOSAM_EMAIL_DEPLOYMENT_ID || !__isForwardableEmailMessage(message)',
+      'this.env.__PLATFORM_EMAIL_DEPLOYMENT_ID || !__isForwardableEmailMessage(message)',
     );
     expect(code).not.toContain('async email(envelope)');
     expect(code).toContain('emailReceipt: __handleEmailReceipt');
@@ -745,7 +745,7 @@ describe('compileWorkerEntry (email)', () => {
   it('co-exists with queue export when both present', () => {
     const code = compileWorkerEntry({ hasQueues: true, hasEmail: true });
     expect(code).toContain(
-      'async queue(batch) { return __nosamQueue(batch, this.env, this.ctx); }',
+      'async queue(batch) { return __platformQueue(batch, this.env, this.ctx); }',
     );
     expect(code).toContain('async email(message)');
   });
@@ -772,7 +772,7 @@ describe('compileWorkerEntry (email)', () => {
 
     const native = { ...envelope, setReject() {}, async forward() {}, async reply() {} };
     await expect(
-      entryEmail.call({ env: { __NOSAM_EMAIL_DEPLOYMENT_ID: 'deploy_1' }, ctx: {} }, native),
+      entryEmail.call({ env: { __PLATFORM_EMAIL_DEPLOYMENT_ID: 'deploy_1' }, ctx: {} }, native),
     ).rejects.toThrow('Native email event required');
     expect(handleEmail).not.toHaveBeenCalled();
     await expect(entryEmail.call({ env: {}, ctx: {} }, native)).resolves.toBeUndefined();
@@ -795,7 +795,7 @@ describe('createInboundTestHarness', () => {
       },
     );
     const harness = createInboundTestHarness({ routes: { support } });
-    // Production: every recipient is `<slug>+<tag>@mail.void.cloud`; the
+    // Production: every recipient is `<slug>+<tag>@mail.buildwf.dev`; the
     // dispatcher strips through the first `+` before matching, so the
     // handler-side tag is `support`. Tests mirror the wire format.
     const result = await harness.deliver({ from: 'a@x.dev', to: 'myslug+support@app.dev' });
@@ -983,7 +983,7 @@ describe('harness enforces the proxy action bounds, like production', () => {
       // A record that `new Headers()` accepts is recorded, and the capture
       // exposes it as the `Headers` its type declares.
       await message.forward('archive@example.com', {
-        'X-Forwarded-By': 'nosam-test',
+        'X-Forwarded-By': 'platform-test',
       } as unknown as Headers);
     });
     await harness.deliver(DELIVERY);
@@ -993,7 +993,7 @@ describe('harness enforces the proxy action bounds, like production', () => {
     expect(harness.forwards.map((f) => f.to)).toEqual(['first@example.com', 'archive@example.com']);
     expect(harness.forwards[0].headers).toBeUndefined();
     expect(harness.forwards[1].headers).toBeInstanceOf(Headers);
-    expect(harness.forwards[1].headers?.get('X-Forwarded-By')).toBe('nosam-test');
+    expect(harness.forwards[1].headers?.get('X-Forwarded-By')).toBe('platform-test');
   });
 
   it('records nothing from a handler that throws, like production', async () => {
@@ -1315,7 +1315,7 @@ describe('admission checks mirrored from the managed router', () => {
     [
       'the same name in different case',
       Array.from({ length: MAX_INBOUND_HEADERS + 1 }, (_, i) =>
-        i % 2 ? 'x-nosam: b' : 'X-Nosam: a',
+        i % 2 ? 'x-platform: b' : 'X-Platform: a',
       ),
     ],
   ])('counts distinct names, like the router: %s do not add up', async (_label, lines) => {
@@ -1352,7 +1352,7 @@ describe('admission checks mirrored from the managed router', () => {
 
     await harness.deliver({
       from: 'u@x.dev',
-      to: 'MySlug+Support@Mail.Nosam.Cloud',
+      to: 'MySlug+Support@Mail.Platform.Cloud',
       raw: rawOfSize(MAX_INBOUND_BYTES + 1),
     });
     await harness.deliver({
@@ -1362,7 +1362,7 @@ describe('admission checks mirrored from the managed router', () => {
     });
 
     expect(harness.rejects).toEqual([
-      'mail.nosam.cloud: message too large (max 10485760 bytes)',
+      'mail.platform.cloud: message too large (max 10485760 bytes)',
       // The router's own fallback label, for a recipient that names no zone.
       'bwf email: message too large (max 10485760 bytes)',
     ]);
@@ -1414,7 +1414,7 @@ function replyInIsolate(headersSource: string): {
     const { message } = createMessageProxy(
       {
         from: 'sender@remote.dev',
-        to: 'acme+support@mail.void.cloud',
+        to: 'acme+support@mail.buildwf.dev',
         headers,
         raw,
         rawSize: raw.length,
@@ -1452,7 +1452,7 @@ describe('reply threading survives a hostile inbound header', () => {
     return createMessageProxy(
       {
         from: 'sender@remote.dev',
-        to: 'acme+support@mail.void.cloud',
+        to: 'acme+support@mail.buildwf.dev',
         headers,
         raw,
         rawSize: raw.length,
@@ -1660,7 +1660,7 @@ describe('reply threading survives a hostile inbound header', () => {
     const { message, getActions } = createMessageProxy(
       {
         from: 'sender@remote.dev',
-        to: 'acme+support@mail.void.cloud',
+        to: 'acme+support@mail.buildwf.dev',
         headers: { references, 'message-id': MESSAGE_ID, subject: 'hi' },
         raw,
         rawSize: raw.length,
@@ -1730,7 +1730,7 @@ describe('reply subject survives a hostile inbound header', () => {
     return createMessageProxy(
       {
         from: 'sender@remote.dev',
-        to: 'acme+support@mail.void.cloud',
+        to: 'acme+support@mail.buildwf.dev',
         headers: { subject },
         raw,
         rawSize: raw.length,
@@ -1904,7 +1904,7 @@ describe('reply subject survives a hostile inbound header', () => {
     const { message, getActions } = createMessageProxy(
       {
         from: 'sender@remote.dev',
-        to: 'acme+support@mail.void.cloud',
+        to: 'acme+support@mail.buildwf.dev',
         headers: { subject: 'a '.repeat(MAX_MESSAGE_BYTES / 2) },
         raw,
         rawSize: raw.length,
@@ -1933,7 +1933,7 @@ describe('parseEmail error contract', () => {
       },
     });
     const { message } = createMessageProxy(
-      { from: 'a@b.dev', to: 'acme+x@mail.void.cloud', headers: {}, raw, rawSize: 32 },
+      { from: 'a@b.dev', to: 'acme+x@mail.buildwf.dev', headers: {}, raw, rawSize: 32 },
       { slug: 'acme' },
     );
 
@@ -1955,7 +1955,7 @@ describe('parseEmail error contract', () => {
     }
     const raw = new TextEncoder().encode(body);
     const { message } = createMessageProxy(
-      { from: 'a@b.dev', to: 'acme+x@mail.void.cloud', headers: {}, raw, rawSize: raw.length },
+      { from: 'a@b.dev', to: 'acme+x@mail.buildwf.dev', headers: {}, raw, rawSize: raw.length },
       { slug: 'acme' },
     );
 
@@ -1973,7 +1973,7 @@ describe('parseEmail error contract', () => {
     const { message } = createMessageProxy(
       {
         from: 'a@b.dev',
-        to: 'acme+x@mail.void.cloud',
+        to: 'acme+x@mail.buildwf.dev',
         headers: {},
         raw,
         rawSize: 100 * 1024 * 1024,
@@ -2011,7 +2011,7 @@ describe('buildReplyMessage', () => {
   // this describe sees them without per-test boilerplate.
   function withSlug<T>(fn: () => T | Promise<T>): T | Promise<T> {
     return envContext.run(
-      { __NOSAM_PROJECT_SLUG: 'myslug', __NOSAM_EMAIL_DOMAIN: MAIL_DOMAIN },
+      { __PLATFORM_PROJECT_SLUG: 'myslug', __PLATFORM_EMAIL_DOMAIN: MAIL_DOMAIN },
       fn,
     );
   }
@@ -2022,7 +2022,7 @@ describe('buildReplyMessage', () => {
     // `message.to` builds the slug-stripped shape the platform reply pin
     // drops, so the handler would see a success and the mail would vanish.
     await envContext.run(
-      { __NOSAM_PROJECT_SLUG: 'a'.repeat(57), __NOSAM_EMAIL_DOMAIN: MAIL_DOMAIN },
+      { __PLATFORM_PROJECT_SLUG: 'a'.repeat(57), __PLATFORM_EMAIL_DOMAIN: MAIL_DOMAIN },
       async () => {
         const message = makeMessage({ Subject: 'Help me' });
         await expect(buildReplyMessage(message, { text: 'sure' })).rejects.toThrow(
@@ -2227,7 +2227,7 @@ describe('end-to-end: envelope → handler → action queue', () => {
 
   it('records a forward action with serialized headers', async () => {
     const handler = defineEmail(async (message) => {
-      const fwd = new Headers({ 'X-Forwarded-By': 'nosam-test' });
+      const fwd = new Headers({ 'X-Forwarded-By': 'platform-test' });
       await message.forward('archive@example.com', fwd);
     });
     const actions = await dispatchToHandler(makeEnvelope(), handler);
@@ -2235,13 +2235,13 @@ describe('end-to-end: envelope → handler → action queue', () => {
       {
         type: 'forward',
         to: 'archive@example.com',
-        headers: { 'x-forwarded-by': 'nosam-test' },
+        headers: { 'x-forwarded-by': 'platform-test' },
       },
     ]);
   });
 
   it('records a reply action with threaded MIME from replyEmail', async () => {
-    // Explicit `from` — without __NOSAM_PROJECT_SLUG / __NOSAM_EMAIL_DOMAIN
+    // Explicit `from` — without __PLATFORM_PROJECT_SLUG / __PLATFORM_EMAIL_DOMAIN
     // in scope, replyEmail's defaulting path errors. Production threads both
     // from env; bare unit tests pass `from` explicitly to skip that machinery.
     const handler = defineEmail(async (message, _env, _ctx, info) => {
@@ -2270,18 +2270,18 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('strips the platform <slug>+ prefix from message.to before user code sees it', async () => {
-    // Production: every recipient arrives as `<slug>+<tag>@mail.void.cloud`.
+    // Production: every recipient arrives as `<slug>+<tag>@mail.buildwf.dev`.
     // The user-visible `message.to` should be the bare `<tag>@<domain>`,
     // matching the address shape user handlers wrote in `email/<addr>.ts`.
     let observedTo: string | undefined;
     let platformTo: string | undefined;
     const handler = defineEmail(async (message) => {
       observedTo = message.to;
-      platformTo = (message as unknown as { __nosamPlatformTo?: string }).__nosamPlatformTo;
+      platformTo = (message as unknown as { __platformTo?: string }).__platformTo;
     });
     const envelope: EmailEnvelope = {
       from: 'sender@example.com',
-      to: 'myslug+support@mail.void.cloud',
+      to: 'myslug+support@mail.buildwf.dev',
       headers: {},
       raw: new Uint8Array(),
       rawSize: 0,
@@ -2289,8 +2289,8 @@ describe('end-to-end: envelope → handler → action queue', () => {
     const { message, getActions } = createMessageProxy(envelope, { slug: 'myslug' });
     await handler(message, {}, {} as ExecutionContext, { params: {} });
     expect(getActions()).toEqual([]);
-    expect(observedTo).toBe('support@mail.void.cloud');
-    expect(platformTo).toBe('myslug+support@mail.void.cloud');
+    expect(observedTo).toBe('support@mail.buildwf.dev');
+    expect(platformTo).toBe('myslug+support@mail.buildwf.dev');
   });
 
   it('leaves message.to untouched when no slug is provided', async () => {
@@ -2304,14 +2304,14 @@ describe('end-to-end: envelope → handler → action queue', () => {
     });
     const envelope: EmailEnvelope = {
       from: 'sender@example.com',
-      to: 'myslug+support@mail.void.cloud',
+      to: 'myslug+support@mail.buildwf.dev',
       headers: {},
       raw: new Uint8Array(),
       rawSize: 0,
     };
     const { message } = createMessageProxy(envelope);
     await handler(message, {}, {} as ExecutionContext, { params: {} });
-    expect(observedTo).toBe('myslug+support@mail.void.cloud');
+    expect(observedTo).toBe('myslug+support@mail.buildwf.dev');
   });
 
   function replyTestMessage(): ForwardableEmailMessage {
@@ -2324,24 +2324,24 @@ describe('end-to-end: envelope → handler → action queue', () => {
     } as unknown as ForwardableEmailMessage;
   }
 
-  it('replyEmail without from replies from message.to when there is no __NOSAM_PROJECT_SLUG', async () => {
+  it('replyEmail without from replies from message.to when there is no __PLATFORM_PROJECT_SLUG', async () => {
     // No slug means no platform slug-pin to satisfy: the message reached a
     // real address on the developer's own zone, and that address is the
     // reply sender. A domain binding on its own does not change that.
-    const built = await envContext.run({ __NOSAM_EMAIL_DOMAIN: 'mail.staging.void.cloud' }, () =>
+    const built = await envContext.run({ __PLATFORM_EMAIL_DOMAIN: 'mail.staging.void.cloud' }, () =>
       buildReplyMessage(replyTestMessage(), { text: 'ack' }),
     );
     expect(built.from).toBe('support@mail.example.dev');
   });
 
-  it('replyEmail without from errors when __NOSAM_EMAIL_DOMAIN is unavailable', async () => {
+  it('replyEmail without from errors when __PLATFORM_EMAIL_DOMAIN is unavailable', async () => {
     // No silent fallback: with a slug but no configured mail domain the
     // reply must fail rather than being addressed from the production zone.
     await expect(
-      envContext.run({ __NOSAM_PROJECT_SLUG: 'myslug' }, () =>
+      envContext.run({ __PLATFORM_PROJECT_SLUG: 'myslug' }, () =>
         replyEmail(replyTestMessage(), { text: 'ack' }),
       ),
-    ).rejects.toThrow(/__NOSAM_EMAIL_DOMAIN/);
+    ).rejects.toThrow(/__PLATFORM_EMAIL_DOMAIN/);
   });
 
   it('replyEmail keeps an explicit from with neither binding present', async () => {
@@ -2661,12 +2661,12 @@ describe('end-to-end: envelope → handler → action queue', () => {
     const handler = defineEmail(async (message) => {
       // The record form is a runtime affordance (JS handlers, or a cast):
       // `ForwardableEmailMessage.forward` is typed against `Headers`.
-      const record = { 'X-Forwarded-By': 'nosam-test' } as unknown as Headers;
+      const record = { 'X-Forwarded-By': 'platform-test' } as unknown as Headers;
       await message.forward('archive@example.com', record);
     });
     const actions = await dispatchToHandler(makeEnvelope(), handler);
     expect(actions).toEqual([
-      { type: 'forward', to: 'archive@example.com', headers: { 'X-Forwarded-By': 'nosam-test' } },
+      { type: 'forward', to: 'archive@example.com', headers: { 'X-Forwarded-By': 'platform-test' } },
     ]);
   });
 
@@ -2698,7 +2698,7 @@ describe('end-to-end: envelope → handler → action queue', () => {
   function headerBag(count: number): Record<string, string> {
     const bag: Record<string, string> = {};
     for (let i = 0; i < count; i++) {
-      bag[`X-Nosam-${i}`] = 'v';
+      bag[`X-Platform-${i}`] = 'v';
     }
     return bag;
   }
@@ -2717,18 +2717,18 @@ describe('end-to-end: envelope → handler → action queue', () => {
     ],
     [
       'a 1025-character value in a record',
-      { 'X-Nosam-Tag': 'v'.repeat(1025) },
-      'forward: header "X-Nosam-Tag" value is 1025 characters, over the 1024-character limit.',
+      { 'X-Platform-Tag': 'v'.repeat(1025) },
+      'forward: header "X-Platform-Tag" value is 1025 characters, over the 1024-character limit.',
     ],
     [
       'a 1025-character value in a Headers',
-      new Headers({ 'X-Nosam-Tag': 'v'.repeat(1025) }),
-      'forward: header "x-nosam-tag" value is 1025 characters, over the 1024-character limit.',
+      new Headers({ 'X-Platform-Tag': 'v'.repeat(1025) }),
+      'forward: header "x-platform-tag" value is 1025 characters, over the 1024-character limit.',
     ],
     [
       'a non-string value',
-      { 'X-Nosam-Tag': 123 },
-      'forward: header "X-Nosam-Tag" value is not a string.',
+      { 'X-Platform-Tag': 123 },
+      'forward: header "X-Platform-Tag" value is not a string.',
     ],
   ])(
     'refuses a forward header bag with %s at the call, recording nothing for it',

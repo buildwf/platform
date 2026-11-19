@@ -37,7 +37,7 @@ async function withMigrationsConfig(
   migrations: Array<Record<string, unknown>>,
   run: (configPath: string) => Promise<void>,
 ): Promise<void> {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-do-lifecycle-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-do-lifecycle-'));
   try {
     const configPath = join(root, 'wrangler.jsonc');
     writeFileSync(configPath, JSON.stringify({ migrations }));
@@ -70,7 +70,7 @@ it('preserves an existing authored version metadata binding without permitting a
   expect(() =>
     assertExistingCloudflareConfig(existing, {
       ...authored,
-      version_metadata: { binding: '__NOSAM_VERSION_METADATA' },
+      version_metadata: { binding: '__PLATFORM_VERSION_METADATA' },
     }),
   ).toThrow('cannot add or replace');
   expect(() => assertCloudflareBindingsPreserved(worker, existing)).toThrow('preserve');

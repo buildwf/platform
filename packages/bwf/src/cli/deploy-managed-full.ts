@@ -76,12 +76,12 @@ export async function runFullDeploy(
     cliLog?.info('build_start', { command: buildCmd });
     const buildStartedAt = Date.now();
     try {
-      // NOSAM_DEPLOY_PROJECT_ID marks a managed build: platform dispatch owns routing.
+      // PLATFORM_DEPLOY_PROJECT_ID marks a managed build: platform dispatch owns routing.
       execSync(buildExec, {
         cwd: root,
         stdio: 'inherit',
         env: buildEnv(
-          { NOSAM_DEPLOY_PROJECT_ID: config.projectId, ...MANAGED_DEPLOY_BUILD_ENV },
+          { PLATFORM_DEPLOY_PROJECT_ID: config.projectId, ...MANAGED_DEPLOY_BUILD_ENV },
           { localBinRoot: root },
         ),
       });

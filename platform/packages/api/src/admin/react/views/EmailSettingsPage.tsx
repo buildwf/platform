@@ -19,7 +19,7 @@ const EMAIL_SETUP_GUIDE =
 
 function EmailSettingsHeader() {
   return (
-    <SectionStack as="header" className="nosam-admin-email-intro">
+    <SectionStack as="header" className="platform-admin-email-intro">
       <Heading level={1}>Email</Heading>
       <p>
         Manage email settings for the platform. Each project’s email page contains its usage,
@@ -38,7 +38,7 @@ export function EmailSettingsPage({
   if (emailEnabled === false) {
     return (
       <Layout platformName={platformName} title="Email" username={username}>
-        <PageStack className="nosam-admin-email-settings">
+        <PageStack className="platform-admin-email-settings">
           <EmailSettingsHeader />
           <AdminCard title="Enable email">
             <p>Email is not enabled on this platform.</p>
@@ -70,7 +70,7 @@ function EnabledEmailSettingsPage({ path, platformName, username }: AdminPagePro
   const [domainManagement, setDomainManagement] = useState(management);
   return (
     <Layout platformName={platformName} title="Email" username={username}>
-      <PageStack className="nosam-admin-email-settings">
+      <PageStack className="platform-admin-email-settings">
         <EmailSettingsHeader />
         <AdminCard title="Recipient policy">
           <p>
@@ -87,7 +87,7 @@ function EnabledEmailSettingsPage({ path, platformName, username }: AdminPagePro
             as="form"
             method="post"
             action="/admin/email/policy"
-            className="nosam-admin-email-choice-form"
+            className="platform-admin-email-choice-form"
           >
             <RadioList
               label="Recipient policy"
@@ -135,7 +135,7 @@ function EnabledEmailSettingsPage({ path, platformName, username }: AdminPagePro
             as="form"
             method="post"
             action="/admin/email/settings"
-            className="nosam-admin-email-choice-form"
+            className="platform-admin-email-choice-form"
           >
             <RadioList
               label="Domain management"

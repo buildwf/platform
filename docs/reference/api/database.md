@@ -85,7 +85,7 @@ function contains(column: SQLWrapper, text: string): SQL {
 
 // D1 only: `db.batch()` takes at least one query.
 const writes: [BatchItem<'sqlite'>, ...Array<BatchItem<'sqlite'>>] = [
-  db.update(posts).set({ published: true }).where(contains(posts.title, 'nosam')),
+  db.update(posts).set({ published: true }).where(contains(posts.title, 'platform')),
 ];
 await db.batch(writes);
 ```

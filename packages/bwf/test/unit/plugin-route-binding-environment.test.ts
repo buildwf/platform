@@ -26,7 +26,7 @@ afterEach(() => {
 });
 
 function createProject(ext: string, sourceDir = ''): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-route-binding-env-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-route-binding-env-'));
   roots.push(root);
   mkdirSync(join(root, sourceDir, 'routes', 'api'), { recursive: true });
   writeFileSync(join(root, 'package.json'), JSON.stringify({ type: 'module' }));
@@ -55,7 +55,7 @@ async function generatedBindings(
   vi.spyOn(process, 'cwd').mockReturnValue(root);
   const { bwfPlugin } = await import('../../src/index.ts');
   const plugins = bwfPlugin();
-  const envPlugin = plugins.find((plugin) => plugin.name === 'nosam:env');
+  const envPlugin = plugins.find((plugin) => plugin.name === 'platform:env');
   const envHook = envPlugin?.config;
   const configure = (typeof envHook === 'function' ? envHook : envHook?.handler) as
     | ((config: UserConfig, environment: ConfigEnv) => void)

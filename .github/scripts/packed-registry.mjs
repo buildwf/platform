@@ -33,7 +33,7 @@ export function inspectPackage(tarball) {
       'docs/guide/quickstart.md',
       'docs/reference/cli.md',
       'skills/bwf/SKILL.md',
-      'skills/migrate-vite-cloudflare-to-nosam/SKILL.md',
+      'skills/migrate-vite-cloudflare-to-platform/SKILL.md',
       'AGENTS_TEMPLATE.md',
     ]) {
       assert(files.has(`package/${file}`), `bwf: missing bundled ${file}`);
@@ -93,7 +93,7 @@ export function inspectPackage(tarball) {
 /** Read-only loopback registry: local release cohort plus public npm dependencies. */
 export async function startPackedRegistry(packages) {
   const byName = new Map(packages.map((pkg) => [pkg.manifest.name, pkg]));
-  const byFile = new Map(packages.map((pkg, index) => [`/_nosam_tarball/${index}.tgz`, pkg]));
+  const byFile = new Map(packages.map((pkg, index) => [`/_platform_tarball/${index}.tgz`, pkg]));
   const metadata = new Map();
   let metadataBytes = 0;
   const server = createServer(async (request, response) => {
@@ -128,7 +128,7 @@ export async function startPackedRegistry(packages) {
         return;
       }
       if (
-        name === 'nosam' ||
+        name === 'platform' ||
         name.startsWith('bwf/') ||
         name === 'create-bwf' ||
         name.startsWith('create-bwf/') ||

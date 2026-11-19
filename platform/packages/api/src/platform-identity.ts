@@ -28,7 +28,7 @@ export function getPlatformApiUrl(env: PlatformIdentityEnv, requestUrl?: string)
     configuredUrl ||
       (env.PLATFORM_ENV === 'staging'
         ? 'https://api.staging.void.cloud'
-        : 'https://nosam.buildwithfriends.dev'),
+        : 'https://platform.buildwithfriends.dev'),
   );
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
     throw new Error('The platform API URL must be an HTTP(S) URL without credentials.');

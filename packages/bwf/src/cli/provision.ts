@@ -488,8 +488,8 @@ export function provisionEnv(ctx?: {
   scrub('CF_ACCESS_CLIENT_ID');
   scrub('CF_ACCESS_CLIENT_SECRET');
   scrub('CF_ACCESS_TOKEN');
-  scrub('NOSAM_ACCESS_CREDENTIALS');
-  scrub('NOSAM_ACCESS_ORIGIN');
+  scrub('PLATFORM_ACCESS_CREDENTIALS');
+  scrub('PLATFORM_ACCESS_ORIGIN');
   scrub('CF_ACCESS_READINESS_ORIGIN');
   for (const name of TRANSPORT_REDIRECT_ENV_VARS) {
     scrub(name);
@@ -597,7 +597,7 @@ function acquireProcessProvisionSlot(): () => void {
         'persists durably).',
     );
   }
-  const token = Symbol('nosam-provision-slot');
+  const token = Symbol('platform-provision-slot');
   activeProvisionSlot = token;
   return () => {
     if (activeProvisionSlot === token) {

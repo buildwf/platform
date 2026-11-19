@@ -211,14 +211,14 @@ async function withBuildOutput(
   sourceMain: string | null,
   action: (directory: string) => Result,
 ): Promise<Result> {
-  const scratch = mkdtempSync(join(tmpdir(), 'nosam-cf-command-'));
+  const scratch = mkdtempSync(join(tmpdir(), 'platform-cf-command-'));
   try {
     const main = 'index.js';
     if (sourceMain) {
       copyFileSync(sourceMain, join(scratch, main));
     } else {
-      const { NOSAM_SECRET_DRAFT_SOURCE } = await import('@builtbyfriends/deploy-cloudflare');
-      writeFileSync(join(scratch, main), NOSAM_SECRET_DRAFT_SOURCE);
+      const { PLATFORM_SECRET_DRAFT_SOURCE } = await import('@builtbyfriends/deploy-cloudflare');
+      writeFileSync(join(scratch, main), PLATFORM_SECRET_DRAFT_SOURCE);
     }
     writeFileSync(
       join(scratch, 'wrangler.json'),
@@ -521,7 +521,7 @@ async function withSecretFile(
   content: string,
   action: (path: string) => Result | Promise<Result>,
 ): Promise<Result> {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-cf-secret-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-cf-secret-'));
   try {
     const path = join(directory, 'body.json');
     writeFileSync(path, content, { mode: 0o600 });
@@ -1038,7 +1038,7 @@ async function setSecretsOnWorkerWithoutCode(
   if (created.status !== 200 || created.body?.success !== true) {
     throw workersApiFailure('create the Worker', created);
   }
-  const { NOSAM_SECRET_DRAFT_MESSAGE, NOSAM_SECRET_DRAFT_SOURCE } =
+  const { PLATFORM_SECRET_DRAFT_MESSAGE, PLATFORM_SECRET_DRAFT_SOURCE } =
     await import('@builtbyfriends/deploy-cloudflare');
   const uploaded = await postWorkersApi(`/${encodeURIComponent(worker)}/versions?deploy=true`, {
     main_module: 'index.js',
@@ -1046,12 +1046,12 @@ async function setSecretsOnWorkerWithoutCode(
       {
         name: 'index.js',
         content_type: 'application/javascript+module',
-        content_base64: Buffer.from(NOSAM_SECRET_DRAFT_SOURCE).toString('base64'),
+        content_base64: Buffer.from(PLATFORM_SECRET_DRAFT_SOURCE).toString('base64'),
       },
     ],
     compatibility_date: config().compatibility_date ?? '2025-01-01',
     bindings: Object.entries(values).map(([name, text]) => ({ type: 'secret_text', name, text })),
-    annotations: { 'workers/message': NOSAM_SECRET_DRAFT_MESSAGE },
+    annotations: { 'workers/message': PLATFORM_SECRET_DRAFT_MESSAGE },
   });
   if (uploaded.status !== 200 || uploaded.body?.success !== true) {
     throw workersApiFailure('deploy the secret placeholder', uploaded);

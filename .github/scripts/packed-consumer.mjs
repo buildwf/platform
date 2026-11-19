@@ -27,7 +27,7 @@ const useVitePlus = toolchain === 'vite-plus';
 const vitePlusVersion = JSON.parse(
   readFileSync(join(root, 'node_modules/vite-plus/package.json'), 'utf8'),
 ).version;
-const work = mkdtempSync(join(tmpdir(), 'nosam-packed-consumer-'));
+const work = mkdtempSync(join(tmpdir(), 'platform-packed-consumer-'));
 const archiveDir = join(work, 'archives');
 mkdirSync(archiveDir);
 console.log(`Packed consumer artifacts: ${work}`);
@@ -35,7 +35,7 @@ console.log(`Packed consumer suite: ${suite}`);
 console.log(`Packed consumer toolchain: ${toolchain}`);
 const environment = { ...process.env, CI: 'true' };
 for (const key of Object.keys(environment)) {
-  if (/^(NOSAM_|VP_|CLOUDFLARE_|CF_|WRANGLER_|NPM_TOKEN$|NODE_AUTH_TOKEN$)/i.test(key)) {
+  if (/^(PLATFORM_|VP_|CLOUDFLARE_|CF_|WRANGLER_|NPM_TOKEN$|NODE_AUTH_TOKEN$)/i.test(key)) {
     delete environment[key];
   }
 }

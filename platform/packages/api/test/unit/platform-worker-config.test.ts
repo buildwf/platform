@@ -10,14 +10,14 @@ describe('platform Worker configuration', () => {
     });
     const configs = createPlatformWorkerConfigs({
       accountId: 'account',
-      apiUrl: 'https://nosam-example-api.example.workers.dev',
+      apiUrl: 'https://platform-example-api.example.workers.dev',
       deployment,
       healthProbeToken: 'probe-token',
       installationId: 'example-a1b2c3d4',
       ownershipNonce: '0123456789abcdef0123456789abcdef',
       platformVersion: '1.0.0',
-      proxyUrl: 'https://nosam-example-proxy.example.workers.dev',
-      emailGatewayUrl: 'https://nosam-example-email-gateway.example.workers.dev',
+      proxyUrl: 'https://platform-example-proxy.example.workers.dev',
+      emailGatewayUrl: 'https://platform-example-email-gateway.example.workers.dev',
       resources: {
         hyperdrive: 'hyperdrive',
         isrCacheKv: 'isr',
@@ -89,7 +89,7 @@ describe('platform Worker configuration', () => {
       ownershipNonce: '0123456789abcdef0123456789abcdef',
       platformVersion: '1.0.0',
       proxyUrl: 'https://proxy.example.com',
-      emailGatewayUrl: 'https://nosam-example-email-gateway.example.workers.dev',
+      emailGatewayUrl: 'https://platform-example-email-gateway.example.workers.dev',
       publicEndpoints: false,
       trafficState: 'staging',
       resources: {

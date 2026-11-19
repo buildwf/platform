@@ -26,7 +26,7 @@ function fixture(
     kind: 'oidc',
     label: 'Company',
     issuer: 'https://identity.example.com',
-    clientId: 'nosam-client',
+    clientId: 'platform-client',
     ...options.configuration,
   });
   const issuer = configuration.issuer!;

@@ -1,5 +1,5 @@
 {
-  "name": "@nosamcloud/dashboard",
+  "name": "@platform-service/dashboard",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -25,7 +25,7 @@
   "devDependencies": {
     "@builtbyfriends/bwf": "workspace:*",
     "@cloudflare/workers-types": "catalog:platform",
-    "@nosamcloud/api": "workspace:*",
+    "@platform-service/api": "workspace:*",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "catalog:",

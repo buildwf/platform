@@ -19,7 +19,7 @@ function requestOrigin(context: Context): string {
 
 /** The login page binds the nonce to both a cookie and the callback URL to prevent login CSRF. */
 function hasMatchingNonce(context: Context): boolean {
-  const nonceCookie = getCookie(context, 'nosam_auth_nonce');
+  const nonceCookie = getCookie(context, 'platform_auth_nonce');
   const nonceParam = context.req.query('login_nonce');
   if (!nonceCookie || !nonceParam || nonceCookie !== nonceParam) {
     console.warn('[dashboard] auth callback nonce mismatch');
@@ -29,9 +29,9 @@ function hasMatchingNonce(context: Context): boolean {
 }
 
 function setSessionCookie(context: Context, token: string, secure: boolean): void {
-  deleteCookie(context, 'nosam_auth_nonce', { path: '/' });
-  deleteCookie(context, 'nosam_auth_nonce', { path: '/auth' });
-  setCookie(context, 'nosam_token', token, {
+  deleteCookie(context, 'platform_auth_nonce', { path: '/' });
+  deleteCookie(context, 'platform_auth_nonce', { path: '/auth' });
+  setCookie(context, 'platform_token', token, {
     httpOnly: true,
     secure,
     sameSite: 'Lax',
@@ -51,7 +51,7 @@ export const loader = defineHandler(async (context) => {
     }
     const host = context.req.header('host') ?? '';
     const isLocal = isLocalDashboardHost(host);
-    const pkce = getCookie(context, 'nosam_auth_pkce');
+    const pkce = getCookie(context, 'platform_auth_pkce');
     const separator = pkce?.indexOf(':') ?? -1;
     const pkceState = separator > 0 ? pkce!.slice(0, separator) : undefined;
     const pkceVerifier = separator > 0 ? pkce!.slice(separator + 1) : undefined;
@@ -86,7 +86,7 @@ export const loader = defineHandler(async (context) => {
       console.warn(`[dashboard] ${exchangePath} returned no token`);
       return context.redirect(loginUrl(context));
     }
-    deleteCookie(context, 'nosam_auth_pkce', { path: '/auth/callback' });
+    deleteCookie(context, 'platform_auth_pkce', { path: '/auth/callback' });
     setSessionCookie(context, exchange.token, !isLocal);
     return context.redirect(homeUrl);
   }

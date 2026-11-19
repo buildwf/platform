@@ -60,7 +60,7 @@ export async function initializeInstalledPlatformAuthentication(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Nosam-Auth-Setup': signature,
+      'X-Platform-Auth-Setup': signature,
       ...cfAccessHeaders(process.env, origin),
     },
     body,

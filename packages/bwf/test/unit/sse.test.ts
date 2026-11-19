@@ -171,7 +171,7 @@ describe('getLastEventId', () => {
   it('reads the Last-Event-ID header', () => {
     expect(
       getLastEventId(
-        new Request('https://nosam.test/events', { headers: { 'Last-Event-ID': '42' } }),
+        new Request('https://platform.test/events', { headers: { 'Last-Event-ID': '42' } }),
       ),
     ).toBe('42');
   });

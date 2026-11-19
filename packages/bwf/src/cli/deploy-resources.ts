@@ -11,7 +11,7 @@ import { MATERIALIZED_CLOUDFLARE_FILE } from '../cloudflare-config.ts';
 import { type DatabaseDialect, type BwfConfig } from '../config.ts';
 import { scopedCloudflareQueueName } from '../queues/cloudflare-names.ts';
 import { hasEmailHandlers, type EmailHandlersScan } from '../router/email.ts';
-import { DEFAULT_NOSAM_AI_BINDING } from './deploy-binding-snapshot.ts';
+import { DEFAULT_PLATFORM_AI_BINDING } from './deploy-binding-snapshot.ts';
 import { type CloudflareAuthSecretFailureReason } from './deploy-types.ts';
 import { isRealD1Id, type DesiredResourceSet, type ProvisionDriftEntry } from './provision.ts';
 
@@ -260,7 +260,7 @@ export async function computeDesiredCloudflareResources(
     migrationsDir: paths.migrationsDir,
     migrations,
     needsAI: bindings.needsAI,
-    aiBindingName: bindingNames?.ai ?? DEFAULT_NOSAM_AI_BINDING,
+    aiBindingName: bindingNames?.ai ?? DEFAULT_PLATFORM_AI_BINDING,
     expectedCrons,
     needsEmail: bindings.needsEmail === true || hasEmailHandlers(emailHandlers),
     emailHandlers,

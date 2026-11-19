@@ -21,12 +21,12 @@ vi.mock('../../src/cli/keyring.ts', () => ({
 const roots: Array<string> = [];
 
 function rootWithPlatform(
-  platform: 'cloudflare' | 'nosam',
+  platform: 'cloudflare' | 'platform',
   metadata: Record<string, unknown> = {},
 ): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-project-team-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-project-team-'));
   roots.push(root);
-  vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', join(root, 'registry'));
+  vi.stubEnv('PLATFORM_REGISTRY_DIR', join(root, 'registry'));
   connect('https://api.example.test', 'Test platform');
   mkdirSync(join(root, '.bwf'));
   writeFileSync(
@@ -115,7 +115,7 @@ describe('project team target selection', () => {
     ]);
   });
 
-  it.each(['cloudflare', 'nosam'] as const)(
+  it.each(['cloudflare', 'platform'] as const)(
     'uses the active connection for account invitations from a read-only %s project linked elsewhere',
     async (platform) => {
       const platformA = 'https://platform-a.example.test';
@@ -126,7 +126,7 @@ describe('project team target selection', () => {
       connect(platformA, 'Platform A');
       connect(platformB, 'Platform B');
       keyring.read.mockImplementation((service: string, account: string) => {
-        if (service !== 'dev.nosam.cli') {
+        if (service !== 'dev.platform.cli') {
           return null;
         }
         if (account === platformCredentialAccount(platformA)) {
@@ -176,18 +176,18 @@ describe('project team target selection', () => {
     },
   );
 
-  it.each(['cloudflare', 'nosam'] as const)(
+  it.each(['cloudflare', 'platform'] as const)(
     'rejects an unscoped BWF_TOKEN for account invitations from a %s project',
     async (platform) => {
       const platformA = 'https://platform-a.example.test';
       const platformB = 'https://platform-b.example.test';
       const root = rootWithPlatform(platform, { platformUrl: platformA });
-      vi.stubEnv('BWF_TOKEN', 'nosam-cloud-token');
+      vi.stubEnv('BWF_TOKEN', 'platform-cloud-token');
       vi.stubEnv('BWF_API_URL', undefined);
       connect(platformA, 'Platform A');
       connect(platformB, 'Platform B');
       keyring.read.mockImplementation((service: string, account: string) =>
-        service === 'dev.nosam.cli' && account === platformCredentialAccount(platformB)
+        service === 'dev.platform.cli' && account === platformCredentialAccount(platformB)
           ? 'platform-b-token'
           : null,
       );
@@ -202,7 +202,7 @@ describe('project team target selection', () => {
   );
 
   it('uses an explicit environment origin and its matching token over saved project and active connections', async () => {
-    const root = rootWithPlatform('nosam', { platformUrl: 'https://platform-a.example.test' });
+    const root = rootWithPlatform('platform', { platformUrl: 'https://platform-a.example.test' });
     connect('https://platform-b.example.test', 'Platform B');
     connect('https://platform-c.example.test', 'Platform C');
     vi.stubEnv('BWF_API_URL', 'https://platform-c.example.test/');
@@ -229,11 +229,11 @@ describe('project team target selection', () => {
   it('never falls back to the linked project token when the active platform has no login', async () => {
     const platformA = 'https://platform-a.example.test';
     const platformB = 'https://platform-b.example.test';
-    const root = rootWithPlatform('nosam', { platformUrl: platformA });
+    const root = rootWithPlatform('platform', { platformUrl: platformA });
     connect(platformA, 'Platform A');
     connect(platformB, 'Platform B');
     keyring.read.mockImplementation((service: string, account: string) =>
-      service === 'dev.nosam.cli' && account === platformCredentialAccount(platformA)
+      service === 'dev.platform.cli' && account === platformCredentialAccount(platformA)
         ? 'platform-a-token'
         : null,
     );
@@ -252,11 +252,11 @@ describe('project team target selection', () => {
   it('uses the linked bwf platform project for member listing', async () => {
     const platformA = 'https://platform-a.example.test';
     const platformB = 'https://platform-b.example.test';
-    const root = rootWithPlatform('nosam', { platformUrl: platformA });
+    const root = rootWithPlatform('platform', { platformUrl: platformA });
     connect(platformA, 'Platform A');
     connect(platformB, 'Platform B');
     keyring.read.mockImplementation((service: string, account: string) => {
-      if (service !== 'dev.nosam.cli') {
+      if (service !== 'dev.platform.cli') {
         return null;
       }
       if (account === platformCredentialAccount(platformA)) {
@@ -288,7 +288,7 @@ describe('project team target selection', () => {
   });
 
   it('prints platform warnings before the member list', async () => {
-    const root = rootWithPlatform('nosam');
+    const root = rootWithPlatform('platform');
     vi.stubEnv('BWF_TOKEN', 'test-token');
     vi.stubEnv('BWF_API_URL', 'https://api.example.test');
     let warnings: Array<string> | undefined = ['stuck \u001b[31mred'];
@@ -329,7 +329,7 @@ describe('project team target selection', () => {
   });
 
   it('resolves an explicit project override before acting', async () => {
-    const root = rootWithPlatform('nosam');
+    const root = rootWithPlatform('platform');
     vi.stubEnv('BWF_TOKEN', 'test-token');
     vi.stubEnv('BWF_API_URL', 'https://api.example.test');
     const fetchMock = vi
@@ -369,7 +369,7 @@ describe('project team target selection', () => {
   });
 
   it('scrubs control characters from invitation confirmation output', async () => {
-    const root = rootWithPlatform('nosam');
+    const root = rootWithPlatform('platform');
     vi.stubEnv('BWF_TOKEN', 'test-token');
     vi.stubEnv('BWF_API_URL', 'https://api.example.test');
     vi.stubGlobal(
@@ -411,7 +411,7 @@ describe('project team target selection', () => {
   it.each(['failed', 'not_configured', 'rate_limited'])(
     'shows recovery instructions when invitation email is %s',
     async (status) => {
-      const root = rootWithPlatform('nosam');
+      const root = rootWithPlatform('platform');
       vi.stubEnv('BWF_TOKEN', 'test-token');
       vi.stubEnv('BWF_API_URL', 'https://api.example.test');
       vi.stubGlobal(
@@ -474,7 +474,7 @@ describe('project team target selection', () => {
       recovery: 'check your access',
     },
   ])('explains $error with a recovery action', async ({ error, status, message, recovery }) => {
-    const root = rootWithPlatform('nosam');
+    const root = rootWithPlatform('platform');
     vi.stubEnv('BWF_TOKEN', 'test-token');
     vi.stubEnv('BWF_API_URL', 'https://api.example.test');
     vi.stubGlobal(
@@ -501,7 +501,7 @@ describe('project team target selection', () => {
     ['forbidden', 'This deployment token cannot respond to invitations. Use your platform login.'],
     ['account suspended', 'This account is suspended. Contact the platform administrator.'],
   ])('preserves the server explanation for invitation rejection %s', async (code, message) => {
-    const root = rootWithPlatform('nosam');
+    const root = rootWithPlatform('platform');
     vi.stubEnv('BWF_TOKEN', 'test-token');
     vi.stubEnv('BWF_API_URL', 'https://api.example.test');
     const body = JSON.stringify({ error: code, message });
@@ -521,7 +521,7 @@ describe('project team target selection', () => {
   });
 
   it('explains an existing-member conflict from an older API', async () => {
-    const root = rootWithPlatform('nosam');
+    const root = rootWithPlatform('platform');
     vi.stubEnv('BWF_TOKEN', 'test-token');
     vi.stubEnv('BWF_API_URL', 'https://api.example.test');
     vi.stubGlobal(

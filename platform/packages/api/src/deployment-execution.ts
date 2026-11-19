@@ -169,7 +169,7 @@ async function writeDeploymentInputReceipt(
   // publication. Keep the parent prefix unchanged for cleanup and recovery.
   const kind = appType === 'spa' ? 'spa' : moduleCount > 0 ? 'worker' : 'static';
   await r2.put(
-    `${prefix}receipt-nosam-platform-${kind}`,
+    `${prefix}receipt-platform-${kind}`,
     JSON.stringify({ createdAt: Date.now() }),
   );
 }
@@ -440,7 +440,7 @@ export function deploymentReceiptResponse(db: Db, id: string): Response {
     },
   });
   return new Response(stream, {
-    headers: { 'Content-Type': 'application/x-ndjson', 'x-nosam-deployment-id': id },
+    headers: { 'Content-Type': 'application/x-ndjson', 'x-platform-deployment-id': id },
   });
 }
 

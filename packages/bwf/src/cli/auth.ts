@@ -21,7 +21,7 @@ import { readProjectConfig, readProjectPlatformUrl } from './project.ts';
 
 const CONFIG_DIR = join(homedir(), '.bwf');
 const CONFIG_PATH = join(CONFIG_DIR, 'config.json');
-const KEYRING_SERVICE = 'dev.nosam.cli';
+const KEYRING_SERVICE = 'dev.platform.cli';
 
 function keyringGet(account: string): string | null {
   return readKeyringPassword(KEYRING_SERVICE, account);
@@ -271,10 +271,10 @@ export function getProxyUrl(root: string = process.cwd()): string {
   // The project file is repository-controlled and therefore cannot be trusted
   // to choose the origin that receives a user's platform credential. Resolve
   // the proxy from the selected API's trusted local registry entry instead.
-  // NOSAM_PROXY_URL remains an explicit operator override for CI and recovery.
+  // PLATFORM_PROXY_URL remains an explicit operator override for CI and recovery.
   const apiUrl = getApiUrl(root);
-  if (process.env.NOSAM_PROXY_URL) {
-    return normalizePlatformApiUrl(process.env.NOSAM_PROXY_URL);
+  if (process.env.PLATFORM_PROXY_URL) {
+    return normalizePlatformApiUrl(process.env.PLATFORM_PROXY_URL);
   }
 
   const proxyUrl = listPlatformConnections().find(
@@ -282,7 +282,7 @@ export function getProxyUrl(root: string = process.cwd()): string {
   )?.proxyUrl;
   if (proxyUrl === null || proxyUrl === undefined) {
     throw new Error(
-      `platform: No verified proxy is registered for ${apiUrl}. Reconnect with \`bwf connect ${apiUrl}\` or set NOSAM_PROXY_URL explicitly.`,
+      `platform: No verified proxy is registered for ${apiUrl}. Reconnect with \`bwf connect ${apiUrl}\` or set PLATFORM_PROXY_URL explicitly.`,
     );
   }
   return proxyUrl;

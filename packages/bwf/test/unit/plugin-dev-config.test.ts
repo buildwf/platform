@@ -41,10 +41,10 @@ describe('isDevTriggerSecretRequest', () => {
     '/src/main.ts',
     '/.bwf/entry.ts',
     '/.bwf/routes.d.ts',
-    '/__nosam/inbox?token=abc',
-    '/__nosam/scheduled',
-    '/api/__nosam/cron-trigger',
-    '/nosam/dev-trigger-token',
+    '/__platform/inbox?token=abc',
+    '/__platform/scheduled',
+    '/api/__platform/cron-trigger',
+    '/platform/dev-trigger-token',
     '/.voidx/dev-trigger-token',
     '/drizzle.config.json',
     '/.bwf/drizzle.config.ts',
@@ -76,7 +76,7 @@ describe('isVitestServer', () => {
   it.each<[Array<PluginOption> | undefined]>([
     [undefined],
     [[]],
-    [[false, [{ name: 'vite-plugin-cloudflare' }, { name: 'nosam:env' }]]],
+    [[false, [{ name: 'vite-plugin-cloudflare' }, { name: 'platform:env' }]]],
     // A plugin named after Vitest is not Vitest's own.
     [[{ name: 'vitest-plugin-example' }]],
   ])('does not find Vitest in %j', (plugins) => {

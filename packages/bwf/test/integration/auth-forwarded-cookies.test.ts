@@ -498,7 +498,7 @@ describe('cookies set by auth.api calls during a request', () => {
 
     const response = await send(app, '/profile', { jar, body: {} });
 
-    await expect(response.json()).resolves.toEqual({ plugins: ['app-plugin', 'nosam-cookies'] });
+    await expect(response.json()).resolves.toEqual({ plugins: ['app-plugin', 'platform-cookies'] });
     expect(plugins).toEqual([plugin]);
     const cookies = response.headers.getSetCookie();
     expect(cookies.some((cookie) => cookie.startsWith('app_hook=updated'))).toBe(true);

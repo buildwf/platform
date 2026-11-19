@@ -5,7 +5,7 @@ outline: deep
 
 # Secrets and Environment {#secrets}
 
-## `bwf secret list` {#nosam-secret-list}
+## `bwf secret list` {#platform-secret-list}
 
 ```
 bwf secret list [--project <name>]
@@ -13,7 +13,7 @@ bwf secret list [--project <name>]
 
 List production secret names for the saved target. Secret values are never printed. Direct Cloudflare targets query the Worker named in `bwf.config.ts`; `--project` is hosted-only.
 
-## `bwf secret put` {#nosam-secret-put}
+## `bwf secret put` {#platform-secret-put}
 
 ```
 bwf secret put <name> [--project <name>]
@@ -28,7 +28,7 @@ Value input modes:
 
 On a direct Cloudflare target, the value is stored as an encrypted Worker secret.
 
-## `bwf secret sync` {#nosam-secret-sync}
+## `bwf secret sync` {#platform-secret-sync}
 
 ```
 bwf secret sync <file> [--project <name>] [--yes]
@@ -44,7 +44,7 @@ Pass `--yes` to skip confirmation in scripts and CI.
 
 Existing remote secrets absent from the file are kept. Every entry must be a server key declared in `env.ts`, and its value must pass validation.
 
-## `bwf secret delete` {#nosam-secret-delete}
+## `bwf secret delete` {#platform-secret-delete}
 
 ```
 bwf secret delete <name> [--project <name>]
@@ -56,7 +56,7 @@ On hosted projects, secret writes and deletes return a retryable conflict while 
 
 ## Env Schema {#env-schema}
 
-### `bwf env check` {#nosam-env-check}
+### `bwf env check` {#platform-env-check}
 
 ```
 bwf env check [--remote]
@@ -64,7 +64,7 @@ bwf env check [--remote]
 
 Without `--remote`, validate `.env` plus the shell for local development. With `--remote`, validate build-shell client values and the remote server-secret names. Exits non-zero if a required key is missing or a readable value is invalid.
 
-### `bwf env types` {#nosam-env-types}
+### `bwf env types` {#platform-env-types}
 
 ```
 bwf env types

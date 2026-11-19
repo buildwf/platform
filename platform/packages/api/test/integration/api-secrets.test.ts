@@ -119,7 +119,7 @@ describe('project secrets API', () => {
   });
 
   // Reserved-binding guard. Only names that also pass `isValidSecretName`
-  // (`^[A-Z][A-Z0-9_]*$`) can reach it — the `__NOSAM_*` bindings are already
+  // (`^[A-Z][A-Z0-9_]*$`) can reach it — the `__PLATFORM_*` bindings are already
   // rejected one step earlier as invalid names. Without this check the row is
   // encrypted and persisted, then silently shadowed by the platform binding at
   // the next deploy, with no clean error anywhere near the PUT that caused it.
@@ -148,7 +148,7 @@ describe('project secrets API', () => {
   );
 
   // Not reserved: there is exactly one project-slug binding and it is
-  // `__NOSAM_PROJECT_SLUG`. Reserving an undotted twin nothing injects would
+  // `__PLATFORM_PROJECT_SLUG`. Reserving an undotted twin nothing injects would
   // take a usable name away for no benefit.
   it('allows a secret named BWF_PROJECT_SLUG', async () => {
     const user = await createTestUser(env.db);

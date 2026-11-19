@@ -96,7 +96,7 @@ describe('acceptance auth with a configured secret', () => {
     mocks.env.SECRET_KEY = 'configured-secret';
     const response = await app.request('/email', {
       method: 'POST',
-      headers: { 'x-nosam-e2e-token': 'wrong-token' },
+      headers: { 'x-platform-e2e-token': 'wrong-token' },
     });
     expect(response.status).toBe(401);
     expect(mocks.sendEmail).not.toHaveBeenCalled();
@@ -108,7 +108,7 @@ describe('acceptance auth with a configured secret', () => {
     const message = { to: 'test@example.com', subject: 'test', text: 'acceptance' };
     const response = await app.request('/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-nosam-e2e-token': 'configured-secret' },
+      headers: { 'Content-Type': 'application/json', 'x-platform-e2e-token': 'configured-secret' },
       body: JSON.stringify(message),
     });
     expect(response.status).toBe(200);
@@ -119,7 +119,7 @@ describe('acceptance auth with a configured secret', () => {
     mocks.env.SECRET_KEY = 'configured-secret';
     const response = await app.request('/queue', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-nosam-e2e-token': 'configured-secret' },
+      headers: { 'Content-Type': 'application/json', 'x-platform-e2e-token': 'configured-secret' },
       body: JSON.stringify({ run: 'stale/arbitrary' }),
     });
     expect(response.status).toBe(400);
@@ -131,7 +131,7 @@ describe('acceptance auth with a configured secret', () => {
     mocks.aiRun.mockResolvedValue({ response: 'Hello' });
     const response = await app.request('/runtime', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-nosam-e2e-token': 'configured-secret' },
+      headers: { 'Content-Type': 'application/json', 'x-platform-e2e-token': 'configured-secret' },
       body: JSON.stringify({ action: 'ai', model: 'arbitrary', max_tokens: 10000 }),
     });
     expect(response.status).toBe(200);

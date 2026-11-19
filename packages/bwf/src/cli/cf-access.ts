@@ -3,7 +3,7 @@ import { cfAccessHeaders } from '../shared/cf-access.ts';
 import { readKeyringPassword, writeKeyringPassword } from './keyring.ts';
 import { normalizePlatformApiUrl, platformCredentialAccount } from './platform-registry.ts';
 
-const ACCESS_KEYRING_SERVICE = 'dev.nosam.cli.access';
+const ACCESS_KEYRING_SERVICE = 'dev.platform.cli.access';
 const keyringTokens = new Map<string, string | null>();
 
 function usableToken(token: string): boolean {
@@ -20,27 +20,27 @@ function usableToken(token: string): boolean {
 function readOriginCredentials(raw: string): Record<string, unknown> {
   const parsed = JSON.parse(raw) as unknown;
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('platform: NOSAM_ACCESS_CREDENTIALS must contain an origin-keyed JSON object.');
+    throw new Error('platform: PLATFORM_ACCESS_CREDENTIALS must contain an origin-keyed JSON object.');
   }
   return parsed as Record<string, unknown>;
 }
 
 function rememberOriginToken(origin: string, token: string): void {
-  const raw = process.env.NOSAM_ACCESS_CREDENTIALS;
-  process.env.NOSAM_ACCESS_CREDENTIALS = JSON.stringify({
+  const raw = process.env.PLATFORM_ACCESS_CREDENTIALS;
+  process.env.PLATFORM_ACCESS_CREDENTIALS = JSON.stringify({
     ...(raw ? readOriginCredentials(raw) : {}),
     [origin]: { CF_ACCESS_TOKEN: token },
   });
 }
 
 function forgetOriginToken(origin: string): void {
-  const raw = process.env.NOSAM_ACCESS_CREDENTIALS;
+  const raw = process.env.PLATFORM_ACCESS_CREDENTIALS;
   if (!raw) {
     return;
   }
   const entries = { ...readOriginCredentials(raw) };
   delete entries[origin];
-  process.env.NOSAM_ACCESS_CREDENTIALS = JSON.stringify(entries);
+  process.env.PLATFORM_ACCESS_CREDENTIALS = JSON.stringify(entries);
 }
 
 export function isCloudflareAccessChallenge(response: Response): boolean {
@@ -122,7 +122,7 @@ export function ensurePlatformAccessToken(
   }
   if (!token || !usableToken(token)) {
     throw new Error(
-      'platform: Cloudflare Access authentication is required. Install cloudflared and sign in interactively, or set NOSAM_ACCESS_ORIGIN with scoped CF_ACCESS_CLIENT_ID/CF_ACCESS_CLIENT_SECRET credentials for CI.',
+      'platform: Cloudflare Access authentication is required. Install cloudflared and sign in interactively, or set PLATFORM_ACCESS_ORIGIN with scoped CF_ACCESS_CLIENT_ID/CF_ACCESS_CLIENT_SECRET credentials for CI.',
     );
   }
   rememberOriginToken(origin, token);

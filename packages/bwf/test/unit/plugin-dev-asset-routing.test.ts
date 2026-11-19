@@ -21,7 +21,7 @@ vi.mock('../../src/plugin-cloudflare.ts', () => import('../helpers/cloudflare-vi
 const tempDirs: Array<string> = [];
 
 function createProjectRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-dev-assets-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-dev-assets-'));
   tempDirs.push(root);
   writeFileSync(join(root, 'package.json'), JSON.stringify({ type: 'module' }));
   writeFileSync(
@@ -135,7 +135,7 @@ export async function GET() {
   return root;
 }
 
-function createAiProjectRoot(platform: 'cloudflare' | 'nosam'): string {
+function createAiProjectRoot(platform: 'cloudflare' | 'platform'): string {
   const root = createProjectRoot();
   mkdirSync(join(root, 'routes/api'), { recursive: true });
   writeFileSync(
@@ -147,7 +147,7 @@ function createAiProjectRoot(platform: 'cloudflare' | 'nosam'): string {
     join(root, '.bwf/project.json'),
     JSON.stringify({
       platform,
-      ...(platform === 'nosam' && {
+      ...(platform === 'platform' && {
         projectId: 'managed-project',
         proxyUrl: 'https://proxy.void.cloud',
         slug: 'managed-project',
@@ -157,7 +157,7 @@ function createAiProjectRoot(platform: 'cloudflare' | 'nosam'): string {
   return root;
 }
 
-function saveDeploymentPlatform(root: string, platform: 'cloudflare' | 'nosam'): void {
+function saveDeploymentPlatform(root: string, platform: 'cloudflare' | 'platform'): void {
   mkdirSync(join(root, '.bwf'), { recursive: true });
   writeFileSync(join(root, '.bwf/project.json'), JSON.stringify({ platform }));
 }
@@ -217,7 +217,7 @@ describe('bwfPlugin dev asset routing', () => {
     vi.spyOn(process, 'cwd').mockReturnValue(root);
     const { bwfPlugin } = await import('../../src/index.ts');
     const plugins = bwfPlugin();
-    const envPlugin = plugins.find((plugin) => plugin.name === 'nosam:env');
+    const envPlugin = plugins.find((plugin) => plugin.name === 'platform:env');
     const config = getHookHandler(envPlugin?.config) as (
       config: import('vite').UserConfig,
       env: import('vite').ConfigEnv,
@@ -236,7 +236,7 @@ describe('bwfPlugin dev asset routing', () => {
   ): Promise<unknown> {
     vi.spyOn(process, 'cwd').mockReturnValue(root);
     const { bwfPlugin } = await import('../../src/index.ts');
-    const plugin = bwfPlugin().find((entry) => entry.name === 'nosam:server-runtime-optimizer');
+    const plugin = bwfPlugin().find((entry) => entry.name === 'platform:server-runtime-optimizer');
     const configEnvironment = getHookHandler(plugin?.configEnvironment) as (
       name: string,
       environment: import('vite').EnvironmentOptions,
@@ -259,7 +259,7 @@ describe('bwfPlugin dev asset routing', () => {
     };
     const nodeOptimizer = { optimizeDeps: { exclude: ['@builtbyfriends/bwf'] } };
     const cases = [
-      [createApiOnlyProjectRoot, 'nosam_worker', workerd, workerdOptimizer],
+      [createApiOnlyProjectRoot, 'platform_worker', workerd, workerdOptimizer],
       // Default mode never runs Vite's own ssr environment.
       [createApiOnlyProjectRoot, 'ssr', node, nodeOptimizer],
       [createFrameworkProjectRoot, 'ssr', workerd, workerdOptimizer],
@@ -320,7 +320,7 @@ describe('bwfPlugin dev asset routing', () => {
     const plugins = bwfPlugin();
 
     if (envSchema) {
-      const schemaPlugin = plugins.find((plugin) => plugin.name === 'nosam:env-schema');
+      const schemaPlugin = plugins.find((plugin) => plugin.name === 'platform:env-schema');
       const schemaConfig = getHookHandler(schemaPlugin?.config) as (
         config: import('vite').UserConfig,
         env: import('vite').ConfigEnv,
@@ -328,7 +328,7 @@ describe('bwfPlugin dev asset routing', () => {
       await schemaConfig({}, configEnv);
     }
 
-    const envPlugin = plugins.find((plugin) => plugin.name === 'nosam:env');
+    const envPlugin = plugins.find((plugin) => plugin.name === 'platform:env');
     const config = getHookHandler(envPlugin?.config) as (
       config: import('vite').UserConfig,
       env: import('vite').ConfigEnv,
@@ -388,7 +388,7 @@ describe('bwfPlugin dev asset routing', () => {
       const assets = await resolveBwfPluginAssets(createRoot(), {}, configEnv);
 
       expect(assets?.not_found_handling).toBe('single-page-application');
-      expect(assets?.run_worker_first).toEqual(['/api', '/api/*', '/__nosam', '/__nosam/*']);
+      expect(assets?.run_worker_first).toEqual(['/api', '/api/*', '/__platform', '/__platform/*']);
     },
   );
 
@@ -404,7 +404,7 @@ describe('bwfPlugin dev asset routing', () => {
     );
 
     expect(assets?.not_found_handling).toBe('single-page-application');
-    expect(assets?.run_worker_first).toEqual(['/__nosam', '/__nosam/*']);
+    expect(assets?.run_worker_first).toEqual(['/__platform', '/__platform/*']);
   });
 
   it('runs configured edge rules before existing assets in native production builds', async () => {
@@ -419,11 +419,11 @@ describe('bwfPlugin dev asset routing', () => {
     {
       name: 'keeps the inferred policy in managed builds',
       managed: true,
-      expected: ['/api', '/api/*', '/__nosam', '/__nosam/*'],
+      expected: ['/api', '/api/*', '/__platform', '/__platform/*'],
     },
   ])('routing.alwaysUseHttps alone $name', async ({ managed, expected }) => {
     if (managed) {
-      vi.stubEnv('NOSAM_DEPLOY_PROJECT_ID', 'managed-project');
+      vi.stubEnv('PLATFORM_DEPLOY_PROJECT_ID', 'managed-project');
     }
     const root = createApiOnlyProjectRoot();
     writeFileSync(join(root, 'bwf.json'), JSON.stringify({ routing: { alwaysUseHttps: true } }));
@@ -461,18 +461,18 @@ describe('bwfPlugin dev asset routing', () => {
   });
 
   it('lets managed production dispatch keep the inferred asset-first policy', async () => {
-    vi.stubEnv('NOSAM_DEPLOY_PROJECT_ID', 'managed-project');
+    vi.stubEnv('PLATFORM_DEPLOY_PROJECT_ID', 'managed-project');
     const assets = await resolveBwfPluginAssets(
       createConfiguredEdgeRulesProjectRoot(),
       {},
       { command: 'build', mode: 'production' },
     );
 
-    expect(assets?.run_worker_first).toEqual(['/api', '/api/*', '/__nosam', '/__nosam/*']);
+    expect(assets?.run_worker_first).toEqual(['/api', '/api/*', '/__platform', '/__platform/*']);
   });
 
   it('ignores an ambient managed project marker during native development', async () => {
-    vi.stubEnv('NOSAM_DEPLOY_PROJECT_ID', 'managed-project');
+    vi.stubEnv('PLATFORM_DEPLOY_PROJECT_ID', 'managed-project');
     const assets = await resolveBwfPluginAssets(
       createConfiguredEdgeRulesProjectRoot(),
       {},
@@ -510,14 +510,14 @@ describe('bwfPlugin dev asset routing', () => {
     vi.stubEnv('CLOUDFLARE_API_TOKEN', 'cloudflare-token');
     vi.stubEnv('CLOUDFLARE_CF_AUTH', undefined);
     vi.stubEnv('CLOUDFLARE_AUTH_USE_KEYRING', 'false');
-    vi.stubEnv('BWF_TOKEN', 'nosam-token-that-must-not-be-used');
+    vi.stubEnv('BWF_TOKEN', 'platform-token-that-must-not-be-used');
     const config = await resolveCloudflareConfig(createAiProjectRoot('cloudflare'));
 
     expect(config.ai).toEqual({ binding: 'AI', remote: true });
     expect(config.vars).not.toMatchObject({
-      __NOSAM_TOKEN: expect.anything(),
-      __NOSAM_PROJECT_ID: expect.anything(),
-      __NOSAM_PROXY_URL: expect.anything(),
+      __PLATFORM_TOKEN: expect.anything(),
+      __PLATFORM_PROJECT_ID: expect.anything(),
+      __PLATFORM_PROXY_URL: expect.anything(),
     });
     expect(process.env.CLOUDFLARE_API_TOKEN).toBe('cloudflare-token');
     expect(process.env.CLOUDFLARE_CF_AUTH).toBe('true');
@@ -586,18 +586,18 @@ describe('bwfPlugin dev asset routing', () => {
     ['Node target', createNodeProjectRoot],
   ] as const)('stops a %s app on a reserved .env name', async (_label, createRoot) => {
     const root = createRoot();
-    writeFileSync(join(root, '.env'), 'API_KEY=k\n__NOSAM_PROXY_TOKEN=local\n');
+    writeFileSync(join(root, '.env'), 'API_KEY=k\n__PLATFORM_PROXY_TOKEN=local\n');
     vi.spyOn(process, 'cwd').mockReturnValue(root);
 
     const { bwfPlugin } = await import('../../src/index.ts');
-    const schemaPlugins = bwfPlugin().filter((plugin) => plugin.name === 'nosam:env-schema');
+    const schemaPlugins = bwfPlugin().filter((plugin) => plugin.name === 'platform:env-schema');
     expect(schemaPlugins).toHaveLength(1);
     const schemaConfig = getHookHandler(schemaPlugins[0]!.config) as (
       config: import('vite').UserConfig,
       env: import('vite').ConfigEnv,
     ) => Promise<void>;
     await expect(schemaConfig({}, { command: 'serve', mode: 'development' })).rejects.toThrow(
-      '.env defines names reserved for bwf: __NOSAM_PROXY_TOKEN. bwf sets these itself',
+      '.env defines names reserved for bwf: __PLATFORM_PROXY_TOKEN. bwf sets these itself',
     );
   });
 
@@ -615,9 +615,9 @@ describe('bwfPlugin dev asset routing', () => {
     vi.stubEnv('CLOUDFLARE_CF_AUTH', undefined);
     vi.stubEnv('CLOUDFLARE_AUTH_USE_KEYRING', undefined);
     vi.stubEnv('BWF_TOKEN', 'managed-token');
-    const root = createAiProjectRoot('nosam');
+    const root = createAiProjectRoot('platform');
     vi.stubEnv('BWF_API_URL', 'https://platform.example.test');
-    vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', join(root, 'registry'));
+    vi.stubEnv('PLATFORM_REGISTRY_DIR', join(root, 'registry'));
     savePlatformConnection({
       accountId: null,
       apiUrl: 'https://platform.example.test',
@@ -630,7 +630,7 @@ describe('bwfPlugin dev asset routing', () => {
     writeFileSync(
       join(root, '.bwf/project.json'),
       JSON.stringify({
-        platform: 'nosam',
+        platform: 'platform',
         projectId: 'managed-project',
         slug: 'managed-app',
         platformUrl: 'https://platform.example.test',
@@ -640,9 +640,9 @@ describe('bwfPlugin dev asset routing', () => {
 
     expect(config.ai).toBeUndefined();
     expect(config.vars).toMatchObject({
-      __NOSAM_TOKEN: 'managed-token',
-      __NOSAM_PROJECT_ID: 'managed-project',
-      __NOSAM_PROXY_URL: 'https://proxy.example.test',
+      __PLATFORM_TOKEN: 'managed-token',
+      __PLATFORM_PROJECT_ID: 'managed-project',
+      __PLATFORM_PROXY_URL: 'https://proxy.example.test',
     });
     expect(process.env.CLOUDFLARE_CF_AUTH).toBeUndefined();
     expect(process.env.CLOUDFLARE_AUTH_USE_KEYRING).toBeUndefined();

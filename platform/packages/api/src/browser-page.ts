@@ -57,12 +57,12 @@ export function platformBrowserError(
     }
   }
   const action = returnUrl
-    ? '<a class="nosam-auth-button nosam-auth-button-primary" href="' +
+    ? '<a class="platform-auth-button platform-auth-button-primary" href="' +
       escapeBrowserHtml(returnUrl) +
       '">Start a new sign-in</a>'
     : '';
   const details = (extra.details ?? [])
-    .map((detail) => '<p class="nosam-auth-note">' + escapeBrowserHtml(detail) + '</p>')
+    .map((detail) => '<p class="platform-auth-note">' + escapeBrowserHtml(detail) + '</p>')
     .join('');
   const command = extra.command
     ? '<pre><code>' + escapeBrowserHtml(extra.command) + '</code></pre>'

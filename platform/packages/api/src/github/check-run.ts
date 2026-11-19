@@ -72,7 +72,7 @@ export function preservedCheckRunConclusion(raw: unknown): CheckRunConclusion {
  * run's name + repo + head SHA, so a rename in one producer and not the other
  * would silently make the "Re-run" button a no-op for that executor.
  */
-export const NOSAM_BUILD_CHECK_RUN_NAME = 'Platform Build';
+export const PLATFORM_BUILD_CHECK_RUN_NAME = 'Platform Build';
 
 // Same retry shape as `getBranchHeadComparisonStatus` (compare): up to 2 extra
 // attempts with a short fixed delay on transient 5xx/network/token-mint. A 4xx
@@ -182,7 +182,7 @@ export async function createCheckRun(
           Accept: 'application/vnd.github+json',
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'User-Agent': 'nosam-api',
+          'User-Agent': 'platform-api',
           'X-GitHub-Api-Version': GITHUB_API_VERSION,
         },
         body,
@@ -307,7 +307,7 @@ export async function completeCheckRun(
             Accept: 'application/vnd.github+json',
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
-            'User-Agent': 'nosam-api',
+            'User-Agent': 'platform-api',
             'X-GitHub-Api-Version': GITHUB_API_VERSION,
           },
           body,

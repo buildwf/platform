@@ -32,7 +32,7 @@ vi.mock('mysql2/promise', () => ({
   },
 }));
 
-const LOCK_NAME = `nosam_migrations:${createHash('sha1').update('app').digest('hex')}`;
+const LOCK_NAME = `platform_migrations:${createHash('sha1').update('app').digest('hex')}`;
 const CONTROL =
   /^(BEGIN|COMMIT|ROLLBACK)$|SAVEPOINT|GET_LOCK|RELEASE_LOCK|IS_USED_LOCK|DATABASE\(\)|_void_migration_lock/;
 
@@ -222,14 +222,14 @@ async function migrate(
   runAuthMigrations?: () => Promise<void>,
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   const handler = createMigrationHandler(
-    { HYPERDRIVE: { connectionString: 'mysql://localhost/app' }, __NOSAM_PROXY_TOKEN: 'token' },
+    { HYPERDRIVE: { connectionString: 'mysql://localhost/app' }, __PLATFORM_PROXY_TOKEN: 'token' },
     migrations,
     runAuthMigrations,
   );
   const response = await handler(
-    new Request('http://localhost/__nosam/migrate', {
+    new Request('http://localhost/__platform/migrate', {
       method: 'POST',
-      headers: { 'x-nosam-internal': 'token' },
+      headers: { 'x-platform-internal': 'token' },
     }),
   );
   return { status: response.status, body: (await response.json()) as Record<string, unknown> };
@@ -289,7 +289,7 @@ function fakeClient(
         return (options.applied ?? []).map((name) => ({ name })) as unknown as T;
       }
       if (sql.startsWith('ROLLBACK TO SAVEPOINT') && options.committed) {
-        throw mySqlError('SAVEPOINT nosam_migration does not exist', 'ER_SP_DOES_NOT_EXIST');
+        throw mySqlError('SAVEPOINT platform_migration does not exist', 'ER_SP_DOES_NOT_EXIST');
       }
       return [] as unknown as T;
     },
@@ -445,8 +445,8 @@ describe('MySQL migration runner', () => {
       'BEGIN',
       'UPDATE c SET n = n + 1;',
       'INSERT INTO nope VALUES (1);',
-      'SAVEPOINT `nosam_migration`',
-      'ROLLBACK TO SAVEPOINT `nosam_migration`',
+      'SAVEPOINT `platform_migration`',
+      'ROLLBACK TO SAVEPOINT `platform_migration`',
       'ROLLBACK',
       'SELECT RELEASE_LOCK(?)',
     ]);
@@ -491,7 +491,7 @@ describe('MySQL migration runner', () => {
         { name: '002_dup.sql', sql: 'ALTER TABLE c ADD COLUMN n INT;' },
       ]),
     ).rejects.toThrow(/^migration 002_dup\.sql failed: Duplicate column name 'n'$/);
-    expect(sql()).not.toContain('SAVEPOINT `nosam_migration`');
+    expect(sql()).not.toContain('SAVEPOINT `platform_migration`');
   });
 
   // MySQL rolls back the whole transaction itself here, so the file left nothing behind.
@@ -1063,7 +1063,7 @@ describe('MySQL Better Auth migrations under the lock', () => {
     const database = useDatabase(new FakeMySqlDatabase());
     let holder: unknown;
     await runMySqlMigrations(
-      join(tmpdir(), 'nosam-no-migrations'),
+      join(tmpdir(), 'platform-no-migrations'),
       'mysql://localhost/app',
       async () => {
         const [row] = (await database.query(database.connect(), 'SELECT IS_USED_LOCK(?)', [
@@ -1079,7 +1079,7 @@ describe('MySQL Better Auth migrations under the lock', () => {
 
   // `vp dev` passes the database it holds the lock of.
   it('runs local Better Auth migrations on the database it is given', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-auth-url-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-auth-url-'));
     writeFileSync(join(root, '.env'), 'DATABASE_URL=mysql://localhost/env\n');
     vi.stubEnv('DATABASE_URL', 'mysql://localhost/shell');
     try {

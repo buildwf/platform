@@ -6,7 +6,7 @@ import { CloudflareApiError } from '../../src/provisioning/cloudflare-api.ts';
 const CREDENTIAL = 'cf-credential-dummy';
 const ACCOUNT = 'acct_1';
 const ZONE = 'zone_1';
-const RELAY = 'nosam-email-relay';
+const RELAY = 'platform-email-relay';
 
 function cfSuccess(result: unknown): Response {
   return Response.json({ success: true, errors: [], result });
@@ -249,12 +249,12 @@ describe('cf-customer client', () => {
         bindings: [
           {
             type: 'plain_text',
-            name: 'NOSAM_EMAIL_GATEWAY_ORIGIN',
+            name: 'PLATFORM_EMAIL_GATEWAY_ORIGIN',
             text: 'https://gateway.example.test',
           },
-          { type: 'plain_text', name: 'NOSAM_EMAIL_ACCOUNT', text: ACCOUNT },
-          { type: 'plain_text', name: 'NOSAM_EMAIL_ZONE', text: ZONE },
-          { type: 'plain_text', name: 'NOSAM_EMAIL_INGRESS', text: RELAY },
+          { type: 'plain_text', name: 'PLATFORM_EMAIL_ACCOUNT', text: ACCOUNT },
+          { type: 'plain_text', name: 'PLATFORM_EMAIL_ZONE', text: ZONE },
+          { type: 'plain_text', name: 'PLATFORM_EMAIL_INGRESS', text: RELAY },
         ],
       });
       const modulePart = formData.get('index.js') as File;
@@ -264,7 +264,7 @@ describe('cf-customer client', () => {
   });
 
   describe('putRelaySecret', () => {
-    it('PUTs { name: NOSAM_RELAY_SECRET, text, type: secret_text } to .../secrets', async () => {
+    it('PUTs { name: PLATFORM_RELAY_SECRET, text, type: secret_text } to .../secrets', async () => {
       fetchMock.mockResolvedValueOnce(cfSuccess({}));
       const client = createCfCustomerClient(CREDENTIAL);
 
@@ -276,7 +276,7 @@ describe('cf-customer client', () => {
       );
       expect(init.method).toBe('PUT');
       expect(JSON.parse(init.body as string)).toEqual({
-        name: 'NOSAM_RELAY_SECRET',
+        name: 'PLATFORM_RELAY_SECRET',
         text: 'relay-secret-dummy',
         type: 'secret_text',
       });

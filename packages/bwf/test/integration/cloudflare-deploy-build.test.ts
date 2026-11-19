@@ -39,17 +39,17 @@ let pg = '';
 
 // The guard accepts only real-shaped ids (D1 UUID, 32-hex KV).
 const ACCOUNT_ID = '0123456789abcdef0123456789abcdef';
-const WORKER_NAME = 'nosam-kitchen-sink';
+const WORKER_NAME = 'platform-kitchen-sink';
 const REAL_D1_ID = '52b3bbc7-c473-4b26-9486-1345f5de61c4';
 const REAL_KV_ID = '7c07b54c9f2a4d1e8b3f6a0c153aa11a';
-const R2_BUCKET_NAME = 'nosam-kitchen-sink-storage';
+const R2_BUCKET_NAME = 'platform-kitchen-sink-storage';
 
 const OVERLAY_WRANGLER = {
   name: WORKER_NAME,
   account_id: ACCOUNT_ID,
   compatibility_date: '2026-02-24',
   d1_databases: [
-    { binding: 'DB', database_name: 'nosam-kitchen-sink-db', database_id: REAL_D1_ID },
+    { binding: 'DB', database_name: 'platform-kitchen-sink-db', database_id: REAL_D1_ID },
   ],
   kv_namespaces: [{ binding: 'KV', id: REAL_KV_ID }],
   r2_buckets: [{ binding: 'STORAGE', bucket_name: R2_BUCKET_NAME }],
@@ -152,7 +152,7 @@ describe('playground/kitchen-sink --platform cloudflare real-build deploy guard'
   it('emits the sandbox container, injected AI binding, cron trigger, and queue bindings', () => {
     expect(pristineEmitted.containers).toHaveLength(1);
     expect(pristineEmitted.containers).toContainEqual(
-      expect.objectContaining({ name: 'void-sandbox-v1', class_name: 'SandboxV1' }),
+      expect.objectContaining({ name: 'platform-sandbox-v1', class_name: 'SandboxV1' }),
     );
     expect(pristineEmitted.ai).toEqual({ binding: 'AI' });
     expect(pristineEmitted.triggers).toEqual({ crons: ['* * * * *'] });

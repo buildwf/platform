@@ -34,7 +34,7 @@ const argumentsFor = (changes: Partial<PlatformInstallCommandOptions> = {}) =>
   platformInstallCommandArguments({ ...options, ...changes }).slice(2);
 
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), 'nosam-saved-plans-'));
+  directory = mkdtempSync(join(tmpdir(), 'platform-saved-plans-'));
 });
 afterEach(() => {
   rmSync(directory, { recursive: true, force: true });

@@ -11,15 +11,15 @@ export function AuthPage({
   children: ReactNode;
 }) {
   return (
-    <main className="nosam-auth-page">
+    <main className="platform-auth-page">
       <style>{browserPageStyles}</style>
-      <div className="nosam-auth-container">
-        <div className="nosam-auth-brand">
-          <span className="nosam-auth-logo" dangerouslySetInnerHTML={{ __html: browserPageLogo }} />
-          <span className="nosam-auth-divider" aria-hidden="true" />
+      <div className="platform-auth-container">
+        <div className="platform-auth-brand">
+          <span className="platform-auth-logo" dangerouslySetInnerHTML={{ __html: browserPageLogo }} />
+          <span className="platform-auth-divider" aria-hidden="true" />
           <span>{platformName}</span>
         </div>
-        <section className="nosam-auth-card" aria-labelledby="nosam-auth-title">
+        <section className="platform-auth-card" aria-labelledby="platform-auth-title">
           {children}
         </section>
       </div>

@@ -23,7 +23,7 @@ describe('production server environment', () => {
   it.each([undefined, 'https://build.example.com'])(
     'uses public build values at boot and during SSR (shell: %s)',
     async (shellValue) => {
-      const root = mkdtempSync(join(tmpdir(), 'nosam-env-server-build-'));
+      const root = mkdtempSync(join(tmpdir(), 'platform-env-server-build-'));
       roots.push(root);
       vi.stubEnv('VITE_ORIGIN', shellValue);
       vi.stubEnv('SERVER_TOKEN', 'build-secret-must-not-be-bundled');

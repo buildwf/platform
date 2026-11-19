@@ -56,7 +56,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   delete process.env.CF_ACCESS_TOKEN;
-  delete process.env.NOSAM_ACCESS_ORIGIN;
+  delete process.env.PLATFORM_ACCESS_ORIGIN;
 });
 
 describe('runPlatformLogin', () => {
@@ -193,7 +193,7 @@ describe('runPlatformLogin', () => {
   it('sends Cloudflare Access headers when exchanging a staging login code', async () => {
     const apiUrl = 'https://api.staging.void.cloud';
     process.env.CF_ACCESS_TOKEN = accessJwt;
-    process.env.NOSAM_ACCESS_ORIGIN = apiUrl;
+    process.env.PLATFORM_ACCESS_ORIGIN = apiUrl;
 
     let resolveLoginUrl!: (url: string) => void;
     const loginUrlPromise = new Promise<string>((resolve) => {

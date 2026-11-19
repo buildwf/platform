@@ -11,7 +11,7 @@ import {
 } from '../../src/cli/cloudflare-process.ts';
 
 it('passes the validated custom D1 migration pattern to cf', () => {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-cf-d1-pattern-test-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-cf-d1-pattern-test-'));
   try {
     const config = join(directory, 'wrangler.json');
     const capture = join(directory, 'cf-args.json');
@@ -86,7 +86,7 @@ syncBuiltinESMExports();
 
 // Runs the operation process with cf replaced, and returns cf's argv and the decoded result.
 function runWithCf(operation: CloudflareOperation, cfStdout: string, cfStatus = 0, cfStderr = '') {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-cf-d1-time-travel-test-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-cf-d1-time-travel-test-'));
   try {
     const config = join(directory, 'wrangler.json');
     const capture = join(directory, 'cf-args.json');

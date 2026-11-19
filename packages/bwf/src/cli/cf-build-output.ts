@@ -157,7 +157,7 @@ export async function prepareCfBuildOutput(
 ): Promise<CfBuildOutput | null> {
   const source = resolve(workerDirectory);
   if (existsSync(getRootConfigPath(source))) {
-    const deferredContainers = join(dirname(getRootConfigPath(source)), 'nosam-containers.json');
+    const deferredContainers = join(dirname(getRootConfigPath(source)), 'platform-containers.json');
     if (existsSync(deferredContainers)) {
       const built = await readBuildOutput(source);
       if (
@@ -265,7 +265,7 @@ export async function prepareCfBuildOutput(
     return null;
   }
   const images: Array<{ dispose(): Promise<void> }> = [];
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-cf-deploy-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-cf-deploy-'));
   const dispose = async () => {
     rmSync(directory, { recursive: true, force: true });
     await Promise.all(images.map((image) => image.dispose()));
@@ -349,7 +349,7 @@ async function prepareNativeBuildOutput(
   ) {
     return null;
   }
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-cf-native-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-cf-native-'));
   const dispose = async () => {
     rmSync(directory, { recursive: true, force: true });
   };
@@ -458,7 +458,7 @@ function additionalModulePath(id: string): string | undefined {
 function additionalModulesPlugin(): Plugin {
   // The external id carries a key, not the path: Rolldown escapes ids in the output.
   // The random marker keeps app strings that look like an id from being rewritten.
-  const marker = `__NOSAM_MODULE_${randomBytes(8).toString('hex')}__`;
+  const marker = `__PLATFORM_MODULE_${randomBytes(8).toString('hex')}__`;
   const paths: Array<string> = [];
   const keys = new Map<string, number>();
   // Each file keeps its own name and extension. Assets with the same bytes would
@@ -466,7 +466,7 @@ function additionalModulesPlugin(): Plugin {
   const fileNames = new Map<string, string>();
   const usedFileNames = new Set<string>();
   return {
-    name: 'nosam:additional-modules',
+    name: 'platform:additional-modules',
     enforce: 'pre',
     resolveId: {
       filter: { id: [ADDITIONAL_MODULE_FILTER, /^#/] },
@@ -598,7 +598,7 @@ export async function prepareCfStaticBuildOutput(options: {
   return prepareBundledBuildOutput({
     projectRoot: options.projectRoot,
     entry,
-    scratchPrefix: 'nosam-cf-static-',
+    scratchPrefix: 'platform-cf-static-',
     config: raw,
     assets: { ...record(raw.assets), directory: resolve(options.assetsDirectory) },
     accountId: options.accountId,

@@ -322,7 +322,7 @@ export async function assertProjectZeroTrustAllowsUninstall(
     [
       `platform: Refusing to uninstall because the project Zero Trust state could not be read from the platform database: ${reason}`,
       'Uninstall turns off the platform API, which bwf needs to remove the Cloudflare Access applications that project Zero Trust created.',
-      'Make the installation database reachable (export NOSAM_PLATFORM_DATABASE_URL if this machine has not recorded it), then retry. If project Zero Trust was ever enabled, run `bwf platform zero-trust disable` first.',
+      'Make the installation database reachable (export PLATFORM_DATABASE_URL if this machine has not recorded it), then retry. If project Zero Trust was ever enabled, run `bwf platform zero-trust disable` first.',
     ].join('\n'),
   );
   if (state.active && state.usersExist === false && options.canTurnOff) {

@@ -8,7 +8,7 @@ import { createServerFetch } from '../../src/runtime/fetch-server.ts';
 describe('compileWorkerClient', () => {
   it('wires the server runtime to the app and request context', () => {
     const code = compileWorkerClient('/resolved/auth-client.mjs');
-    expect(code).toContain('import app, { requestContext } from "virtual:nosam-routes"');
+    expect(code).toContain('import app, { requestContext } from "virtual:platform-routes"');
     expect(code).toContain('import { env } from "cloudflare:workers"');
     expect(code).toContain('import { createServerFetch }');
     expect(code).toContain('export { FetchError }');

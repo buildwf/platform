@@ -47,7 +47,7 @@ An unquoted value ends at `#`, which starts a comment. Quote a value that contai
 
 Keep `.env` out of Git. Other dotenv files, including `.env.local`, `.env.production`, `.env.example`, and Wrangler’s `.dev.vars*`, are not supported.
 
-Names starting with `__NOSAM_` are reserved for bwf. bwf stops with an error if `.env` or `env.ts` defines one.
+Names starting with `__PLATFORM_` are reserved for bwf. bwf stops with an error if `.env` or `env.ts` defines one.
 
 Run the local check at any time:
 

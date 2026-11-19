@@ -118,7 +118,7 @@ async function post(key = crypto.randomUUID(), body: unknown = payload(), jwt = 
       headers: {
         Authorization: `Bearer ${jwt}`,
         'content-type': 'application/json',
-        'x-nosam-deploy-idempotency-key': key,
+        'x-platform-deploy-idempotency-key': key,
       },
       body: JSON.stringify(body),
     }),
@@ -133,7 +133,7 @@ async function post(key = crypto.randomUUID(), body: unknown = payload(), jwt = 
 async function admit(key = crypto.randomUUID(), jwt = user.jwt) {
   const response = await post(key, payload(), jwt);
   expect(response.status).toBe(200);
-  const id = response.headers.get('x-nosam-deployment-id');
+  const id = response.headers.get('x-platform-deployment-id');
   expect(id).toMatch(/^dpl_/);
   return id!;
 }
@@ -142,7 +142,7 @@ function delivery(id: string) {
   const ack = vi.fn();
   const retry = vi.fn();
   const batch = {
-    queue: 'nosam-deployments',
+    queue: 'platform-deployments',
     messages: [{ body: { deploymentId: id }, ack, retry }],
   } as unknown as MessageBatch<unknown>;
   return { batch, ack, retry };
@@ -184,7 +184,7 @@ async function checkpoint(status = 'installed', desiredState = 'enabled') {
 
 function probe(headers: Record<string, string> = {}, bindings = queuedEnv) {
   return app.fetch(
-    new Request('https://api.test/__nosam/platform/deployment-execution', { headers }),
+    new Request('https://api.test/__platform/platform/deployment-execution', { headers }),
     bindings,
   );
 }
@@ -193,8 +193,8 @@ describe('durable deployment admission and observation', () => {
   it.each([
     ['static', 'static'],
     ['spa', 'spa'],
-    ['nosam', 'static'],
-    ['nosam', 'worker'],
+    ['platform', 'static'],
+    ['platform', 'worker'],
   ] as const)(
     'stages one attributed receipt for a %s app before queue delivery',
     async (type, kind) => {
@@ -207,12 +207,12 @@ describe('durable deployment admission and observation', () => {
       expect(response.status).toBe(200);
       const operation = await getDeploymentOperation(
         env.db,
-        response.headers.get('x-nosam-deployment-id')!,
+        response.headers.get('x-platform-deployment-id')!,
       );
       const staged = await env.STATIC_ASSETS_R2.list({ prefix: operation!.input_prefix });
       expect(
         staged.objects.filter(({ key }) => key.includes('/receipt')).map(({ key }) => key),
-      ).toEqual([`${operation!.input_prefix}receipt-nosam-platform-${kind}`]);
+      ).toEqual([`${operation!.input_prefix}receipt-platform-${kind}`]);
     },
   );
 
@@ -293,7 +293,7 @@ describe('durable deployment admission and observation', () => {
       await checkpoint(status, desiredState);
       const response = await post();
       expect(response.status).toBe(409);
-      expect(response.headers.get('x-nosam-deployment-id')).toBeNull();
+      expect(response.headers.get('x-platform-deployment-id')).toBeNull();
       expect(send).toHaveBeenCalledOnce();
       expect(await env.db.select().from(deploymentOperations)).toHaveLength(1);
       expect(await env.db.select().from(deployments)).toMatchObject([{ id, status: 'pending' }]);
@@ -312,8 +312,8 @@ describe('durable deployment admission and observation', () => {
     await checkpoint();
     const id = await admit();
     expect((await probe()).status).toBe(404);
-    expect((await probe({ 'X-Nosam-Platform-Probe': 'wrong' })).status).toBe(404);
-    const headers = { 'X-Nosam-Platform-Probe': probeToken };
+    expect((await probe({ 'X-Platform-Probe': 'wrong' })).status).toBe(404);
+    const headers = { 'X-Platform-Probe': probeToken };
     const enabled = await probe(headers);
     expect(enabled.status).toBe(200);
     expect(await enabled.json()).toEqual({
@@ -376,10 +376,10 @@ describe('durable deployment admission and observation', () => {
       .setProtectedHeader({ alg: 'RS256', kid: 'durable-key' })
       .sign(pair.privateKey);
     const bindings = { ...queuedEnv, PLATFORM_TRAFFIC_STATE: 'staging' };
-    expect((await probe({ 'X-Nosam-Platform-Probe': probeToken }, bindings)).status).toBe(403);
+    expect((await probe({ 'X-Platform-Probe': probeToken }, bindings)).status).toBe(403);
     const response = await probe(
       {
-        'X-Nosam-Platform-Probe': probeToken,
+        'X-Platform-Probe': probeToken,
         'Cf-Access-Jwt-Assertion': assertion,
       },
       bindings,
@@ -410,7 +410,7 @@ describe('durable deployment admission and observation', () => {
       const provider = mockCfApi();
       const fresh = await post();
       expect(fresh.status).toBe(409);
-      expect(fresh.headers.get('x-nosam-deployment-id')).toBeNull();
+      expect(fresh.headers.get('x-platform-deployment-id')).toBeNull();
       const rollback = await app.fetch(
         new Request(`https://api.test/projects/${project.id}/rollback`, {
           method: 'POST',
@@ -642,7 +642,7 @@ describe('durable deployment admission and observation', () => {
     expect(await countUserDeploymentsToday(env.db, user.id)).toBe(1);
     const receiptKeys = put.mock.calls
       .map(([key]) => key)
-      .filter((key) => key.endsWith('/receipt-nosam-platform-spa'));
+      .filter((key) => key.endsWith('/receipt-platform-spa'));
     expect(receiptKeys).toHaveLength(2);
     expect(new Set(receiptKeys).size).toBe(2);
     for (const key of receiptKeys) {
@@ -731,7 +731,7 @@ describe('durable execution claim and revocation', () => {
     });
     const id = await admit(crypto.randomUUID(), collaborator.jwt);
     const stagedOperation = await getDeploymentOperation(env.db, id);
-    const receiptKey = `${stagedOperation!.input_prefix}receipt-nosam-platform-spa`;
+    const receiptKey = `${stagedOperation!.input_prefix}receipt-platform-spa`;
     expect(await env.STATIC_ASSETS_R2.get(receiptKey)).not.toBeNull();
     expect(await getDeploymentOperation(env.db, id)).toMatchObject({ actor_id: collaborator.id });
     await env.db
@@ -815,20 +815,20 @@ describe('durable execution claim and revocation', () => {
         get: () => ({
           fetch: async (request: Request) => {
             const pathname = new URL(request.url).pathname;
-            if (pathname === '/__nosam/migrate/capabilities') {
+            if (pathname === '/__platform/migrate/capabilities') {
               return Response.json({
                 ...migrations,
                 destructiveValidation: 'passed',
                 endpoints: {
-                  app: '/__nosam/migrate/app',
-                  reconcile: '/__nosam/migrate/app/attempt/:attemptId',
+                  app: '/__platform/migrate/app',
+                  reconcile: '/__platform/migrate/app/attempt/:attemptId',
                 },
               });
             }
-            if (pathname === '/__nosam/migrate/app') {
+            if (pathname === '/__platform/migrate/app') {
               return migrate();
             }
-            if (pathname === '/__nosam/ready') {
+            if (pathname === '/__platform/ready') {
               return Response.json({ ready: true });
             }
             return new Response('<h1>durable</h1>', {
@@ -843,14 +843,14 @@ describe('durable execution claim and revocation', () => {
           version: 3,
           assetManifestVersion: 2,
           bindings: { d1: ['DB'] },
-          type: 'nosam',
+          type: 'platform',
           queues: [{ name: 'demo-queue', bindingName: 'QUEUE_DEMO_QUEUE' }],
           migrations,
         },
         workerFiles: { 'index.js': btoa('export default {};') },
       });
       expect(response.status).toBe(200);
-      const id = response.headers.get('x-nosam-deployment-id')!;
+      const id = response.headers.get('x-platform-deployment-id')!;
       const execute = vi.spyOn(deploy, 'executeQueuedDeployment');
       const originalAppend = execution.appendDeploymentEvent;
       let failures = 0;
@@ -898,19 +898,19 @@ describe('durable execution claim and revocation', () => {
           version: 3,
           assetManifestVersion: 2,
           bindings: {},
-          type: 'nosam',
+          type: 'platform',
           queues: [{ name: 'demo-queue', bindingName: 'QUEUE_DEMO_QUEUE', maxBatchSize }],
         },
         workerFiles: { 'index.js': btoa('export default {};') },
       });
       const first = await post(crypto.randomUUID(), workerPayload(7));
-      const liveId = first.headers.get('x-nosam-deployment-id')!;
+      const liveId = first.headers.get('x-platform-deployment-id')!;
       expect((await run(liveId)).ack).toHaveBeenCalledOnce();
       const queueKey = `queue:${project.id.toLowerCase().replaceAll('_', '-')}-demo-queue`;
       const liveRoute = await env.ROUTING.get(queueKey);
       const consumer = {
         consumer_id: 'consumer',
-        script: 'nosam-dispatch',
+        script: 'platform-dispatch',
         type: 'worker',
         settings: { batch_size: 7 },
       };
@@ -927,7 +927,7 @@ describe('durable execution claim and revocation', () => {
         },
       });
       const second = await post(crypto.randomUUID(), workerPayload(1));
-      const id = second.headers.get('x-nosam-deployment-id')!;
+      const id = second.headers.get('x-platform-deployment-id')!;
       const provider = globalThis.fetch;
       let release: (() => void) | undefined;
       let notify!: () => void;
@@ -1005,11 +1005,11 @@ describe('durable execution claim and revocation', () => {
     });
     const response = await post(crypto.randomUUID(), {
       ...payload(),
-      manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'nosam' },
+      manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'platform' },
       workerFiles: { 'index.js': btoa(worker) },
     });
     expect(response.status).toBe(200);
-    const id = response.headers.get('x-nosam-deployment-id')!;
+    const id = response.headers.get('x-platform-deployment-id')!;
     const operation = await getDeploymentOperation(env.db, id);
     expect(operation?.payload.body).not.toHaveProperty('workerFiles');
     expect(operation?.payload.modules).toMatchObject([{ name: 'index.js' }]);
@@ -1032,10 +1032,10 @@ describe('durable execution claim and revocation', () => {
   it('does not upload corrupt staged modules or acknowledge an unknown execution outcome', async () => {
     const response = await post(crypto.randomUUID(), {
       ...payload(),
-      manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'nosam' },
+      manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'platform' },
       workerFiles: { 'index.js': btoa('export default {};') },
     });
-    const id = response.headers.get('x-nosam-deployment-id')!;
+    const id = response.headers.get('x-platform-deployment-id')!;
     const operation = await getDeploymentOperation(env.db, id);
     await env.STATIC_ASSETS_R2.put(operation!.payload.modules[0]!.key, 'corrupted module');
     const message = await run(id);
@@ -1072,10 +1072,10 @@ describe('durable execution claim and revocation', () => {
       });
       const response = await post(crypto.randomUUID(), {
         ...payload(),
-        manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'nosam' },
+        manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'platform' },
         workerFiles: { 'index.js': btoa('export default {};') },
       });
-      const id = response.headers.get('x-nosam-deployment-id')!;
+      const id = response.headers.get('x-platform-deployment-id')!;
       const list = env.STATIC_ASSETS_R2.list.bind(env.STATIC_ASSETS_R2);
       vi.spyOn(env.STATIC_ASSETS_R2, 'list').mockImplementation(async (options) => {
         // The run spent this long before it read its staged modules.
@@ -1238,7 +1238,7 @@ describe('durable execution of directly uploaded Worker modules', () => {
   function workerPayload(workerInput: unknown) {
     return {
       ...payload(),
-      manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'nosam' },
+      manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'platform' },
       workerInput,
     };
   }
@@ -1260,7 +1260,7 @@ describe('durable execution of directly uploaded Worker modules', () => {
     const { workerInput, prefix } = await uploadWorker({ 'index.js': worker });
     const response = await post(crypto.randomUUID(), workerPayload(workerInput));
     expect(response.status).toBe(200);
-    const id = response.headers.get('x-nosam-deployment-id')!;
+    const id = response.headers.get('x-platform-deployment-id')!;
     const operation = await getDeploymentOperation(env.db, id);
     expect(operation?.input_prefix).toBe(prefix);
     expect(operation?.payload.body).not.toHaveProperty('workerInput');
@@ -1274,7 +1274,7 @@ describe('durable execution of directly uploaded Worker modules', () => {
       },
     ]);
     // Nothing was copied: the prefix holds the upload and the receipt marker.
-    expect(await keys(prefix)).toEqual([`${prefix}0`, `${prefix}receipt-nosam-platform-worker`]);
+    expect(await keys(prefix)).toEqual([`${prefix}0`, `${prefix}receipt-platform-worker`]);
 
     const message = await run(id);
     expect(message.ack).toHaveBeenCalledOnce();
@@ -1287,11 +1287,11 @@ describe('durable execution of directly uploaded Worker modules', () => {
     const { workerInput, prefix } = await uploadWorker({ 'index.js': 'export default {};' });
     const key = crypto.randomUUID();
     const first = await post(key, workerPayload(workerInput));
-    const id = first.headers.get('x-nosam-deployment-id')!;
+    const id = first.headers.get('x-platform-deployment-id')!;
     // A transport retry repeats the request: the same key and the same upload.
     const retry = await post(key, workerPayload(workerInput));
     expect(retry.status).toBe(200);
-    expect(retry.headers.get('x-nosam-deployment-id')).toBe(id);
+    expect(retry.headers.get('x-platform-deployment-id')).toBe(id);
     expect(await keys(prefix)).toContain(`${prefix}0`);
 
     // A different deploy cannot claim an upload another operation owns.
@@ -1301,7 +1301,7 @@ describe('durable execution of directly uploaded Worker modules', () => {
         headers: {
           Authorization: `Bearer ${user.jwt}`,
           'content-type': 'application/json',
-          'x-nosam-deploy-idempotency-key': crypto.randomUUID(),
+          'x-platform-deploy-idempotency-key': crypto.randomUUID(),
         },
         body: JSON.stringify(workerPayload(workerInput)),
       }),
@@ -1324,7 +1324,7 @@ describe('durable execution of directly uploaded Worker modules', () => {
     const { workerInput, prefix } = await uploadWorker({ 'index.js': 'export default {};' });
     const key = crypto.randomUUID();
     const first = await post(key, workerPayload(workerInput));
-    const id = first.headers.get('x-nosam-deployment-id')!;
+    const id = first.headers.get('x-platform-deployment-id')!;
     expect((await run(id)).ack).toHaveBeenCalledOnce();
     expect(await getDeploymentOperation(env.db, id)).toMatchObject({
       status: 'terminal',
@@ -1336,7 +1336,7 @@ describe('durable execution of directly uploaded Worker modules', () => {
     // receipt and writes nothing under the deleted upload.
     const retry = await post(key, workerPayload(workerInput));
     expect(retry.status).toBe(200);
-    expect(retry.headers.get('x-nosam-deployment-id')).toBe(id);
+    expect(retry.headers.get('x-platform-deployment-id')).toBe(id);
     expect(await keys(prefix)).toEqual([]);
     expect(await env.db.select().from(deploymentOperations)).toHaveLength(1);
 
@@ -1351,7 +1351,7 @@ describe('durable execution of directly uploaded Worker modules', () => {
     mockCfApi({ uploadWorker: uploaded });
     const { workerInput, prefix } = await uploadWorker({ 'index.js': 'export default {};' });
     const response = await post(crypto.randomUUID(), workerPayload(workerInput));
-    const id = response.headers.get('x-nosam-deployment-id')!;
+    const id = response.headers.get('x-platform-deployment-id')!;
     await env.STATIC_ASSETS_R2.put(`${prefix}0`, 'export default [];');
 
     const message = await run(id);
@@ -1393,10 +1393,10 @@ describe('durable execution of directly uploaded Worker modules', () => {
     });
     const response = await post(crypto.randomUUID(), {
       ...payload(),
-      manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'nosam' },
+      manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'platform' },
       workerFiles: { 'index.js': btoa(worker) },
     });
-    const id = response.headers.get('x-nosam-deployment-id')!;
+    const id = response.headers.get('x-platform-deployment-id')!;
     const operation = await getDeploymentOperation(env.db, id);
     expect(operation?.payload.modules[0]?.size).toBe(worker.length);
     await env.db

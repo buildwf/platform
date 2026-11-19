@@ -48,7 +48,7 @@ const mockDiscoverPlatform = vi.fn();
 let platformRegistryDirectory: string;
 
 it('pins compatibility date in the lock without rewriting authored TypeScript', () => {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-init-authored-config-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-init-authored-config-'));
   const source =
     "import { defineConfig } from '@builtbyfriends/bwf/config';\nexport default defineConfig({ remote: process.env.REMOTE === '1' });\n";
   try {
@@ -63,7 +63,7 @@ it('pins compatibility date in the lock without rewriting authored TypeScript', 
 });
 
 it('keeps an existing typed Astro adapter with dynamic options during targeted init', async () => {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-init-typed-astro-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-init-typed-astro-'));
   const adapter =
     'import cloudflare from "@astrojs/cloudflare"; const options = { configPath: "./.bwf-wrangler.jsonc" }; export default { adapter: cloudflare(options) };\n';
   try {
@@ -91,7 +91,7 @@ describe('init Git arguments', () => {
   });
 
   it.each(['--git', '--no-git'])('keeps the full starter flow with %s', async (flag) => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-git-flow-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-git-flow-'));
     try {
       mockSelect
         .mockResolvedValueOnce('vite')
@@ -113,7 +113,7 @@ describe('init Git arguments', () => {
   it.each(['--git', '--no-git'])(
     'rejects %s in a workspace member before modifying it',
     async (flag) => {
-      const root = mkdtempSync(join(tmpdir(), 'nosam-init-git-workspace-'));
+      const root = mkdtempSync(join(tmpdir(), 'platform-init-git-workspace-'));
       try {
         writeFileSync(join(root, 'package.json'), JSON.stringify({ workspaces: ['apps/*'] }));
         const child = join(root, 'apps', 'web');
@@ -155,7 +155,7 @@ describe('init scaffold arguments', () => {
   });
 
   it('scaffolds from flags without prompting when stdin is not a terminal', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-flags-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-flags-'));
     try {
       Object.defineProperty(process.stdin, 'isTTY', { configurable: true, get: () => false });
       await runInitCommand(
@@ -180,7 +180,7 @@ describe('init scaffold arguments', () => {
   });
 
   it('fails with the missing flag instead of prompting when stdin is not a terminal', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-flags-missing-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-flags-missing-'));
     try {
       Object.defineProperty(process.stdin, 'isTTY', { configurable: true, get: () => false });
       await expect(runInitCommand(root, parseInitArgs(['--toolchain', 'vite']))).rejects.toThrow(
@@ -194,12 +194,12 @@ describe('init scaffold arguments', () => {
   });
 
   it('keeps a missing deployment choice retryable without a terminal', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-flags-retry-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-flags-retry-'));
     const flags = ['--toolchain', 'vite', '--framework', 'react', '--starter', 'spa'];
     try {
       Object.defineProperty(process.stdin, 'isTTY', { configurable: true, get: () => false });
       await expect(runInitCommand(root, parseInitArgs(flags))).rejects.toThrow(
-        'init: Pass --deploy (cloudflare, nosam, none) when running without an interactive terminal.',
+        'init: Pass --deploy (cloudflare, platform, none) when running without an interactive terminal.',
       );
       expect(readdirSync(root)).toEqual([]);
       expect(mockSpawnSync).not.toHaveBeenCalled();
@@ -217,7 +217,7 @@ describe('init scaffold arguments', () => {
 
 describe('GitHub Actions deployment workflows', () => {
   it('requires a selected URL for a bwf deployment workflow', () => {
-    expect(() => getWorkflowYaml('/project', 'npm', 'my-app', 'nosam')).toThrow('bwf connect');
+    expect(() => getWorkflowYaml('/project', 'npm', 'my-app', 'platform')).toThrow('bwf connect');
   });
   it('scaffolds the direct Cloudflare deployment path with a scoped API token', () => {
     const yaml = getWorkflowYaml('/project', 'npm', null, 'cloudflare');
@@ -254,7 +254,7 @@ describe('GitHub Actions deployment workflows', () => {
       '/project',
       'bun',
       'my-app',
-      'nosam',
+      'platform',
       'https://api.company.example',
     );
     expect(managed.indexOf('actions/setup-node@v6')).toBeGreaterThan(-1);
@@ -266,7 +266,7 @@ describe('GitHub Actions deployment workflows', () => {
   it.each(['24.22.1', '24'])(
     'uses .node-version %s for the Bun workflow Node without a stale cached release',
     (pin) => {
-      const root = mkdtempSync(join(tmpdir(), 'nosam-init-bun-node-'));
+      const root = mkdtempSync(join(tmpdir(), 'platform-init-bun-node-'));
       try {
         writeFileSync(join(root, '.node-version'), `${pin}\n`);
         const yaml = getWorkflowYaml(root, 'bun', null, 'cloudflare');
@@ -298,7 +298,7 @@ describe('GitHub Actions deployment workflows', () => {
       '/project',
       'npm',
       'my-app',
-      'nosam',
+      'platform',
       'https://api.company.example',
     );
     expect(yaml).toContain('name: Deploy to bwf');
@@ -383,7 +383,7 @@ vi.mock('node:child_process', () => ({
 }));
 
 function withTempDir(run: (root: string) => void): void {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
   try {
     run(root);
   } finally {
@@ -625,7 +625,7 @@ function restoreInteractiveTerminal(): void {
 
 afterEach(() => {
   restoreInteractiveTerminal();
-  delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+  delete process.env.PLATFORM_REGISTRY_DIR;
   rmSync(platformRegistryDirectory, { recursive: true, force: true });
   mockSpawnSync.mockReset();
   mockSelect.mockReset();
@@ -648,11 +648,11 @@ beforeEach(() => {
   previousCI = process.env.CI;
   process.env.CI = 'true';
   Object.defineProperty(process.stdin, 'isTTY', { configurable: true, get: () => true });
-  platformRegistryDirectory = mkdtempSync(join(tmpdir(), 'nosam-init-platform-registry-'));
-  process.env.NOSAM_PLATFORM_REGISTRY_DIR = platformRegistryDirectory;
+  platformRegistryDirectory = mkdtempSync(join(tmpdir(), 'platform-init-platform-registry-'));
+  process.env.PLATFORM_REGISTRY_DIR = platformRegistryDirectory;
   savePlatformConnection({
     accountId: null,
-    apiUrl: 'https://nosam.buildwithfriends.dev',
+    apiUrl: 'https://platform.buildwithfriends.dev',
     applicationDomain: 'void.app',
     displayName: 'bwf Cloud',
     installationId: null,
@@ -660,16 +660,16 @@ beforeEach(() => {
     proxyUrl: 'https://proxy.void.cloud',
   });
   mockSelect.mockImplementation((options: { message?: string }) =>
-    options.message === 'Where should this project deploy?' ? 'nosam' : undefined,
+    options.message === 'Where should this project deploy?' ? 'platform' : undefined,
   );
   mockSpawnSuccess();
   mockGetToken.mockReturnValue(null);
-  mockGetApiUrl.mockReturnValue('https://nosam.buildwithfriends.dev');
+  mockGetApiUrl.mockReturnValue('https://platform.buildwithfriends.dev');
   mockRunLogin.mockResolvedValue('token_123');
   mockListProjects.mockResolvedValue([]);
   mockCreateProject.mockResolvedValue({ id: 'proj_123', slug: 'my-app' });
   mockDiscoverPlatform.mockResolvedValue({
-    apiUrl: 'https://nosam.buildwithfriends.dev',
+    apiUrl: 'https://platform.buildwithfriends.dev',
     applicationDomain: 'void.app',
     authenticationProviders: ['github', 'google'],
     capabilities: {
@@ -730,7 +730,7 @@ describe('bwf platform deployment setup', () => {
   });
 
   it('refuses to scaffold unsupported platform GitHub Actions', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-no-github-actions-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-no-github-actions-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -842,7 +842,7 @@ describe('isBwfResolvableFrom', () => {
   }
 
   it('returns true when a PnP runtime sits at an ancestor directory', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-'));
     try {
       const subApp = join(root, 'packages', 'app');
       mkdirSync(subApp, { recursive: true });
@@ -857,7 +857,7 @@ describe('isBwfResolvableFrom', () => {
 
   // Before `yarn install`, a committed `.pnp.cjs` points at archives that are not fetched yet.
   it('returns false when .pnp.cjs exists but .yarn/install-state.gz is missing', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-fresh-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-fresh-'));
     try {
       writeFileSync(join(root, '.pnp.cjs'), '// pnp stub\n');
       expect(isBwfResolvableFrom(root)).toBe(false);
@@ -868,7 +868,7 @@ describe('isBwfResolvableFrom', () => {
 
   // Zero-install repos commit `.yarn/cache` and often have no install-state.gz.
   it('returns true when .pnp.cjs exists with a populated .yarn/cache (zero-install)', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-zero-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-zero-'));
     try {
       writeFileSync(join(root, '.pnp.cjs'), '// pnp stub\n');
       mkdirSync(join(root, '.yarn', 'cache'), { recursive: true });
@@ -880,7 +880,7 @@ describe('isBwfResolvableFrom', () => {
   });
 
   it('returns false when .pnp.cjs exists but .yarn/cache is empty and install-state.gz is missing', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-empty-cache-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-empty-cache-'));
     try {
       writeFileSync(join(root, '.pnp.cjs'), '// pnp stub\n');
       mkdirSync(join(root, '.yarn', 'cache'), { recursive: true });
@@ -891,7 +891,7 @@ describe('isBwfResolvableFrom', () => {
   });
 
   it('returns false when .yarn/install-state.gz is at a DIFFERENT ancestor than .pnp.cjs', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-mismatch-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-mismatch-'));
     try {
       const subApp = join(root, 'app');
       mkdirSync(subApp, { recursive: true });
@@ -905,7 +905,7 @@ describe('isBwfResolvableFrom', () => {
   });
 
   it('returns false for a bare directory with no node_modules and no PnP runtime', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-bare-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-bare-'));
     try {
       expect(isBwfResolvableFrom(root)).toBe(false);
     } finally {
@@ -914,7 +914,7 @@ describe('isBwfResolvableFrom', () => {
   });
 
   it('returns true when `node_modules/@builtbyfriends/bwf/package.json` exists at `start` (unchanged legacy shape)', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-nm-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-nm-'));
     try {
       writeInstalledBwf(root);
       expect(isBwfResolvableFrom(root)).toBe(true);
@@ -924,7 +924,7 @@ describe('isBwfResolvableFrom', () => {
   });
 
   it('returns true when `node_modules/@builtbyfriends/bwf/package.json` exists at an ancestor (hoisted monorepo shape)', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-hoist-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-hoist-'));
     try {
       writeInstalledBwf(root);
       const subApp = join(root, 'packages', 'app');
@@ -935,9 +935,9 @@ describe('isBwfResolvableFrom', () => {
     }
   });
 
-  // Installed PnP data can be stale (for example after `nosam` was removed on another branch).
+  // Installed PnP data can be stale (for example after `platform` was removed on another branch).
   it('returns false when the PnP probe for `require.resolve("@builtbyfriends/bwf")` fails (stale .pnp.cjs)', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-stale-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-stale-'));
     try {
       writeFileSync(join(root, '.pnp.cjs'), '// pnp stub\n');
       mkdirSync(join(root, '.yarn'), { recursive: true });
@@ -952,7 +952,7 @@ describe('isBwfResolvableFrom', () => {
   });
 
   it('returns true when the PnP probe for `require.resolve("@builtbyfriends/bwf")` succeeds', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-ok-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-ok-'));
     try {
       writeFileSync(join(root, '.pnp.cjs'), '// pnp stub\n');
       mkdirSync(join(root, '.yarn'), { recursive: true });
@@ -968,7 +968,7 @@ describe('isBwfResolvableFrom', () => {
 
   // A loader-only runtime gets no `--require`, so a CJS probe cannot see it.
   it('uses an ESM probe when only `.pnp.loader.mjs` is present (loader-only PnP)', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-loader-only-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-loader-only-'));
     try {
       writeFileSync(join(root, '.pnp.loader.mjs'), '// pnp loader\n');
       mkdirSync(join(root, '.yarn'), { recursive: true });
@@ -984,7 +984,7 @@ describe('isBwfResolvableFrom', () => {
   });
 
   it('returns false when the loader-only ESM probe fails (stale `.pnp.loader.mjs`)', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-loader-stale-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-loader-stale-'));
     try {
       writeFileSync(join(root, '.pnp.loader.mjs'), '// pnp loader\n');
       mkdirSync(join(root, '.yarn'), { recursive: true });
@@ -999,7 +999,7 @@ describe('isBwfResolvableFrom', () => {
   });
 
   it('still uses the CJS probe when both `.pnp.cjs` and `.pnp.loader.mjs` are present', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-both-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-both-'));
     try {
       writeFileSync(join(root, '.pnp.cjs'), '// pnp stub\n');
       writeFileSync(join(root, '.pnp.loader.mjs'), '// pnp loader\n');
@@ -1016,7 +1016,7 @@ describe('isBwfResolvableFrom', () => {
   });
 
   it('does not spawn the PnP probe when node_modules/@builtbyfriends/bwf exists at start (even with PnP markers)', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-nm-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-nm-'));
     try {
       writeInstalledBwf(root);
       writeFileSync(join(root, '.pnp.cjs'), '// pnp stub\n');
@@ -1033,7 +1033,7 @@ describe('isBwfResolvableFrom', () => {
 
   // A nested project with its own lockfile must not inherit an outer PnP graph.
   it('does not walk past a leaf-managed lockfile into an ancestor Yarn PnP monorepo', () => {
-    const outer = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-leaf-lock-'));
+    const outer = mkdtempSync(join(tmpdir(), 'platform-init-pnp-leaf-lock-'));
     try {
       writeFileSync(join(outer, '.pnp.cjs'), '// pnp stub\n');
       mkdirSync(join(outer, '.yarn'), { recursive: true });
@@ -1053,7 +1053,7 @@ describe('isBwfResolvableFrom', () => {
 
   // Yarn workspace members may carry their own Corepack pin and still use the root `.pnp.cjs`.
   it('still walks to an ancestor `.pnp.cjs` when a subpackage has only a `packageManager` pin (no lockfile)', () => {
-    const outer = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-pkgmgr-ws-'));
+    const outer = mkdtempSync(join(tmpdir(), 'platform-init-pnp-pkgmgr-ws-'));
     try {
       writeFileSync(join(outer, '.pnp.cjs'), '// pnp stub\n');
       mkdirSync(join(outer, '.yarn'), { recursive: true });
@@ -1077,7 +1077,7 @@ describe('isBwfResolvableFrom', () => {
 // An outer `.pnp.cjs` in NODE_OPTIONS would resolve a leaf project's deps through the wrong graph.
 describe('buildDrizzleKitSpawnEnv leaf-managed gate', () => {
   it('does not inject NODE_OPTIONS for a leaf project with a local lockfile inside a Yarn PnP monorepo', () => {
-    const outer = mkdtempSync(join(tmpdir(), 'nosam-init-env-leaf-lock-'));
+    const outer = mkdtempSync(join(tmpdir(), 'platform-init-env-leaf-lock-'));
     const savedNodeOptions = process.env.NODE_OPTIONS;
     delete process.env.NODE_OPTIONS;
     try {
@@ -1102,7 +1102,7 @@ describe('buildDrizzleKitSpawnEnv leaf-managed gate', () => {
   });
 
   it('still injects NODE_OPTIONS for a workspace subpackage that only has a `packageManager` pin', () => {
-    const outer = mkdtempSync(join(tmpdir(), 'nosam-init-env-pkgmgr-ws-'));
+    const outer = mkdtempSync(join(tmpdir(), 'platform-init-env-pkgmgr-ws-'));
     const savedNodeOptions = process.env.NODE_OPTIONS;
     delete process.env.NODE_OPTIONS;
     try {
@@ -1130,7 +1130,7 @@ describe('buildDrizzleKitSpawnEnv leaf-managed gate', () => {
   });
 
   it('still injects NODE_OPTIONS when local PnP files exist alongside a lockfile (local PnP precedence)', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-env-local-pnp-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-env-local-pnp-'));
     const savedNodeOptions = process.env.NODE_OPTIONS;
     delete process.env.NODE_OPTIONS;
     try {
@@ -1206,14 +1206,14 @@ describe('isScaffoldableEmptyProject', () => {
           '  sharp: set this to true or false',
           '  workerd: set this to true or false',
           'minimumReleaseAgeExclude:',
-          '  - nosam@0.8.9',
+          '  - platform@0.8.9',
           '',
         ].join('\n'),
       );
       mkdirSync(join(root, 'node_modules', '@builtbyfriends', 'bwf'), { recursive: true });
       writeFileSync(
         join(root, 'node_modules', '@builtbyfriends', 'bwf', 'package.json'),
-        '{"name":"nosam"}\n',
+        '{"name":"platform"}\n',
       );
 
       expect(isScaffoldableEmptyProject(root)).toBe(true);
@@ -1303,7 +1303,7 @@ describe('isScaffoldableEmptyProject', () => {
   });
 
   it('replaces stale vp starter scripts when plain Vite is selected', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -1368,7 +1368,7 @@ describe('isScaffoldableEmptyProject', () => {
   });
 
   it('scaffolds a React SPA starter with D1 in an empty directory', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('sqlite');
       mockConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
@@ -1458,7 +1458,7 @@ describe('isScaffoldableEmptyProject', () => {
   });
 
   it('scaffolds an SPA-only starter without database files', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('spa');
       mockConfirm.mockResolvedValueOnce(false);
@@ -1507,7 +1507,7 @@ describe('isScaffoldableEmptyProject', () => {
   it.each(['npm@11.20.0', 'pnpm@10.34.4', 'yarn@4.5.3', 'bun@1.1.42'])(
     'preserves %s when scaffolding with Vite+',
     async (packageManager) => {
-      const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+      const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
       try {
         writeFileSync(
           join(root, 'package.json'),
@@ -1544,7 +1544,7 @@ describe('isScaffoldableEmptyProject', () => {
   it.each(['package-lock.json', 'yarn.lock', 'bun.lock'])(
     'preserves %s without switching a Vite+ starter to pnpm',
     async (lockfile) => {
-      const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+      const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
       try {
         writeFileSync(join(root, lockfile), '');
         mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('spa');
@@ -1564,7 +1564,7 @@ describe('isScaffoldableEmptyProject', () => {
   );
 
   it('prompts for the scaffold toolchain after pnpm add -D void creates pnpm-workspace.yaml', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -1588,14 +1588,14 @@ describe('isScaffoldableEmptyProject', () => {
           '  sharp: set this to true or false',
           '  workerd: set this to true or false',
           'minimumReleaseAgeExclude:',
-          '  - nosam@0.8.9',
+          '  - platform@0.8.9',
           '',
         ].join('\n'),
       );
       mkdirSync(join(root, 'node_modules', '@builtbyfriends', 'bwf'), { recursive: true });
       writeFileSync(
         join(root, 'node_modules', '@builtbyfriends', 'bwf', 'package.json'),
-        '{"name":"nosam"}\n',
+        '{"name":"platform"}\n',
       );
 
       mockSelect.mockResolvedValueOnce('vite-plus').mockResolvedValueOnce('spa');
@@ -1621,7 +1621,7 @@ describe('isScaffoldableEmptyProject', () => {
   });
 
   it('offers to scaffold in a subfolder from a non-project parent directory', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       mkdirSync(join(root, 'existing-project'));
       mockSelect
@@ -1648,15 +1648,15 @@ describe('isScaffoldableEmptyProject', () => {
       expect(mockText).toHaveBeenCalledWith(
         expect.objectContaining({
           message: 'New project folder name:',
-          placeholder: 'my-nosam-app',
-          defaultValue: 'my-nosam-app',
+          placeholder: 'my-platform-app',
+          defaultValue: 'my-platform-app',
         }),
       );
       const folderPrompt = mockText.mock.calls[0]![0];
       expect(folderPrompt).not.toHaveProperty('initialValue');
       expect(folderPrompt.validate('')).toBeUndefined();
       expect(folderPrompt.validate(' ')).toBe('Enter a folder name.');
-      mkdirSync(join(root, 'my-nosam-app'));
+      mkdirSync(join(root, 'my-platform-app'));
       expect(folderPrompt.validate('')).toBe('That folder already exists.');
       expect(folderPrompt.validate('another-app')).toBeUndefined();
       expectVpInstall(toSlash(appRoot));
@@ -1666,7 +1666,7 @@ describe('isScaffoldableEmptyProject', () => {
   });
 
   it('can continue configuring a non-project parent directory when requested', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       mkdirSync(join(root, 'existing-project'));
       mockSelect.mockResolvedValueOnce('current').mockResolvedValueOnce('none');
@@ -1686,7 +1686,7 @@ describe('isScaffoldableEmptyProject', () => {
   });
 
   it('configures an existing package without forcing it to ESM', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       mkdirSync(join(root, 'src'));
       writeFileSync(
@@ -1727,7 +1727,7 @@ describe('isScaffoldableEmptyProject', () => {
   });
 
   it('scaffolds an OIDC deploy workflow with a BWF_PROJECT placeholder when no project is linked', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -1742,12 +1742,12 @@ describe('isScaffoldableEmptyProject', () => {
       expect(yaml).toContain('contents: read');
       expect(yaml).toContain('BWF_PROJECT: ${{ vars.BWF_PROJECT }}');
       expect(yaml).toContain(
-        "BWF_API_URL: ${{ vars.BWF_API_URL || 'https://nosam.buildwithfriends.dev' }}",
+        "BWF_API_URL: ${{ vars.BWF_API_URL || 'https://platform.buildwithfriends.dev' }}",
       );
       expect(yaml).toContain('npx bwf deploy --platform bwf --project "$BWF_PROJECT"');
       expect(yaml.match(/deploy --platform bwf --project "\$BWF_PROJECT"/g)).toHaveLength(1);
       expect(yaml).toContain('concurrency:');
-      expect(yaml).toContain('group: nosam-deploy-${{ github.repository }}-${{ github.ref }}');
+      expect(yaml).toContain('group: platform-deploy-${{ github.repository }}-${{ github.ref }}');
       expect(yaml).toContain('cancel-in-progress: true');
       expect(mockNote).toHaveBeenCalledWith(
         expect.stringContaining('Set a BWF_PROJECT repository variable'),
@@ -1759,7 +1759,7 @@ describe('isScaffoldableEmptyProject', () => {
   });
 
   it('bakes the linked project slug into the OIDC deploy workflow', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -1777,7 +1777,7 @@ describe('isScaffoldableEmptyProject', () => {
       expect(yaml).toContain('BWF_PROJECT: my-app');
       expect(yaml).not.toContain('vars.BWF_PROJECT');
       expect(yaml).toContain('concurrency:');
-      expect(yaml).toContain('group: nosam-deploy-${{ github.repository }}-${{ github.ref }}');
+      expect(yaml).toContain('group: platform-deploy-${{ github.repository }}-${{ github.ref }}');
       expect(yaml).toContain('cancel-in-progress: true');
       expect(mockNote).toHaveBeenCalledWith(
         expect.stringContaining('"my-app"'),
@@ -1790,7 +1790,7 @@ describe('isScaffoldableEmptyProject', () => {
 
   it('bakes the slug into bwf-deploy.yml when a project is linked during the same interactive init', async () => {
     // The workflow is written before the project link, so the slug is patched in afterwards.
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -1818,7 +1818,7 @@ describe('isScaffoldableEmptyProject', () => {
       // Selects: database, deployment platform, project.
       mockSelect
         .mockResolvedValueOnce('none')
-        .mockResolvedValueOnce('nosam')
+        .mockResolvedValueOnce('platform')
         .mockResolvedValueOnce('proj_789');
       // Confirms: demo code (declined), workflow, link, overwrite.
       mockConfirm
@@ -1831,8 +1831,8 @@ describe('isScaffoldableEmptyProject', () => {
 
       expect(JSON.parse(readFileSync(join(root, '.bwf', 'project.json'), 'utf-8'))).toEqual({
         applicationDomain: 'void.app',
-        platform: 'nosam',
-        platformUrl: 'https://nosam.buildwithfriends.dev',
+        platform: 'platform',
+        platformUrl: 'https://platform.buildwithfriends.dev',
         proxyUrl: 'https://proxy.void.cloud',
         projectId: 'proj_789',
         slug: 'linked-app',
@@ -1847,7 +1847,7 @@ describe('isScaffoldableEmptyProject', () => {
   });
 
   it('writes bwf-deploy.yml and never touches an existing deploy.yml (no migration)', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -1883,7 +1883,7 @@ jobs:
   });
 
   it('adds bwfPlugin to an existing Vite plugins array without replacing scripts', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -1946,7 +1946,7 @@ export default defineConfig({
   });
 
   it('patches only the top-level Vite plugins array', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -1998,7 +1998,7 @@ export default defineConfig({
   });
 
   it('adds a top-level Vite plugins property instead of patching nested plugin options', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -2046,7 +2046,7 @@ export default defineConfig({
   });
 
   it('prints a manual Vite config step when an existing config is too dynamic to patch', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -2089,7 +2089,7 @@ export default config;
   });
 
   it('does not patch nested plugin arrays when the top-level Vite config object is dynamic', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -2143,7 +2143,7 @@ export default config;
   });
 
   it('does not run existing-project setup for targeted init flags', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       mkdirSync(join(root, 'src'));
       writeFileSync(
@@ -2186,7 +2186,7 @@ export default config;
     });
 
     it('creates minimal AGENTS.md for a new project without prompting or agent detection', async () => {
-      const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+      const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
       try {
         await runInitCommand(root, { tsconfig: true, github: false });
 
@@ -2209,7 +2209,7 @@ export default config;
       'writes AGENTS.md and preserves CLAUDE.md when Claude is detected (existing AGENTS.md: %s)',
       async (hasAgentsFile) => {
         // Resolve macOS's /var alias so relative skill symlinks use the fixture's real path.
-        const root = realpathSync(mkdtempSync(join(tmpdir(), 'nosam-init-')));
+        const root = realpathSync(mkdtempSync(join(tmpdir(), 'platform-init-')));
         try {
           const claudeInstructions = '# Claude instructions\n\nKeep these instructions.\n';
           const projectInstructions = '# Project instructions\n\nKeep this guidance.\n';
@@ -2246,7 +2246,7 @@ export default config;
     it.each(['prerelease', 'current'])(
       'updates %s agent instructions only after approval',
       async (versionKind) => {
-        const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+        const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
         try {
           const currentVersion = JSON.parse(
             readFileSync(join(process.cwd(), 'packages/bwf/package.json'), 'utf-8'),
@@ -2256,7 +2256,7 @@ export default config;
           const oldVersion = versionKind === 'current' ? currentVersion : '1.2.3-beta.2+build.7';
           writeFileSync(
             join(root, 'AGENTS.md'),
-            `${before}<!--injected-by-nosam-v${oldVersion}-->\nStale managed instructions.\n<!--/injected-by-nosam-->${after}`,
+            `${before}<!--injected-by-platform-v${oldVersion}-->\nStale managed instructions.\n<!--/injected-by-platform-->${after}`,
           );
           mockConfirm.mockResolvedValueOnce(true);
 
@@ -2265,12 +2265,12 @@ export default config;
           const updated = readFileSync(join(root, 'AGENTS.md'), 'utf-8');
           expect(updated.startsWith(before)).toBe(true);
           expect(updated.endsWith(after)).toBe(true);
-          expect(updated).toContain(`<!--injected-by-nosam-v${currentVersion}-->`);
+          expect(updated).toContain(`<!--injected-by-platform-v${currentVersion}-->`);
           expect(updated).not.toContain('1.2.3-beta.2+build.7');
           expect(updated).not.toContain('Stale managed instructions.');
           expect(updated).toContain('node_modules/@builtbyfriends/bwf/docs/');
-          expect(updated.match(/<!--injected-by-nosam-v/g)).toHaveLength(1);
-          expect(updated.match(/<!--\/injected-by-nosam-->/g)).toHaveLength(1);
+          expect(updated.match(/<!--injected-by-platform-v/g)).toHaveLength(1);
+          expect(updated.match(/<!--\/injected-by-platform-->/g)).toHaveLength(1);
           expect(mockConfirm).toHaveBeenCalledExactlyOnceWith({
             message: 'Update bwf instructions in AGENTS.md?',
             initialValue: true,
@@ -2287,7 +2287,7 @@ export default config;
     it.each([false, true])(
       'preserves existing project instructions when declined (AGENTS.md: %s)',
       async (hasInstructions) => {
-        const root = mkdtempSync(join(tmpdir(), 'nosam-init-agents-decline-'));
+        const root = mkdtempSync(join(tmpdir(), 'platform-init-agents-decline-'));
         const original = '# My project\n\nKeep this unchanged.\n';
         try {
           mkdirSync(join(root, 'src'));
@@ -2309,7 +2309,7 @@ export default config;
     );
 
     it.each(['CI', 'non-TTY'])('does not change existing AGENTS.md in %s', async (mode) => {
-      const root = mkdtempSync(join(tmpdir(), 'nosam-init-agents-headless-'));
+      const root = mkdtempSync(join(tmpdir(), 'platform-init-agents-headless-'));
       const original = '# Keep my instructions\n';
       try {
         writeFileSync(join(root, 'AGENTS.md'), original);
@@ -2327,7 +2327,7 @@ export default config;
     });
 
     it('cancels before appending instructions', async () => {
-      const root = mkdtempSync(join(tmpdir(), 'nosam-init-agents-cancel-'));
+      const root = mkdtempSync(join(tmpdir(), 'platform-init-agents-cancel-'));
       const original = '# Keep my instructions\n';
       const exit = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('Cancelled');
@@ -2348,7 +2348,7 @@ export default config;
   });
 
   it('creates .gitignore with bwf defaults during targeted setup', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       await runInitCommand(root, { tsconfig: true, github: false });
 
@@ -2365,7 +2365,7 @@ export default config;
   });
 
   it('appends missing bwf defaults to an existing .gitignore', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(join(root, '.gitignore'), 'node_modules\ncustom-cache\n');
 
@@ -2383,7 +2383,7 @@ export default config;
   });
 
   it('parses tsconfig.json with JSONC comments', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'tsconfig.json'),
@@ -2409,7 +2409,7 @@ export default config;
   });
 
   it('merges bwf type files and path aliases into root-level tsconfig fields', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       mkdirSync(join(root, 'routes'), { recursive: true });
       mkdirSync(join(root, 'src'), { recursive: true });
@@ -2448,7 +2448,7 @@ export default config;
   });
 
   it('preserves directly extended tsconfig files and paths when adding bwf config', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       mkdirSync(join(root, 'routes'), { recursive: true });
       writeFileSync(join(root, 'base.d.ts'), 'declare const baseValue: string;\n');
@@ -2494,7 +2494,7 @@ export default config;
   });
 
   it('writes bwf path aliases relative to an inherited baseUrl', async () => {
-    const workspaceRoot = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const workspaceRoot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       const root = join(workspaceRoot, 'packages', 'app');
       mkdirSync(join(root, 'routes'), { recursive: true });
@@ -2539,7 +2539,7 @@ export default config;
   });
 
   it('merges bwf type files and paths into explicit empty tsconfig override fields', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       mkdirSync(join(root, 'routes'), { recursive: true });
       writeFileSync(join(root, 'base.d.ts'), 'declare const baseValue: string;\n');
@@ -2588,7 +2588,7 @@ export default config;
   });
 
   it('uses the preinstalled adapter to scaffold an empty project', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -2634,7 +2634,7 @@ export default config;
   });
 
   it('preserves other bwf.json fields when switching from pg to sqlite', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'bwf.json'),
@@ -2670,7 +2670,7 @@ export default config;
     }
   });
   it('keeps database.casing when switching from pg to sqlite', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'bwf.json'),
@@ -2696,7 +2696,7 @@ export default config;
   });
 
   it('keeps a pg database object with casing when choosing pg', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'bwf.json'),
@@ -2718,7 +2718,7 @@ export default config;
   });
 
   it('removes the pg config when choosing no database yet', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(join(root, 'bwf.json'), JSON.stringify({ database: 'pg' }, null, 2) + '\n');
       mockSelect.mockResolvedValueOnce('none');
@@ -2737,7 +2737,7 @@ export default config;
   });
 
   it('removes a casing-only database config when choosing no database yet', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'bwf.json'),
@@ -2759,12 +2759,12 @@ export default config;
   });
 
   it('can log in and create a project during init', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       mockSelect
         .mockResolvedValueOnce('vite-plus')
         .mockResolvedValueOnce('sqlite')
-        .mockResolvedValueOnce('nosam')
+        .mockResolvedValueOnce('platform')
         .mockResolvedValueOnce('github');
       mockConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
       mockText.mockResolvedValueOnce('my-live-app');
@@ -2776,17 +2776,17 @@ export default config;
         message: 'Log in now and link or create a bwf project?',
       });
       expect(mockRunLogin).toHaveBeenCalledWith(
-        'https://nosam.buildwithfriends.dev',
+        'https://platform.buildwithfriends.dev',
         'github',
         expect.any(Function),
       );
-      expect(mockSaveToken).toHaveBeenCalledWith('token_123', 'https://nosam.buildwithfriends.dev');
+      expect(mockSaveToken).toHaveBeenCalledWith('token_123', 'https://platform.buildwithfriends.dev');
       expect(mockListProjects).toHaveBeenCalledOnce();
       expect(mockCreateProject).toHaveBeenCalledWith('my-live-app');
       expect(JSON.parse(readFileSync(join(root, '.bwf', 'project.json'), 'utf-8'))).toEqual({
         applicationDomain: 'void.app',
-        platform: 'nosam',
-        platformUrl: 'https://nosam.buildwithfriends.dev',
+        platform: 'platform',
+        platformUrl: 'https://platform.buildwithfriends.dev',
         proxyUrl: 'https://proxy.void.cloud',
         projectId: 'proj_live',
         slug: 'my-live-app',
@@ -2797,12 +2797,12 @@ export default config;
   });
 
   it('installs starter dependencies before optional project creation', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       mockSelect
         .mockResolvedValueOnce('vite-plus')
         .mockResolvedValueOnce('sqlite')
-        .mockResolvedValueOnce('nosam')
+        .mockResolvedValueOnce('platform')
         .mockResolvedValueOnce('github');
       mockConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
       mockText.mockResolvedValueOnce('my-live-app');
@@ -2822,7 +2822,7 @@ export default config;
   });
 
   it('can link an existing project during init without re-authenticating', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       mockGetToken.mockReturnValue('existing_token');
       mockListProjects.mockResolvedValueOnce([
@@ -2838,7 +2838,7 @@ export default config;
       mockSelect
         .mockResolvedValueOnce('vite-plus')
         .mockResolvedValueOnce('sqlite')
-        .mockResolvedValueOnce('nosam')
+        .mockResolvedValueOnce('platform')
         .mockResolvedValueOnce('proj_456');
       mockConfirm
         .mockResolvedValueOnce(false)
@@ -2859,8 +2859,8 @@ export default config;
       expect(mockCreateProject).not.toHaveBeenCalled();
       expect(JSON.parse(readFileSync(join(root, '.bwf', 'project.json'), 'utf-8'))).toEqual({
         applicationDomain: 'void.app',
-        platform: 'nosam',
-        platformUrl: 'https://nosam.buildwithfriends.dev',
+        platform: 'platform',
+        platformUrl: 'https://platform.buildwithfriends.dev',
         proxyUrl: 'https://proxy.void.cloud',
         projectId: 'proj_456',
         slug: 'existing-app',
@@ -2871,7 +2871,7 @@ export default config;
   });
 
   it('persists skipped deployment setup without prompting for bwf setup', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -2902,7 +2902,7 @@ export default config;
   });
 
   it('defaults the database prompt to D1 when no database is configured', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
         join(root, 'package.json'),
@@ -2954,7 +2954,7 @@ export default config;
   });
 
   it('skips install after demo scaffold when node_modules/@builtbyfriends/bwf is already populated (workspace subpackage)', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       // Without a lockfile init falls back to npm, which rejects `workspace:` specs.
       writeExistingViteApp(root, { bwf: 'workspace:../packages/bwf' });
@@ -2969,7 +2969,7 @@ export default config;
   });
 
   it('skips install after demo scaffold when void is hoisted at the workspace root (ancestor node_modules)', async () => {
-    const wsroot = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const wsroot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeInstalledBwf(wsroot);
       const subpkgRoot = join(wsroot, 'subpkg');
@@ -2985,8 +2985,8 @@ export default config;
 
   it('runs install after demo scaffold when void resolves from an ancestor but the child package.json was mutated', async () => {
     // The parent is not a workspace root, so the child's own lockfile must
-    // pick up the `nosam` dependency that init adds.
-    const parentRoot = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    // pick up the `platform` dependency that init adds.
+    const parentRoot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeInstalledBwf(parentRoot);
       const childRoot = join(parentRoot, 'subpkg');
@@ -3006,7 +3006,7 @@ export default config;
   it('skips install and starter migration in a fresh workspace subpackage', async () => {
     // Before the first workspace install, a leaf install rejects `workspace:`
     // specs and drizzle-kit cannot resolve `@builtbyfriends/bwf/schema-d1`.
-    const wsroot = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const wsroot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(join(wsroot, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
       const subpkgRoot = join(wsroot, 'packages', 'app');
@@ -3043,7 +3043,7 @@ export default config;
   ] as const)(
     'defers install and starter migration only for members ($marker `$pattern`, $subPath)',
     async ({ marker, pattern, subPath, member }) => {
-      const wsroot = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+      const wsroot = mkdtempSync(join(tmpdir(), 'platform-init-'));
       try {
         if (marker === 'pnpm') {
           writeFileSync(join(wsroot, 'pnpm-workspace.yaml'), `packages:\n  - '${pattern}'\n`);
@@ -3072,8 +3072,8 @@ export default config;
   );
 
   it('emits a lockfile-sync note when init adds void to a workspace subpackage with void hoisted', async () => {
-    // The workspace lockfile must pick up the new `nosam` entry before the next frozen install.
-    const wsroot = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    // The workspace lockfile must pick up the new `platform` entry before the next frozen install.
+    const wsroot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(join(wsroot, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
       writeInstalledBwf(wsroot);
@@ -3096,7 +3096,7 @@ export default config;
   });
 
   it('runs install after demo scaffold when node_modules/@builtbyfriends/bwf is missing (fresh clone)', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeExistingViteApp(root, { bwf: '^0.0.1' });
       writeFileSync(join(root, 'package-lock.json'), '{}\n');
@@ -3117,7 +3117,7 @@ export default config;
   ] as const)(
     'scaffolds the demo for the chosen %s database',
     async (dialect, configValue, schemaModule) => {
-      const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+      const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
       try {
         writeExistingViteApp(root, { bwf: '^0.0.1' });
         mockSelect.mockResolvedValueOnce(dialect);
@@ -3144,7 +3144,7 @@ export default config;
     ['db/schema.ts', 'Project already has a database schema, skipping demo'],
     ['src/demo.ts', 'Project already has src/demo.ts, skipping demo'],
   ])('keeps an existing %s and skips the whole demo', async (existingFile, message) => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeExistingViteApp(root, { bwf: '^0.0.1' });
       const authored = 'export const authored = "keep me";\n';
@@ -3172,7 +3172,7 @@ export default config;
   });
 
   it('scaffolds every demo file in a project without a schema', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeExistingViteApp(root, { bwf: '^0.0.1' });
 
@@ -3187,7 +3187,7 @@ export default config;
   });
 
   it('runs starter migration with injected PnP NODE_OPTIONS in a Yarn Berry PnP project', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeExistingViteApp(root, { bwf: '^0.0.1', packageManager: 'yarn@4.5.3' });
       writeFileSync(join(root, 'yarn.lock'), '# yarn lockfile v1\n');
@@ -3234,7 +3234,7 @@ export default config;
 
   it('runs starter migration in a Yarn 4 project with `.yarnrc.yml` but `nodeLinker: node-modules`', async () => {
     // `.yarnrc.yml` is not a PnP marker; only `.pnp.cjs` and `.pnp.loader.mjs` are.
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeExistingViteApp(root, { bwf: '^0.0.1', packageManager: 'yarn@4.5.3' });
       writeFileSync(join(root, 'yarn.lock'), '# yarn lockfile v1\n');
@@ -3254,7 +3254,7 @@ export default config;
   });
 
   it('bwf init in an empty pnpm workspace subpackage skips leaf install and starter migration', async () => {
-    const wsroot = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const wsroot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(join(wsroot, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
       const subpkgRoot = join(wsroot, 'packages', 'my-new-app');
@@ -3282,7 +3282,7 @@ export default config;
   });
 
   it('omits the `bwf db generate` follow-up in the workspace skip note AND outro for static starter mode', async () => {
-    const wsroot = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const wsroot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(join(wsroot, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
 
@@ -3317,7 +3317,7 @@ export default config;
   it.each(['member', 'local-lockfile', 'local-corepack-pin'] as const)(
     'skips GitHub Actions setup for `bwf init --github` in a workspace subpackage (%s)',
     async (shape) => {
-      const wsroot = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+      const wsroot = mkdtempSync(join(tmpdir(), 'platform-init-'));
       try {
         writeFileSync(join(wsroot, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
 
@@ -3347,7 +3347,7 @@ export default config;
   );
 
   it('runs install (does NOT take the workspace skip path) for a starter init when the subpackage has a local `packageManager: bun@…` Corepack pin', async () => {
-    const wsroot = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const wsroot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(join(wsroot, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
 
@@ -3385,7 +3385,7 @@ export default config;
   });
 
   it('honors a local `package-lock.json` veto for a yarn-leaf nested under a pnpm workspace', async () => {
-    const wsroot = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const wsroot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(join(wsroot, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
 
@@ -3406,7 +3406,7 @@ export default config;
   });
 
   it('skips GitHub Actions setup when the workspace-subpackage skip path fires', async () => {
-    const wsroot = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const wsroot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(join(wsroot, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
 
@@ -3427,7 +3427,7 @@ export default config;
   });
 
   it('bwf init in an empty STANDALONE app (not a workspace subpackage) still runs install and starter migration', async () => {
-    const parent = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const parent = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       const appRoot = join(parent, 'my-app');
       mkdirSync(appRoot, { recursive: true });
@@ -3449,7 +3449,7 @@ export default config;
   it('keeps the pnpm build policy and Corepack pin at the root of a pnpm workspace', async () => {
     // The member has no lockfile or pin, so `detectProjectState` reports npm;
     // pnpm still installs it from the workspace root.
-    const wsroot = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const wsroot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(join(wsroot, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
       writeFileSync(
@@ -3479,7 +3479,7 @@ export default config;
   });
 
   it('writes pnpm allowBuilds without adding a packageManager pin in a standalone pnpm project', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(join(root, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n");
 
@@ -3499,7 +3499,7 @@ export default config;
   it('keeps the existing pnpm build approvals when adding the bwf defaults', async () => {
     const roots: Array<string> = [];
     const initWithWorkspaceYaml = async (yaml: string): Promise<string> => {
-      const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+      const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
       roots.push(root);
       writeExistingViteApp(root);
       writeFileSync(join(root, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n");
@@ -3532,7 +3532,7 @@ export default config;
   });
 
   it('continues without an account when Cloudflare sign-in fails', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeExistingReactRouterProject(root);
       selectCloudflareDuringInit();
@@ -3561,7 +3561,7 @@ export default config;
   });
 
   it('defaults deployment setup to Cloudflare, opens login, and offers its GitHub workflow', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeExistingReactRouterProject(root);
       selectCloudflareDuringInit();
@@ -3619,7 +3619,7 @@ export default config;
   });
 
   it('keeps an existing valid Cloudflare account without asking again', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeExistingReactRouterProject(root);
       writeFileSync(
@@ -3656,7 +3656,7 @@ export default config;
   });
 
   it('opens Cloudflare browser login, rereads accounts, and stores the selected account', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeExistingReactRouterProject(root);
       selectCloudflareDuringInit('account-2');
@@ -3699,7 +3699,7 @@ export default config;
   });
 
   it('stores the only authenticated Cloudflare account and preserves Wrangler JSONC', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeExistingReactRouterProject(root);
       writeFileSync(

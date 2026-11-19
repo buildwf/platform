@@ -1,7 +1,7 @@
 {
   "version": 1,
   "source": {
-    "name": "nosam-dashboard",
+    "name": "platform-dashboard",
     "compatibility_date": "2026-02-12",
     "assets": {
       "directory": "dist/client"
@@ -15,12 +15,12 @@
     "services": [
       {
         "binding": "API",
-        "service": "nosam-api"
+        "service": "platform-api"
       }
     ],
     "env": {
       "production": {
-        "name": "nosam-dashboard",
+        "name": "platform-dashboard",
         "routes": [
           {
             "pattern": "dash.void.cloud",
@@ -30,12 +30,12 @@
         "services": [
           {
             "binding": "API",
-            "service": "nosam-api"
+            "service": "platform-api"
           }
         ]
       },
       "staging": {
-        "name": "nosam-dashboard-staging",
+        "name": "platform-dashboard-staging",
         "routes": [
           {
             "pattern": "dash.staging.void.cloud",
@@ -45,7 +45,7 @@
         "services": [
           {
             "binding": "API",
-            "service": "nosam-api-staging"
+            "service": "platform-api-staging"
           }
         ],
         "vars": {
@@ -56,7 +56,7 @@
     }
   },
   "resolved": {
-    "name": "nosam-dashboard",
+    "name": "platform-dashboard",
     "compatibility_date": "2026-02-12",
     "assets": {
       "directory": "dist/client"
@@ -70,12 +70,12 @@
     "services": [
       {
         "binding": "API",
-        "service": "nosam-api"
+        "service": "platform-api"
       }
     ],
     "env": {
       "production": {
-        "name": "nosam-dashboard",
+        "name": "platform-dashboard",
         "routes": [
           {
             "pattern": "dash.void.cloud",
@@ -85,12 +85,12 @@
         "services": [
           {
             "binding": "API",
-            "service": "nosam-api"
+            "service": "platform-api"
           }
         ]
       },
       "staging": {
-        "name": "nosam-dashboard-staging",
+        "name": "platform-dashboard-staging",
         "routes": [
           {
             "pattern": "dash.staging.void.cloud",
@@ -100,7 +100,7 @@
         "services": [
           {
             "binding": "API",
-            "service": "nosam-api-staging"
+            "service": "platform-api-staging"
           }
         ],
         "vars": {
@@ -110,5 +110,5 @@
       }
     }
   },
-  "text": "{\n  \"name\": \"nosam-dashboard\",\n  \"compatibility_date\": \"2026-02-12\",\n  \"assets\": {\n    \"directory\": \"dist/client\",\n  },\n  \"routes\": [{ \"pattern\": \"dash.void.cloud\", \"custom_domain\": true }],\n  \"services\": [{ \"binding\": \"API\", \"service\": \"nosam-api\" }],\n  \"env\": {\n    \"production\": {\n      \"name\": \"nosam-dashboard\",\n      \"routes\": [{ \"pattern\": \"dash.void.cloud\", \"custom_domain\": true }],\n      \"services\": [{ \"binding\": \"API\", \"service\": \"nosam-api\" }],\n    },\n    \"staging\": {\n      \"name\": \"nosam-dashboard-staging\",\n      \"routes\": [{ \"pattern\": \"dash.staging.void.cloud\", \"custom_domain\": true }],\n      \"services\": [{ \"binding\": \"API\", \"service\": \"nosam-api-staging\" }],\n      \"vars\": {\n        \"API_URL\": \"https://api.staging.void.cloud\",\n        \"SITE_DOMAIN\": \"staging.void.app\",\n      },\n    },\n  },\n}\n"
+  "text": "{\n  \"name\": \"platform-dashboard\",\n  \"compatibility_date\": \"2026-02-12\",\n  \"assets\": {\n    \"directory\": \"dist/client\",\n  },\n  \"routes\": [{ \"pattern\": \"dash.void.cloud\", \"custom_domain\": true }],\n  \"services\": [{ \"binding\": \"API\", \"service\": \"platform-api\" }],\n  \"env\": {\n    \"production\": {\n      \"name\": \"platform-dashboard\",\n      \"routes\": [{ \"pattern\": \"dash.void.cloud\", \"custom_domain\": true }],\n      \"services\": [{ \"binding\": \"API\", \"service\": \"platform-api\" }],\n    },\n    \"staging\": {\n      \"name\": \"platform-dashboard-staging\",\n      \"routes\": [{ \"pattern\": \"dash.staging.void.cloud\", \"custom_domain\": true }],\n      \"services\": [{ \"binding\": \"API\", \"service\": \"platform-api-staging\" }],\n      \"vars\": {\n        \"API_URL\": \"https://api.staging.void.cloud\",\n        \"SITE_DOMAIN\": \"staging.void.app\",\n      },\n    },\n  },\n}\n"
 }

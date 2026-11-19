@@ -85,7 +85,7 @@ function domainRow(overrides: Partial<EmailDomainResponse> = {}): EmailDomainRes
     connectionId: 'conn_1',
     account_id: 'account_1',
     zone_id: 'zone_1',
-    relay_worker_name: 'nosam-email-ingress',
+    relay_worker_name: 'platform-email-ingress',
     relay_version: 1,
     operationId: null,
     readiness: {

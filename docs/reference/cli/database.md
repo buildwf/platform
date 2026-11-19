@@ -5,13 +5,13 @@ outline: deep
 
 # Database {#database}
 
-## `bwf db push` {#nosam-db-push}
+## `bwf db push` {#platform-db-push}
 
 Apply your Drizzle schema directly to the development database without creating migration files. D1 updates the local database; PostgreSQL and MySQL use `DATABASE_URL` from `.env`.
 
 Use this for quick schema iteration while prototyping. Before deploying, generate and review migration files with `bwf db generate`.
 
-## `bwf db generate` {#nosam-db-generate}
+## `bwf db generate` {#platform-db-generate}
 
 Generate SQL migration files from schema changes.
 
@@ -19,11 +19,11 @@ Compares your schema with the last Drizzle snapshot and writes migrations under 
 
 For SQLite, bwf checks that the migration history applies to a fresh database. If generation fails this check, the previous SQL, snapshots, and journal are restored. If an existing migration fails, repair that unapplied migration first: rerunning generation compares snapshots and does not repair existing SQL. This check does not verify that a migration preserves existing data; review table rebuilds and foreign-key actions carefully.
 
-## `bwf db status` {#nosam-db-status}
+## `bwf db status` {#platform-db-status}
 
 Show applied and pending migrations locally and on the saved deployment target. Direct Cloudflare PostgreSQL and MySQL projects use `DATABASE_URL` from the current shell for remote status.
 
-## `bwf db reset` {#nosam-db-reset}
+## `bwf db reset` {#platform-db-reset}
 
 ```
 bwf db reset [--yes]
@@ -33,7 +33,7 @@ Reset the development database and re-apply all migrations. D1 resets local data
 
 When that `DATABASE_URL` points to a host other than `localhost`, bwf names the database and asks before dropping its tables. Pass `--yes` to skip the prompt in scripts and CI; without a terminal, the command stops unless `--yes` is set. If `.env` uses the same URL as your deployment (for example after `bwf db connect`), reset drops the deployed tables.
 
-## `bwf db seed` {#nosam-db-seed}
+## `bwf db seed` {#platform-db-seed}
 
 ```
 bwf db seed [--file <path>] [--yes]
@@ -47,7 +47,7 @@ If more than one default seed file exists, the CLI stops and asks you to pass `-
 
 Programmatic seed modules must export either a default function or a named `seed` function.
 
-## `bwf db execute` {#nosam-db-execute}
+## `bwf db execute` {#platform-db-execute}
 
 ```
 bwf db execute <sql>
@@ -66,7 +66,7 @@ By default, targets the local database. Pass `--remote` to run against the deplo
 
 For destructive statements (`DELETE`, `UPDATE`, `DROP`, etc.) when running in a TTY, you will be prompted to confirm before the query is sent to the deployed database. Non-TTY environments (CI) skip the prompt.
 
-## `bwf db migrate` {#nosam-db-migrate}
+## `bwf db migrate` {#platform-db-migrate}
 
 ```
 bwf db migrate [--remote]
@@ -76,7 +76,7 @@ Apply pending migrations to the local database without resetting. Unlike `bwf db
 
 Pass `--remote` to apply pending migrations to the saved target. Hosted projects require a bwf login and link. Direct Cloudflare D1 projects use the binding's configured migration directory, table, and pattern. The D1 binding must set `migrations_dir`. Direct PostgreSQL and MySQL projects use the shell `DATABASE_URL`.
 
-## `bwf db studio` {#nosam-db-studio}
+## `bwf db studio` {#platform-db-studio}
 
 ```
 bwf db studio [--remote]
@@ -90,7 +90,7 @@ By default, targets the local database. Pass `--remote` to open Studio against t
 - **Direct Cloudflare PostgreSQL and MySQL projects**: use `DATABASE_URL` from the current shell.
 - **D1 projects**: use `bwf db execute --remote` to query the deployed database.
 
-## `bwf db restore` {#nosam-db-restore}
+## `bwf db restore` {#platform-db-restore}
 
 ```
 bwf db restore --bookmark <bookmark> [--platform cloudflare] [--yes]
@@ -105,26 +105,26 @@ Restoring discards every write made after the selected point. bwf asks for confi
 
 To recover from a bad migration:
 
-1. Roll back the code with [`bwf project rollback`](./project.md#nosam-project-rollback-deployid) if the live version needs the newer schema.
+1. Roll back the code with [`bwf project rollback`](./project.md#platform-project-rollback-deployid) if the live version needs the newer schema.
 2. Restore the database using the printed bookmark.
 3. Fix or remove the failed migration before deploying again. The restore also rewinds migration history, so the next deploy reapplies pending files.
 
 For a one-off Cloudflare deployment, add `--platform cloudflare` to restore, rollback, and deploy commands.
 
-## `bwf db rename-migrations` {#nosam-db-rename-migrations}
+## `bwf db rename-migrations` {#platform-db-rename-migrations}
 
 For linked bwf platform projects, rename migrations from numeric prefixes (`0001_name.sql`) to timestamps (`20260410161500_name.sql`) and update local and remote migration records. Sign in and run `bwf project link` first.
 
 For direct Cloudflare deployments, keep existing filenames. New migrations use timestamps and run after them.
 
-## `bwf db connect` {#nosam-db-connect}
+## `bwf db connect` {#platform-db-connect}
 
 Connect an existing PostgreSQL/MySQL database or provision one through an adapter:
 
 ```sh
 bwf db connect 'postgresql://user:password@host/database'
 NEON_API_KEY=... bwf db connect --provider neon --name my-app
-bwf db connect --provider @acme/nosam-db-provider --region region-id
+bwf db connect --provider @acme/platform-db-provider --region region-id
 ```
 
 The command saves `DATABASE_URL` in `.env`. When authenticated with a linked bwf project, it also updates the encrypted deployment URL; pass `--local-only` to skip that sync. `neon` is built in. Other adapters are project dependencies or local modules exporting a `DatabaseProviderAdapter` from `@builtbyfriends/bwf/database-provider`.
@@ -133,13 +133,13 @@ Provider-created credentials are never printed. For direct Cloudflare deploys, c
 
 For an existing PostgreSQL database migrated by Drizzle, [adopt its applied migration history](../../guide/database.md#adopt-existing-drizzle) before the first bwf deployment.
 
-## `bwf db set-url` {#nosam-db-set-url}
+## `bwf db set-url` {#platform-db-set-url}
 
 Update the PostgreSQL or MySQL connection string for deployment. Available for projects with `"database": "pg"` or `"database": "mysql"`.
 
 Prompts for a connection string and sends it to the platform API to create or update the Hyperdrive configuration.
 
-## `bwf db export` {#nosam-db-export}
+## `bwf db export` {#platform-db-export}
 
 ```
 bwf db export [--output <path>] [--no-data] [--no-schema] [--table <name>]

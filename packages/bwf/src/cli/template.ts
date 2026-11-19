@@ -314,7 +314,7 @@ function getApp(framework: ScaffoldFramework, starterMode: ScaffoldStarterMode):
     <div class="hero">
       <img class="base" src="/stack.svg" width="170" height="179" alt="" />
       <img class="framework" src="/${framework}.svg" alt="${label} logo" />
-      <img class="nosam" src="/bwf.svg" alt="bwf logo" />
+      <img class="platform" src="/bwf.svg" alt="bwf logo" />
     </div>
     <div class="starter-intro">
       <h1 id="welcome-title">Welcome to bwf</h1>

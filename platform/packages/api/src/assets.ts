@@ -431,7 +431,7 @@ function createBase64MultipartBody(parts: ReadonlyArray<AssetUploadPart>): {
   body: ReadableStream<Uint8Array>;
   contentType: string;
 } {
-  const boundary = `----nosam-assets-${Math.random().toString(36).slice(2)}`;
+  const boundary = `----platform-assets-${Math.random().toString(36).slice(2)}`;
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
   const writer = writable.getWriter();
 

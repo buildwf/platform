@@ -12,7 +12,7 @@ import { getApplicationTables } from '../../src/migrations/runner.ts';
 const roots: Array<string> = [];
 
 function createRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-local-d1-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-local-d1-'));
   roots.push(root);
   writeFileSync(join(root, 'package.json'), JSON.stringify({ type: 'module' }));
   return root;
@@ -38,7 +38,7 @@ function hookHandler<T>(hook: T | { handler: T } | undefined): T {
 }
 
 async function runGeneratedMigrationPlugin(plugins: ReturnType<typeof bwfPlugin>): Promise<void> {
-  const plugin = plugins.find(({ name }) => name === 'nosam:migrations');
+  const plugin = plugins.find(({ name }) => name === 'platform:migrations');
   expect(plugin).toBeTruthy();
   const configureServer = hookHandler(plugin?.configureServer);
   await (configureServer as (server: unknown) => Promise<void>).call({}, { environments: {} });

@@ -42,9 +42,9 @@ If you run migrations in a separate release step, or a preview shares your datab
 bwf deploy --skip-migrations
 ```
 
-The app must work with the database's current schema. Both deployment destinations support this option, and the next deploy without it applies pending migrations. See [`--skip-migrations`](../reference/cli/deploy.md#nosam-deploy) for requirements and [`bwf db migrate`](../reference/cli/database.md#nosam-db-migrate) to apply migrations separately.
+The app must work with the database's current schema. Both deployment destinations support this option, and the next deploy without it applies pending migrations. See [`--skip-migrations`](../reference/cli/deploy.md#platform-deploy) for requirements and [`bwf db migrate`](../reference/cli/database.md#platform-db-migrate) to apply migrations separately.
 
-For D1 on your own Cloudflare account, deploy saves a restore point before applying migrations and prints a [`bwf db restore`](../reference/cli/database.md#nosam-db-restore) command. Use it to recover from a bad migration, then fix the migration before deploying again. A restore discards writes made after that point; check that your deployed code works with the restored schema. See the command reference for the recovery steps and retention limits.
+For D1 on your own Cloudflare account, deploy saves a restore point before applying migrations and prints a [`bwf db restore`](../reference/cli/database.md#platform-db-restore) command. Use it to recover from a bad migration, then fix the migration before deploying again. A restore discards writes made after that point; check that your deployed code works with the restored schema. See the command reference for the recovery steps and retention limits.
 
 ### Environment variables
 

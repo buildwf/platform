@@ -35,7 +35,7 @@ describe('git deploy metadata', () => {
 
   // Git hooks and credential helpers must see childEnv, not process.env.
   it.skipIf(process.platform === 'win32')('runs the git children under childEnv', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'nosam-git-meta-'));
+    const dir = mkdtempSync(join(tmpdir(), 'platform-git-meta-'));
     const saved = process.env.CF_ACCESS_CLIENT_SECRET;
     try {
       mkdirSync(join(dir, 'bin'), { recursive: true });

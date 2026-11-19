@@ -20,7 +20,7 @@ import {
   isBwfSecretOnlyDraft,
   isWranglerSecretOnlyDraft,
   isSecretDraftMessage,
-  NOSAM_SECRET_DRAFT_SOURCE,
+  PLATFORM_SECRET_DRAFT_SOURCE,
 } from './secret-draft.ts';
 
 const DURABLE_MIGRATION_VERSION_ERROR = 10211;
@@ -190,16 +190,16 @@ export function encodeCloudflareVersionMessage(
   const metadata: CloudflareVersionMetadata = triggerConfig
     ? { schema: 2, migrations, triggerConfig, ...(contentHash ? { contentHash } : {}) }
     : { schema: 1, migrations };
-  return `nosam:${JSON.stringify(metadata)}`;
+  return `platform:${JSON.stringify(metadata)}`;
 }
 
 /** Read migration state written by {@link encodeCloudflareVersionMessage}. */
 export function parseCloudflareVersionMessage(
   message: string | null | undefined,
 ): CloudflareVersionMetadata | null {
-  // Versions that earlier releases deployed carry the prefix `void:`, so an upgrade still finds
-  // their record.
-  const prefix = ['nosam:', 'void:'].find((candidate) => message?.startsWith(candidate));
+  // Versions that earlier releases deployed carry the prefix `nosam:` or `void:`, so an upgrade
+  // still finds their record.
+  const prefix = ['platform:', 'nosam:', 'void:'].find((candidate) => message?.startsWith(candidate));
   if (!message || !prefix) {
     return null;
   }
@@ -302,7 +302,7 @@ export async function deployCloudflareVersionTriggers(options: {
     ),
     options.manageRoutes,
   );
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-version-triggers-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-version-triggers-'));
   const configPath = join(directory, 'wrangler.json');
   try {
     writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
@@ -604,7 +604,7 @@ function hasCustomDomains(routes: ReadonlyArray<unknown> | undefined): boolean {
   return routes?.some((route) => isRecord(route) && route.custom_domain === true) === true;
 }
 
-/** Select a configured HTTPS route that is guaranteed to cover /__nosam/ready. */
+/** Select a configured HTTPS route that is guaranteed to cover /__platform/ready. */
 function customRouteReadinessUrl(routes: ReadonlyArray<unknown>): string | undefined {
   for (const route of routes) {
     const record = isRecord(route) ? route : undefined;
@@ -905,7 +905,7 @@ export async function activateCloudflareVersion(
     return activateCloudflareVersionWithSecretsFile(options);
   }
 
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-version-secrets-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-version-secrets-'));
   const path = join(directory, 'secrets.json');
   try {
     writeFileSync(path, `${JSON.stringify(Object.fromEntries(candidateSecrets))}\n`, {
@@ -1141,7 +1141,7 @@ async function activateCloudflareVersionWithSecretsFile(
     options.queueConsumerCleanup,
   );
 
-  const alias = `nosam-ready-${Date.now().toString(36)}`;
+  const alias = `platform-ready-${Date.now().toString(36)}`;
   const bootstrapBwfDraft =
     !options.preserveTriggers &&
     !options.requirePreviewForReadiness &&
@@ -1456,7 +1456,7 @@ async function activateCloudflareVersionWithSecretsFile(
       readinessUsesCustomRoute && !isTrustedReadinessOrigin(url, trustedReadinessOrigin);
     const probe = (url: string) =>
       probeReadiness(
-        `${url.replace(/\/$/, '')}/__nosam/ready`,
+        `${url.replace(/\/$/, '')}/__platform/ready`,
         options.workerName,
         withholdsCustomRouteHeaders(url) ? undefined : options.readinessHeaders,
         authenticatedWorkersDevSubdomain,
@@ -2000,7 +2000,7 @@ async function isBwfSecretDraftPlaceholderVersion(
     return (
       isRecord(module) &&
       module.name === entry.main_module &&
-      module.content_base64 === Buffer.from(NOSAM_SECRET_DRAFT_SOURCE).toString('base64') &&
+      module.content_base64 === Buffer.from(PLATFORM_SECRET_DRAFT_SOURCE).toString('base64') &&
       entry.bindings.every((binding) => isRecord(binding) && binding.type === 'secret_text')
     );
   } catch {
@@ -2421,7 +2421,7 @@ async function bootstrapFirstDeployment(
     !previewSubdomain && !isTrustedReadinessOrigin(previewUrl, trustedReadinessOrigin);
   options.onProgress?.('Waiting for the Worker to become ready...');
   const ready = await probeReadiness(
-    `${previewUrl.replace(/\/$/, '')}/__nosam/ready`,
+    `${previewUrl.replace(/\/$/, '')}/__platform/ready`,
     options.workerName,
     withholdsCustomRouteHeaders ? undefined : options.readinessHeaders,
     previewSubdomain,
@@ -2456,7 +2456,7 @@ async function bootstrapFirstDeployment(
       ...(ready === 'failed' && usesCustomDomain
         ? {
             diagnostic:
-              'The Custom Domain may still be propagating DNS or its TLS certificate. Check the configured domain in Cloudflare, then retry `bwf deploy --platform cloudflare` once its /__nosam/ready endpoint is reachable.',
+              'The Custom Domain may still be propagating DNS or its TLS certificate. Check the configured domain in Cloudflare, then retry `bwf deploy --platform cloudflare` once its /__platform/ready endpoint is reachable.',
           }
         : {}),
     };
@@ -2756,7 +2756,7 @@ async function probeReadiness(
     try {
       response = await fetcher(url, {
         headers: {
-          'user-agent': 'nosam-deploy-readiness/1',
+          'user-agent': 'platform-deploy-readiness/1',
           ...headers,
           ...(versionOverride
             ? {
@@ -2946,7 +2946,7 @@ export async function deployCloudflareVersionTraffic(options: {
   bypassDeploymentChecks?: boolean;
 }): Promise<CloudflareCommandResult> {
   const config = pickWranglerTriggerContext(parseRootWranglerConfig(options.configPath));
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-version-traffic-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-version-traffic-'));
   const path = join(directory, 'wrangler.json');
   try {
     writeFileSync(path, JSON.stringify(config), { mode: 0o600 });

@@ -286,7 +286,7 @@ it.each([390, 1280])(
       await page.goto('http://localhost/admin/status');
       await page.getByText('Showing the last confirmed snapshot', { exact: false }).waitFor();
       const summary = page.getByRole('list', { name: 'Installation and traffic' });
-      const card = page.locator('.nosam-admin-status-card');
+      const card = page.locator('.platform-admin-status-card');
       expect(await card.count()).toBe(1);
       expect(await card.getAttribute('data-state')).toBe('unavailable');
       expect(await summary.getByText('Waiting for Sandbox drain', { exact: true }).count()).toBe(1);

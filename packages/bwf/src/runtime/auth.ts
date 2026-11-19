@@ -88,7 +88,7 @@ export function getSession(): AuthState | null {
 
 /** Returns the instance created by bwf's auth middleware for this request. */
 export function getAuth(c: Context): AuthInstance {
-  const auth = c.get('__nosamAuth') as AuthInstance | undefined;
+  const auth = c.get('__platformAuth') as AuthInstance | undefined;
   if (!auth) {
     throw new Error('Better Auth is not available for this request. Enable auth in bwf.config.ts.');
   }

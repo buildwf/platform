@@ -320,7 +320,7 @@ export function envSchemaPlugin(root: string, options: EnvSchemaPluginOptions = 
   }
 
   return {
-    name: 'nosam:env-schema',
+    name: 'platform:env-schema',
     enforce: 'pre',
     async config(_config, environment) {
       // Plugin `config` hooks run before Vite loads env files, and `pre` puts

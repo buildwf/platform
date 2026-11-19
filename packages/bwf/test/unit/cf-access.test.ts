@@ -22,7 +22,7 @@ describe('cfAccessHeaders', () => {
           CF_ACCESS_CLIENT_ID: 'id',
           CF_ACCESS_CLIENT_SECRET: 'secret',
           CF_ACCESS_TOKEN: 'jwt',
-          NOSAM_ACCESS_ORIGIN: 'https://api.staging.void.cloud',
+          PLATFORM_ACCESS_ORIGIN: 'https://api.staging.void.cloud',
         },
         'https://api.staging.void.cloud',
       ),
@@ -38,7 +38,7 @@ describe('cfAccessHeaders', () => {
         {
           CF_ACCESS_CLIENT_ID: 'id',
           CF_ACCESS_TOKEN: 'jwt',
-          NOSAM_ACCESS_ORIGIN: 'https://proxy.staging.void.cloud',
+          PLATFORM_ACCESS_ORIGIN: 'https://proxy.staging.void.cloud',
         },
         'https://proxy.staging.void.cloud',
       ),
@@ -88,7 +88,7 @@ describe('cfAccessHeaders', () => {
     const env = {
       CF_ACCESS_CLIENT_ID: 'ci-id',
       CF_ACCESS_CLIENT_SECRET: 'ci-secret',
-      NOSAM_ACCESS_ORIGIN: 'https://platform.example.com',
+      PLATFORM_ACCESS_ORIGIN: 'https://platform.example.com',
     };
     expect(cfAccessHeaders(env, 'https://platform.example.com/projects')).toEqual({
       'CF-Access-Client-Id': 'ci-id',
@@ -107,7 +107,7 @@ describe('cfAccessHeaders', () => {
 
   it('supports separate API and proxy credentials without sharing them across origins', () => {
     const env = {
-      NOSAM_ACCESS_CREDENTIALS: JSON.stringify({
+      PLATFORM_ACCESS_CREDENTIALS: JSON.stringify({
         'https://api.example.com': { CF_ACCESS_TOKEN: 'api-token' },
         'https://proxy.example.com': {
           CF_ACCESS_CLIENT_ID: 'proxy-id',
@@ -134,7 +134,7 @@ describe('cfAccessHeaders', () => {
     ]) {
       expect(
         cfAccessHeaders(
-          { CF_ACCESS_TOKEN: 'shared-secret', NOSAM_ACCESS_CREDENTIALS: encoded },
+          { CF_ACCESS_TOKEN: 'shared-secret', PLATFORM_ACCESS_CREDENTIALS: encoded },
           'https://api.staging.void.cloud',
         ),
       ).toEqual({});
@@ -159,8 +159,8 @@ describe('origin-scoped self-hosted Access login', () => {
       'CF_ACCESS_CLIENT_ID',
       'CF_ACCESS_CLIENT_SECRET',
       'CF_ACCESS_TOKEN',
-      'NOSAM_ACCESS_CREDENTIALS',
-      'NOSAM_ACCESS_ORIGIN',
+      'PLATFORM_ACCESS_CREDENTIALS',
+      'PLATFORM_ACCESS_ORIGIN',
     ]) {
       vi.stubEnv(name, '');
     }
@@ -203,7 +203,7 @@ describe('origin-scoped self-hosted Access login', () => {
   it('acquires a separate proxy token for development and never reuses the API audience', async () => {
     const apiToken = jwt(Math.floor(Date.now() / 1000) + 600);
     const proxyToken = jwt(Math.floor(Date.now() / 1000) + 900);
-    process.env.NOSAM_ACCESS_CREDENTIALS = JSON.stringify({
+    process.env.PLATFORM_ACCESS_CREDENTIALS = JSON.stringify({
       'https://api.example.com': { CF_ACCESS_TOKEN: apiToken },
     });
     spawnSyncMock.mockReturnValue({ status: 0, stdout: proxyToken });
@@ -225,7 +225,7 @@ describe('origin-scoped self-hosted Access login', () => {
     const { ensurePlatformProxyAccess } = await import('../../src/cli/cf-access.ts');
     ensurePlatformProxyAccess('https://api.example.com', 'https://proxy.example.com');
     expect(spawnSyncMock).not.toHaveBeenCalled();
-    expect(process.env.NOSAM_ACCESS_CREDENTIALS).toBe('');
+    expect(process.env.PLATFORM_ACCESS_CREDENTIALS).toBe('');
   });
   it('refreshes an expired cached token without storing it in a project file', async () => {
     const token = jwt(Math.floor(Date.now() / 1000) + 600);
@@ -238,7 +238,7 @@ describe('origin-scoped self-hosted Access login', () => {
       'token',
       '-app=https://api.example.com',
     ]);
-    expect(keyring.write).toHaveBeenCalledWith('dev.nosam.cli.access', expect.any(String), token);
+    expect(keyring.write).toHaveBeenCalledWith('dev.platform.cli.access', expect.any(String), token);
     expect(cfAccessHeaders(process.env, 'https://api.example.com')).toEqual({
       'cf-access-token': token,
     });
@@ -269,7 +269,7 @@ describe('origin-scoped self-hosted Access login', () => {
     expect(cfAccessHeaders(process.env, 'https://api.example.com')).toEqual({
       'cf-access-token': fresh,
     });
-    expect(keyring.write).toHaveBeenCalledWith('dev.nosam.cli.access', expect.any(String), fresh);
+    expect(keyring.write).toHaveBeenCalledWith('dev.platform.cli.access', expect.any(String), fresh);
   });
 
   it('does not treat arbitrary redirects as company authentication challenges', async () => {
@@ -336,8 +336,8 @@ describe('origin-scoped self-hosted Access login', () => {
       apiUrl: discovery.apiUrl,
     });
     expect(request.mock.calls.map(([url]) => url)).toEqual([
-      'https://api.example.com/.well-known/nosam-platform',
-      'https://api.example.com/.well-known/nosam-platform',
+      'https://api.example.com/.well-known/platform',
+      'https://api.example.com/.well-known/platform',
     ]);
     expect(request.mock.calls[0]?.[1].headers['cf-access-token']).toBeUndefined();
     expect(request.mock.calls[1]?.[1].headers['cf-access-token']).toBe(token);
@@ -347,7 +347,7 @@ describe('origin-scoped self-hosted Access login', () => {
 
 describe('ensurePlatformAccessToken defaults', () => {
   it.each([
-    'https://nosam.buildwithfriends.dev',
+    'https://platform.buildwithfriends.dev',
     'https://api.staging.void.cloud',
     'https://proxy.staging.void.cloud',
   ])('does not implicitly authenticate a former hosted origin: %s', async (origin) => {
@@ -355,8 +355,8 @@ describe('ensurePlatformAccessToken defaults', () => {
     spawnSyncMock.mockReset();
     keyring.read.mockReset().mockReturnValue(null);
     vi.stubEnv('CF_ACCESS_TOKEN', 'unscoped-token');
-    vi.stubEnv('NOSAM_ACCESS_ORIGIN', '');
-    vi.stubEnv('NOSAM_ACCESS_CREDENTIALS', '');
+    vi.stubEnv('PLATFORM_ACCESS_ORIGIN', '');
+    vi.stubEnv('PLATFORM_ACCESS_CREDENTIALS', '');
     const { ensurePlatformAccessToken } = await import('../../src/cli/cf-access.ts');
     ensurePlatformAccessToken(origin);
     expect(spawnSyncMock).not.toHaveBeenCalled();

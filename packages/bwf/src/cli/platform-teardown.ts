@@ -572,7 +572,7 @@ export async function assertNoPlatformProjects(
   const slugs = await readPlatformDatabase(
     read,
     (reason) =>
-      `platform: Refusing --purge-resources because the project list could not be read from the platform database: ${reason}\nMake the installation database reachable (export NOSAM_PLATFORM_DATABASE_URL if this machine has not recorded it), then retry.`,
+      `platform: Refusing --purge-resources because the project list could not be read from the platform database: ${reason}\nMake the installation database reachable (export PLATFORM_DATABASE_URL if this machine has not recorded it), then retry.`,
   );
   if (slugs.length) {
     throw new Error(
@@ -830,7 +830,7 @@ export async function runPurgeResourcesTeardown(
           live.name !== access.name ||
           !(
             access.name.startsWith(`void-${next.id}-`) ||
-            access.name.startsWith(`nosam-${next.id}-`)
+            access.name.startsWith(`platform-${next.id}-`)
           )
         ) {
           await keep(

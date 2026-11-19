@@ -16,7 +16,7 @@
  * before that — so every consumer on the email path also refuses the slug
  * outright: the proxy refuses `/email/send` for it, and the inbound router
  * rejects mail addressed to it. Kept in its own module
- * so the proxy (`@nosamcloud/api/reserved-slugs`) shares one list with the
+ * so the proxy (`@platform-service/api/reserved-slugs`) shares one list with the
  * api rather than carrying a copy that can drift.
  *
  * The rest of `RESERVED_SLUGS` (`www`, `api`, `mail`, `smtp`, …) is NOT

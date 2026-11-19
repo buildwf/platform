@@ -160,9 +160,9 @@ describe('platform Cloudflare client', () => {
   it('accepts an existing subdomain and handles an empty result without a property access error', async () => {
     const client = new PlatformCloudflareClient('token', {
       fetcher: async () =>
-        Response.json({ success: true, result: { subdomain: 'nosam-platform-e2e-test' } }),
+        Response.json({ success: true, result: { subdomain: 'platform-e2e-test' } }),
     });
-    await expect(client.getWorkersSubdomain('account')).resolves.toBe('nosam-platform-e2e-test');
+    await expect(client.getWorkersSubdomain('account')).resolves.toBe('platform-e2e-test');
     const empty = new PlatformCloudflareClient('token', {
       fetcher: async () => Response.json({ success: true, result: null }),
     });
@@ -360,13 +360,13 @@ describe('platform Cloudflare client', () => {
     const client = new PlatformCloudflareClient('token', {
       fetcher: async (_input, init) => {
         payload = JSON.parse(String(init?.body));
-        return Response.json({ success: true, result: { id: 'hyperdrive-id', name: 'nosam-db' } });
+        return Response.json({ success: true, result: { id: 'hyperdrive-id', name: 'platform-db' } });
       },
     });
 
     await client.createHyperdrive(
       'account',
-      'nosam-db',
+      'platform-db',
       `postgresql://user:secret@db.example.com/void${query}`,
     );
 
@@ -410,7 +410,7 @@ describe('platform Cloudflare client', () => {
             success: true,
             result: {
               id: 'hyperdrive-id',
-              name: 'nosam-db',
+              name: 'platform-db',
               origin: {
                 database: 'void',
                 host: 'DB.EXAMPLE.COM',
@@ -532,7 +532,7 @@ describe('platform Cloudflare client', () => {
             success: true,
             result: {
               id: 'hyperdrive-id',
-              name: 'nosam-db',
+              name: 'platform-db',
               origin: { database: 'void', host: 'db.example.com', port, scheme: 'postgres' },
             },
           }),
@@ -589,7 +589,7 @@ describe('platform Cloudflare client', () => {
     const purge = JSON.parse(requests[1]!.body) as { files: ReadonlyArray<string> };
     expect(purge.files).toHaveLength(1);
     expect(purge.files[0]).toMatch(
-      /^https:\/\/apps\.example\.com\/\.well-known\/nosam\/runtime-token-preflight-[a-f0-9-]+$/,
+      /^https:\/\/apps\.example\.com\/\.well-known\/platform\/runtime-token-preflight-[a-f0-9-]+$/,
     );
   });
 
@@ -745,7 +745,7 @@ describe('platform Cloudflare client', () => {
       }
       expect(message).toContain('email zone mail-zone');
       expect(message).toContain('The token value stays the same');
-      expect(message).toContain('NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN');
+      expect(message).toContain('PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN');
       expect(message).not.toContain('synthetic-runtime-secret');
       expect(message).not.toContain('upstream echoed');
       expect((failure as Error).cause).toBeInstanceOf(PlatformCloudflareApiError);
@@ -795,13 +795,13 @@ describe('platform Cloudflare client', () => {
         }).catch((error: Error) => error.message);
 
       await expect(check(true)).resolves.toBe(
-        'platform: The runtime API token saved on this machine cannot use platform email. Cloudflare denied: Zone → Email Routing Rules → Edit (HTTP 403). bwf checked this token because NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN is not set. If the platform uses a different runtime token, set NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to that token, and bwf checks that token instead. Otherwise, check that the zone permissions of the saved token include the email zone mail-zone. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Then run the command again.',
+        'platform: The runtime API token saved on this machine cannot use platform email. Cloudflare denied: Zone → Email Routing Rules → Edit (HTTP 403). bwf checked this token because PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN is not set. If the platform uses a different runtime token, set PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to that token, and bwf checks that token instead. Otherwise, check that the zone permissions of the saved token include the email zone mail-zone. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Then run the command again.',
       );
-      // A token from NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN, or one that
+      // A token from PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN, or one that
       // the run sends to the Workers, keeps the message.
       for (const savedToken of [undefined, false]) {
         await expect(check(savedToken)).resolves.toBe(
-          'platform: The runtime API token cannot use platform email. Cloudflare denied: Zone → Email Routing Rules → Edit (HTTP 403). Check that the token is valid and that its zone permissions include the email zone mail-zone. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Or set NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to a valid token that has these permissions. Then run the command again.',
+          'platform: The runtime API token cannot use platform email. Cloudflare denied: Zone → Email Routing Rules → Edit (HTTP 403). Check that the token is valid and that its zone permissions include the email zone mail-zone. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Or set PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to a valid token that has these permissions. Then run the command again.',
         );
       }
     });
@@ -931,16 +931,16 @@ describe('platform Cloudflare client', () => {
 
   it('filters KV namespaces by exact title instead of trusting an unsupported API filter', async () => {
     const entries = [
-      { id: 'routing-id', title: 'nosam-example-routing' },
-      { id: 'isr-id', title: 'nosam-example-isr-cache' },
-      { id: 'legacy-id', title: 'nosam-example-legacy-assets' },
-      { id: 'other-id', title: 'nosam-example-routing-other' },
+      { id: 'routing-id', title: 'platform-example-routing' },
+      { id: 'isr-id', title: 'platform-example-isr-cache' },
+      { id: 'legacy-id', title: 'platform-example-legacy-assets' },
+      { id: 'other-id', title: 'platform-example-routing-other' },
     ];
     const client = new PlatformCloudflareClient('token', {
       fetcher: async () => Response.json({ success: true, result: entries }),
     });
-    await expect(client.listKvNamespaces('account', 'nosam-example-routing')).resolves.toEqual([
-      { id: 'routing-id', name: 'nosam-example-routing' },
+    await expect(client.listKvNamespaces('account', 'platform-example-routing')).resolves.toEqual([
+      { id: 'routing-id', name: 'platform-example-routing' },
     ]);
     await expect(client.listKvNamespaces('account', 'missing')).resolves.toEqual([]);
     await expect(client.listKvNamespaces('account')).resolves.toHaveLength(4);
@@ -1051,9 +1051,9 @@ describe('platform Cloudflare client', () => {
       },
     });
 
-    await client.putR2Object('account', 'bucket/name', '__nosam/platform/ownership/v1', 'marker');
+    await client.putR2Object('account', 'bucket/name', '__platform/platform/ownership/v1', 'marker');
     await expect(
-      client.getR2Object('account', 'bucket/name', '__nosam/platform/ownership/v1'),
+      client.getR2Object('account', 'bucket/name', '__platform/platform/ownership/v1'),
     ).resolves.toBe('marker');
     await client.putR2Object('account', 'bucket/name', 'reserved/what? #%.json', 'reserved');
     await expect(
@@ -1064,13 +1064,13 @@ describe('platform Cloudflare client', () => {
         body: 'marker',
         method: 'PUT',
         pathname:
-          '/client/v4/accounts/account/r2/buckets/bucket%2Fname/objects/__nosam/platform/ownership/v1',
+          '/client/v4/accounts/account/r2/buckets/bucket%2Fname/objects/__platform/platform/ownership/v1',
       },
       {
         body: '',
         method: 'GET',
         pathname:
-          '/client/v4/accounts/account/r2/buckets/bucket%2Fname/objects/__nosam/platform/ownership/v1',
+          '/client/v4/accounts/account/r2/buckets/bucket%2Fname/objects/__platform/platform/ownership/v1',
       },
       {
         body: 'reserved',
@@ -1128,7 +1128,7 @@ describe('platform Cloudflare client', () => {
                 success: true,
                 result: [
                   { key: 'a.txt' },
-                  { key: '__nosam/platform/ownership/v1' },
+                  { key: '__platform/platform/ownership/v1' },
                   { key: 'b.txt' },
                 ],
                 result_info: { cursor: 'next-page' },
@@ -1139,8 +1139,8 @@ describe('platform Cloudflare client', () => {
 
     await client.emptyR2Bucket(
       'account',
-      'nosam-assets',
-      new Set(['__nosam/platform/ownership/v1']),
+      'platform-assets',
+      new Set(['__platform/platform/ownership/v1']),
     );
     expect(cursors).toEqual(['', 'next-page']);
     expect(deleted).toEqual([['a.txt', 'b.txt'], ['nested/c.txt']]);
@@ -1165,13 +1165,13 @@ describe('platform Cloudflare client', () => {
       },
     });
 
-    await client.emptyR2Bucket('account', 'nosam-assets', new Set(), async () => {
+    await client.emptyR2Bucket('account', 'platform-assets', new Set(), async () => {
       events.push('check');
     });
     expect(events).toEqual(['check', 'delete a.txt', 'check', 'delete b.txt']);
 
     await expect(
-      client.emptyR2Bucket('account', 'nosam-assets', new Set(), async () => {
+      client.emptyR2Bucket('account', 'platform-assets', new Set(), async () => {
         throw new Error('replaced');
       }),
     ).rejects.toThrow('replaced');
@@ -1201,18 +1201,18 @@ describe('platform Cloudflare client', () => {
             result: [
               {
                 consumer_id: 'c1',
-                queue_name: 'nosam-team-usage',
-                script_name: 'nosam-team-api',
+                queue_name: 'platform-team-usage',
+                script_name: 'platform-team-api',
                 settings: { batch_size: 10 },
                 type: 'worker',
               },
               {
                 consumer_id: 'c2',
-                queue_name: 'nosam-team-usage',
+                queue_name: 'platform-team-usage',
                 script_name: 'other',
                 type: 'worker',
               },
-              { consumer_id: 'c3', queue_name: 'nosam-team-usage', type: 'http_pull' },
+              { consumer_id: 'c3', queue_name: 'platform-team-usage', type: 'http_pull' },
             ],
           });
         }
@@ -1220,7 +1220,7 @@ describe('platform Cloudflare client', () => {
           return Response.json({ success: true, result: [{ id: 'app-one' }] });
         }
         if (url.pathname.includes('/access/')) {
-          return Response.json({ success: true, result: { id: 'app-id', name: 'nosam-app' } });
+          return Response.json({ success: true, result: { id: 'app-id', name: 'platform-app' } });
         }
         return Response.json({ success: true, result: [] });
       },
@@ -1229,40 +1229,40 @@ describe('platform Cloudflare client', () => {
     await client.deleteResource('account', {
       id: 'worker-id',
       kind: 'worker',
-      name: 'nosam-team-api',
+      name: 'platform-team-api',
     });
     await client.deleteResource('account', { id: 'gone', kind: 'worker', name: 'gone' });
     await client.deleteWorkerRoute('zone', 'route-id');
     await client.deleteWorkerRoute('zone', 'gone');
     await client.deleteWorkerDomain('account', 'domain-id');
     await expect(client.listQueueConsumers('account', 'queue-id')).resolves.toEqual([
-      { id: 'c1', script: 'nosam-team-api' },
+      { id: 'c1', script: 'platform-team-api' },
       { id: 'c2', script: 'other' },
       { id: 'c3', script: null },
     ]);
     await client.deleteQueueConsumer('account', 'queue-id', 'c1');
-    await expect(client.listDispatchNamespaceScripts('account', 'nosam-users')).resolves.toEqual([
+    await expect(client.listDispatchNamespaceScripts('account', 'platform-users')).resolves.toEqual([
       'app-one',
     ]);
-    await client.deleteDispatchNamespaceScript('account', 'nosam-users', 'app-one');
+    await client.deleteDispatchNamespaceScript('account', 'platform-users', 'app-one');
     await expect(client.getAccessResource('account', 'application', 'app-id')).resolves.toEqual({
       id: 'app-id',
-      name: 'nosam-app',
+      name: 'platform-app',
     });
     await expect(client.getAccessResource('account', 'service-token', 'gone')).resolves.toBeNull();
     await client.deleteAccessResource('account', 'application', 'app-id');
     await client.deleteAccessResource('account', 'service-token', 'token-id');
 
     expect(requests).toEqual([
-      'DELETE /client/v4/accounts/account/workers/scripts/nosam-team-api',
+      'DELETE /client/v4/accounts/account/workers/scripts/platform-team-api',
       'DELETE /client/v4/accounts/account/workers/scripts/gone',
       'DELETE /client/v4/zones/zone/workers/routes/route-id',
       'DELETE /client/v4/zones/zone/workers/routes/gone',
       'DELETE /client/v4/accounts/account/workers/domains/domain-id',
       'GET /client/v4/accounts/account/queues/queue-id/consumers',
       'DELETE /client/v4/accounts/account/queues/queue-id/consumers/c1',
-      'GET /client/v4/accounts/account/workers/dispatch/namespaces/nosam-users/scripts',
-      'DELETE /client/v4/accounts/account/workers/dispatch/namespaces/nosam-users/scripts/app-one',
+      'GET /client/v4/accounts/account/workers/dispatch/namespaces/platform-users/scripts',
+      'DELETE /client/v4/accounts/account/workers/dispatch/namespaces/platform-users/scripts/app-one',
       'GET /client/v4/accounts/account/access/apps/app-id',
       'GET /client/v4/accounts/account/access/service_tokens/gone',
       'DELETE /client/v4/accounts/account/access/apps/app-id',
@@ -1283,12 +1283,12 @@ describe('platform Cloudflare client', () => {
             success: true,
             result: {
               services: {
-                outgoing: [{ name: 'PLATFORM_PROXY', service: 'nosam-team-proxy' }],
-                incoming: [{ name: 'API', service: 'nosam-team-proxy', environment: 'production' }],
+                outgoing: [{ name: 'PLATFORM_PROXY', service: 'platform-team-proxy' }],
+                incoming: [{ name: 'API', service: 'platform-team-proxy', environment: 'production' }],
               },
               domains: [],
               durable_objects: [
-                { name: 'USAGE_COUNTER', service: 'nosam-team-api', environment: 'production' },
+                { name: 'USAGE_COUNTER', service: 'platform-team-api', environment: 'production' },
                 { name: 'SHARED', service: 'customer-worker', environment: 'production' },
               ],
               dispatch_outbounds: [{ script: 'outbound-user', namespace: 'ns' }],
@@ -1298,23 +1298,23 @@ describe('platform Cloudflare client', () => {
         if (url.pathname.includes('/workers/tails/by-consumer/')) {
           return Response.json({
             success: true,
-            result: [{ producer: { script: 'nosam-team-proxy' }, consumer: { script: 'x' } }],
+            result: [{ producer: { script: 'platform-team-proxy' }, consumer: { script: 'x' } }],
           });
         }
         return Response.json({ success: true, result: null });
       },
     });
 
-    await expect(client.listWorkerDependents('account', 'nosam-team-api')).resolves.toEqual({
+    await expect(client.listWorkerDependents('account', 'platform-team-api')).resolves.toEqual({
       pagesFunction: false,
-      workers: ['nosam-team-proxy', 'customer-worker', 'outbound-user'],
+      workers: ['platform-team-proxy', 'customer-worker', 'outbound-user'],
     });
-    await client.forceDeleteWorker('account', 'nosam-team-api');
+    await client.forceDeleteWorker('account', 'platform-team-api');
 
     expect(requests).toEqual([
-      'GET /client/v4/accounts/account/workers/scripts/nosam-team-api/references',
-      'GET /client/v4/accounts/account/workers/tails/by-consumer/nosam-team-api',
-      'DELETE /client/v4/accounts/account/workers/scripts/nosam-team-api?force=true',
+      'GET /client/v4/accounts/account/workers/scripts/platform-team-api/references',
+      'GET /client/v4/accounts/account/workers/tails/by-consumer/platform-team-api',
+      'DELETE /client/v4/accounts/account/workers/scripts/platform-team-api?force=true',
     ]);
   });
 
@@ -1327,11 +1327,11 @@ describe('platform Cloudflare client', () => {
     // Wrangler still reads these older names for the same Worker.
     await expect(
       respond([
-        { consumer_id: 'c1', script: 'nosam-team-api', type: 'worker' },
+        { consumer_id: 'c1', script: 'platform-team-api', type: 'worker' },
         { consumer_id: 'c2', service: 'other', type: 'worker' },
       ]),
     ).resolves.toEqual([
-      { id: 'c1', script: 'nosam-team-api' },
+      { id: 'c1', script: 'platform-team-api' },
       { id: 'c2', script: 'other' },
     ]);
     await expect(respond([{ consumer_id: 'c1', type: 'worker' }])).rejects.toThrow(
@@ -1359,7 +1359,7 @@ describe('platform Cloudflare client', () => {
               )
             : Response.json({
                 success: true,
-                result: { enabled: true, actions: worker('nosam-team-email-gateway') },
+                result: { enabled: true, actions: worker('platform-team-email-gateway') },
               });
         }
         if (method === 'GET') {
@@ -1369,7 +1369,7 @@ describe('platform Cloudflare client', () => {
             result:
               page === '1'
                 ? [
-                    { id: 'r1', enabled: true, actions: worker('nosam-team-email-gateway') },
+                    { id: 'r1', enabled: true, actions: worker('platform-team-email-gateway') },
                     ...Array.from({ length: 48 }, (_, index) => ({
                       id: `other-${index}`,
                       enabled: true,
@@ -1382,7 +1382,7 @@ describe('platform Cloudflare client', () => {
                     {
                       tag: 'r2',
                       enabled: false,
-                      actions: [...worker('nosam-team-email-gateway'), { type: 'drop' }],
+                      actions: [...worker('platform-team-email-gateway'), { type: 'drop' }],
                     },
                   ],
           });
@@ -1392,12 +1392,12 @@ describe('platform Cloudflare client', () => {
     });
 
     const rules = await client.listEmailRoutingRules('zone');
-    expect(rules[0]).toEqual({ id: 'r1', enabled: true, workerName: 'nosam-team-email-gateway' });
+    expect(rules[0]).toEqual({ id: 'r1', enabled: true, workerName: 'platform-team-email-gateway' });
     expect(rules.at(-1)).toEqual({ id: 'r2', enabled: false, workerName: null });
     expect(rules.some((rule) => rule.id === 'all')).toBe(false);
     await expect(client.getEmailRoutingCatchAll('zone')).resolves.toEqual({
       enabled: true,
-      workerName: 'nosam-team-email-gateway',
+      workerName: 'platform-team-email-gateway',
     });
     await expect(client.getEmailRoutingCatchAll('empty-zone')).resolves.toBeNull();
     await client.deleteEmailRoutingRule('zone', 'r1');
@@ -1435,7 +1435,7 @@ describe('platform Cloudflare client', () => {
     });
 
     await expect(
-      client.deleteResource('account', { id: 'tail', kind: 'worker', name: 'nosam-team-tail' }),
+      client.deleteResource('account', { id: 'tail', kind: 'worker', name: 'platform-team-tail' }),
     ).rejects.toThrow(
       'Cannot delete this Worker as it is a Tail Worker consumer for other Workers. (code 100109)',
     );
@@ -1448,7 +1448,7 @@ describe('platform Cloudflare client', () => {
           success: true,
           result: [
             // The live API answers in this form.
-            { id: 'nosam-team', created_at: '2026-10-05 18:29:14' },
+            { id: 'platform-team', created_at: '2026-10-05 18:29:14' },
             { id: 'zoned', created_at: '2026-09-14T00:00:01.400Z' },
             { id: 'odd', created_at: 'not a time' },
           ],
@@ -1456,7 +1456,7 @@ describe('platform Cloudflare client', () => {
     });
 
     await expect(client.listAiGateways('account')).resolves.toEqual([
-      { createdAt: '2026-10-05T18:29:14.000Z', id: 'nosam-team', name: 'nosam-team' },
+      { createdAt: '2026-10-05T18:29:14.000Z', id: 'platform-team', name: 'platform-team' },
       { createdAt: '2026-09-14T00:00:01.400Z', id: 'zoned', name: 'zoned' },
       { id: 'odd', name: 'odd' },
     ]);
@@ -1472,9 +1472,9 @@ describe('platform Cloudflare client', () => {
     }).withAiGatewayToken('runtime-token');
 
     await client.deleteResource('account', {
-      id: 'nosam-team',
+      id: 'platform-team',
       kind: 'ai-gateway',
-      name: 'nosam-team',
+      name: 'platform-team',
     });
     expect(authorizations).toEqual(['Bearer runtime-token']);
   });
@@ -1494,13 +1494,13 @@ describe('platform Cloudflare client', () => {
     await client.deleteResource('account', {
       id: '5f2f1fa4-9a2f-4f4f-9713-9c27b6a1dd7f',
       kind: 'dispatch-namespace',
-      name: 'nosam-team-users',
+      name: 'platform-team-users',
     });
 
     expect(requests).toEqual([
       {
         method: 'DELETE',
-        pathname: '/client/v4/accounts/account/workers/dispatch/namespaces/nosam-team-users',
+        pathname: '/client/v4/accounts/account/workers/dispatch/namespaces/platform-team-users',
       },
     ]);
   });
@@ -1517,25 +1517,25 @@ describe('platform Cloudflare client', () => {
         });
         const result =
           init?.method === 'POST'
-            ? { id: 'nosam-team' }
+            ? { id: 'platform-team' }
             : init?.method === 'DELETE'
               ? null
-              : [{ id: 'nosam-team' }];
+              : [{ id: 'platform-team' }];
         return Response.json({ success: true, result });
       },
     });
 
     await expect(client.listAiGateways('account')).resolves.toEqual([
-      { id: 'nosam-team', name: 'nosam-team' },
+      { id: 'platform-team', name: 'platform-team' },
     ]);
-    await expect(client.createAiGateway('account', 'nosam-team')).resolves.toEqual({
-      id: 'nosam-team',
-      name: 'nosam-team',
+    await expect(client.createAiGateway('account', 'platform-team')).resolves.toEqual({
+      id: 'platform-team',
+      name: 'platform-team',
     });
     await client.deleteResource('account', {
-      id: 'nosam-team',
+      id: 'platform-team',
       kind: 'ai-gateway',
-      name: 'nosam-team',
+      name: 'platform-team',
     });
 
     expect(requests).toEqual([
@@ -1549,7 +1549,7 @@ describe('platform Cloudflare client', () => {
           cache_invalidate_on_update: false,
           cache_ttl: null,
           collect_logs: true,
-          id: 'nosam-team',
+          id: 'platform-team',
           rate_limiting_interval: null,
           rate_limiting_limit: null,
         },
@@ -1559,7 +1559,7 @@ describe('platform Cloudflare client', () => {
       {
         body: null,
         method: 'DELETE',
-        pathname: '/client/v4/accounts/account/ai-gateway/gateways/nosam-team',
+        pathname: '/client/v4/accounts/account/ai-gateway/gateways/platform-team',
       },
     ]);
   });
@@ -1677,32 +1677,32 @@ describe('platform Cloudflare client', () => {
         if (init?.method === 'POST') {
           return Response.json({
             success: true,
-            result: { id: 'managed-id', pattern: 'apps.example.com/*', script: 'nosam-dispatch' },
+            result: { id: 'managed-id', pattern: 'apps.example.com/*', script: 'platform-dispatch' },
           });
         }
         return Response.json({
           success: true,
           result:
             inventories++ === 0
-              ? [{ id: 'manual-id', pattern: 'manual.example.net/*', script: 'nosam-dispatch' }]
+              ? [{ id: 'manual-id', pattern: 'manual.example.net/*', script: 'platform-dispatch' }]
               : [
-                  { id: 'manual-id', pattern: 'manual.example.net/*', script: 'nosam-dispatch' },
-                  { id: 'managed-id', pattern: 'apps.example.com/*', script: 'nosam-dispatch' },
+                  { id: 'manual-id', pattern: 'manual.example.net/*', script: 'platform-dispatch' },
+                  { id: 'managed-id', pattern: 'apps.example.com/*', script: 'platform-dispatch' },
                   {
                     id: 'concurrent-id',
                     pattern: 'concurrent.example.net/*',
-                    script: 'nosam-dispatch',
+                    script: 'platform-dispatch',
                   },
                 ],
         });
       },
     });
 
-    await client.publishWorkerRoutesSafely('zone', 'nosam-dispatch', ['apps.example.com/*']);
+    await client.publishWorkerRoutesSafely('zone', 'platform-dispatch', ['apps.example.com/*']);
 
     expect(requests.map((request) => request.method)).toEqual(['GET', 'POST', 'GET']);
     expect(requests[1]).toMatchObject({
-      body: { pattern: 'apps.example.com/*', script: 'nosam-dispatch' },
+      body: { pattern: 'apps.example.com/*', script: 'platform-dispatch' },
     });
   });
 
@@ -1717,7 +1717,7 @@ describe('platform Cloudflare client', () => {
     });
 
     await expect(
-      client.publishWorkerRoutesSafely('zone', 'nosam-dispatch', ['apps.example.com/*']),
+      client.publishWorkerRoutesSafely('zone', 'platform-dispatch', ['apps.example.com/*']),
     ).rejects.toMatchObject({ name: 'PlatformWorkerRoutesChangedError' });
   });
 
@@ -1743,13 +1743,13 @@ describe('platform Cloudflare client', () => {
                       {
                         hostname: 'api.example.com',
                         id: 'domain-id',
-                        service: 'nosam-api',
+                        service: 'platform-api',
                         zone_name: 'example.com',
                       },
                       {
                         hostname: 'concurrent.example.net',
                         id: 'concurrent-domain-id',
-                        service: 'nosam-api',
+                        service: 'platform-api',
                       },
                     ],
               result_info: { page: 1, per_page: 100, total_pages: 1 },
@@ -1757,7 +1757,7 @@ describe('platform Cloudflare client', () => {
       },
     });
 
-    await client.publishWorkerCustomDomainsSafely('account', 'nosam-api', [
+    await client.publishWorkerCustomDomainsSafely('account', 'platform-api', [
       { hostname: 'api.example.com', zoneName: 'example.com' },
     ]);
 
@@ -1772,7 +1772,7 @@ describe('platform Cloudflare client', () => {
       method: 'PUT',
     });
     expect(requests[1]!.url).toContain(
-      '/accounts/account/workers/scripts/nosam-api/domains/records',
+      '/accounts/account/workers/scripts/platform-api/domains/records',
     );
     expect(requests[2]).toMatchObject({ method: 'GET' });
   });
@@ -1784,13 +1784,13 @@ describe('platform Cloudflare client', () => {
         methods.push(init?.method ?? 'GET');
         return Response.json({
           success: true,
-          result: [{ hostname: 'api.example.com', id: 'domain-id', service: 'nosam-api' }],
+          result: [{ hostname: 'api.example.com', id: 'domain-id', service: 'platform-api' }],
           result_info: { page: 1, per_page: 100, total_pages: 1 },
         });
       },
     });
 
-    await client.publishWorkerCustomDomainsSafely('account', 'nosam-api', [
+    await client.publishWorkerCustomDomainsSafely('account', 'platform-api', [
       { hostname: 'api.example.com' },
     ]);
     expect(methods).toEqual(['GET']);
@@ -1811,7 +1811,7 @@ describe('platform Cloudflare client', () => {
     });
 
     await expect(
-      client.publishWorkerCustomDomainsSafely('account', 'nosam-api', [
+      client.publishWorkerCustomDomainsSafely('account', 'platform-api', [
         { hostname: 'api.example.com' },
       ]),
     ).rejects.toBeInstanceOf(PlatformWorkerCustomDomainsChangedError);
@@ -1829,7 +1829,7 @@ describe('platform Cloudflare client', () => {
             }),
     });
 
-    const publication = client.publishWorkerCustomDomainsSafely('account', 'nosam-api', [
+    const publication = client.publishWorkerCustomDomainsSafely('account', 'platform-api', [
       { hostname: 'api.example.com' },
     ]);
     await expect(publication).rejects.toBeInstanceOf(PlatformWorkerCustomDomainsChangedError);

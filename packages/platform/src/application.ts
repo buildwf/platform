@@ -16,7 +16,7 @@ export type PlatformApplicationProject = Readonly<{ id: string; slug: string }>;
 /** Minimal public-origin adapter; request policy remains in the service-bound dispatcher. */
 export const PLATFORM_PROJECT_INGRESS_SOURCE: string = `export default {
   fetch(request, env) {
-    if (new URL(request.url).hostname !== env.NOSAM_APP_HOSTNAME) {
+    if (new URL(request.url).hostname !== env.PLATFORM_APP_HOSTNAME) {
       return new Response('Not Found', {status: 404});
     }
     return env.PLATFORM_DISPATCH.fetch(request);

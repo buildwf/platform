@@ -49,11 +49,11 @@ function r2DeleteKeys(body: { key?: string; keys?: Array<string> }): Array<strin
 }
 
 /**
- * Creates a Hono app that handles `/__nosam/*` routes for native binding access.
+ * Creates a Hono app that handles `/__platform/*` routes for native binding access.
  * Deployed user workers expose this so the proxy can dispatch D1/KV/R2 operations
  * via Workers for Platforms instead of the Cloudflare REST API (~1-5ms vs ~50-200ms).
  *
- * Authenticated via `x-nosam-internal` header against `env.__NOSAM_PROXY_TOKEN`.
+ * Authenticated via `x-platform-internal` header against `env.__PLATFORM_PROXY_TOKEN`.
  * Response formats match the proxy's REST API responses, so ProxyClient
  * handles both paths.
  */
@@ -61,8 +61,8 @@ export function createBindingHandler(env: Record<string, unknown>): Hono {
   const app = new Hono();
 
   app.use('*', async (c, next) => {
-    const token = c.req.header('x-nosam-internal');
-    const expected = env.__NOSAM_PROXY_TOKEN as string | undefined;
+    const token = c.req.header('x-platform-internal');
+    const expected = env.__PLATFORM_PROXY_TOKEN as string | undefined;
     if (!token || !expected || token !== expected) {
       return c.json({ error: 'unauthorized' }, 403);
     }

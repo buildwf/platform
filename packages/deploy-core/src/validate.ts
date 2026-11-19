@@ -313,7 +313,7 @@ export function validateManifestShape(manifest: unknown): string | null {
   }
 
   if (manifest.type !== undefined) {
-    const allowed = ['nosam', 'spa', 'static'];
+    const allowed = ['platform', 'spa', 'static'];
     if (typeof manifest.type !== 'string' || !allowed.includes(manifest.type)) {
       return `invalid manifest shape: type must be one of ${allowed.join(', ')}`;
     }

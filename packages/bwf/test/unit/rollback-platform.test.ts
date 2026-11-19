@@ -79,7 +79,7 @@ describe('bwf project rollback --platform cloudflare', () => {
   });
 
   it('rolls back the Cloudflare Worker after a one-off deploy from a bwf project', async () => {
-    mockReadDeploymentPlatform.mockReturnValue('nosam');
+    mockReadDeploymentPlatform.mockReturnValue('platform');
 
     await runRollbackCommand('/app', 'old-version', 'cloudflare');
 
@@ -111,7 +111,7 @@ describe('bwf project rollback --platform cloudflare', () => {
   });
 
   it('follows the saved bwf platform without --platform', async () => {
-    mockReadDeploymentPlatform.mockReturnValue('nosam');
+    mockReadDeploymentPlatform.mockReturnValue('platform');
 
     await expect(runRollbackCommand('/app', 'old-version')).rejects.toThrow('process.exit:1');
 

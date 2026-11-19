@@ -33,9 +33,9 @@ platform. In a non-interactive shell, pass `--platform cloudflare|void` or use
 the explicit `bwf cloudflare` and `bwf account` commands. Choosing a destination
 for authentication does not change the project's deploy target.
 
-## bwf platform account {#nosam-platform-account}
+## bwf platform account {#platform-account}
 
-### `bwf account login` {#nosam-account-login}
+### `bwf account login` {#platform-account-login}
 
 Browser login through one of the platform's currently enabled methods. The token is saved in the operating-system keychain, scoped to the platform origin. Login fails closed when no keychain is available instead of writing the token to a plaintext file; headless environments use `BWF_TOKEN` from their secret manager.
 
@@ -49,22 +49,22 @@ saved login instead, unset `BWF_TOKEN`.
 
 This is optional if you already completed auth during `bwf connect` or the interactive `bwf init` flow.
 
-### `bwf account link [connection-id]` {#nosam-account-link-connection-id}
+### `bwf account link [connection-id]` {#platform-account-link-connection-id}
 
 Link another enabled login method to your current account. Sign in again if your
 session is no longer recent, complete the additional provider's browser login,
 and confirm the displayed identity. With no connection ID, choose an enabled
 method interactively. The optional dashboard exposes the same flow in **Account**.
 
-### `bwf account logout` {#nosam-account-logout}
+### `bwf account logout` {#platform-account-logout}
 
 Removes saved credentials.
 
-### `bwf account whoami` {#nosam-account-whoami}
+### `bwf account whoami` {#platform-account-whoami}
 
 Prints your current login.
 
-### `bwf account token` {#nosam-account-token}
+### `bwf account token` {#platform-account-token}
 
 Copies your human auth token to the system clipboard. It is intended for
 interactive troubleshooting and remains subject to login-method revocation. Do

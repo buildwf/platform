@@ -78,7 +78,7 @@ describe('provisionBindings', () => {
         bindings: { r2: ['STORAGE'] },
         storage: hint ? { locationHint: hint } : undefined,
       },
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN, storageLocationHint: fallback },
     );
     expect(createR2Bucket).toHaveBeenCalledWith(
@@ -99,7 +99,7 @@ describe('provisionBindings', () => {
       API_TOKEN,
       PROJECT_ID,
       { version: 5, bindings: { r2: ['STORAGE'] }, storage: { locationHint: 'apac' } },
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
     expect(createR2Bucket).not.toHaveBeenCalled();
@@ -118,7 +118,7 @@ describe('provisionBindings', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
@@ -137,7 +137,7 @@ describe('provisionBindings', () => {
     vi.mocked(createResource).mockRejectedValueOnce(new Error('insert failed (FK violation)'));
 
     await expect(
-      provisionBindings(mockDb, ACCOUNT_ID, API_TOKEN, PROJECT_ID, manifest, 'nosam-proxy', {
+      provisionBindings(mockDb, ACCOUNT_ID, API_TOKEN, PROJECT_ID, manifest, 'platform-proxy', {
         projectSlug: PROJECT_SLUG,
         proxyToken: PROXY_TOKEN,
       }),
@@ -158,7 +158,7 @@ describe('provisionBindings', () => {
     vi.mocked(createResource).mockRejectedValueOnce(new Error('insert failed (FK violation)'));
 
     await expect(
-      provisionBindings(mockDb, ACCOUNT_ID, API_TOKEN, PROJECT_ID, manifest, 'nosam-proxy', {
+      provisionBindings(mockDb, ACCOUNT_ID, API_TOKEN, PROJECT_ID, manifest, 'platform-proxy', {
         projectSlug: PROJECT_SLUG,
         proxyToken: PROXY_TOKEN,
       }),
@@ -176,7 +176,7 @@ describe('provisionBindings', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
@@ -195,7 +195,7 @@ describe('provisionBindings', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
@@ -233,7 +233,7 @@ describe('provisionBindings', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
@@ -275,7 +275,7 @@ describe('provisionBindings', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
@@ -310,7 +310,7 @@ describe('provisionBindings', () => {
         API_TOKEN,
         PROJECT_ID,
         manifest,
-        'nosam-proxy',
+        'platform-proxy',
         { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
       );
 
@@ -329,7 +329,7 @@ describe('provisionBindings', () => {
       );
 
       await expect(
-        provisionBindings(mockDb, ACCOUNT_ID, API_TOKEN, PROJECT_ID, manifest, 'nosam-proxy', {
+        provisionBindings(mockDb, ACCOUNT_ID, API_TOKEN, PROJECT_ID, manifest, 'platform-proxy', {
           projectSlug: PROJECT_SLUG,
           proxyToken: PROXY_TOKEN,
         }),
@@ -357,7 +357,7 @@ describe('provisionBindings', () => {
         API_TOKEN,
         PROJECT_ID,
         { version: 3, bindings: {}, queues: [{ name: 'emails', bindingName: 'QUEUE_EMAILS' }] },
-        'nosam-proxy',
+        'platform-proxy',
         { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
       );
       expect(bindings[0]).toMatchObject({ type: 'queue', queue_id: id });
@@ -379,7 +379,7 @@ describe('provisionBindings', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
@@ -406,7 +406,7 @@ describe('provisionBindings', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
@@ -416,7 +416,7 @@ describe('provisionBindings', () => {
     expect(createResource).not.toHaveBeenCalled();
     // Proxy bindings are always injected
     expect(bindings).toHaveLength(4);
-    expect(bindings[0]).toEqual({ type: 'service', name: '__NOSAM_PROXY', service: 'nosam-proxy' });
+    expect(bindings[0]).toEqual({ type: 'service', name: '__PLATFORM_PROXY', service: 'platform-proxy' });
   });
 
   it('always injects proxy bindings with the issued token', async () => {
@@ -428,21 +428,21 @@ describe('provisionBindings', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
     expect(bindings).toHaveLength(4);
-    expect(bindings[0]).toEqual({ type: 'service', name: '__NOSAM_PROXY', service: 'nosam-proxy' });
+    expect(bindings[0]).toEqual({ type: 'service', name: '__PLATFORM_PROXY', service: 'platform-proxy' });
     expect(bindings[1]).toEqual({ type: 'plain_text', name: '__PROJECT_ID', text: PROJECT_ID });
     expect(bindings[2]).toEqual({
       type: 'plain_text',
-      name: '__NOSAM_PROXY_TOKEN',
+      name: '__PLATFORM_PROXY_TOKEN',
       text: PROXY_TOKEN,
     });
   });
 
-  it('always injects __NOSAM_PROJECT_SLUG, for sandbox and non-sandbox projects alike', async () => {
+  it('always injects __PLATFORM_PROJECT_SLUG, for sandbox and non-sandbox projects alike', async () => {
     // `@builtbyfriends/bwf/email` defaults an outbound `from` to `<slug>+noreply@<domain>` on
     // EVERY worker, so this is the single unconditional producer — and the
     // sandbox runtime reads the same name.
@@ -454,20 +454,20 @@ describe('provisionBindings', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
     expect(bindings).toContainEqual({
       type: 'plain_text',
-      name: '__NOSAM_PROJECT_SLUG',
+      name: '__PLATFORM_PROJECT_SLUG',
       text: PROJECT_SLUG,
     });
   });
 
-  it('injects __NOSAM_EMAIL_DOMAIN from the configured platform mail domain', async () => {
-    // Per-environment, never hard-coded: production is `mail.void.cloud` and
-    // staging `mail.voidcloud.dev`, and the proxy validates senders
+  it('injects __PLATFORM_EMAIL_DOMAIN from the configured platform mail domain', async () => {
+    // Per-environment, never hard-coded: production is `mail.buildwf.dev` and
+    // staging `mail.staging.buildwf.dev`, and the proxy validates senders
     // against its own copy of the same value.
     const manifest: DeployManifest = { version: 1, bindings: {} };
 
@@ -477,25 +477,25 @@ describe('provisionBindings', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       {
         projectSlug: PROJECT_SLUG,
         proxyToken: PROXY_TOKEN,
-        emailSenderDomain: 'mail.voidcloud.dev',
+        emailSenderDomain: 'mail.staging.buildwf.dev',
       },
     );
 
     expect(bindings).toContainEqual({
       type: 'plain_text',
-      name: '__NOSAM_EMAIL_DOMAIN',
-      text: 'mail.voidcloud.dev',
+      name: '__PLATFORM_EMAIL_DOMAIN',
+      text: 'mail.staging.buildwf.dev',
     });
   });
 
-  it('omits __NOSAM_EMAIL_DOMAIN entirely when no mail domain is configured', async () => {
+  it('omits __PLATFORM_EMAIL_DOMAIN entirely when no mail domain is configured', async () => {
     // Injecting an empty string would build a malformed `slug+noreply@` the
     // proxy rejects for an unrelated reason. Omitted, the framework fails
-    // naming `__NOSAM_EMAIL_DOMAIN`, which points straight at the misconfig.
+    // naming `__PLATFORM_EMAIL_DOMAIN`, which points straight at the misconfig.
     const manifest: DeployManifest = { version: 1, bindings: {} };
 
     const bindings = await provisionBindings(
@@ -504,11 +504,11 @@ describe('provisionBindings', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN, emailSenderDomain: '' },
     );
 
-    expect(bindings.some((b) => b.name === '__NOSAM_EMAIL_DOMAIN')).toBe(false);
+    expect(bindings.some((b) => b.name === '__PLATFORM_EMAIL_DOMAIN')).toBe(false);
   });
 
   it('injects proxy bindings alongside other provisioned bindings', async () => {
@@ -520,18 +520,18 @@ describe('provisionBindings', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
     // D1 + 4 platform bindings
     expect(bindings).toHaveLength(5);
     expect(bindings[0]).toEqual({ type: 'd1', name: 'DB', id: 'd1-uuid-123' });
-    expect(bindings[1]).toEqual({ type: 'service', name: '__NOSAM_PROXY', service: 'nosam-proxy' });
+    expect(bindings[1]).toEqual({ type: 'service', name: '__PLATFORM_PROXY', service: 'platform-proxy' });
     expect(bindings[2]).toEqual({ type: 'plain_text', name: '__PROJECT_ID', text: PROJECT_ID });
     expect(bindings[3]).toEqual({
       type: 'plain_text',
-      name: '__NOSAM_PROXY_TOKEN',
+      name: '__PLATFORM_PROXY_TOKEN',
       text: PROXY_TOKEN,
     });
   });
@@ -561,7 +561,7 @@ describe('provisionBindings', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
@@ -587,7 +587,7 @@ describe('ensureResource — already exists fallback', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
@@ -610,7 +610,7 @@ describe('ensureResource — already exists fallback', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
@@ -635,7 +635,7 @@ describe('ensureResource — already exists fallback', () => {
       API_TOKEN,
       PROJECT_ID,
       manifest,
-      'nosam-proxy',
+      'platform-proxy',
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
@@ -656,7 +656,7 @@ describe('ensureResource — already exists fallback', () => {
 
     const manifest: DeployManifest = { version: 1, bindings: { d1: ['DB'] } };
     await expect(
-      provisionBindings(mockDb, ACCOUNT_ID, API_TOKEN, PROJECT_ID, manifest, 'nosam-proxy', {
+      provisionBindings(mockDb, ACCOUNT_ID, API_TOKEN, PROJECT_ID, manifest, 'platform-proxy', {
         projectSlug: PROJECT_SLUG,
         proxyToken: PROXY_TOKEN,
       }),

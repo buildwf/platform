@@ -31,8 +31,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.account.mockReset();
   mocks.keyringRead.mockReset();
-  root = mkdtempSync(join(tmpdir(), 'nosam-auth-router-'));
-  vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', join(root, 'registry'));
+  root = mkdtempSync(join(tmpdir(), 'platform-auth-router-'));
+  vi.stubEnv('PLATFORM_REGISTRY_DIR', join(root, 'registry'));
   vi.stubEnv('BWF_API_URL', undefined);
   vi.stubEnv('BWF_TOKEN', undefined);
 });
@@ -50,7 +50,7 @@ describe('bwf auth destination routing', () => {
   });
 
   it('uses the saved bwf destination and maps status to whoami', async () => {
-    writeDeploymentPlatform(root, 'nosam');
+    writeDeploymentPlatform(root, 'platform');
     await runAuthRouter(root, parseAuthArgs(['status']), false);
     expect(mocks.account).toHaveBeenCalledWith(root, { subcommand: 'whoami' });
     expect(mocks.select).not.toHaveBeenCalled();
@@ -58,7 +58,7 @@ describe('bwf auth destination routing', () => {
 
   it('lets an explicit target override a saved destination', async () => {
     writeDeploymentPlatform(root, 'cloudflare');
-    await runAuthRouter(root, parseAuthArgs(['logout', '--platform', 'nosam']), false);
+    await runAuthRouter(root, parseAuthArgs(['logout', '--platform', 'platform']), false);
     expect(mocks.account).toHaveBeenCalledWith(root, { subcommand: 'logout' });
     expect(mocks.cloudflare).not.toHaveBeenCalled();
   });
@@ -128,7 +128,7 @@ describe('bwf auth destination routing', () => {
     await runAuthRouter(root, parseAuthArgs(['login']), true);
     expect(mocks.select.mock.calls[0]?.[0].options).toContainEqual(
       expect.objectContaining({
-        value: 'nosam',
+        value: 'platform',
         disabled: true,
         hint: expect.stringContaining('bwf connect'),
       }),

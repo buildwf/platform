@@ -95,15 +95,15 @@ export const finalize = procedure('deploy.finalize')
         await next();
       })
       .post('/:id/deploy', handleManifestOnlyDeploy);
-    const cliVersion = request.headers.get('x-nosam-cli-version');
+    const cliVersion = request.headers.get('x-platform-cli-version');
     const response = await deployApp.fetch(
       new Request(`https://deploy.invalid/${input.projectId}/deploy`, {
         method: 'POST',
         headers: {
           'content-type': request.headers.get('content-type') ?? 'application/json',
-          ...(cliVersion ? { 'x-nosam-cli-version': cliVersion } : {}),
+          ...(cliVersion ? { 'x-platform-cli-version': cliVersion } : {}),
           ...(input.idempotencyKey
-            ? { 'x-nosam-deploy-idempotency-key': input.idempotencyKey }
+            ? { 'x-platform-deploy-idempotency-key': input.idempotencyKey }
             : {}),
         },
         body: JSON.stringify(input.body),
@@ -137,7 +137,7 @@ export const finalize = procedure('deploy.finalize')
     // With the Queue the receipt header names a deployment the Queue owns, so drop the stream and let
     // the caller observe it. Without the Queue the deploy runs inside this response: read it to the
     // end and hand its events back, the first of which names the deployment.
-    const receipt = response.headers.get('x-nosam-deployment-id');
+    const receipt = response.headers.get('x-platform-deployment-id');
     if (env.DEPLOYMENTS_QUEUE && receipt) {
       await response.body?.cancel().catch(() => {});
       return { deploymentId: receipt };

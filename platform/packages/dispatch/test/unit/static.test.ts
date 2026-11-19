@@ -235,7 +235,7 @@ describe('resolveStaticPath', () => {
     ])('does not relax other encoding guards for bracketed paths: %s', (path) => {
       const guarded = {
         '/assets/[slug].js': 'hash_asset',
-        '/__nosam/[slug].js': 'hash_internal',
+        '/__platform/[slug].js': 'hash_internal',
         '/assets/../[slug].js': 'hash_dot',
         '/assets/%5Bslug%5D.js': 'hash_percent',
         '/assets/[slug]%2.js': 'hash_malformed',
@@ -266,17 +266,17 @@ describe('resolveStaticPath', () => {
       // '..' — must be rejected: otherwise a request could reconstruct a guarded
       // path (`/assets%2Fapp.js`, `/%61ssets/app.js`, `/%5F%5Fvoid/secret.js`)
       // and serve the manifest entry while the raw-`url.pathname` policy gates
-      // — the `/__nosam/*` reserved-route block, the hashed-asset prefix gate,
+      // — the `/__platform/*` reserved-route block, the hashed-asset prefix gate,
       // and the header/redirect rules — never fire.
       const guarded: Record<string, string> = {
         '/assets/app.js': 'hash_app',
-        '/__nosam/secret.js': 'hash_secret',
+        '/__platform/secret.js': 'hash_secret',
       };
       const cfg = { html_handling: 'none' } as const;
       // encoded slash (both cases)
       expect(resolveStaticPath('/assets%2Fapp.js', guarded, cfg)).toBeNull();
       expect(resolveStaticPath('/assets%2fapp.js', guarded, cfg)).toBeNull();
-      expect(resolveStaticPath('/__nosam%2Fsecret.js', guarded, cfg)).toBeNull();
+      expect(resolveStaticPath('/__platform%2Fsecret.js', guarded, cfg)).toBeNull();
       // over-encoded ordinary characters
       expect(resolveStaticPath('/%61ssets/app.js', guarded, cfg)).toBeNull();
       expect(resolveStaticPath('/%5F%5Fvoid/secret.js', guarded, cfg)).toBeNull();

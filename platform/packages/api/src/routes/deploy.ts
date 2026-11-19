@@ -127,7 +127,7 @@ export async function executeQueuedDeployment(
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        ...(operation.cli_version ? { 'x-nosam-cli-version': operation.cli_version } : {}),
+        ...(operation.cli_version ? { 'x-platform-cli-version': operation.cli_version } : {}),
       },
       body: JSON.stringify(operation.payload.body),
     }),

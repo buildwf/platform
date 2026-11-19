@@ -83,27 +83,27 @@ export async function runConnectCommand(
   args: ConnectArgs,
   interactive: boolean = Boolean(process.stdin.isTTY),
 ): Promise<void> {
-  let target = args.platform ?? (args.url || args.noLogin ? 'nosam' : null);
+  let target = args.platform ?? (args.url || args.noLogin ? 'platform' : null);
   if (!target) {
     if (!interactive) {
-      throw new Error('connect: Supply a platform URL or --platform cloudflare|nosam.');
+      throw new Error('connect: Supply a platform URL or --platform cloudflare|platform.');
     }
     const value = await select({
       message: 'Where should this project deploy?',
-      initialValue: readDeploymentPlatform(root) === 'nosam' ? 'nosam' : 'cloudflare',
+      initialValue: readDeploymentPlatform(root) === 'platform' ? 'platform' : 'cloudflare',
       options: [
         {
           value: 'cloudflare',
           label: 'Cloudflare',
           hint: 'Deploy to your own Cloudflare account.',
         },
-        { value: 'nosam', label: 'Platform', hint: "Deploy to your company's bwf Platform." },
+        { value: 'platform', label: 'Platform', hint: "Deploy to your company's bwf Platform." },
       ],
     });
     if (isCancel(value)) {
       throw new Error('connect: Cancelled.');
     }
-    target = value as 'cloudflare' | 'nosam';
+    target = value as 'cloudflare' | 'platform';
   }
   if (target === 'cloudflare') {
     await connectCloudflare(root, interactive);

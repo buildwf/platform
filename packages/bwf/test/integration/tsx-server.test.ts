@@ -120,7 +120,7 @@ export const GET = defineHandler(c => c.html(${jsxImportSource === 'react' ? `re
         expect(types).not.toContain(`environment.${env === 'dev' ? 'prod' : 'dev'}.${ext}`);
       }
     }
-    const serverGraph = readFileSync(join(playground.root, '.bwf/jsx-nosam_worker.json'), 'utf8');
+    const serverGraph = readFileSync(join(playground.root, '.bwf/jsx-platform_worker.json'), 'utf8');
     for (const ext of httpExtensions) {
       expect(serverGraph).toContain(`/routes/${ext}/jsx.${ext}`);
       expect(serverGraph).toContain(`/routes/${ext}/environment.prod.${ext}`);

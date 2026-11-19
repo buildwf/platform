@@ -7,7 +7,7 @@ export const acceptanceVersion = 'void-runtime-acceptance-v1';
 
 export const GET = defineHandler(async (c) => {
   const secret = env.SECRET_KEY;
-  if (typeof secret !== 'string' || !secret || c.req.header('x-nosam-e2e-token') !== secret) {
+  if (typeof secret !== 'string' || !secret || c.req.header('x-platform-e2e-token') !== secret) {
     return c.json({ error: 'unauthorized' }, 401);
   }
   return c.json({ ok: true, version: acceptanceVersion });
@@ -15,12 +15,12 @@ export const GET = defineHandler(async (c) => {
 
 export const POST = defineHandler(async (c) => {
   const secret = env.SECRET_KEY;
-  if (typeof secret !== 'string' || !secret || c.req.header('x-nosam-e2e-token') !== secret) {
+  if (typeof secret !== 'string' || !secret || c.req.header('x-platform-e2e-token') !== secret) {
     return c.json({ error: 'unauthorized' }, 401);
   }
   const body = await c.req.json<{ action?: unknown; marker?: unknown }>().catch(() => null);
   if (body?.action === 'log') {
-    if (typeof body.marker !== 'string' || !/^nosam-e2e-[a-f0-9]{16}$/.test(body.marker)) {
+    if (typeof body.marker !== 'string' || !/^platform-e2e-[a-f0-9]{16}$/.test(body.marker)) {
       return c.json({ error: 'invalid isolated log marker' }, 400);
     }
     console.log(body.marker);

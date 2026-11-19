@@ -1,5 +1,5 @@
 {
-  "name": "@nosamcloud/api",
+  "name": "@platform-service/api",
   "private": true,
   "type": "module",
   "exports": {

@@ -9,11 +9,11 @@ function createClient() {
 
 /** Send ProxyClient requests to the binding handler that a deployed worker runs. */
 function connectBucket(bucket: Partial<Record<keyof R2Bucket, unknown>>) {
-  const handler = createBindingHandler({ __NOSAM_PROXY_TOKEN: 'internal', STORAGE: bucket });
+  const handler = createBindingHandler({ __PLATFORM_PROXY_TOKEN: 'internal', STORAGE: bucket });
   globalThis.fetch = vi.fn(async (input, init) =>
     handler.request(new URL(String(input)).pathname, {
       ...init,
-      headers: { 'content-type': 'application/json', 'x-nosam-internal': 'internal' },
+      headers: { 'content-type': 'application/json', 'x-platform-internal': 'internal' },
     }),
   ) as typeof fetch;
   return new ProxyR2Bucket(createClient(), 'STORAGE');
@@ -202,10 +202,10 @@ describe('ProxyR2Bucket', () => {
   describe('put()', () => {
     it('rejects malformed conditions before calling R2', async () => {
       const put = vi.fn();
-      const handler = createBindingHandler({ __NOSAM_PROXY_TOKEN: 'internal', STORAGE: { put } });
+      const handler = createBindingHandler({ __PLATFORM_PROXY_TOKEN: 'internal', STORAGE: { put } });
       const response = await handler.request('/r2/put-conditional', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-nosam-internal': 'internal' },
+        headers: { 'content-type': 'application/json', 'x-platform-internal': 'internal' },
         body: JSON.stringify({
           binding: 'STORAGE',
           key: 'key',
@@ -221,14 +221,14 @@ describe('ProxyR2Bucket', () => {
       'preserves %s conditions and a rejected write through the binding handler',
       async (kind) => {
         const put = vi.fn(async () => null);
-        const handler = createBindingHandler({ __NOSAM_PROXY_TOKEN: 'internal', STORAGE: { put } });
+        const handler = createBindingHandler({ __PLATFORM_PROXY_TOKEN: 'internal', STORAGE: { put } });
         const requests: Array<string> = [];
         globalThis.fetch = vi.fn(async (input, init) => {
           const path = new URL(String(input)).pathname;
           requests.push(path);
           return handler.request(path, {
             ...init,
-            headers: { 'content-type': 'application/json', 'x-nosam-internal': 'internal' },
+            headers: { 'content-type': 'application/json', 'x-platform-internal': 'internal' },
           });
         }) as typeof fetch;
         const before = new Date('2026-01-01T00:00:00Z');

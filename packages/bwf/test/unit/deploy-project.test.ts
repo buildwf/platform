@@ -85,7 +85,7 @@ describe('resolveProjectBySlug', () => {
 
 describe('inferDefaultSlug', () => {
   it('derives slug from a scoped package name', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-test-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-test-'));
     tempDirs.push(root);
     writeFileSync(join(root, 'package.json'), JSON.stringify({ name: '@acme/my-app' }));
 
@@ -93,7 +93,7 @@ describe('inferDefaultSlug', () => {
   });
 
   it('uses fallback values when package name is missing', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-test-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-test-'));
     tempDirs.push(root);
     writeFileSync(join(root, 'package.json'), JSON.stringify({}));
 
@@ -103,7 +103,7 @@ describe('inferDefaultSlug', () => {
 
 describe('resolveDistDir', () => {
   it('returns dist/ for non-framework deploys', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-test-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-test-'));
     tempDirs.push(root);
     mkdirSync(join(root, 'dist'), { recursive: true });
 
@@ -113,7 +113,7 @@ describe('resolveDistDir', () => {
 
 describe('resolveDeployWranglerCompat', () => {
   it('upgrades auth deploy manifests to nodejs_compat even when root wrangler flags win', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-test-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-test-'));
     tempDirs.push(root);
     writeFileSync(
       join(root, 'wrangler.jsonc'),
@@ -145,7 +145,7 @@ describe('resolveDeployWranglerCompat', () => {
 
 describe('resolveDeployWorkerMain', () => {
   it('uses the build output wrangler main for non-framework bwf deploys', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-test-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-test-'));
     tempDirs.push(root);
     const buildDir = join(root, 'dist', 'ssr');
     mkdirSync(buildDir, { recursive: true });
@@ -162,7 +162,7 @@ describe('resolveDeployWorkerMain', () => {
 
 describe('ensurePreviouslyDeployedLiveBindingConfig', () => {
   it('restores the active deployment live binding into wrangler config', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-test-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-test-'));
     tempDirs.push(root);
     const client = {
       async listDeployments() {
@@ -179,9 +179,9 @@ describe('ensurePreviouslyDeployedLiveBindingConfig', () => {
                 bindings: {},
                 live: {
                   bindingName: 'BWF_LIVE_a1b2c3d4',
-                  className: 'NosamLiveStreamDurableObject_a1b2c3d4',
+                  className: 'PlatformLiveStreamDurableObject_a1b2c3d4',
                   storage: 'sqlite',
-                  classes: ['NosamLiveStreamDurableObject_a1b2c3d4'],
+                  classes: ['PlatformLiveStreamDurableObject_a1b2c3d4'],
                 },
               }),
               error_message: null,
@@ -202,18 +202,18 @@ describe('ensurePreviouslyDeployedLiveBindingConfig', () => {
     const wrangler = JSON.parse(readFileSync(join(root, 'wrangler.jsonc'), 'utf-8'));
     expect(wrangler.durable_objects.bindings).toContainEqual({
       name: 'BWF_LIVE_a1b2c3d4',
-      class_name: 'NosamLiveStreamDurableObject_a1b2c3d4',
+      class_name: 'PlatformLiveStreamDurableObject_a1b2c3d4',
     });
     expect(wrangler.migrations).toContainEqual({
       tag: 'live-v1',
-      new_sqlite_classes: ['NosamLiveStreamDurableObject_a1b2c3d4'],
+      new_sqlite_classes: ['PlatformLiveStreamDurableObject_a1b2c3d4'],
     });
   });
 });
 
 describe('resolveDeployLiveBindingConfig', () => {
   it('does not restore or activate live bindings when current source no longer needs live', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-test-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-test-'));
     tempDirs.push(root);
     writeFileSync(
       join(root, 'wrangler.jsonc'),
@@ -222,7 +222,7 @@ describe('resolveDeployLiveBindingConfig', () => {
           bindings: [
             {
               name: 'BWF_LIVE_a1b2c3d4',
-              class_name: 'NosamLiveStreamDurableObject_a1b2c3d4',
+              class_name: 'PlatformLiveStreamDurableObject_a1b2c3d4',
             },
           ],
         },
@@ -246,7 +246,7 @@ describe('resolveDeployLiveBindingConfig', () => {
   });
 
   it('restores the active deployment live binding only when current source still needs live', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-test-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-test-'));
     tempDirs.push(root);
     const client = {
       async listDeployments() {
@@ -263,7 +263,7 @@ describe('resolveDeployLiveBindingConfig', () => {
                 bindings: {},
                 live: {
                   bindingName: 'BWF_LIVE_a1b2c3d4',
-                  className: 'NosamLiveStreamDurableObject_a1b2c3d4',
+                  className: 'PlatformLiveStreamDurableObject_a1b2c3d4',
                 },
               }),
               error_message: null,
@@ -284,7 +284,7 @@ describe('resolveDeployLiveBindingConfig', () => {
       }),
     ).resolves.toEqual({
       bindingName: 'BWF_LIVE_a1b2c3d4',
-      className: 'NosamLiveStreamDurableObject_a1b2c3d4',
+      className: 'PlatformLiveStreamDurableObject_a1b2c3d4',
     });
   });
 });
@@ -319,7 +319,7 @@ describe('resolveStaticBuildCommand', () => {
 });
 
 describe('resolveFullDeployBuildCommand', () => {
-  const root = '/tmp/nosam-full-deploy-build-cmd';
+  const root = '/tmp/platform-full-deploy-build-cmd';
 
   it('uses inference.build verbatim when set', () => {
     expect(resolveFullDeployBuildCommand(root, 'vitepress build && vite build')).toEqual({
@@ -341,7 +341,7 @@ describe('resolveFullDeployBuildCommand', () => {
 
 describe('resolveStaticDeployPreset', () => {
   it('treats --dir as a static deploy override even in framework-shaped projects', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-test-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-test-'));
     tempDirs.push(root);
     writeFileSync(
       join(root, 'package.json'),
@@ -356,7 +356,7 @@ describe('resolveStaticDeployPreset', () => {
   });
 
   it('treats explicit static app type as an override before framework detection', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-test-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-test-'));
     tempDirs.push(root);
     writeFileSync(
       join(root, 'package.json'),
@@ -371,7 +371,7 @@ describe('resolveStaticDeployPreset', () => {
   });
 
   it('does not classify ordinary framework auto-detection as a static override', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-test-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-test-'));
     tempDirs.push(root);
     writeFileSync(
       join(root, 'package.json'),
@@ -384,7 +384,7 @@ describe('resolveStaticDeployPreset', () => {
 
 describe('resolveWorkerDirName', () => {
   it('probes for ssr/ without a preset', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-test-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-test-'));
     tempDirs.push(root);
     const dist = join(root, 'dist');
     mkdirSync(join(dist, 'ssr'), { recursive: true });
@@ -393,7 +393,7 @@ describe('resolveWorkerDirName', () => {
   });
 
   it('throws when no worker dir exists without preset', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-test-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-test-'));
     tempDirs.push(root);
     const dist = join(root, 'dist');
     mkdirSync(dist, { recursive: true });

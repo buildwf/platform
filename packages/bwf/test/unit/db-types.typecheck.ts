@@ -32,7 +32,7 @@ function orderBy(column: AnyColumn) {
   return asc(column);
 }
 
-const condition = and(eq(posts.id, 1), contains(posts.title, 'nosam'));
+const condition = and(eq(posts.id, 1), contains(posts.title, 'platform'));
 expectTypeOf(condition).toEqualTypeOf<SQL | undefined>();
 countIf(eq(posts.id, 1));
 orderBy(posts.title);

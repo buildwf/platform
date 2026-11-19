@@ -54,8 +54,8 @@ export function createMigrationHandler(
   planBundle?: MigrationPlanBundle,
 ) {
   return async (request: Request): Promise<Response> => {
-    const token = request.headers.get('x-nosam-internal');
-    if (!token || token !== (env as Record<string, string>).__NOSAM_PROXY_TOKEN) {
+    const token = request.headers.get('x-platform-internal');
+    if (!token || token !== (env as Record<string, string>).__PLATFORM_PROXY_TOKEN) {
       return Response.json(
         { ok: false, error: 'unauthorized', migrations: [] } satisfies MigrationResponse,
         { status: 401 },
@@ -72,23 +72,23 @@ export function createMigrationHandler(
         );
       }
 
-      if (request.method === 'GET' && url.pathname === '/__nosam/migrate/capabilities') {
+      if (request.method === 'GET' && url.pathname === '/__platform/migrate/capabilities') {
         const verified = await verifyPlanBundle(migrations ?? [], planBundle);
         return Response.json({
           classifierVersion: verified.classifierVersion,
           destructiveValidation: verified.destructiveValidation,
           dialect: 'sqlite',
           endpoints: {
-            app: '/__nosam/migrate/app',
-            auth: runAuthMigrations ? '/__nosam/migrate/auth' : undefined,
-            reconcile: '/__nosam/migrate/app/attempt/:attemptId',
+            app: '/__platform/migrate/app',
+            auth: runAuthMigrations ? '/__platform/migrate/auth' : undefined,
+            reconcile: '/__platform/migrate/app/attempt/:attemptId',
           },
           migrationListHash: verified.migrationListHash,
           protocolVersion: 2,
         });
       }
 
-      if (request.method === 'POST' && url.pathname === '/__nosam/migrate/app') {
+      if (request.method === 'POST' && url.pathname === '/__platform/migrate/app') {
         const body = (await request.json().catch(() => ({}))) as {
           attemptId?: string;
           deploymentId?: string;
@@ -111,13 +111,13 @@ export function createMigrationHandler(
         return Response.json(result, { status });
       }
 
-      if (request.method === 'GET' && url.pathname.startsWith('/__nosam/migrate/app/attempt/')) {
+      if (request.method === 'GET' && url.pathname.startsWith('/__platform/migrate/app/attempt/')) {
         const attemptId = decodeURIComponent(url.pathname.split('/').pop() ?? '');
         const result = await reconcileAttempt(db, attemptId);
         return Response.json(result, { status: result.ok ? 200 : 409 });
       }
 
-      if (request.method === 'POST' && url.pathname === '/__nosam/migrate/auth') {
+      if (request.method === 'POST' && url.pathname === '/__platform/migrate/auth') {
         if (runAuthMigrations) {
           await runAuthMigrations();
         }

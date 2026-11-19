@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "nosam-docs",
+  "name": "platform-docs",
   "compatibility_date": "2026-09-30",
   "previews": {},
   "assets": {

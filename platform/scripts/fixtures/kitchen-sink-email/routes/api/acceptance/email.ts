@@ -5,7 +5,7 @@ import { kv } from '@builtbyfriends/bwf/kv';
 
 export const POST = defineHandler(async (c) => {
   const secret = env.SECRET_KEY;
-  if (typeof secret !== 'string' || !secret || c.req.header('x-nosam-e2e-token') !== secret) {
+  if (typeof secret !== 'string' || !secret || c.req.header('x-platform-e2e-token') !== secret) {
     return c.json({ error: 'unauthorized' }, 401);
   }
   const body = await c.req.json<SendEmailOptions>();
@@ -14,7 +14,7 @@ export const POST = defineHandler(async (c) => {
 
 export const GET = defineHandler(async (c) => {
   const secret = env.SECRET_KEY;
-  if (typeof secret !== 'string' || !secret || c.req.header('x-nosam-e2e-token') !== secret) {
+  if (typeof secret !== 'string' || !secret || c.req.header('x-platform-e2e-token') !== secret) {
     return c.json({ error: 'unauthorized' }, 401);
   }
   const subject = c.req.query('subject');

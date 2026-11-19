@@ -14,7 +14,7 @@ vi.mock('../../src/cli/auth', async (importOriginal) => ({
 }));
 
 function setIsolatedHome(): void {
-  const dir = mkdtempSync(join(tmpdir(), 'nosam-home-'));
+  const dir = mkdtempSync(join(tmpdir(), 'platform-home-'));
   tempHomes.push(dir);
   process.env.HOME = dir;
   process.env.USERPROFILE = dir;
@@ -53,7 +53,7 @@ describe('runListCommand', () => {
     }) as never);
 
     const runListCommand = await importRunListCommand();
-    const root = mkdtempSync(join(tmpdir(), 'nosam-list-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-list-'));
     tempHomes.push(root);
     await expect(runListCommand(root)).rejects.toThrow('process.exit:1');
     const out = capture.output();
@@ -72,7 +72,7 @@ describe('runListCommand', () => {
     }) as never);
 
     const runListCommand = await importRunListCommand();
-    const root = mkdtempSync(join(tmpdir(), 'nosam-list-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-list-'));
     tempHomes.push(root);
     await expect(runListCommand(root)).rejects.toThrow('process.exit:1');
     const out = capture.output();
@@ -84,7 +84,7 @@ describe('runListCommand', () => {
   it('lists each deployment with its app type', async () => {
     setIsolatedHome();
     mockGetToken.mockReturnValue('test-token');
-    const root = mkdtempSync(join(tmpdir(), 'nosam-list-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-list-'));
     tempHomes.push(root);
     mkdirSync(join(root, '.bwf'), { recursive: true });
     writeFileSync(
@@ -111,10 +111,10 @@ describe('runListCommand', () => {
       vi.fn(async () =>
         Response.json({
           deployments: [
-            deployment('dep-nosam', { type: 'nosam' }),
+            deployment('dep-platform', { type: 'platform' }),
             deployment('dep-spa', { type: 'spa' }),
           ],
-          activeDeploymentId: 'dep-nosam',
+          activeDeploymentId: 'dep-platform',
         }),
       ),
     );
@@ -126,7 +126,7 @@ describe('runListCommand', () => {
     capture.restore();
 
     const rowFor = (id: string) => out.split('\n').find((line) => line.includes(id)) ?? '';
-    expect(rowFor('dep-nosam')).toMatch(/\bnosam\b/);
+    expect(rowFor('dep-platform')).toMatch(/\bplatform\b/);
     expect(rowFor('dep-spa')).toMatch(/\bspa\b/);
     expect(out).not.toMatch(/\bisr\b/);
   });
@@ -134,7 +134,7 @@ describe('runListCommand', () => {
   it('prints platform warnings before the deployment table', async () => {
     setIsolatedHome();
     mockGetToken.mockReturnValue('test-token');
-    const root = mkdtempSync(join(tmpdir(), 'nosam-list-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-list-'));
     tempHomes.push(root);
     mkdirSync(join(root, '.bwf'), { recursive: true });
     writeFileSync(

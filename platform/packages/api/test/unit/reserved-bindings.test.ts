@@ -30,11 +30,11 @@ async function platformBindingNames(): Promise<ReadonlyArray<string>> {
     'test-token',
     'proj_abc123',
     EMPTY_MANIFEST,
-    'nosam-proxy',
+    'platform-proxy',
     {
       projectSlug: 'my-app',
       proxyToken: 'test-proxy-token',
-      emailSenderDomain: 'mail.voidcloud.dev',
+      emailSenderDomain: 'mail.staging.buildwf.dev',
     },
   );
   return provisioned.map((binding) => binding.name);
@@ -48,11 +48,11 @@ describe('reserved binding names cover every platform-injected binding', () => {
       'test-token',
       'proj_abc123',
       EMPTY_MANIFEST,
-      'nosam-proxy',
+      'platform-proxy',
       {
         projectSlug: 'my-app',
         proxyToken: 'test-proxy-token',
-        emailSenderDomain: 'mail.voidcloud.dev',
+        emailSenderDomain: 'mail.staging.buildwf.dev',
       },
     );
     expect(provisioned.length).toBeGreaterThan(0);
@@ -65,7 +65,7 @@ describe('reserved binding names cover every platform-injected binding', () => {
   });
 
   it('keeps retired sandbox identity and queue names reserved', () => {
-    expect(isReservedBindingName('__NOSAM_USER_ID')).toBe(true);
+    expect(isReservedBindingName('__PLATFORM_USER_ID')).toBe(true);
     expect(isReservedBindingName('USAGE_EVENTS_QUEUE')).toBe(true);
   });
 
@@ -79,17 +79,17 @@ describe('reserved binding names cover every platform-injected binding', () => {
     // the set. Retired Sandbox producer names are checked separately above.
     expect(new Set(await platformBindingNames())).toEqual(
       new Set([
-        '__NOSAM_PROXY',
+        '__PLATFORM_PROXY',
         '__PROJECT_ID',
-        '__NOSAM_PROXY_TOKEN',
-        '__NOSAM_PROJECT_SLUG',
-        '__NOSAM_EMAIL_DOMAIN',
+        '__PLATFORM_PROXY_TOKEN',
+        '__PLATFORM_PROJECT_SLUG',
+        '__PLATFORM_EMAIL_DOMAIN',
       ]),
     );
   });
 
   it('reserves SEND_EMAIL even though no worker receives that binding today', () => {
-    // Outbound mail goes through `__NOSAM_PROXY/email/send`; the proxy holds
+    // Outbound mail goes through `__PLATFORM_PROXY/email/send`; the proxy holds
     // the account-level send_email binding. Reserved anyway so the name stays
     // free for custom-domain email and cannot collide with framework code
     // that still references it.
@@ -103,14 +103,14 @@ describe('reserved binding names cover every platform-injected binding', () => {
   });
 
   it('does NOT reserve a bare BWF_PROJECT_SLUG', () => {
-    // There is exactly one project-slug binding and it is `__NOSAM_PROJECT_SLUG`
+    // There is exactly one project-slug binding and it is `__PLATFORM_PROJECT_SLUG`
     // (what the framework reads). Reserving an undotted `BWF_PROJECT_SLUG`
     // nothing injects would only take a usable name away from users.
     expect(isReservedBindingName('BWF_PROJECT_SLUG')).toBe(false);
   });
 
   it('is exposed as a set so callers cannot mutate it into disagreement', () => {
-    expect(RESERVED_BINDING_NAMES.has('__NOSAM_PROXY_TOKEN')).toBe(true);
+    expect(RESERVED_BINDING_NAMES.has('__PLATFORM_PROXY_TOKEN')).toBe(true);
   });
 });
 
@@ -121,16 +121,16 @@ it('pins managed email to its deployment identity and reserves that binding', as
     'test-token',
     'proj_abc123',
     { ...EMPTY_MANIFEST, emailProtocolVersion: 1 },
-    'nosam-proxy',
+    'platform-proxy',
     { projectSlug: 'my-app', proxyToken: 'test-proxy-token', deploymentId: 'deploy_a' },
   ] as const;
   const bindings = await provisionBindings(...args);
   expect(bindings).toContainEqual({
     type: 'plain_text',
-    name: '__NOSAM_EMAIL_DEPLOYMENT_ID',
+    name: '__PLATFORM_EMAIL_DEPLOYMENT_ID',
     text: 'deploy_a',
   });
-  expect(isReservedBindingName('__NOSAM_EMAIL_DEPLOYMENT_ID')).toBe(true);
+  expect(isReservedBindingName('__PLATFORM_EMAIL_DEPLOYMENT_ID')).toBe(true);
   await expect(
     provisionBindings(
       ...(args.slice(0, 6) as [(typeof args)[0], string, string, string, (typeof args)[4], string]),

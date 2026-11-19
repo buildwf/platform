@@ -88,7 +88,7 @@ export function BuildTable({ builds, tz }: { builds: ReadonlyArray<Build>; tz?: 
           return (
             <TableRow key={b.id} className={active ? 'build-active' : undefined}>
               <TableCell>
-                <Link className="nosam-admin-resource-link" href={`/admin/builds/${b.id}`}>
+                <Link className="platform-admin-resource-link" href={`/admin/builds/${b.id}`}>
                   {b.id}
                 </Link>
               </TableCell>

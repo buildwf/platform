@@ -262,7 +262,7 @@ describe('resolveBwfAuthOptions', () => {
       {} as never,
     );
 
-    expect(options.secret).toBe('nosam-dev-better-auth-secret-1234567890');
+    expect(options.secret).toBe('platform-dev-better-auth-secret-1234567890');
   });
 
   it('prefers BETTER_AUTH_SECRET over the dev fallback', async () => {

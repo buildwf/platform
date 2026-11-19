@@ -1,4 +1,4 @@
-# @nosamcloud/tail
+# @platform-service/tail
 
 Tail consumer for deployed user workers.
 

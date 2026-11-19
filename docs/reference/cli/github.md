@@ -9,7 +9,7 @@ Deploy-on-GitHub works from **any** bwf login — Google, GitHub, or other SSO. 
 
 Project-scoped `github` and `build` commands resolve the project in the same order as deploy: the `[project]` argument or `--project`, then `BWF_PROJECT`, then the linked project (`.bwf/project.json`).
 
-## `bwf github link` {#nosam-github-link}
+## `bwf github link` {#platform-github-link}
 
 ```
 bwf github link
@@ -21,7 +21,7 @@ Link your signed-in bwf account to GitHub through your browser. `bwf github inst
 A GitHub identity can belong to only one bwf account. If it is already linked elsewhere, sign in to that bwf account or authorize a different GitHub identity.
 :::
 
-## `bwf github install` {#nosam-github-install}
+## `bwf github install` {#platform-github-install}
 
 ```
 bwf github install
@@ -29,7 +29,7 @@ bwf github install
 
 Open the GitHub App install page in your browser. If your account has no linked GitHub identity yet, `bwf github install` first runs the GitHub link automatically (browser authorize), then continues. After installing, run `bwf github connect` to link a repository to your project.
 
-## `bwf github installations` {#nosam-github-installations}
+## `bwf github installations` {#platform-github-installations}
 
 ```
 bwf github installations
@@ -37,7 +37,7 @@ bwf github installations
 
 List all GitHub App installations linked to your account. Each entry includes the `[id: <installation_id>]` needed for `--installation` in non-interactive use.
 
-## `bwf github join` {#nosam-github-join}
+## `bwf github join` {#platform-github-join}
 
 ```
 bwf github join
@@ -47,7 +47,7 @@ Join an existing organization installation through your browser. `bwf github con
 
 Requires a signed-in bwf account and organization-installation sharing enabled by your platform. Use `bwf github installations` to find the installation ID.
 
-## `bwf github connect` {#nosam-github-connect}
+## `bwf github connect` {#platform-github-connect}
 
 ```
 bwf github connect [project] [options]
@@ -85,7 +85,7 @@ You can connect only repositories your GitHub account can access.
 
 A project has one GitHub connection. Running `bwf github connect` on a project that is already connected fails. To connect a different repository, run `bwf github disconnect` first.
 
-## `bwf github update` {#nosam-github-update}
+## `bwf github update` {#platform-github-update}
 
 ```
 bwf github update [project] [options]
@@ -108,7 +108,7 @@ The CLI prompts for new settings using the current values as defaults. In CI, pa
 bwf github update my-app --executor github_actions
 ```
 
-## `bwf github status` {#nosam-github-status}
+## `bwf github status` {#platform-github-status}
 
 ```
 bwf github status [project]
@@ -126,7 +126,7 @@ Show the connected repository, branch, executor, and workflow. Container builds 
 bwf github status my-app
 ```
 
-## `bwf github disconnect` {#nosam-github-disconnect}
+## `bwf github disconnect` {#platform-github-disconnect}
 
 ```
 bwf github disconnect [project]
@@ -151,7 +151,7 @@ bwf github disconnect my-app --yes
 
 Inspect Deploy-on-GitHub builds.
 
-### `bwf build logs` {#nosam-build-logs}
+### `bwf build logs` {#platform-build-logs}
 
 ```
 bwf build logs [build] [--follow] [--output <file>] [--project <slug>]

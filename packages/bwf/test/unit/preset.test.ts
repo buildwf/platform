@@ -213,7 +213,7 @@ describe('detectPreset — strictBackend', () => {
     expect(message).toContain('crons/');
     // ...and tells the user both ways out, so the error is actionable.
     expect(message).toContain('"appType": "static"');
-    expect(message).toContain('"appType": "nosam"');
+    expect(message).toContain('"appType": "platform"');
     expect(message).toContain('"build"');
   });
 
@@ -336,7 +336,7 @@ describe('resolveProjectCommand shell safety (project root with spaces)', () => 
     const binPath = join(SPACED_TMP, 'node_modules', '.bin', binName);
     // Executable that prints a sentinel + its args so we can confirm the shell
     // launched THIS binary (not a truncated `/…/.tmp` prefix from word-splitting).
-    writeFileSync(binPath, `#!/bin/sh\necho "NOSAM_BIN_OK args=$*"\n`);
+    writeFileSync(binPath, `#!/bin/sh\necho "PLATFORM_BIN_OK args=$*"\n`);
     chmodSync(binPath, 0o755);
     return { root: SPACED_TMP, binPath };
   }
@@ -363,7 +363,7 @@ describe('resolveProjectCommand shell safety (project root with spaces)', () => 
       const { root } = setupSpacedProject('vitepress');
       const cmd = resolveProjectCommand(root, 'vitepress build docs');
       const out = execSync(cmd, { encoding: 'utf-8' });
-      expect(out).toContain('NOSAM_BIN_OK');
+      expect(out).toContain('PLATFORM_BIN_OK');
       expect(out).toContain('args=build docs');
     },
   );
@@ -380,7 +380,7 @@ describe('resolveProjectCommand shell safety (project root with spaces)', () => 
       const cmd = resolveProjectCommand(SPACED_TMP, 'vite build');
       expect(cmd).toBe(`'${binPath.replace(/'/g, "'\\''")}' build`);
       const out = execSync(cmd, { encoding: 'utf-8' });
-      expect(out).toContain('NOSAM_BIN_OK');
+      expect(out).toContain('PLATFORM_BIN_OK');
       expect(out).toContain('args=build');
     },
   );

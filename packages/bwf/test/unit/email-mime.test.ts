@@ -1213,7 +1213,7 @@ describe('normalizeEmail', () => {
         ['a.b', '<a.b>'],
         ['a.b.c@d.e', '<a.b.c@d.e>'],
         ["!#$%&'*+-/=?^_`{|}~", "<!#$%&'*+-/=?^_`{|}~>"], // every atext symbol
-        ['20240101.1234@mail.void.cloud', '<20240101.1234@mail.void.cloud>'],
+        ['20240101.1234@mail.buildwf.dev', '<20240101.1234@mail.buildwf.dev>'],
         ['Logo-1_2', '<Logo-1_2>'], // case is kept as given
       ];
       for (const [contentId, rendered] of valid) {

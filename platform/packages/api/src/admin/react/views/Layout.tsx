@@ -61,7 +61,7 @@ export function Layout({
 
   return (
     <AppShell
-      className="nosam-admin-shell"
+      className="platform-admin-shell"
       height="auto"
       contentPadding={6}
       mobileNav={{ breakpoint: 'lg' }}
@@ -70,7 +70,7 @@ export function Layout({
           label="Platform administration"
           heading={
             <TopNavHeading
-              className="nosam-admin-brand"
+              className="platform-admin-brand"
               logo={<BwfLogo />}
               heading={platformName}
             />
@@ -186,7 +186,7 @@ export function Layout({
         </SideNav>
       }
     >
-      <PageStack className="nosam-admin-content">{children}</PageStack>
+      <PageStack className="platform-admin-content">{children}</PageStack>
     </AppShell>
   );
 }

@@ -17,7 +17,7 @@ describe('dashboard auth callback', () => {
     vi.restoreAllMocks();
   });
 
-  it('exchanges a dashboard auth code into a nosam_token cookie', async () => {
+  it('exchanges a dashboard auth code into a platform_token cookie', async () => {
     const app = createApp(
       vi.fn(async () =>
         Response.json({
@@ -30,7 +30,7 @@ describe('dashboard auth callback', () => {
       'https://dash.staging.void.cloud/auth/callback?code=auth-code&login_nonce=nonce',
       {
         headers: {
-          Cookie: 'nosam_auth_nonce=nonce',
+          Cookie: 'platform_auth_nonce=nonce',
           Host: 'dash.staging.void.cloud',
         },
         redirect: 'manual',
@@ -42,8 +42,8 @@ describe('dashboard auth callback', () => {
     expect(res.headers.get('Location')).toBe('https://dash.staging.void.cloud/');
     expect(res.headers.getSetCookie()).toEqual(
       expect.arrayContaining([
-        expect.stringContaining('nosam_auth_nonce=;'),
-        expect.stringContaining('nosam_token=dashboard-jwt;'),
+        expect.stringContaining('platform_auth_nonce=;'),
+        expect.stringContaining('platform_token=dashboard-jwt;'),
       ]),
     );
   });
@@ -60,7 +60,7 @@ describe('dashboard auth callback', () => {
       'https://dash.staging.void.cloud/auth/callback?code=auth-code&login_nonce=nonce',
       {
         headers: {
-          Cookie: 'nosam_auth_nonce=nonce',
+          Cookie: 'platform_auth_nonce=nonce',
           Host: 'dash.staging.void.cloud',
         },
         redirect: 'manual',
@@ -82,7 +82,7 @@ describe('dashboard auth callback', () => {
     const response = await app.request(
       'https://dashboard.example.com/auth/callback?code=auth-code&login_nonce=nonce',
       {
-        headers: { Cookie: 'nosam_auth_nonce=nonce', Host: 'dashboard.example.com' },
+        headers: { Cookie: 'platform_auth_nonce=nonce', Host: 'dashboard.example.com' },
         redirect: 'manual',
       },
       { API_URL: 'https://api.example.com' },
@@ -91,7 +91,7 @@ describe('dashboard auth callback', () => {
     expect(response.status).toBe(302);
     expect(response.headers.get('Location')).toBe('https://dashboard.example.com/login');
     expect(
-      response.headers.getSetCookie().some((cookie) => cookie.startsWith('nosam_token=')),
+      response.headers.getSetCookie().some((cookie) => cookie.startsWith('platform_token=')),
     ).toBe(false);
   });
 
@@ -103,7 +103,7 @@ describe('dashboard auth callback', () => {
       'http://localhost:5173/auth/callback?code=auth-code&login_nonce=nonce&state=pkce-state',
       {
         headers: {
-          Cookie: `nosam_auth_nonce=nonce; nosam_auth_pkce=pkce-state:${verifier}`,
+          Cookie: `platform_auth_nonce=nonce; platform_auth_pkce=pkce-state:${verifier}`,
           Host: 'localhost:5173',
         },
         redirect: 'manual',
@@ -120,8 +120,8 @@ describe('dashboard auth callback', () => {
     });
     expect(res.headers.getSetCookie()).toEqual(
       expect.arrayContaining([
-        expect.stringContaining('nosam_auth_pkce=;'),
-        expect.stringContaining('nosam_token=managed-local-jwt;'),
+        expect.stringContaining('platform_auth_pkce=;'),
+        expect.stringContaining('platform_token=managed-local-jwt;'),
       ]),
     );
   });
@@ -137,14 +137,14 @@ describe('localhost token bypass', () => {
     vi.restoreAllMocks();
   });
 
-  it('sets nosam_token cookie when token + matching nonce arrive on localhost', async () => {
+  it('sets platform_token cookie when token + matching nonce arrive on localhost', async () => {
     const app = createApp(noApiFetch);
 
     const res = await app.request(
       'http://localhost:5173/auth/callback?token=test-jwt&login_nonce=devnonce',
       {
         headers: {
-          Cookie: 'nosam_auth_nonce=devnonce',
+          Cookie: 'platform_auth_nonce=devnonce',
           Host: 'localhost:5173',
         },
         redirect: 'manual',
@@ -156,10 +156,10 @@ describe('localhost token bypass', () => {
     expect(res.headers.get('Location')).toBe('http://localhost:5173/');
     const cookies = res.headers.getSetCookie();
     expect(cookies).toEqual(
-      expect.arrayContaining([expect.stringContaining('nosam_token=test-jwt;')]),
+      expect.arrayContaining([expect.stringContaining('platform_token=test-jwt;')]),
     );
     expect(cookies).toEqual(
-      expect.arrayContaining([expect.stringContaining('nosam_auth_nonce=;')]),
+      expect.arrayContaining([expect.stringContaining('platform_auth_nonce=;')]),
     );
   });
 
@@ -181,7 +181,7 @@ describe('localhost token bypass', () => {
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toBe('http://localhost:5173/login');
     expect(res.headers.getSetCookie()).not.toEqual(
-      expect.arrayContaining([expect.stringContaining('nosam_token=')]),
+      expect.arrayContaining([expect.stringContaining('platform_token=')]),
     );
     expect(warn).toHaveBeenCalledWith('[dashboard] auth callback nonce mismatch');
   });
@@ -194,7 +194,7 @@ describe('localhost token bypass', () => {
       'http://localhost:5173/auth/callback?token=test-jwt',
       {
         headers: {
-          Cookie: 'nosam_auth_nonce=devnonce',
+          Cookie: 'platform_auth_nonce=devnonce',
           Host: 'localhost:5173',
         },
         redirect: 'manual',
@@ -205,7 +205,7 @@ describe('localhost token bypass', () => {
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toBe('http://localhost:5173/login');
     expect(res.headers.getSetCookie()).not.toEqual(
-      expect.arrayContaining([expect.stringContaining('nosam_token=')]),
+      expect.arrayContaining([expect.stringContaining('platform_token=')]),
     );
     expect(warn).toHaveBeenCalledWith('[dashboard] auth callback nonce mismatch');
   });
@@ -218,7 +218,7 @@ describe('localhost token bypass', () => {
       'http://localhost:5173/auth/callback?token=test-jwt&login_nonce=mismatch',
       {
         headers: {
-          Cookie: 'nosam_auth_nonce=devnonce',
+          Cookie: 'platform_auth_nonce=devnonce',
           Host: 'localhost:5173',
         },
         redirect: 'manual',
@@ -229,7 +229,7 @@ describe('localhost token bypass', () => {
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toBe('http://localhost:5173/login');
     expect(res.headers.getSetCookie()).not.toEqual(
-      expect.arrayContaining([expect.stringContaining('nosam_token=')]),
+      expect.arrayContaining([expect.stringContaining('platform_token=')]),
     );
     expect(warn).toHaveBeenCalledWith('[dashboard] auth callback nonce mismatch');
   });
@@ -241,18 +241,18 @@ describe('localhost token bypass', () => {
       'https://dash.void.cloud/auth/callback?token=test-jwt&login_nonce=devnonce',
       {
         headers: {
-          Cookie: 'nosam_auth_nonce=devnonce',
+          Cookie: 'platform_auth_nonce=devnonce',
           Host: 'dash.void.cloud',
         },
         redirect: 'manual',
       },
-      { API_URL: 'https://nosam.buildwithfriends.dev' },
+      { API_URL: 'https://platform.buildwithfriends.dev' },
     );
 
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toBe('https://dash.void.cloud/login');
     expect(res.headers.getSetCookie()).not.toEqual(
-      expect.arrayContaining([expect.stringContaining('nosam_token=')]),
+      expect.arrayContaining([expect.stringContaining('platform_token=')]),
     );
   });
 });

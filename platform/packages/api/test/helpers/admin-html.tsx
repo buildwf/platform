@@ -12,7 +12,7 @@ import { PageView, SpaContext, type PageObject } from '../../src/admin/react/spa
 export async function adminHtml(response: Response): Promise<string> {
   const html = await response.text();
   const match = html.match(
-    /<script type="application\/json" id="nosam-admin-page">([\s\S]*?)<\/script>/,
+    /<script type="application\/json" id="platform-admin-page">([\s\S]*?)<\/script>/,
   );
   if (!match) {
     return html;

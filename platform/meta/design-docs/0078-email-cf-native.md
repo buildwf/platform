@@ -5,7 +5,7 @@ status: implemented
 
 # Cloudflare-native email
 
-The repository implements two email hosting paths. Native Cloudflare deployments use the app's own send binding and email event. Platform deployments use a dedicated gateway for inbound mail, a proxy for sending, and PostgreSQL for policy, quotas, operations, and outcome records. The public programming model is nosam/email in both paths. Production enablement is a separate [release acceptance procedure](../release-acceptance.md#email-acceptance); this record describes the code present in the repository.
+The repository implements two email hosting paths. Native Cloudflare deployments use the app's own send binding and email event. Platform deployments use a dedicated gateway for inbound mail, a proxy for sending, and PostgreSQL for policy, quotas, operations, and outcome records. The public programming model is platform/email in both paths. Production enablement is a separate [release acceptance procedure](../release-acceptance.md#email-acceptance); this record describes the code present in the repository.
 
 ## Native deployment
 

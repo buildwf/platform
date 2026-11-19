@@ -187,9 +187,9 @@ function showNextSteps(): void {
   p.note(
     [
       'From the repository root:',
-      '  1. vp run --filter @nosamcloud/api dev:admin',
+      '  1. vp run --filter @platform-service/api dev:admin',
       '  2. Open http://localhost:8787/admin/',
-      '  3. For the separate user dashboard: vp run --filter @nosamcloud/dashboard dev',
+      '  3. For the separate user dashboard: vp run --filter @platform-service/dashboard dev',
     ].join('\n'),
     'Next steps',
   );
@@ -225,34 +225,34 @@ async function main(): Promise<void> {
 
   const s = p.spinner();
 
-  // 1. Create nosam_dev role and database (idempotent)
-  s.start('Creating local database nosam_api_dev');
+  // 1. Create platform_dev role and database (idempotent)
+  s.start('Creating local database platform_api_dev');
   try {
     run(
-      `psql -d postgres -c "CREATE ROLE nosam_dev WITH LOGIN PASSWORD 'nosam_dev'" 2>/dev/null`,
+      `psql -d postgres -c "CREATE ROLE platform_dev WITH LOGIN PASSWORD 'platform_dev'" 2>/dev/null`,
       platformDir,
     );
   } catch {
     // Role already exists — fine
   }
   try {
-    run('createdb -O nosam_dev nosam_api_dev 2>/dev/null', platformDir);
+    run('createdb -O platform_dev platform_api_dev 2>/dev/null', platformDir);
   } catch {
     // Already exists — fine
   }
-  // Ensure nosam_dev owns the database even if it was created before the role
+  // Ensure platform_dev owns the database even if it was created before the role
   try {
-    run(`psql -d postgres -c "ALTER DATABASE nosam_api_dev OWNER TO nosam_dev"`, platformDir);
+    run(`psql -d postgres -c "ALTER DATABASE platform_api_dev OWNER TO platform_dev"`, platformDir);
   } catch {
     // Fine
   }
 
   try {
-    run(`psql "${localDbUrl}" -c "ALTER SCHEMA public OWNER TO nosam_dev"`, platformDir);
+    run(`psql "${localDbUrl}" -c "ALTER SCHEMA public OWNER TO platform_dev"`, platformDir);
   } catch {
     // Fine
   }
-  s.stop('Database nosam_api_dev ready');
+  s.stop('Database platform_api_dev ready');
 
   // 2. Apply Drizzle migrations
   s.start('Applying migrations');
@@ -274,7 +274,7 @@ async function main(): Promise<void> {
     }
   }
   run(
-    `psql "${localDbUrl}" -c "GRANT USAGE, CREATE ON SCHEMA public TO nosam_dev; GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO nosam_dev; GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO nosam_dev; GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO nosam_dev; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO nosam_dev; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO nosam_dev; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON FUNCTIONS TO nosam_dev;"`,
+    `psql "${localDbUrl}" -c "GRANT USAGE, CREATE ON SCHEMA public TO platform_dev; GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO platform_dev; GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO platform_dev; GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO platform_dev; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO platform_dev; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO platform_dev; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON FUNCTIONS TO platform_dev;"`,
     platformDir,
   );
   s.stop('Applied migrations');

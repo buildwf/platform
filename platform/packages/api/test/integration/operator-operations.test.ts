@@ -604,7 +604,7 @@ describe('operator installation-aware system and worker operations', () => {
     expect(privateFetch).toHaveBeenCalledExactlyOnceWith(
       'https://my-proxy.example/health',
       expect.objectContaining({
-        headers: { 'X-Nosam-Platform-Probe': 'probe' },
+        headers: { 'X-Platform-Probe': 'probe' },
         redirect: 'manual',
         signal: expect.any(AbortSignal),
       }),
@@ -689,8 +689,8 @@ describe('operator installation-aware system and worker operations', () => {
       'https://my-proxy.example/health',
       'https://void-platform-health.apps.example/health',
     ]);
-    expect(fetch.mock.calls[1][1]?.headers).toEqual({ 'X-Nosam-Platform-Probe': 'probe' });
-    expect(fetch.mock.calls[0][1]?.headers).toEqual({ 'X-Nosam-Platform-Probe': 'probe' });
+    expect(fetch.mock.calls[1][1]?.headers).toEqual({ 'X-Platform-Probe': 'probe' });
+    expect(fetch.mock.calls[0][1]?.headers).toEqual({ 'X-Platform-Probe': 'probe' });
     expect(fetch.mock.calls.every(([, init]) => init?.redirect === 'manual')).toBe(true);
   });
 
@@ -795,7 +795,7 @@ describe('operator installation-aware system and worker operations', () => {
     expect(fetch.mock.calls.map(([, init]) => init?.headers)).toEqual([
       undefined,
       undefined,
-      { 'X-Health-Check': 'nosam-admin' },
+      { 'X-Health-Check': 'platform-admin' },
     ]);
   });
 
@@ -898,7 +898,7 @@ describe('operator installation-aware system and worker operations', () => {
   test('worker reads preserve available data and report Cloudflare failures', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
-      if (url.includes('/scripts/nosam-api/deployments')) {
+      if (url.includes('/scripts/platform-api/deployments')) {
         return Response.json(
           { success: false, errors: [{ message: 'Permission denied' }] },
           { status: 403 },
@@ -972,7 +972,7 @@ describe('operator installation-aware system and worker operations', () => {
     expect((await req('/workers/rollback-all', {})).status).toBe(400);
   });
   test('bulk rollback pins reviewed targets, stops after failure, and persists partial outcomes', async () => {
-    const fetch = cloudflareWorkerStub('nosam-api-staging');
+    const fetch = cloudflareWorkerStub('platform-api-staging');
     const versions = {
       dispatch: 'previous',
       'email-gateway': 'previous',
@@ -1000,7 +1000,7 @@ describe('operator installation-aware system and worker operations', () => {
     ]);
     const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'POST');
     expect(writes).toHaveLength(2);
-    expect(writes[0][0]).toContain('nosam-dashboard-staging');
+    expect(writes[0][0]).toContain('platform-dashboard-staging');
     expect(JSON.parse(String(writes[0][1]?.body))).toMatchObject({
       versions: [{ version_id: 'previous', percentage: 100 }],
     });
@@ -1016,7 +1016,7 @@ describe('operator installation-aware system and worker operations', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       Response.json({
         success: true,
-        result: [{ name: '__NOSAM_PROXY_TOKEN', type: 'plain_text', text: 'private-token' }],
+        result: [{ name: '__PLATFORM_PROXY_TOKEN', type: 'plain_text', text: 'private-token' }],
       }),
     );
     const response = await req('/system/backfill-queue-tokens', { dryRun: true });
@@ -1030,7 +1030,7 @@ describe('operator installation-aware system and worker operations', () => {
   test('previews, cancels, resumes, and audits an orphan Sandbox application drain', async () => {
     const project = await createTestProject(env.db, ownerId, 'sandbox-drain');
     const deployment = await createLegacySandboxDeployment(project.id, 'pending');
-    const applicationName = `${project.id}-${deployment.id}-nosam-sandbox`
+    const applicationName = `${project.id}-${deployment.id}-platform-sandbox`
       .toLowerCase()
       .replaceAll('_', '-');
     const namespaceId = 'ns-sandbox-drain';
@@ -1043,7 +1043,7 @@ describe('operator installation-aware system and worker operations', () => {
           sandbox: {
             bindingName: 'SANDBOX',
             className: 'Sandbox',
-            containerName: 'nosam-sandbox',
+            containerName: 'platform-sandbox',
             image: 'registry.cloudflare.com/sandbox:1.0.0',
           },
         }),
@@ -1213,7 +1213,7 @@ describe('operator installation-aware system and worker operations', () => {
       .set({ manifest: JSON.stringify({ version: 4, type: 'static' }) })
       .where(eq(deployments.id, current.id));
     const deployment = await createLegacySandboxDeployment(project.id, 'pending');
-    const applicationName = `${project.id}-${deployment.id}-nosam-sandbox`
+    const applicationName = `${project.id}-${deployment.id}-platform-sandbox`
       .toLowerCase()
       .replaceAll('_', '-');
     const namespaceId = 'ns-sandbox-cutover';
@@ -1223,12 +1223,12 @@ describe('operator installation-aware system and worker operations', () => {
         status: 'cutover',
         manifest: JSON.stringify({
           version: 4,
-          type: 'nosam',
+          type: 'platform',
           bindings: {},
           sandbox: {
             bindingName: 'SANDBOX',
             className: 'Sandbox',
-            containerName: 'nosam-sandbox',
+            containerName: 'platform-sandbox',
             image: 'registry.cloudflare.com/sandbox:1.0.0',
           },
         }),
@@ -1306,7 +1306,7 @@ describe('operator installation-aware system and worker operations', () => {
           sandbox: {
             bindingName: 'SANDBOX',
             className: 'Sandbox',
-            containerName: 'nosam-sandbox',
+            containerName: 'platform-sandbox',
             image: 'registry.cloudflare.com/sandbox:1.0.0',
           },
         }),
@@ -1319,7 +1319,7 @@ describe('operator installation-aware system and worker operations', () => {
       deploymentId: deployment.id,
       bindingName: 'SANDBOX',
       className: 'Sandbox',
-      containerName: 'nosam-sandbox',
+      containerName: 'platform-sandbox',
       identityOversized: false,
     });
     expect(Object.keys(rows[0]!)).toEqual([
@@ -1355,7 +1355,7 @@ describe('operator installation-aware system and worker operations', () => {
           sandbox: {
             bindingName: 'S'.repeat(513),
             className: 'Sandbox',
-            containerName: 'nosam-sandbox',
+            containerName: 'platform-sandbox',
             image: 'registry.cloudflare.com/sandbox:1.0.0',
           },
         }),
@@ -1425,13 +1425,13 @@ describe('operator installation-aware system and worker operations', () => {
           sandbox: {
             bindingName: 'SANDBOX',
             className: 'Sandbox',
-            containerName: 'nosam-sandbox',
+            containerName: 'platform-sandbox',
             image: 'registry.cloudflare.com/sandbox:1.0.0',
           },
         }),
       })
       .where(eq(deployments.id, deployment.id));
-    const applicationName = `${project.id}-${deployment.id}-nosam-sandbox`
+    const applicationName = `${project.id}-${deployment.id}-platform-sandbox`
       .toLowerCase()
       .replaceAll('_', '-');
     const cf = mockCfApi({
@@ -1543,7 +1543,7 @@ describe('proxy token rotation', () => {
         cf.seedHostScript({
           scriptName,
           bindings: [
-            { type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: await tok(project.id, gen) },
+            { type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: await tok(project.id, gen) },
             { type: 'secret_text', name: 'API_KEY' },
           ],
         });
@@ -1570,7 +1570,7 @@ describe('proxy token rotation', () => {
   }
 
   const scriptToken = (cf: MockCfApiHandle, script: string) =>
-    cf.state.hostScripts.get(script)?.bindings.find((b) => b.name === '__NOSAM_PROXY_TOKEN')?.text;
+    cf.state.hostScripts.get(script)?.bindings.find((b) => b.name === '__PLATFORM_PROXY_TOKEN')?.text;
 
   /** Moves every rotation wait an hour back and makes the jobs due. */
   async function endWaits() {

@@ -103,7 +103,7 @@ the configured origin is outside the active coverage.
 
 ## Cloudflare footprint
 
-New platform resources use deterministic `void-<installation-name>-<role>` names where Cloudflare allows them, such as `nosam-team-api`. Choose an unused installation name in the account; bwf stops on an unowned name conflict instead of replacing that resource. Existing installations keep their recorded names, including older names with suffixes.
+New platform resources use deterministic `void-<installation-name>-<role>` names where Cloudflare allows them, such as `platform-team-api`. Choose an unused installation name in the account; bwf stops on an unowned name conflict instead of replacing that resource. Existing installations keep their recorded names, including older names with suffixes.
 
 | Resource                                  |                                 Count | Purpose                                                                                       |
 | ----------------------------------------- | ------------------------------------: | --------------------------------------------------------------------------------------------- |

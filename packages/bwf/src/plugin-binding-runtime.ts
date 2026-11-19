@@ -6,12 +6,12 @@ type BindingNames = { kv?: string; r2?: string };
 const envModuleResolved = fileURLToPath(import.meta.resolve('#self/_env'));
 const kvModuleResolved = fileURLToPath(import.meta.resolve('@builtbyfriends/bwf/kv'));
 const storageModuleResolved = fileURLToPath(import.meta.resolve('@builtbyfriends/bwf/storage'));
-const VIRTUAL_KV_ID = '\0virtual:nosam-kv';
-const VIRTUAL_STORAGE_ID = '\0virtual:nosam-storage';
+const VIRTUAL_KV_ID = '\0virtual:platform-kv';
+const VIRTUAL_STORAGE_ID = '\0virtual:platform-storage';
 
 export function bindingRuntimePlugin(bindingNames: BindingNames | undefined): Plugin {
   return {
-    name: 'nosam:binding-runtime',
+    name: 'platform:binding-runtime',
     enforce: 'pre',
     resolveId: {
       filter: { id: /^(@builtbyfriends\/bwf\/kv|@builtbyfriends\/bwf\/storage)$/ },
@@ -29,7 +29,7 @@ export function bindingRuntimePlugin(bindingNames: BindingNames | undefined): Pl
     },
     load: {
       // eslint-disable-next-line no-control-regex -- Vite virtual module null-byte prefix
-      filter: { id: /^\0virtual:nosam-(?:kv|storage)$/ },
+      filter: { id: /^\0virtual:platform-(?:kv|storage)$/ },
       handler(id) {
         if (id === VIRTUAL_KV_ID) {
           return `

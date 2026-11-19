@@ -93,12 +93,12 @@ function compatibilityTemplate(value: string): URL {
   if (
     !['postgres:', 'postgresql:'].includes(url.protocol) ||
     !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) ||
-    url.username !== 'nosam_ci' ||
-    url.pathname !== '/nosam_schema_compat' ||
+    url.username !== 'platform_ci' ||
+    url.pathname !== '/platform_schema_compat' ||
     url.search ||
     url.hash
   ) {
-    throw new Error('Use the disposable nosam_schema_compat database on loopback as nosam_ci.');
+    throw new Error('Use the disposable platform_schema_compat database on loopback as platform_ci.');
   }
   return url;
 }
@@ -131,7 +131,7 @@ async function runIsolatedCompatibilityTests(options: {
   if (!options.files.length || new Set(options.files).size !== options.files.length) {
     throw new Error('Compatibility tests must contain unique test files.');
   }
-  const prefix = `nosam_compat_${randomUUID().replaceAll('-', '')}`;
+  const prefix = `platform_compat_${randomUUID().replaceAll('-', '')}`;
   const failures: Array<string> = [];
   let cursor = 0;
   const worker = async () => {
@@ -141,7 +141,7 @@ async function runIsolatedCompatibilityTests(options: {
       const name = `${prefix}_${index}`;
       const database = new URL(template);
       database.pathname = `/${name}`;
-      await options.query(`CREATE DATABASE "${name}" TEMPLATE "nosam_schema_compat"`);
+      await options.query(`CREATE DATABASE "${name}" TEMPLATE "platform_schema_compat"`);
       try {
         if ((await options.runTest(file, database.href)) !== 0) {
           failures.push(file);

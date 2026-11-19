@@ -400,9 +400,9 @@ To use bwf with a PostgreSQL database that Drizzle has already migrated, record 
 
    Match each row's `created_at` to `when` in `meta/_journal.json`, and its `hash` to the SQL file's SHA-256. Resolve any differences before continuing.
 
-4. Save this as `adopt-nosam.sql`. Replace the example filenames with **only the migrations you verified as applied**, including `.sql`. Leave pending migrations out.
+4. Save this as `adopt-platform.sql`. Replace the example filenames with **only the migrations you verified as applied**, including `.sql`. Leave pending migrations out.
 
-   ```sql [adopt-nosam.sql]
+   ```sql [adopt-platform.sql]
    BEGIN;
    CREATE TABLE IF NOT EXISTS _void_migrations (
      name TEXT PRIMARY KEY,

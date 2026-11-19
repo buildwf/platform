@@ -238,7 +238,7 @@ describe('GET /projects', () => {
     const lastSeen = new Date().toISOString();
     mockCfApi({
       analyticsQuery: (_url, init) => {
-        expect(init?.body).toContain('FROM nosam_requests');
+        expect(init?.body).toContain('FROM platform_requests');
         expect(init?.body).toContain('WHERE blob1 IN');
         return Response.json({
           data: [
@@ -2008,11 +2008,11 @@ describe('POST /projects/:id/rollback', () => {
     const current = await createDeployment(
       env.db,
       project.id,
-      JSON.stringify({ version: 3, type: 'nosam', bindings: {} }),
+      JSON.stringify({ version: 3, type: 'platform', bindings: {} }),
     );
     await updateDeploymentStatus(env.db, current.id, 'live');
     await markDeploymentRetained(env.db, current.id, true);
-    await env.db.update(projects).set({ type: 'nosam' }).where(eq(projects.id, project.id));
+    await env.db.update(projects).set({ type: 'platform' }).where(eq(projects.id, project.id));
     await setActiveDeployment(env.db, project.id, current.id);
 
     const res = await app.fetch(
@@ -2114,9 +2114,9 @@ describe('POST /projects/:id/rollback', () => {
     );
 
     expect(response.status).toBe(200);
-    expect((await db.getProject(env.db, project.id))?.type).toBe('nosam');
+    expect((await db.getProject(env.db, project.id))?.type).toBe('platform');
     expect(await env.ROUTING.get(project.slug, 'json')).toMatchObject({
-      type: 'nosam',
+      type: 'platform',
       workerName: `user-${project.slug}-${target.id}`,
     });
   });
@@ -2327,11 +2327,11 @@ describe('POST /projects/:id/rollback', () => {
     const current = await createDeployment(
       env.db,
       project.id,
-      JSON.stringify({ version: 3, type: 'nosam', bindings: {} }),
+      JSON.stringify({ version: 3, type: 'platform', bindings: {} }),
     );
     await updateDeploymentStatus(env.db, current.id, 'live');
     await markDeploymentRetained(env.db, current.id, true);
-    await env.db.update(projects).set({ type: 'nosam' }).where(eq(projects.id, project.id));
+    await env.db.update(projects).set({ type: 'platform' }).where(eq(projects.id, project.id));
     await setActiveDeployment(env.db, project.id, current.id);
 
     const previousSlugRouting = JSON.stringify({
@@ -2368,7 +2368,7 @@ describe('POST /projects/:id/rollback', () => {
 
     expect(res.status).toBe(500);
     expect((await db.getProject(env.db, project.id))?.active_deployment_id).toBe(current.id);
-    expect((await db.getProject(env.db, project.id))?.type).toBe('nosam');
+    expect((await db.getProject(env.db, project.id))?.type).toBe('platform');
     expect(await env.ROUTING.get(project.slug)).toBe(previousSlugRouting);
     expect(await env.ROUTING.get('domain:compensate.example.com')).toBe(previousDomainRouting);
   });
@@ -2379,7 +2379,7 @@ describe('POST /projects/:id/rollback', () => {
     const target = await createDeployment(
       env.db,
       project.id,
-      JSON.stringify({ version: 3, type: 'nosam', bindings: {} }),
+      JSON.stringify({ version: 3, type: 'platform', bindings: {} }),
     );
     await updateDeploymentStatus(env.db, target.id, 'live');
     await markDeploymentRetained(env.db, target.id, true);
@@ -2450,7 +2450,7 @@ describe('POST /projects/:id/rollback', () => {
       project.id,
       JSON.stringify({
         version: 4,
-        type: 'nosam',
+        type: 'platform',
         bindings: {},
         queues: [{ name: 'emails', bindingName: 'QUEUE_EMAILS', maxBatchSize: 20 }],
       }),
@@ -2462,7 +2462,7 @@ describe('POST /projects/:id/rollback', () => {
       project.id,
       JSON.stringify({
         version: 4,
-        type: 'nosam',
+        type: 'platform',
         bindings: {},
         queues: [{ name: 'emails', bindingName: 'QUEUE_EMAILS', maxBatchSize: 5 }],
       }),
@@ -2473,7 +2473,7 @@ describe('POST /projects/:id/rollback', () => {
 
     const oldConsumer = {
       consumer_id: 'consumer-1',
-      script: 'nosam-dispatch',
+      script: 'platform-dispatch',
       type: 'worker',
       settings: { batch_size: 5, max_retries: 2 },
     };
@@ -2482,7 +2482,7 @@ describe('POST /projects/:id/rollback', () => {
     const updateBodies: Array<unknown> = [];
     mockCfApi({
       listWorkerBindings: () =>
-        cfSuccess([{ type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: 'queue-proxy-token' }]),
+        cfSuccess([{ type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: 'queue-proxy-token' }]),
       addQueueConsumer: () => cfError('queue already has a consumer', 409),
       listQueueConsumers: () => {
         listCalls++;
@@ -2522,7 +2522,7 @@ describe('POST /projects/:id/rollback', () => {
     expect(updateBodies).toHaveLength(2);
     expect(updateBodies[0]).toMatchObject({ settings: { batch_size: 20 } });
     expect(updateBodies[1]).toEqual({
-      script_name: 'nosam-dispatch',
+      script_name: 'platform-dispatch',
       type: 'worker',
       settings: { batch_size: 5, max_retries: 2 },
     });
@@ -2567,7 +2567,7 @@ describe('POST /projects/:id/rollback', () => {
         bindingsCalls++;
         if (bindingsCalls === 1) {
           return cfSuccess([
-            { type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: 'baked-d1-token' },
+            { type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: 'baked-d1-token' },
           ]);
         }
         return new Response(
@@ -2620,7 +2620,7 @@ describe('POST /projects/:id/rollback', () => {
     expect(queueRouting.proxyToken).toBe('baked-d1-token');
   });
 
-  it('rollback cron sync uses the baked __NOSAM_PROXY_TOKEN from the target worker', async () => {
+  it('rollback cron sync uses the baked __PLATFORM_PROXY_TOKEN from the target worker', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'cron-roll');
 
@@ -2644,7 +2644,7 @@ describe('POST /projects/:id/rollback', () => {
     mockCfApi({
       listWorkerBindings: () =>
         cfSuccess([
-          { type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: 'baked-into-d1-cron' },
+          { type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: 'baked-into-d1-cron' },
         ]),
     });
 
@@ -2711,14 +2711,14 @@ describe('POST /projects/:id/rollback', () => {
     await setActiveDeployment(env.db, project.id, d2.id);
 
     // Worker bindings stored at deploy time include the exact
-    // __NOSAM_PROXY_TOKEN that d1 expects — rollback must read THIS value
+    // __PLATFORM_PROXY_TOKEN that d1 expects — rollback must read THIS value
     // from CF rather than re-derive from the current JWT_SECRET, which
     // would 401 the worker if the secret has rotated since d1 was
     // deployed.
     mockCfApi({
       listWorkerBindings: () =>
         cfSuccess([
-          { type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: 'token-baked-into-d1' },
+          { type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: 'token-baked-into-d1' },
         ]),
     });
 
@@ -2789,7 +2789,7 @@ describe('POST /projects/:id/rollback', () => {
       const heldToken = await deriveProxyToken(env.JWT_SECRET, project.id, held);
       mockCfApi({
         listWorkerBindings: () =>
-          cfSuccess([{ type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: heldToken }]),
+          cfSuccess([{ type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: heldToken }]),
       });
       const syncBodies: Array<string> = [];
       const originalGet = env.CRON_SCHEDULER.get.bind(env.CRON_SCHEDULER);
@@ -3469,8 +3469,8 @@ describe('POST /projects — owner email destination auto-add', () => {
   // sender to allow-list a recipient for, so the auto-add stays inert.
   const emailEnv = () => ({
     ...env,
-    EMAIL_GATEWAY_ORIGIN: 'https://nosam-email-gateway-staging.voidzer0.workers.dev',
-    EMAIL_SENDER_DOMAIN: 'mail.voidcloud.dev',
+    EMAIL_GATEWAY_ORIGIN: 'https://platform-email-gateway-staging.voidzer0.workers.dev',
+    EMAIL_SENDER_DOMAIN: 'mail.staging.buildwf.dev',
   });
 
   // `respond` may be async so a test can commit a competing write (project

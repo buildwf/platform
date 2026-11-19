@@ -13,13 +13,13 @@ const baseOptions = {
   honoPath: '/resolved/hono/index.mjs',
   honoRoutePath: '/resolved/hono/route.mjs',
 
-  runtimeEnvPath: '/resolved/nosam/runtime/env.mjs',
+  runtimeEnvPath: '/resolved/platform/runtime/env.mjs',
   projectRoot: '/project',
   homeDir: '/Users/test',
 };
 
 const sqliteAuth: AuthCompileOptions = {
-  authRuntimePath: '/resolved/nosam/runtime/better-auth.mjs',
+  authRuntimePath: '/resolved/platform/runtime/better-auth.mjs',
   authConfigPath: null,
   authDatabasePath: '/project/.bwf/better-auth-db.ts',
   authSchemaPath: '/project/.bwf/better-auth-schema.ts',
@@ -28,7 +28,7 @@ const sqliteAuth: AuthCompileOptions = {
 };
 
 const pgAuth: AuthCompileOptions = {
-  authRuntimePath: '/resolved/nosam/runtime/better-auth.mjs',
+  authRuntimePath: '/resolved/platform/runtime/better-auth.mjs',
   authConfigPath: '/app/auth.ts',
   authDatabasePath: '/project/.bwf/better-auth-db.ts',
   authSchemaPath: '/project/.bwf/better-auth-schema.ts',
@@ -79,17 +79,17 @@ describe('compileRouteTable auth integration', () => {
       auth: sqliteAuth,
     });
 
-    expect(code).toContain('from "/resolved/nosam/runtime/better-auth.mjs"');
-    expect(code).toContain('import { __nosamAuthDatabase } from "/project/.bwf/better-auth-db.ts"');
+    expect(code).toContain('from "/resolved/platform/runtime/better-auth.mjs"');
+    expect(code).toContain('import { __platformAuthDatabase } from "/project/.bwf/better-auth-db.ts"');
     expect(code).toContain(
-      'import { migrationSchema as __nosamAuthMigrationSchema } from "/project/.bwf/better-auth-schema.ts"',
+      'import { migrationSchema as __platformAuthMigrationSchema } from "/project/.bwf/better-auth-schema.ts"',
     );
     expect(code).toContain('runBwfAuthMiddleware');
     expect(code).toContain('handleBwfAuthRequest');
     expect(code).toContain(
-      'runBwfAuthMiddleware(c, next, __nosamAuthOptions, __nosamAuthDatabase)',
+      'runBwfAuthMiddleware(c, next, __platformAuthOptions, __platformAuthDatabase)',
     );
-    expect(code).toContain('handleBwfAuthRequest(c, __nosamAuthOptions, __nosamAuthDatabase)');
+    expect(code).toContain('handleBwfAuthRequest(c, __platformAuthOptions, __platformAuthDatabase)');
     expect(code).toContain('app.all("/api/auth", async (c) =>');
     expect(code).toContain('app.all("/api/auth/*", async (c) =>');
     expect(code).not.toContain('app.post("/auth/register"');
@@ -126,8 +126,8 @@ describe('compileRouteTable auth integration', () => {
       auth: pgAuth,
     });
 
-    expect(code).toContain('import __nosamAuthConfig from "/app/auth.ts"');
-    expect(code).toContain('userConfig: __nosamAuthConfig');
+    expect(code).toContain('import __platformAuthConfig from "/app/auth.ts"');
+    expect(code).toContain('userConfig: __platformAuthConfig');
   });
 
   it('places auth middleware before user middleware and auth routes before user routes', () => {
@@ -172,11 +172,11 @@ describe('compileRouteTable auth integration', () => {
 
     expect(code).toContain('runBwfAuthMigrations');
     expect(code).toContain(
-      'runBwfAuthMigrations(__nosamGetMigrationEnv(), __nosamAuthOptions, __nosamAuthMigrationSchema)',
+      'runBwfAuthMigrations(__platformGetMigrationEnv(), __platformAuthOptions, __platformAuthMigrationSchema)',
     );
-    expect(code).toContain('export async function __nosamHandleInternalRoute(request)');
-    expect(code).toContain('if (request.method === "POST" && url.pathname === "/__nosam/migrate")');
-    expect(code).toContain('app.post("/__nosam/migrate"');
+    expect(code).toContain('export async function __platformHandleInternalRoute(request)');
+    expect(code).toContain('if (request.method === "POST" && url.pathname === "/__platform/migrate")');
+    expect(code).toContain('app.post("/__platform/migrate"');
   });
 
   it('aliases custom D1 binding names for internal sqlite migrations', () => {
@@ -191,9 +191,9 @@ describe('compileRouteTable auth integration', () => {
     expect(code).toContain('env["myapp_db"]');
     expect(code).not.toContain('env.DB != null');
     expect(code).toContain('return { ...env, DB: env["myapp_db"] };');
-    expect(code).toContain('__createMigrationHandler(\n    __nosamGetMigrationEnv(),');
+    expect(code).toContain('__createMigrationHandler(\n    __platformGetMigrationEnv(),');
     expect(code).toContain(
-      'runBwfAuthMigrations(__nosamGetMigrationEnv(), __nosamAuthOptions, __nosamAuthMigrationSchema)',
+      'runBwfAuthMigrations(__platformGetMigrationEnv(), __platformAuthOptions, __platformAuthMigrationSchema)',
     );
   });
 });

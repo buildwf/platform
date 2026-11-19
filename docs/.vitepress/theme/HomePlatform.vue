@@ -3,7 +3,7 @@ import RiveAnimation from '@components/shared/RiveAnimation.vue';
 import { Icon } from '@iconify/vue';
 import { useData } from 'vitepress';
 import appsFieldAnimation from './assets/animations/640_x_320_apps_field_light.riv';
-import platformSecurityAnimation from './assets/animations/640_x_320_nosam_platform_light.riv';
+import platformSecurityAnimation from './assets/animations/640_x_320_platform_light.riv';
 import HomePlatformResourceCode from './HomePlatformResourceCode.vue';
 
 const { frontmatter } = useData();

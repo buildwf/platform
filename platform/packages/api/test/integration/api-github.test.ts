@@ -3349,11 +3349,11 @@ describe('GET /github/install-url', () => {
     const user = await createTestUser(env.db);
     const res = await app.fetch(
       new Request('http://localhost/github/install-url', authed(user.jwt)),
-      { ...env, GITHUB_APP_SLUG: 'nosam-deploy' },
+      { ...env, GITHUB_APP_SLUG: 'platform-deploy' },
     );
     expect(res.status).toBe(200);
     const { url } = (await res.json()) as { url: string };
-    expect(url.startsWith('https://github.com/apps/nosam-deploy/installations/new?state=')).toBe(
+    expect(url.startsWith('https://github.com/apps/platform-deploy/installations/new?state=')).toBe(
       true,
     );
   });
@@ -3364,7 +3364,7 @@ describe('GET /github/install-url', () => {
     const user = await createTestUser(env.db, 'nogithub', 'google');
     const res = await app.fetch(
       new Request('http://localhost/github/install-url', authed(user.jwt)),
-      { ...env, GITHUB_APP_SLUG: 'nosam-deploy' },
+      { ...env, GITHUB_APP_SLUG: 'platform-deploy' },
     );
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({ error: 'github_identity_required' });

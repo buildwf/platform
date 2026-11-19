@@ -11,19 +11,19 @@ function assert(condition: unknown, message: string): asserts condition {
 
 export const POST = defineHandler(async (c) => {
   const secret = env.SECRET_KEY;
-  if (typeof secret !== 'string' || !secret || c.req.header('x-nosam-e2e-token') !== secret) {
+  if (typeof secret !== 'string' || !secret || c.req.header('x-platform-e2e-token') !== secret) {
     return c.json({ error: 'unauthorized' }, 401);
   }
   const started = Date.now();
   const id = `acceptance-${crypto.randomUUID()}`;
-  const root = '/workspace/nosam-acceptance';
+  const root = '/workspace/platform-acceptance';
   const clients: Array<SandboxClient> = [];
   const checks: Array<string> = [];
   try {
     const sandbox = await getSandbox(id, {
       inactivityTimeoutMs: 30_000,
       enableInternet: false,
-      labels: { purpose: 'nosam-acceptance' },
+      labels: { purpose: 'platform-acceptance' },
     });
     clients.push(sandbox);
     assert(!(await sandbox.running()), 'Resolving a fresh Sandbox must not start it');
@@ -82,11 +82,11 @@ export const POST = defineHandler(async (c) => {
       [
         'node',
         '-e',
-        'console.log(process.cwd()); console.log(process.env.NOSAM_ACCEPTANCE); console.error("stderr marker");',
+        'console.log(process.cwd()); console.log(process.env.PLATFORM_ACCEPTANCE); console.error("stderr marker");',
       ],
       {
         cwd: root,
-        env: { NOSAM_ACCEPTANCE: id },
+        env: { PLATFORM_ACCEPTANCE: id },
         signal: AbortSignal.timeout(10_000),
       },
     );

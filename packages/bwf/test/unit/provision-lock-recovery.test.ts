@@ -169,14 +169,14 @@ describe('acquireProvisionLock — the gate runs on EVERY attempt + post-acquire
 
 describe('acquireProvisionLock — proper-lockfile registry key spelling', () => {
   it('preserves the native separators used by proper-lockfile on each platform', () => {
-    const lockTarget = 'D:/a/nosam/nosam/wrangler.jsonc.nosam-provision.lock';
+    const lockTarget = 'D:/a/platform/platform/wrangler.jsonc.platform-provision.lock';
 
     expect(resolveProperLockfileKey(lockTarget, 'win32')).toBe(
-      'D:\\a\\nosam\\nosam\\wrangler.jsonc.nosam-provision.lock',
+      'D:\\a\\platform\\platform\\wrangler.jsonc.platform-provision.lock',
     );
     expect(
-      resolveProperLockfileKey('/tmp/nosam/wrangler.jsonc.nosam-provision.lock', 'linux'),
-    ).toBe('/tmp/nosam/wrangler.jsonc.nosam-provision.lock');
+      resolveProperLockfileKey('/tmp/platform/wrangler.jsonc.platform-provision.lock', 'linux'),
+    ).toBe('/tmp/platform/wrangler.jsonc.platform-provision.lock');
   });
 });
 

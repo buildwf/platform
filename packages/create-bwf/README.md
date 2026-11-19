@@ -7,7 +7,7 @@ Create a full-stack Vite app with bwf, ready for local development and deploymen
 Use Node.js 24.22+ or 26.12+:
 
 ```sh
-npm create nosam@latest my-app
+npm create platform@latest my-app
 cd my-app
 npm run dev
 ```

@@ -13,7 +13,7 @@ import { loadBwfConfig } from '../../src/config-loader.ts';
 const roots: Array<string> = [];
 
 function createTempProject(config: string): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-config-loader-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-config-loader-'));
   roots.push(root);
   writeFileSync(join(root, 'bwf.config.ts'), config);
   return root;

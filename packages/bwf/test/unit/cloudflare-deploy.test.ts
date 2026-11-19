@@ -192,7 +192,7 @@ const cleanExit: DeployWranglerRunResult = {
 // writes on a throw. These tests read the JSONL file back from a temp home folder.
 describe('Cloudflare deploy log end record', () => {
   beforeEach(() => {
-    logHome.dir = mkdtempSync(join(tmpdir(), 'nosam-deploy-log-'));
+    logHome.dir = mkdtempSync(join(tmpdir(), 'platform-deploy-log-'));
   });
   afterEach(() => {
     rmSync(logHome.dir, { recursive: true, force: true });
@@ -2075,7 +2075,7 @@ const KITCHEN_SINK_NON_ID_BINDINGS = {
   },
   migrations: [{ tag: 'v1', new_sqlite_classes: ['Sandbox'] }],
   containers: [{ class_name: 'Sandbox', image: './Dockerfile' }],
-  vars: { __NOSAM_AI_GATEWAY: 'my-gateway', PUBLIC_FLAG: 'on' },
+  vars: { __PLATFORM_AI_GATEWAY: 'my-gateway', PUBLIC_FLAG: 'on' },
   assets: { directory: './dist/client', binding: 'ASSETS' },
   triggers: { crons: ['0 0 * * *'] },
   rules: [{ type: 'ESModule', globs: ['**/*.js'] }],
@@ -2673,7 +2673,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
           assets: {
             binding: 'ASSETS',
             not_found_handling: 'single-page-application',
-            run_worker_first: ['/__nosam', '/__nosam/*'],
+            run_worker_first: ['/__platform', '/__platform/*'],
           },
         });
         await options.validateUploadedVersion!('new');
@@ -2705,7 +2705,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
     expect(trace).not.toContain('auth-secret');
   });
 
-  it('serves a configured SPA from assets, with the thin edge Worker only for /__nosam', async () => {
+  it('serves a configured SPA from assets, with the thin edge Worker only for /__platform', async () => {
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'spaapp' }),
       'bwf.json': JSON.stringify({ inference: { appType: 'spa' } }),
@@ -2724,12 +2724,12 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
     expect(config).toMatchObject({
       name: 'spaapp',
       account_id: 'acc123',
-      version_metadata: { binding: '__NOSAM_VERSION_METADATA' },
+      version_metadata: { binding: '__PLATFORM_VERSION_METADATA' },
       main: 'static-edge.mjs',
       assets: {
         directory: '../../../dist',
         binding: 'ASSETS',
-        run_worker_first: ['/__nosam', '/__nosam/*'],
+        run_worker_first: ['/__platform', '/__platform/*'],
         not_found_handling: 'single-page-application',
       },
     });
@@ -3035,7 +3035,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
   });
 
   it('scrubs stale managed markers from a native static build', async () => {
-    vi.stubEnv('NOSAM_DEPLOY_PROJECT_ID', 'stale-managed-project');
+    vi.stubEnv('PLATFORM_DEPLOY_PROJECT_ID', 'stale-managed-project');
     vi.stubEnv('BWF_DEPLOY_BUILD', '1');
     let buildEnvSeen: NodeJS.ProcessEnv = {};
     const root = makeProject({
@@ -3054,7 +3054,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
 
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
 
-    expect(buildEnvSeen.NOSAM_DEPLOY_PROJECT_ID).toBeUndefined();
+    expect(buildEnvSeen.PLATFORM_DEPLOY_PROJECT_ID).toBeUndefined();
     expect(buildEnvSeen.BWF_DEPLOY_BUILD).toBeUndefined();
   });
 
@@ -3192,7 +3192,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
     expect(wranglerArgs.at(-1)).toContain(toSlash(stagedAssets));
   });
 
-  it('rejects a bare project with no bwf backend files (positive full-Nosam assertion)', async () => {
+  it('rejects a bare project with no bwf backend files (positive full-Platform assertion)', async () => {
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'bare' }),
       'bwf.json': JSON.stringify({}),
@@ -3281,7 +3281,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
 
       expect(exitCalls).toEqual([]);
       expect(parseRootWranglerConfig(generatedStaticConfig(root))).toMatchObject({
-        assets: { run_worker_first: ['/__nosam', '/__nosam/*'] },
+        assets: { run_worker_first: ['/__platform', '/__platform/*'] },
       });
       expect(readFileSync(stagedHeaders(root), 'utf-8')).toBe(generatedHeaders);
       expect(staticEntry(root)).not.toContain('headerRules');
@@ -3509,7 +3509,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
     expect(first.exitCalls).toEqual([]);
     expect(first.trace).toEqual(['wrangler:whoami', 'build', 'gate', 'wrangler:deploy']);
     expect(parseRootWranglerConfig(join(root, 'wrangler.jsonc'))).toMatchObject({
-      migrations: [{ tag: 'void-ws-v1', new_sqlite_classes: ['ChatRoomWs'] }],
+      migrations: [{ tag: 'platform-ws-v1', new_sqlite_classes: ['ChatRoomWs'] }],
     });
 
     writeFileSync(
@@ -3532,8 +3532,8 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
         ],
       },
       migrations: [
-        { tag: 'void-ws-v1', new_sqlite_classes: ['ChatRoomWs'] },
-        { tag: 'void-ws-v1-2', new_sqlite_classes: ['NotificationsWs'] },
+        { tag: 'platform-ws-v1', new_sqlite_classes: ['ChatRoomWs'] },
+        { tag: 'platform-ws-v1-2', new_sqlite_classes: ['NotificationsWs'] },
       ],
     });
   });
@@ -4362,7 +4362,7 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
     });
     const build = h.deps.runBuild!;
     h.deps.runBuild = (env) => {
-      const names = env.NOSAM_CLOUDFLARE_QUEUE_NAMES;
+      const names = env.PLATFORM_CLOUDFLARE_QUEUE_NAMES;
       builtQueueNames.push(names === undefined ? undefined : JSON.parse(names));
       return build(env);
     };
@@ -4561,7 +4561,7 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
     const { deps, wranglerArgs } = harness();
     let builtQueueNames: string | undefined = 'UNSET';
     deps.runBuild = (env) => {
-      builtQueueNames = env.NOSAM_CLOUDFLARE_QUEUE_NAMES;
+      builtQueueNames = env.PLATFORM_CLOUDFLARE_QUEUE_NAMES;
     };
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
     expect(wranglerArgs.some((a) => a[0] === 'queues')).toBe(false);
@@ -4569,12 +4569,12 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
   });
 
   it('drops an ambient queue name map from the build', async () => {
-    vi.stubEnv('NOSAM_CLOUDFLARE_QUEUE_NAMES', '{"jobs":"elsewhere"}');
+    vi.stubEnv('PLATFORM_CLOUDFLARE_QUEUE_NAMES', '{"jobs":"elsewhere"}');
     const root = d1Project(PROVISIONED_D1, INIT_MIGRATION);
     const { deps } = harness();
     let builtQueueNames: string | undefined = 'UNSET';
     deps.runBuild = (env) => {
-      builtQueueNames = env.NOSAM_CLOUDFLARE_QUEUE_NAMES;
+      builtQueueNames = env.PLATFORM_CLOUDFLARE_QUEUE_NAMES;
     };
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
     expect(builtQueueNames).toBeUndefined();
@@ -5894,7 +5894,7 @@ describe('verifyGeneratedDeployConfig', () => {
     expect(result.reason).toMatch(/durable_objects/);
   });
 
-  it('passes Nosam-style LOCAL durable_objects (`{name, class_name}`, no script_name)', () => {
+  it('passes Platform-style LOCAL durable_objects (`{name, class_name}`, no script_name)', () => {
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -6149,11 +6149,11 @@ describe('verifyGeneratedDeployConfig', () => {
     );
     expect(state.bindings).toEqual([
       { name: 'SANDBOX', class_name: 'SandboxV1' },
-      { name: 'BWF_LIVE', class_name: 'NosamLiveStreamDurableObject' },
+      { name: 'BWF_LIVE', class_name: 'PlatformLiveStreamDurableObject' },
     ]);
     expect(state.migrations).toEqual([
       { tag: 'void-sandbox-v2', new_sqlite_classes: ['SandboxV1'] },
-      { tag: 'live-v1', new_sqlite_classes: ['NosamLiveStreamDurableObject'] },
+      { tag: 'live-v1', new_sqlite_classes: ['PlatformLiveStreamDurableObject'] },
     ]);
     const emitted = deployConfigProject({
       account_id: 'acc123',
@@ -6254,7 +6254,7 @@ describe('verifyGeneratedDeployConfig', () => {
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
-      migrations: [{ tag: 'void-sandbox-v1', new_sqlite_classes: ['Sandbox'] }],
+      migrations: [{ tag: 'platform-sandbox-v1', new_sqlite_classes: ['Sandbox'] }],
     });
     const result = verifyGeneratedDeployConfig(root, {
       accountId: 'acc123',
@@ -6313,7 +6313,7 @@ describe('verifyGeneratedDeployConfig', () => {
   // container must fail closed. The expected set is reconstructed pre-build and passed in. ---
 
   const SANDBOX_CONTAINER = {
-    name: 'nosam-sandbox',
+    name: 'platform-sandbox',
     class_name: 'Sandbox',
     image: '/abs/node_modules/@cloudflare/sandbox/Dockerfile',
   };
@@ -9053,7 +9053,7 @@ describe('runCloudflareDeploy — schema probe runs under the build NODE_ENV', (
   });
 
   it('scrubs stale managed markers from native probes and the build', async () => {
-    vi.stubEnv('NOSAM_DEPLOY_PROJECT_ID', 'stale-managed-project');
+    vi.stubEnv('PLATFORM_DEPLOY_PROJECT_ID', 'stale-managed-project');
     vi.stubEnv('BWF_DEPLOY_BUILD', '1');
     let probeEnvSeen: NodeJS.ProcessEnv = {};
     let buildEnvSeen: NodeJS.ProcessEnv = {};
@@ -9071,7 +9071,7 @@ describe('runCloudflareDeploy — schema probe runs under the build NODE_ENV', (
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
 
     for (const env of [probeEnvSeen, buildEnvSeen]) {
-      expect(env.NOSAM_DEPLOY_PROJECT_ID).toBeUndefined();
+      expect(env.PLATFORM_DEPLOY_PROJECT_ID).toBeUndefined();
       expect(env.BWF_DEPLOY_BUILD).toBeUndefined();
     }
   });
@@ -10063,7 +10063,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     const written = readRootConfig(root);
     expect(written.send_email).toEqual([{ name: 'SEND_EMAIL' }]);
     expect(written.addresses).toEqual(['support@mail.acme.com']);
-    expect((written.vars as Record<string, string>).__NOSAM_EMAIL_FROM).toBe(
+    expect((written.vars as Record<string, string>).__PLATFORM_EMAIL_FROM).toBe(
       'noreply@mail.acme.com',
     );
     // …and the deploy went through: `rootConfig` was re-parsed after the write, or the
@@ -10341,7 +10341,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
           },
         ],
         addresses: ['support@mail.acme.com'],
-        vars: { __NOSAM_EMAIL_FROM: 'support@mail.acme.com' },
+        vars: { __PLATFORM_EMAIL_FROM: 'support@mail.acme.com' },
       },
       {},
       {},
@@ -10425,7 +10425,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
       ...PROVISIONED_D1,
       send_email: [{ name: 'SEND_EMAIL' }],
       addresses: ['support@mail.acme.com'],
-      vars: { __NOSAM_EMAIL_FROM: 'noreply@mail.acme.com' },
+      vars: { __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' },
     });
     const before = readRootConfig(root);
     const { deps, spawns, fetchCalls, exitCalls } = emailHarness({
@@ -10481,7 +10481,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     ...PROVISIONED_D1,
     send_email: [{ name: 'SEND_EMAIL' }],
     addresses: ['support@mail.acme.com'],
-    vars: { __NOSAM_EMAIL_FROM: 'noreply@mail.acme.com' },
+    vars: { __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' },
   };
   /** Every account row ready: routing on the subdomain, subaddressing on, sending onboarded. */
   const readyRows = {
@@ -10518,7 +10518,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(readRootConfig(root)).toMatchObject({
       send_email: [{ name: 'SEND_EMAIL' }],
       addresses: ['support@mail.acme.com'],
-      vars: { __NOSAM_EMAIL_FROM: 'noreply@mail.acme.com' },
+      vars: { __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' },
     });
     expect(
       setupFetchCalls.filter((call) => call.method !== 'GET').map((call) => call.method),
@@ -10693,7 +10693,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     const written = readRootConfig(root);
     expect(written.send_email).toEqual([{ name: 'SEND_EMAIL' }]);
     expect(written.addresses).toEqual(['support@mail.acme.com']);
-    expect(written.vars).toEqual({ __NOSAM_EMAIL_FROM: 'noreply@mail.acme.com' });
+    expect(written.vars).toEqual({ __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' });
   });
 
   /**
@@ -10859,7 +10859,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(output.lines.join('\n')).toContain('wrangler.jsonc updated (addresses removed)');
   });
 
-  it('ready path: a changed `email.from` on the same domain rewrites `__NOSAM_EMAIL_FROM` without a prompt', async () => {
+  it('ready path: a changed `email.from` on the same domain rewrites `__PLATFORM_EMAIL_FROM` without a prompt', async () => {
     // Only the root var reaches the worker on build; without the rewrite the worker keeps
     // sending as the old address while the map advertises the new one.
     const root = emailProject(COMMITTED_EMAIL, {}, { email: { from: 'hello@mail.acme.com' } });
@@ -10877,13 +10877,13 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(fetchCalls.filter((c) => c.method !== 'GET')).toEqual([]);
     expect(spawns.some((s) => s.args[0] === 'email' && s.args[2] === 'enable')).toBe(false);
     const after = readRootConfig(root);
-    expect((after.vars as Record<string, string>).__NOSAM_EMAIL_FROM).toBe('hello@mail.acme.com');
+    expect((after.vars as Record<string, string>).__PLATFORM_EMAIL_FROM).toBe('hello@mail.acme.com');
     expect(after.addresses).toEqual(['support@mail.acme.com']);
     expect(after.send_email).toEqual(COMMITTED_EMAIL.send_email);
     expect(spawns.some((s) => s.args[0] === 'deploy')).toBe(true);
     const printed = output.lines.join('\n');
     expect(printed).toContain(
-      'wrangler.jsonc updated (vars.__NOSAM_EMAIL_FROM: "hello@mail.acme.com")',
+      'wrangler.jsonc updated (vars.__PLATFORM_EMAIL_FROM: "hello@mail.acme.com")',
     );
     expect(printed).toContain('outbound  sendEmail() from hello@mail.acme.com');
   });
@@ -10996,7 +10996,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(printed).toContain('send_email SEND_EMAIL binding');
     // The detach guidance names the checked-in config and dashboard path.
     expect(printed).toContain(
-      'remove `addresses`, `send_email`, and `vars.__NOSAM_EMAIL_FROM` from `resolved` in bwf.lock.json',
+      'remove `addresses`, `send_email`, and `vars.__PLATFORM_EMAIL_FROM` from `resolved` in bwf.lock.json',
     );
     expect(printed).not.toContain('underlying Cloudflare operation');
   });
@@ -11201,7 +11201,7 @@ describe('readWranglerAuthToken — keeps the helper child failure', () => {
   });
 });
 
-describe('Nosam-written credential failure texts', () => {
+describe('Platform-written credential failure texts', () => {
   it('pass through the shared Cloudflare diagnostic formatter unchanged', () => {
     for (const text of [
       'Could not get the Cloudflare session credential for the upload: the bwf CLI helper process exited with code 1.',

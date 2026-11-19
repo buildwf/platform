@@ -34,11 +34,11 @@ export function AdminCard({
       height="auto"
       header={
         <LayoutHeader hasDivider padding={0}>
-          <div className="nosam-admin-card-heading">
-            <div className="nosam-admin-card-title">
+          <div className="platform-admin-card-heading">
+            <div className="platform-admin-card-title">
               <Heading level={headingLevel} id={titleId}>
                 {titleIcon ? (
-                  <span className="nosam-admin-card-label">
+                  <span className="platform-admin-card-label">
                     {titleIcon}
                     {title}
                   </span>
@@ -48,7 +48,7 @@ export function AdminCard({
               </Heading>
               {headerAccessory}
               {href && (
-                <ChevronRight className="nosam-admin-card-arrow" size={18} aria-hidden="true" />
+                <ChevronRight className="platform-admin-card-arrow" size={18} aria-hidden="true" />
               )}
             </div>
           </div>
@@ -57,7 +57,7 @@ export function AdminCard({
       content={
         (description != null || children != null) && (
           <LayoutContent>
-            <SectionStack as="div" className="nosam-admin-card-content">
+            <SectionStack as="div" className="platform-admin-card-content">
               {description != null && (
                 <Text as="p" type="body">
                   {description}
@@ -70,7 +70,7 @@ export function AdminCard({
       }
       footer={
         footer != null && (
-          <LayoutFooter hasDivider className="nosam-admin-card-footer">
+          <LayoutFooter hasDivider className="platform-admin-card-footer">
             {footer}
           </LayoutFooter>
         )
@@ -79,10 +79,10 @@ export function AdminCard({
   );
   if (href) {
     return (
-      <ClickableCard className="nosam-admin-card" label={title} href={href}>
+      <ClickableCard className="platform-admin-card" label={title} href={href}>
         {content}
       </ClickableCard>
     );
   }
-  return <Card className="nosam-admin-card">{content}</Card>;
+  return <Card className="platform-admin-card">{content}</Card>;
 }

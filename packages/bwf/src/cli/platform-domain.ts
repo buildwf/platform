@@ -227,7 +227,7 @@ export async function activatePlatformDomain(
     signal: AbortSignal.timeout(120_000),
     headers: {
       'Content-Type': 'application/json',
-      'X-Nosam-Platform-Probe': createPlatformHealthProbeToken(manifest.ownershipNonce),
+      'X-Platform-Probe': createPlatformHealthProbeToken(manifest.ownershipNonce),
       ...cfAccessHeaders(process.env, url),
     },
     body: JSON.stringify({ application }),
@@ -269,7 +269,7 @@ async function probePlatformDomain(
       redirect: 'manual',
       signal: AbortSignal.timeout(30_000),
       headers: {
-        'X-Nosam-Platform-Probe': createPlatformHealthProbeToken(manifest.ownershipNonce),
+        'X-Platform-Probe': createPlatformHealthProbeToken(manifest.ownershipNonce),
         ...cfAccessHeaders(process.env, url),
       },
     });
@@ -374,7 +374,7 @@ export async function runPlatformDomainCommand(args: DomainArgs): Promise<void> 
           signal: AbortSignal.timeout(30_000),
           headers: {
             'Content-Type': 'application/json',
-            'X-Nosam-Platform-Probe': createPlatformHealthProbeToken(manifest.ownershipNonce),
+            'X-Platform-Probe': createPlatformHealthProbeToken(manifest.ownershipNonce),
             ...cfAccessHeaders(process.env, url),
           },
           body: JSON.stringify({ zoneId, domain }),
@@ -426,7 +426,7 @@ export async function runPlatformDomainCommand(args: DomainArgs): Promise<void> 
     const recovery = readInstallationRecoverySecrets(selected);
     const databaseUrl = resolvePlatformInstallDatabaseUrl(recovery, selected);
     if (!databaseUrl) {
-      throw new Error('platform: Supply NOSAM_PLATFORM_DATABASE_URL to coordinate domain setup.');
+      throw new Error('platform: Supply PLATFORM_DATABASE_URL to coordinate domain setup.');
     }
     const databaseLock = await acquirePlatformDatabaseLifecycleLock(
       databaseUrl,

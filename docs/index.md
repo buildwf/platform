@@ -16,7 +16,7 @@ hero:
       link: https://github.com/voidzero-dev/void
     - theme: alt
       text: Read the Announcement
-      link: https://blog.cloudflare.com/deploy-with-nosam
+      link: https://blog.cloudflare.com/deploy-with-platform
 features:
   - iconify: lucide:layers
     visual: stack

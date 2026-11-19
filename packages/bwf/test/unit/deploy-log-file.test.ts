@@ -15,7 +15,7 @@ const { openDeployLog } = await import('../../src/cli/log-file.ts');
 
 describe('openDeployLog', () => {
   beforeEach(() => {
-    home.dir = mkdtempSync(join(tmpdir(), 'nosam-deploy-log-'));
+    home.dir = mkdtempSync(join(tmpdir(), 'platform-deploy-log-'));
   });
 
   afterEach(() => {

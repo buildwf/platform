@@ -791,8 +791,8 @@ export function secretListEnv(accountId?: string, platform?: NodeJS.Platform): N
   };
   scrub('CF_ACCESS_CLIENT_ID');
   scrub('CF_ACCESS_CLIENT_SECRET');
-  scrub('NOSAM_ACCESS_CREDENTIALS');
-  scrub('NOSAM_ACCESS_ORIGIN');
+  scrub('PLATFORM_ACCESS_CREDENTIALS');
+  scrub('PLATFORM_ACCESS_ORIGIN');
   scrub('CF_ACCESS_READINESS_ORIGIN');
   scrub('WRANGLER_LOG_SANITIZE');
   env.WRANGLER_LOG_SANITIZE = 'true';

@@ -18,8 +18,8 @@ export function builderCacheEnv(): Record<string, string>;
 /** `CI=true` for every build child, so interactive CLIs render CI-safe (non-animated) output. */
 export function nonInteractiveEnv(): Record<string, string>;
 
-/** Fallback `nosam` CLI version when BuildManager injects no `BWF_CLI_VERSION`. */
-export const DEFAULT_NOSAM_CLI_VERSION: string;
+/** Fallback `platform` CLI version when BuildManager injects no `BWF_CLI_VERSION`. */
+export const DEFAULT_PLATFORM_CLI_VERSION: string;
 
 /**
  * Bounds on the source download. `SOURCE_STALL_TIMEOUT_MS` is the guard that does

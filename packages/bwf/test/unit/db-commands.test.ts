@@ -131,7 +131,7 @@ vi.mock('../../src/migrations/collect', async () => {
 
 const mockGetToken = vi.fn<() => string | null>(() => null);
 const mockReadProjectConfig = vi.fn<() => { projectId: string; slug: string } | null>(() => null);
-const mockReadDeploymentPlatform = vi.fn<() => string | null>(() => 'nosam');
+const mockReadDeploymentPlatform = vi.fn<() => string | null>(() => 'platform');
 const mockRenameMigrations =
   vi.fn<
     (projectId: string, renames: Array<{ from: string; to: string }>) => Promise<{ ok: boolean }>
@@ -192,7 +192,7 @@ function createRenameProjectRoot(options: {
   }>;
   withJournal?: boolean;
 }): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-rename-test-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-rename-test-'));
   rootsToClean.push(root);
 
   const migrationsDir = join(root, 'db', 'migrations');
@@ -374,7 +374,7 @@ describe('bwf db reset', () => {
   });
 
   it('SQLite: catches genuine drift before rmSync (dbPath file survives)', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-reset-sqlite-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-reset-sqlite-'));
     rootsToClean.push(root);
 
     const migrationsDir = join(root, 'db', 'migrations');
@@ -412,7 +412,7 @@ describe('bwf db reset', () => {
   });
 
   it('PostgreSQL: asks before dropping every table in a non-local DATABASE_URL', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-reset-pg-remote-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-reset-pg-remote-'));
     rootsToClean.push(root);
     mkdirSync(join(root, 'db', 'migrations'), { recursive: true });
     writeFileSync(join(root, 'bwf.json'), JSON.stringify({ database: 'pg' }));
@@ -450,7 +450,7 @@ describe('bwf db reset', () => {
   });
 
   it('MySQL: drops every table and re-applies migrations', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-reset-mysql-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-reset-mysql-'));
     rootsToClean.push(root);
     mkdirSync(join(root, 'db', 'migrations'), { recursive: true });
     writeFileSync(
@@ -501,7 +501,7 @@ describe('bwf db export', () => {
   });
 
   it('MySQL: exports every table with foreign key checks off', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-export-mysql-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-export-mysql-'));
     rootsToClean.push(root);
     writeFileSync(join(root, 'bwf.json'), JSON.stringify({ database: 'mysql' }));
     writeFileSync(join(root, '.env'), 'DATABASE_URL="mysql://root@127.0.0.1:3306/app"\n');
@@ -523,7 +523,7 @@ describe('bwf db export', () => {
   });
 
   it('MySQL: skips only bwf bookkeeping tables and reads values as MySQL text', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-export-mysql-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-export-mysql-'));
     rootsToClean.push(root);
     writeFileSync(join(root, 'bwf.json'), JSON.stringify({ database: 'mysql' }));
     writeFileSync(join(root, '.env'), 'DATABASE_URL="mysql://root@127.0.0.1:3306/app"\n');
@@ -554,8 +554,8 @@ describe('bwf db export', () => {
   });
 
   it('PostgreSQL: writes an absolute --output path as given', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-export-pg-'));
-    const elsewhere = mkdtempSync(join(tmpdir(), 'nosam-export-out-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-export-pg-'));
+    const elsewhere = mkdtempSync(join(tmpdir(), 'platform-export-out-'));
     rootsToClean.push(root, elsewhere);
     writeFileSync(join(root, 'bwf.json'), JSON.stringify({ database: 'pg' }));
     writeFileSync(join(root, '.env'), 'DATABASE_URL="postgresql://u:p@127.0.0.1:5432/app"\n');
@@ -584,8 +584,8 @@ describe('bwf db execute', () => {
   });
 
   it('reads an absolute --file path as given', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-execute-abs-'));
-    const elsewhere = mkdtempSync(join(tmpdir(), 'nosam-execute-sql-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-execute-abs-'));
+    const elsewhere = mkdtempSync(join(tmpdir(), 'platform-execute-sql-'));
     rootsToClean.push(root, elsewhere);
     writeFileSync(join(root, 'bwf.json'), JSON.stringify({ database: 'mysql' }));
     writeFileSync(join(root, '.env'), 'DATABASE_URL="mysql://root@127.0.0.1:3306/app"\n');
@@ -598,8 +598,8 @@ describe('bwf db execute', () => {
   });
 
   it('PostgreSQL: reads an absolute --file path as given', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-execute-abs-'));
-    const elsewhere = mkdtempSync(join(tmpdir(), 'nosam-execute-sql-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-execute-abs-'));
+    const elsewhere = mkdtempSync(join(tmpdir(), 'platform-execute-sql-'));
     rootsToClean.push(root, elsewhere);
     writeFileSync(join(root, 'bwf.json'), JSON.stringify({ database: 'pg' }));
     writeFileSync(join(root, '.env'), 'DATABASE_URL="postgresql://u:p@127.0.0.1:5432/app"\n');
@@ -636,7 +636,7 @@ describe('bwf db status', () => {
   });
 
   it('SQLite: corrupted _journal.json exits cleanly via log.error (not uncaught throw)', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-status-corrupt-journal-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-status-corrupt-journal-'));
     rootsToClean.push(root);
 
     const migrationsDir = join(root, 'db', 'migrations');
@@ -711,7 +711,7 @@ describe('bwf db rename-migrations', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     // Return a path that does NOT exist so the SQLite tracking branch no-ops.
-    mockGetMiniflareDatabasePath.mockReturnValue(join(tmpdir(), 'nonexistent-nosam-rename.sqlite'));
+    mockGetMiniflareDatabasePath.mockReturnValue(join(tmpdir(), 'nonexistent-platform-rename.sqlite'));
     // afterEach resets these mocks, so reinstall the defaults.
     mockGetToken.mockImplementation(() => null);
     mockReadProjectConfig.mockImplementation(() => null);
@@ -881,7 +881,7 @@ describe('bwf db rename-migrations', () => {
   });
 
   it('renames bare-legacy placeholder journal projects (empty entries, no snapshots)', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-rename-placeholder-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-rename-placeholder-'));
     rootsToClean.push(root);
 
     const migrationsDir = join(root, 'db', 'migrations');
@@ -1169,7 +1169,7 @@ describe('bwf db rename-migrations', () => {
   });
 
   it('refuses a bwf project that is not linked', async () => {
-    mockReadDeploymentPlatform.mockReturnValue('nosam');
+    mockReadDeploymentPlatform.mockReturnValue('platform');
     const root = createRenameProjectRoot({
       files: { '0001_a.sql': '-- a\n', '0002_b.sql': '-- b\n' },
       withJournal: false,

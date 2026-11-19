@@ -45,7 +45,7 @@ const pin =
   '{\n // Existing deployment target must not change on login.\n "account_id": "individual-id", "name": "existing-worker"\n}';
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'nosam-auth-session-'));
+  root = mkdtempSync(join(tmpdir(), 'platform-auth-session-'));
   fixture.cli = join(import.meta.dirname, '../fixtures/cloudflare-auth-cli.mjs');
   write({ session: oldSession, nextLogin: newSession, commands: [] });
   writeFileSync(join(root, 'wrangler.jsonc'), pin);

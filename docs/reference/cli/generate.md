@@ -5,7 +5,7 @@ outline: deep
 
 # Code Generation {#code-generation}
 
-## `bwf gen model` {#nosam-gen-model}
+## `bwf gen model` {#platform-gen-model}
 
 ```
 bwf gen model <name> [columns...]
@@ -31,7 +31,7 @@ Column format: `name:type` or `name:type?` (nullable). Types: `string`, `text`, 
 
 Model names must be lowercase alphanumeric with underscores (e.g. `posts`, `user_roles`). Existing files are never overwritten.
 
-## `bwf gen migration` {#nosam-gen-migration}
+## `bwf gen migration` {#platform-gen-migration}
 
 ```
 bwf gen migration <name>
@@ -46,7 +46,7 @@ bwf gen migration add_avatar_to_users
 
 Existing projects using the old numeric prefix (`0001_`, `0002_`, ...) can rename with `bwf db rename-migrations`.
 
-## `bwf gen route` {#nosam-gen-route}
+## `bwf gen route` {#platform-gen-route}
 
 ```
 bwf gen route <path> [--methods get,post,...]
@@ -61,7 +61,7 @@ bwf gen route api/users --methods get,post,delete
 
 Creates `routes/<path>.ts` with an exported handler for each method. Supported methods: `get`, `post`, `put`, `patch`, `delete`.
 
-## `bwf gen middleware` {#nosam-gen-middleware}
+## `bwf gen middleware` {#platform-gen-middleware}
 
 ```
 bwf gen middleware <name>
@@ -76,7 +76,7 @@ bwf gen middleware auth
 
 The prefix is auto-detected from existing middleware files.
 
-## `bwf gen cron` {#nosam-gen-cron}
+## `bwf gen cron` {#platform-gen-cron}
 
 ```
 bwf gen cron <name>
@@ -88,7 +88,7 @@ Create a cron job file in `crons/` with `defineScheduled` and a placeholder cron
 bwf gen cron hourly-sync
 ```
 
-## `bwf gen queue` {#nosam-gen-queue}
+## `bwf gen queue` {#platform-gen-queue}
 
 ```
 bwf gen queue <name>
@@ -100,7 +100,7 @@ Create a queue consumer file in `queues/` with `defineQueue`, a `Message` type, 
 bwf gen queue emails
 ```
 
-## `bwf gen procedure` {#nosam-gen-procedure}
+## `bwf gen procedure` {#platform-gen-procedure}
 
 ```
 bwf gen procedure <file.name>

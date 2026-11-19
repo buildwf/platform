@@ -19,7 +19,7 @@ session for a short-lived operator session. Every request checks expiry,
 revocation, current role and suspension state.
 
 Operator credentials use separate origin-scoped keychain entries;
-`NOSAM_OPERATOR_TOKEN` supplies headless credentials. Browser cookies and
+`PLATFORM_OPERATOR_TOKEN` supplies headless credentials. Browser cookies and
 project deployment tokens cannot authenticate this API. Command destination
 selection uses explicit connection options or the active connection, never
 repository metadata that could redirect administrator credentials.

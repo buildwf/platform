@@ -1,6 +1,6 @@
 import type { Context } from 'hono';
 
-const STATIC_ASSET_KEY = '__nosamStaticAsset';
+const STATIC_ASSET_KEY = '__platformStaticAsset';
 
 type StaticAssetMark = { policy: string; body: ReadableStream | null };
 

@@ -30,11 +30,11 @@ import {
 const roots: Array<string> = [];
 
 beforeEach(() => {
-  process.env.NOSAM_PLATFORM_RECOVERY_KEY = Buffer.alloc(32, 7).toString('base64');
+  process.env.PLATFORM_RECOVERY_KEY = Buffer.alloc(32, 7).toString('base64');
 });
 
 function temporaryRegistry(): string {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-registry-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-registry-'));
   roots.push(directory);
   return directory;
 }
@@ -59,7 +59,7 @@ function exampleInstallation() {
 }
 
 afterEach(() => {
-  delete process.env.NOSAM_PLATFORM_RECOVERY_KEY;
+  delete process.env.PLATFORM_RECOVERY_KEY;
   for (const root of roots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
   }
