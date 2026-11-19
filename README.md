@@ -40,7 +40,7 @@ The guides are in [`docs/guide/`](./docs/guide/index.md). Start with the [quicks
 ## Work on bwf
 
 ```sh
-git clone --recurse-submodules https://github.com/buildwf/platform.git
+git clone --recurse-submodules https://github.com/builtbyfriends/platform.git
 cd platform
 vp install
 vp run build
