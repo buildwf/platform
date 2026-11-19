@@ -1,4 +1,4 @@
-import { type PlatformLoginConfiguration, parsePlatformIdentityUrl } from '@buildwf/platform';
+import { type PlatformLoginConfiguration, parsePlatformIdentityUrl } from '@builtbyfriends/platform';
 import * as oauth from 'oauth4webapi';
 import { assertPublicIdentityUrl, boundedIdentityResponse } from './identity-network.ts';
 import { LoginFailure } from './login-failure.ts';

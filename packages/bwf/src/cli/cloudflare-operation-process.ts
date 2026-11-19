@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import type {
   CloudflareCommandResult as Result,
   CloudflareOperation,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { parse } from 'jsonc-parser';
 import { dirname, join, resolve } from 'pathslash';
 import {
@@ -217,7 +217,7 @@ async function withBuildOutput(
     if (sourceMain) {
       copyFileSync(sourceMain, join(scratch, main));
     } else {
-      const { NOSAM_SECRET_DRAFT_SOURCE } = await import('@buildwf/deploy-cloudflare');
+      const { NOSAM_SECRET_DRAFT_SOURCE } = await import('@builtbyfriends/deploy-cloudflare');
       writeFileSync(join(scratch, main), NOSAM_SECRET_DRAFT_SOURCE);
     }
     writeFileSync(
@@ -1039,7 +1039,7 @@ async function setSecretsOnWorkerWithoutCode(
     throw workersApiFailure('create the Worker', created);
   }
   const { NOSAM_SECRET_DRAFT_MESSAGE, NOSAM_SECRET_DRAFT_SOURCE } =
-    await import('@buildwf/deploy-cloudflare');
+    await import('@builtbyfriends/deploy-cloudflare');
   const uploaded = await postWorkersApi(`/${encodeURIComponent(worker)}/versions?deploy=true`, {
     main_module: 'index.js',
     modules: [

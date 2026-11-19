@@ -1,4 +1,4 @@
-import type { WebSocketRouteMap } from '@buildwf/bwf/routes';
+import type { WebSocketRouteMap } from '@builtbyfriends/bwf/routes';
 import { isResourceName } from '../shared/resource-name.ts';
 import type { StandardSchemaV1 } from '../standard-schema.ts';
 import type { AuthUser } from './auth.ts';

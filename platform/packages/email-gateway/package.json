@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@buildwf/platform": "workspace:*",
+    "@builtbyfriends/platform": "workspace:*",
     "@nosamcloud/api": "workspace:*",
     "@nosamcloud/proxy": "workspace:*",
     "email-validator": "^2.0.4"

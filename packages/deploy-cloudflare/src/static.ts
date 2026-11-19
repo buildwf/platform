@@ -1,5 +1,5 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import type { AssetConfig, HeaderRule, RedirectRule } from '@buildwf/deploy-core';
+import type { AssetConfig, HeaderRule, RedirectRule } from '@builtbyfriends/deploy-core';
 import {
   createScanner,
   parse,
@@ -40,7 +40,7 @@ export function renderCloudflareStaticEntry(options: {
       : {}),
   });
   return [
-    `import { createStaticEdgeHandler } from ${JSON.stringify(options.runtimeImport ?? '@buildwf/edge')};`,
+    `import { createStaticEdgeHandler } from ${JSON.stringify(options.runtimeImport ?? '@builtbyfriends/edge')};`,
     `export default createStaticEdgeHandler(${config});`,
     '',
   ].join('\n');

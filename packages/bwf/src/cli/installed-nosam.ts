@@ -13,7 +13,7 @@ export function assertInstalledBwfMatchesCli(root: string): void {
   const declaresBwf = ['dependencies', 'devDependencies', 'optionalDependencies'].some((key) => {
     const dependencies = project[key];
     return (
-      typeof dependencies === 'object' && dependencies !== null && '@buildwf/bwf' in dependencies
+      typeof dependencies === 'object' && dependencies !== null && '@builtbyfriends/bwf' in dependencies
     );
   });
   if (!declaresBwf) {
@@ -27,7 +27,7 @@ export function assertInstalledBwfMatchesCli(root: string): void {
   let installedVersion: string | undefined;
   let installedPackageDir: string | undefined;
   try {
-    const entry = createRequire(projectManifest).resolve('@buildwf/bwf');
+    const entry = createRequire(projectManifest).resolve('@builtbyfriends/bwf');
     let directory = dirname(entry);
     for (let depth = 0; depth < 8; depth++) {
       const manifest = join(directory, 'package.json');
@@ -36,7 +36,7 @@ export function assertInstalledBwfMatchesCli(root: string): void {
           name?: string;
           version?: string;
         };
-        if (installed.name === '@buildwf/bwf') {
+        if (installed.name === '@builtbyfriends/bwf') {
           installedVersion = installed.version;
           installedPackageDir = directory;
           break;

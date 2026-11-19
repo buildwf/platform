@@ -140,7 +140,7 @@ writeFileSync(
 environment.npm_config_registry = registry.origin;
 environment.NPM_CONFIG_REGISTRY = registry.origin;
 environment.PNPM_CONFIG_REGISTRY = registry.origin;
-const version = packages.find((pkg) => pkg.manifest.name === '@buildwf/bwf').manifest.version;
+const version = packages.find((pkg) => pkg.manifest.name === '@builtbyfriends/bwf').manifest.version;
 const managers = process.env.BWF_PACKED_PM ? [process.env.BWF_PACKED_PM] : ['npm', 'pnpm'];
 assert(managers.every((manager) => ['npm', 'pnpm'].includes(manager)));
 const frameworks = ['react'];
@@ -179,8 +179,8 @@ try {
         );
         const agentInstructions = readFileSync(join(fixture, 'AGENTS.md'), 'utf8');
         assert.equal(agentInstructions.match(/^- /gm)?.length, 2);
-        assert(agentInstructions.includes('node_modules/@buildwf/bwf/docs/'));
-        assert(existsSync(join(fixture, 'node_modules/@buildwf/bwf/docs/guide/quickstart.md')));
+        assert(agentInstructions.includes('node_modules/@builtbyfriends/bwf/docs/'));
+        assert(existsSync(join(fixture, 'node_modules/@builtbyfriends/bwf/docs/guide/quickstart.md')));
         assert(
           existsSync(join(fixture, '.git')),
           'Init should initialize the accepted Git repository',
@@ -220,7 +220,7 @@ try {
           join(fixture, '.npmrc'),
           `registry=${registry.origin}\nengine-strict=true\n${manager === 'pnpm' ? 'strict-peer-dependencies=true\n' : ''}audit=false\nfund=false\n`,
         );
-        const cli = join(fixture, 'node_modules/@buildwf/bwf/dist/cli/cli.mjs');
+        const cli = join(fixture, 'node_modules/@builtbyfriends/bwf/dist/cli/cli.mjs');
         await run(process.execPath, [cli, '--help'], fixture);
         const manifest = JSON.parse(readFileSync(join(fixture, 'package.json'), 'utf8'));
         if (useVitePlus) {
@@ -255,7 +255,7 @@ try {
           assert(installedVite.version.startsWith('8.'), 'The consumer must use public Vite 8');
         }
         assert.equal(
-          JSON.parse(readFileSync(join(fixture, 'node_modules/@buildwf/bwf/package.json'), 'utf8'))
+          JSON.parse(readFileSync(join(fixture, 'node_modules/@builtbyfriends/bwf/package.json'), 'utf8'))
             .version,
           version,
         );
@@ -265,12 +265,12 @@ try {
         mkdirSync(join(fixture, 'routes/api'), { recursive: true });
         writeFileSync(
           join(fixture, 'routes/api/packed.ts'),
-          `import { defineHandler } from '@buildwf/bwf';\nimport { kv } from '@buildwf/bwf/kv';\nexport const GET = defineHandler(async () => { await kv.put('packed', 'ok'); return { value: await kv.get('packed') }; });\n`,
+          `import { defineHandler } from '@builtbyfriends/bwf';\nimport { kv } from '@builtbyfriends/bwf/kv';\nexport const GET = defineHandler(async () => { await kv.put('packed', 'ok'); return { value: await kv.get('packed') }; });\n`,
         );
         // bwf/email pulls a CommonJS dependency into the Worker; only an installed package shows whether dev serves it.
         writeFileSync(
           join(fixture, 'routes/api/packed-email.ts'),
-          `import { defineHandler } from '@buildwf/bwf';\nimport { sendEmail } from '@buildwf/bwf/email';\nexport const GET = defineHandler(async () => { return sendEmail({ from: 'packed@example.com', to: 'inbox@example.com', subject: 'Packed', text: 'ok' }); });\n`,
+          `import { defineHandler } from '@builtbyfriends/bwf';\nimport { sendEmail } from '@builtbyfriends/bwf/email';\nexport const GET = defineHandler(async () => { return sendEmail({ from: 'packed@example.com', to: 'inbox@example.com', subject: 'Packed', text: 'ok' }); });\n`,
         );
         mkdirSync(join(fixture, 'public'), { recursive: true });
         writeFileSync(join(fixture, 'public/packed.txt'), label);
@@ -290,11 +290,11 @@ try {
           mkdirSync(join(fixture, 'src'), { recursive: true });
           writeFileSync(
             join(fixture, 'src/visits.ts'),
-            `import { kv } from '@buildwf/bwf/kv';\nexport async function countVisit(): Promise<number> {\n  const visits = ((await kv.get<number>('visits')) ?? 0) + 1;\n  await kv.put('visits', visits);\n  return visits;\n}\n`,
+            `import { kv } from '@builtbyfriends/bwf/kv';\nexport async function countVisit(): Promise<number> {\n  const visits = ((await kv.get<number>('visits')) ?? 0) + 1;\n  await kv.put('visits', visits);\n  return visits;\n}\n`,
           );
           writeFileSync(
             join(fixture, 'src/visits.test.ts'),
-            `import { expect, it, vi } from 'vite-plus/test';\nimport { countVisit } from './visits';\nvi.mock('@buildwf/bwf/kv', () => {\n  const values = new Map<string, unknown>();\n  return { kv: { get: async (key: string) => values.get(key) ?? null, put: async (key: string, value: unknown) => { values.set(key, value); } } };\n});\nit('counts visits', async () => {\n  await countVisit();\n  expect(await countVisit()).toBe(2);\n});\n`,
+            `import { expect, it, vi } from 'vite-plus/test';\nimport { countVisit } from './visits';\nvi.mock('@builtbyfriends/bwf/kv', () => {\n  const values = new Map<string, unknown>();\n  return { kv: { get: async (key: string) => values.get(key) ?? null, put: async (key: string, value: unknown) => { values.set(key, value); } } };\n});\nit('counts visits', async () => {\n  await countVisit();\n  expect(await countVisit()).toBe(2);\n});\n`,
           );
           await run(process.execPath, [vite, 'test', 'run'], fixture);
           rmSync(join(fixture, 'src/visits.ts'));
@@ -309,7 +309,7 @@ try {
             `import { findPackageJSON } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-const manifestPath = findPackageJSON('@buildwf/platform', import.meta.resolve('@buildwf/bwf'));
+const manifestPath = findPackageJSON('@builtbyfriends/platform', import.meta.resolve('@builtbyfriends/bwf'));
 const entry = JSON.parse(readFileSync(manifestPath, 'utf8')).exports['./installer'].import;
 const { resolvePlatformRuntime } = await import(new URL(entry, pathToFileURL(manifestPath)));
 const runtime = resolvePlatformRuntime();

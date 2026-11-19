@@ -20,7 +20,7 @@ You don't need all of the SDK. You can start with a plain React app and add API 
 You need Node.js 24.22 or newer. In an empty folder, run:
 
 ```sh
-npm install -D @buildwf/bwf
+npm install -D @builtbyfriends/bwf
 npx bwf init
 npm run dev
 ```
@@ -35,7 +35,7 @@ bwf builds the app, makes the resources, applies migrations and prints the URL. 
 
 ## Docs
 
-The guides are in [`docs/guide/`](./docs/guide/index.md). Start with the [quickstart](./docs/guide/quickstart.md). The package also has a copy in `node_modules/@buildwf/bwf/docs/`.
+The guides are in [`docs/guide/`](./docs/guide/index.md). Start with the [quickstart](./docs/guide/quickstart.md). The package also has a copy in `node_modules/@builtbyfriends/bwf/docs/`.
 
 ## Work on bwf
 

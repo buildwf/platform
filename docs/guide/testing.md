@@ -25,7 +25,7 @@ For example, this function counts visits in KV:
 
 ```ts
 // src/visits.ts
-import { kv } from '@buildwf/bwf/kv';
+import { kv } from '@builtbyfriends/bwf/kv';
 
 export async function countVisit(): Promise<number> {
   const visits = ((await kv.get<number>('visits')) ?? 0) + 1;
@@ -41,7 +41,7 @@ Replace KV with an in-memory map in the test:
 import { expect, it, vi } from 'vite-plus/test';
 import { countVisit } from './visits';
 
-vi.mock('@buildwf/bwf/kv', () => {
+vi.mock('@builtbyfriends/bwf/kv', () => {
   const values = new Map<string, unknown>();
   return {
     kv: {
@@ -61,4 +61,4 @@ it('counts visits', async () => {
 
 ## Email {#email}
 
-`@buildwf/bwf/email/testing` captures sent and received email in tests. See [Testing](./email/sending.md#testing) in Sending Email and [Testing inbound handlers](./email/receiving.md#testing-inbound-handlers) in Receiving Email.
+`@builtbyfriends/bwf/email/testing` captures sent and received email in tests. See [Testing](./email/sending.md#testing) in Sending Email and [Testing inbound handlers](./email/receiving.md#testing-inbound-handlers) in Receiving Email.

@@ -1,4 +1,4 @@
-import { planWebSocketMigrations } from '@buildwf/deploy-core';
+import { planWebSocketMigrations } from '@builtbyfriends/deploy-core';
 import {
   type DeployManifest,
   type LiveMigrationMeta,

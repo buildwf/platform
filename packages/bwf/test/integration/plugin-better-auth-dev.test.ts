@@ -23,7 +23,7 @@ describe('bwf dev better-auth module', () => {
     // The package export is `dist/index.mjs`.
     const betterAuthEntry = fileURLToPath(import.meta.resolve('better-auth'));
     const betterAuthRoot = realpathSync(dirname(dirname(betterAuthEntry)));
-    mkdirSync(join(root, 'node_modules', '@buildwf', 'bwf'), { recursive: true });
+    mkdirSync(join(root, 'node_modules', '@builtbyfriends', 'bwf'), { recursive: true });
     symlinkSync(betterAuthRoot, join(root, 'node_modules', 'better-auth'), 'dir');
     writeFileSync(
       join(root, 'package.json'),
@@ -40,15 +40,15 @@ describe('bwf dev better-auth module', () => {
     // better-auth stays on the package source. This probe is that file: the relative path
     // is the module the runtime reaches, and the route imports the public subpath a plugin uses.
     writeFileSync(
-      join(root, 'node_modules', '@buildwf', 'bwf', 'package.json'),
+      join(root, 'node_modules', '@builtbyfriends', 'bwf', 'package.json'),
       JSON.stringify({
-        name: '@buildwf/bwf',
+        name: '@builtbyfriends/bwf',
         type: 'module',
         exports: { './oauth-probe': './oauth-probe.mjs' },
       }),
     );
     writeFileSync(
-      join(root, 'node_modules', '@buildwf', 'bwf', 'oauth-probe.mjs'),
+      join(root, 'node_modules', '@builtbyfriends', 'bwf', 'oauth-probe.mjs'),
       "export { getOAuthState } from '../better-auth/dist/api/state/oauth.mjs';\n",
     );
     mkdirSync(join(root, 'routes', 'api'), { recursive: true });
@@ -56,7 +56,7 @@ describe('bwf dev better-auth module', () => {
       join(root, 'routes', 'api', 'oauth-state.ts'),
       [
         "import { getOAuthState as fromApp } from 'better-auth/api';",
-        "import { getOAuthState as fromRuntime } from '@buildwf/bwf/oauth-probe';",
+        "import { getOAuthState as fromRuntime } from '@builtbyfriends/bwf/oauth-probe';",
         'export const GET = () => Response.json({ same: fromApp === fromRuntime });',
         '',
       ].join('\n'),

@@ -1,5 +1,5 @@
 import { setTimeout as delay } from 'node:timers/promises';
-import { normalizeApplicationDomain, PLATFORM_HEALTH_HOSTNAME_LABEL } from '@buildwf/platform';
+import { normalizeApplicationDomain, PLATFORM_HEALTH_HOSTNAME_LABEL } from '@builtbyfriends/platform';
 import { cfAccessHeaders } from '../shared/cf-access.ts';
 import { type PlatformHealthCheckContext } from './platform-installer-types.ts';
 

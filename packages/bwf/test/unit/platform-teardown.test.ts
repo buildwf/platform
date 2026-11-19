@@ -15,7 +15,7 @@ import {
   type InstallationResourceKind,
   type PlatformInstallationManifest,
   type ResourceOwnership,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { log, note } from '@voidzero-dev/vite-plus-prompts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { printSuccess } from '../../src/cli/output.ts';

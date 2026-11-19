@@ -1,6 +1,6 @@
-import { defineMiddleware } from '@buildwf/bwf';
+import { defineMiddleware } from '@builtbyfriends/bwf';
 
-declare module '@buildwf/bwf' {
+declare module '@builtbyfriends/bwf' {
   interface CloudContextVariables {
     shared: { appName: string };
   }

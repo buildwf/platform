@@ -7,7 +7,7 @@
  *
  * @example
  * ```ts
- * import { logger } from "@buildwf/bwf/log";
+ * import { logger } from "@builtbyfriends/bwf/log";
  *
  * logger.error("websocket failed", { jobId, attempt: 3 });
  * logger.info("user signed in", { userId });

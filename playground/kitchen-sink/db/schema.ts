@@ -1,6 +1,6 @@
-import { sql } from '@buildwf/bwf/db';
-import { createInsertSchema, createSelectSchema } from '@buildwf/bwf/drizzle-valibot';
-import { sqliteTable, integer, text } from '@buildwf/bwf/schema-d1';
+import { sql } from '@builtbyfriends/bwf/db';
+import { createInsertSchema, createSelectSchema } from '@builtbyfriends/bwf/drizzle-valibot';
+import { sqliteTable, integer, text } from '@builtbyfriends/bwf/schema-d1';
 import { minLength, pick, pipe } from 'valibot';
 
 export const notes = sqliteTable('notes', {

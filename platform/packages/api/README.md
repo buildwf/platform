@@ -283,7 +283,7 @@ Connect a repo through a GitHub App; a `git push` then builds and deploys automa
 
 ## Email
 
-Projects send and receive mail through `@buildwf/bwf/email`. The API authorizes routing, consent, suspension, and quota reservations in PostgreSQL. The proxy submits outbound mail, and the dedicated email gateway authenticates inbound zone traffic and dispatches it to the active project worker.
+Projects send and receive mail through `@builtbyfriends/bwf/email`. The API authorizes routing, consent, suspension, and quota reservations in PostgreSQL. The proxy submits outbound mail, and the dedicated email gateway authenticates inbound zone traffic and dispatches it to the active project worker.
 
 ### Sender identity is per-environment
 

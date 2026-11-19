@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vite-plus/test';
 import { loadBwfConfig } from '../../src/config-loader.ts';
 
 /**
- * Coverage for the bwf.config.ts loader. jiti only aliases `@buildwf/bwf/config`,
+ * Coverage for the bwf.config.ts loader. jiti only aliases `@builtbyfriends/bwf/config`,
  * so tsconfig path aliases fail to resolve — they get detected and produce
  * the same hint as env.ts.
  */
@@ -28,7 +28,7 @@ afterEach(() => {
 describe('loadBwfConfig', () => {
   it('loads bwf.config.ts with relative imports', () => {
     const root = createTempProject(
-      'import { defineConfig } from "@buildwf/bwf/config";\n' +
+      'import { defineConfig } from "@builtbyfriends/bwf/config";\n' +
         'import { SOURCE_DIR } from "./shared.ts";\n' +
         'export default defineConfig({ sourceDir: SOURCE_DIR });\n',
     );
@@ -42,7 +42,7 @@ describe('loadBwfConfig', () => {
 
   it('gives a targeted hint when bwf.config.ts imports through a tsconfig path alias', () => {
     const root = createTempProject(
-      'import { defineConfig } from "@buildwf/bwf/config";\n' +
+      'import { defineConfig } from "@builtbyfriends/bwf/config";\n' +
         'import { SOURCE_DIR } from "@/lib/shared";\n' +
         'export default defineConfig({ sourceDir: SOURCE_DIR });\n',
     );

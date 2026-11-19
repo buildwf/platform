@@ -6,7 +6,7 @@ import {
   readStoredResourceName,
   assertExistingCloudflareConfig,
   type ExistingCloudflareWorker,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { dirname, resolve } from 'pathslash';
 import {
   deployPointerPath,

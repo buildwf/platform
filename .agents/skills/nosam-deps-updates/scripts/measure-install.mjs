@@ -92,14 +92,14 @@ async function measure() {
       `Incomplete cohort: missing ${manifest.name}.`,
     );
   }
-  const version = packages.find((pkg) => pkg.manifest.name === '@buildwf/bwf')?.manifest.version;
+  const version = packages.find((pkg) => pkg.manifest.name === '@builtbyfriends/bwf')?.manifest.version;
   assert(version, 'Captured cohort must include void.');
   assert(
-    packages.some((pkg) => pkg.manifest.name === '@buildwf/platform'),
-    'Captured cohort must include @buildwf/platform.',
+    packages.some((pkg) => pkg.manifest.name === '@builtbyfriends/platform'),
+    'Captured cohort must include @builtbyfriends/platform.',
   );
   for (const pkg of packages) {
-    if (pkg.manifest.name === '@buildwf/bwf' || pkg.manifest.name.startsWith('@buildwf/')) {
+    if (pkg.manifest.name === '@builtbyfriends/bwf' || pkg.manifest.name.startsWith('@builtbyfriends/')) {
       assert.equal(
         pkg.manifest.version,
         version,
@@ -149,7 +149,7 @@ async function measure() {
       import { findPackageJSON } from 'node:module';
       import { readFileSync } from 'node:fs';
       import { pathToFileURL } from 'node:url';
-      const file = findPackageJSON('@buildwf/platform', import.meta.resolve('@buildwf/bwf'));
+      const file = findPackageJSON('@builtbyfriends/platform', import.meta.resolve('@builtbyfriends/bwf'));
       const entry = JSON.parse(readFileSync(file, 'utf8')).exports['./installer'].import;
       const { resolvePlatformRuntime } = await import(new URL(entry, pathToFileURL(file)));
       if (resolvePlatformRuntime().manifest.platformVersion !== ${JSON.stringify(version)}) throw new Error('Packaged runtime version mismatch.');

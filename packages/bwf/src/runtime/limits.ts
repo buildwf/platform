@@ -1,5 +1,5 @@
-import { readUsageLimit, usageLimitResponse, type UsageLimitData } from '@buildwf/edge';
-export { readUsageLimit, type UsageLimitData } from '@buildwf/edge';
+import { readUsageLimit, usageLimitResponse, type UsageLimitData } from '@builtbyfriends/edge';
+export { readUsageLimit, type UsageLimitData } from '@builtbyfriends/edge';
 
 export class UsageLimit extends Error {
   override readonly name: string = 'UsageLimit';

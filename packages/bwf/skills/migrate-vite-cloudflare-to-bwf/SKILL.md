@@ -9,7 +9,7 @@ Read the app's package manifest, Vite config, Worker entry, Cloudflare config,
 and migrations. Identify its UI, endpoints, bindings, and deployed Worker
 before changing them.
 
-Use the bundled guides under `node_modules/@buildwf/bwf/docs/`. Without a local bwf
+Use the bundled guides under `node_modules/@builtbyfriends/bwf/docs/`. Without a local bwf
 installation, use `../../docs/` relative to this skill's real directory in the
 bwf package, following any symlink. If the skill was copied without the package,
 use the guides at https://void.cloud instead:
@@ -29,7 +29,7 @@ For native bwf routes, use one file per URL with named HTTP method exports:
 
 ```ts
 // routes/api/users/[id].ts
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 
 export const GET = defineHandler((c) => {
   return { id: c.req.param('id') };

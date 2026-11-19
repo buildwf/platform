@@ -266,7 +266,7 @@ describe(
       writeFileSync(
         authSchema,
         generateBwfAuthDrizzleSchema({ dialect: 'sqlite', providers: ['email'] }).replace(
-          '"@buildwf/bwf/schema-d1"',
+          '"@builtbyfriends/bwf/schema-d1"',
           '"drizzle-orm/sqlite-core"',
         ),
       );

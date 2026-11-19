@@ -5,7 +5,7 @@ import {
   appendSqliteClassMigration,
   isRecord,
   type DurableObjectMigrationStep,
-} from '@buildwf/deploy-core';
+} from '@builtbyfriends/deploy-core';
 import {
   applyEdits,
   createScanner,
@@ -350,7 +350,7 @@ function resolveGeneratedName(base: string, used: Set<string>, kind: string): st
 
   for (let attempt = 0; ; attempt++) {
     const suffix = createHash('sha256')
-      .update(`@buildwf/bwf/live:${kind}:${base}:${attempt}`)
+      .update(`@builtbyfriends/bwf/live:${kind}:${base}:${attempt}`)
       .digest('hex')
       .slice(0, 8);
     const candidate = `${base}_${suffix}`;

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { platformDatabaseSchemaDigest } from '@buildwf/platform/installer';
+import { platformDatabaseSchemaDigest } from '@builtbyfriends/platform/installer';
 import { PGlite } from '@electric-sql/pglite';
 import { expect, it } from 'vite-plus/test';
 

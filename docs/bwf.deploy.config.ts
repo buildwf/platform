@@ -1,4 +1,4 @@
-import { defineConfig } from '@buildwf/bwf/config';
+import { defineConfig } from '@builtbyfriends/bwf/config';
 
 // The GitHub container executor deploys the docs from the repository root.
 export default defineConfig({

@@ -322,7 +322,7 @@ describe('bwf db drizzle-kit subprocesses', () => {
 
   it('resolves function-based Better Auth schemas with local env values', async () => {
     const root = createDrizzleProjectRoot();
-    const bwfStubDir = join(root, 'node_modules', '@buildwf', 'bwf');
+    const bwfStubDir = join(root, 'node_modules', '@builtbyfriends', 'bwf');
     mkdirSync(bwfStubDir, { recursive: true });
     writeFileSync(
       join(bwfStubDir, 'package.json'),
@@ -332,7 +332,7 @@ describe('bwf db drizzle-kit subprocesses', () => {
     writeFileSync(
       join(root, 'auth.js'),
       [
-        'import { defineAuth } from "@buildwf/bwf/auth";',
+        'import { defineAuth } from "@builtbyfriends/bwf/auth";',
         'export default defineAuth(({ defaults, env }) => ({',
         '  ...defaults,',
         '  user: { modelName: env.AUTH_USER_TABLE },',

@@ -35,7 +35,7 @@ describe('generateRouteTypes', () => {
 
     const { dts } = generateRouteTypes(scan, '/project/routes', '/project/.bwf');
 
-    expect(dts).toContain('declare module "@buildwf/bwf/routes"');
+    expect(dts).toContain('declare module "@builtbyfriends/bwf/routes"');
     expect(dts).toContain('"/api/hello"');
     expect(dts).toContain('GET: {');
     expect(dts).toContain('typeof import("../routes/api/hello.ts")');
@@ -205,9 +205,9 @@ describe('generateRouteTypes', () => {
 
     const { dts } = generateRouteTypes(scan, '/project/routes', '/project/.bwf');
 
-    // Both exports must live inside the `declare module "@buildwf/bwf/routes"` block so
-    // consumers importing from `@buildwf/bwf/routes` pick them up after codegen.
-    const moduleBlockStart = dts.indexOf('declare module "@buildwf/bwf/routes"');
+    // Both exports must live inside the `declare module "@builtbyfriends/bwf/routes"` block so
+    // consumers importing from `@builtbyfriends/bwf/routes` pick them up after codegen.
+    const moduleBlockStart = dts.indexOf('declare module "@builtbyfriends/bwf/routes"');
     expect(moduleBlockStart).toBeGreaterThan(-1);
     const moduleBlock = dts.slice(moduleBlockStart);
 

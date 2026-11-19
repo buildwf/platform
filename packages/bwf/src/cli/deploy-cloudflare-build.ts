@@ -4,7 +4,7 @@ import {
   readStoredResourceName,
   resolveD1MigrateTarget,
   assertCloudflareDurableObjectLifecycleSupported,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { dirname, relative } from 'pathslash';
 import { type BwfConfig } from '../config.ts';
 import { collectMigrations } from '../migrations/collect.ts';

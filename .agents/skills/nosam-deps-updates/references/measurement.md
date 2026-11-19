@@ -4,7 +4,7 @@ Use the checkout's current package structure and policies; dated versions are ev
 
 ## Comparable measurements
 
-- Build and pack every public bwf package as one cohort, including `@buildwf/platform` runtime artifacts. Resolve public sibling names through `.github/scripts/packed-registry.mjs`.
+- Build and pack every public bwf package as one cohort, including `@builtbyfriends/platform` runtime artifacts. Resolve public sibling names through `.github/scripts/packed-registry.mjs`.
 - Install in a fresh directory with npm `--omit=dev`, no consumer overrides/workspace links, and normal required install behavior. Compare the same Node/npm, OS, architecture, and options before/after. Keep archives, lockfile, registry/time, and footprint JSON.
 - The primary metric is unpacked regular-file bytes under consumer `node_modules`, counting each hardlinked inode once and not following symlinks. MiB means bytes / 1,048,576. Filesystem allocation (`du`) is separate and can vary with unpacking/storage. Neither the monorepo nor bwf's own tarball represents this metric.
 - Enumerate actual installed Miniflare/workerd paths and versions; compatible identical copies can be deduplicated, incompatible ranges cannot. An old development runtime in the workspace lock does not establish production duplication.

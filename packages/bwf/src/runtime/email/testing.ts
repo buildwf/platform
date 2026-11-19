@@ -6,13 +6,13 @@
  *                                inbound route table and captures any
  *                                replies / forwards / rejects.
  *
- *   import { createEmailTestHarness } from "@buildwf/bwf/email/testing";
+ *   import { createEmailTestHarness } from "@builtbyfriends/bwf/email/testing";
  *   const harness = createEmailTestHarness();
  *   await sendEmail({ from: "a@x.dev", to: "b@y.dev", subject: "hi", text: "yo" });
  *   expect(harness.messages[0].subject).toBe("hi");
  *   harness.dispose();
  *
- *   import { createInboundTestHarness } from "@buildwf/bwf/email/testing";
+ *   import { createInboundTestHarness } from "@builtbyfriends/bwf/email/testing";
  *   const inbound = createInboundTestHarness({
  *     routes: { "support+[ticket]": supportHandler, _default: catchAll },
  *   });

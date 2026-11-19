@@ -101,7 +101,7 @@ describe('checkCliVersionOrRespond', () => {
     expect(body.minVersion).toBe(MIN_CLI_VERSION);
     expect(body.clientVersion).toBe('0.6.0');
     expect(body.message).toMatch(/below the minimum/i);
-    expect(body.message).toMatch(/npm i -g @buildwf\/bwf@latest/);
+    expect(body.message).toMatch(/npm i -g @builtbyfriends\/bwf@latest/);
   });
 
   it('rejects multipart bodies with 426 (regardless of header)', async () => {

@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseRootWranglerConfig } from '@buildwf/deploy-cloudflare';
+import { parseRootWranglerConfig } from '@builtbyfriends/deploy-cloudflare';
 import spawn from 'cross-spawn';
 import { describe, expect, it } from 'vite-plus/test';
 import { createIsolatedPlayground } from '../../../../test/integration-helpers.ts';
@@ -56,15 +56,15 @@ describe('real Cloudflare Durable Object configuration merge', () => {
         if (options.websocket) {
           write(
             'routes/chat.ws.ts',
-            `import { defineWebSocket } from '@buildwf/bwf/ws';
+            `import { defineWebSocket } from '@builtbyfriends/bwf/ws';
 export default defineWebSocket({ onConnect({ connection }) { connection.send('connected'); } });\n`,
           );
         }
         if (options.live) {
           write(
             'routes/api/live.ts',
-            `import { defineHandler } from '@buildwf/bwf';
-import { defineLiveStream } from '@buildwf/bwf/live';
+            `import { defineHandler } from '@builtbyfriends/bwf';
+import { defineLiveStream } from '@builtbyfriends/bwf/live';
 const stream = defineLiveStream({ id: 'build-regression' });
 export const GET = defineHandler(c => stream.connect(c, { owner: 'local', user: null }));\n`,
           );
@@ -74,10 +74,10 @@ export const GET = defineHandler(c => stream.connect(c, { owner: 'local', user: 
             'durable-objects/history.ts',
             'native' in options && options.native
               ? `import { DurableObject } from 'cloudflare:workers';
-import { defineDurableObject } from '@buildwf/bwf/durable';
+import { defineDurableObject } from '@builtbyfriends/bwf/durable';
 class History extends DurableObject { increment() { return 1; } }
 export default defineDurableObject({ class: History });\n`
-              : `import { defineDurableState } from '@buildwf/bwf/durable';
+              : `import { defineDurableState } from '@builtbyfriends/bwf/durable';
 export default defineDurableState({ initialState: { count: 0 }, methods: { increment(c) { return ++c.state.count; } } });\n`,
           );
         }

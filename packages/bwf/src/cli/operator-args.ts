@@ -1,4 +1,4 @@
-import { parsePlatformLoginId } from '@buildwf/platform';
+import { parsePlatformLoginId } from '@builtbyfriends/platform';
 import { OPERATOR_MAX_TIMEOUT_MS } from './operator-client.ts';
 
 /** Public operator commands. This table also drives nested CLI help. */

@@ -5,7 +5,7 @@ import {
   readPlatformApplication,
   PLATFORM_PROJECT_INGRESS_SOURCE,
   type PlatformApplicationProject,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import type { ApiEnv } from './env.ts';
 import { cfFetch, CF_API_BASE, CloudflareApiError } from './provisioning/cloudflare-api.ts';
 

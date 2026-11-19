@@ -1,5 +1,5 @@
-import { createInsertSchema } from '@buildwf/bwf/drizzle-valibot';
-import { pgTable, serial, integer, text, boolean, timestamp } from '@buildwf/bwf/schema-pg';
+import { createInsertSchema } from '@builtbyfriends/bwf/drizzle-valibot';
+import { pgTable, serial, integer, text, boolean, timestamp } from '@builtbyfriends/bwf/schema-pg';
 import { minLength, pipe } from 'valibot';
 
 export const users = pgTable('users', {

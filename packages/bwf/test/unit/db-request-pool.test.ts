@@ -124,7 +124,7 @@ function drizzle(config) {
   return { db: module.db, users, state, request, endPools };
 }
 
-describe.each(['postgresql', 'mysql'] as const)('@buildwf/bwf/db %s across requests', (dialect) => {
+describe.each(['postgresql', 'mysql'] as const)('@builtbyfriends/bwf/db %s across requests', (dialect) => {
   let url: string;
   let pglite: PGlite | undefined;
   let pgServer: ReturnType<typeof createServer> | undefined;

@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
 import { isDeepStrictEqual } from 'node:util';
-import type { CloudflareCommandResult } from '@buildwf/deploy-cloudflare';
+import type { CloudflareCommandResult } from '@builtbyfriends/deploy-cloudflare';
 import {
   getWorkerAssetsDir,
   getWorkerBundleDir,

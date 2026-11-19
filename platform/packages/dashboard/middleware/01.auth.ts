@@ -1,10 +1,10 @@
-import { defineMiddleware } from '@buildwf/bwf';
+import { defineMiddleware } from '@builtbyfriends/bwf';
 import { deleteCookie, getCookie } from 'hono/cookie';
 import { getCurrentUser, type CurrentUser } from '../lib/api.ts';
 
 export type DashboardUser = CurrentUser;
 
-declare module '@buildwf/bwf' {
+declare module '@builtbyfriends/bwf' {
   interface CloudContextVariables {
     token: string;
     dashboardUser: DashboardUser;

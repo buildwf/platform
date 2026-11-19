@@ -192,7 +192,7 @@ describe('routingPlugin', () => {
     const root = createTempRoot();
     writeFileSync(
       join(root, 'auth.ts'),
-      "export type {} from '@buildwf/bwf/auth';\nexport default { user: { additionalFields: { nickname: { type: 'string' } } } };",
+      "export type {} from '@builtbyfriends/bwf/auth';\nexport default { user: { additionalFields: { nickname: { type: 'string' } } } };",
     );
     const plugin = createRoutingPlugin(root, { isAuthEnabled: () => true });
     resolveConfig(plugin, 'serve');
@@ -215,7 +215,7 @@ describe('routingPlugin', () => {
     writeFileSync(
       join(root, 'auth.ts'),
       [
-        "import type { BwfAuthConfig } from '@buildwf/bwf/auth';",
+        "import type { BwfAuthConfig } from '@builtbyfriends/bwf/auth';",
         "import { nickname } from './lib/nickname';",
         "import { pronouns } from '@fields/pronouns';",
         'export default { user: { additionalFields: { nickname, pronouns } } } satisfies BwfAuthConfig;',
@@ -251,7 +251,7 @@ describe('routingPlugin', () => {
     writeFileSync(join(root, 'routes', 'health.ts'), 'export const GET = () => new Response();');
     writeFileSync(
       join(root, 'auth.ts'),
-      "import type { BwfAuthConfig } from '@buildwf/bwf/auth';\nexport default {} satisfies BwfAuthConfig;\n",
+      "import type { BwfAuthConfig } from '@builtbyfriends/bwf/auth';\nexport default {} satisfies BwfAuthConfig;\n",
     );
     const tsconfigPath = join(root, '.bwf', 'tsconfig.json');
     const readTsconfig = () =>
@@ -279,7 +279,7 @@ describe('routingPlugin', () => {
 
     expect(existsSync(join(root, '.bwf', 'auth.d.ts'))).toBe(false);
     expect(readTsconfig().files).toEqual(['routes.d.ts', 'db.d.ts']);
-    expect(readTsconfig().compilerOptions?.paths?.['@buildwf/bwf/db']).toEqual(['./db.d.ts']);
+    expect(readTsconfig().compilerOptions?.paths?.['@builtbyfriends/bwf/db']).toEqual(['./db.d.ts']);
   });
 
   it('resolves explicit framework client subpaths to framework auth clients', async () => {
@@ -293,11 +293,11 @@ describe('routingPlugin', () => {
 
     resolveConfig(plugin, 'serve');
 
-    expect(resolveId.call({ environment: { name: 'client' } }, '@buildwf/bwf/client/react')).toBe(
+    expect(resolveId.call({ environment: { name: 'client' } }, '@builtbyfriends/bwf/client/react')).toBe(
       'virtual:nosam-client-browser:react',
     );
     expect(
-      resolveId.call({ environment: { name: 'nosam_worker' } }, '@buildwf/bwf/client/react'),
+      resolveId.call({ environment: { name: 'nosam_worker' } }, '@builtbyfriends/bwf/client/react'),
     ).toBe('virtual:nosam-client-worker:react');
 
     const browserCode = await load('virtual:nosam-client-browser:react');
@@ -768,7 +768,7 @@ describe('routingPlugin', () => {
     const extraPath = join(dirname(authPath), 'auth-extra.ts');
     // The type-only export makes the file an auth config without loading bwf/auth.
     const authSource = (imports: string, fields: string) =>
-      "export type {} from '@buildwf/bwf/auth';\n" +
+      "export type {} from '@builtbyfriends/bwf/auth';\n" +
       imports +
       '\nexport default ({ defaults }) => ({ ...defaults, user: { additionalFields: { ' +
       fields +

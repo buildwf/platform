@@ -1,4 +1,4 @@
-import { createPlatformWorkerConfigs, type PlatformInstallationManifest } from '@buildwf/platform';
+import { createPlatformWorkerConfigs, type PlatformInstallationManifest } from '@builtbyfriends/platform';
 import { writePlatformTiming } from './platform-installer-process.ts';
 import {
   recordResource,

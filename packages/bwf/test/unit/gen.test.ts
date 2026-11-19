@@ -194,7 +194,7 @@ describe('gen model', () => {
         bwfPackageSpec: '*',
       });
       writePkg(template.dependencies);
-      expect(template.files['routes/api/messages.ts']).toContain('@buildwf/bwf/drizzle-zod');
+      expect(template.files['routes/api/messages.ts']).toContain('@builtbyfriends/bwf/drizzle-zod');
       expect(detectValidator(TMP)).toBe('zod');
 
       await runGenCommand(TMP, {
@@ -230,7 +230,7 @@ describe('gen model', () => {
     });
 
     const schema = read('db/schema/posts.ts');
-    expect(schema).toContain('from "@buildwf/bwf/schema-d1"');
+    expect(schema).toContain('from "@builtbyfriends/bwf/schema-d1"');
     expect(schema).toContain('import { sqliteTable');
     expect(schema).toContain('export const posts = sqliteTable("posts"');
     expect(schema).toContain('id: integer("id").primaryKey({ autoIncrement: true })');
@@ -374,8 +374,8 @@ describe('gen model', () => {
 
     const route = read('routes/api/posts/index.ts');
     expect(route).toContain('import * as v from "valibot"');
-    expect(route).toContain('import { defineHandler } from "@buildwf/bwf"');
-    expect(route).toContain('import { db } from "@buildwf/bwf/db"');
+    expect(route).toContain('import { defineHandler } from "@builtbyfriends/bwf"');
+    expect(route).toContain('import { db } from "@builtbyfriends/bwf/db"');
     expect(route).toContain('import { posts } from "@schema"');
     expect(route).toContain('export const GET = defineHandler');
     expect(route).toContain('db.select().from(posts)');
@@ -415,7 +415,7 @@ describe('gen model', () => {
     });
 
     const route = read('routes/api/posts/[id].ts');
-    expect(route).toContain('import { db, eq } from "@buildwf/bwf/db"');
+    expect(route).toContain('import { db, eq } from "@builtbyfriends/bwf/db"');
     expect(route).toContain('import * as v from "valibot"');
     expect(route).toContain('import { posts } from "@schema"');
     expect(route).toContain('params: v.object({ id: v.string() })');
@@ -944,7 +944,7 @@ describe('gen migration', () => {
   });
 
   // Under Yarn PnP there is no node_modules, so drizzle-kit needs the PnP
-  // loaders to resolve `@buildwf/bwf/schema-*` imports from db/schema.ts.
+  // loaders to resolve `@builtbyfriends/bwf/schema-*` imports from db/schema.ts.
   describe('Yarn PnP NODE_OPTIONS injection', () => {
     let savedNodeOptions: string | undefined;
     beforeEach(() => {
@@ -1049,7 +1049,7 @@ describe('gen route', () => {
     });
 
     const content = read('routes/api/health.ts');
-    expect(content).toContain('import { defineHandler } from "@buildwf/bwf"');
+    expect(content).toContain('import { defineHandler } from "@builtbyfriends/bwf"');
     expect(content).toContain('export const GET = defineHandler');
     expect(content).toContain('"GET api/health"');
     expect(content).not.toContain('export const POST');
@@ -1102,7 +1102,7 @@ describe('gen middleware', () => {
     await runGenCommand(TMP, { subcommand: 'middleware', name: 'auth' });
 
     const content = read('middleware/01.auth.ts');
-    expect(content).toContain('import { defineMiddleware } from "@buildwf/bwf"');
+    expect(content).toContain('import { defineMiddleware } from "@builtbyfriends/bwf"');
     expect(content).toContain('export default defineMiddleware');
     expect(content).toContain('await next()');
     expect(content).toContain('implement auth middleware');
@@ -1129,7 +1129,7 @@ describe('gen cron', () => {
     await runGenCommand(TMP, { subcommand: 'cron', name: 'hourly-sync' });
 
     const content = read('crons/hourly-sync.ts');
-    expect(content).toContain('import { defineScheduled } from "@buildwf/bwf"');
+    expect(content).toContain('import { defineScheduled } from "@builtbyfriends/bwf"');
     expect(content).toContain('export const cron = "* * * * *"');
     expect(content).toContain('export default defineScheduled(');
     expect(content).toContain('// TODO: implement hourly-sync');
@@ -1151,7 +1151,7 @@ describe('gen queue', () => {
     await runGenCommand(TMP, { subcommand: 'queue', name: 'emails' });
 
     const content = read('queues/emails.ts');
-    expect(content).toContain('import { defineQueue } from "@buildwf/bwf"');
+    expect(content).toContain('import { defineQueue } from "@builtbyfriends/bwf"');
     expect(content).toContain('type Message = {};');
     expect(content).toContain('// export const maxBatchSize = 10;');
     expect(content).toContain('// export const maxBatchTimeout = 5;');
@@ -1211,7 +1211,7 @@ describe('gen model (mysql)', () => {
 
     const schema = read('db/schema/products.ts');
     expect(schema).toContain('mysqlTable');
-    expect(schema).toContain('from "@buildwf/bwf/schema-mysql"');
+    expect(schema).toContain('from "@builtbyfriends/bwf/schema-mysql"');
     expect(schema).toContain('int("id").autoincrement().primaryKey()');
     expect(schema).toContain('boolean("active")');
     expect(schema).toContain('double("price")');

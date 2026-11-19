@@ -1,6 +1,6 @@
 import { setTimeout as delay } from 'node:timers/promises';
-import type { PlatformInstallationManifest } from '@buildwf/platform';
-import type { PlatformRuntime } from '@buildwf/platform/installer';
+import type { PlatformInstallationManifest } from '@builtbyfriends/platform';
+import type { PlatformRuntime } from '@builtbyfriends/platform/installer';
 import { confirm, isCancel, log, type SpinnerResult } from '@voidzero-dev/vite-plus-prompts';
 import { note } from './output.ts';
 import {

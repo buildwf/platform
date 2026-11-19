@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
-import { isRecord } from '@buildwf/deploy-core';
+import { isRecord } from '@builtbyfriends/deploy-core';
 import { join } from 'pathslash';
 import { parseJsoncObject } from './cli/generated-wrangler-config.ts';
 import { TYPED_CONFIG_FILE } from './config-loader.ts';

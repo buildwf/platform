@@ -18,61 +18,61 @@ const NO_BINDINGS: InferredBindings = {
 };
 
 const MODULE_BINDINGS = [
-  ['@buildwf/bwf/db', 'needsD1'],
-  ['@buildwf/bwf/kv', 'needsKV'],
-  ['@buildwf/bwf/storage', 'needsR2'],
-  ['@buildwf/bwf/auth', 'needsAuth'],
-  ['@buildwf/bwf/queues', 'needsQueues'],
-  ['@buildwf/bwf/ai', 'needsAI'],
-  ['@buildwf/bwf/sandbox', 'needsSandbox'],
-  ['@buildwf/bwf/email', 'needsEmail'],
-  ['@buildwf/bwf/live', 'needsLive'],
+  ['@builtbyfriends/bwf/db', 'needsD1'],
+  ['@builtbyfriends/bwf/kv', 'needsKV'],
+  ['@builtbyfriends/bwf/storage', 'needsR2'],
+  ['@builtbyfriends/bwf/auth', 'needsAuth'],
+  ['@builtbyfriends/bwf/queues', 'needsQueues'],
+  ['@builtbyfriends/bwf/ai', 'needsAI'],
+  ['@builtbyfriends/bwf/sandbox', 'needsSandbox'],
+  ['@builtbyfriends/bwf/email', 'needsEmail'],
+  ['@builtbyfriends/bwf/live', 'needsLive'],
 ] as const;
 
 describe('inferBindingsFromSource', () => {
   it.each([
-    'import { auth as account } from "@buildwf/bwf/client";',
-    'import { "auth" as account } from "@buildwf/bwf/client";',
-    'import { \\u0061uth as account } from "@buildwf/bwf/client";',
-    'import * as client from "@buildwf/bwf/client"; client.auth.signOut();',
-    'import * as client from "@buildwf/bwf/client/react"; client["auth"].useSession();',
-    'import * as client from "@buildwf/bwf/client"; client["\\x61uth"].signOut();',
-    'import * as client from "@buildwf/bwf/client"; client["aut\\h"].signOut();',
-    'import * as client from "@buildwf/bwf/client"; client["au\\\nth"].signOut();',
-    'import * as client from "@buildwf/bwf/client"; const { auth: account } = client;',
-    'import * as client from "@buildwf/bwf/client"; const alias = client; alias.auth.signOut();',
-    'import * as client from "@buildwf/bwf/client"; namespace Local { export const client = {}; } client.auth.signOut();',
-    'const { auth } = await import("@buildwf/bwf/client");',
-    'const client = await import("@buildwf/bwf/client"); client.auth.signOut();',
-    'const value = (await import("@buildwf/bwf/client"))["auth"];',
-    'async function run() { const client = await import("@buildwf/bwf/client"); client["\\141uth"].signOut(); }',
-    'export { auth as account } from "@buildwf/bwf/client";',
-    'export { "\\x61uth" as account } from "@buildwf/bwf/client";',
-    'export * from "@buildwf/bwf/client";',
-    'export * as client from "@buildwf/bwf/client";',
+    'import { auth as account } from "@builtbyfriends/bwf/client";',
+    'import { "auth" as account } from "@builtbyfriends/bwf/client";',
+    'import { \\u0061uth as account } from "@builtbyfriends/bwf/client";',
+    'import * as client from "@builtbyfriends/bwf/client"; client.auth.signOut();',
+    'import * as client from "@builtbyfriends/bwf/client/react"; client["auth"].useSession();',
+    'import * as client from "@builtbyfriends/bwf/client"; client["\\x61uth"].signOut();',
+    'import * as client from "@builtbyfriends/bwf/client"; client["aut\\h"].signOut();',
+    'import * as client from "@builtbyfriends/bwf/client"; client["au\\\nth"].signOut();',
+    'import * as client from "@builtbyfriends/bwf/client"; const { auth: account } = client;',
+    'import * as client from "@builtbyfriends/bwf/client"; const alias = client; alias.auth.signOut();',
+    'import * as client from "@builtbyfriends/bwf/client"; namespace Local { export const client = {}; } client.auth.signOut();',
+    'const { auth } = await import("@builtbyfriends/bwf/client");',
+    'const client = await import("@builtbyfriends/bwf/client"); client.auth.signOut();',
+    'const value = (await import("@builtbyfriends/bwf/client"))["auth"];',
+    'async function run() { const client = await import("@builtbyfriends/bwf/client"); client["\\141uth"].signOut(); }',
+    'export { auth as account } from "@builtbyfriends/bwf/client";',
+    'export { "\\x61uth" as account } from "@builtbyfriends/bwf/client";',
+    'export * from "@builtbyfriends/bwf/client";',
+    'export * as client from "@builtbyfriends/bwf/client";',
   ])('infers auth from the imported runtime value: %s', (code) => {
     expect(inferBindingsFromSource(code, 'test.ts')).toEqual({ ...NO_BINDINGS, needsAuth: true });
   });
 
   it.each([
-    'import { fetch as auth } from "@buildwf/bwf/client";',
-    'import { fetch /* auth */ } from "@buildwf/bwf/client";',
-    'import { type auth, fetch } from "@buildwf/bwf/client";',
-    'import type * as client from "@buildwf/bwf/client"; type T = typeof client.auth;',
-    'import * as client from "@buildwf/bwf/client"; client.fetch("/api");',
-    'import * as client from "@buildwf/bwf/client"; const parts = text.split(/\\s+/); client.fetch("/api");',
-    'import * as client from "@buildwf/bwf/client"; function local(client) { return client.auth; }',
-    'import * as client from "@buildwf/bwf/client"; function local() { client.auth(); var client; }',
-    'import * as client from "@buildwf/bwf/client"; class Local { constructor(private client: any) { client.auth(); } }',
-    'import * as client from "@buildwf/bwf/client"; function local() { enum client { auth }; return client.auth; }',
-    'import * as client from "@buildwf/bwf/client"; const { fetch: auth } = client;',
-    'import * as client from "@buildwf/bwf/client"; client[key];',
-    'import * as client from "@buildwf/bwf/client"; const a = b; const b = a; a.auth;',
-    'const { fetch: auth } = await import("@buildwf/bwf/client");',
-    'const client = await import("@buildwf/bwf/client"); function local(client) { return client.auth; }',
-    'export { fetch as auth } from "@buildwf/bwf/client";',
-    'export { type auth, fetch } from "@buildwf/bwf/client";',
-    'export type * from "@buildwf/bwf/client";',
+    'import { fetch as auth } from "@builtbyfriends/bwf/client";',
+    'import { fetch /* auth */ } from "@builtbyfriends/bwf/client";',
+    'import { type auth, fetch } from "@builtbyfriends/bwf/client";',
+    'import type * as client from "@builtbyfriends/bwf/client"; type T = typeof client.auth;',
+    'import * as client from "@builtbyfriends/bwf/client"; client.fetch("/api");',
+    'import * as client from "@builtbyfriends/bwf/client"; const parts = text.split(/\\s+/); client.fetch("/api");',
+    'import * as client from "@builtbyfriends/bwf/client"; function local(client) { return client.auth; }',
+    'import * as client from "@builtbyfriends/bwf/client"; function local() { client.auth(); var client; }',
+    'import * as client from "@builtbyfriends/bwf/client"; class Local { constructor(private client: any) { client.auth(); } }',
+    'import * as client from "@builtbyfriends/bwf/client"; function local() { enum client { auth }; return client.auth; }',
+    'import * as client from "@builtbyfriends/bwf/client"; const { fetch: auth } = client;',
+    'import * as client from "@builtbyfriends/bwf/client"; client[key];',
+    'import * as client from "@builtbyfriends/bwf/client"; const a = b; const b = a; a.auth;',
+    'const { fetch: auth } = await import("@builtbyfriends/bwf/client");',
+    'const client = await import("@builtbyfriends/bwf/client"); function local(client) { return client.auth; }',
+    'export { fetch as auth } from "@builtbyfriends/bwf/client";',
+    'export { type auth, fetch } from "@builtbyfriends/bwf/client";',
+    'export type * from "@builtbyfriends/bwf/client";',
   ])('ignores aliases, type-only names and unrelated auth properties: %s', (code) => {
     expect(inferBindingsFromSource(code, 'test.ts')).toEqual(NO_BINDINGS);
   });
@@ -82,7 +82,7 @@ describe('inferBindingsFromSource', () => {
       { length: 10_000 },
       (_, index) => `const alias${index + 1} = alias${index};`,
     ).join('\n');
-    const code = `import * as client from '@buildwf/bwf/client'; const alias0 = client;
+    const code = `import * as client from '@builtbyfriends/bwf/client'; const alias0 = client;
       ${aliases}
       alias10000.auth.signOut();`;
     expect(inferBindingsFromSource(code, 'test.ts')).toEqual({ ...NO_BINDINGS, needsAuth: true });
@@ -143,10 +143,10 @@ describe('inferBindingsFromSource', () => {
   });
 
   it.each([
-    "const load = () => import('@buildwf/bwf/ai');",
-    'const load = () => import(`@buildwf/bwf/ai`);',
-    "const load = () => import('@buildwf/bwf/\\u0061i');",
-    "const load = () => import(('@buildwf/bwf/ai'));",
+    "const load = () => import('@builtbyfriends/bwf/ai');",
+    'const load = () => import(`@builtbyfriends/bwf/ai`);',
+    "const load = () => import('@builtbyfriends/bwf/\\u0061i');",
+    "const load = () => import(('@builtbyfriends/bwf/ai'));",
   ])('detects literal dynamic imports in TSX: %s', (statement) => {
     expect(inferBindingsFromSource(`${statement}\nconst view = <div />;`, 'view.tsx').needsAI).toBe(
       true,
@@ -154,22 +154,22 @@ describe('inferBindingsFromSource', () => {
   });
 
   it.each([
-    "type T = import('@buildwf/bwf/ai').AI;",
-    "import type {} from '@buildwf/bwf/ai';",
-    "import { /* keep */ type AI } from '@buildwf/bwf/ai';",
-    "export type * from '@buildwf/bwf/ai';",
-    "const load = () => import('@buildwf/bwf/' + feature);",
+    "type T = import('@builtbyfriends/bwf/ai').AI;",
+    "import type {} from '@builtbyfriends/bwf/ai';",
+    "import { /* keep */ type AI } from '@builtbyfriends/bwf/ai';",
+    "export type * from '@builtbyfriends/bwf/ai';",
+    "const load = () => import('@builtbyfriends/bwf/' + feature);",
     'const load = () => import(`bwf/${feature}`);',
-    '// import("@buildwf/bwf/ai")\nconst text = "@buildwf/bwf/ai";',
+    '// import("@builtbyfriends/bwf/ai")\nconst text = "@builtbyfriends/bwf/ai";',
   ])('does not infer runtime bindings from %s', (code) => {
     expect(inferBindingsFromSource(code, 'test.ts').needsAI).toBe(false);
   });
 
   it.each([
-    "import {} from '@buildwf/bwf/ai';",
-    "export {} from '@buildwf/bwf/ai';",
-    "export /* keep */ {} from '@buildwf/bwf/ai';",
-    "export { /* keep */ } from '@buildwf/bwf/ai';",
+    "import {} from '@builtbyfriends/bwf/ai';",
+    "export {} from '@builtbyfriends/bwf/ai';",
+    "export /* keep */ {} from '@builtbyfriends/bwf/ai';",
+    "export { /* keep */ } from '@builtbyfriends/bwf/ai';",
   ])('retains side-effect module references: %s', (code) => {
     expect(inferBindingsFromSource(code, 'test.ts').needsAI).toBe(true);
   });
@@ -233,18 +233,18 @@ describe('inferBindingsFromSource', () => {
     expect(result.needsAuth).toBe(false);
   });
 
-  it("detects import { auth } from '@buildwf/bwf/client'", () => {
+  it("detects import { auth } from '@builtbyfriends/bwf/client'", () => {
     const code = `
-      import { auth } from "@buildwf/bwf/client";
+      import { auth } from "@builtbyfriends/bwf/client";
       await auth.signOut();
     `;
     const result = inferBindingsFromSource(code, 'test.ts');
     expect(result.needsAuth).toBe(true);
   });
 
-  it("detects auth imports from '@buildwf/bwf/client' alongside other client helpers", () => {
+  it("detects auth imports from '@builtbyfriends/bwf/client' alongside other client helpers", () => {
     const code = `
-      import { auth, fetch } from "@buildwf/bwf/client";
+      import { auth, fetch } from "@builtbyfriends/bwf/client";
       await auth.signIn.email({ email, password });
       await fetch("/api/hello");
     `;
@@ -252,27 +252,27 @@ describe('inferBindingsFromSource', () => {
     expect(result.needsAuth).toBe(true);
   });
 
-  it("detects auth imports from framework-specific '@buildwf/bwf/client' subpaths", () => {
+  it("detects auth imports from framework-specific '@builtbyfriends/bwf/client' subpaths", () => {
     const code = `
-      import { auth } from "@buildwf/bwf/client/react";
+      import { auth } from "@builtbyfriends/bwf/client/react";
       await auth.useSession();
     `;
     const result = inferBindingsFromSource(code, 'test.tsx');
     expect(result.needsAuth).toBe(true);
   });
 
-  it("does not detect auth from '@buildwf/bwf/client' when only fetch is imported", () => {
+  it("does not detect auth from '@builtbyfriends/bwf/client' when only fetch is imported", () => {
     const code = `
-      import { fetch } from "@buildwf/bwf/client";
+      import { fetch } from "@builtbyfriends/bwf/client";
       const data = await fetch("/api/hello");
     `;
     const result = inferBindingsFromSource(code, 'test.ts');
     expect(result.needsAuth).toBe(false);
   });
 
-  it("does not detect auth from framework-specific '@buildwf/bwf/client' subpaths when only fetch is imported", () => {
+  it("does not detect auth from framework-specific '@builtbyfriends/bwf/client' subpaths when only fetch is imported", () => {
     const code = `
-      import { fetch } from "@buildwf/bwf/client/react";
+      import { fetch } from "@builtbyfriends/bwf/client/react";
       const data = await fetch("/api/hello");
     `;
     const result = inferBindingsFromSource(code, 'test.tsx');
@@ -288,13 +288,13 @@ describe('inferBindingsFromSource', () => {
 
   it('ignores type-only AI imports in TSX while retaining value imports', () => {
     const typeOnly = `
-      import type { AI } from '@buildwf/bwf/ai';
+      import type { AI } from '@builtbyfriends/bwf/ai';
       export const View = () => <div>AI</div>;
     `;
     expect(inferBindingsFromSource(typeOnly, 'View.tsx').needsAI).toBe(false);
 
     const mixed = `
-      import { type AI, ai } from '@buildwf/bwf/ai';
+      import { type AI, ai } from '@builtbyfriends/bwf/ai';
       export const View = () => <div>{String(ai)}</div>;
     `;
     expect(inferBindingsFromSource(mixed, 'View.tsx').needsAI).toBe(true);
@@ -303,7 +303,7 @@ describe('inferBindingsFromSource', () => {
   it('detects a runtime AI import after an unrelated type import in TSX', () => {
     const code = `
       import type { Props } from './types';
-      import { ai } from '@buildwf/bwf/ai';
+      import { ai } from '@builtbyfriends/bwf/ai';
       export const View = () => <div>{String(ai)}</div>;
     `;
     expect(inferBindingsFromSource(code, 'View.tsx').needsAI).toBe(true);
@@ -311,13 +311,13 @@ describe('inferBindingsFromSource', () => {
 
   it('ignores type-only AI re-exports but keeps runtime re-exports', () => {
     expect(
-      inferBindingsFromSource("export type { AI } from '@buildwf/bwf/ai';", 'types.ts').needsAI,
+      inferBindingsFromSource("export type { AI } from '@builtbyfriends/bwf/ai';", 'types.ts').needsAI,
     ).toBe(false);
     expect(
-      inferBindingsFromSource("export { type AI } from '@buildwf/bwf/ai';", 'types.ts').needsAI,
+      inferBindingsFromSource("export { type AI } from '@builtbyfriends/bwf/ai';", 'types.ts').needsAI,
     ).toBe(false);
     expect(
-      inferBindingsFromSource("export { ai } from '@buildwf/bwf/ai';", 'index.ts').needsAI,
+      inferBindingsFromSource("export { ai } from '@builtbyfriends/bwf/ai';", 'index.ts').needsAI,
     ).toBe(true);
   });
 
@@ -342,9 +342,9 @@ describe('inferBindingsFromSource', () => {
     expect(result.needsAI).toBe(false);
   });
 
-  it("does not detect live infrastructure from '@buildwf/bwf/live/client'", () => {
+  it("does not detect live infrastructure from '@builtbyfriends/bwf/live/client'", () => {
     const code = `
-      import { connectLiveStream } from "@buildwf/bwf/live/client";
+      import { connectLiveStream } from "@builtbyfriends/bwf/live/client";
       connectLiveStream("/live");
     `;
     const result = inferBindingsFromSource(code, 'client.ts');

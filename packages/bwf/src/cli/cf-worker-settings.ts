@@ -1,4 +1,4 @@
-import { isRecord } from '@buildwf/deploy-core';
+import { isRecord } from '@builtbyfriends/deploy-core';
 import { getBwfUserAgent } from './cf-user-agent.ts';
 
 /** Version uploads leave Worker-wide settings untouched; publish only explicit configuration. */

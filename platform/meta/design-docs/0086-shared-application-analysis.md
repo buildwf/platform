@@ -47,7 +47,7 @@ Provider IDs, resource names, migration history, credentials and cutover are
 still owned by the deployment target. Analysis does not rename or adopt any
 persistent resources.
 
-The existing `@buildwf/deploy-core` artifact, manifest and asset-manifest versions
+The existing `@builtbyfriends/deploy-core` artifact, manifest and asset-manifest versions
 remain unchanged. Managed packaging emits that contract; native deployment
 compiles Cloudflare Build Output and validates the actual emitted provider
 configuration. A source snapshot does not replace artifact validation. Native

@@ -1,5 +1,5 @@
 {
-  "name": "@buildwf/platform",
+  "name": "@builtbyfriends/platform",
   "version": "1.9.1",
   "description": "Packaged runtime and installation contracts for self-hosted bwf platforms.",
   "homepage": "https://github.com/buildwf/platform",
@@ -51,7 +51,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@buildwf/deploy-core": "workspace:*",
+    "@builtbyfriends/deploy-core": "workspace:*",
     "pathslash": "catalog:"
   },
   "devDependencies": {

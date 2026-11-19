@@ -3,7 +3,7 @@ import {
   deployArtifactDigest,
   validateManifestShape,
   type DeployArtifact,
-} from '@buildwf/deploy-core';
+} from '@builtbyfriends/deploy-core';
 import { and, count, eq, gt, sql } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import { getCookie } from 'hono/cookie';

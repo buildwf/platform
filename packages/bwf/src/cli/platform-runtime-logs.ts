@@ -1,4 +1,4 @@
-import type { PlatformDeploymentManifest } from '@buildwf/platform';
+import type { PlatformDeploymentManifest } from '@builtbyfriends/platform';
 import type { PlatformCloudflareClient } from './platform-cloudflare.ts';
 
 /**

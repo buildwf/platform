@@ -19,7 +19,7 @@ Review the generated SQL and migration journal before committing them. Released 
 
 ## Runtime artifact contract
 
-`@buildwf/platform` contains installation manifests, resource naming, discovery contracts, Worker configuration, and deployable bundles under the `./installer` export. Platform source lives in `platform/packages/`.
+`@builtbyfriends/platform` contains installation manifests, resource naming, discovery contracts, Worker configuration, and deployable bundles under the `./installer` export. Platform source lives in `platform/packages/`.
 
 Runtime artifacts include migration SQL, its journal, and a rollback compatibility manifest. Drizzle authoring snapshots remain in the source tree.
 

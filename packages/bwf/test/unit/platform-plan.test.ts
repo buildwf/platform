@@ -9,7 +9,7 @@ import {
   setInstallationEndpoints,
   type InstallationResourceKind,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { pc } from '../../src/cli/output.ts';
 import {

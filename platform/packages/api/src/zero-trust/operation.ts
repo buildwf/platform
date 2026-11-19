@@ -2,7 +2,7 @@ import {
   PLATFORM_APPLICATION_KEY,
   platformHealthHostname,
   readPlatformApplication,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { sql } from 'drizzle-orm';
 import type { Db, DbOrTx } from '../db.ts';
 import { getProject } from '../db.ts';

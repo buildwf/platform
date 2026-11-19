@@ -4,8 +4,8 @@
  * `deriveAddresses` maps handlers to `addresses`, `preflightEmail` reads state without writing,
  * `renderEmailChecklist` shows it, and `applyEmailSetup` runs only the rows not ready.
  */
-import type { CloudflareOperation, CloudflareCommandResult } from '@buildwf/deploy-cloudflare';
-import { isRecord } from '@buildwf/deploy-core';
+import type { CloudflareOperation, CloudflareCommandResult } from '@builtbyfriends/deploy-cloudflare';
+import { isRecord } from '@builtbyfriends/deploy-core';
 import type { EmailHandlersScan } from '../router/email.ts';
 import { findBindingNameOwner } from './wrangler.ts';
 

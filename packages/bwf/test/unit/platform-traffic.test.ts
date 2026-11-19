@@ -1,7 +1,7 @@
 import {
   createPlatformDeploymentManifest,
   createPlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { describe, expect, it } from 'vite-plus/test';
 import { recordPlatformWorkerTraffic } from '../../src/cli/platform-traffic.ts';
 

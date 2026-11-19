@@ -1,5 +1,5 @@
-import { parsePlatformAuthenticationSetup } from '@buildwf/platform';
-import { browserPageLead, browserPageStatus } from '@buildwf/platform/browser-page';
+import { parsePlatformAuthenticationSetup } from '@builtbyfriends/platform';
+import { browserPageLead, browserPageStatus } from '@builtbyfriends/platform/browser-page';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';

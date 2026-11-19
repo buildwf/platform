@@ -1,7 +1,7 @@
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { deployArtifactDigest } from '@buildwf/deploy-core';
+import { deployArtifactDigest } from '@builtbyfriends/deploy-core';
 import { beforeEach, afterEach, it, expect, vi } from 'vite-plus/test';
 import { prepareDeployArtifact } from '../../src/deploy.ts';
 
@@ -104,7 +104,7 @@ it('packages native Durable Objects for managed deployment without namespace aut
   mkdirSync(join(root, 'durable-objects'));
   writeFileSync(
     join(root, 'durable-objects/workspace.ts'),
-    "import {defineDurableObject} from '@buildwf/bwf/durable'; export default defineDurableObject({name:'workspace',class: class Workspace {}});",
+    "import {defineDurableObject} from '@builtbyfriends/bwf/durable'; export default defineDurableObject({name:'workspace',class: class Workspace {}});",
   );
   const result = await prepareDeployArtifact(root);
   expect(result.artifact.manifest.version).toBe(4);

@@ -2,8 +2,8 @@ import {
   recordInstallationStep,
   transitionInstallation,
   type PlatformLifecycleOperation,
-} from '@buildwf/platform';
-import type { PlatformRuntimeManifest } from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform';
+import type { PlatformRuntimeManifest } from '@builtbyfriends/platform/installer';
 import { join } from 'pathslash';
 import { publishInstallationAiLogging } from './platform-ai-logging-projection.ts';
 import { verifyPlatformAuthenticationDatabase } from './platform-auth-database.ts';

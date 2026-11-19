@@ -14,8 +14,8 @@
   "dependencies": {
     "@astryxdesign/core": "catalog:",
     "@astryxdesign/theme-neutral": "catalog:",
-    "@buildwf/platform": "workspace:*",
-    "@buildwf/realtime": "^0.1.0",
+    "@builtbyfriends/platform": "workspace:*",
+    "@builtbyfriends/realtime": "^0.1.0",
     "@stylexjs/stylex": "catalog:",
     "hono": "catalog:platform",
     "lucide-react": "catalog:",
@@ -23,7 +23,7 @@
     "react-dom": "catalog:"
   },
   "devDependencies": {
-    "@buildwf/bwf": "workspace:*",
+    "@builtbyfriends/bwf": "workspace:*",
     "@cloudflare/workers-types": "catalog:platform",
     "@nosamcloud/api": "workspace:*",
     "@types/react": "^19.3.0",

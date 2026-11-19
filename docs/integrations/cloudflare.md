@@ -13,7 +13,7 @@ In bwf routes and middleware, use `c.env`:
 
 ```ts
 // routes/api/users.ts
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 
 export const GET = defineHandler(async (c) => {
   const { results } = await c.env.DB.prepare('SELECT * FROM users').all();
@@ -31,12 +31,12 @@ const { results } = await env.DB.prepare('SELECT * FROM users').all();
 
 ### TypeScript setup
 
-Add `@buildwf/bwf/env` to your TypeScript types:
+Add `@builtbyfriends/bwf/env` to your TypeScript types:
 
 ```json
 {
   "compilerOptions": {
-    "types": ["@buildwf/bwf/env"]
+    "types": ["@builtbyfriends/bwf/env"]
   }
 }
 ```
@@ -47,12 +47,12 @@ This provides binding and Workers runtime types. For custom bindings in `bwf.con
 
 | Binding          | Resource        | Use in your app                           |
 | ---------------- | --------------- | ----------------------------------------- |
-| `DB`             | D1              | `c.env.DB` or `@buildwf/bwf/db`           |
-| `KV`             | KV              | `c.env.KV` or `@buildwf/bwf/kv`           |
-| `STORAGE`        | R2              | `c.env.STORAGE` or `@buildwf/bwf/storage` |
-| `AI`             | Workers AI      | `c.env.AI` or `@buildwf/bwf/ai`           |
+| `DB`             | D1              | `c.env.DB` or `@builtbyfriends/bwf/db`           |
+| `KV`             | KV              | `c.env.KV` or `@builtbyfriends/bwf/kv`           |
+| `STORAGE`        | R2              | `c.env.STORAGE` or `@builtbyfriends/bwf/storage` |
+| `AI`             | Workers AI      | `c.env.AI` or `@builtbyfriends/bwf/ai`           |
 | `ASSETS`         | Static assets   | `c.env.ASSETS.fetch(request)`             |
-| `QUEUE_*`        | Queues          | `defineQueue()` or `@buildwf/bwf/queues`  |
+| `QUEUE_*`        | Queues          | `defineQueue()` or `@builtbyfriends/bwf/queues`  |
 | Filename-derived | Durable Objects | A module in `durable-objects/`            |
 
 Use [binding configuration](../reference/resource-inference.md#explicit-binding-overrides) when you need to enable, disable, or rename an inferred binding.
@@ -62,7 +62,7 @@ Use [binding configuration](../reference/resource-inference.md#explicit-binding-
 Define Worker settings in `bwf.config.ts`:
 
 ```ts
-import { defineConfig } from '@buildwf/bwf/config';
+import { defineConfig } from '@builtbyfriends/bwf/config';
 
 export default defineConfig({
   worker: {
@@ -227,7 +227,7 @@ Workers AI runs remotely after you connect to Cloudflare, so development calls c
 `ai.run()`, `ai.stream()`, and `ai.image()` use your Workers AI binding. For provider models, configure your AI Gateway and store the provider key as a Worker secret:
 
 ```ts
-import { defineConfig } from '@buildwf/bwf/config';
+import { defineConfig } from '@builtbyfriends/bwf/config';
 
 export default defineConfig({
   ai: { gateway: 'my-gateway' },

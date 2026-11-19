@@ -15,7 +15,7 @@ Commit `bwf.lock.json` when bwf adds a resource. Keep its deployed migration ent
 
 ```ts
 // durable-objects/counter.ts
-import { defineDurableState } from '@buildwf/bwf/durable';
+import { defineDurableState } from '@builtbyfriends/bwf/durable';
 
 export const Counter = defineDurableState({
   initialState: { count: 0 },
@@ -41,7 +41,7 @@ Import your definition and call `get()` with a name to select an object. Method 
 
 ```ts
 // routes/api/counter.ts
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 import { Counter } from '../../durable-objects/counter';
 
 export const POST = defineHandler(async () => {
@@ -172,7 +172,7 @@ This is separate from [typed WebSocket routes](./websockets.md), which also use 
 Use `defineDurableObject` to keep a native Cloudflare class, including classes extending Cloudflare Agents. bwf discovers its binding and exports the class without replacing its constructor, lifecycle, or RPC methods. Like Durable State, this supports bwf platforms and direct Cloudflare deployments.
 
 ```ts
-import { defineDurableObject } from '@buildwf/bwf/durable';
+import { defineDurableObject } from '@builtbyfriends/bwf/durable';
 // durable-objects/workspace.ts
 import { DurableObject } from 'cloudflare:workers';
 

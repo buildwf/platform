@@ -6,7 +6,7 @@ import {
   validatePlatformAdmissionPolicy,
   type PlatformAuthenticationRecovery,
   type PlatformLoginConfiguration,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import type { QueryConnection } from './platform-zero-trust-uninstall.ts';
 
 type Credential = { ciphertext: string; iv: string; keyVersion: string };

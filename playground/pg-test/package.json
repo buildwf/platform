@@ -14,7 +14,7 @@
     "valibot": "^1.5.0"
   },
   "devDependencies": {
-    "@buildwf/bwf": "workspace:*",
+    "@builtbyfriends/bwf": "workspace:*",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "catalog:",

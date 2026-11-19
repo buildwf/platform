@@ -5,7 +5,7 @@ import {
   readStoredResourceName,
   readWranglerTopLevelString,
   type ExistingCloudflareWorker,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { confirm, isCancel } from '@voidzero-dev/vite-plus-prompts';
 import { basename, dirname, relative } from 'pathslash';
 import { analyzeApplicationSync, type ApplicationAnalysis } from '../application-analysis.ts';

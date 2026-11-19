@@ -78,7 +78,7 @@ export default { async fetch(request, env) {
         logLevel: 'silent',
         resolve: {
           alias: {
-            '@buildwf/bwf/_sandbox-container': join(
+            '@builtbyfriends/bwf/_sandbox-container': join(
               root,
               'packages/bwf/src/runtime/sandbox-container.ts',
             ),

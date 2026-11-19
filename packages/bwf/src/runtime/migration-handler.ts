@@ -4,7 +4,7 @@ import {
   getMigrationPlanHashInput,
   isSingleStatement,
   splitSqlStatements,
-} from '@buildwf/deploy-core';
+} from '@builtbyfriends/deploy-core';
 import type { MigrationExecutionPlan, MigrationPlanBundle } from '../migrations/plan.ts';
 
 export type MigrationEntry = {

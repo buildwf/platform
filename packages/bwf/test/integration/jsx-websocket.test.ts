@@ -46,7 +46,7 @@ describe.each(
         writeFileSync(
           join(root, 'routes', ext, `${mode}.${env}.ws.${ext}`),
           `import * as v from 'valibot';
-import { ${helper} } from '@buildwf/bwf/ws';
+import { ${helper} } from '@builtbyfriends/bwf/ws';
 ${jsxImportSource === 'react' ? "import { renderToStaticMarkup } from 'react-dom/server.edge';" : ''}
 function ChatMessage({ text }) { return <p data-environment="${env}">{text}</p>; }
 export default ${helper}({

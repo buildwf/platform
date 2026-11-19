@@ -1,4 +1,4 @@
-import { redirectToHttps } from '@buildwf/edge';
+import { redirectToHttps } from '@builtbyfriends/edge';
 import type { ExecutionContext } from 'hono';
 import { createManifestLoader, type ManifestLoader } from './routing-assets.ts';
 

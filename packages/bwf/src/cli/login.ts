@@ -1,4 +1,4 @@
-import type { PlatformAuthenticationDiscovery } from '@buildwf/platform';
+import type { PlatformAuthenticationDiscovery } from '@builtbyfriends/platform';
 import { outro, log, select, isCancel, cancel } from '@voidzero-dev/vite-plus-prompts';
 import {
   getToken,

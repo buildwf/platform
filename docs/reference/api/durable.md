@@ -5,7 +5,7 @@ outline: deep
 
 # Durable State and WebSockets {#durable-state}
 
-Imported from `"@buildwf/bwf/durable"`. See [Durable State](../../guide/durable-state.md) for the complete file convention and deployment support.
+Imported from `"@builtbyfriends/bwf/durable"`. See [Durable State](../../guide/durable-state.md) for the complete file convention and deployment support.
 
 ## `defineDurableState(definition)` {#definedurablestate-definition}
 
@@ -33,7 +33,7 @@ function defineDurableState<TState, TEnv, TMethods>(definition: {
 
 ## WebSockets {#websockets}
 
-Imported from `"@buildwf/bwf/ws"`. `defineRoom()` adds shared-room helpers to hook contexts; `defineWebSocket()` supplies a connection's socket helpers. Both require `messages.client` and `messages.server` Standard Schema validators and support the hooks described in the [WebSocket guide](../../guide/websockets.md).
+Imported from `"@builtbyfriends/bwf/ws"`. `defineRoom()` adds shared-room helpers to hook contexts; `defineWebSocket()` supplies a connection's socket helpers. Both require `messages.client` and `messages.server` Standard Schema validators and support the hooks described in the [WebSocket guide](../../guide/websockets.md).
 
 Both helpers accept these optional resource settings:
 

@@ -5,12 +5,12 @@ outline: deep
 
 # Typed Fetch
 
-Import `fetch` from `@buildwf/bwf/client` for route autocomplete, checked request bodies, and inferred response types.
+Import `fetch` from `@builtbyfriends/bwf/client` for route autocomplete, checked request bodies, and inferred response types.
 
 ## Basic Usage
 
 ```ts
-import { fetch } from '@buildwf/bwf/client';
+import { fetch } from '@builtbyfriends/bwf/client';
 
 // GET: return type inferred from your handler
 const users = await fetch('/api/users');
@@ -64,7 +64,7 @@ const data = await fetch('/api/search', {
 Non-2xx responses throw a `FetchError`:
 
 ```ts
-import { fetch, FetchError } from '@buildwf/bwf/client';
+import { fetch, FetchError } from '@builtbyfriends/bwf/client';
 
 try {
   await fetch('/api/users/[id]', { params: { id: '999' } });

@@ -1,4 +1,4 @@
-import { createDefaultPlanCatalog, type PlatformPlanCatalog } from '@buildwf/platform/plans';
+import { createDefaultPlanCatalog, type PlatformPlanCatalog } from '@builtbyfriends/platform/plans';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
 import { signDeployToken } from '../../src/auth/deploy-token.ts';

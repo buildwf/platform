@@ -50,7 +50,7 @@ describe('ensureProjectTsconfig', () => {
     ensureProjectTsconfig(root, true);
     const tsconfig = readTsconfig();
     expect(tsconfig.files).toContain('routes.d.ts');
-    expect(tsconfig.compilerOptions.paths['@buildwf/bwf/routes']).toEqual(['./routes.d.ts']);
+    expect(tsconfig.compilerOptions.paths['@builtbyfriends/bwf/routes']).toEqual(['./routes.d.ts']);
   });
 
   it('does not rewrite tsconfig.json when generated content is unchanged', () => {
@@ -71,7 +71,7 @@ describe('ensureProjectTsconfig', () => {
   it('lists auth.d.ts only when the generated file already exists', () => {
     writeFileSync(
       join(root, 'auth.ts'),
-      'import { defineAuth } from "@buildwf/bwf/auth";\nexport default defineAuth({});\n',
+      'import { defineAuth } from "@builtbyfriends/bwf/auth";\nexport default defineAuth({});\n',
     );
     ensureProjectTsconfig(root);
     expect(readTsconfig().files).not.toContain('auth.d.ts');
@@ -95,8 +95,8 @@ describe('ensureProjectTsconfig', () => {
     expect(tsconfig.files).toContain('routes.d.ts');
     expect(tsconfig.files).toContain('db.d.ts');
     expect(tsconfig.files).toContain('queues.d.ts');
-    expect(tsconfig.compilerOptions.paths['@buildwf/bwf/routes']).toEqual(['./routes.d.ts']);
-    expect(tsconfig.compilerOptions.paths['@buildwf/bwf/db']).toEqual(['./db.d.ts']);
-    expect(tsconfig.compilerOptions.paths['@buildwf/bwf/queues']).toEqual(['./queues.d.ts']);
+    expect(tsconfig.compilerOptions.paths['@builtbyfriends/bwf/routes']).toEqual(['./routes.d.ts']);
+    expect(tsconfig.compilerOptions.paths['@builtbyfriends/bwf/db']).toEqual(['./db.d.ts']);
+    expect(tsconfig.compilerOptions.paths['@builtbyfriends/bwf/queues']).toEqual(['./queues.d.ts']);
   });
 });

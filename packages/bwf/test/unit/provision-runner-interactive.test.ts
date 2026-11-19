@@ -2,7 +2,7 @@ import type { ChildProcess } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { CloudflareOperation } from '@buildwf/deploy-cloudflare';
+import type { CloudflareOperation } from '@builtbyfriends/deploy-cloudflare';
 import { afterEach, expect, it } from 'vite-plus/test';
 import { createDefaultRunWrangler } from '../../src/cli/provision.ts';
 

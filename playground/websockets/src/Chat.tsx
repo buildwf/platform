@@ -1,5 +1,5 @@
-import type { WebSocketRouteMap } from '@buildwf/bwf/routes';
-import { connect, type BwfSocket } from '@buildwf/bwf/ws';
+import type { WebSocketRouteMap } from '@builtbyfriends/bwf/routes';
+import { connect, type BwfSocket } from '@builtbyfriends/bwf/ws';
 import { startTransition, useEffect, useEffectEvent, useRef, useState } from 'react';
 
 type ChatSocket = BwfSocket<'/ws/chat/:room'>;

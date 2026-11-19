@@ -134,7 +134,7 @@ describe('bwfPlugin Vite environments', () => {
     const config = await resolveConfig({ root, plugins: [bwfPlugin()] }, 'serve', 'development');
 
     expect(config.environments.nosam_worker.optimizeDeps.include).toEqual(
-      expect.arrayContaining(['@buildwf/bwf > email-validator', '@buildwf/bwf > pg']),
+      expect.arrayContaining(['@builtbyfriends/bwf > email-validator', '@builtbyfriends/bwf > pg']),
     );
     expect(config.environments.nosam_worker.optimizeDeps.exclude).toEqual(
       expect.arrayContaining(['nosam', 'better-auth']),
@@ -157,13 +157,13 @@ describe('bwfPlugin Vite environments', () => {
     // A top-level sql`` call, as in a column default, is enough to need the helper.
     writeFileSync(
       join(root, 'src/resources/projects/projects.schema.ts'),
-      "import { sql } from '@buildwf/bwf/db';\nexport const projects = sql`(datetime('now'))`;\n",
+      "import { sql } from '@builtbyfriends/bwf/db';\nexport const projects = sql`(datetime('now'))`;\n",
     );
     mkdirSync(join(root, 'routes/api'), { recursive: true });
     writeFileSync(
       join(root, 'routes/api/projects.ts'),
       [
-        "import { db } from '@buildwf/bwf/db';",
+        "import { db } from '@builtbyfriends/bwf/db';",
         "import { projects } from '@schema';",
         'export const GET = () => Response.json({ db: typeof db, projects: typeof projects });',
         '',

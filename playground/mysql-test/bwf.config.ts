@@ -1,4 +1,4 @@
-import { defineConfig } from '@buildwf/bwf/config';
+import { defineConfig } from '@builtbyfriends/bwf/config';
 
 export default defineConfig({
   database: 'mysql',

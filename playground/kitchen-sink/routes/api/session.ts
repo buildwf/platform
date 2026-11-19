@@ -1,5 +1,5 @@
-import { defineHandler } from '@buildwf/bwf';
-import { getSession } from '@buildwf/bwf/auth';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { getSession } from '@builtbyfriends/bwf/auth';
 
 export const GET = defineHandler(() => {
   const auth = getSession();

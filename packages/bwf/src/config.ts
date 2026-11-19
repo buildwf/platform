@@ -1,11 +1,11 @@
-import type { RewriteDestination } from '@buildwf/bwf/routes';
+import type { RewriteDestination } from '@builtbyfriends/bwf/routes';
 import {
   isRecord,
   isR2LocationHint,
   R2_LOCATION_HINTS,
   type AssetConfig,
   type StorageConfig,
-} from '@buildwf/deploy-core';
+} from '@builtbyfriends/deploy-core';
 import { NOSAM_AUTH_PROVIDERS, isBwfAuthProvider, type BwfAuthProvider } from './auth/providers.ts';
 import type { DevRedirectRule, HeaderRule } from './cli/types.ts';
 import { loadBwfConfig } from './config-loader.ts';
@@ -194,7 +194,7 @@ const CONFIG_FILE = 'bwf.json';
 const VALID_APP_TYPES = new Set(['spa', 'static', 'nosam']);
 /**
  * Accepted `routing.notFound` values. Keep in sync with the schema.json enum
- * and `AssetConfig.not_found_handling` in `@buildwf/deploy-core`.
+ * and `AssetConfig.not_found_handling` in `@builtbyfriends/deploy-core`.
  */
 const VALID_NOT_FOUND_HANDLING: Set<string> = new Set([
   'single-page-application',
@@ -233,7 +233,7 @@ const SANDBOX_KEYS = [...SANDBOX_STRING_KEYS, 'instanceType'];
 
 /**
  * Count anonymous `*` wildcards, ignoring the `*` that ends a `:name*` capture:
- * `compilePattern` (`@buildwf/edge`) gives `:name*` its own group, so it never clashes with a splat.
+ * `compilePattern` (`@builtbyfriends/edge`) gives `:name*` its own group, so it never clashes with a splat.
  */
 export function countSplats(source: string): number {
   return source.replace(/:[A-Za-z0-9_]+\*/g, '').match(/\*/g)?.length ?? 0;
@@ -307,7 +307,7 @@ function assertNotProtocolRelative(
   );
 }
 
-// Mirrors LITERAL_HOSTNAME_REGEX in @buildwf/deploy-core and the platform domains route.
+// Mirrors LITERAL_HOSTNAME_REGEX in @builtbyfriends/deploy-core and the platform domains route.
 const LITERAL_HOSTNAME_REGEX = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
 
 type ParsedRuleSource = {
@@ -600,7 +600,7 @@ function validateConfigObject(obj: unknown): BwfConfig {
 
     if (inf.auth !== undefined) {
       throw new Error(
-        `config: "inference.auth" in ${CONFIG_FILE} is no longer supported. Use auth.ts or import from "@buildwf/bwf/auth"/"@buildwf/bwf/client" instead.`,
+        `config: "inference.auth" in ${CONFIG_FILE} is no longer supported. Use auth.ts or import from "@builtbyfriends/bwf/auth"/"@builtbyfriends/bwf/client" instead.`,
       );
     }
 

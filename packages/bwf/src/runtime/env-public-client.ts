@@ -1,5 +1,5 @@
 /**
- * Client-side variant of `@buildwf/bwf/env`.
+ * Client-side variant of `@builtbyfriends/bwf/env`.
  *
  * Selected via the `browser` export condition. bwf exposes only fixed-prefix
  * `VITE_*` schema keys to the client bundle. If a server-only key is read

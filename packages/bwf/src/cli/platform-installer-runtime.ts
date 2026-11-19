@@ -3,8 +3,8 @@ import type {
   PlatformRuntime,
   PlatformRuntimeDatabaseManifest,
   PlatformRuntimeManifest,
-} from '@buildwf/platform/installer';
-import { resolvePlatformRuntime } from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform/installer';
+import { resolvePlatformRuntime } from '@builtbyfriends/platform/installer';
 import { join } from 'pathslash';
 import { getErrorMessage } from './output.ts';
 import { hash } from './platform-installer-resources.ts';

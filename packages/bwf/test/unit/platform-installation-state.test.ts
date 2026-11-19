@@ -3,7 +3,7 @@ import {
   createPlatformInstallationManifest,
   parsePlatformInstallationManifest,
   transitionInstallation,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { describe, expect, it } from 'vite-plus/test';
 
 function manifestAt(status: 'deploying' | 'verifying') {

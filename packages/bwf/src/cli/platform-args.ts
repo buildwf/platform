@@ -3,7 +3,7 @@ import {
   PLATFORM_LOGIN_KINDS,
   type PlatformLoginKind,
   type PlatformAppAccess,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { operatorGroups, parseOperatorArgs, type OperatorArgs } from './operator-args.ts';
 import { parsePlatformConfigArgs, type PlatformConfigArgs } from './platform-config-args.ts';
 import { parsePlatformPlansArgs, type PlatformPlansArgs } from './platform-plans-args.ts';

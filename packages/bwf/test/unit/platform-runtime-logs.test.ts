@@ -1,4 +1,4 @@
-import { createPlatformDeploymentManifest } from '@buildwf/platform';
+import { createPlatformDeploymentManifest } from '@builtbyfriends/platform';
 import { describe, expect, it } from 'vite-plus/test';
 import { PlatformCloudflareClient } from '../../src/cli/platform-cloudflare.ts';
 import {

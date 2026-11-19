@@ -116,7 +116,7 @@ describe('bwf prepare (subprocess)', () => {
 
     expect(readFileSync(routesDts, 'utf8')).toContain('typeof import("../routes/api/hello.ts")');
     expect(readFileSync(dbDts, 'utf8')).toContain('import type * as schema from "@schema"');
-    expect(readFileSync(envDts, 'utf8')).toContain('declare module "@buildwf/bwf/env"');
+    expect(readFileSync(envDts, 'utf8')).toContain('declare module "@builtbyfriends/bwf/env"');
 
     const parsedTsconfig = JSON.parse(readFileSync(tsconfig, 'utf8')) as {
       files: Array<string>;
@@ -125,10 +125,10 @@ describe('bwf prepare (subprocess)', () => {
     expect(parsedTsconfig.files).toEqual(
       expect.arrayContaining(['routes.d.ts', 'db.d.ts', 'env.d.ts']),
     );
-    expect(parsedTsconfig.compilerOptions?.paths?.['@buildwf/bwf/routes']).toEqual([
+    expect(parsedTsconfig.compilerOptions?.paths?.['@builtbyfriends/bwf/routes']).toEqual([
       './routes.d.ts',
     ]);
-    expect(parsedTsconfig.compilerOptions?.paths?.['@buildwf/bwf/db']).toEqual(['./db.d.ts']);
+    expect(parsedTsconfig.compilerOptions?.paths?.['@builtbyfriends/bwf/db']).toEqual(['./db.d.ts']);
   });
 
   it('still prepares tsconfig when no generated source inputs exist', () => {

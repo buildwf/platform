@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 /**
- * Control-plane coverage for `@buildwf/bwf/email`.
+ * Control-plane coverage for `@builtbyfriends/bwf/email`.
  *
  * Routes under test (all mounted in `src/index.ts`):
  *   - `GET    /projects/:id/email/usage`

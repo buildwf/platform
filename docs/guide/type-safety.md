@@ -52,7 +52,7 @@ The Drizzle schema defines database columns, runtime validation, handler input t
 To build the URL of an API route, pass its route pattern and parameters to `routeUrl()`:
 
 ```ts
-import { routeUrl } from '@buildwf/bwf/routes';
+import { routeUrl } from '@builtbyfriends/bwf/routes';
 
 const url = routeUrl('/api/users/[id]', {
   params: { id: 42 },
@@ -70,7 +70,7 @@ The same bracket patterns work with typed `fetch()` and WebSocket `connect()`.
 Pass the returned string to `fetch()`, an `<a>`, or `c.redirect()`. For `c.redirect()` and `c.rewrite()`, you can pass a destination object directly:
 
 ```ts
-import type { RouteDestination } from '@buildwf/bwf/routes';
+import type { RouteDestination } from '@builtbyfriends/bwf/routes';
 
 const user = {
   pathname: '/api/users/[id]',
@@ -101,7 +101,7 @@ Enable [`routing.typedRoutes`](../reference/config.md#routing-typedroutes) to ca
 
 ```ts
 // bwf.config.ts
-import { defineConfig } from '@buildwf/bwf/config';
+import { defineConfig } from '@builtbyfriends/bwf/config';
 
 export default defineConfig({
   routing: { typedRoutes: true },
@@ -125,7 +125,7 @@ The [SSE](./sse.md#client) and [live stream](./live.md#subscribe-from-the-browse
 `c.redirect()` also accepts a `URL` or destination object. For a URL from a provider SDK, your CMS, or `public/`, use `as Href` to skip the type check:
 
 ```ts
-import { routeUrl, type Href } from '@buildwf/bwf/routes';
+import { routeUrl, type Href } from '@builtbyfriends/bwf/routes';
 
 declare const id: string;
 declare const dynamic: string;
@@ -140,7 +140,7 @@ c.redirect(dynamic as Href);
 
 Cast only URLs you trust. Validate request values such as `?redirectTo=` before redirecting; see [`c.redirect()`](../reference/api/rewrites.md#c-rewrite-destination) for an example.
 
-`@buildwf/bwf/routes` exports two types for these strings:
+`@builtbyfriends/bwf/routes` exports two types for these strings:
 
 - `RouteUrl`: the URL of one of your routes. `routeUrl()` returns it, and `c.rewrite()` accepts it.
 - `Href`: anything `c.redirect()` can point to: a `RouteUrl`, a same-page query or hash, or an external URL.
@@ -148,7 +148,7 @@ Cast only URLs you trust. Validate request values such as `?redirectTo=` before 
 Use these types for URLs you check at runtime:
 
 ```ts
-import type { Href, RouteUrl } from '@buildwf/bwf/routes';
+import type { Href, RouteUrl } from '@builtbyfriends/bwf/routes';
 
 c.rewrite(post.path as RouteUrl);
 c.redirect(user.website as Href);
@@ -190,7 +190,7 @@ Middleware and handlers share typed data through Hono's context variables. Augme
 
 ```ts
 // middleware/01.auth.ts
-declare module '@buildwf/bwf' {
+declare module '@builtbyfriends/bwf' {
   interface CloudContextVariables {
     requestId: string;
   }
@@ -210,7 +210,7 @@ For native Cloudflare deployments, declare a binding in `bwf.config.ts` to give 
 
 ```ts
 // bwf.config.ts
-import { defineConfig } from '@buildwf/bwf/config';
+import { defineConfig } from '@builtbyfriends/bwf/config';
 
 export default defineConfig({
   cloudflare: {
@@ -224,7 +224,7 @@ export default defineConfig({
 Run `bwf prepare`, or start the dev server, to use the binding without a type assertion:
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 
 export const GET = defineHandler(async (c) => {
   const { success } = await c.env.MY_RATE_LIMITER.limit({ key: 'example' });
@@ -235,9 +235,9 @@ export const GET = defineHandler(async (c) => {
 Service bindings use `Fetcher`, Durable Objects use `DurableObjectNamespace`, and other bindings use their standard Cloudflare types. For RPC methods or other specialized types, augment `CloudBindings` in a file included by your tsconfig:
 
 ```ts
-import type {} from '@buildwf/bwf';
+import type {} from '@builtbyfriends/bwf';
 
-declare module '@buildwf/bwf' {
+declare module '@builtbyfriends/bwf' {
   interface CloudBindings {
     AUTH: Fetcher & { check(): Promise<boolean> };
   }
@@ -259,7 +259,7 @@ Extend the generated tsconfig in your project:
     "moduleResolution": "bundler",
     "strict": true,
     "jsx": "react-jsx",
-    "types": ["@buildwf/bwf/env"]
+    "types": ["@builtbyfriends/bwf/env"]
   },
   "include": ["src", "routes", "middleware", "crons", "queues"]
 }

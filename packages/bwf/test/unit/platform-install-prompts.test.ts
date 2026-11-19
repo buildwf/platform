@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
-import { createPlatformDeploymentManifest } from '@buildwf/platform';
+import { createPlatformDeploymentManifest } from '@builtbyfriends/platform';
 import { CANCEL_SYMBOL, intro } from '@voidzero-dev/vite-plus-prompts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { pc } from '../../src/cli/output.ts';

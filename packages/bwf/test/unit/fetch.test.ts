@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vite-plus/test';
 import { fetch as typedFetch, FetchError } from '../../src/runtime/fetch.ts';
 
-declare module '@buildwf/bwf/routes' {
+declare module '@builtbyfriends/bwf/routes' {
   interface RouteMap {
     '/api/users/[id]': RouteMap['/api/users/:id'];
     '/api/files/[...path]': RouteMap['/api/files/:path{.+}'];

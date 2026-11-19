@@ -1,4 +1,4 @@
-import { compilePattern, matchPattern } from '@buildwf/edge';
+import { compilePattern, matchPattern } from '@builtbyfriends/edge';
 import type { Rolldown } from 'vite';
 import type { ClientManifest } from './runtime/routing-assets.ts';
 import type { RoutingHeaderRule } from './runtime/routing.ts';

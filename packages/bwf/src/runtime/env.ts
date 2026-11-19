@@ -1,5 +1,5 @@
 /**
- * Public runtime env API — exposed via "@buildwf/bwf/_env".
+ * Public runtime env API — exposed via "@builtbyfriends/bwf/_env".
  *
  * All exports from this module are accessible to user code.
  * Internal platform bindings (__NOSAM_*, __PROJECT_*) are filtered

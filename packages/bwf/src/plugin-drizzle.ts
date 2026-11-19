@@ -67,7 +67,7 @@ type DrizzlePluginOptions = BwfDbModuleOptions & {
 };
 
 /**
- * The app's `@buildwf/bwf/db` module for its dialect, schema and D1 binding. Resolving and loading
+ * The app's `@builtbyfriends/bwf/db` module for its dialect, schema and D1 binding. Resolving and loading
  * have no side effects, so the Vite plugin and `bwfDbBundlerPlugin` share them.
  */
 function createBwfDbModule(
@@ -77,7 +77,7 @@ function createBwfDbModule(
   paths: ProjectPaths = readProjectPaths(root),
 ) {
   const schema = discoverSchema(root, paths);
-  // The package's own `@buildwf/bwf/db` is a D1 client, so PostgreSQL and MySQL always need this one.
+  // The package's own `@builtbyfriends/bwf/db` is a D1 client, so PostgreSQL and MySQL always need this one.
   // It cannot apply `database.casing` either, which also names the columns of tables that an
   // app keeps outside its schema.
   const hasDbRuntime =
@@ -92,7 +92,7 @@ function createBwfDbModule(
     hasDbRuntime,
 
     resolveId(id: string, importer: string | undefined): string | undefined {
-      if (id === '@buildwf/bwf/db') {
+      if (id === '@builtbyfriends/bwf/db') {
         if (!hasDbRuntime) {
           return;
         } // Fall through to the real module (stub)
@@ -329,7 +329,7 @@ function createPrimaryDb(d1) {
 /**
  * Vite plugin for Drizzle integration.
  *
- * - Intercepts `@buildwf/bwf/db` imports in SSR/worker environments and serves
+ * - Intercepts `@builtbyfriends/bwf/db` imports in SSR/worker environments and serves
  *   a virtual module that creates a Drizzle DB instance, using the user's
  *   schema when present.
  * - Generates `.bwf/db.d.ts` with proper Drizzle types.
@@ -377,10 +377,10 @@ export function drizzlePlugin(
     },
 
     resolveId: {
-      filter: { id: /^(@buildwf\/bwf\/db|@schema)/ },
+      filter: { id: /^(@builtbyfriends\/bwf\/db|@schema)/ },
       handler(id, importer) {
         // Only intercept bwf/db in server/worker environments (not client)
-        if (id === '@buildwf/bwf/db' && this.environment?.name === 'client') {
+        if (id === '@builtbyfriends/bwf/db' && this.environment?.name === 'client') {
           return;
         }
         const resolved = dbModule.resolveId(id, importer);
@@ -425,8 +425,8 @@ export function drizzlePlugin(
 }
 
 /**
- * `@buildwf/bwf/db` and `@schema` for bundles that do not run bwf's Vite plugins, such as the cron and
- * queue handler bundle that deploys build. Without it they load the package's static `@buildwf/bwf/db`, a D1 client without the app's
+ * `@builtbyfriends/bwf/db` and `@schema` for bundles that do not run bwf's Vite plugins, such as the cron and
+ * queue handler bundle that deploys build. Without it they load the package's static `@builtbyfriends/bwf/db`, a D1 client without the app's
  * schema. It reads the dialect, schema and D1 binding from the project, as the Vite plugin does.
  * Its hooks are plain Rollup hooks; Vite also needs `enforce` to run them before its resolver.
  *
@@ -449,7 +449,7 @@ export function bwfDbBundlerPlugin(
   const dbModule = createBwfDbModule(
     root,
     dialect,
-    // The package's own `@buildwf/bwf/db` reads D1 from the `DB` binding.
+    // The package's own `@builtbyfriends/bwf/db` reads D1 from the `DB` binding.
     {
       d1BindingName,
       forceVirtualDb: d1BindingName !== undefined,
@@ -504,7 +504,7 @@ export function bwfDbBundlerPlugin(
         return { id, external: true };
       }
       const resolved = dbModule.resolveId(id, importer);
-      if (resolved !== undefined && id !== '@buildwf/bwf/db') {
+      if (resolved !== undefined && id !== '@builtbyfriends/bwf/db') {
         // `@schema` can name a schema folder or a file without its extension. Only Vite's
         // config alias hands those to a resolver, so apply the bundler's own rules here.
         return this.resolve(resolved, importer, { skipSelf: true });

@@ -1,4 +1,4 @@
-import { parsePlatformResourceOwnershipMarker } from '@buildwf/platform';
+import { parsePlatformResourceOwnershipMarker } from '@builtbyfriends/platform';
 
 /** Attribute infrastructure uploads using the installer's existing ownership proof. */
 export function platformWorkerUploadAttribution(

@@ -17,7 +17,7 @@ In an existing project, bwf asks before creating, appending to, or updating
 keeps the file unchanged; CI and non-interactive runs skip changes to existing
 projects' instructions.
 
-The complete Markdown docs ship at `node_modules/@buildwf/bwf/docs/`. Start with
+The complete Markdown docs ship at `node_modules/@builtbyfriends/bwf/docs/`. Start with
 `guide/quickstart.md` for setup and `reference/cli.md` for commands. Agents can
 read them directly, even without a linked skill.
 

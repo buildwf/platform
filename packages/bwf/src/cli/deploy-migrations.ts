@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { cloudflareCommandDiagnostic, readBindingFieldPresence } from '@buildwf/deploy-cloudflare';
+import { cloudflareCommandDiagnostic, readBindingFieldPresence } from '@builtbyfriends/deploy-cloudflare';
 import { Minimatch } from 'minimatch';
 import { dirname, join, normalize, resolve } from 'pathslash';
 import type { BwfAuthMigrationSchema } from '../auth/drizzle.ts';

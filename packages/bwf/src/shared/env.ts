@@ -10,7 +10,7 @@ import { parseDotenvFile } from './dotenv.ts';
 /** bwf's single local dotenv file. It is never a production configuration source. */
 export const LOCAL_ENV_FILE = '.env';
 
-/** The fixed browser-exposure convention supported by `@buildwf/bwf/env`. */
+/** The fixed browser-exposure convention supported by `@builtbyfriends/bwf/env`. */
 export const CLIENT_ENV_PREFIX = 'VITE_';
 
 export function isClientEnvKey(key: string): boolean {

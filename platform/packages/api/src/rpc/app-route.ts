@@ -1,5 +1,5 @@
-import { defineRegistry } from '@buildwf/realtime';
-import { rpcHandler } from '@buildwf/realtime-http';
+import { defineRegistry } from '@builtbyfriends/realtime';
+import { rpcHandler } from '@builtbyfriends/realtime-http';
 import { Hono } from 'hono';
 import { oauthBearer, OAuthError } from '../auth/oauth.ts';
 import type { ApiEnv } from '../env.ts';

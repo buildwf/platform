@@ -1,6 +1,6 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import type { CloudflareOperation } from '@buildwf/deploy-cloudflare';
+import type { CloudflareOperation } from '@builtbyfriends/deploy-cloudflare';
 import { log } from '@voidzero-dev/vite-plus-prompts';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import {

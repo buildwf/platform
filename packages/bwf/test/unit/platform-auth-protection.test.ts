@@ -4,7 +4,7 @@ import {
   createPlatformInstallationManifest,
   platformProtectionProofMessage,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import {
   runPlatformProtectionConfig,

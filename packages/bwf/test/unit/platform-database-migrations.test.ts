@@ -3,7 +3,7 @@ import {
   platformDatabaseSchemaDigest,
   readPlatformRuntimeManifest,
   type PlatformRuntimeDatabaseManifest,
-} from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform/installer';
 import { PGlite } from '@electric-sql/pglite';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 import {

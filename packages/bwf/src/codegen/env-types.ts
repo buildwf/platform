@@ -37,8 +37,8 @@ export type EnvTypesResult = {
 
 /**
  * Generate `.bwf/env.d.ts` content. Augments:
- *   - `@buildwf/bwf/env`'s `ValidatedEnv` so `env.X` is typed
- *   - `@buildwf/bwf/handler`'s `CloudBindings` so `c.env.X` is typed
+ *   - `@builtbyfriends/bwf/env`'s `ValidatedEnv` so `env.X` is typed
+ *   - `@builtbyfriends/bwf/handler`'s `CloudBindings` so `c.env.X` is typed
  *
  * Uses `typeof import(...)` on the env schema file so TypeScript handles the
  * inference — codegen never analyses types itself.
@@ -64,7 +64,7 @@ export function generateEnvTypes(envFileAbs: string, outDir: string): EnvTypesRe
     'type _NosamEnvShape = _NosamEnvSchema extends { default: infer D } ? D : _NosamEnvSchema extends { env: infer E } ? E : {};',
   );
   lines.push('');
-  lines.push('declare module "@buildwf/bwf/env" {');
+  lines.push('declare module "@builtbyfriends/bwf/env" {');
   lines.push('  interface ValidatedEnv extends _NosamEnvShape {}');
   lines.push('}');
   lines.push('');
@@ -73,7 +73,7 @@ export function generateEnvTypes(envFileAbs: string, outDir: string): EnvTypesRe
   lines.push('}');
   lines.push('');
   // Augment Hono c.env via the CloudBindings interface re-exported from bwf/handler.
-  lines.push('declare module "@buildwf/bwf/handler" {');
+  lines.push('declare module "@builtbyfriends/bwf/handler" {');
   lines.push('  interface CloudBindings extends _NosamEnvShape {}');
   lines.push('}');
   lines.push('');

@@ -1,4 +1,4 @@
-import type { CloudflareCommandResult, CloudflareOperation } from '@buildwf/deploy-cloudflare';
+import type { CloudflareCommandResult, CloudflareOperation } from '@builtbyfriends/deploy-cloudflare';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 vi.mock('@voidzero-dev/vite-plus-prompts', () => ({

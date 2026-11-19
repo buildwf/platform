@@ -6,7 +6,7 @@ import {
   parsePlatformLoginConfiguration,
   type PlatformAccessProtection,
   type PlatformLoginConfiguration,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import {
   PlatformCloudflareApiError,
   type PlatformCloudflareClient,

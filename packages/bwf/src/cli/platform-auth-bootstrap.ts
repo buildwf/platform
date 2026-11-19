@@ -2,7 +2,7 @@ import { createHash, createHmac, randomBytes } from 'node:crypto';
 import {
   parsePlatformAuthenticationSetup,
   PLATFORM_AUTH_SETUP_PROOF_PREFIX,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { cfAccessHeaders } from '../shared/cf-access.ts';
 import { ensurePlatformAccessToken } from './cf-access.ts';
 import { normalizePlatformApiUrl } from './platform-registry.ts';

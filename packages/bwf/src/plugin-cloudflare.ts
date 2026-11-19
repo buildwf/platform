@@ -33,7 +33,7 @@ function isInside(directory: string, path: string): boolean {
  * Vitest runs tests in Node.js, in a Vite server of its own that turns off dependency
  * prebundling. The Cloudflare plugin needs prebundling to start the Worker, so the Worker would
  * fail before any test runs. Leave these plugins out of that server; bwf's other plugins still
- * resolve `@buildwf/bwf/*`, `@schema` and the generated modules for tests.
+ * resolve `@builtbyfriends/bwf/*`, `@schema` and the generated modules for tests.
  */
 function skipOnVitestServer(plugins: Array<Plugin>): Array<Plugin> {
   for (const plugin of plugins) {

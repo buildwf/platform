@@ -5,7 +5,7 @@ import {
   parseRootWranglerConfig,
   readWranglerTopLevelString,
   type CloudflareOperation,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { dirname, join, resolve } from 'pathslash';
 import { findEnvFile } from '../codegen/env-types.ts';
 import { loadUserEnvFile } from '../host/load-user-env.ts';

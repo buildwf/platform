@@ -56,9 +56,9 @@ export function readResourceDefinition(
       const declaration = statement as AstImportDeclaration;
       const source = declaration.source.value;
       const supported =
-        source === '@buildwf/bwf/ws'
+        source === '@builtbyfriends/bwf/ws'
           ? new Set(['defineRoom', 'defineWebSocket'])
-          : source === '@buildwf/bwf/durable'
+          : source === '@builtbyfriends/bwf/durable'
             ? new Set(['defineDurableState', 'defineDurableObject'])
             : new Set<string>();
       for (const specifier of declaration.specifiers ?? []) {

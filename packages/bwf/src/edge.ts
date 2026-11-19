@@ -4,4 +4,4 @@ export {
   type StaticEdgeConfig,
   type StaticEdgeEnv,
   type StaticEdgeHandler,
-} from '@buildwf/edge';
+} from '@builtbyfriends/edge';

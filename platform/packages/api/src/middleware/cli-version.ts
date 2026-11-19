@@ -104,7 +104,7 @@ export function cliVersionProblem(
       error: 'cli_outdated',
       message:
         'Your nosam CLI is too old: it sent a multipart deploy body, which is no longer supported. ' +
-        `Upgrade with: npm i -g @buildwf/bwf@latest (minimum version ${MIN_CLI_VERSION}).`,
+        `Upgrade with: npm i -g @builtbyfriends/bwf@latest (minimum version ${MIN_CLI_VERSION}).`,
       minVersion: MIN_CLI_VERSION,
     };
   }
@@ -116,9 +116,9 @@ export function cliVersionProblem(
         message:
           cmp === null
             ? `Your nosam CLI sent an unrecognized version "${cliVersion}". ` +
-              'Upgrade with: npm i -g @buildwf/bwf@latest'
+              'Upgrade with: npm i -g @builtbyfriends/bwf@latest'
             : `Your nosam CLI ${cliVersion} is below the minimum supported version ${MIN_CLI_VERSION}. ` +
-              'Upgrade with: npm i -g @buildwf/bwf@latest',
+              'Upgrade with: npm i -g @builtbyfriends/bwf@latest',
         minVersion: MIN_CLI_VERSION,
         clientVersion: cliVersion,
       };

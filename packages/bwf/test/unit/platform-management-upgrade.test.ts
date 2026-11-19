@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
-import { encodeCloudflareVersionMessage } from '@buildwf/deploy-cloudflare';
+import { encodeCloudflareVersionMessage } from '@builtbyfriends/deploy-cloudflare';
 import {
   createPlatformDeploymentManifest,
   parsePlatformAuthenticationSetup,
@@ -14,8 +14,8 @@ import {
   recordInstallationStep,
   transitionInstallation,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
-import { getPlatformRuntimeDirectory, resolvePlatformRuntime } from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform';
+import { getPlatformRuntimeDirectory, resolvePlatformRuntime } from '@builtbyfriends/platform/installer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { printSuccess } from '../../src/cli/output.ts';
 

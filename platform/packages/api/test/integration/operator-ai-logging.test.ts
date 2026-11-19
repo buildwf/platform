@@ -384,7 +384,7 @@ describe('plan defaults', () => {
     'an account on an unknown plan follows the default plan: %s',
     async (_name, overrides, savedCatalog, defaultPlanId) => {
       if (savedCatalog) {
-        const { createDefaultPlanCatalog } = await import('@buildwf/platform/plans');
+        const { createDefaultPlanCatalog } = await import('@builtbyfriends/platform/plans');
         await setPlatformSetting(env.db, PLAN_CATALOG_SETTING, {
           ...createDefaultPlanCatalog('free'),
           defaultPlanId: 'pro',

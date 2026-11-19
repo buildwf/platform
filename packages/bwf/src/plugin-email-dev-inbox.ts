@@ -1,6 +1,6 @@
 // Dev-only Vite plugin: owns the in-memory email buffer and serves
 // `/__nosam/inbox` routes for browsing captured messages. Activated when
-// binding inference detected `@buildwf/bwf/email` usage.
+// binding inference detected `@builtbyfriends/bwf/email` usage.
 //
 // `sendEmail` runs in workerd, a separate OS process, so it POSTs each
 // captured message to `/__nosam/inbox/_capture` through its dev assets

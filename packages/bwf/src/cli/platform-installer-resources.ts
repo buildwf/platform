@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { type CloudflareTriggerConfig } from '@buildwf/deploy-cloudflare';
+import { type CloudflareTriggerConfig } from '@builtbyfriends/deploy-cloudflare';
 import {
   createPlatformResourceOwnershipMarker,
   PLATFORM_R2_OWNERSHIP_MARKER_KEY,
@@ -7,8 +7,8 @@ import {
   recordInstallationStep,
   type InstallationResource,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
-import { PLATFORM_REMOTE_INSTALLATION_MANIFEST_KEY as REMOTE_INSTALLATION_MANIFEST_KEY } from '@buildwf/platform';
+} from '@builtbyfriends/platform';
+import { PLATFORM_REMOTE_INSTALLATION_MANIFEST_KEY as REMOTE_INSTALLATION_MANIFEST_KEY } from '@builtbyfriends/platform';
 import {
   hyperdriveOriginConfigHash,
   hyperdriveOriginFromConnectionString,

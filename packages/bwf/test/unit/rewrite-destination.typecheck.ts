@@ -1,8 +1,8 @@
 import { describe, expectTypeOf, it } from 'vite-plus/test';
 import type { RewriteDestination, RouteName } from '../../src/routes-stub.ts';
 
-// `@buildwf/bwf/routes` resolves to routes-stub.ts; this augmentation adds a known route.
-declare module '@buildwf/bwf/routes' {
+// `@builtbyfriends/bwf/routes` resolves to routes-stub.ts; this augmentation adds a known route.
+declare module '@builtbyfriends/bwf/routes' {
   interface RouteMap {
     '/rewrite-destination-test/known': {
       GET: { input: unknown; output: unknown };

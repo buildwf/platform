@@ -64,7 +64,7 @@ function createPrimaryDb(d1: D1Database): DrizzleD1Database {
 const requestDbKey = {};
 
 function requireD1(): D1Database {
-  // Vite serves a PostgreSQL or MySQL app's own `@buildwf/bwf/db` to an installed package only when the
+  // Vite serves a PostgreSQL or MySQL app's own `@builtbyfriends/bwf/db` to an installed package only when the
   // package is an ES module that depends on void and the app lists it or reaches it through such
   // packages.
   if (

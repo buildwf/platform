@@ -1,4 +1,4 @@
-import { parsePlatformLoginConfiguration } from '@buildwf/platform';
+import { parsePlatformLoginConfiguration } from '@builtbyfriends/platform';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 import { assertPublicIdentityUrl, PlatformOidcProvider } from '../../src/auth/oidc.ts';

@@ -50,13 +50,13 @@ describe('generateAuthTypes', () => {
       expect(dts).toContain('export {}');
       // better-auth is reached through bwf/auth: apps usually cannot resolve it themselves.
       expect(dts).toContain(
-        'import type { InferAuthInstance, InferAuthSession } from "@buildwf/bwf/auth";',
+        'import type { InferAuthInstance, InferAuthSession } from "@builtbyfriends/bwf/auth";',
       );
       expect(dts).not.toContain('from "better-auth"');
       expect(dts).toContain(
         'type _NosamAuthSession = InferAuthSession<typeof import("../auth.ts")["default"]>;',
       );
-      expect(dts).toContain('declare module "@buildwf/bwf/auth"');
+      expect(dts).toContain('declare module "@builtbyfriends/bwf/auth"');
       expect(dts).toContain('interface BwfAuthTypes {');
       expect(dts).toContain('auth: InferAuthInstance<typeof import("../auth.ts")["default"]>;');
       expect(dts).toContain('user: _NosamAuthSession["user"];');

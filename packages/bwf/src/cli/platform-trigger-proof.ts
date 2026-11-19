@@ -1,5 +1,5 @@
-import type { CloudflareTriggerConfig } from '@buildwf/deploy-cloudflare';
-import { isRecord } from '@buildwf/deploy-core';
+import type { CloudflareTriggerConfig } from '@builtbyfriends/deploy-cloudflare';
+import { isRecord } from '@builtbyfriends/deploy-core';
 
 type ReadCloudflare = (path: string) => Promise<unknown>;
 

@@ -50,7 +50,7 @@ const testTimeout = 120_000 * ciTimeoutScale;
 const hookTimeout = 120_000 * ciTimeoutScale;
 
 const platformAlias = {
-  '@buildwf/bwf/_sandbox-container': fileURLToPath(
+  '@builtbyfriends/bwf/_sandbox-container': fileURLToPath(
     new URL('packages/bwf/src/runtime/sandbox-container.ts', import.meta.url),
   ),
   'nosam:sandbox-controller-source': fileURLToPath(

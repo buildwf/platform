@@ -1,4 +1,4 @@
-import { createDeployArtifact } from '@buildwf/deploy-core';
+import { createDeployArtifact } from '@builtbyfriends/deploy-core';
 import { eq, isNull } from 'drizzle-orm';
 import {
   beforeAll,

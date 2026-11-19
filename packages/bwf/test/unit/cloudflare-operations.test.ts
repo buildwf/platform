@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { encodeCloudflareVersionMessage } from '@buildwf/deploy-cloudflare';
+import { encodeCloudflareVersionMessage } from '@builtbyfriends/deploy-cloudflare';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import {
   activateCloudflareExistingVersion,

@@ -1,4 +1,4 @@
-import { isRecord } from '@buildwf/deploy-core';
+import { isRecord } from '@builtbyfriends/deploy-core';
 import { clientSchema, dataView, memo, type EntityOf } from 'react-fate';
 import { createFateClient } from './client.generated.ts';
 import type {

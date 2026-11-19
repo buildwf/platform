@@ -2,7 +2,7 @@
  * Public types for the bwf/email module.
  *
  * The runtime entrypoint (../email.ts) re-exports these so that consumers
- * can import them via `import type { SendEmailOptions } from "@buildwf/bwf/email"`.
+ * can import them via `import type { SendEmailOptions } from "@builtbyfriends/bwf/email"`.
  */
 
 export type Address = string | { email: string; name?: string };

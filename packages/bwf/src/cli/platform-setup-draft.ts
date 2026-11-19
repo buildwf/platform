@@ -4,7 +4,7 @@ import {
   recordInstallationStep,
   transitionInstallation,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import type { PlatformInstallPlan } from './platform-plan.ts';
 import { writeInstallationManifest, writePendingInstallationSecrets } from './platform-registry.ts';
 

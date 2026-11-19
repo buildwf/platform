@@ -1,11 +1,11 @@
 /**
- * Public env API — `@buildwf/bwf/env`.
+ * Public env API — `@builtbyfriends/bwf/env`.
  *
  * Canonical usage:
  *
  * ```ts
  * // env.ts at project root
- * import { defineEnv, string, number, oneOf } from "@buildwf/bwf/env";
+ * import { defineEnv, string, number, oneOf } from "@builtbyfriends/bwf/env";
  *
  * export default defineEnv({
  *   STRIPE_KEY: string(),
@@ -15,7 +15,7 @@
  * });
  *
  * // anywhere else
- * import { env } from "@buildwf/bwf/env";
+ * import { env } from "@builtbyfriends/bwf/env";
  * env.STRIPE_KEY;
  * ```
  *
@@ -59,7 +59,7 @@ type EnvRegistryState = {
   validation?: EnvValidation | null;
 };
 
-// Tooling can load `@buildwf/bwf/env` through a different module instance than the Vite
+// Tooling can load `@builtbyfriends/bwf/env` through a different module instance than the Vite
 // plugin (source workspace, built package, or cache-busted HMR import). Keep the
 // registry process-global so every instance observes the same schema.
 const ENV_REGISTRY_SYMBOL = Symbol.for('bwf.env.registry');
@@ -112,7 +112,7 @@ type InferEnv<S extends AnySchema> = {
  * `env.ts` at project root, imports it, and uses the schema for runtime
  * validation, type generation, and deploy-time secret checks.
  *
- * The return value is identical to the `env` export from `@buildwf/bwf/env`.
+ * The return value is identical to the `env` export from `@builtbyfriends/bwf/env`.
  * Re-export it from your `env.ts` if you prefer the explicit
  * `import { env } from "~/env"` pattern.
  */
@@ -461,7 +461,7 @@ async function validateAllEnvWithValues(
 export { string, number, boolean, url, email, oneOf, json, type EnvSchema } from './env-helpers.ts';
 
 // Ambient Cloudflare.Env declarations so user tsconfigs that include
-// `types: ["@buildwf/bwf/env"]` expose D1/KV/R2 globals plus the auto-inferred bwf
+// `types: ["@builtbyfriends/bwf/env"]` expose D1/KV/R2 globals plus the auto-inferred bwf
 // framework bindings.
 declare global {
   namespace Cloudflare {

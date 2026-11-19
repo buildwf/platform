@@ -4,7 +4,7 @@ import {
   recordInstallationStep,
   type InstallationResource,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import {
   PlatformCloudflareApiError,
   type PlatformCloudflareClient,

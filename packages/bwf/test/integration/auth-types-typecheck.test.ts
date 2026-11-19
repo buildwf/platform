@@ -66,15 +66,15 @@ describe('generated auth types in a consumer project', () => {
     const adminTypes = join(betterAuthPkg, 'dist/plugins/admin/index.d.mts');
     const result = typecheck(
       'import { admin } from "better-auth/plugins/admin";\n' +
-        'import { defineAuth } from "@buildwf/bwf/auth";\n' +
+        'import { defineAuth } from "@builtbyfriends/bwf/auth";\n' +
         'export default defineAuth(({ defaults }) => ({\n' +
         '  ...defaults,\n' +
         '  plugins: [admin()],\n' +
         '  user: { additionalFields: { plan: { type: "string", required: false } } },\n' +
         '}));\n',
-      'import { defineHandler } from "@buildwf/bwf";\n' +
-        'import { getAuth, getUser, getSession, requireAuth } from "@buildwf/bwf/auth";\n' +
-        'import { logger } from "@buildwf/bwf/log";\n' +
+      'import { defineHandler } from "@builtbyfriends/bwf";\n' +
+        'import { getAuth, getUser, getSession, requireAuth } from "@builtbyfriends/bwf/auth";\n' +
+        'import { logger } from "@builtbyfriends/bwf/log";\n' +
         'export const loader = defineHandler((c) => {\n' +
         '  const auth = getAuth(c);\n' +
         '  auth.api.listUsers({ headers: c.req.raw.headers, query: { limit: 10 } });\n' +
@@ -106,7 +106,7 @@ describe('generated auth types in a consumer project', () => {
 
   it('keeps fields every branch shares when auth.ts returns different shapes', () => {
     const result = typecheck(
-      'import { defineAuth } from "@buildwf/bwf/auth";\n' +
+      'import { defineAuth } from "@builtbyfriends/bwf/auth";\n' +
         'const plan = { type: "string", required: true } as const;\n' +
         'const trialDays = { type: "number", required: true } as const;\n' +
         'const seats = { type: "number", required: true } as const;\n' +
@@ -115,7 +115,7 @@ describe('generated auth types in a consumer project', () => {
         '  const paid = { ...defaults, user: { additionalFields: { plan, seats } } };\n' +
         '  return env.TRIAL ? trial : paid;\n' +
         '});\n',
-      'import { getUser } from "@buildwf/bwf/auth";\n' +
+      'import { getUser } from "@builtbyfriends/bwf/auth";\n' +
         'export const plan: string = getUser()!.plan;\n' +
         '// @ts-expect-error only one branch adds trialDays\n' +
         'export const trialDays: number = getUser()!.trialDays;\n',
@@ -126,12 +126,12 @@ describe('generated auth types in a consumer project', () => {
 
   it('keeps Better Auth base types when a JS auth config cannot be typed', () => {
     const result = typecheck(
-      'import { defineAuth } from "@buildwf/bwf/auth";\n' +
+      'import { defineAuth } from "@builtbyfriends/bwf/auth";\n' +
         'export default defineAuth({\n' +
         '  user: { additionalFields: { plan: { type: "string", required: true } } },\n' +
         '});\n',
-      'import { getAuth, getUser, type AuthUser } from "@buildwf/bwf/auth";\n' +
-        'import { defineHandler } from "@buildwf/bwf";\n' +
+      'import { getAuth, getUser, type AuthUser } from "@builtbyfriends/bwf/auth";\n' +
+        'import { defineHandler } from "@builtbyfriends/bwf";\n' +
         'export const GET = defineHandler(c => {\n' +
         '  getAuth(c).handler(c.req.raw);\n' +
         '  // @ts-expect-error not an endpoint on the base instance\n' +

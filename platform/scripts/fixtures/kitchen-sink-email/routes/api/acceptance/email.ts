@@ -1,7 +1,7 @@
-import { defineHandler } from '@buildwf/bwf';
-import { sendEmail, type SendEmailOptions } from '@buildwf/bwf/email';
-import { env } from '@buildwf/bwf/env';
-import { kv } from '@buildwf/bwf/kv';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { sendEmail, type SendEmailOptions } from '@builtbyfriends/bwf/email';
+import { env } from '@builtbyfriends/bwf/env';
+import { kv } from '@builtbyfriends/bwf/kv';
 
 export const POST = defineHandler(async (c) => {
   const secret = env.SECRET_KEY;

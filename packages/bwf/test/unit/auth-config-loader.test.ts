@@ -75,7 +75,7 @@ describe('loadBwfAuthConfig', () => {
     writeFileSync(
       join(root, 'auth.ts'),
       [
-        "import type { BwfAuthConfig } from '@buildwf/bwf/auth';",
+        "import type { BwfAuthConfig } from '@builtbyfriends/bwf/auth';",
         "import { nickname } from './lib/nickname';",
         "import { pronouns } from '@fields/pronouns';",
         "import { website } from '@schema';",

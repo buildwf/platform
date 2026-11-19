@@ -29,7 +29,7 @@ describe.each(['react', 'hono/jsx'])('server JSX with %s', (jsxImportSource) => 
       join(root, 'vite.config.ts'),
       `import { writeFileSync } from 'node:fs';
 import { defineConfig } from 'vite-plus';
-import { bwfPlugin } from '@buildwf/bwf';
+import { bwfPlugin } from '@builtbyfriends/bwf';
 export default defineConfig({
   oxc: { jsx: { runtime: 'automatic', importSource: ${JSON.stringify(jsxImportSource)} } },
   plugins: [bwfPlugin(), {
@@ -40,7 +40,7 @@ export default defineConfig({
   }],
 });`,
     );
-    const handler = (text: string) => `import { defineHandler } from '@buildwf/bwf';
+    const handler = (text: string) => `import { defineHandler } from '@builtbyfriends/bwf';
 ${jsxImportSource === 'react' ? "import { renderToStaticMarkup } from 'react-dom/server';" : ''}
 export const GET = defineHandler(c => c.html(${jsxImportSource === 'react' ? `renderToStaticMarkup(<h1>${text}</h1>)` : `<h1>${text}</h1>`}));`;
     for (const ext of httpExtensions) {

@@ -1,7 +1,7 @@
 import { describe, it } from 'vite-plus/test';
 import { fetch as typedFetch } from '../../src/runtime/fetch.ts';
 
-declare module '@buildwf/bwf/routes' {
+declare module '@builtbyfriends/bwf/routes' {
   interface RouteMap {
     '/api/rebuild': {
       POST: { input: {}; output: { started: boolean } };

@@ -29,7 +29,7 @@ bwf reads `.env` for the dev server and `bwf db` commands. In production, the Wo
 
 ```ts
 // db/schema.ts
-import { int, mysqlTable, text, timestamp } from '@buildwf/bwf/schema-mysql';
+import { int, mysqlTable, text, timestamp } from '@builtbyfriends/bwf/schema-mysql';
 
 export const messages = mysqlTable('messages', {
   id: int('id').autoincrement().primaryKey(),

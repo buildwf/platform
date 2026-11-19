@@ -13,7 +13,7 @@ describe('Better Auth Drizzle codegen', () => {
     });
 
     expect(code).toContain(
-      'import { index, integer, sqliteTable, text } from "@buildwf/bwf/schema-d1"',
+      'import { index, integer, sqliteTable, text } from "@builtbyfriends/bwf/schema-d1"',
     );
     expect(code).toContain('export const userTable = sqliteTable("user"');
     expect(code).toContain('"id": text("id").primaryKey().notNull()');
@@ -46,7 +46,7 @@ describe('Better Auth Drizzle codegen', () => {
     });
 
     expect(code).toContain(
-      'import { boolean, index, pgTable, text, timestamp } from "@buildwf/bwf/schema-pg"',
+      'import { boolean, index, pgTable, text, timestamp } from "@builtbyfriends/bwf/schema-pg"',
     );
     expect(code).toContain('export const userTable = pgTable("members"');
     expect(code).toContain('"email_address": text("email_address").notNull().unique()');
@@ -58,7 +58,7 @@ describe('Better Auth Drizzle codegen', () => {
     const code = generateBwfAuthDrizzleSchema({ dialect: 'mysql', providers: null });
 
     expect(code).toContain('mysqlTable');
-    expect(code).toContain('from "@buildwf/bwf/schema-mysql"');
+    expect(code).toContain('from "@builtbyfriends/bwf/schema-mysql"');
     expect(code).toContain('boolean("emailVerified")');
     expect(code).toContain('timestamp("createdAt", { mode: "date", fsp: 3 })');
     expect(code).toContain('"dialect": "mysql"');
@@ -105,7 +105,7 @@ describe('Better Auth Drizzle codegen', () => {
       '"id": uuid("id").primaryKey().defaultRandom().notNull()',
     );
     expect(generate('mysql', 'serial')).toContain(
-      'import { boolean, index, int, mysqlTable, text, timestamp, varchar } from "@buildwf/bwf/schema-mysql"',
+      'import { boolean, index, int, mysqlTable, text, timestamp, varchar } from "@builtbyfriends/bwf/schema-mysql"',
     );
   });
 
@@ -276,7 +276,7 @@ describe('Better Auth Drizzle codegen', () => {
       drizzleAdapterPath: '/resolved/better-auth/adapters/drizzle.mjs',
     });
 
-    expect(code).toContain('import { db as __nosamDb } from "@buildwf/bwf/db"');
+    expect(code).toContain('import { db as __nosamDb } from "@builtbyfriends/bwf/db"');
     expect(code).toContain(
       'let __nosamAuthDatabaseInstance: ReturnType<typeof drizzleAdapter> | undefined;',
     );

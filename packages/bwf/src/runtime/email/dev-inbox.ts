@@ -54,7 +54,7 @@ export const DEV_INBOX_ENV_VAR: string = '__NOSAM_EMAIL_DEV_INBOX';
 
 /**
  * Serve-only var carrying the dev-trigger token for the capture POST: the
- * router's token const is not importable from `@buildwf/bwf/email`.
+ * router's token const is not importable from `@builtbyfriends/bwf/email`.
  */
 export const DEV_INBOX_TOKEN_ENV_VAR: string = '__NOSAM_EMAIL_DEV_INBOX_TOKEN';
 

@@ -7,7 +7,7 @@ import {
   type PlatformLoginKind,
   parsePlatformAdmissionPolicy,
   type PlatformAdmissionPolicy,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { confirm, multiselect, password, select, text } from '@voidzero-dev/vite-plus-prompts';
 import { openBrowser } from './auth.ts';
 import { readOperatorToken, resolveOperatorOrigin } from './operator-auth.ts';

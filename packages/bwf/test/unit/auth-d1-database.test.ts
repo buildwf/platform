@@ -34,7 +34,7 @@ async function loadAuthDatabase(d1BindingName: string) {
     schemaPath,
     stripTypeScriptTypes(
       generateBwfAuthDrizzleSchema({ dialect: 'sqlite', providers: ['email'] }).replace(
-        '"@buildwf/bwf/schema-d1"',
+        '"@builtbyfriends/bwf/schema-d1"',
         JSON.stringify(import.meta.resolve('drizzle-orm/sqlite-core')),
       ),
     ),
@@ -61,8 +61,8 @@ async function loadAuthDatabase(d1BindingName: string) {
     authPath,
     stripTypeScriptTypes(
       generateBwfAuthDatabaseModule(options)
-        .replace('"@buildwf/bwf/db"', JSON.stringify(pathToFileURL(dbPath).href))
-        .replace('"@buildwf/bwf/_env"', JSON.stringify(envUrl)),
+        .replace('"@builtbyfriends/bwf/db"', JSON.stringify(pathToFileURL(dbPath).href))
+        .replace('"@builtbyfriends/bwf/_env"', JSON.stringify(envUrl)),
     ),
   );
   const { __nosamAuthDatabase } = (await import(pathToFileURL(authPath).href)) as {

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { connect } from '../../src/runtime/ws.ts';
 
-declare module '@buildwf/bwf/routes' {
+declare module '@builtbyfriends/bwf/routes' {
   interface WebSocketRouteMap {
     '/chat/[room]': WebSocketRouteMap['/chat/:room'];
     '/files/[...path]': WebSocketRouteMap['/files/:path{.+}'];

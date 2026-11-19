@@ -67,7 +67,7 @@ describe('hosted kitchen-sink smoke fixture', () => {
     try {
       writeFileSync(
         resolve(senderFixture.root, 'routes/api/sender.ts'),
-        `import { sendEmail } from '@buildwf/bwf/email';
+        `import { sendEmail } from '@builtbyfriends/bwf/email';
 export const POST = () => sendEmail({ to: 'test@example.com', subject: 'Test', text: 'Test' });`,
       );
       const application = analyzeApplicationSync(senderFixture.root, {

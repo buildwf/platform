@@ -1,4 +1,4 @@
-import type { AssetConfig, HeaderRule, RedirectRule } from '@buildwf/deploy-core';
+import type { AssetConfig, HeaderRule, RedirectRule } from '@builtbyfriends/deploy-core';
 import { applyHeaderRules } from './headers.ts';
 import { redirectToHttps } from './https.ts';
 import { applyRoutingRules, mergeQueryIntoLocation } from './routing-rules.ts';

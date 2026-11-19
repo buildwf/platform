@@ -10,7 +10,7 @@ Nosam apps use Better Auth for managed authentication. Auth activates from confi
 Nosam supports the app's D1, PostgreSQL, or MySQL database through its generated auth schema and Drizzle adapter. Auth-enabled deployments require BETTER_AUTH_SECRET, which the platform stores as a project secret. This replaces the earlier bespoke session and identity implementation.
 
 Nosam generates tables and an adapter into `.bwf/better-auth-schema.ts` and
-`.bwf/better-auth-db.ts`. The adapter uses the app's `@buildwf/bwf/db` connection with
+`.bwf/better-auth-db.ts`. The adapter uses the app's `@builtbyfriends/bwf/db` connection with
 Better Auth's Drizzle adapter, and the auth route reuses the auth instance
 prepared for its request.
 

@@ -1,4 +1,4 @@
-import { auth, fetch as bwfFetch } from '@buildwf/bwf/client';
+import { auth, fetch as bwfFetch } from '@builtbyfriends/bwf/client';
 import {
   lazy,
   Suspense,

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { createDeployArtifact, createDeployUploadPayload } from '@buildwf/deploy-core';
-import { getContentType } from '@buildwf/edge';
+import { createDeployArtifact, createDeployUploadPayload } from '@builtbyfriends/deploy-core';
+import { getContentType } from '@builtbyfriends/edge';
 import { type SpinnerResult } from '@voidzero-dev/vite-plus-prompts';
 import { type NotFoundHandling, type RoutingConfig } from '../config.ts';
 import { getTokenSource } from './auth.ts';

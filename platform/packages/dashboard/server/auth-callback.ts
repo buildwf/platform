@@ -1,4 +1,4 @@
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 import type { Context } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { fetchApi, getApiErrorMessage, readApiJson } from '../lib/api.ts';

@@ -5,7 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { CloudflareOperation } from '@buildwf/deploy-cloudflare';
+import type { CloudflareOperation } from '@builtbyfriends/deploy-cloudflare';
 import { afterEach } from 'vite-plus/test';
 import { encodeCloudflareOperation } from '../../src/cli/cloudflare-process.ts';
 import { resolveCloudflareOperationArgv } from '../../src/cli/preset.ts';

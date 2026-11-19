@@ -11,7 +11,7 @@ import {
   type PlatformAuthenticationSetup,
   type PlatformDeploymentManifest,
   type PlatformLoginKind,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { confirm, multiselect, password, select, text } from '@voidzero-dev/vite-plus-prompts';
 import { formatUrl } from './output.ts';
 import {

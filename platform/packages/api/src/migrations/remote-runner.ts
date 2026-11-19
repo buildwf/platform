@@ -1,4 +1,4 @@
-import { tokenizeSql } from '@buildwf/deploy-core';
+import { tokenizeSql } from '@builtbyfriends/deploy-core';
 
 const CF_API_BASE = 'https://api.cloudflare.com/client/v4/accounts';
 

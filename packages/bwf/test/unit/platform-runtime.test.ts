@@ -7,7 +7,7 @@ import {
   parsePlatformRuntimeManifest,
   readPlatformRuntimeManifest,
   resolvePlatformRuntime,
-} from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform/installer';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { describe, expect, it } from 'vite-plus/test';
 import { loadPlatformRuntime } from '../../src/cli/platform-installer.ts';

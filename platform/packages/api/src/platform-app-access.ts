@@ -5,7 +5,7 @@ import {
   PLATFORM_DISABLED_KEY,
   PLATFORM_DISABLED_VALUE,
   type PlatformAppAccessSetup,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { sql } from 'drizzle-orm';
 import type { Context } from 'hono';
 import type { Db } from './db.ts';

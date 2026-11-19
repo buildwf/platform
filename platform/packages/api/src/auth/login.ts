@@ -1,9 +1,9 @@
-import type { PlatformLoginConfiguration, PlatformAuthenticationRecovery } from '@buildwf/platform';
+import type { PlatformLoginConfiguration, PlatformAuthenticationRecovery } from '@builtbyfriends/platform';
 import {
   browserPageIdentity,
   browserPageLead,
   browserPageStatus,
-} from '@buildwf/platform/browser-page';
+} from '@builtbyfriends/platform/browser-page';
 import { and, eq, gt } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';

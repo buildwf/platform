@@ -2,7 +2,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
-import { parseRootWranglerConfig, readWranglerTopLevelString } from '@buildwf/deploy-cloudflare';
+import { parseRootWranglerConfig, readWranglerTopLevelString } from '@builtbyfriends/deploy-cloudflare';
 import { confirm, isCancel, log, password } from '@voidzero-dev/vite-plus-prompts';
 import { join } from 'pathslash';
 import { readConfig } from '../config.ts';

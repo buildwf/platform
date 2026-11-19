@@ -1,7 +1,7 @@
 import {
   getPlatformRuntimeDirectory,
   readPlatformRuntimeManifest,
-} from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform/installer';
 import { PGlite } from '@electric-sql/pglite';
 import { afterEach, beforeEach, expect, it, vi } from 'vite-plus/test';
 import { claimPlatformDatabase } from '../../src/cli/platform-installer-database.ts';

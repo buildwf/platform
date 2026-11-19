@@ -98,12 +98,12 @@ async function withNoSchema(fn: () => Promise<void>): Promise<void> {
 
 describe('envClientGuardPlugin', () => {
   it.each([
-    `import { env } from '@buildwf/bwf/env'; function local(env) { return env.SECRET; }`,
-    `import { env } from '@buildwf/bwf/env'; function local() { console.log(env.SECRET); var env; }`,
-    `import { env } from '@buildwf/bwf/env'; { console.log(env.SECRET); let env; }`,
-    `import { env } from '@buildwf/bwf/env'; try {} catch ({ env }) { console.log(env.SECRET); }`,
-    `import * as ns from '@buildwf/bwf/env'; const local = (ns) => ns.env.SECRET;`,
-    `import { env } from '@buildwf/bwf/env'; class Local { constructor(private env: any) { console.log(env.SECRET); } }`,
+    `import { env } from '@builtbyfriends/bwf/env'; function local(env) { return env.SECRET; }`,
+    `import { env } from '@builtbyfriends/bwf/env'; function local() { console.log(env.SECRET); var env; }`,
+    `import { env } from '@builtbyfriends/bwf/env'; { console.log(env.SECRET); let env; }`,
+    `import { env } from '@builtbyfriends/bwf/env'; try {} catch ({ env }) { console.log(env.SECRET); }`,
+    `import * as ns from '@builtbyfriends/bwf/env'; const local = (ns) => ns.env.SECRET;`,
+    `import { env } from '@builtbyfriends/bwf/env'; class Local { constructor(private env: any) { console.log(env.SECRET); } }`,
   ])('accepts reads belonging to local bindings: %s', async (code) => {
     defineEnv({ SECRET: string() });
     const ctx = makeContext();
@@ -117,7 +117,7 @@ describe('envClientGuardPlugin', () => {
     const ctx = makeContext();
     const result = await runTransform(
       ctx,
-      `import { env } from '@buildwf/bwf/env'; function local(env) { return env.SECRET; } console.log(env.SECRET);`,
+      `import { env } from '@builtbyfriends/bwf/env'; function local(env) { return env.SECRET; } console.log(env.SECRET);`,
       `${ROOT}/src/page.ts`,
     );
     expect(result.threw).toBe(true);
@@ -133,7 +133,7 @@ describe('envClientGuardPlugin', () => {
     const ctx = makeContext('client');
     const result = await runTransform(
       ctx,
-      `import { env } from "@buildwf/bwf/env";\nconsole.log(env.STRIPE_KEY);\n`,
+      `import { env } from "@builtbyfriends/bwf/env";\nconsole.log(env.STRIPE_KEY);\n`,
       `${ROOT}/src/page.ts`,
     );
     expect(result.threw).toBe(true);
@@ -148,7 +148,7 @@ describe('envClientGuardPlugin', () => {
     const ctx = makeContext('client');
     const result = await runTransform(
       ctx,
-      `import { env } from "@buildwf/bwf/env";\nconsole.log(env.VITE_TITLE);\n`,
+      `import { env } from "@builtbyfriends/bwf/env";\nconsole.log(env.VITE_TITLE);\n`,
       `${ROOT}/src/page.ts`,
     );
     expect(result.threw).toBe(false);
@@ -161,7 +161,7 @@ describe('envClientGuardPlugin', () => {
     const ctx = makeContext('client');
     const result = await runTransform(
       ctx,
-      `import { env as e } from "@buildwf/bwf/env";\nconst k = e.STRIPE_KEY;\n`,
+      `import { env as e } from "@builtbyfriends/bwf/env";\nconst k = e.STRIPE_KEY;\n`,
       `${ROOT}/src/page.ts`,
     );
     expect(result.threw).toBe(true);
@@ -173,7 +173,7 @@ describe('envClientGuardPlugin', () => {
     const ctx = makeContext('client');
     const result = await runTransform(
       ctx,
-      `import * as bwfEnv from "@buildwf/bwf/env";\nconst k = bwfEnv.env.STRIPE_KEY;\n`,
+      `import * as bwfEnv from "@builtbyfriends/bwf/env";\nconst k = bwfEnv.env.STRIPE_KEY;\n`,
       `${ROOT}/src/page.ts`,
     );
     expect(result.threw).toBe(true);
@@ -185,7 +185,7 @@ describe('envClientGuardPlugin', () => {
     const ctx = makeContext('client');
     const result = await runTransform(
       ctx,
-      `import { env } from "@buildwf/bwf/env";\nconst k = env.RANDOM_THING;\n`,
+      `import { env } from "@builtbyfriends/bwf/env";\nconst k = env.RANDOM_THING;\n`,
       `${ROOT}/src/page.ts`,
     );
     expect(result.threw).toBe(false);
@@ -198,7 +198,7 @@ describe('envClientGuardPlugin', () => {
     const ctx = makeContext('client');
     const result = await runTransform(
       ctx,
-      `import { env } from "@buildwf/bwf/env";\nconst key = "STRIPE_KEY";\nconst k = env[key];\n`,
+      `import { env } from "@builtbyfriends/bwf/env";\nconst key = "STRIPE_KEY";\nconst k = env[key];\n`,
       `${ROOT}/src/page.ts`,
     );
     expect(result.threw).toBe(false);
@@ -212,7 +212,7 @@ describe('envClientGuardPlugin', () => {
       const ctx = makeContext('client');
       const result = await runTransform(
         ctx,
-        `import { env } from "@buildwf/bwf/env";\nconsole.log(env.STRIPE_KEY);\n`,
+        `import { env } from "@builtbyfriends/bwf/env";\nconsole.log(env.STRIPE_KEY);\n`,
         `${ROOT}/src/page.ts`,
       );
       expect(result.threw).toBe(false);
@@ -221,7 +221,7 @@ describe('envClientGuardPlugin', () => {
     });
   });
 
-  it('takes a fast path when the source has no `@buildwf/bwf/env` import', async () => {
+  it('takes a fast path when the source has no `@builtbyfriends/bwf/env` import', async () => {
     defineEnv({ STRIPE_KEY: string() });
     const ctx = makeContext('client');
     // env.STRIPE_KEY here is just an arbitrary identifier — there's no
@@ -242,7 +242,7 @@ describe('envClientGuardPlugin', () => {
       const ctx = makeContext(envName);
       const result = await runTransform(
         ctx,
-        `import { env } from "@buildwf/bwf/env";\nconsole.log(env.STRIPE_KEY);\n`,
+        `import { env } from "@builtbyfriends/bwf/env";\nconsole.log(env.STRIPE_KEY);\n`,
         `${ROOT}/src/page.ts`,
       );
       expect(result.threw, `env ${envName} should not throw`).toBe(false);
@@ -256,7 +256,7 @@ describe('envClientGuardPlugin', () => {
     const ctx = makeContext('client');
     const result = await runTransform(
       ctx,
-      `import { env } from "@buildwf/bwf/env";\nconsole.log(env.STRIPE_KEY);\n`,
+      `import { env } from "@builtbyfriends/bwf/env";\nconsole.log(env.STRIPE_KEY);\n`,
       `${ROOT}/node_modules/some-lib/dist/index.js`,
     );
     expect(result.threw).toBe(false);
@@ -267,7 +267,7 @@ describe('envClientGuardPlugin', () => {
     defineEnv({ STRIPE_KEY: string() });
     const ctx = makeContext('client');
     const code = [
-      `import { env } from "@buildwf/bwf/env";`,
+      `import { env } from "@builtbyfriends/bwf/env";`,
       ``,
       `export function f() {`,
       `  return env.STRIPE_KEY;`,
@@ -288,7 +288,7 @@ describe('envClientGuardPlugin', () => {
     const ctx = makeContext('client');
     const result = await runTransform(
       ctx,
-      `import { env } from "@buildwf/bwf/env";\nconsole.log(env.STRIPE_KEY);\n`,
+      `import { env } from "@builtbyfriends/bwf/env";\nconsole.log(env.STRIPE_KEY);\n`,
       `${ROOT}/pages/index.vue?vue&type=script&setup=true&lang.ts`,
     );
     expect(result.threw).toBe(true);

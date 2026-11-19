@@ -5,14 +5,14 @@ outline: deep
 
 # Fetch Client {#fetch-client}
 
-Imported from `"@buildwf/bwf/client"`.
+Imported from `"@builtbyfriends/bwf/client"`.
 
 ## `fetch(path, options?)` {#fetch-path-options}
 
 Type-safe fetch client for calling your API routes from client code, built on top of [ofetch](https://github.com/unjs/ofetch). Route paths and return types are inferred from the generated `RouteMap`.
 
 ```ts
-import { fetch } from '@buildwf/bwf/client';
+import { fetch } from '@builtbyfriends/bwf/client';
 
 // Types are fully inferred from your route handlers
 const users = await fetch('/api/users');
@@ -53,7 +53,7 @@ Returns the parsed JSON response body, or `undefined` for 204 responses. Throws 
 Error class thrown by `fetch` on non-2xx responses.
 
 ```ts
-import { fetch, FetchError } from '@buildwf/bwf/client';
+import { fetch, FetchError } from '@builtbyfriends/bwf/client';
 
 try {
   await fetch('/api/users/[id]', { params: { id: '999' } });
@@ -77,7 +77,7 @@ try {
 
 The typed client is built on [ofetch](https://github.com/unjs/ofetch) with a typed route layer on top. Key differences from native `fetch`:
 
-| Behavior               | Native `fetch`                                       | `@buildwf/bwf/client` `fetch`                                                                                          |
+| Behavior               | Native `fetch`                                       | `@builtbyfriends/bwf/client` `fetch`                                                                                          |
 | ---------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | **Return type**        | `Promise<Response>`, so you call `.json()` yourself  | `Promise<T>`, which auto-parses JSON and returns the typed result directly (`undefined` for `204`)                     |
 | **Error handling**     | Resolves on any HTTP status; you check `response.ok` | Throws `FetchError` on non-2xx responses                                                                               |

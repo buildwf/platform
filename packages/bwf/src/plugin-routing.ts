@@ -61,11 +61,11 @@ const VIRTUAL_CLIENT_WORKER_ID = 'virtual:nosam-client-worker';
 const VIRTUAL_CLIENT_BROWSER_ID = 'virtual:nosam-client-browser';
 const AUTH_CLIENT_FRAMEWORKS = ['react'] as const;
 type AuthClientFramework = (typeof AUTH_CLIENT_FRAMEWORKS)[number];
-const CLIENT_IMPORT_RE = /^@buildwf\/bwf\/client(?:\/(react))?$/;
+const CLIENT_IMPORT_RE = /^@builtbyfriends\/bwf\/client(?:\/(react))?$/;
 const VIRTUAL_CLIENT_RE = /^virtual:nosam-client-(browser|worker)(?::(react))?$/;
 // Rolldown resolveId hook filters currently require RegExp for `id`.
 const RESOLVE_ID_FILTER =
-  /^(virtual:nosam-(routes|client-worker(?::(react))?|client-browser(?::(react))?)|@buildwf\/bwf(\/client(\/(react))?|\/queues)?)$/;
+  /^(virtual:nosam-(routes|client-worker(?::(react))?|client-browser(?::(react))?)|@builtbyfriends\/bwf(\/client(\/(react))?|\/queues)?)$/;
 const LOAD_ID_FILTER =
   /^virtual:nosam-(routes|client-worker(?::(react))?|client-browser(?::(react))?)$/;
 
@@ -739,11 +739,11 @@ export function routingPlugin(
         }
         // Redirect bare "nosam" imports to the lightweight handler
         // subpath to avoid pulling the entire plugin into the Worker bundle.
-        if (id === '@buildwf/bwf') {
+        if (id === '@builtbyfriends/bwf') {
           return handlerFile;
         }
         // Redirect bwf/queues to the built runtime module
-        if (id === '@buildwf/bwf/queues') {
+        if (id === '@builtbyfriends/bwf/queues') {
           return resolveFile('#self/queues');
         }
         if (CLIENT_IMPORT_RE.test(id)) {

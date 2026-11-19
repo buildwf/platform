@@ -40,7 +40,7 @@ it.each(['0.20.0', '0.20.1', '0.21.0-rc.2'])(
       mkdirSync(untrusted);
       writeFileSync(
         join(untrusted, 'package.json'),
-        JSON.stringify({ name: '@buildwf/bwf', version: '99.0.0' }),
+        JSON.stringify({ name: '@builtbyfriends/bwf', version: '99.0.0' }),
       );
       const result = spawnSync(
         process.execPath,

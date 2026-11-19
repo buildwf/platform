@@ -19,12 +19,12 @@ export function loadTypedBwfConfigFile(path: string): unknown {
   const sourceEntry = fileURLToPath(new URL('./config-entry.ts', import.meta.url));
   const configEntry = existsSync(sourceEntry)
     ? sourceEntry
-    : fileURLToPath(import.meta.resolve('@buildwf/bwf/config'));
+    : fileURLToPath(import.meta.resolve('@builtbyfriends/bwf/config'));
   const jiti = createJiti(import.meta.url, {
     fsCache: false,
     moduleCache: false,
     interopDefault: false,
-    alias: { '@buildwf/bwf/config': configEntry },
+    alias: { '@builtbyfriends/bwf/config': configEntry },
   });
   const module = jiti(path) as { default?: unknown };
   if (!Object.hasOwn(module, 'default')) {

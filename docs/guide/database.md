@@ -34,7 +34,7 @@ const dbFileItems = [
 
 # Database
 
-Define your tables in TypeScript, then query them with `db` from `@buildwf/bwf/db`. bwf includes [Drizzle ORM](https://orm.drizzle.team) and configures the connection, so you can use the same schema and query workflow with D1, PostgreSQL, or MySQL.
+Define your tables in TypeScript, then query them with `db` from `@builtbyfriends/bwf/db`. bwf includes [Drizzle ORM](https://orm.drizzle.team) and configures the connection, so you can use the same schema and query workflow with D1, PostgreSQL, or MySQL.
 
 <FileTree :items="dbFileItems" default-expanded />
 
@@ -52,14 +52,14 @@ A bwf platform keeps Hyperdrive query caching off for your database connection, 
 
 ## Schema Definition
 
-Define your tables in `db/schema.ts` using column helpers from `@buildwf/bwf/schema-d1`, `@buildwf/bwf/schema-pg`, or `@buildwf/bwf/schema-mysql`.
+Define your tables in `db/schema.ts` using column helpers from `@builtbyfriends/bwf/schema-d1`, `@builtbyfriends/bwf/schema-pg`, or `@builtbyfriends/bwf/schema-mysql`.
 
 ::: code-group
 
 ```ts [SQLite (D1)]
 // db/schema.ts
-import { sql } from '@buildwf/bwf/db';
-import { sqliteTable, text, integer } from '@buildwf/bwf/schema-d1';
+import { sql } from '@builtbyfriends/bwf/db';
+import { sqliteTable, text, integer } from '@builtbyfriends/bwf/schema-d1';
 
 export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -74,7 +74,7 @@ export const users = sqliteTable('users', {
 
 ```ts [PostgreSQL]
 // db/schema.ts
-import { pgTable, serial, text, timestamp } from '@buildwf/bwf/schema-pg';
+import { pgTable, serial, text, timestamp } from '@builtbyfriends/bwf/schema-pg';
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -87,7 +87,7 @@ export const users = pgTable('users', {
 
 ```ts [MySQL]
 // db/schema.ts
-import { int, mysqlTable, text, timestamp } from '@buildwf/bwf/schema-mysql';
+import { int, mysqlTable, text, timestamp } from '@builtbyfriends/bwf/schema-mysql';
 
 export const users = mysqlTable('users', {
   id: int('id').autoincrement().primaryKey(),
@@ -117,11 +117,11 @@ export * from "./schema/posts";
 
 ### Column casing
 
-By default, a column declared without a name, such as `createdAt: timestamp()`, uses its key as the column name. Set `database.casing` to `'snake_case'` to store these columns as `created_at` instead. It applies to `@buildwf/bwf/db` queries and to `bwf db` commands such as `generate`, `push`, and `seed`. Columns with an explicit name, such as `text('created_at')`, keep that name.
+By default, a column declared without a name, such as `createdAt: timestamp()`, uses its key as the column name. Set `database.casing` to `'snake_case'` to store these columns as `created_at` instead. It applies to `@builtbyfriends/bwf/db` queries and to `bwf db` commands such as `generate`, `push`, and `seed`. Columns with an explicit name, such as `text('created_at')`, keep that name.
 
 ```ts
 // bwf.config.ts
-import { defineConfig } from '@buildwf/bwf/config';
+import { defineConfig } from '@builtbyfriends/bwf/config';
 
 export default defineConfig({
   database: { dialect: 'pg', casing: 'snake_case' },
@@ -130,7 +130,7 @@ export default defineConfig({
 
 ```ts
 // db/schema.ts
-import { pgTable, serial, text, timestamp } from '@buildwf/bwf/schema-pg';
+import { pgTable, serial, text, timestamp } from '@builtbyfriends/bwf/schema-pg';
 
 export const posts = pgTable('posts', {
   id: serial().primaryKey(),
@@ -143,10 +143,10 @@ Omit `dialect` for D1. If your database already has tables, run `bwf db generate
 
 ## Querying
 
-bwf re-exports all common [Drizzle query operators](https://orm.drizzle.team/docs/select) from `@buildwf/bwf/db` so you don't need to install `drizzle-orm` separately. Import `db` from `@buildwf/bwf/db` and your tables from `@schema`:
+bwf re-exports all common [Drizzle query operators](https://orm.drizzle.team/docs/select) from `@builtbyfriends/bwf/db` so you don't need to install `drizzle-orm` separately. Import `db` from `@builtbyfriends/bwf/db` and your tables from `@schema`:
 
 ```ts
-import { db } from '@buildwf/bwf/db';
+import { db } from '@builtbyfriends/bwf/db';
 import { users } from '@schema';
 ```
 
@@ -163,7 +163,7 @@ const allUsers = await db.select().from(users);
 ### Filter with `where`
 
 ```ts
-import { db, eq, and, or } from '@buildwf/bwf/db';
+import { db, eq, and, or } from '@builtbyfriends/bwf/db';
 import { users } from '@schema';
 
 // Single condition
@@ -229,7 +229,7 @@ const names = await db.select({ name: users.name, email: users.email }).from(use
 ### Ordering and pagination
 
 ```ts
-import { db, desc } from '@buildwf/bwf/db';
+import { db, desc } from '@builtbyfriends/bwf/db';
 import { users } from '@schema';
 
 const page = await db.select().from(users).orderBy(desc(users.createdAt)).limit(10).offset(20);
@@ -238,7 +238,7 @@ const page = await db.select().from(users).orderBy(desc(users.createdAt)).limit(
 ### Joins
 
 ```ts
-import { db, eq } from '@buildwf/bwf/db';
+import { db, eq } from '@builtbyfriends/bwf/db';
 import { users, posts } from '@schema';
 
 const results = await db
@@ -273,7 +273,7 @@ Use `db/seed.ts` when you want to generate seed data in code. Export a default f
 
 ```ts
 // db/seed.ts
-import { defineSeed } from '@buildwf/bwf/seed';
+import { defineSeed } from '@builtbyfriends/bwf/seed';
 
 export default defineSeed<typeof import('./schema')>(async ({ db, schema }) => {
   const rows = Array.from({ length: 100 }, (_, i) => ({
@@ -300,13 +300,13 @@ INSERT INTO messages (text) VALUES ('Hello from SQL');
 
 ## Schema-Derived Validators
 
-Derive request validators from your tables with `@buildwf/bwf/drizzle-zod`, `@buildwf/bwf/drizzle-valibot`, or `@buildwf/bwf/drizzle-arktype`. Add the validator after your table definition:
+Derive request validators from your tables with `@builtbyfriends/bwf/drizzle-zod`, `@builtbyfriends/bwf/drizzle-valibot`, or `@builtbyfriends/bwf/drizzle-arktype`. Add the validator after your table definition:
 
 ::: code-group
 
 ```ts [Zod]
 // db/schema.ts
-import { createInsertSchema } from '@buildwf/bwf/drizzle-zod';
+import { createInsertSchema } from '@builtbyfriends/bwf/drizzle-zod';
 
 export const insertUserSchema = createInsertSchema(users, {
   name: (schema) => schema.min(1),
@@ -315,7 +315,7 @@ export const insertUserSchema = createInsertSchema(users, {
 ```
 
 ```ts [Valibot]
-import { createInsertSchema } from '@buildwf/bwf/drizzle-valibot';
+import { createInsertSchema } from '@builtbyfriends/bwf/drizzle-valibot';
 // db/schema.ts
 import { pipe, minLength, email } from 'valibot';
 
@@ -326,7 +326,7 @@ export const insertUserSchema = createInsertSchema(users, {
 ```
 
 ```ts [ArkType]
-import { createInsertSchema } from '@buildwf/bwf/drizzle-arktype';
+import { createInsertSchema } from '@builtbyfriends/bwf/drizzle-arktype';
 // db/schema.ts
 import { type } from 'arktype';
 
@@ -343,8 +343,8 @@ export const insertUserSchema = createInsertSchema(users, {
 Use the derived schema in your route handlers with [`withValidator()`](./server-routing.md#validation):
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
-import { db } from '@buildwf/bwf/db';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { db } from '@builtbyfriends/bwf/db';
 // routes/api/users/index.ts
 import { users, insertUserSchema } from '@schema';
 

@@ -45,7 +45,7 @@ function freshAuthApp() {
   };
   write(
     'vite.config.ts',
-    "import { bwfPlugin } from '@buildwf/bwf'; export default { plugins: [bwfPlugin()], resolve: { tsconfigPaths: true } };",
+    "import { bwfPlugin } from '@builtbyfriends/bwf'; export default { plugins: [bwfPlugin()], resolve: { tsconfigPaths: true } };",
   );
   write('bwf.config.ts', "export default { auth: { providers: ['email'] } };");
   write(
@@ -58,7 +58,7 @@ function freshAuthApp() {
   );
   write(
     'auth.ts',
-    `import { defineAuth } from '@buildwf/bwf/auth';
+    `import { defineAuth } from '@builtbyfriends/bwf/auth';
 export default defineAuth(({ defaults }) => ({
   ...defaults,
   user: { additionalFields: { nickname: { type: 'string', required: false } } },
@@ -75,7 +75,7 @@ export default defineAuth(({ defaults }) => ({
   write(
     'db/schema.ts',
     `import { userTable } from '@auth-schema';
-import { sqliteTable, text } from '@buildwf/bwf/schema-d1';
+import { sqliteTable, text } from '@builtbyfriends/bwf/schema-d1';
 export const postTable = sqliteTable('post', {
   id: text('id').primaryKey(),
   authorId: text('author_id').references(() => userTable.id),
@@ -83,7 +83,7 @@ export const postTable = sqliteTable('post', {
   );
   write(
     'routes/index.ts',
-    `import '@buildwf/bwf/db';
+    `import '@builtbyfriends/bwf/db';
 import { postTable } from '../db/schema';
 import { authFields } from '../lib/users';
 export const GET = () => Response.json({ fields: authFields(), author: postTable.authorId.name });`,

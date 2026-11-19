@@ -45,11 +45,11 @@ The Hyperdrive that bwf creates connects with TLS in Cloudflare's default `requi
 
 ## Schema Definition
 
-Import schema helpers from `@buildwf/bwf/schema-pg`:
+Import schema helpers from `@builtbyfriends/bwf/schema-pg`:
 
 ```ts
 // db/schema.ts
-import { pgTable, serial, text, timestamp, boolean } from '@buildwf/bwf/schema-pg';
+import { pgTable, serial, text, timestamp, boolean } from '@builtbyfriends/bwf/schema-pg';
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),

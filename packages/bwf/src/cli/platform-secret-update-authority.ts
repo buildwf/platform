@@ -1,4 +1,4 @@
-import type { PlatformInstallationManifest } from '@buildwf/platform';
+import type { PlatformInstallationManifest } from '@builtbyfriends/platform';
 import {
   PLATFORM_WORKER_SECRET_UPDATE_NAMES,
   type PlatformWorkerSecretUpdates,

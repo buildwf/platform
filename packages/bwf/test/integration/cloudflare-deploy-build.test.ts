@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, normalize } from 'node:path';
-import { parseRootWranglerConfig } from '@buildwf/deploy-cloudflare';
+import { parseRootWranglerConfig } from '@builtbyfriends/deploy-cloudflare';
 import spawn from 'cross-spawn';
 import { toSlash } from 'pathslash';
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';

@@ -5,7 +5,7 @@ import { stripVTControlCharacters } from 'node:util';
 import {
   createPlatformDeploymentManifest,
   createPlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { discoverPlatform, runPlatformCommand } from '../../src/cli/platform-cmd.ts';
 import {

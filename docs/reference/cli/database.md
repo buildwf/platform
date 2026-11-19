@@ -127,7 +127,7 @@ NEON_API_KEY=... bwf db connect --provider neon --name my-app
 bwf db connect --provider @acme/nosam-db-provider --region region-id
 ```
 
-The command saves `DATABASE_URL` in `.env`. When authenticated with a linked bwf project, it also updates the encrypted deployment URL; pass `--local-only` to skip that sync. `neon` is built in. Other adapters are project dependencies or local modules exporting a `DatabaseProviderAdapter` from `@buildwf/bwf/database-provider`.
+The command saves `DATABASE_URL` in `.env`. When authenticated with a linked bwf project, it also updates the encrypted deployment URL; pass `--local-only` to skip that sync. `neon` is built in. Other adapters are project dependencies or local modules exporting a `DatabaseProviderAdapter` from `@builtbyfriends/bwf/database-provider`.
 
 Provider-created credentials are never printed. For direct Cloudflare deploys, configure the same URL as a protected `DATABASE_URL` in the shell or CI environment that runs deploy.
 

@@ -553,7 +553,7 @@ async function prepareBundledBuildOutput(options: {
       root: options.projectRoot,
       publicDir: false,
       // `.env` is local-only. The framework build drops its client values, but modules it left
-      // as imports (an installed `@buildwf/bwf/env`) are compiled here, and Vite
+      // as imports (an installed `@builtbyfriends/bwf/env`) are compiled here, and Vite
       // would fill their `import.meta.env` from the project's `.env`. Shell values still apply.
       envDir: false,
       logLevel: 'error',

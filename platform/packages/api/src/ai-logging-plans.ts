@@ -1,4 +1,4 @@
-import type { BuiltinPlanId, PlatformPlanCatalog } from '@buildwf/platform/plans';
+import type { BuiltinPlanId, PlatformPlanCatalog } from '@builtbyfriends/platform/plans';
 import {
   and,
   asc,

@@ -5,8 +5,8 @@ import { TabsContent, TabsList, TabsRoot, TabsTrigger } from 'reka-ui';
 const files = [
   {
     name: 'blog.server.ts',
-    source: `import { defineHandler, type InferProps } from '@buildwf/bwf';
-import { db } from '@buildwf/bwf/db';
+    source: `import { defineHandler, type InferProps } from '@builtbyfriends/bwf';
+import { db } from '@builtbyfriends/bwf/db';
 import { posts } from '@schema';
 
 export const loader = defineHandler(async () => ({
@@ -29,8 +29,8 @@ export default function Blog({ posts }: Props) {
   },
   {
     name: 'api/decide.ts',
-    source: `import { defineHandler } from '@buildwf/bwf';
-import { ai } from '@buildwf/bwf/ai';
+    source: `import { defineHandler } from '@builtbyfriends/bwf';
+import { ai } from '@builtbyfriends/bwf/ai';
 
 export const POST = defineHandler(async (c) => {
   const { question } = await c.req.json();

@@ -32,7 +32,7 @@ describe('generated env types in a consumer project', () => {
     mkdirSync(outDir);
     writeFileSync(
       envFile,
-      'import { defineEnv, string } from "@buildwf/bwf/env";\n' +
+      'import { defineEnv, string } from "@builtbyfriends/bwf/env";\n' +
         'export default defineEnv({ API_SECRET: string() });\n',
     );
     writeFileSync(join(outDir, 'env.d.ts'), generateEnvTypes(envFile, outDir).dts);
@@ -47,10 +47,10 @@ describe('generated env types in a consumer project', () => {
     );
     writeFileSync(
       join(root, 'handler.ts'),
-      'import { defineHandler } from "@buildwf/bwf";\n' +
-        'import type { CloudBindings } from "@buildwf/bwf";\n' +
-        'declare module "@buildwf/bwf" { interface CloudBindings { AUTH: Fetcher & { check(): Promise<boolean> } } }\n' +
-        'import { env } from "@buildwf/bwf/env";\n' +
+      'import { defineHandler } from "@builtbyfriends/bwf";\n' +
+        'import type { CloudBindings } from "@builtbyfriends/bwf";\n' +
+        'declare module "@builtbyfriends/bwf" { interface CloudBindings { AUTH: Fetcher & { check(): Promise<boolean> } } }\n' +
+        'import { env } from "@builtbyfriends/bwf/env";\n' +
         'const direct: string = env.API_SECRET;\n' +
         'export const GET = defineHandler((c) => c.text(direct + c.env.API_SECRET.toUpperCase()));\n' +
         'export const POST = defineHandler((c) => c.env.ASSETS.fetch(c.req.raw));\n' +

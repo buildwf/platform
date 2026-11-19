@@ -1,4 +1,4 @@
-import { platformProjectWorkersDevHostname, platformWorkersDevAliasKey } from '@buildwf/platform';
+import { platformProjectWorkersDevHostname, platformWorkersDevAliasKey } from '@builtbyfriends/platform';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { ApiEnv } from '../../src/env.ts';
 import { ensureProjectIngress, PROJECT_INGRESS_SOURCE } from '../../src/project-ingress.ts';

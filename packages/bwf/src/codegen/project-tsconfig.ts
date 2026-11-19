@@ -22,7 +22,7 @@ export type ProjectTsconfig = {
  *
  * @param hasRouteTypes - When true, include routes.d.ts. When omitted,
  *   auto-detect by checking for a routes/ directory.
- * @param hasDb - When true, include db.d.ts and redirect `@buildwf/bwf/db` to it.
+ * @param hasDb - When true, include db.d.ts and redirect `@builtbyfriends/bwf/db` to it.
  * @param hasSchema - When true, configure `@schema` paths for the user's
  *   Drizzle schema.
  */
@@ -59,7 +59,7 @@ export function createProjectTsconfig(
     if (options.redirectDbModule !== false) {
       // moduleResolution "bundler" ignores ambient declarations when a specifier resolves to a
       // package file, so bwf/db, bwf/routes and bwf/queues map to .bwf/*.d.ts.
-      paths['@buildwf/bwf/db'] = ['./db.d.ts'];
+      paths['@builtbyfriends/bwf/db'] = ['./db.d.ts'];
     }
 
     if (hasSchema) {
@@ -78,13 +78,13 @@ export function createProjectTsconfig(
   if (includeRoutes) {
     const compilerOptions = (tsconfig.compilerOptions ??= {});
     const paths = (compilerOptions.paths ??= {});
-    paths['@buildwf/bwf/routes'] = ['./routes.d.ts'];
+    paths['@builtbyfriends/bwf/routes'] = ['./routes.d.ts'];
   }
 
   if (includeQueues) {
     const compilerOptions = (tsconfig.compilerOptions ??= {});
     const paths = (compilerOptions.paths ??= {});
-    paths['@buildwf/bwf/queues'] = ['./queues.d.ts'];
+    paths['@builtbyfriends/bwf/queues'] = ['./queues.d.ts'];
   }
 
   return tsconfig;

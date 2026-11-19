@@ -1,4 +1,4 @@
-import type { PlatformDeploymentManifest } from '@buildwf/platform';
+import type { PlatformDeploymentManifest } from '@builtbyfriends/platform';
 import { type CANCEL_SYMBOL, isCancel, log } from '@voidzero-dev/vite-plus-prompts';
 import { openBrowser } from './auth.ts';
 import { formatLink, pc } from './output.ts';

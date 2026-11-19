@@ -6,12 +6,12 @@ import {
   type PlatformInstallationManifest,
   parsePlatformAccessProtection,
   type PlatformLoginKind,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import type {
   PlatformRuntimeDatabaseManifest,
   PlatformRuntimeManifest,
-} from '@buildwf/platform/installer';
-import { platformDatabaseSchemaDigest } from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform/installer';
+import { platformDatabaseSchemaDigest } from '@builtbyfriends/platform/installer';
 import { join } from 'pathslash';
 import type { Pool } from 'pg';
 import { projectPlatformAiLoggingConnection } from './platform-ai-logging-projection.ts';

@@ -4,7 +4,7 @@ import {
   normalizeReadinessAccessOrigin,
   normalizeWorkersDevSubdomain,
   type CloudflareWorkersDevSubdomainLookup,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { dirname, join } from 'pathslash';
 import { isCleanCloudflareExit } from './cloudflare-process.ts';
 import type { DeployWranglerRun } from './deploy-types.ts';

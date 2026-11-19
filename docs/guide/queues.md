@@ -17,7 +17,7 @@ Export a default handler wrapped with [`defineQueue<T>`](../reference/api/handle
 
 ```ts
 // queues/emails.ts
-import { defineQueue } from '@buildwf/bwf';
+import { defineQueue } from '@builtbyfriends/bwf';
 
 interface Message {
   to: string;
@@ -36,12 +36,12 @@ Files or directories starting with `_` are ignored.
 
 ## Sending messages
 
-Import the typed `queues` proxy from `@buildwf/bwf/queues` to send messages. Each queue is available as a property matching its name, with full type safety from the consumer's `defineQueue<T>` generic.
+Import the typed `queues` proxy from `@builtbyfriends/bwf/queues` to send messages. Each queue is available as a property matching its name, with full type safety from the consumer's `defineQueue<T>` generic.
 
 ```ts
 // routes/api/orders.ts
-import { defineHandler } from '@buildwf/bwf';
-import { queues } from '@buildwf/bwf/queues';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { queues } from '@builtbyfriends/bwf/queues';
 
 export const POST = defineHandler(async (c) => {
   const order = await c.req.json();
@@ -87,7 +87,7 @@ Export named constants to configure how Cloudflare delivers batches to your cons
 
 ```ts
 // queues/emails.ts
-import { defineQueue } from '@buildwf/bwf';
+import { defineQueue } from '@builtbyfriends/bwf';
 
 interface Message {
   to: string;

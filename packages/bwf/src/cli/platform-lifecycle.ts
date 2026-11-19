@@ -4,7 +4,7 @@ import {
   normalizeApplicationDomain,
   normalizeInstallationSlug,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import {
   confirm,
   isCancel,

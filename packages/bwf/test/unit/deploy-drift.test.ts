@@ -90,7 +90,7 @@ describe('hasDeploySchemaDrift', { timeout: driftTestTimeout }, () => {
     const generated = generateBwfAuthDrizzleSchema({
       dialect: 'sqlite',
       providers: ['email'],
-    }).replace('"@buildwf/bwf/schema-d1"', '"drizzle-orm/sqlite-core"');
+    }).replace('"@builtbyfriends/bwf/schema-d1"', '"drizzle-orm/sqlite-core"');
     writeFileSync(join(outDir, 'better-auth-schema.ts'), generated);
 
     generateMigrations(root, { includeAuth: true });

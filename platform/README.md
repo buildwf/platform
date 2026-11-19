@@ -5,7 +5,7 @@ applications through the Nosam CLI. This repository contains its control plane,
 routing, proxy, log ingestion, and optional dashboard and build services.
 
 The API, dispatch, proxy, tail, and email gateway Workers are packaged into
-[`@buildwf/platform`](../packages/platform/README.md). A released or source-built
+[`@builtbyfriends/platform`](../packages/platform/README.md). A released or source-built
 runtime can be installed and upgraded with `bwf platform`. The installer tracks
 resource ownership, applies compatible migrations, and preserves credentials
 across upgrades.

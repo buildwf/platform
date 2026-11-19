@@ -1,6 +1,6 @@
-import { defineHandler } from '@buildwf/bwf';
-import { ai } from '@buildwf/bwf/ai';
-import { UsageLimit } from '@buildwf/bwf/limits';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { ai } from '@builtbyfriends/bwf/ai';
+import { UsageLimit } from '@builtbyfriends/bwf/limits';
 
 function textInputForModel(model: string, prompt: string) {
   if (model.startsWith('google/')) {

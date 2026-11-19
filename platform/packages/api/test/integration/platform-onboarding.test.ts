@@ -1,4 +1,4 @@
-import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from '@buildwf/platform';
+import { PLATFORM_DISABLED_KEY, PLATFORM_DISABLED_VALUE } from '@builtbyfriends/platform';
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
 import app from '../../src/index.ts';
 import { adminHtml } from '../helpers/admin-html.tsx';

@@ -100,7 +100,7 @@ export async function prepareProject(root: string): Promise<PrepareProjectResult
   }
 
   const schema = discoverSchema(root, paths);
-  // Matches the Vite plugin, which serves its own `@buildwf/bwf/db` for `database.casing`.
+  // Matches the Vite plugin, which serves its own `@builtbyfriends/bwf/db` for `database.casing`.
   const hasDbRuntime = schema != null || authEnabled || getDatabaseCasing(config) !== undefined;
   if (hasDbRuntime) {
     if (generateDbDts(outDir, schema, dialect)) {

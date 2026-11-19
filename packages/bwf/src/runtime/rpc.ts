@@ -1,5 +1,5 @@
-import type { ErrorsOf, InputOf, OutputOf } from '@buildwf/realtime';
-import { createClient, RpcError } from '@buildwf/realtime-http/client';
+import type { ErrorsOf, InputOf, OutputOf } from '@builtbyfriends/realtime';
+import { createClient, RpcError } from '@builtbyfriends/realtime-http/client';
 
 export { RpcError };
 

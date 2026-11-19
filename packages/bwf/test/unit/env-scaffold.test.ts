@@ -58,7 +58,7 @@ describe('inferHelperForValue', () => {
 describe('renderEnvTs', () => {
   it('emits an empty defineEnv for zero entries', () => {
     const out = renderEnvTs([]);
-    expect(out).toContain(`import { defineEnv } from '@buildwf/bwf/env';`);
+    expect(out).toContain(`import { defineEnv } from '@builtbyfriends/bwf/env';`);
     expect(out).toContain('export default defineEnv({});');
   });
 
@@ -68,7 +68,7 @@ describe('renderEnvTs', () => {
       { key: 'PORT', helper: 'number' },
     ]);
     const importLine = out.split('\n').find((l) => l.startsWith('import'))!;
-    expect(importLine).toBe(`import { defineEnv, string, number } from '@buildwf/bwf/env';`);
+    expect(importLine).toBe(`import { defineEnv, string, number } from '@builtbyfriends/bwf/env';`);
   });
 
   it('nudges the user to tighten inferred types', () => {

@@ -5,7 +5,7 @@ import {
   type InstallationResource,
   type PlatformDeploymentManifest,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import type {
   CloudflareWorkerDomain,
   CloudflareWorkerRoute,

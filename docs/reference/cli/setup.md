@@ -58,7 +58,7 @@ In an existing app, bwf adds missing dependencies and scripts and updates the Vi
 The wizard also sets up TypeScript, agent instructions, environment declarations, and a deployment target. Choose Cloudflare, a bwf platform, or skip deployment setup. If you skip sign-in, run `bwf connect` when you're ready. See [Quick Start](../../guide/quickstart.md).
 
 Every init run sets up coding agents. New projects get a minimal `AGENTS.md`
-pointing to `node_modules/@buildwf/bwf/docs/`. Existing projects prompt before the file
+pointing to `node_modules/@builtbyfriends/bwf/docs/`. Existing projects prompt before the file
 is created, appended to, or updated; CI and non-interactive runs leave existing
 projects' instructions unchanged. Skills are linked for detected agents. See
 [Coding Agents](../../integrations/agents.md).

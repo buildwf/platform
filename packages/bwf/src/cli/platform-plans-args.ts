@@ -1,4 +1,4 @@
-import { parsePlatformPlanId } from '@buildwf/platform/plans';
+import { parsePlatformPlanId } from '@builtbyfriends/platform/plans';
 import { parseConfigFlags } from './platform-config-args.ts';
 
 const PLATFORM_PLAN_ACTIONS = [

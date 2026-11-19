@@ -20,7 +20,7 @@ Example:
 
 ```ts
 // crons/hourly-heartbeat.ts
-import { defineScheduled } from '@buildwf/bwf';
+import { defineScheduled } from '@builtbyfriends/bwf';
 
 export const cron = '0 * * * *';
 
@@ -35,7 +35,7 @@ A single job file can export an array of cron expressions:
 
 ```ts
 // crons/cleanup.ts
-import { defineScheduled } from '@buildwf/bwf';
+import { defineScheduled } from '@builtbyfriends/bwf';
 
 export const cron = ['0 * * * *', '30 * * * *'];
 

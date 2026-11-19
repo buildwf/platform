@@ -6,7 +6,7 @@ import {
   createPlatformResourceOwnershipMarker,
   type InstallationResource,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { note } from '@voidzero-dev/vite-plus-prompts';
 import { expect, vi } from 'vite-plus/test';
 import {

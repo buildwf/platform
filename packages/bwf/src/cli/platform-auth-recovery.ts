@@ -1,7 +1,7 @@
 import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
-import { platformAuthenticationRecoveryMessage } from '@buildwf/platform';
+import { platformAuthenticationRecoveryMessage } from '@builtbyfriends/platform';
 import { confirm, isCancel } from '@voidzero-dev/vite-plus-prompts';
 import { openBrowser } from './auth.ts';
 import { resolveOperatorOrigin } from './operator-auth.ts';

@@ -9,7 +9,7 @@ import {
 } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
-import { readConfigEntryString as readD1EntryString } from '@buildwf/deploy-cloudflare';
+import { readConfigEntryString as readD1EntryString } from '@builtbyfriends/deploy-cloudflare';
 import { dirname, join, resolve } from 'pathslash';
 import { analyzeApplicationSync, type ApplicationAnalysis } from '../application-analysis.ts';
 import { type BwfConfig } from '../config.ts';

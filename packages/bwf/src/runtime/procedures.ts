@@ -4,9 +4,9 @@ import {
   type AnalyticsProvider,
   type AnyProcedure,
   type Registry,
-} from '@buildwf/realtime';
-import { analyticsEngine } from '@buildwf/realtime-analytics';
-import { rpcHandler } from '@buildwf/realtime-http';
+} from '@builtbyfriends/realtime';
+import { analyticsEngine } from '@builtbyfriends/realtime-analytics';
+import { rpcHandler } from '@builtbyfriends/realtime-http';
 import type { Hono } from 'hono';
 
 /** The Analytics Engine binding bwf adds when an app has procedures. */
@@ -68,7 +68,7 @@ export function mountProcedures(
   // Every procedure that chose `.mcp()` is a tool. The MCP server loads on the first request,
   // so apps that never use it pay no startup cost.
   const mcp = (async () => {
-    const { mcpHandler } = await import('@buildwf/realtime-mcp');
+    const { mcpHandler } = await import('@builtbyfriends/realtime-mcp');
     return mcpHandler(registry, { name: options.name, version: options.version, route: MCP_PATH });
   })();
   app.all(MCP_PATH, async (c) =>

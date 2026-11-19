@@ -70,7 +70,7 @@ describe('shared application analysis', () => {
     source(
       applicationRoot,
       'appsrc/auth.ts',
-      'import { defineAuth } from "@buildwf/bwf/auth"; export default defineAuth({});',
+      'import { defineAuth } from "@builtbyfriends/bwf/auth"; export default defineAuth({});',
     );
     source(applicationRoot, 'appsrc/db/migrations/002.sql', 'CREATE TABLE second (id TEXT);');
     source(applicationRoot, 'appsrc/db/migrations/001.sql', 'CREATE TABLE first (id TEXT);');
@@ -141,22 +141,22 @@ describe('shared application analysis', () => {
     source(
       applicationRoot,
       'routes/debug.dev.ts',
-      'import { storage } from "@buildwf/bwf/storage"; export const GET = () => storage.list();',
+      'import { storage } from "@builtbyfriends/bwf/storage"; export const GET = () => storage.list();',
     );
     source(
       applicationRoot,
       'routes/index.prod.ts',
-      'import { kv } from "@buildwf/bwf/kv"; export const GET = () => kv.get("key");',
+      'import { kv } from "@builtbyfriends/bwf/kv"; export const GET = () => kv.get("key");',
     );
     source(
       applicationRoot,
       'routes/chat.dev.ws.ts',
-      'import { defineWebSocket } from "@buildwf/bwf/ws"; export default defineWebSocket({});',
+      'import { defineWebSocket } from "@builtbyfriends/bwf/ws"; export default defineWebSocket({});',
     );
     source(
       applicationRoot,
       'routes/chat.prod.ws.ts',
-      'import { defineWebSocket } from "@buildwf/bwf/ws"; export default defineWebSocket({});',
+      'import { defineWebSocket } from "@builtbyfriends/bwf/ws"; export default defineWebSocket({});',
     );
     const prod = analyzeApplicationSync(applicationRoot, { config: {}, environment: 'prod' });
     const dev = analyzeApplicationSync(applicationRoot, { config: {}, environment: 'dev' });
@@ -176,7 +176,7 @@ describe('shared application analysis', () => {
     source(
       applicationRoot,
       'src/features.ts',
-      'import { auth } from "@buildwf/bwf/client"; import { defineLiveStream } from "@buildwf/bwf/live";',
+      'import { auth } from "@builtbyfriends/bwf/client"; import { defineLiveStream } from "@builtbyfriends/bwf/live";',
     );
     const analysis = analyzeApplicationSync(applicationRoot, {
       config: { sandbox: true, inference: { bindings: { kv: false } } },

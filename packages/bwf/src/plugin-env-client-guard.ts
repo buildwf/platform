@@ -29,7 +29,7 @@ export async function loadEnvPublic(): Promise<EnvPublicModule> {
 }
 
 // Files we don't bother parsing — the AST walker would either fail or have
-// nothing relevant to find. Anything else with a `@buildwf/bwf/env` import is fair
+// nothing relevant to find. Anything else with a `@builtbyfriends/bwf/env` import is fair
 // game.
 const SKIP_EXT =
   /\.(?:css|s[ac]ss|less|styl|json|svg|png|jpe?g|gif|webp|avif|ico|woff2?|ttf|otf|eot|wasm|mp[34]|webm|md|mdx)(?:\?|$)/;
@@ -38,8 +38,8 @@ const SCRIPT_LANG_RE = /[?&]lang\.([a-z0-9]+)/i;
 
 /**
  * Cheap prefilter shared with the fold plugin: is this a client script
- * module that mentions `@buildwf/bwf/env`? Anything we'd want to parse is JS/TS or
- * has a script sub-resource (a `lang.tsx` / `lang.ts` / `lang.js` query). The `@buildwf/bwf/env` substring check lets most files skip the AST
+ * module that mentions `@builtbyfriends/bwf/env`? Anything we'd want to parse is JS/TS or
+ * has a script sub-resource (a `lang.tsx` / `lang.ts` / `lang.js` query). The `@builtbyfriends/bwf/env` substring check lets most files skip the AST
  * walk; a false positive only means an unneeded parse.
  */
 export function isBwfEnvScriptCandidate(id: string, code: string): boolean {
@@ -52,7 +52,7 @@ export function isBwfEnvScriptCandidate(id: string, code: string): boolean {
   if (!isScriptQuery && !isPlainScript) {
     return false;
   }
-  return code.includes('@buildwf/bwf/env');
+  return code.includes('@builtbyfriends/bwf/env');
 }
 
 export type ImportBindings = {
@@ -72,7 +72,7 @@ export function extractEnvBindings(program: AstProgram): ImportBindings | null {
       continue;
     }
     const source = (node as AstImportDeclaration).source;
-    if (source.value !== '@buildwf/bwf/env') {
+    if (source.value !== '@builtbyfriends/bwf/env') {
       continue;
     }
     found = true;
@@ -132,7 +132,7 @@ function offsetToLineCol(index: OffsetIndex, offset: number): { line: number; co
 
 /**
  * Visit every `env.X` (or `<ns>.env.X`) member expression where `env` is
- * bound to the `@buildwf/bwf/env` proxy.
+ * bound to the `@builtbyfriends/bwf/env` proxy.
  */
 export function walkEnvReads(
   program: AstProgram,
@@ -197,7 +197,7 @@ type Hit = {
 };
 
 /**
- * Collect every `@buildwf/bwf/env` read. Computed access produces a warning hit
+ * Collect every `@builtbyfriends/bwf/env` read. Computed access produces a warning hit
  * with `property === null`; everything else carries the property name.
  */
 function findHits(program: AstProgram, bindings: ImportBindings): Array<Hit> {
@@ -236,7 +236,7 @@ export function envClientGuardPlugin(root: string): Plugin {
     enforce: 'post',
     async transform(code, id) {
       // Only run on the client environment. SSR, worker, RSC etc. legitimately
-      // read server keys via the same `@buildwf/bwf/env` import.
+      // read server keys via the same `@builtbyfriends/bwf/env` import.
       if (this.environment?.name !== 'client') {
         return;
       }

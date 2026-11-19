@@ -1,4 +1,4 @@
-import { defineEmail } from '@buildwf/bwf/email';
+import { defineEmail } from '@builtbyfriends/bwf/email';
 
 /**
  * Fallback for any inbound message that doesn't match a per-address handler.

@@ -284,7 +284,7 @@ describe('parseEmail', () => {
 const COMPILE_OPTIONS = {
   honoPath: 'hono',
   honoRoutePath: 'hono/route',
-  runtimeEnvPath: '@buildwf/bwf/_env',
+  runtimeEnvPath: '@builtbyfriends/bwf/_env',
   projectRoot: '/project',
   homeDir: '/home/test',
   auth: null,
@@ -732,8 +732,8 @@ describe('compileWorkerEntry (email)', () => {
     expect(code).toContain('await __verifyEmailReceiptThroughProxy(');
     expect(code).toContain('await __readEmailEnvelope(request.body)');
     expect(code).toContain('async function handleEmail');
-    expect(code).toContain('from "@buildwf/bwf/_email-protocol"');
-    expect(code).not.toContain('from "@buildwf/platform/email-protocol"');
+    expect(code).toContain('from "@builtbyfriends/bwf/_email-protocol"');
+    expect(code).not.toContain('from "@builtbyfriends/platform/email-protocol"');
   });
 
   it('omits the email export when hasEmail is false', () => {
@@ -1964,7 +1964,7 @@ describe('parseEmail error contract', () => {
     );
   });
 
-  // `@buildwf/bwf/email` is the only public path to the error classes, so a handler
+  // `@builtbyfriends/bwf/email` is the only public path to the error classes, so a handler
   // can `instanceof` them only through it.
   it('reports an oversized message as INBOUND_TOO_LARGE, with the classes bwf/email exports', async () => {
     expect(emailBarrel.ParseEmailError).toBe(ParseEmailError);

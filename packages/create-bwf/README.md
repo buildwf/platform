@@ -24,4 +24,4 @@ npx bwf deploy
 
 Follow the Quickstart to explore your new app. For an existing Vite app, install `bwf` and run `npx bwf init`.
 
-Read the bwf documentation online or use the Markdown guides and references in `node_modules/@buildwf/bwf/docs/`, included with the `bwf` package.
+Read the bwf documentation online or use the Markdown guides and references in `node_modules/@builtbyfriends/bwf/docs/`, included with the `bwf` package.

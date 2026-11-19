@@ -4,7 +4,7 @@ description: 'Prepare a built app, SPA, or static site for a managed platform de
 
 # Deployment artifacts
 
-Use `@buildwf/bwf/deploy` from Node.js to prepare a built bwf app, SPA, or static site for a managed platform deployment without platform credentials.
+Use `@builtbyfriends/bwf/deploy` from Node.js to prepare a built bwf app, SPA, or static site for a managed platform deployment without platform credentials.
 
 Build the app in managed mode inside its isolated environment:
 
@@ -15,7 +15,7 @@ BWF_DEPLOY_BUILD=1 NOSAM_DEPLOY_PROJECT_ID=artifact npm run build
 These values select a platform-compatible build. The target project is selected during publish approval.
 
 ```ts
-import { prepareDeployArtifact } from '@buildwf/bwf/deploy';
+import { prepareDeployArtifact } from '@builtbyfriends/bwf/deploy';
 
 const { artifact, assets } = await prepareDeployArtifact('/path/to/app');
 ```
@@ -35,7 +35,7 @@ Run preparation inside the same isolated environment as the app build. App confi
 Use `prepareCfBuildOutput` to prepare an existing Worker build for Cloudflare publication:
 
 ```ts
-import { prepareCfBuildOutput } from '@buildwf/bwf/deploy';
+import { prepareCfBuildOutput } from '@builtbyfriends/bwf/deploy';
 
 const prepared = await prepareCfBuildOutput('/path/to/app/dist/server', {
   projectRoot: '/path/to/app',

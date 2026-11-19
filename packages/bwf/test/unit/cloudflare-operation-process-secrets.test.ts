@@ -5,7 +5,7 @@ import {
   NOSAM_SECRET_DRAFT_MESSAGE,
   NOSAM_SECRET_DRAFT_SOURCE,
   type CloudflareOperation,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { expect, it } from 'vite-plus/test';
 import { decodeCloudflareOperationResult } from '../../src/cli/cloudflare-process.ts';
 import {

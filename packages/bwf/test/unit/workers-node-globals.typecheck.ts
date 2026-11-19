@@ -4,7 +4,7 @@ import { Buffer } from '../../src/cli/node-buffer.ts';
 
 expectTypeOf(Buffer).not.toBeAny();
 expectTypeOf(process).not.toBeAny();
-expectTypeOf(Buffer.from('@buildwf/bwf')).toEqualTypeOf<Buffer<ArrayBuffer>>();
+expectTypeOf(Buffer.from('@builtbyfriends/bwf')).toEqualTypeOf<Buffer<ArrayBuffer>>();
 expectTypeOf(randomBytes(8).toString('hex')).toEqualTypeOf<string>();
 
 declare const chunk: unknown;

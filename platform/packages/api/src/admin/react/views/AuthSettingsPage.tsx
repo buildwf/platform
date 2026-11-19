@@ -3,7 +3,7 @@
 import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { Heading } from '@astryxdesign/core/Text';
-import type { PlatformLoginConfiguration } from '@buildwf/platform';
+import type { PlatformLoginConfiguration } from '@builtbyfriends/platform';
 import { useRequest, useView } from 'react-fate';
 import { AuthSettingsView, authSettingsRequest } from '../../fate/views.ts';
 import { type AdminPageProps } from '../page-utils.ts';

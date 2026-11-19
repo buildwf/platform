@@ -1,4 +1,4 @@
-import { isPlatformAccessIdentityRule } from '@buildwf/platform';
+import { isPlatformAccessIdentityRule } from '@builtbyfriends/platform';
 import type { ManagedAccessApplication } from './configuration.ts';
 
 type ObjectValue = Record<string, unknown>;

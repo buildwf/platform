@@ -1,4 +1,4 @@
-import type { R2LocationHint } from '@buildwf/deploy-core';
+import type { R2LocationHint } from '@builtbyfriends/deploy-core';
 
 /** Typed provider operations shared by app deployment and platform installation. */
 type ConfigTarget = { configPath?: string };

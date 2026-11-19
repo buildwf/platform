@@ -8,7 +8,7 @@ outline: deep
 Use `sendEmail` to send transactional email. During development, bwf captures messages in a local inbox.
 
 ```ts
-import { sendEmail } from '@buildwf/bwf/email';
+import { sendEmail } from '@builtbyfriends/bwf/email';
 
 const result = await sendEmail({
   from: 'Acme <acme+noreply@mail.example.com>', // use your project's sender address
@@ -226,7 +226,7 @@ curl -X DELETE http://localhost:5173/__nosam/inbox \
 
 The inbox keeps the most recent 100 messages through HMR and clears on a full server restart.
 
-The dev inbox works in bwf apps. Use `createEmailTestHarness` from `@buildwf/bwf/email/testing` to capture sends in tests. If a configured inbox cannot be reached, `sendEmail` returns `UPSTREAM_ERROR` without sending.
+The dev inbox works in bwf apps. Use `createEmailTestHarness` from `@builtbyfriends/bwf/email/testing` to capture sends in tests. If a configured inbox cannot be reached, `sendEmail` returns `UPSTREAM_ERROR` without sending.
 
 Remove the deprecated `sendInDev` option to use the local inbox. Deploy the app to test real delivery.
 
@@ -235,8 +235,8 @@ Remove the deprecated `sendInDev` option to use the local inbox. Deploy the app 
 Use the test harness to assert on outgoing messages without mocking the binding:
 
 ```ts
-import { sendEmail } from '@buildwf/bwf/email';
-import { createEmailTestHarness } from '@buildwf/bwf/email/testing';
+import { sendEmail } from '@builtbyfriends/bwf/email';
+import { createEmailTestHarness } from '@builtbyfriends/bwf/email/testing';
 import { describe, it, expect } from 'vite-plus/test';
 
 describe('signup flow', () => {

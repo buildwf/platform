@@ -10,7 +10,7 @@ created: 2026-10-02
 
 App deployment and platform installation keep their existing orchestration.
 Provider requests use the discriminated `CloudflareOperation` contract in
-`@buildwf/deploy-cloudflare`. Public targets are fields; secrets and Hyperdrive
+`@builtbyfriends/deploy-cloudflare`. Public targets are fields; secrets and Hyperdrive
 connection strings use stdin or private temporary files. Results carry provider
 data, codes, errors and process provenance. Diagnostics remain human text.
 

@@ -18,7 +18,7 @@ import {
   parseCloudflareVersionMessage,
   parseRootWranglerConfig,
   type CloudflareOperation,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { log } from '@voidzero-dev/vite-plus-prompts';
 import { toSlash } from 'pathslash';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
@@ -1719,7 +1719,7 @@ describe('existing Cloudflare site handoff', () => {
     const root = site();
     writeFileSync(
       join(root, 'routes/index.ts'),
-      'import { kv } from "@buildwf/bwf/kv"; export const GET = () => kv.get("key");',
+      'import { kv } from "@builtbyfriends/bwf/kv"; export const GET = () => kv.get("key");',
     );
     const { deps, trace } = harness({ readExistingWorker: async () => existing });
     await expect(
@@ -1925,13 +1925,13 @@ function d1Project(
   });
 }
 
-/** A minimal worker-bearing app whose source inference enables `@buildwf/bwf/sandbox`. */
+/** A minimal worker-bearing app whose source inference enables `@builtbyfriends/bwf/sandbox`. */
 function sandboxProject(): string {
   return makeProject({
     'package.json': JSON.stringify({ name: 'sandbox-app' }),
     'bwf.json': JSON.stringify({}),
     'routes/index.ts': [
-      `import { getSandbox } from '@buildwf/bwf/sandbox';`,
+      `import { getSandbox } from '@builtbyfriends/bwf/sandbox';`,
       `export const GET = () => Response.json({ sandbox: Boolean(getSandbox) });`,
     ].join('\n'),
     'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'sandbox-app' }, null, 2),
@@ -2100,7 +2100,7 @@ describe('computeDesiredCloudflareResources — desired set from source', () => 
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'location-test' }),
       'bwf.json': JSON.stringify({ storage: { locationHint: 'apac' } }),
-      'routes/files.ts': `import { storage } from '@buildwf/bwf/storage'; export const GET = () => storage.list();`,
+      'routes/files.ts': `import { storage } from '@builtbyfriends/bwf/storage'; export const GET = () => storage.list();`,
     });
     const result = await computeDesiredCloudflareResources(
       root,
@@ -2734,7 +2734,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
       },
     });
     const entry = staticEntry(root);
-    expect(entry).toContain('@buildwf/bwf/edge');
+    expect(entry).toContain('@builtbyfriends/bwf/edge');
     expect(entry).not.toContain('alwaysUseHttps');
     expect(wranglerArgs.at(-1)).toContain(toSlash(join(root, '.bwf/deploy/cloudflare/assets')));
   });
@@ -3501,7 +3501,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
   "vars": { "FEATURE": "on" }
 }`,
       'routes/index.ts': `export const GET = () => new Response('ok');`,
-      'routes/chat/[room].ws.ts': `import { defineRoom } from '@buildwf/bwf/ws';\nexport default defineRoom({});`,
+      'routes/chat/[room].ws.ts': `import { defineRoom } from '@builtbyfriends/bwf/ws';\nexport default defineRoom({});`,
     });
     const first = harness();
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, first.deps);
@@ -3514,7 +3514,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
 
     writeFileSync(
       join(root, 'routes/notifications.ws.ts'),
-      `import { defineWebSocket } from '@buildwf/bwf/ws';\nexport default defineWebSocket({});`,
+      `import { defineWebSocket } from '@builtbyfriends/bwf/ws';\nexport default defineWebSocket({});`,
     );
     const second = harness();
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, second.deps);
@@ -3544,7 +3544,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
       'package.json': JSON.stringify({ name: 'wsapp' }),
       'bwf.json': JSON.stringify({}),
       'routes/index.ts': `export const GET = () => new Response('ok');`,
-      'routes/chat/[room].dev.ws.ts': `import { defineRoom } from '@buildwf/bwf/ws';\nexport default defineRoom({});`,
+      'routes/chat/[room].dev.ws.ts': `import { defineRoom } from '@builtbyfriends/bwf/ws';\nexport default defineRoom({});`,
     });
     const errors: Array<string> = [];
     const errorSpy = vi.spyOn(log, 'error').mockImplementation((message) => {
@@ -6659,7 +6659,7 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
       ...INIT_MIGRATION,
       'queues/jobs.ts': 'export default {};',
       'routes/ai.ts':
-        "import { ai } from '@buildwf/bwf/ai';\nexport const GET = () => ai.run('@cf/x', {});",
+        "import { ai } from '@builtbyfriends/bwf/ai';\nexport const GET = () => ai.run('@cf/x', {});",
     });
     const { deps, wranglerArgs, exitCalls } = harness({
       runBuild: () =>
@@ -10972,7 +10972,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
   });
 
   it('an app that stopped using email warns about the setup wrangler.jsonc still carries, and deploys as-is', async () => {
-    // No `email/` directory and no `@buildwf/bwf/email` import, but the root still has what an earlier
+    // No `email/` directory and no `@builtbyfriends/bwf/email` import, but the root still has what an earlier
     // email deploy wrote: wrangler keeps routing support@ to a worker with no `email()` export.
     const root = d1Project(COMMITTED_EMAIL, INIT_MIGRATION);
     const { deps, spawns, exitCalls } = emailHarness({
@@ -11001,15 +11001,15 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(printed).not.toContain('underlying Cloudflare operation');
   });
 
-  it('last inbound handler removed, outbound `@buildwf/bwf/email` kept: the committed entry is a decision-13 blocker, the array stays, and the trigger snapshot still carries it (the ready-path `null` write is never reached)', async () => {
-    // The inbound handler that produced COMMITTED_EMAIL is gone, but `@buildwf/bwf/email` is still
+  it('last inbound handler removed, outbound `@builtbyfriends/bwf/email` kept: the committed entry is a decision-13 blocker, the array stays, and the trigger snapshot still carries it (the ready-path `null` write is never reached)', async () => {
+    // The inbound handler that produced COMMITTED_EMAIL is gone, but `@builtbyfriends/bwf/email` is still
     // imported, so the email step runs with an empty derived set. The committed entry is one bwf
     // did not derive, so the step skips and leaves the array, and the annotation replays it.
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'myapp' }),
       'bwf.json': JSON.stringify({ email: { from: 'noreply@mail.acme.com' } }),
       'routes/index.ts': [
-        `import { sendEmail } from '@buildwf/bwf/email';`,
+        `import { sendEmail } from '@builtbyfriends/bwf/email';`,
         `export const GET = async (c) => {`,
         `  await sendEmail({ to: 'a@b.c', subject: 's', text: 't' });`,
         `  return c.env.DB.prepare('SELECT 1').first();`,

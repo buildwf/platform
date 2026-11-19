@@ -5,7 +5,7 @@ import {
   encodeCloudflareVersionMessage,
   type CloudflareOperation,
   type CloudflareTriggerConfig,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import {
   createPlatformDeploymentManifest,
   createPlatformInstallationManifest,
@@ -13,8 +13,8 @@ import {
   recordInstallationResource,
   type InstallationResourceKind,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
-import { getPlatformRuntimeDirectory, resolvePlatformRuntime } from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform';
+import { getPlatformRuntimeDirectory, resolvePlatformRuntime } from '@builtbyfriends/platform/installer';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 vi.mock('@voidzero-dev/vite-plus-prompts', async (importOriginal) => {

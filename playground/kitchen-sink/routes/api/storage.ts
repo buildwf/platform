@@ -1,5 +1,5 @@
-import { defineHandler } from '@buildwf/bwf';
-import { storage } from '@buildwf/bwf/storage';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { storage } from '@builtbyfriends/bwf/storage';
 
 export const GET = defineHandler(async () => {
   const list = await storage.list({ limit: 20 });

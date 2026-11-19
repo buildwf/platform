@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 
-import { browserPageLogo, browserPageStyles } from '@buildwf/platform/browser-page';
+import { browserPageLogo, browserPageStyles } from '@builtbyfriends/platform/browser-page';
 import type { ReactNode } from 'react';
 
 export function AuthPage({

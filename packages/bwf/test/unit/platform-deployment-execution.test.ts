@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import {
   createPlatformInstallationManifest,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
-import { resolvePlatformRuntime } from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform';
+import { resolvePlatformRuntime } from '@builtbyfriends/platform/installer';
 import { afterEach, expect, it, vi } from 'vite-plus/test';
 import { verifyPlatformDeploymentExecutionDrain } from '../../src/cli/platform-installer-health.ts';
 import {

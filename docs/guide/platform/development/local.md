@@ -35,7 +35,7 @@ Use the Node.js version recorded in `.node-version`.
 | `platform/packages/tail`                             | Runtime log ingestion                                                |
 | `platform/packages/dashboard`                        | Dashboard source and local UI components in `ui/`                    |
 
-The `@nosamcloud/*` names identify workspace implementation packages. Their `private: true` flags prevent publishing those packages to npm. Deployable core Workers are bundled into the public `@buildwf/platform` package.
+The `@nosamcloud/*` names identify workspace implementation packages. Their `private: true` flags prevent publishing those packages to npm. Deployable core Workers are bundled into the public `@builtbyfriends/platform` package.
 
 The core installer creates the API, dispatch, proxy, tail, and email gateway Workers. The dashboard and managed GitHub build services are available in the source tree but are not included in that installation. Adding an optional service requires its infrastructure, bindings, authentication, and capability configuration together.
 

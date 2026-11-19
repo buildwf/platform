@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
-import { normalizeApplicationDomain } from '@buildwf/platform';
+import { normalizeApplicationDomain } from '@builtbyfriends/platform';
 import { join, dirname } from 'pathslash';
 import { listPlatformConnections, normalizePlatformApiUrl } from './platform-registry.ts';
 import type { DeployTarget } from './types.ts';

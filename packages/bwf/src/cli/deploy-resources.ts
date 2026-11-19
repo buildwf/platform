@@ -3,7 +3,7 @@ import {
   parseRootWranglerConfig,
   readStoredResourceName,
   readWranglerTopLevelString,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { basename, join } from 'pathslash';
 import { type ApplicationAnalysis } from '../application-analysis.ts';
 import { analyzeApplication, completeApplicationAnalysis } from '../application-routing.ts';
@@ -47,7 +47,7 @@ const CLOUDFLARE_CONTAINERS_PRICING_URL = 'https://developers.cloudflare.com/con
 export function formatCloudflareSandboxUnavailable(options?: { preflight?: boolean }): string {
   return [
     options?.preflight
-      ? 'deploy: this app uses `@buildwf/bwf/sandbox`, but bwf could not verify Cloudflare Containers with the current account and credentials.'
+      ? 'deploy: this app uses `@builtbyfriends/bwf/sandbox`, but bwf could not verify Cloudflare Containers with the current account and credentials.'
       : "deploy: Cloudflare rejected access to Containers while deploying this app's Sandbox.",
     'Cloudflare Containers require the Workers Paid plan and are not available on Workers Free.',
     '',
@@ -142,14 +142,14 @@ export async function computeDesiredCloudflareResources(
   needsAI: boolean;
   /** Workers AI binding emitted by the build (default `AI`). */
   aiBindingName: string;
-  /** `bwf.config.ts` enables Sandbox or the source imports `@buildwf/bwf/sandbox`. */
+  /** `bwf.config.ts` enables Sandbox or the source imports `@builtbyfriends/bwf/sandbox`. */
   needsSandbox: boolean;
   /** Whether the source imports bwf/live and the build may emit its Durable Object. */
   needsLive: boolean;
   analysis: ApplicationAnalysis;
   /** Cron schedules the build emits into `triggers.crons`. */
   expectedCrons: Array<string>;
-  /** Inbound `email/` handlers or an outbound `@buildwf/bwf/email` import. */
+  /** Inbound `email/` handlers or an outbound `@builtbyfriends/bwf/email` import. */
   needsEmail: boolean;
   emailHandlers: EmailHandlersScan;
 }> {

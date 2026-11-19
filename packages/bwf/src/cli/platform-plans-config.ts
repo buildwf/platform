@@ -4,7 +4,7 @@ import {
   AI_LOGGING_MODES,
   parsePlanAiLoggingInput,
   type AiLoggingMode,
-} from '@buildwf/platform/ai-logging';
+} from '@builtbyfriends/platform/ai-logging';
 import {
   PLAN_EDITABLE_LIMIT_KEYS,
   PLAN_LIMITS,
@@ -14,7 +14,7 @@ import {
   parsePlatformPlanId,
   type PlatformPlanCatalog,
   type PlatformPlanDefinition,
-} from '@buildwf/platform/plans';
+} from '@builtbyfriends/platform/plans';
 import {
   type CANCEL_SYMBOL,
   confirm,

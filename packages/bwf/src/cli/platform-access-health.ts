@@ -3,7 +3,7 @@ import {
   PLATFORM_HEALTH_HOSTNAME_LABEL,
   parsePlatformAppAccessSetup,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import {
   PlatformAccessClient,
   platformAccessCreateRejected,

@@ -2,12 +2,12 @@ import {
   parseCloudflareVersionMessage,
   readCloudflareVersionMigrationTag,
   type CloudflareTriggerConfig,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import {
   createPlatformResourceOwnershipMarker,
   parsePlatformResourceOwnershipMarker,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { assertCleanPlatformWrangler } from './platform-installer-errors.ts';
 import { runPlatformWrangler } from './platform-installer-process.ts';
 import {

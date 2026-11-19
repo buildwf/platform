@@ -1,4 +1,4 @@
-import { isRecord } from '@buildwf/deploy-core';
+import { isRecord } from '@builtbyfriends/deploy-core';
 /**
  * Uninstall turns off the platform API, and only that API can remove the
  * Cloudflare Access applications project Zero Trust created. The shared

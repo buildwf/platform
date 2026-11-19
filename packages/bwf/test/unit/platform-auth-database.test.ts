@@ -1,4 +1,4 @@
-import type { InstallationResource } from '@buildwf/platform';
+import type { InstallationResource } from '@builtbyfriends/platform';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import {
   readPlatformHyperdriveSelection,

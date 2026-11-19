@@ -140,10 +140,10 @@ describe('WebSocket resource names', () => {
   );
 
   it.each([
-    `import { defineRoom as room } from '@buildwf/bwf/ws'; export default room({ name: 'chat-room' });`,
-    `import { defineWebSocket as socket } from '@buildwf/bwf/ws'; const chat = socket({ name: 'chat-room' }); export default chat;`,
-    `import * as ws from '@buildwf/bwf/ws'; export default ws.defineRoom({ name: 'chat-room' });`,
-    `import * as ws from '@buildwf/bwf/ws'; export default ws['defineWebSocket']({ name: 'chat-room' });`,
+    `import { defineRoom as room } from '@builtbyfriends/bwf/ws'; export default room({ name: 'chat-room' });`,
+    `import { defineWebSocket as socket } from '@builtbyfriends/bwf/ws'; const chat = socket({ name: 'chat-room' }); export default chat;`,
+    `import * as ws from '@builtbyfriends/bwf/ws'; export default ws.defineRoom({ name: 'chat-room' });`,
+    `import * as ws from '@builtbyfriends/bwf/ws'; export default ws['defineWebSocket']({ name: 'chat-room' });`,
   ])('reads explicit identities through aliased or namespace imports', (source) => {
     const root = createRoot();
     createRoute(root, 'moved.ws.ts', source);
@@ -158,7 +158,7 @@ describe('WebSocket resource names', () => {
     'const identity = undefined; export default defineRoom({ name: identity });',
     `const base = { name: 'room' }; export default defineRoom({ ...base, name: undefined });`,
     `const noName = { name: undefined }; export default defineRoom({ name: 'room', ...noName });`,
-    `import { defineRoom as room } from '@buildwf/bwf/ws'; export default room({ name: undefined });`,
+    `import { defineRoom as room } from '@builtbyfriends/bwf/ws'; export default room({ name: undefined });`,
   ])('treats statically undefined names exactly as absent', (source) => {
     const root = createRoot();
     createRoute(root, 'chat.ws.ts', source);
@@ -168,8 +168,8 @@ describe('WebSocket resource names', () => {
   });
 
   it.each([
-    `import { defineRoom as room } from '@buildwf/bwf/ws'; export default room({ name: getName() });`,
-    `import * as ws from '@buildwf/bwf/ws'; export default ws.defineRoom({ name: process.env.NAME });`,
+    `import { defineRoom as room } from '@builtbyfriends/bwf/ws'; export default room({ name: getName() });`,
+    `import * as ws from '@builtbyfriends/bwf/ws'; export default ws.defineRoom({ name: process.env.NAME });`,
     `const undefined = getName(); export default defineRoom({ name: undefined });`,
     `const { undefined } = options; export default defineRoom({ name: undefined });`,
     `function undefined() {} export default defineRoom({ name: undefined });`,

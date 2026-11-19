@@ -8,8 +8,8 @@ import {
   type CloudflareCommandRunner,
   type CloudflareOperation,
   type CloudflareVersionActivationOptions,
-} from '@buildwf/deploy-cloudflare';
-import { isRecord as record } from '@buildwf/deploy-core';
+} from '@builtbyfriends/deploy-cloudflare';
+import { isRecord as record } from '@builtbyfriends/deploy-core';
 import { getWorkerConfigPath, readBuildOutput } from '@cloudflare/build-output-utils';
 import { dirname, join } from 'pathslash';
 import type { CfBuildOutput } from './cf-build-output.ts';

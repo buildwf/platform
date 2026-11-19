@@ -113,7 +113,7 @@ describe('envSchemaPlugin auto-discovery', () => {
       ) => Promise<{ code: string }>;
       const result = await transform.call(
         { environment: { name: 'client' } },
-        'import { env } from "@buildwf/bwf/env"; export const title = env.VITE_TITLE;',
+        'import { env } from "@builtbyfriends/bwf/env"; export const title = env.VITE_TITLE;',
         join(root, 'client.ts'),
       );
 
@@ -128,7 +128,7 @@ describe('envSchemaPlugin auto-discovery', () => {
     const root = createTempRoot();
     writeFileSync(
       join(root, 'env.ts'),
-      'import { defineEnv, string } from "@buildwf/bwf/env";\n' +
+      'import { defineEnv, string } from "@builtbyfriends/bwf/env";\n' +
         'export default defineEnv({ STRIPE_KEY: string(), PUBLIC_URL: string() });\n',
     );
 
@@ -141,8 +141,8 @@ describe('envSchemaPlugin auto-discovery', () => {
     const dts = readFileSync(dtsPath, 'utf-8');
     // `export {}` makes the file an augmentation instead of an ambient module.
     expect(dts).toContain('export {}');
-    expect(dts).toContain('declare module "@buildwf/bwf/env"');
-    expect(dts).toContain('declare module "@buildwf/bwf/handler"');
+    expect(dts).toContain('declare module "@builtbyfriends/bwf/env"');
+    expect(dts).toContain('declare module "@builtbyfriends/bwf/handler"');
     expect(dts).toContain('interface ValidatedEnv extends _NosamEnvShape');
     expect(dts).toContain('interface CloudBindings extends _NosamEnvShape');
     expect(dts).toContain('typeof import("../env.ts")');
@@ -153,7 +153,7 @@ describe('envSchemaPlugin auto-discovery', () => {
     mkdirSync(join(root, 'src'), { recursive: true });
     writeFileSync(
       join(root, 'src', 'env.ts'),
-      'import { defineEnv, string } from "@buildwf/bwf/env";\n' +
+      'import { defineEnv, string } from "@builtbyfriends/bwf/env";\n' +
         'export default defineEnv({ API_KEY: string() });\n',
     );
 
@@ -364,7 +364,7 @@ describe('envSchemaPlugin auto-discovery', () => {
     const root = createTempRoot();
     writeFileSync(
       join(root, 'env.ts'),
-      'import { defineEnv, string } from "@buildwf/bwf/env";\n' +
+      'import { defineEnv, string } from "@builtbyfriends/bwf/env";\n' +
         'export default defineEnv({ STRIPE_KEY: string(), VITE_TITLE: string() });\n',
     );
 
@@ -402,7 +402,7 @@ describe('envSchemaPlugin auto-discovery', () => {
     const root = createTempRoot();
     writeFileSync(
       join(root, 'env.ts'),
-      'import { defineEnv, string } from "@buildwf/bwf/env";\n' +
+      'import { defineEnv, string } from "@builtbyfriends/bwf/env";\n' +
         'export default defineEnv({ STRIPE_KEY: string() });\n',
     );
 

@@ -123,7 +123,7 @@ export async function runFullDeploy(
   const sandboxConfig = bindings.needsSandbox ? resolveSandboxConfig(bwfConfig, root) : undefined;
   if (sandboxConfig && isSandboxAttached(sandboxConfig)) {
     throw new Error(
-      'deploy: `sandbox.durableObject` attaches the container to your own Durable Object, which needs a native Cloudflare deploy (`bwf deploy --platform cloudflare`). Managed platforms run containers in their own controller; use `getSandbox` from `@buildwf/bwf/sandbox` there.',
+      'deploy: `sandbox.durableObject` attaches the container to your own Durable Object, which needs a native Cloudflare deploy (`bwf deploy --platform cloudflare`). Managed platforms run containers in their own controller; use `getSandbox` from `@builtbyfriends/bwf/sandbox` there.',
     );
   }
   if (bindings.needsSandbox && requiresSandboxPlatformImage(bwfConfig)) {

@@ -13,7 +13,7 @@ A procedure's name comes from its file and export. `procedures/contacts.ts` expo
 
 ```ts
 // procedures/contacts.ts
-import { procedure, signedIn } from '@buildwf/bwf/procedure';
+import { procedure, signedIn } from '@builtbyfriends/bwf/procedure';
 
 export const get = procedure()
   .auth(signedIn)
@@ -30,8 +30,8 @@ Each procedure must make every decision (authentication, input, output, authoriz
 ## Calling procedures
 
 ```tsx
-import { rpc } from '@buildwf/bwf/rpc';
-import { useCall } from '@buildwf/bwf/rpc/react';
+import { rpc } from '@builtbyfriends/bwf/rpc';
+import { useCall } from '@builtbyfriends/bwf/rpc/react';
 
 function Contact({ id }: { id: string }) {
   const { data, error, loading, refetch } = useCall(rpc.contacts.get, { id });
@@ -45,4 +45,4 @@ Inputs, outputs and the error codes of a failed call are typed from the procedur
 
 Types come from `.bwf/procedures.d.ts`, which `bwf dev`, `bwf build` and `bwf prepare` keep current. It imports only types, so no server code reaches the browser.
 
-To call procedures from another origin or a script, create a client with `createRpc({ baseUrl, token })` from `@buildwf/bwf/rpc`.
+To call procedures from another origin or a script, create a client with `createRpc({ baseUrl, token })` from `@builtbyfriends/bwf/rpc`.

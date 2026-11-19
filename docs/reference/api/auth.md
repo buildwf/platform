@@ -5,14 +5,14 @@ outline: deep
 
 # Authentication {#auth}
 
-Imported from `"@buildwf/bwf/auth"`. Client-side helpers imported from `"@buildwf/bwf/client"`.
+Imported from `"@builtbyfriends/bwf/auth"`. Client-side helpers imported from `"@builtbyfriends/bwf/client"`.
 
 ## `defineAuth(config)` {#defineauth-config}
 
 Advanced escape hatch for customizing bwf's Better Auth config.
 
 ```ts
-import { defineAuth } from '@buildwf/bwf/auth';
+import { defineAuth } from '@builtbyfriends/bwf/auth';
 
 export default defineAuth(({ defaults }) => ({
   ...defaults,
@@ -31,7 +31,7 @@ function defineAuth(config: BwfAuthConfig): BwfAuthConfig;
 Returns the current authenticated user, or `null` when no user is present.
 
 ```ts
-import { getUser } from '@buildwf/bwf/auth';
+import { getUser } from '@builtbyfriends/bwf/auth';
 
 const user = getUser();
 ```
@@ -47,7 +47,7 @@ function getUser(): AuthUser | null;
 Returns the current Better Auth request state, or `null`.
 
 ```ts
-import { getSession } from '@buildwf/bwf/auth';
+import { getSession } from '@builtbyfriends/bwf/auth';
 
 const state = getSession();
 ```
@@ -63,8 +63,8 @@ function getSession(): AuthState | null;
 Returns the Better Auth instance for the current request, including plugin APIs inferred from `auth.ts`. Use it with Better Auth plugin helpers or to forward requests to `auth.handler`.
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
-import { getAuth } from '@buildwf/bwf/auth';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { getAuth } from '@builtbyfriends/bwf/auth';
 
 export const GET = defineHandler((c) => getAuth(c).handler(c.req.raw));
 ```
@@ -86,8 +86,8 @@ Returns the authenticated user from the request context. Without `throwRedirect`
 Use it without options in route handlers or actions when you want a plain-text `401`, not an error page:
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
-import { requireAuth } from '@buildwf/bwf/auth';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { requireAuth } from '@builtbyfriends/bwf/auth';
 
 export const GET = defineHandler((c) => {
   const user = requireAuth(c);
@@ -98,8 +98,8 @@ export const GET = defineHandler((c) => {
 To send a signed-out browser to a login page, pass `throwRedirect` to [redirect unauthenticated visitors to login](../../guide/auth.md#protect-a-server-route):
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
-import { requireAuth } from '@buildwf/bwf/auth';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { requireAuth } from '@builtbyfriends/bwf/auth';
 
 export const GET = defineHandler((c) => {
   const user = requireAuth(c, { throwRedirect: '/login' });
@@ -167,10 +167,10 @@ interface AuthState {
 
 ## `auth` {#auth-1}
 
-Imported from `"@buildwf/bwf/client"`. This is a ready-to-use Better Auth client instance preconfigured with `basePath: "/api/auth"`.
+Imported from `"@builtbyfriends/bwf/client"`. This is a ready-to-use Better Auth client instance preconfigured with `basePath: "/api/auth"`.
 
 ```ts
-import { auth } from '@buildwf/bwf/client';
+import { auth } from '@builtbyfriends/bwf/client';
 
 await auth.signIn.email({ email, password });
 await auth.signOut();
@@ -179,17 +179,17 @@ await auth.signOut();
 The exact client methods come from Better Auth. For React hooks such as `useSession()`, import the React client:
 
 ```ts
-import { auth } from '@buildwf/bwf/client/react';
+import { auth } from '@builtbyfriends/bwf/client/react';
 ```
 
-That subpath keeps the same `fetch`, `fetchStream`, and auth exports as `@buildwf/bwf/client`, but binds `auth` and `createAuthClient` to Better Auth's React package.
+That subpath keeps the same `fetch`, `fetchStream`, and auth exports as `@builtbyfriends/bwf/client`, but binds `auth` and `createAuthClient` to Better Auth's React package.
 
 ## `createAuthClient` {#createauthclient}
 
-Imported from `"@buildwf/bwf/client"`. Re-export of Better Auth's `createAuthClient` for advanced usage.
+Imported from `"@builtbyfriends/bwf/client"`. Re-export of Better Auth's `createAuthClient` for advanced usage.
 
 ```ts
-import { createAuthClient } from '@buildwf/bwf/client';
+import { createAuthClient } from '@builtbyfriends/bwf/client';
 
 const auth = createAuthClient({ basePath: '/api/auth' });
 ```

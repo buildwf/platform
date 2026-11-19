@@ -5,7 +5,7 @@ outline: deep
 
 # AI
 
-Run Workers AI models and provider APIs from server code with `ai` from `@buildwf/bwf/ai`. Provider requests use Cloudflare's [AI Gateway](https://developers.cloudflare.com/ai-gateway/).
+Run Workers AI models and provider APIs from server code with `ai` from `@builtbyfriends/bwf/ai`. Provider requests use Cloudflare's [AI Gateway](https://developers.cloudflare.com/ai-gateway/).
 
 ## Local Development
 
@@ -16,7 +16,7 @@ bwf connect --platform cloudflare
 npm run dev
 ```
 
-When the app imports `@buildwf/bwf/ai`, bwf enables a remote Workers AI binding during
+When the app imports `@builtbyfriends/bwf/ai`, bwf enables a remote Workers AI binding during
 development and preview. Requests use your Cloudflare account and its allowance;
 Workers AI has no local simulator. Development and preview use the same
 Cloudflare login as `bwf connect`; sign in with `bwf cloudflare login`. A
@@ -37,8 +37,8 @@ This also applies to model listing, Markdown conversion, and provider-native req
 Call `ai.run()` with a model name and inputs. Model names and input types are fully typed from `@cloudflare/workers-types`.
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
-import { ai } from '@buildwf/bwf/ai';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { ai } from '@builtbyfriends/bwf/ai';
 
 export const POST = defineHandler(async (c) => {
   const { prompt } = await c.req.json();
@@ -59,8 +59,8 @@ You can use any model available through Cloudflare's AI binding, including Worke
 Use `ai.stream()` to get a streaming response with SSE headers that you can return directly from a route handler:
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
-import { ai } from '@buildwf/bwf/ai';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { ai } from '@builtbyfriends/bwf/ai';
 
 export const POST = defineHandler(async (c) => {
   const { prompt } = await c.req.json();
@@ -71,7 +71,7 @@ export const POST = defineHandler(async (c) => {
 });
 ```
 
-Streaming responses end with a `nosam:error` SSE event if generation is interrupted after the response starts, or `nosam:limit` for a usage limit. `fetchStream()` from `@buildwf/bwf/client` throws `UsageLimit` for limits before or during streaming and `StreamError` for other terminal errors. Catch the error in your UI to stop its generating state, retain partial output, and offer retry. This also applies to streaming provider responses and `ai.run()` with `stream: true`.
+Streaming responses end with a `nosam:error` SSE event if generation is interrupted after the response starts, or `nosam:limit` for a usage limit. `fetchStream()` from `@builtbyfriends/bwf/client` throws `UsageLimit` for limits before or during streaming and `StreamError` for other terminal errors. Catch the error in your UI to stop its generating state, retain partial output, and offer retry. This also applies to streaming provider responses and `ai.run()` with `stream: true`.
 
 ## Listing Models
 
@@ -100,14 +100,14 @@ requests also use your provider credentials and their billing terms.
 
 A team platform uses its own Cloudflare account and may apply per-user limits. Ask your administrator about the available allowance.
 
-Usage limits reject the operation's promise with `UsageLimit` from `@buildwf/bwf/limits`. It includes `resource`, `reason`, and an optional `retryAt` timestamp. In bwf route handlers and Pages actions, an uncaught limit produces a structured HTTP 429 with retry information. In queues, scheduled jobs, and other server code, it remains a rejected promise.
+Usage limits reject the operation's promise with `UsageLimit` from `@builtbyfriends/bwf/limits`. It includes `resource`, `reason`, and an optional `retryAt` timestamp. In bwf route handlers and Pages actions, an uncaught limit produces a structured HTTP 429 with retry information. In queues, scheduled jobs, and other server code, it remains a rejected promise.
 
 Handling a limit is optional. Use `instanceof UsageLimit` when you want a fallback or a message tailored to your app:
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
-import { ai } from '@buildwf/bwf/ai';
-import { UsageLimit } from '@buildwf/bwf/limits';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { ai } from '@builtbyfriends/bwf/ai';
+import { UsageLimit } from '@builtbyfriends/bwf/limits';
 
 export const POST = defineHandler(async (c) => {
   const { prompt } = await c.req.json();
@@ -158,8 +158,8 @@ platform ignores logging, metadata and cost headers.
 ### OpenAI
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
-import { ai } from '@buildwf/bwf/ai';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { ai } from '@builtbyfriends/bwf/ai';
 
 export const POST = defineHandler(async (c) => {
   const { prompt } = await c.req.json();

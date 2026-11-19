@@ -1,10 +1,10 @@
 // Generated email handlers import the wire protocol through bwf so consumer
-// projects do not need a direct dependency on @buildwf/platform.
+// projects do not need a direct dependency on @builtbyfriends/platform.
 export {
   EMAIL_PROTOCOL_VERSION,
   encodeEmailActions,
   readEmailEnvelope,
-} from '@buildwf/platform/email-protocol';
+} from '@builtbyfriends/platform/email-protocol';
 
 const RECEIPT_VERIFICATION_DEADLINE_MS = 5_000;
 const MAX_RECEIPT_VERIFICATION_BYTES = 2 * 1024;

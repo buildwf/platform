@@ -19,13 +19,13 @@ import {
   type CloudflareCommandResult,
   type CloudflareOperation,
   type CloudflareTriggerConfig,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import {
   createPlatformWorkerConfigs,
   PLATFORM_DISABLED_KEY,
   PLATFORM_DISABLED_VALUE,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { dirname, join, resolve } from 'pathslash';
 import { getErrorMessage } from './output.ts';
 import {

@@ -41,7 +41,7 @@ If your account's dashboard has no **Enable** action, create a disposable Hello 
 With Node.js 24.22+ or 26.12+, install the CLI:
 
 ```sh
-pnpm add --global @buildwf/bwf
+pnpm add --global @builtbyfriends/bwf
 bwf platform install --plan
 ```
 

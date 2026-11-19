@@ -1,4 +1,4 @@
-import { createDefaultPlanCatalog } from '@buildwf/platform/plans';
+import { createDefaultPlanCatalog } from '@builtbyfriends/platform/plans';
 import { describe, expect, test } from 'vite-plus/test';
 import { planAiLoggingChanges, startPlanAiLoggingPublish } from '../../src/ai-logging-plans.ts';
 import { proposePlanAiLogging } from '../../src/operator/plans.ts';

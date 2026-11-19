@@ -4,7 +4,7 @@ import type { QueueDefinition } from '../queues/scan.ts';
 /**
  * Generate .bwf/queues.d.ts content.
  *
- * Augments `@buildwf/bwf/queues` with a typed `QueueMap` interface
+ * Augments `@builtbyfriends/bwf/queues` with a typed `QueueMap` interface
  * so `queues.emails.send(body)` is fully typed from the consumer's
  * `defineQueue<T>` phantom type.
  */

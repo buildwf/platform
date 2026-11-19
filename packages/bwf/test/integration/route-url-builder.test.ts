@@ -25,11 +25,11 @@ afterEach(() => {
 const typedCheck = `import type { Context } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { etag } from 'hono/etag';
-import { routeUrl, type Href, type RouteUrl } from '@buildwf/bwf/routes';
-import { defineConfig } from '@buildwf/bwf/config';
-import { defineHandler, defineMiddleware, type CloudContext } from '@buildwf/bwf/handler';
-import { connectLiveStream } from '@buildwf/bwf/live/client';
-import { connectEventStream } from '@buildwf/bwf/sse/client';
+import { routeUrl, type Href, type RouteUrl } from '@builtbyfriends/bwf/routes';
+import { defineConfig } from '@builtbyfriends/bwf/config';
+import { defineHandler, defineMiddleware, type CloudContext } from '@builtbyfriends/bwf/handler';
+import { connectLiveStream } from '@builtbyfriends/bwf/live/client';
+import { connectEventStream } from '@builtbyfriends/bwf/sse/client';
 declare const id: number;
 declare const dynamic: string;
 const user: RouteUrl = routeUrl('/users/:id', { params: { id } });
@@ -157,23 +157,23 @@ async function createFixture({
     'check-typed.ts': typedCheck,
     'package.json': '{"type":"module"}',
     'routes/api/users/[id].ts':
-      "import { defineHandler } from '@buildwf/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+      "import { defineHandler } from '@builtbyfriends/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
     'routes/api/legacy.ts':
-      "import { defineHandler } from '@buildwf/bwf/handler'; export default defineHandler(() => ({ ok: true }));",
+      "import { defineHandler } from '@builtbyfriends/bwf/handler'; export default defineHandler(() => ({ ok: true }));",
     'routes/index.ts':
-      "import { defineHandler } from '@buildwf/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+      "import { defineHandler } from '@builtbyfriends/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
     'routes/about.ts':
-      "import { defineHandler } from '@buildwf/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+      "import { defineHandler } from '@builtbyfriends/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
     'routes/café menu.ts':
-      "import { defineHandler } from '@buildwf/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+      "import { defineHandler } from '@builtbyfriends/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
     'routes/café/[id].ts':
-      "import { defineHandler } from '@buildwf/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+      "import { defineHandler } from '@builtbyfriends/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
     'routes/users/[id].ts':
-      "import { defineHandler } from '@buildwf/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+      "import { defineHandler } from '@builtbyfriends/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
     'routes/files/[...path].ts':
-      "import { defineHandler } from '@buildwf/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+      "import { defineHandler } from '@builtbyfriends/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
     'routes/wild/[...].ts':
-      "import { defineHandler } from '@buildwf/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+      "import { defineHandler } from '@builtbyfriends/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
     'check.ts': `import type { Context, MiddlewareHandler } from 'hono';
 import { getCookie } from 'hono/cookie';
 import {
@@ -181,8 +181,8 @@ import {
   type RouteDestination,
   type RouteOptions,
   type RoutePath,
-} from '@buildwf/bwf/routes';
-import { defineHandler, defineMiddleware, type CloudContext, type CloudEnv } from '@buildwf/bwf/handler';
+} from '@builtbyfriends/bwf/routes';
+import { defineHandler, defineMiddleware, type CloudContext, type CloudEnv } from '@builtbyfriends/bwf/handler';
 const path: RoutePath = '/users/:id';
 const options: RouteOptions<typeof path> = { params: { id: 123 }, query: { tab: 'activity' }, hash: 'details' };
 const url: string = routeUrl(path, options);
@@ -256,7 +256,7 @@ defineMiddleware(async c => c.redirect(destination));
     writeFileSync(join(root, path), content);
   }
   mkdirSync(join(root, 'node_modules'));
-  symlinkSync(packageRoot, join(root, 'node_modules/@buildwf/bwf'), 'junction');
+  symlinkSync(packageRoot, join(root, 'node_modules/@builtbyfriends/bwf'), 'junction');
   symlinkSync(join(packageRoot, 'node_modules/hono'), join(root, 'node_modules/hono'), 'junction');
   const { scan } = await analyzeApplication(root, {
     config: readConfig(root),
@@ -315,14 +315,14 @@ describe('standalone routeUrl utility', () => {
     async (declarations) => {
       const root = await createFixture({
         extraFiles: {
-          'routes/chat/[room].ws.ts': `import { defineRoom } from '@buildwf/bwf/ws';
+          'routes/chat/[room].ws.ts': `import { defineRoom } from '@builtbyfriends/bwf/ws';
 type Schema<T> = { '~standard': { version: 1; vendor: string; validate: (value: unknown) => { value: T }; types?: { input: T; output: T } } };
 declare const message: Schema<{ text: string }>;
 export default defineRoom({ messages: { client: message, server: message } });
 `,
-          'check-aliases.ts': `import { fetch } from '@buildwf/bwf/client';
-import { connect } from '@buildwf/bwf/ws';
-import type { RouteMap, RoutePathMap, WebSocketRouteMap } from '@buildwf/bwf/routes';
+          'check-aliases.ts': `import { fetch } from '@builtbyfriends/bwf/client';
+import { connect } from '@builtbyfriends/bwf/ws';
+import type { RouteMap, RoutePathMap, WebSocketRouteMap } from '@builtbyfriends/bwf/routes';
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 const aliases: [
   Same<RouteMap['/api/users/[id]'], RouteMap['/api/users/:id']>,
@@ -381,9 +381,9 @@ connect('/chat/[room]', { params: { room: 'lobby' } }).on('message', (message) =
       typedRoutes: true,
       extraFiles: {
         'routes/[slug].ts':
-          "import { defineHandler } from '@buildwf/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
+          "import { defineHandler } from '@builtbyfriends/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
         // Template literal types cannot exclude empty or slash-leading segments.
-        'check-root-dynamic.ts': `import type { RouteUrl } from '@buildwf/bwf/routes';
+        'check-root-dynamic.ts': `import type { RouteUrl } from '@builtbyfriends/bwf/routes';
 const loose: Array<RouteUrl> = ['/anything', '/users/', '//example.com'];
 void loose;
 `,
@@ -401,12 +401,12 @@ void loose;
     const root = mkdtempSync(join(tmpdir(), 'nosam-route-stub-'));
     roots.push(root);
     mkdirSync(join(root, 'node_modules'));
-    symlinkSync(packageRoot, join(root, 'node_modules/@buildwf/bwf'), 'junction');
+    symlinkSync(packageRoot, join(root, 'node_modules/@builtbyfriends/bwf'), 'junction');
     writeFileSync(join(root, 'package.json'), '{"type":"module"}');
     writeFileSync(
       join(root, 'routes.d.ts'),
       `export {};
-declare module '@buildwf/bwf/routes' {
+declare module '@builtbyfriends/bwf/routes' {
   interface RoutePathMap { '/': never; '/docs/[...]': '*'; '/trailing/[...]/': '*'; '/users/[id]': 'id'; '/café menu': never }
   interface EncodedRoutePathMap { '/café menu': '/caf%C3%A9%20menu' }
   interface RouteTypesConfig { typedRoutes: true }
@@ -415,7 +415,7 @@ declare module '@buildwf/bwf/routes' {
     );
     writeFileSync(
       join(root, 'check.ts'),
-      `import type { Href, RouteUrl } from '@buildwf/bwf/routes';
+      `import type { Href, RouteUrl } from '@builtbyfriends/bwf/routes';
 const hrefs: Array<Href> = ['/', '/docs', '/docs/a/b', '/users/42', '/café menu', '/caf%C3%A9%20menu?q=1', '#top', 'https://vite.dev'];
 const route: RouteUrl = '/caf%C3%A9%20menu';
 const emptyCatchAll: RouteUrl = '/trailing/';
@@ -495,7 +495,7 @@ void [hrefs, route, emptyCatchAll, nestedCatchAll, unknown, external];
     const root = await createFixture();
     writeFileSync(
       join(root, 'entry.ts'),
-      `import { routeUrl } from '@buildwf/bwf/routes';
+      `import { routeUrl } from '@builtbyfriends/bwf/routes';
 export function buildUrls() {
   return [
     routeUrl('/users/[id]', { params: { id: 'a/b' }, query: { page: 2, tag: ['one', 'two'] }, hash: '/settings?tab=1&next=%2Fhome' }),

@@ -1,4 +1,4 @@
-import { PLATFORM_DISABLED_KEY } from '@buildwf/platform';
+import { PLATFORM_DISABLED_KEY } from '@builtbyfriends/platform';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { processPlatformQueue } from '../../src/platform-queue.ts';
 

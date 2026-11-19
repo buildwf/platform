@@ -1,4 +1,4 @@
-import { platformProjectHostnames, readPlatformApplication } from '@buildwf/platform';
+import { platformProjectHostnames, readPlatformApplication } from '@builtbyfriends/platform';
 import { and, eq, or, sql as drizzleSql } from 'drizzle-orm';
 import { type Context } from 'hono';
 import { findR2Assets, persistedR2AssetSizes } from '../asset-inventory.ts';

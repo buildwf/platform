@@ -44,14 +44,14 @@ describe('vp test in a bwf app', () => {
     playground = createIsolatedPlayground(repository, 'playground/spa');
     writeFileSync(
       join(playground.root, 'routes/api/health.ts'),
-      "import { defineHandler } from '@buildwf/bwf';\nexport const GET = defineHandler((c) => c.json({ status: 'ok' }));\n",
+      "import { defineHandler } from '@builtbyfriends/bwf';\nexport const GET = defineHandler((c) => c.json({ status: 'ok' }));\n",
     );
     writeTest(
       playground.root,
       `import { Hono } from 'hono';
 import { describe, expect, it } from 'vite-plus/test';
 import * as schema from '@schema';
-import { db } from '@buildwf/bwf/db';
+import { db } from '@builtbyfriends/bwf/db';
 import { GET } from '../routes/api/health.ts';
 
 describe('app', () => {

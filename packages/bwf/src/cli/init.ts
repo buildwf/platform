@@ -2,8 +2,8 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { parseArgs } from 'node:util';
-import { isRecord } from '@buildwf/deploy-core';
-import type { PlatformDiscoveryDocument } from '@buildwf/platform';
+import { isRecord } from '@builtbyfriends/deploy-core';
+import type { PlatformDiscoveryDocument } from '@builtbyfriends/platform';
 import { log, confirm, isCancel, cancel, select, text } from '@voidzero-dev/vite-plus-prompts';
 import { parse, type ParseError } from 'jsonc-parser';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'pathslash';
@@ -196,7 +196,7 @@ const PNPM_BUILD_PLACEHOLDER = 'set this to true or false';
 // Packages a previous bwf starter can leave behind, so re-running init
 // after deleting the app files still takes the starter path.
 const EMPTY_PROJECT_ALLOWED_PACKAGES = new Set([
-  '@buildwf/bwf',
+  '@builtbyfriends/bwf',
   'hono',
   'vite',
   'vite-plus',
@@ -240,7 +240,7 @@ function hasOnlyBwfStarterDependencies(depNames: Array<string>): boolean {
     return false;
   }
   const hasStarterDependency = depNames.some(
-    (dep) => dep !== '@buildwf/bwf' && dep !== EMPTY_PROJECT_STARTER_MARKER,
+    (dep) => dep !== '@builtbyfriends/bwf' && dep !== EMPTY_PROJECT_STARTER_MARKER,
   );
   return !hasStarterDependency || depNames.includes(EMPTY_PROJECT_STARTER_MARKER);
 }
@@ -735,7 +735,7 @@ function hasAncestorPnpmMarkers(start: string): boolean {
 export function isBwfResolvableFrom(start: string): boolean {
   let dir = start;
   while (true) {
-    if (existsSync(join(dir, 'node_modules', '@buildwf', 'bwf', 'package.json'))) {
+    if (existsSync(join(dir, 'node_modules', '@builtbyfriends', 'bwf', 'package.json'))) {
       return true;
     }
     const parent = dirname(dir);
@@ -750,8 +750,8 @@ export function isBwfResolvableFrom(start: string): boolean {
   const installed = findInstalledYarnPnpRuntime(start);
   if (installed !== undefined) {
     const probeArgs = installed.pnpCjs
-      ? ['-e', "require.resolve('@buildwf/bwf')"]
-      : ['--input-type=module', '-e', "import.meta.resolve('@buildwf/bwf')"];
+      ? ['-e', "require.resolve('@builtbyfriends/bwf')"]
+      : ['--input-type=module', '-e', "import.meta.resolve('@builtbyfriends/bwf')"];
     const probe = spawnSync(process.execPath, probeArgs, {
       cwd: start,
       stdio: 'ignore',
@@ -1218,8 +1218,8 @@ function setupTsconfig(root: string, state: ProjectState, framework?: ScaffoldFr
     const types = Array.isArray(compilerOptions.types)
       ? compilerOptions.types.filter((value): value is string => typeof value === 'string')
       : [];
-    if (!types.includes('@buildwf/bwf/env')) {
-      types.push('@buildwf/bwf/env');
+    if (!types.includes('@builtbyfriends/bwf/env')) {
+      types.push('@builtbyfriends/bwf/env');
       updated = true;
       log.step('Updated tsconfig.json — added bwf/env to types');
     }
@@ -1296,7 +1296,7 @@ function setupTsconfig(root: string, state: ProjectState, framework?: ScaffoldFr
         strict: true,
         esModuleInterop: true,
         skipLibCheck: true,
-        types: ['@buildwf/bwf/env'],
+        types: ['@builtbyfriends/bwf/env'],
         ...getScaffoldTsconfigCompilerOptions(framework),
       },
       include: ['src', 'routes', 'middleware', 'crons', 'queues', 'db'],
@@ -1376,7 +1376,7 @@ function clearConfiguredDatabase(
   log.step(messages.updated);
 }
 
-/** Remove `database` entirely: its casing alone still makes bwf serve `@buildwf/bwf/db`. */
+/** Remove `database` entirely: its casing alone still makes bwf serve `@builtbyfriends/bwf/db`. */
 function removeDatabaseConfig(root: string): void {
   const config = readConfig(root);
   if (config.database === undefined) {
@@ -2104,7 +2104,7 @@ export function generateStarterMigration(
   const rollBack = snapshotDrizzleOutputs(readProjectPaths(root).migrationsDir);
 
   log.step('Generating initial Drizzle migration');
-  // Adds the Yarn PnP loaders drizzle-kit needs to resolve `@buildwf/bwf/schema-d1`.
+  // Adds the Yarn PnP loaders drizzle-kit needs to resolve `@builtbyfriends/bwf/schema-d1`.
   const result = spawnSync(process.execPath, [drizzleKitBin, 'generate', '--config', configPath], {
     cwd: root,
     stdio: 'pipe',
@@ -2144,7 +2144,7 @@ function scaffoldSpaApp(
     framework,
     starterMode,
     toolchain,
-    bwfPackageSpec: resolveScaffoldDependencySpec(root, '@buildwf/bwf', getOwnVersion()),
+    bwfPackageSpec: resolveScaffoldDependencySpec(root, '@builtbyfriends/bwf', getOwnVersion()),
   });
   let pkg: JsonObject = {};
 
@@ -2261,7 +2261,7 @@ function ensureExistingProjectPackage(
   options: { plainViteSetup?: boolean } = {},
 ): boolean {
   const packageJsonPath = join(root, 'package.json');
-  const bwfSpec = resolveScaffoldDependencySpec(root, '@buildwf/bwf', getOwnVersion());
+  const bwfSpec = resolveScaffoldDependencySpec(root, '@builtbyfriends/bwf', getOwnVersion());
   const plainViteSetup = options.plainViteSetup ?? true;
   let pkg: JsonObject = {};
   let existedBefore = false;
@@ -2307,8 +2307,8 @@ function ensureExistingProjectPackage(
 
   const devDependencies = asRecord(pkg.devDependencies) ?? {};
   pkg.devDependencies = devDependencies;
-  if (!hasPackageDependency(pkg, '@buildwf/bwf', DEPENDENCY_FIELDS)) {
-    devDependencies['@buildwf/bwf'] = bwfSpec;
+  if (!hasPackageDependency(pkg, '@builtbyfriends/bwf', DEPENDENCY_FIELDS)) {
+    devDependencies['@builtbyfriends/bwf'] = bwfSpec;
     changed = true;
     dependencyAdded = true;
   }
@@ -2340,7 +2340,7 @@ function ensureExistingProjectPackage(
 
 function getBasicBwfViteConfig(): string {
   return `import { defineConfig } from "vite";
-import { bwfPlugin } from "@buildwf/bwf";
+import { bwfPlugin } from "@builtbyfriends/bwf";
 
 export default defineConfig({
   plugins: [bwfPlugin()],
@@ -2358,7 +2358,7 @@ function noteManualViteConfigSetup(configPath?: string): void {
   note(
     `Could not safely update ${target} automatically.\n\n` +
       `Add \`bwfPlugin()\` to the top-level Vite plugins array:\n\n` +
-      `import { bwfPlugin } from "@buildwf/bwf";\n\n` +
+      `import { bwfPlugin } from "@builtbyfriends/bwf";\n\n` +
       `export default defineConfig({\n` +
       `  plugins: [bwfPlugin()],\n` +
       `});`,
@@ -2402,7 +2402,7 @@ function setupExistingProject(root: string): boolean {
 /** The demo `posts` table for the database dialect that init configured. */
 function demoSchemaSource(dialect: DatabaseDialect): string {
   if (dialect === 'postgresql') {
-    return `import { pgTable, serial, text, timestamp } from "@buildwf/bwf/schema-pg";
+    return `import { pgTable, serial, text, timestamp } from "@builtbyfriends/bwf/schema-pg";
 
 export const posts = pgTable("posts", {
   id: serial("id").primaryKey(),
@@ -2414,7 +2414,7 @@ export const posts = pgTable("posts", {
   }
 
   if (dialect === 'mysql') {
-    return `import { int, mysqlTable, text, timestamp } from "@buildwf/bwf/schema-mysql";
+    return `import { int, mysqlTable, text, timestamp } from "@builtbyfriends/bwf/schema-mysql";
 
 export const posts = mysqlTable("posts", {
   id: int("id").autoincrement().primaryKey(),
@@ -2425,8 +2425,8 @@ export const posts = mysqlTable("posts", {
 `;
   }
 
-  return `import { sql } from "@buildwf/bwf/db";
-import { integer, sqliteTable, text } from "@buildwf/bwf/schema-d1";
+  return `import { sql } from "@builtbyfriends/bwf/db";
+import { integer, sqliteTable, text } from "@builtbyfriends/bwf/schema-d1";
 
 export const posts = sqliteTable("posts", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -2464,8 +2464,8 @@ function scaffoldDemo(root: string, dialect: DatabaseDialect): void {
   mkdirSync(join(paths.routesDir, 'api'), { recursive: true });
   writeFileSync(
     files.route,
-    `import { defineHandler } from "@buildwf/bwf";
-import { db } from "@buildwf/bwf/db";
+    `import { defineHandler } from "@builtbyfriends/bwf";
+import { db } from "@builtbyfriends/bwf/db";
 import { posts } from "@schema";
 
 // GET /api/posts — returns all posts, fully typed from migration schema
@@ -2481,7 +2481,7 @@ export const GET = defineHandler(async () => {
   mkdirSync(dirname(files.client), { recursive: true });
   writeFileSync(
     files.client,
-    `import { fetch } from "@buildwf/bwf/client";
+    `import { fetch } from "@builtbyfriends/bwf/client";
 
 // Fully typed: response type is inferred from the GET handler's return type,
 // which is derived from the migration schema. No manual types needed.
@@ -2529,7 +2529,7 @@ async function injectAgentBlock(root: string, newProject: boolean): Promise<void
   if (!newProject) {
     if (process.env.CI || !process.stdin.isTTY) {
       log.info(
-        `Skipping ${filePath} setup without an interactive terminal; read node_modules/@buildwf/bwf/docs/.`,
+        `Skipping ${filePath} setup without an interactive terminal; read node_modules/@builtbyfriends/bwf/docs/.`,
       );
       return;
     }
@@ -2708,7 +2708,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
     const { linkSkillsForSpecificAgents } = await import('./skills.ts');
     linkSkillsForSpecificAgents(root, agents);
   } else {
-    log.info('Bundled bwf docs: node_modules/@buildwf/bwf/docs/');
+    log.info('Bundled bwf docs: node_modules/@builtbyfriends/bwf/docs/');
   }
 
   // Demo code only in the full flow.
