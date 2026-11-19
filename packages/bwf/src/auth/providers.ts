@@ -37,27 +37,27 @@ export const BWF_SOCIAL_AUTH_PROVIDERS = [
 
 export const BWF_EMAIL_AUTH_PROVIDER = 'email';
 
-export const NOSAM_AUTH_PROVIDERS: readonly [
+export const PLATFORM_AUTH_PROVIDERS: readonly [
   typeof BWF_EMAIL_AUTH_PROVIDER,
   ...typeof BWF_SOCIAL_AUTH_PROVIDERS,
 ] = [BWF_EMAIL_AUTH_PROVIDER, ...BWF_SOCIAL_AUTH_PROVIDERS] as const;
 
 export type BwfSocialAuthProvider = (typeof BWF_SOCIAL_AUTH_PROVIDERS)[number];
-export type BwfAuthProvider = (typeof NOSAM_AUTH_PROVIDERS)[number];
+export type BwfAuthProvider = (typeof PLATFORM_AUTH_PROVIDERS)[number];
 
-const NOSAM_SOCIAL_AUTH_PROVIDER_SET = new Set<string>(BWF_SOCIAL_AUTH_PROVIDERS);
-const NOSAM_AUTH_PROVIDER_SET = new Set<string>(NOSAM_AUTH_PROVIDERS);
+const PLATFORM_SOCIAL_AUTH_PROVIDER_SET = new Set<string>(BWF_SOCIAL_AUTH_PROVIDERS);
+const PLATFORM_AUTH_PROVIDER_SET = new Set<string>(PLATFORM_AUTH_PROVIDERS);
 
 export function isBwfSocialAuthProvider(value: string): value is BwfSocialAuthProvider {
-  return NOSAM_SOCIAL_AUTH_PROVIDER_SET.has(value);
+  return PLATFORM_SOCIAL_AUTH_PROVIDER_SET.has(value);
 }
 
 export function isBwfAuthProvider(value: string): value is BwfAuthProvider {
-  return NOSAM_AUTH_PROVIDER_SET.has(value);
+  return PLATFORM_AUTH_PROVIDER_SET.has(value);
 }
 
 /** Provider options other than the client credentials, with the env var that holds each one. */
-const NOSAM_AUTH_PROVIDER_SETTING_ENV_NAMES: Partial<
+const PLATFORM_AUTH_PROVIDER_SETTING_ENV_NAMES: Partial<
   Record<BwfSocialAuthProvider, Record<string, string>>
 > = {
   cognito: {
@@ -70,7 +70,7 @@ const NOSAM_AUTH_PROVIDER_SETTING_ENV_NAMES: Partial<
 export function getBwfAuthProviderSettingEnvNames(
   provider: BwfSocialAuthProvider,
 ): Record<string, string> {
-  return NOSAM_AUTH_PROVIDER_SETTING_ENV_NAMES[provider] ?? {};
+  return PLATFORM_AUTH_PROVIDER_SETTING_ENV_NAMES[provider] ?? {};
 }
 
 export function getBwfAuthProviderEnvNames(provider: BwfSocialAuthProvider): {

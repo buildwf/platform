@@ -273,7 +273,7 @@ describe('streamDeployEvents', () => {
   // Ctrl-C during a managed deploy exits with 130 without awaiting anything, so the records
   // must already be on disk. The log goes to a temp home folder.
   it('has every managed deploy record on disk when Ctrl-C exits', async () => {
-    logHome.dir = mkdtempSync(join(tmpdir(), 'nosam-deploy-log-'));
+    logHome.dir = mkdtempSync(join(tmpdir(), 'platform-deploy-log-'));
     const { spinner } = createMockSpinner();
     const cliLog = openDeployLog();
     expect(cliLog.path).not.toBeNull();

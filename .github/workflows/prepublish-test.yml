@@ -61,7 +61,7 @@ jobs:
     permissions:
       contents: read
     env:
-      NOSAM_PLATFORM_SOURCE_REVISION: ${{ github.sha }}
+      PLATFORM_SOURCE_REVISION: ${{ github.sha }}
       BWF_PACKED_SUITE: ${{ needs.scope.outputs.suite }}
     strategy:
       fail-fast: false

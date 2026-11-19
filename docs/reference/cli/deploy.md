@@ -5,7 +5,7 @@ outline: deep
 
 # Deployment {#deploy}
 
-## `bwf deploy` {#nosam-deploy}
+## `bwf deploy` {#platform-deploy}
 
 ```
 bwf deploy [--project <name>] [--dir <path>] [--spa] [--skip-build] [--skip-migrations] [--debug]
@@ -79,9 +79,9 @@ name the project when overriding a different platform's saved link. Existing
 project links and deployment preferences remain unchanged, even when the target
 project is created. The same applies to `BWF_PROJECT` and to another project on
 the current platform. A first deployment still links the project when no destination
-is configured. See [Deploy to another bwf platform](../../guide/deployment.md#deploy-to-another-nosam-platform).
+is configured. See [Deploy to another bwf platform](../../guide/deployment.md#deploy-to-another-platform).
 
-## `bwf deploy --platform cloudflare` {#nosam-deploy-platform-cloudflare}
+## `bwf deploy --platform cloudflare` {#platform-deploy-platform-cloudflare}
 
 Build and deploy to your Cloudflare account using `bwf.config.ts`:
 

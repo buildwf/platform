@@ -15,7 +15,7 @@ afterEach(() => {
 
 /**
  * Typecheck `auth.ts` plus `handler.ts` in a kitchen-sink app that depends on
- * `nosam` only, the way pnpm lays it out: the app has no `better-auth` of its own.
+ * `platform` only, the way pnpm lays it out: the app has no `better-auth` of its own.
  * An `auth.js` config is left out of `files`, as in a TS app without `allowJs`.
  */
 function typecheck(

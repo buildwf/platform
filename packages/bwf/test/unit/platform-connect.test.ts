@@ -36,8 +36,8 @@ const document = {
 
 describe('platform discovery', () => {
   it('groups the current platform first and explains how to select another platform', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'nosam-list-'));
-    vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', directory);
+    const directory = mkdtempSync(join(tmpdir(), 'platform-list-'));
+    vi.stubEnv('PLATFORM_REGISTRY_DIR', directory);
     const output = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       savePlatformConnection({
@@ -96,8 +96,8 @@ describe('platform discovery', () => {
   });
 
   it('shows saved lifecycle progress when live discovery is blocked by maintenance', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'nosam-status-'));
-    vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', directory);
+    const directory = mkdtempSync(join(tmpdir(), 'platform-status-'));
+    vi.stubEnv('PLATFORM_REGISTRY_DIR', directory);
     const output = vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.stubGlobal(
       'fetch',
@@ -145,8 +145,8 @@ describe('platform discovery', () => {
     }
   });
   it('reports a disabled platform and how to enable it', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'nosam-status-'));
-    vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', directory);
+    const directory = mkdtempSync(join(tmpdir(), 'platform-status-'));
+    vi.stubEnv('PLATFORM_REGISTRY_DIR', directory);
     const output = vi.spyOn(console, 'log').mockImplementation(() => {});
     const fetcher = vi.fn(async () =>
       Response.json({ error: 'Platform disabled' }, { status: 503 }),
@@ -188,8 +188,8 @@ describe('platform discovery', () => {
     }
   });
   it('reports an upgrade or repair, not a disabled platform, while maintenance pauses traffic', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'nosam-status-'));
-    vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', directory);
+    const directory = mkdtempSync(join(tmpdir(), 'platform-status-'));
+    vi.stubEnv('PLATFORM_REGISTRY_DIR', directory);
     const output = vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.stubGlobal(
       'fetch',
@@ -241,7 +241,7 @@ describe('platform discovery', () => {
   ])('discovers %s at %s', async (input, apiUrl) => {
     const response = new Response(JSON.stringify({ ...document, apiUrl }));
     Object.defineProperty(response, 'url', {
-      value: `${apiUrl}/.well-known/nosam-platform`,
+      value: `${apiUrl}/.well-known/platform`,
     });
     const request = vi.fn(async () => response);
 
@@ -250,7 +250,7 @@ describe('platform discovery', () => {
       displayName: 'Example',
     });
     expect(request).toHaveBeenCalledWith(
-      `${apiUrl}/.well-known/nosam-platform`,
+      `${apiUrl}/.well-known/platform`,
       expect.objectContaining({ redirect: 'manual' }),
     );
   });
@@ -276,7 +276,7 @@ describe('platform discovery', () => {
     delete incomplete.proxyUrl;
     const response = new Response(JSON.stringify(incomplete));
     Object.defineProperty(response, 'url', {
-      value: 'https://api.example.com/.well-known/nosam-platform',
+      value: 'https://api.example.com/.well-known/platform',
     });
 
     await expect(discoverPlatform('https://api.example.com', async () => response)).rejects.toThrow(
@@ -287,7 +287,7 @@ describe('platform discovery', () => {
   it('rejects discovery documents that claim a different origin', async () => {
     const response = new Response(JSON.stringify(document));
     Object.defineProperty(response, 'url', {
-      value: 'https://evil.example/.well-known/nosam-platform',
+      value: 'https://evil.example/.well-known/platform',
     });
     await expect(discoverPlatform('https://api.example.com', async () => response)).rejects.toThrow(
       'origin mismatch',

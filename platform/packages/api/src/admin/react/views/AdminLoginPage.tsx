@@ -11,16 +11,16 @@ export function AdminLoginPage({
 }) {
   return (
     <AuthPage platformName={platformName}>
-      <div className="nosam-auth-lead">
-        <h1 id="nosam-auth-title">Sign in to administer {platformName}</h1>
+      <div className="platform-auth-lead">
+        <h1 id="platform-auth-title">Sign in to administer {platformName}</h1>
         <p>Sign in with your administrator account.</p>
       </div>
-      <div className="nosam-auth-actions">
+      <div className="platform-auth-actions">
         {providers.map(({ id, label }, index) => (
           <a
             key={id}
             className={
-              index === 0 ? 'nosam-auth-button nosam-auth-button-primary' : 'nosam-auth-button'
+              index === 0 ? 'platform-auth-button platform-auth-button-primary' : 'platform-auth-button'
             }
             href={`/admin/login/${encodeURIComponent(id)}`}
           >

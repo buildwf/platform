@@ -453,7 +453,7 @@ export async function recoverFailedDeployment(input: {
       force: true,
     }).catch(() => {});
     input.currentStatus = 'live';
-    await updateProjectType(context.get('db'), projectId, failedManifest.type ?? 'nosam').catch(
+    await updateProjectType(context.get('db'), projectId, failedManifest.type ?? 'platform').catch(
       () => {},
     );
     await setActiveDeployment(context.get('db'), projectId, failedDeployment.id).catch(() => {});

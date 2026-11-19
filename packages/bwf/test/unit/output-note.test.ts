@@ -38,7 +38,7 @@ it.each([0, 80, 160])('separates a deployment URL from the box border at %s colu
       return true;
     },
   } as unknown as Writable;
-  const url = 'https://blog-nosam.mdong185.workers.dev';
+  const url = 'https://blog-platform.mdong185.workers.dev';
 
   note('Static Site — 1 asset', url, { output });
 

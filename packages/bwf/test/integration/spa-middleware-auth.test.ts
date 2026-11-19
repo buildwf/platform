@@ -168,9 +168,9 @@ beforeAll(() => {
   middlewareDir = join(playground.root, 'middleware');
   middlewareBackupDir = join(playground.root, `.middleware.e2e-backup-${process.pid}`);
   publicDir = join(playground.root, 'public');
-  protectedAsset = join(publicDir, 'nosam-basic-auth-regression.txt');
-  edgeHeaderAsset = join(publicDir, 'nosam-native-header-regression.txt');
-  edgeRedirectAsset = join(publicDir, 'nosam-native-redirect-regression.txt');
+  protectedAsset = join(publicDir, 'platform-basic-auth-regression.txt');
+  edgeHeaderAsset = join(publicDir, 'platform-native-header-regression.txt');
+  edgeRedirectAsset = join(publicDir, 'platform-native-redirect-regression.txt');
   bwfConfig = join(playground.root, 'bwf.config.ts');
   dist = join(playground.root, 'dist');
 });
@@ -208,7 +208,7 @@ describe('SPA asset routing policy', () => {
 
     const assetConfig = readBuiltAssetConfig();
     expect(assetConfig.not_found_handling).toBe('single-page-application');
-    expect(assetConfig.run_worker_first).toEqual(['/api', '/api/*', '/__nosam', '/__nosam/*']);
+    expect(assetConfig.run_worker_first).toEqual(['/api', '/api/*', '/__platform', '/__platform/*']);
     expectNoGeneratedAssetHeaders();
   });
 
@@ -222,16 +222,16 @@ describe('SPA asset routing policy', () => {
     const config = readConfig(playground.root);
     const routing = {
       headers: {
-        '/nosam-native-header-regression.txt': ['X-Nosam-Native-Rule: applied'],
+        '/platform-native-header-regression.txt': ['X-Platform-Native-Rule: applied'],
       },
       redirects: {
-        '/nosam-native-redirect-regression.txt': { to: '/redirect-target', status: 302 as const },
+        '/platform-native-redirect-regression.txt': { to: '/redirect-target', status: 302 as const },
       },
     };
     writeFileSync(bwfConfig, renderBwfConfig({ ...config, routing }));
     rmSync(dist, { recursive: true, force: true });
     const buildEnv = { ...process.env };
-    delete buildEnv.NOSAM_DEPLOY_PROJECT_ID;
+    delete buildEnv.PLATFORM_DEPLOY_PROJECT_ID;
     delete buildEnv.BWF_DEPLOY_BUILD;
     execSync('vp build', {
       cwd: playground.root,
@@ -242,12 +242,12 @@ describe('SPA asset routing policy', () => {
     expect(readBuiltAssetConfig().run_worker_first).toEqual(['/**']);
     expectNoGeneratedAssetHeaders();
     const base = await startSpaPreviewServer();
-    const headerResponse = await fetch(`${base}/nosam-native-header-regression.txt`);
+    const headerResponse = await fetch(`${base}/platform-native-header-regression.txt`);
     expect(headerResponse.status).toBe(200);
     expect(await headerResponse.text()).toBe('header asset');
-    expect(headerResponse.headers.get('x-nosam-native-rule')).toBe('applied');
+    expect(headerResponse.headers.get('x-platform-native-rule')).toBe('applied');
 
-    const redirectResponse = await fetch(`${base}/nosam-native-redirect-regression.txt`, {
+    const redirectResponse = await fetch(`${base}/platform-native-redirect-regression.txt`, {
       redirect: 'manual',
     });
     expect(redirectResponse.status).toBe(302);
@@ -277,11 +277,11 @@ describe('SPA asset routing policy', () => {
     writeProtectedAsset();
 
     const base = await startSpaDevServer();
-    const unauthenticatedAsset = await fetch(`${base}/nosam-basic-auth-regression.txt`);
+    const unauthenticatedAsset = await fetch(`${base}/platform-basic-auth-regression.txt`);
     expect(unauthenticatedAsset.status).toBe(401);
     expect(await unauthenticatedAsset.text()).toBe('Authentication required');
 
-    const authenticatedAsset = await fetch(`${base}/nosam-basic-auth-regression.txt`, {
+    const authenticatedAsset = await fetch(`${base}/platform-basic-auth-regression.txt`, {
       headers: { Authorization: AUTH_HEADER },
     });
     expect(authenticatedAsset.status).toBe(200);

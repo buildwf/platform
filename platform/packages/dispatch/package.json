@@ -1,5 +1,5 @@
 {
-  "name": "@nosamcloud/dispatch",
+  "name": "@platform-service/dispatch",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@builtbyfriends/edge": "workspace:*",
-    "@nosamcloud/api": "workspace:*",
+    "@platform-service/api": "workspace:*",
     "jose": "catalog:"
   },
   "devDependencies": {

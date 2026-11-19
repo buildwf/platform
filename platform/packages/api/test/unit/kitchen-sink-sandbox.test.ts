@@ -54,9 +54,9 @@ describe('kitchen-sink Sandbox requests', () => {
           await bothStarted;
           // The command reads its program only after both requests have
           // written files, reproducing the race when they share a container.
-          const marker = files.get('/workspace/nosam-kitchen-sink-code-lab/user-code.mjs');
+          const marker = files.get('/workspace/platform-kitchen-sink-code-lab/user-code.mjs');
           const output = JSON.stringify({ value: marker });
-          files.set('/workspace/nosam-kitchen-sink-code-lab/output.json', output);
+          files.set('/workspace/platform-kitchen-sink-code-lab/output.json', output);
           return {
             exitCode: 0,
             stdout: new TextEncoder().encode(output),

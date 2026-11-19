@@ -14,7 +14,7 @@ function makeMessage(body: CronFireMessage): QueueMessageStub {
 
 function makeBatch(messages: Array<QueueMessageStub>) {
   return {
-    queue: 'nosam-cron-fires',
+    queue: 'platform-cron-fires',
     messages,
     retryAll: vi.fn(),
     ackAll: vi.fn(),
@@ -30,7 +30,7 @@ function makeEnv(fetchImpl: (req: Request) => Promise<Response>): ApiEnv['Bindin
 }
 
 describe('processCronFiresBatch', () => {
-  it('acks message when user worker returns 2xx on /__nosam/scheduled', async () => {
+  it('acks message when user worker returns 2xx on /__platform/scheduled', async () => {
     const seen: Array<Request> = [];
     const env = makeEnv(async (req) => {
       seen.push(req);
@@ -46,13 +46,13 @@ describe('processCronFiresBatch', () => {
     await processCronFiresBatch(makeBatch([msg]), env);
 
     expect(seen).toHaveLength(1);
-    expect(new URL(seen[0].url).pathname).toBe('/__nosam/scheduled');
-    expect(seen[0].headers.get('x-nosam-internal')).toBe('tok');
+    expect(new URL(seen[0].url).pathname).toBe('/__platform/scheduled');
+    expect(seen[0].headers.get('x-platform-internal')).toBe('tok');
     expect(msg.ack).toHaveBeenCalledOnce();
     expect(msg.retry).not.toHaveBeenCalled();
   });
 
-  it('falls back to legacy /__scheduled when /__nosam/scheduled returns 404', async () => {
+  it('falls back to legacy /__scheduled when /__platform/scheduled returns 404', async () => {
     const seen: Array<Request> = [];
     let n = 0;
     const env = makeEnv(async (req) => {
@@ -77,7 +77,7 @@ describe('processCronFiresBatch', () => {
 
   it('acks 401 with AUTH_DRIFT marker (and does not retry — same token would yield same failure)', async () => {
     // Auth drift between CronScheduler's stored proxyToken and the user
-    // worker's baked __NOSAM_PROXY_TOKEN: retry sends the same token back
+    // worker's baked __PLATFORM_PROXY_TOKEN: retry sends the same token back
     // and gets the same 401, so retry can't help. Ack; the next deploy's
     // /sync resyncs the token. Log with a stable AUTH_DRIFT marker so ops
     // can alert on the (rare) case this happens in production.
@@ -205,7 +205,7 @@ describe('processCronFiresBatch', () => {
   it('processes multiple messages independently', async () => {
     const fetchSpy = vi.fn(async (req: Request) => {
       const url = new URL(req.url);
-      if (req.headers.get('x-nosam-internal') === 'fail') {
+      if (req.headers.get('x-platform-internal') === 'fail') {
         return new Response('fail', { status: 500 });
       }
       return new Response('{"ok":true}', { status: 200, headers: { 'x-path': url.pathname } });

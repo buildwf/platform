@@ -18,7 +18,7 @@ bwf platform system health
 Administrator login is separate from the credentials used to deploy apps. In a new or unlinked bwf app directory, connect using the installed API URL and deploy your first project:
 
 ```sh
-bwf connect nosam-company-api.example.workers.dev
+bwf connect platform-company-api.example.workers.dev
 bwf deploy --platform void --project my-first-app
 ```
 
@@ -47,24 +47,24 @@ with `.bwf/*` and `!.bwf/project.json`. Rotate with `bwf project token renew <id
 If Cloudflare Access protects the platform, Access proof and the project
 credential are both required; the service token does not grant bwf user or
 operator authority. A deploy that uses remote bindings calls
-both the API and proxy, so store `NOSAM_ACCESS_CREDENTIALS` in the CI secret
+both the API and proxy, so store `PLATFORM_ACCESS_CREDENTIALS` in the CI secret
 manager with entries for both exact HTTPS origins. Include both entries even
 when the same admitted service-token pair is used for both origins:
 
 ```json
 {
-  "https://nosam-company-api.example.workers.dev": {
+  "https://platform-company-api.example.workers.dev": {
     "CF_ACCESS_CLIENT_ID": "<service-token client ID>",
     "CF_ACCESS_CLIENT_SECRET": "<service-token client secret>"
   },
-  "https://nosam-company-proxy.example.workers.dev": {
+  "https://platform-company-proxy.example.workers.dev": {
     "CF_ACCESS_CLIENT_ID": "<service-token client ID>",
     "CF_ACCESS_CLIENT_SECRET": "<service-token client secret>"
   }
 }
 ```
 
-`NOSAM_ACCESS_ORIGIN` can scope credentials to one origin only; setting it to
+`PLATFORM_ACCESS_ORIGIN` can scope credentials to one origin only; setting it to
 the API origin does not authorize proxy requests.
 
 Use these commands to inspect connections and installations:

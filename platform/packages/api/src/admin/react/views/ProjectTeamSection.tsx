@@ -55,11 +55,11 @@ export function ProjectTeamSection({
   );
 
   return (
-    <PageStack as="section" id="team" className="nosam-admin-project-team">
+    <PageStack as="section" id="team" className="platform-admin-project-team">
       <SectionStack>
         <h2>Team members ({members.length + 1})</h2>
         <p>Add an existing platform user to this project with the selected role.</p>
-        <div className="nosam-admin-team-table-scroll">
+        <div className="platform-admin-team-table-scroll">
           <Table>
             <TableHeader>
               <TableRow>
@@ -73,7 +73,7 @@ export function ProjectTeamSection({
               <TableRow>
                 <TableCell>
                   {owner ? (
-                    <a className="nosam-admin-resource-link" href={`/admin/users/${owner.id}`}>
+                    <a className="platform-admin-resource-link" href={`/admin/users/${owner.id}`}>
                       {owner.login}
                     </a>
                   ) : (
@@ -95,15 +95,15 @@ export function ProjectTeamSection({
               {members.map(({ user, role, createdAt }) => (
                 <TableRow key={user.id}>
                   <TableCell>
-                    <a className="nosam-admin-resource-link" href={`/admin/users/${user.id}`}>
+                    <a className="platform-admin-resource-link" href={`/admin/users/${user.id}`}>
                       {user.login}
                     </a>
-                    {user.email && <span className="nosam-admin-team-email">{user.email}</span>}
+                    {user.email && <span className="platform-admin-team-email">{user.email}</span>}
                   </TableCell>
                   <TableCell>{role}</TableCell>
                   <TableCell>{formatDateTime(createdAt, tz)}</TableCell>
                   <TableCell>
-                    <div className="nosam-admin-team-actions">
+                    <div className="platform-admin-team-actions">
                       <form
                         method="post"
                         action={`/admin/projects/${projectId}/team/${user.id}/role`}
@@ -136,7 +136,7 @@ export function ProjectTeamSection({
       <SectionStack>
         <h3>Add team member</h3>
         <form
-          className="nosam-admin-team-add"
+          className="platform-admin-team-add"
           method="post"
           action={`/admin/projects/${projectId}/team/add`}
         >
@@ -165,7 +165,7 @@ export function ProjectTeamSection({
             If email delivery is unavailable, share the invitation ID and ask the user to run{' '}
             <code>bwf project team accept &lt;invitation-id&gt;</code>.
           </p>
-          <div className="nosam-admin-team-table-scroll">
+          <div className="platform-admin-team-table-scroll">
             <Table>
               <TableHeader>
                 <TableRow>

@@ -25,7 +25,7 @@ import {
 import type { ApiEnv } from './env.ts';
 import {
   type CheckRunConclusion,
-  NOSAM_BUILD_CHECK_RUN_NAME,
+  PLATFORM_BUILD_CHECK_RUN_NAME,
   completeCheckRun,
   createCheckRun,
 } from './github/check-run.ts';
@@ -265,7 +265,7 @@ export function withDeadline<T>(work: Promise<T>, ms: number, reason: string): P
 
 // Bundled from the release's SDK manifest. Used only when the application has
 // no local Platform dependency; never resolve the moving npm "latest" channel.
-export const PINNED_NOSAM_CLI_VERSION = bwfPackageJson.version;
+export const PINNED_PLATFORM_CLI_VERSION = bwfPackageJson.version;
 
 // Ceiling on how long a queued build may wait for the just-in-time branch-head
 // freshness recheck to succeed. While the GitHub compare API is unreachable
@@ -1571,7 +1571,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
         null;
       if (!checkRunId && config.commitSha) {
         checkRunId = await createCheckRun(this.env, config.installationId, config.repoFullName, {
-          name: NOSAM_BUILD_CHECK_RUN_NAME,
+          name: PLATFORM_BUILD_CHECK_RUN_NAME,
           headSha: config.commitSha,
           externalId: config.buildId,
           detailsUrl: this.projectUrl(config),
@@ -1694,7 +1694,7 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
       const bwfApiUrl =
         this.env.PLATFORM_ENV === 'staging'
           ? 'https://api.staging.void.cloud'
-          : 'https://nosam.buildwithfriends.dev';
+          : 'https://platform.buildwithfriends.dev';
 
       // Staging API hosts sit behind CF Access; the `bwf deploy` child can't do
       // the interactive `cloudflared` flow (no TTY/binary in the container), so
@@ -1737,9 +1737,9 @@ export class BuildManager extends Container<ApiEnv['Bindings']> {
         SOURCE_TOKEN: sourceToken,
         BWF_TOKEN: bwfToken,
         BWF_API_URL: bwfApiUrl,
-        ...(this.env.PROXY_URL ? { NOSAM_PROXY_URL: this.env.PROXY_URL } : {}),
+        ...(this.env.PROXY_URL ? { PLATFORM_PROXY_URL: this.env.PROXY_URL } : {}),
         BWF_PROJECT: config.projectSlug,
-        BWF_CLI_VERSION: PINNED_NOSAM_CLI_VERSION,
+        BWF_CLI_VERSION: PINNED_PLATFORM_CLI_VERSION,
         DO_LOG_URL: 'https://manager/logs',
         AGENT_TOKEN: agentToken,
         // Commit/source metadata for `bwf deploy`. The extracted tarball has no

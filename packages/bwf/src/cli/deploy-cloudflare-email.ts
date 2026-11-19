@@ -143,7 +143,7 @@ export async function runCloudflareEmailStep(
 
   // Ready: no prompt and no account call; a sending onboarding recorded as refused is never
   // retried here. The config rows are still rewritten, because a stale `addresses` entry
-  // becomes a plan conflict and a stale `__NOSAM_EMAIL_FROM` ships the old sender. `null`
+  // becomes a plan conflict and a stale `__PLATFORM_EMAIL_FROM` ships the old sender. `null`
   // removes the key when every derived address is routed elsewhere.
   if (pre.ready) {
     const patch: ProvisionedWranglerPatch = {};

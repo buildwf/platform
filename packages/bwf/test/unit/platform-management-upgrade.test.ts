@@ -338,7 +338,7 @@ describe('installed platform upgrade', () => {
     state.listWorkerNames.mockReset().mockResolvedValue([]);
     state.listNamespaceScripts
       .mockReset()
-      .mockResolvedValue(['user-app-dpl', 'nosam-do-project-hash', 'other']);
+      .mockResolvedValue(['user-app-dpl', 'platform-do-project-hash', 'other']);
     state.patchScriptSettings.mockReset().mockResolvedValue(undefined);
     state.request.mockReset().mockResolvedValue({ name: 'assets' });
     state.getWorkerLastDeployedFrom.mockReset().mockResolvedValue('cf_cli');
@@ -411,8 +411,8 @@ describe('installed platform upgrade', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
-    delete process.env.NOSAM_PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION;
-    delete process.env.NOSAM_PLATFORM_PROJECT_SECRET_KEYS_JSON;
+    delete process.env.PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION;
+    delete process.env.PLATFORM_PROJECT_SECRET_KEYS_JSON;
   });
 
   it.each([false, true])(
@@ -482,8 +482,8 @@ describe('installed platform upgrade', () => {
   );
 
   it('includes shared email configuration when planning an upgrade', async () => {
-    vi.stubEnv('NOSAM_EMAIL_SHARED_ZONE_ID', 'mail-zone');
-    vi.stubEnv('NOSAM_EMAIL_SENDER_DOMAIN', 'mail.example.com');
+    vi.stubEnv('PLATFORM_EMAIL_SHARED_ZONE_ID', 'mail-zone');
+    vi.stubEnv('PLATFORM_EMAIL_SENDER_DOMAIN', 'mail.example.com');
     await upgrade({ plan: true });
     expect(createPlatformInstallPlan).toHaveBeenCalledWith(
       expect.anything(),
@@ -579,7 +579,7 @@ describe('installed platform upgrade', () => {
         const namespace = state.manifest!.deployment.resources.dispatchNamespace;
         expect(state.listNamespaceScripts).toHaveBeenCalledExactlyOnceWith('account', namespace);
         expect(patched()).toEqual(
-          ['user-app-dpl', 'nosam-do-project-hash'].map((script) => ({
+          ['user-app-dpl', 'platform-do-project-hash'].map((script) => ({
             account: 'account',
             namespace,
             script,
@@ -659,8 +659,8 @@ describe('installed platform upgrade', () => {
       v1: Buffer.alloc(32, 1).toString('base64'),
       v2: Buffer.alloc(32, 2).toString('base64'),
     });
-    process.env.NOSAM_PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION = 'v2';
-    process.env.NOSAM_PLATFORM_PROJECT_SECRET_KEYS_JSON = keysJson;
+    process.env.PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION = 'v2';
+    process.env.PLATFORM_PROJECT_SECRET_KEYS_JSON = keysJson;
 
     await runInstalledPlatformCommand({
       plan: false,
@@ -681,7 +681,7 @@ describe('installed platform upgrade', () => {
 
   it('forwards the dedicated email key and recorded capability during maintenance', async () => {
     const emailSigningSecret = 'restored-email-signing-secret-material';
-    vi.stubEnv('NOSAM_PLATFORM_EMAIL_SIGNING_SECRET', emailSigningSecret);
+    vi.stubEnv('PLATFORM_EMAIL_SIGNING_SECRET', emailSigningSecret);
     state.manifest = {
       ...state.manifest!,
       deployment: createPlatformDeploymentManifest({
@@ -935,7 +935,7 @@ describe('installed platform upgrade', () => {
     const replacement = () => state.createSecrets.mock.calls.at(-1)![0];
 
     beforeEach(async () => {
-      directory = await mkdtemp(join(tmpdir(), 'nosam-repair-login-'));
+      directory = await mkdtemp(join(tmpdir(), 'platform-repair-login-'));
       authFile = join(directory, 'auth.json');
       await writeFile(
         authFile,
@@ -1035,7 +1035,7 @@ describe('installed platform upgrade', () => {
             }),
           };
         },
-        'Set NOSAM_PLATFORM_GITHUB_CLIENT_ID and NOSAM_PLATFORM_GITHUB_CLIENT_SECRET',
+        'Set PLATFORM_GITHUB_CLIENT_ID and PLATFORM_GITHUB_CLIENT_SECRET',
       ],
       [
         'a computer without the saved setup authority',
@@ -1221,7 +1221,7 @@ describe('installed platform upgrade', () => {
     it('requires a runtime token when enabling custom domains without saved credentials', async () => {
       state.createSecrets.mockReturnValue({});
       await expect(upgrade({ customDomains: true })).rejects.toThrow(
-        'NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN',
+        'PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN',
       );
       expect(installPlatform).not.toHaveBeenCalled();
     });
@@ -1338,11 +1338,11 @@ describe('installed platform upgrade', () => {
 
       // The Workers can use a newer token than the one saved on this machine.
       await expect(upgrade()).rejects.toThrow(
-        'platform: The runtime API token saved on this machine cannot use platform email. Cloudflare denied: Zone → Zone Settings → Edit, Zone → Email Routing Rules → Edit, Account → Email Routing Addresses → Edit (HTTP 403). bwf checked this token because NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN is not set. If the platform uses a different runtime token, set NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to that token, and bwf checks that token instead.',
+        'platform: The runtime API token saved on this machine cannot use platform email. Cloudflare denied: Zone → Zone Settings → Edit, Zone → Email Routing Rules → Edit, Account → Email Routing Addresses → Edit (HTTP 403). bwf checked this token because PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN is not set. If the platform uses a different runtime token, set PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to that token, and bwf checks that token instead.',
       );
       expect(installPlatform).not.toHaveBeenCalled();
 
-      // A token from NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN goes to the
+      // A token from PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN goes to the
       // Workers, so the message does not talk about the saved token.
       state.createSecrets.mockReturnValue({
         cloudflareApiToken: 'replacement-token',
@@ -1378,7 +1378,7 @@ describe('installed platform upgrade', () => {
 
       expect(vi.mocked(log.warn).mock.calls).toEqual([
         [
-          'The runtime API token saved on this machine is not valid (HTTP 401). bwf cannot check the platform email permissions before it changes the platform, and it continues without this check. To do the check, set NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to the runtime token of the platform.',
+          'The runtime API token saved on this machine is not valid (HTTP 401). bwf cannot check the platform email permissions before it changes the platform, and it continues without this check. To do the check, set PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to the runtime token of the platform.',
         ],
       ]);
       expect(emailRequests()).toEqual(emailPaths.map((path) => `request:${path}`));
@@ -1421,7 +1421,7 @@ describe('installed platform upgrade', () => {
     const enabled = {
       active: true,
       destinations: ['*.apps.example.com'],
-      applications: [{ role: 'shared project application', id: 'app', name: 'nosam-app' }],
+      applications: [{ role: 'shared project application', id: 'app', name: 'platform-app' }],
       unfinishedDeletions: [],
     };
     const uninstall = (plan: boolean) =>

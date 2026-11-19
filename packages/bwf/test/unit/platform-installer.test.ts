@@ -192,15 +192,15 @@ function sandboxDrainPreparation(state: 'complete' | 'pending') {
 }
 
 beforeEach(() => {
-  process.env.NOSAM_PLATFORM_RECOVERY_KEY = Buffer.alloc(32, 7).toString('base64');
+  process.env.PLATFORM_RECOVERY_KEY = Buffer.alloc(32, 7).toString('base64');
 });
 
 afterEach(() => {
-  delete process.env.NOSAM_PLATFORM_RECOVERY_KEY;
-  delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+  delete process.env.PLATFORM_RECOVERY_KEY;
+  delete process.env.PLATFORM_REGISTRY_DIR;
   delete process.env.CF_ACCESS_CLIENT_ID;
   delete process.env.CF_ACCESS_CLIENT_SECRET;
-  delete process.env.NOSAM_ACCESS_CREDENTIALS;
+  delete process.env.PLATFORM_ACCESS_CREDENTIALS;
   for (const directory of directories.splice(0)) {
     rmSync(directory, { force: true, recursive: true });
   }
@@ -275,9 +275,9 @@ function examplePlan(
 }
 
 function useRegistryDirectory(): string {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-installer-test-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-installer-test-'));
   directories.push(directory);
-  process.env.NOSAM_PLATFORM_REGISTRY_DIR = directory;
+  process.env.PLATFORM_REGISTRY_DIR = directory;
   return directory;
 }
 
@@ -920,7 +920,7 @@ describe('platform installer', () => {
     });
     expect(result.manifest.status).toBe('installed');
     const upload = ['api', 'proxy', 'email-gateway', 'tail', 'dispatch'].map(
-      (name) => `deploy nosam-logging-${name}`,
+      (name) => `deploy platform-logging-${name}`,
     );
     // A fresh install uploads the Workers with traffic paused, then deploys them
     // again to open traffic; the second pass runs between the two.
@@ -1054,11 +1054,11 @@ describe('platform installer', () => {
     } = FRESH_SECRETS_INPUT;
 
     expect(() => createPlatformInstallationSecrets(input)).toThrow(
-      'NOSAM_PLATFORM_JWT_SECRET is required',
+      'PLATFORM_JWT_SECRET is required',
     );
     expect(() =>
       createPlatformInstallationSecrets({ ...input, jwtSecret: TEST_PLATFORM_JWT_SECRET }),
-    ).toThrow('NOSAM_PLATFORM_PROJECT_SECRET_KEY is required');
+    ).toThrow('PLATFORM_PROJECT_SECRET_KEY is required');
     expect(() =>
       createPlatformInstallationSecrets({
         ...input,
@@ -1080,7 +1080,7 @@ describe('platform installer', () => {
         projectSecretActiveKeyVersion: 'v1',
         projectSecretKeysJson: JSON.stringify({ v1: TEST_PLATFORM_PROJECT_SECRET_KEY }),
       }),
-    ).toThrow('Fresh installations use NOSAM_PLATFORM_PROJECT_SECRET_KEY');
+    ).toThrow('Fresh installations use PLATFORM_PROJECT_SECRET_KEY');
     expect(
       createPlatformInstallationSecrets({
         ...input,
@@ -1178,7 +1178,7 @@ describe('platform installer', () => {
         emailEnabled: true,
         emailSigningSecret: TEST_PLATFORM_JWT_SECRET,
       }),
-    ).toThrow('must be different from NOSAM_PLATFORM_JWT_SECRET');
+    ).toThrow('must be different from PLATFORM_JWT_SECRET');
 
     const existingInput = {
       ...FRESH_SECRETS_INPUT,
@@ -1187,7 +1187,7 @@ describe('platform installer', () => {
       existingEmailEnabled: true,
     };
     expect(() => createPlatformInstallationSecrets(existingInput)).toThrow(
-      'NOSAM_PLATFORM_EMAIL_SIGNING_SECRET is required',
+      'PLATFORM_EMAIL_SIGNING_SECRET is required',
     );
     expect(() =>
       createPlatformInstallationSecrets({
@@ -1204,7 +1204,7 @@ describe('platform installer', () => {
         },
         emailSigningSecret: TEST_PLATFORM_EMAIL_SIGNING_SECRET,
       }),
-    ).toThrow('must be different from NOSAM_PLATFORM_JWT_SECRET');
+    ).toThrow('must be different from PLATFORM_JWT_SECRET');
     const restored = createPlatformInstallationSecrets({
       ...existingInput,
       checkpoint: { emailSigningSecret: TEST_PLATFORM_EMAIL_SIGNING_SECRET },
@@ -1439,14 +1439,14 @@ describe('platform installer', () => {
       await expect(
         withConditionalPlatformWorkerCreate(
           'account',
-          'nosam-api',
+          'platform-api',
           async (apiBaseUrl) => {
             const inspection = await fetch(`${apiBaseUrl}/accounts/account/workers/subdomain`, {
               headers: { Authorization: 'Bearer secret-token' },
             });
             expect(inspection.ok).toBe(true);
             const created = await fetch(
-              `${apiBaseUrl}/accounts/account/workers/scripts/nosam-api${query}`,
+              `${apiBaseUrl}/accounts/account/workers/scripts/platform-api${query}`,
               {
                 body: 'worker bundle',
                 headers: {
@@ -1476,7 +1476,7 @@ describe('platform installer', () => {
           body: 'worker bundle',
           ifNoneMatch: '*',
           method: 'PUT',
-          path: '/client/v4/accounts/account/workers/scripts/nosam-api' + query,
+          path: '/client/v4/accounts/account/workers/scripts/platform-api' + query,
         },
       ]);
     } finally {
@@ -1501,10 +1501,10 @@ describe('platform installer', () => {
     try {
       const result = withConditionalPlatformWorkerCreate(
         'account',
-        'nosam-api',
+        'platform-api',
         async (base) => {
           const response = await fetch(
-            `${base}/accounts/account/workers/scripts/nosam-api${query}`,
+            `${base}/accounts/account/workers/scripts/platform-api${query}`,
             {
               method: 'PUT',
               body: 'worker bundle',
@@ -1531,10 +1531,10 @@ describe('platform installer', () => {
     try {
       const failure = withConditionalPlatformWorkerCreate(
         'account',
-        'nosam-api',
+        'platform-api',
         async (apiBaseUrl) => {
           await fetch(
-            `${apiBaseUrl}/accounts/account/workers/scripts/nosam-api?excludeScript=true&bindings_inherit=strict`,
+            `${apiBaseUrl}/accounts/account/workers/scripts/platform-api?excludeScript=true&bindings_inherit=strict`,
             {
               body: 'worker bundle',
               headers: { Authorization: 'Bearer secret-token' },
@@ -1562,7 +1562,7 @@ describe('platform installer', () => {
       await expect(
         withConditionalPlatformWorkerCreate(
           'account',
-          'nosam-api',
+          'platform-api',
           async (apiBaseUrl) => {
             proxyBaseUrl = apiBaseUrl;
             const response = await fetch(
@@ -1604,26 +1604,26 @@ describe('platform installer', () => {
       await expect(
         withConditionalPlatformWorkerCreate(
           'account',
-          'nosam-api',
+          'platform-api',
           async (apiBaseUrl) => {
             // The order the bundled uploader uses for a new Worker with static assets.
             const sequence: Array<[string, string, string]> = [
-              ['GET', '/accounts/account/workers/services/nosam-api', 'secret-token'],
-              ['GET', '/accounts/account/workers/scripts/nosam-api/deployments', 'secret-token'],
+              ['GET', '/accounts/account/workers/services/platform-api', 'secret-token'],
+              ['GET', '/accounts/account/workers/scripts/platform-api/deployments', 'secret-token'],
               [
                 'POST',
-                '/accounts/account/workers/scripts/nosam-api/assets-upload-session',
+                '/accounts/account/workers/scripts/platform-api/assets-upload-session',
                 'secret-token',
               ],
               ['POST', '/accounts/account/workers/assets/upload?base64=true', 'session-jwt'],
               ['POST', `/accounts/account/workers/assets/upload/${hash}`, 'session-jwt'],
-              ['GET', '/accounts/account/workers/scripts/nosam-api/settings', 'secret-token'],
+              ['GET', '/accounts/account/workers/scripts/platform-api/settings', 'secret-token'],
               [
                 'PUT',
-                '/accounts/account/workers/scripts/nosam-api?excludeScript=true&bindings_inherit=strict',
+                '/accounts/account/workers/scripts/platform-api?excludeScript=true&bindings_inherit=strict',
                 'secret-token',
               ],
-              ['POST', '/accounts/account/workers/scripts/nosam-api/subdomain', 'secret-token'],
+              ['POST', '/accounts/account/workers/scripts/platform-api/subdomain', 'secret-token'],
             ];
             for (const [method, path, token] of sequence) {
               const response = await fetch(`${apiBaseUrl}${path}`, {
@@ -1642,18 +1642,18 @@ describe('platform installer', () => {
         {
           authorization: 'Bearer secret-token',
           ifNoneMatch: undefined,
-          request: 'GET /client/v4/accounts/account/workers/services/nosam-api',
+          request: 'GET /client/v4/accounts/account/workers/services/platform-api',
         },
         {
           authorization: 'Bearer secret-token',
           ifNoneMatch: undefined,
-          request: 'GET /client/v4/accounts/account/workers/scripts/nosam-api/deployments',
+          request: 'GET /client/v4/accounts/account/workers/scripts/platform-api/deployments',
         },
         {
           authorization: 'Bearer secret-token',
           ifNoneMatch: undefined,
           request:
-            'POST /client/v4/accounts/account/workers/scripts/nosam-api/assets-upload-session',
+            'POST /client/v4/accounts/account/workers/scripts/platform-api/assets-upload-session',
         },
         {
           authorization: 'Bearer session-jwt',
@@ -1668,18 +1668,18 @@ describe('platform installer', () => {
         {
           authorization: 'Bearer secret-token',
           ifNoneMatch: undefined,
-          request: 'GET /client/v4/accounts/account/workers/scripts/nosam-api/settings',
+          request: 'GET /client/v4/accounts/account/workers/scripts/platform-api/settings',
         },
         {
           authorization: 'Bearer secret-token',
           ifNoneMatch: '*',
           request:
-            'PUT /client/v4/accounts/account/workers/scripts/nosam-api?excludeScript=true&bindings_inherit=strict',
+            'PUT /client/v4/accounts/account/workers/scripts/platform-api?excludeScript=true&bindings_inherit=strict',
         },
         {
           authorization: 'Bearer secret-token',
           ifNoneMatch: undefined,
-          request: 'POST /client/v4/accounts/account/workers/scripts/nosam-api/subdomain',
+          request: 'POST /client/v4/accounts/account/workers/scripts/platform-api/subdomain',
         },
       ]);
     } finally {
@@ -1689,7 +1689,7 @@ describe('platform installer', () => {
 
   const assetSession = [
     'POST',
-    '/accounts/account/workers/scripts/nosam-api/assets-upload-session',
+    '/accounts/account/workers/scripts/platform-api/assets-upload-session',
   ] as const;
   it.each<{
     name: string;
@@ -1704,30 +1704,30 @@ describe('platform installer', () => {
     {
       name: 'a session with a query',
       before: [],
-      blocked: ['POST', '/accounts/account/workers/scripts/nosam-api/assets-upload-session?x=1'],
+      blocked: ['POST', '/accounts/account/workers/scripts/platform-api/assets-upload-session?x=1'],
     },
     {
       name: 'a PUT on the session path',
       before: [],
-      blocked: ['PUT', '/accounts/account/workers/scripts/nosam-api/assets-upload-session'],
+      blocked: ['PUT', '/accounts/account/workers/scripts/platform-api/assets-upload-session'],
     },
     {
       name: 'a DELETE on the session path',
       before: [],
-      blocked: ['DELETE', '/accounts/account/workers/scripts/nosam-api/assets-upload-session'],
+      blocked: ['DELETE', '/accounts/account/workers/scripts/platform-api/assets-upload-session'],
     },
     {
       name: 'a dispatch namespace session',
       before: [],
       blocked: [
         'POST',
-        '/accounts/account/workers/dispatch/namespaces/ns/scripts/nosam-api/assets-upload-session',
+        '/accounts/account/workers/dispatch/namespaces/ns/scripts/platform-api/assets-upload-session',
       ],
     },
     {
       name: 'a session under another account',
       before: [],
-      blocked: ['POST', '/accounts/other/workers/scripts/nosam-api/assets-upload-session'],
+      blocked: ['POST', '/accounts/other/workers/scripts/platform-api/assets-upload-session'],
     },
     {
       name: 'an upload before any session',
@@ -1767,12 +1767,12 @@ describe('platform installer', () => {
     {
       name: 'a version upload after a session',
       before: [assetSession],
-      blocked: ['POST', '/accounts/account/workers/scripts/nosam-api/versions'],
+      blocked: ['POST', '/accounts/account/workers/scripts/platform-api/versions'],
     },
     {
       name: 'a subdomain change after a session',
       before: [assetSession],
-      blocked: ['POST', '/accounts/account/workers/scripts/nosam-api/subdomain'],
+      blocked: ['POST', '/accounts/account/workers/scripts/platform-api/subdomain'],
     },
     {
       name: 'an unrelated account mutation after a session',
@@ -1790,7 +1790,7 @@ describe('platform installer', () => {
     {
       name: 'an unconditional create after a session',
       before: [assetSession],
-      blocked: ['PUT', '/accounts/account/workers/scripts/nosam-api?excludeScript=false'],
+      blocked: ['PUT', '/accounts/account/workers/scripts/platform-api?excludeScript=false'],
     },
   ])('blocks $name before the guarded create', async ({ before, blocked }) => {
     let forwarded = 0;
@@ -1804,7 +1804,7 @@ describe('platform installer', () => {
     try {
       const result = withConditionalPlatformWorkerCreate(
         'account',
-        'nosam-api',
+        'platform-api',
         async (base) => {
           for (const [method, path] of before) {
             const response = await fetch(`${base}${path}`, { body: 'payload', method });
@@ -1889,7 +1889,7 @@ describe('platform installer', () => {
     const deployments = await readPlatformWorkerDeployments(
       '/tmp/wrangler.json',
       'account',
-      'nosam-api',
+      'platform-api',
       async (args) => {
         commands.push(args);
         return { status: 0, stderr: '', stdout: '', data: history };
@@ -1897,7 +1897,7 @@ describe('platform installer', () => {
     );
 
     expect(commands).toEqual([
-      { type: 'deployments.list', configPath: '/tmp/wrangler.json', workerName: 'nosam-api' },
+      { type: 'deployments.list', configPath: '/tmp/wrangler.json', workerName: 'platform-api' },
     ]);
     expect(deployments.map((deployment) => deployment.id)).toEqual([
       'deployment-enabled',
@@ -1911,7 +1911,7 @@ describe('platform installer', () => {
     const raced = await readPlatformWorkerDeployments(
       '/tmp/wrangler.json',
       'account',
-      'nosam-api',
+      'platform-api',
       async () => ({
         status: 0,
         stderr: '',
@@ -1983,7 +1983,7 @@ describe('platform installer', () => {
             : [previous, ours],
         };
       },
-      workerName: 'nosam-api',
+      workerName: 'platform-api',
     });
 
     expect(commands[1]).toEqual({
@@ -2036,7 +2036,7 @@ describe('platform installer', () => {
             ],
           };
         },
-        workerName: 'nosam-api',
+        workerName: 'platform-api',
       }),
     ).rejects.toThrow('refusing to overwrite the newer deployment');
     expect(commands).toHaveLength(1);
@@ -2090,7 +2090,7 @@ describe('platform installer', () => {
               : [previous, ours],
           };
         },
-        workerName: 'nosam-api',
+        workerName: 'platform-api',
       }),
     ).rejects.toThrow('restoration was superseded');
 
@@ -2148,16 +2148,16 @@ describe('platform installer', () => {
       { tag: 'v3', new_sqlite_classes: ['ErrorAlertMonitor'] },
       { tag: 'v4', new_sqlite_classes: ['SandboxConcurrencyCounter'] },
     ];
-    const config = { migrations, name: 'nosam-api' };
+    const config = { migrations, name: 'platform-api' };
 
-    expect(withoutCompletedPlatformWorkerMigrations(config, 'v4')).toEqual({ name: 'nosam-api' });
+    expect(withoutCompletedPlatformWorkerMigrations(config, 'v4')).toEqual({ name: 'platform-api' });
     expect(withoutCompletedPlatformWorkerMigrations(config, 'v3')).toBe(config);
     expect(withoutCompletedPlatformWorkerMigrations(config, null)).toBe(config);
     expect(config.migrations).toBe(migrations);
   });
 
   it('reuses a Worker upload digest only for identical code, assets, and bindings', () => {
-    const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-worker-fingerprint-'));
+    const directory = mkdtempSync(join(tmpdir(), 'platform-worker-fingerprint-'));
     try {
       const main = join(directory, 'worker.js');
       const assets = join(directory, 'assets');
@@ -2166,7 +2166,7 @@ describe('platform installer', () => {
       writeFileSync(join(assets, 'index.html'), '<h1>one</h1>');
       const config = {
         main,
-        name: 'nosam-test-api',
+        name: 'platform-test-api',
         assets: { directory: assets },
         vars: { PLATFORM_VERSION: 'one' },
       };
@@ -2297,14 +2297,14 @@ describe('platform installer', () => {
 
     expect(
       withoutPlatformWorkerTrafficAttachments({
-        name: 'nosam-dispatch',
+        name: 'platform-dispatch',
         route: 'legacy.example.com/*',
         routes: [
           { pattern: 'apps.example.com/*', zone_name: 'example.com' },
           { pattern: 'manual.example.net/*', zone_name: 'example.net' },
         ],
       }),
-    ).toEqual({ name: 'nosam-dispatch' });
+    ).toEqual({ name: 'platform-dispatch' });
   });
 
   it('requires the installation ownership marker before managing a new Worker', async () => {
@@ -2324,16 +2324,16 @@ describe('platform installer', () => {
       accountId: 'account',
       installationId: manifest.id,
       ownershipNonce: manifest.ownershipNonce,
-      resourceId: 'nosam-example-api',
+      resourceId: 'platform-example-api',
       resourceKey: 'api-worker',
       resourceKind: 'worker',
-      resourceName: 'nosam-example-api',
+      resourceName: 'platform-example-api',
     });
     const workerClient = {
       getWorkerPlainTextBindings: async () => ({
         PLATFORM_OWNERSHIP_MARKER: JSON.stringify(marker),
       }),
-      listWorkerNames: async () => ['nosam-example-api'],
+      listWorkerNames: async () => ['platform-example-api'],
     };
 
     await expect(
@@ -2342,7 +2342,7 @@ describe('platform installer', () => {
         'account',
         manifest,
         'api-worker',
-        'nosam-example-api',
+        'platform-example-api',
       ),
     ).resolves.toBe('owned');
 
@@ -2355,7 +2355,7 @@ describe('platform installer', () => {
         'account',
         manifest,
         'api-worker',
-        'nosam-example-api',
+        'platform-example-api',
       ),
     ).rejects.toThrow('refusing to treat it as installer-owned');
 
@@ -2366,7 +2366,7 @@ describe('platform installer', () => {
         'account',
         manifest,
         'api-worker',
-        'nosam-example-api',
+        'platform-example-api',
       ),
     ).resolves.toBe('missing');
   });
@@ -2436,7 +2436,7 @@ describe('platform installer', () => {
       const url = String(input);
       requests.push({ headers: new Headers(init?.headers), url, redirect: init?.redirect });
       return Response.json(
-        url.endsWith('/.well-known/nosam-platform') || url === 'https://email.example.com/health'
+        url.endsWith('/.well-known/platform') || url === 'https://email.example.com/health'
           ? {
               installationId: 'example-a1b2c3d4',
               platformVersion: '1.2.3',
@@ -2462,13 +2462,13 @@ describe('platform installer', () => {
 
     expect(requests.map((entry) => entry.url)).toEqual([
       'https://api.example.com/health',
-      'https://api.example.com/.well-known/nosam-platform',
+      'https://api.example.com/.well-known/platform',
       'https://proxy.example.com/health',
       'https://void-platform-health.apps.example.com/health',
       'https://email.example.com/health',
     ]);
     expect(
-      requests.every((entry) => entry.headers.get('X-Nosam-Platform-Probe') === 'probe-token'),
+      requests.every((entry) => entry.headers.get('X-Platform-Probe') === 'probe-token'),
     ).toBe(true);
     expect(requests.every((entry) => !entry.headers.has('X-Health-Check'))).toBe(true);
     expect(requests.every((entry) => entry.redirect === 'manual')).toBe(true);
@@ -2547,7 +2547,7 @@ describe('platform installer', () => {
       for (const [url, init] of fetcher.mock.calls) {
         expect(url).toBe('https://api.example.com/internal/platform/email-bootstrap');
         expect(init).toMatchObject({ method: 'POST', redirect: 'manual' });
-        expect(new Headers(init.headers).get('X-Nosam-Platform-Probe')).toBe('probe-token');
+        expect(new Headers(init.headers).get('X-Platform-Probe')).toBe('probe-token');
       }
     });
 
@@ -2733,7 +2733,7 @@ describe('platform installer', () => {
         `Step: ${step}. Failure: blocked. Domain: mail.example.com (inbound: pending). This step needs ${permission} on the runtime API token.`,
       );
       expect(message).toContain('The token value stays the same.');
-      expect(message).toContain('NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN');
+      expect(message).toContain('PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN');
       expect(message).toMatch(/Then resume this installation\. Traffic remains disabled\.$/);
       expect(message).not.toContain('Authentication error');
     });
@@ -2763,9 +2763,9 @@ describe('platform installer', () => {
 
   it.each([
     'https://api.example.com/health',
-    'https://api.example.com/.well-known/nosam-platform',
+    'https://api.example.com/.well-known/platform',
     'https://proxy.example.com/health',
-    'https://nosam-example-dispatch.account.workers.dev/health',
+    'https://platform-example-dispatch.account.workers.dev/health',
   ])(
     'explains Cloudflare account Default-Deny at %s without exposing response content',
     async (blockedUrl) => {
@@ -2785,7 +2785,7 @@ describe('platform installer', () => {
           );
         }
         return Response.json(
-          url.endsWith('/.well-known/nosam-platform')
+          url.endsWith('/.well-known/platform')
             ? {
                 installationId: 'example-a1b2c3d4',
                 platformVersion: '1.2.3',
@@ -2803,7 +2803,7 @@ describe('platform installer', () => {
         1,
         'probe-token',
         fetcher,
-        'https://nosam-example-dispatch.account.workers.dev',
+        'https://platform-example-dispatch.account.workers.dev',
         {
           accountName: 'Example account',
           workers: ['legacy-api-123', 'custom-proxy', 'custom-dispatch'],
@@ -2867,7 +2867,7 @@ describe('platform installer', () => {
   );
 
   it('authenticates lifecycle health probes with explicitly scoped Access proof', async () => {
-    process.env.NOSAM_ACCESS_CREDENTIALS = JSON.stringify(
+    process.env.PLATFORM_ACCESS_CREDENTIALS = JSON.stringify(
       Object.fromEntries(
         [
           'https://api.staging.void.cloud',
@@ -2885,7 +2885,7 @@ describe('platform installer', () => {
     const fetcher = (async (input: string | URL | Request, init?: RequestInit) => {
       requests.push(new Headers(init?.headers));
       return Response.json(
-        String(input).endsWith('/.well-known/nosam-platform')
+        String(input).endsWith('/.well-known/platform')
           ? {
               installationId: 'example-a1b2c3d4',
               platformVersion: '1.2.3',
@@ -2918,7 +2918,7 @@ describe('platform installer', () => {
   it('requires the live API to report the target usage protocol before traffic opens', async () => {
     const legacyFetcher = (async (input: string | URL | Request) =>
       Response.json(
-        String(input).endsWith('/.well-known/nosam-platform')
+        String(input).endsWith('/.well-known/platform')
           ? { installationId: 'example-a1b2c3d4', platformVersion: '1.2.3' }
           : { ok: true },
       )) as typeof fetch;
@@ -2978,7 +2978,7 @@ describe('platform installer', () => {
     await expect(
       verifyPlatformSandboxDrain('https://api.example.com', 'probe-token', fetcher),
     ).resolves.toBe(true);
-    expect(headers.every((value) => value.get('X-Nosam-Platform-Probe') === 'probe-token')).toBe(
+    expect(headers.every((value) => value.get('X-Platform-Probe') === 'probe-token')).toBe(
       true,
     );
 
@@ -3014,7 +3014,7 @@ describe('platform installer', () => {
         return new Response('unhealthy', { status: 500 });
       }
       return Response.json(
-        url.endsWith('/.well-known/nosam-platform')
+        url.endsWith('/.well-known/platform')
           ? {
               installationId: 'example-a1b2c3d4',
               platformVersion: '1.2.3',
@@ -4116,7 +4116,7 @@ describe('platform installer', () => {
     });
 
     expect(() => assertRequiredPlatformSecrets(plan, manifest, secrets)).toThrow(
-      'Creating a missing platform Worker requires: NOSAM_PLATFORM_GITHUB_CLIENT_ID',
+      'Creating a missing platform Worker requires: PLATFORM_GITHUB_CLIENT_ID',
     );
   });
 
@@ -4422,7 +4422,7 @@ describe('platform installer', () => {
             if (key === PLATFORM_DISABLED_KEY) {
               lifecycleEvents.push(`put:${key}`);
             }
-            if (key === '__nosam/platform/installation/v1') {
+            if (key === '__platform/platform/installation/v1') {
               captured.remoteManifest = value;
             }
           },
@@ -4654,11 +4654,11 @@ describe('platform installer', () => {
     expect(checkpoint?.databaseClaimState).toBeUndefined();
     // The database is still unbound, so the operator can resume with a corrected URL.
     const corrected = 'postgres://user:password@db.example.com/void?sslmode=require';
-    process.env.NOSAM_PLATFORM_DATABASE_URL = corrected;
+    process.env.PLATFORM_DATABASE_URL = corrected;
     try {
       expect(resolvePlatformInstallDatabaseUrl(checkpoint, manifest)).toBe(corrected);
     } finally {
-      delete process.env.NOSAM_PLATFORM_DATABASE_URL;
+      delete process.env.PLATFORM_DATABASE_URL;
     }
   });
 
@@ -4666,7 +4666,7 @@ describe('platform installer', () => {
     'postgres://user:password@db.example.com/void?sslmode=verify-full&sslrootcert=/etc/ssl/private-ca.pem',
     'postgres://user:password@db.example.com/void?sslmode=verify-full&sslrootcert=system&sslrootcert=/etc/ssl/private-ca.pem',
   ])(
-    'rejects a private certificate authority for a Nosam-created Hyperdrive before claiming the database: %s',
+    'rejects a private certificate authority for a Platform-created Hyperdrive before claiming the database: %s',
     async (databaseUrl) => {
       const directory = useRegistryDirectory();
       const plan = await examplePlan();
@@ -4709,7 +4709,7 @@ describe('platform installer', () => {
         'A Hyperdrive created by bwf trusts only public certificate authorities',
       );
       await expect(rejected).rejects.toThrow('Use an existing Hyperdrive');
-      await expect(rejected).rejects.toThrow('NOSAM_PLATFORM_HYPERDRIVE_ID');
+      await expect(rejected).rejects.toThrow('PLATFORM_HYPERDRIVE_ID');
 
       expect(claimedUrls).toEqual([]);
       expect(lockedUrls).toEqual([]);
@@ -4722,12 +4722,12 @@ describe('platform installer', () => {
       // The database is still unbound, so the same installation resumes with a corrected URL.
       const corrected =
         'postgres://user:password@db.example.com/void?sslmode=verify-full&sslrootcert=system';
-      process.env.NOSAM_PLATFORM_DATABASE_URL = corrected;
+      process.env.PLATFORM_DATABASE_URL = corrected;
       let resumedUrl: string;
       try {
         resumedUrl = resolvePlatformInstallDatabaseUrl(checkpoint, manifest);
       } finally {
-        delete process.env.NOSAM_PLATFORM_DATABASE_URL;
+        delete process.env.PLATFORM_DATABASE_URL;
       }
       expect(resumedUrl).toBe(corrected);
       const resumedPlan = await examplePlan(manifest);
@@ -5378,7 +5378,7 @@ describe('platform installer', () => {
     ]);
     expect(migrations).toBe(0);
     expect(new Set(upgradeKvWrites)).toEqual(
-      new Set(['__nosam/platform/installation/v1', PLATFORM_DISABLED_KEY]),
+      new Set(['__platform/platform/installation/v1', PLATFORM_DISABLED_KEY]),
     );
     expect(upgraded.manifest.status).toBe('installed');
     expect(upgraded.manifest.platformVersion).toBe(readPlatformRuntimeManifest().platformVersion);
@@ -6358,7 +6358,7 @@ describe('platform installer', () => {
     expect(enabledUpgrade.manifest.desiredState).toBe('enabled');
     expect(enabledUpgrade.manifest.deployment.authentication.configurable).toBe(true);
     expect(enabledHealthChecks).toBe(2);
-    expect(deletedKvValues).toContain('__nosam/platform/disabled/v1');
+    expect(deletedKvValues).toContain('__platform/platform/disabled/v1');
     expect(enabledConfigs).toHaveLength(10);
     for (const config of enabledConfigs.slice(0, 5)) {
       expect((config.vars as Record<string, unknown>).PLATFORM_TRAFFIC_STATE).not.toBe('enabled');

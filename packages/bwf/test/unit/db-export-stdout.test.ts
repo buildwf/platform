@@ -55,7 +55,7 @@ describe('bwf db export → stdout', () => {
   });
 
   it('streams pure SQL to stdout without a command banner or stderr noise', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-db-export-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-db-export-'));
     roots.push(root);
     writeFileSync(join(root, 'package.json'), JSON.stringify({ dependencies: { bwf: '*' } }));
     writeFileSync(join(root, 'bwf.json'), JSON.stringify({}));

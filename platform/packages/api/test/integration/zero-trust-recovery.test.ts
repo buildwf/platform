@@ -894,7 +894,7 @@ describe('Zero Trust recovery', () => {
         // A prior API version could create and checkpoint a public exception
         // while wildcard teardown was failed. Preserve this reachable upgrade
         // state to prove finalization revisits outstanding cleanup handles.
-        const bypassName = 'nosam-late-disable-public-checkpoint';
+        const bypassName = 'platform-late-disable-public-checkpoint';
         cloudflare.applications.set('late-bypass', {
           id: 'late-bypass',
           name: bypassName,

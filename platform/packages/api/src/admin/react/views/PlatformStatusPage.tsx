@@ -147,8 +147,8 @@ export function PlatformStatusPage({
 
   return (
     <Layout platformName={platformName} username={username} title="Platform status">
-      <PageStack className="nosam-platform-status">
-        <div className="nosam-platform-status-heading">
+      <PageStack className="platform-status">
+        <div className="platform-status-heading">
           <SectionStack as="div">
             <Heading level={1}>Platform status</Heading>
             <p>Follow upgrade and rollback progress. This page is read-only during maintenance.</p>
@@ -179,14 +179,14 @@ export function PlatformStatusPage({
             />
           }
         >
-          <ul className="nosam-platform-status-summary" aria-label="Installation and traffic">
+          <ul className="platform-status-summary" aria-label="Installation and traffic">
             {(operation || failed) && (
               <li data-state={connection !== 'current' ? 'unavailable' : lifecycleState}>
-                <span className="nosam-admin-health-indicator" aria-hidden="true">
+                <span className="platform-admin-health-indicator" aria-hidden="true">
                   <LifecycleIcon size={16} />
                 </span>
                 <span>
-                  <span className="nosam-platform-status-summary-label">
+                  <span className="platform-status-summary-label">
                     {operation ? ACTION_LABELS[operation.action] : 'Installation'}
                   </span>
                   <strong>{phaseLabel}</strong>
@@ -202,11 +202,11 @@ export function PlatformStatusPage({
                     : 'healthy'
               }
             >
-              <span className="nosam-admin-health-indicator" aria-hidden="true">
+              <span className="platform-admin-health-indicator" aria-hidden="true">
                 <TrafficIcon size={16} />
               </span>
               <span>
-                <span className="nosam-platform-status-summary-label">Application traffic</span>
+                <span className="platform-status-summary-label">Application traffic</span>
                 <strong>
                   {trafficLabel}
                   {current && connection !== 'current' ? ' (last confirmed)' : ''}
@@ -216,7 +216,7 @@ export function PlatformStatusPage({
           </ul>
 
           <div
-            className="nosam-platform-status-notice"
+            className="platform-status-notice"
             data-state={connection}
             role="status"
             aria-live="polite"
@@ -242,7 +242,7 @@ export function PlatformStatusPage({
             )}
           </div>
 
-          <div className="nosam-platform-status-grid">
+          <div className="platform-status-grid">
             {current?.checkpoint && (
               <SectionStack aria-labelledby="platform-operation-heading">
                 <Heading level={3} id="platform-operation-heading">
@@ -250,7 +250,7 @@ export function PlatformStatusPage({
                 </Heading>
                 {operation ? (
                   <>
-                    <p className="nosam-platform-status-version">
+                    <p className="platform-status-version">
                       {operation.fromVersion ?? 'New installation'} <span aria-label="to">→</span>{' '}
                       {operation.toVersion}
                     </p>
@@ -301,7 +301,7 @@ export function PlatformStatusPage({
 
           {needsAttention && (
             <SectionStack
-              className="nosam-platform-status-recovery"
+              className="platform-status-recovery"
               aria-labelledby="platform-recovery-heading"
             >
               <Heading level={3} id="platform-recovery-heading">

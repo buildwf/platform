@@ -10,7 +10,7 @@ export type RemoteR2Conditional =
 export type RemoteR2HttpMetadata = Omit<R2HTTPMetadata, 'cacheExpiry'> & { cacheExpiry?: string };
 
 /** URI-encoded JSON object metadata that the binding handler sends with a streamed `/r2/get` body. */
-export const R2_OBJECT_HEADER = 'x-nosam-r2-object';
+export const R2_OBJECT_HEADER = 'x-platform-r2-object';
 
 const HTTP_METADATA_FIELDS = new Set([
   'contentType',

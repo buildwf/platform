@@ -38,7 +38,7 @@ function capability() {
 describe('Sandbox runtime', () => {
   it('starts operations immediately and shares process completion and output promises', async () => {
     const c = capability();
-    await envContext.run({ __NOSAM_SANDBOX: { getSandbox: async () => c } }, async () => {
+    await envContext.run({ __PLATFORM_SANDBOX: { getSandbox: async () => c } }, async () => {
       const client = await getSandbox();
       const execution = client.exec(['work']);
       expect(execution).toBeInstanceOf(Promise);
@@ -93,8 +93,8 @@ describe('Sandbox runtime', () => {
         expect(invoke).not.toHaveBeenCalled();
         const forwarded = fetch.mock.calls[0]![0] as Request;
         expect(forwarded.url).toBe(request.url);
-        expect(forwarded.headers.get('x-nosam-sandbox-port')).toBe('5173');
-        expect(request.headers.has('x-nosam-sandbox-port')).toBe(false);
+        expect(forwarded.headers.get('x-platform-sandbox-port')).toBe('5173');
+        expect(request.headers.has('x-platform-sandbox-port')).toBe(false);
         await expect(client.fetch(65536, request)).rejects.toThrow('Invalid Sandbox TCP port');
         expect(fetch).toHaveBeenCalledOnce();
       },
@@ -103,7 +103,7 @@ describe('Sandbox runtime', () => {
   it('rejects managed WebSockets before attempting an unserializable RPC response', async () => {
     const invoke = vi.fn();
     await envContext.run(
-      { __NOSAM_SANDBOX: { getSandbox: async () => ({ invoke }) } },
+      { __PLATFORM_SANDBOX: { getSandbox: async () => ({ invoke }) } },
       async () => {
         const client = await getSandbox();
         await expect(
@@ -117,7 +117,7 @@ describe('Sandbox runtime', () => {
     const c = capability();
     const resolve = vi.fn().mockResolvedValue({ invoke: c.invoke });
     await envContext.run(
-      { __NOSAM_SANDBOX: { getSandbox: resolve }, __PROJECT_ID: 'project' },
+      { __PLATFORM_SANDBOX: { getSandbox: resolve }, __PROJECT_ID: 'project' },
       async () => {
         const client = await getSandbox('Workspace');
         const process = await client.exec(['node', '--version']);
@@ -142,7 +142,7 @@ describe('Sandbox runtime', () => {
   it('encodes aborts as cancellable RPC streams and rejects an already aborted signal', async () => {
     const c = capability();
     const controller = new AbortController();
-    await envContext.run({ __NOSAM_SANDBOX: { getSandbox: async () => c } }, async () => {
+    await envContext.run({ __PLATFORM_SANDBOX: { getSandbox: async () => c } }, async () => {
       const client = await getSandbox();
       await client.exec(['sleep', '10'], { signal: controller.signal });
       const encoded = c.invoke.mock.calls[0]![1][1] as { abort: ReadableStream; signal?: unknown };
@@ -161,7 +161,7 @@ describe('Sandbox runtime', () => {
       const remove = vi.spyOn(controller.signal, 'removeEventListener');
       const invoke = vi.fn().mockRejectedValue(new Error('admission failed'));
       await envContext.run(
-        { __NOSAM_SANDBOX: { getSandbox: async () => ({ invoke }) } },
+        { __PLATFORM_SANDBOX: { getSandbox: async () => ({ invoke }) } },
         async () => {
           const client = await getSandbox();
           await expect(
@@ -182,7 +182,7 @@ describe('Sandbox runtime', () => {
     await envContext.run({ __PROJECT_ID: 'project', SANDBOX: {} }, async () => {
       await expect(getSandbox()).rejects.toBeInstanceOf(SandboxUnavailableError);
     });
-    await envContext.run({ __NOSAM_SANDBOX: {} }, async () => {
+    await envContext.run({ __PLATFORM_SANDBOX: {} }, async () => {
       await expect(getSandbox('default', { binding: 'CUSTOM' })).rejects.toBeInstanceOf(
         SandboxUnavailableError,
       );
@@ -197,7 +197,7 @@ describe('Sandbox runtime', () => {
     const error = new TypeError('invalid path');
     const invoke = vi.fn().mockResolvedValueOnce(response).mockRejectedValueOnce(error);
     await envContext.run(
-      { __NOSAM_SANDBOX: { getSandbox: async () => ({ invoke }) } },
+      { __PLATFORM_SANDBOX: { getSandbox: async () => ({ invoke }) } },
       async () => {
         const client = await getSandbox();
         expect(await (await client.files.readFile('/file')).text()).toBe('file');
@@ -210,8 +210,8 @@ describe('Sandbox runtime', () => {
 describe('Sandbox usage-limit rejections', () => {
   it('handles a quota on process completion after successful admission', async () => {
     const c = capability();
-    c.processInvoke.mockRejectedValue(new Error('NOSAM_SANDBOX_runtime_budget'));
-    await envContext.run({ __NOSAM_SANDBOX: { getSandbox: async () => c } }, async () => {
+    c.processInvoke.mockRejectedValue(new Error('PLATFORM_SANDBOX_runtime_budget'));
+    await envContext.run({ __PLATFORM_SANDBOX: { getSandbox: async () => c } }, async () => {
       const client = await getSandbox();
       const op = client.run(['work']);
       expect(op).toBeInstanceOf(Promise);
@@ -229,9 +229,9 @@ describe('Sandbox usage-limit rejections', () => {
   it.each(['exec', 'file', 'fetch'] as const)(
     'rejects %s admission limits with UsageLimit',
     async (method) => {
-      const invoke = vi.fn().mockRejectedValue(new Error('NOSAM_SANDBOX_concurrency'));
+      const invoke = vi.fn().mockRejectedValue(new Error('PLATFORM_SANDBOX_concurrency'));
       await envContext.run(
-        { __NOSAM_SANDBOX: { getSandbox: async () => ({ invoke }) } },
+        { __PLATFORM_SANDBOX: { getSandbox: async () => ({ invoke }) } },
         async () => {
           const client = await getSandbox();
           const op =

@@ -10,9 +10,9 @@ import { compileRouteTable, compileWorkerEntry } from '../../src/router/compile.
 import type { ScanResult } from '../../src/router/scan.ts';
 
 const root = join(import.meta.dirname, '..', '..', '..', '..');
-const temporary = mkdtempSync(join(tmpdir(), 'nosam-websocket-middleware-'));
+const temporary = mkdtempSync(join(tmpdir(), 'platform-websocket-middleware-'));
 const output = join(temporary, 'dist');
-const routeTablePath = join(temporary, 'virtual-nosam-routes.ts');
+const routeTablePath = join(temporary, 'virtual-platform-routes.ts');
 const workerPath = join(temporary, 'worker.ts');
 
 type MiniflareInstance = {
@@ -190,9 +190,9 @@ export default { __kind: "socket", messages: { client: schema, server: schema } 
       logLevel: 'silent',
       plugins: [
         {
-          name: 'nosam-websocket-middleware-test',
+          name: 'platform-websocket-middleware-test',
           resolveId(id) {
-            return id === 'virtual:nosam-routes' ? routeTablePath : null;
+            return id === 'virtual:platform-routes' ? routeTablePath : null;
           },
         },
       ],

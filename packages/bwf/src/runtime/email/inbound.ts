@@ -75,16 +75,16 @@ export function readEnvString(name: string): string | undefined {
 // At most 56 characters, so `<slug>+noreply` fits RFC 5321's 64-octet local part.
 const VALID_SLUG = /^[a-z0-9](?:[a-z0-9-]{0,54}[a-z0-9])?$/;
 
-/** `__NOSAM_PROJECT_SLUG` when it can head a sender address. */
+/** `__PLATFORM_PROJECT_SLUG` when it can head a sender address. */
 export function readProjectSlug(): string | undefined {
-  const raw = readEnvString('__NOSAM_PROJECT_SLUG');
+  const raw = readEnvString('__PLATFORM_PROJECT_SLUG');
   return raw !== undefined && VALID_SLUG.test(raw) ? raw : undefined;
 }
 
 // The relay-lane marker `createMessageProxy` sets from `envelope.viaDomain`;
 // undefined for platform-lane, own-account and hand-built messages.
 function readRelayDomain(message: ForwardableEmailMessage): string | undefined {
-  const raw: unknown = (message as { __nosamRelayDomain?: unknown }).__nosamRelayDomain;
+  const raw: unknown = (message as { __platformRelayDomain?: unknown }).__platformRelayDomain;
   return typeof raw === 'string' && raw.length > 0 ? raw : undefined;
 }
 
@@ -625,7 +625,7 @@ export function createMessageProxy(
   // The wire-form recipient, for diagnostics; non-enumerable so it never
   // serializes.
   if (envelope.to !== userVisibleTo) {
-    Object.defineProperty(message, '__nosamPlatformTo', {
+    Object.defineProperty(message, '__platformTo', {
       value: envelope.to,
       enumerable: false,
       writable: false,
@@ -636,7 +636,7 @@ export function createMessageProxy(
   // Relay-lane marker: `buildReplyMessage` then defaults `from` to the
   // receiving address on the customer domain.
   if (typeof envelope.viaDomain === 'string' && envelope.viaDomain.length > 0) {
-    Object.defineProperty(message, '__nosamRelayDomain', {
+    Object.defineProperty(message, '__platformRelayDomain', {
       value: envelope.viaDomain,
       enumerable: false,
       writable: false,
@@ -651,8 +651,8 @@ export function createMessageProxy(
 
 export interface ReplyEmailOptions {
   /**
-   * On the managed platform (a `__NOSAM_PROJECT_SLUG` is injected) defaults
-   * to `<__NOSAM_PROJECT_SLUG>+noreply@<__NOSAM_EMAIL_DOMAIN>`, and THROWS
+   * On the managed platform (a `__PLATFORM_PROJECT_SLUG` is injected) defaults
+   * to `<__PLATFORM_PROJECT_SLUG>+noreply@<__PLATFORM_EMAIL_DOMAIN>`, and THROWS
    * when the domain binding is absent — a reply sender is never guessed.
    *
    * There, an override must stay on your own slug. The platform accepts a
@@ -809,17 +809,17 @@ export async function buildReplyMessage(
   } else {
     const slug = readProjectSlug();
     if (slug) {
-      const domain = readEnvString('__NOSAM_EMAIL_DOMAIN');
+      const domain = readEnvString('__PLATFORM_EMAIL_DOMAIN');
       if (!domain) {
         throw new Error(
-          "replyEmail: 'from' is required when __NOSAM_PROJECT_SLUG is set " +
-            'but __NOSAM_EMAIL_DOMAIN is not. Set `from` explicitly, or deploy ' +
-            'via bwf so the platform-injected __NOSAM_PROJECT_SLUG and ' +
-            '__NOSAM_EMAIL_DOMAIN can default it to <slug>+noreply@<domain>.',
+          "replyEmail: 'from' is required when __PLATFORM_PROJECT_SLUG is set " +
+            'but __PLATFORM_EMAIL_DOMAIN is not. Set `from` explicitly, or deploy ' +
+            'via bwf so the platform-injected __PLATFORM_PROJECT_SLUG and ' +
+            '__PLATFORM_EMAIL_DOMAIN can default it to <slug>+noreply@<domain>.',
         );
       }
       fromAddr = `${slug}+noreply@${domain}`;
-    } else if (readEnvString('__NOSAM_PROJECT_SLUG') !== undefined) {
+    } else if (readEnvString('__PLATFORM_PROJECT_SLUG') !== undefined) {
       // A platform slug too long for `<slug>+noreply@`: `message.to` would
       // build a sender the platform drops without telling the handler.
       throw new Error(

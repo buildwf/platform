@@ -9,7 +9,7 @@ export default defineConfig({
     },
   },
   cloudflare: {
-    name: 'nosam-dashboard',
+    name: 'platform-dashboard',
     compatibility_date: '2026-02-12',
     assets: {
       directory: 'dist/client',
@@ -23,12 +23,12 @@ export default defineConfig({
     services: [
       {
         binding: 'API',
-        service: 'nosam-api',
+        service: 'platform-api',
       },
     ],
     env: {
       production: {
-        name: 'nosam-dashboard',
+        name: 'platform-dashboard',
         routes: [
           {
             pattern: 'dash.void.cloud',
@@ -38,12 +38,12 @@ export default defineConfig({
         services: [
           {
             binding: 'API',
-            service: 'nosam-api',
+            service: 'platform-api',
           },
         ],
       },
       staging: {
-        name: 'nosam-dashboard-staging',
+        name: 'platform-dashboard-staging',
         routes: [
           {
             pattern: 'dash.staging.void.cloud',
@@ -53,7 +53,7 @@ export default defineConfig({
         services: [
           {
             binding: 'API',
-            service: 'nosam-api-staging',
+            service: 'platform-api-staging',
           },
         ],
         vars: {

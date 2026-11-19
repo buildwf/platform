@@ -39,7 +39,7 @@ export const CLOUDFLARE_DEPLOY_BUILD_ENV = 'BWF_CLOUDFLARE_DEPLOY_BUILD';
  * JSON map from each `queues/` name to the Cloudflare queue name that
  * `bwf deploy --platform cloudflare` chose. Set only for its Vite build.
  */
-export const CLOUDFLARE_QUEUE_NAMES_BUILD_ENV = 'NOSAM_CLOUDFLARE_QUEUE_NAMES';
+export const CLOUDFLARE_QUEUE_NAMES_BUILD_ENV = 'PLATFORM_CLOUDFLARE_QUEUE_NAMES';
 
 /**
  * Find legacy Vite dotenv variants. bwf intentionally supports only `.env`;
@@ -104,9 +104,9 @@ export function resolveRemoteMode(configRemote: boolean | undefined): boolean {
  * and writes it over `vars`, so dropping keys from `vars` cannot keep them
  * out. `envSchemaPlugin` and `bwf env check` reject them instead.
  */
-export const RESERVED_ENV_PREFIX = '__NOSAM_';
+export const RESERVED_ENV_PREFIX = '__PLATFORM_';
 
-/** Names in `keys` that use the reserved `__NOSAM_` prefix, in input order. */
+/** Names in `keys` that use the reserved `__PLATFORM_` prefix, in input order. */
 export function findReservedEnvKeys(keys: Iterable<string>): Array<string> {
   return Array.from(keys).filter((key) => key.startsWith(RESERVED_ENV_PREFIX));
 }
@@ -120,7 +120,7 @@ export function reservedEnvKeysMessage(source: '.env' | 'env.ts', keys: Array<st
   return (
     `${source} ${verb} names reserved for bwf: ${keys.join(', ')}. ` +
     'bwf sets these itself; remove them. To trigger crons or queues locally, use the ' +
-    'x-nosam-dev-trigger header printed at dev start.'
+    'x-platform-dev-trigger header printed at dev start.'
   );
 }
 
@@ -134,13 +134,13 @@ export function reservedEnvKeysMessage(source: '.env' | 'env.ts', keys: Array<st
  * Caller: `prerender.ts` buildPrerenderBindings (CF prerender subprocess bindings).
  */
 export const INTERNAL_ENV_KEYS = [
-  '__NOSAM_ACCESS_CREDENTIALS',
-  '__NOSAM_TOKEN',
-  '__NOSAM_PROJECT_ID',
-  '__NOSAM_REMOTE',
-  '__NOSAM_STAGING',
-  '__NOSAM_PROXY_URL',
-  '__NOSAM_PROXY_TOKEN',
+  '__PLATFORM_ACCESS_CREDENTIALS',
+  '__PLATFORM_TOKEN',
+  '__PLATFORM_PROJECT_ID',
+  '__PLATFORM_REMOTE',
+  '__PLATFORM_STAGING',
+  '__PLATFORM_PROXY_URL',
+  '__PLATFORM_PROXY_TOKEN',
 ] as const;
 
 const INTERNAL_ENV_KEY_SET: ReadonlySet<string> = new Set(INTERNAL_ENV_KEYS);

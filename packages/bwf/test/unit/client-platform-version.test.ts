@@ -69,7 +69,7 @@ describe('minimum platform version', () => {
       } else {
         await expect(result).rejects.toThrow('does not support --skip-migrations');
       }
-      expect(requestedPaths()).toEqual(['/.well-known/nosam-platform', '/capabilities']);
+      expect(requestedPaths()).toEqual(['/.well-known/platform', '/capabilities']);
     },
   );
 
@@ -78,7 +78,7 @@ describe('minimum platform version', () => {
     async (version) => {
       serve(version);
       await expect(client().listProjectChoices()).resolves.toEqual([]);
-      expect(requestedPaths()).toEqual(['/.well-known/nosam-platform', '/projects/choices']);
+      expect(requestedPaths()).toEqual(['/.well-known/platform', '/projects/choices']);
     },
   );
 
@@ -114,21 +114,21 @@ describe('minimum platform version', () => {
     await expect(client().listProjectChoices()).rejects.toThrow(
       `The bwf platform at ${origin} runs version ${version}, but this CLI requires 1.9.0 or later. Ask its administrator to upgrade the platform runtime with \`bwf platform upgrade\`.`,
     );
-    expect(requestedPaths()).toEqual(['/.well-known/nosam-platform']);
+    expect(requestedPaths()).toEqual(['/.well-known/platform']);
   });
 
   it('checks once per process and base URL, sharing a concurrent first check', async () => {
     serve('1.9.0');
     await Promise.all([client().listProjectChoices(), client().listProjects()]);
     await client().listProjectChoices();
-    expect(requestedPaths().filter((path) => path === '/.well-known/nosam-platform')).toHaveLength(
+    expect(requestedPaths().filter((path) => path === '/.well-known/platform')).toHaveLength(
       1,
     );
     expect(requestedPaths()).toHaveLength(4);
 
     const other = `https://other-${sequence}.example.test`;
     await new PlatformClient('token', { apiUrl: other }).listProjects();
-    expect(fetchMock.mock.calls.at(-2)?.[0]).toBe(`${other}/.well-known/nosam-platform`);
+    expect(fetchMock.mock.calls.at(-2)?.[0]).toBe(`${other}/.well-known/platform`);
   });
 
   it('does not check when login opts out', async () => {
@@ -141,7 +141,7 @@ describe('minimum platform version', () => {
     serve('0.22.0');
     await expect(client().listProjectChoices()).rejects.toThrow('runs version 0.22.0');
     await expect(client().listProjects()).rejects.toThrow('runs version 0.22.0');
-    expect(requestedPaths()).toEqual(['/.well-known/nosam-platform']);
+    expect(requestedPaths()).toEqual(['/.well-known/platform']);
   });
 
   it.each([
@@ -152,7 +152,7 @@ describe('minimum platform version', () => {
     const message = `The bwf platform at ${origin} does not report its version, but this CLI requires 1.9.0 or later. Ask its administrator to upgrade the platform runtime with \`bwf platform upgrade\`.`;
     await expect(client().listProjectChoices()).rejects.toThrow(message);
     await expect(client().listProjects()).rejects.toThrow(message);
-    expect(requestedPaths()).toEqual(['/.well-known/nosam-platform']);
+    expect(requestedPaths()).toEqual(['/.well-known/platform']);
   });
 
   it.each([
@@ -188,7 +188,7 @@ describe('minimum platform version', () => {
       await expect(client().listProjectChoices()).resolves.toEqual([]);
       await expect(client().listProjects()).resolves.toEqual([]);
       expect(requestedPaths()).toEqual([
-        '/.well-known/nosam-platform',
+        '/.well-known/platform',
         '/projects/choices',
         '/projects',
       ]);
@@ -219,7 +219,7 @@ describe('direct Worker upload discovery', () => {
     serveFeatures({ directWorkerUpload: true });
     await client().listProjectChoices();
     await expect(client().supportsDirectWorkerUpload()).resolves.toBe(true);
-    expect(requestedPaths()).toEqual(['/.well-known/nosam-platform', '/projects/choices']);
+    expect(requestedPaths()).toEqual(['/.well-known/platform', '/projects/choices']);
   });
 
   it.each([
@@ -249,9 +249,9 @@ describe('direct Worker upload discovery', () => {
     // The version check keeps its first outcome.
     await client().listProjects();
     expect(requestedPaths()).toEqual([
-      '/.well-known/nosam-platform',
+      '/.well-known/platform',
       '/projects/choices',
-      '/.well-known/nosam-platform',
+      '/.well-known/platform',
       '/projects',
     ]);
   });
@@ -261,9 +261,9 @@ describe('direct Worker upload discovery', () => {
     await client().listProjectChoices();
     await expect(client().supportsDirectWorkerUpload()).resolves.toBe(false);
     expect(requestedPaths()).toEqual([
-      '/.well-known/nosam-platform',
+      '/.well-known/platform',
       '/projects/choices',
-      '/.well-known/nosam-platform',
+      '/.well-known/platform',
     ]);
   });
 
@@ -271,6 +271,6 @@ describe('direct Worker upload discovery', () => {
     serveFeatures({});
     await client().listProjectChoices();
     await expect(client().supportsDirectWorkerUpload()).resolves.toBe(false);
-    expect(requestedPaths()).toEqual(['/.well-known/nosam-platform', '/projects/choices']);
+    expect(requestedPaths()).toEqual(['/.well-known/platform', '/projects/choices']);
   });
 });

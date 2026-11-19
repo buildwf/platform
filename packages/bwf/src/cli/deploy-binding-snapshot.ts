@@ -175,7 +175,7 @@ const DEPLOY_RAW_SNAPSHOT_FIELDS: ReadonlyArray<string> = [
 ];
 
 /** Default Workers AI binding name that bwf emits. */
-export const DEFAULT_NOSAM_AI_BINDING = 'AI';
+export const DEFAULT_PLATFORM_AI_BINDING = 'AI';
 
 /** `durable_objects` sub-fields that bind another Worker's Durable Objects. bwf never emits them. */
 const DURABLE_OBJECT_EXTERNAL_FIELDS = ['script_name', 'environment'];

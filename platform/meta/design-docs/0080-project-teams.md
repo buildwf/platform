@@ -8,12 +8,12 @@ created: 2026-09-17
 
 ## Summary
 
-Add project-scoped membership to the Nosam Platform. A project keeps one owner,
+Add project-scoped membership to the Platform. A project keeps one owner,
 and can additionally have readers, collaborators, and project administrators.
 The owner remains the billing and quota subject regardless of which member
 performs an action.
 
-This is a Nosam Platform control-plane feature. It does not add an organization
+This is a Platform control-plane feature. It does not add an organization
 object, change application manifests, or affect projects deployed directly to
 Cloudflare.
 
@@ -37,7 +37,7 @@ Cloudflare.
   accounts.
 - Membership on direct Cloudflare deployments.
 - Multiple owners or project ownership by a group.
-- Project members who do not have their own Nosam Platform account.
+- Project members who do not have their own Platform account.
 - Sharing the installation administrator role through a project role.
 - Reading stored secret values. The existing API exposes secret names and
   write/delete operations, not plaintext reads; teams do not change that.
@@ -371,7 +371,7 @@ bwf project team decline <invitation-id>
 ```
 
 The existing project selector and saved project link identify the project when
-`--project` is absent. Project-scoped commands require a connected Nosam Platform
+`--project` is absent. Project-scoped commands require a connected Platform
 project and give a clear error for a direct Cloudflare target. The account-scoped
 `pending`, `accept`, and `decline` commands use the active platform connection,
 independently of the current directory's project or direct Cloudflare target.

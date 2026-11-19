@@ -29,7 +29,7 @@ const fake = vi.hoisted(() => {
 vi.mock('cloudflare:email', () => ({ EmailMessage: fake.FakeEmailMessage }));
 
 /**
- * Build a fake `__NOSAM_PROXY` service binding that responds to
+ * Build a fake `__PLATFORM_PROXY` service binding that responds to
  * `/email/send` with a canned response. Captures every request body for
  * assertion.
  */
@@ -67,17 +67,17 @@ function fakeProxy(handler: (body: unknown) => { status: number; body: unknown }
 }
 
 const PROXY_ENV_KEYS = {
-  __NOSAM_PROXY_TOKEN: 'tok',
+  __PLATFORM_PROXY_TOKEN: 'tok',
   __PROJECT_ID: 'p_test',
 };
 
-/** Sends through `__NOSAM_PROXY` when no harness sink is active. */
+/** Sends through `__PLATFORM_PROXY` when no harness sink is active. */
 function send(
   proxy: ReturnType<typeof fakeProxy>['proxy'],
   to: string | Array<string> = 'b@y.dev',
   extra: Partial<Parameters<typeof sendEmail>[0]> = {},
 ): ReturnType<typeof sendEmail> {
-  return withRuntimeEnv({ __NOSAM_PROXY: proxy, ...PROXY_ENV_KEYS }, () =>
+  return withRuntimeEnv({ __PLATFORM_PROXY: proxy, ...PROXY_ENV_KEYS }, () =>
     sendEmail({ from: 'a@x.dev', to, subject: 's', text: 't', ...extra }),
   );
 }
@@ -357,17 +357,17 @@ describe('sendEmail (error mapping)', () => {
 });
 
 describe('sendEmail (from defaulting)', () => {
-  // The platform mail domain is injected per environment (`mail.void.cloud`
+  // The platform mail domain is injected per environment (`mail.buildwf.dev`
   // in production, its own zone in staging), so these tests deliberately use
   // a non-production value: a passing assertion then proves the address was
   // built from the binding rather than from a baked-in constant.
   const MAIL_DOMAIN = 'mail.staging.void.cloud';
 
-  it('defaults from to <slug>+noreply@<__NOSAM_EMAIL_DOMAIN> when omitted and both bindings are injected', async () => {
+  it('defaults from to <slug>+noreply@<__PLATFORM_EMAIL_DOMAIN> when omitted and both bindings are injected', async () => {
     const harness = createEmailTestHarness();
     try {
       const result = await withRuntimeEnv(
-        { __NOSAM_PROJECT_SLUG: 'acme', __NOSAM_EMAIL_DOMAIN: MAIL_DOMAIN },
+        { __PLATFORM_PROJECT_SLUG: 'acme', __PLATFORM_EMAIL_DOMAIN: MAIL_DOMAIN },
         () => sendEmail({ to: 'b@y.dev', subject: 's', text: 't' }),
       );
       expect(result.ok).toBe(true);
@@ -378,11 +378,11 @@ describe('sendEmail (from defaulting)', () => {
     }
   });
 
-  it('defaults from to __NOSAM_EMAIL_FROM when omitted (own-account deploys)', async () => {
+  it('defaults from to __PLATFORM_EMAIL_FROM when omitted (own-account deploys)', async () => {
     const harness = createEmailTestHarness();
     try {
       const result = await withRuntimeEnv(
-        { __NOSAM_EMAIL_FROM: 'Acme <noreply@mail.acme.com>' },
+        { __PLATFORM_EMAIL_FROM: 'Acme <noreply@mail.acme.com>' },
         () => sendEmail({ to: 'b@y.dev', subject: 's', text: 't' }),
       );
       expect(result.ok).toBe(true);
@@ -392,14 +392,14 @@ describe('sendEmail (from defaulting)', () => {
     }
   });
 
-  it('prefers __NOSAM_EMAIL_FROM over the platform slug default', async () => {
+  it('prefers __PLATFORM_EMAIL_FROM over the platform slug default', async () => {
     const harness = createEmailTestHarness();
     try {
       await withRuntimeEnv(
         {
-          __NOSAM_EMAIL_FROM: 'noreply@mail.acme.com',
-          __NOSAM_PROJECT_SLUG: 'acme',
-          __NOSAM_EMAIL_DOMAIN: MAIL_DOMAIN,
+          __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com',
+          __PLATFORM_PROJECT_SLUG: 'acme',
+          __PLATFORM_EMAIL_DOMAIN: MAIL_DOMAIN,
         },
         () => sendEmail({ to: 'b@y.dev', subject: 's', text: 't' }),
       );
@@ -409,10 +409,10 @@ describe('sendEmail (from defaulting)', () => {
     }
   });
 
-  it('returns INVALID_FROM for a malformed __NOSAM_EMAIL_FROM instead of guessing', async () => {
+  it('returns INVALID_FROM for a malformed __PLATFORM_EMAIL_FROM instead of guessing', async () => {
     const harness = createEmailTestHarness();
     try {
-      const result = await withRuntimeEnv({ __NOSAM_EMAIL_FROM: 'not-an-address' }, () =>
+      const result = await withRuntimeEnv({ __PLATFORM_EMAIL_FROM: 'not-an-address' }, () =>
         sendEmail({ to: 'b@y.dev', subject: 's', text: 't' }),
       );
       expect(result.ok).toBe(false);
@@ -429,7 +429,7 @@ describe('sendEmail (from defaulting)', () => {
     const harness = createEmailTestHarness();
     try {
       await withRuntimeEnv(
-        { __NOSAM_PROJECT_SLUG: 'acme', __NOSAM_EMAIL_DOMAIN: MAIL_DOMAIN },
+        { __PLATFORM_PROJECT_SLUG: 'acme', __PLATFORM_EMAIL_DOMAIN: MAIL_DOMAIN },
         () =>
           sendEmail({
             from: 'override@example.com',
@@ -474,16 +474,16 @@ describe('sendEmail (from defaulting)', () => {
     }
   });
 
-  it('returns INVALID_FROM (never a baked-in domain) when __NOSAM_EMAIL_DOMAIN is missing', async () => {
+  it('returns INVALID_FROM (never a baked-in domain) when __PLATFORM_EMAIL_DOMAIN is missing', async () => {
     const harness = createEmailTestHarness();
     try {
-      const result = await withRuntimeEnv({ __NOSAM_PROJECT_SLUG: 'acme' }, () =>
+      const result = await withRuntimeEnv({ __PLATFORM_PROJECT_SLUG: 'acme' }, () =>
         sendEmail({ to: 'b@y.dev', subject: 's', text: 't' }),
       );
       expect(result.ok).toBe(false);
       if (!result.ok && 'error' in result) {
         expect(result.error.code).toBe('INVALID_FROM');
-        expect(result.error.message).not.toContain('mail.void.cloud');
+        expect(result.error.message).not.toContain('mail.buildwf.dev');
       }
       expect(harness.messages).toHaveLength(0);
     } finally {
@@ -491,10 +491,10 @@ describe('sendEmail (from defaulting)', () => {
     }
   });
 
-  it('returns INVALID_FROM when __NOSAM_PROJECT_SLUG is missing but the domain is set', async () => {
+  it('returns INVALID_FROM when __PLATFORM_PROJECT_SLUG is missing but the domain is set', async () => {
     const harness = createEmailTestHarness();
     try {
-      const result = await withRuntimeEnv({ __NOSAM_EMAIL_DOMAIN: MAIL_DOMAIN }, () =>
+      const result = await withRuntimeEnv({ __PLATFORM_EMAIL_DOMAIN: MAIL_DOMAIN }, () =>
         sendEmail({ to: 'b@y.dev', subject: 's', text: 't' }),
       );
       expect(result.ok).toBe(false);
@@ -507,12 +507,12 @@ describe('sendEmail (from defaulting)', () => {
     }
   });
 
-  it('refuses to substitute a malformed __NOSAM_PROJECT_SLUG', async () => {
+  it('refuses to substitute a malformed __PLATFORM_PROJECT_SLUG', async () => {
     const harness = createEmailTestHarness();
     try {
       // Slug containing `@` would corrupt the resulting envelope address.
       const result = await withRuntimeEnv(
-        { __NOSAM_PROJECT_SLUG: 'evil@x.com', __NOSAM_EMAIL_DOMAIN: MAIL_DOMAIN },
+        { __PLATFORM_PROJECT_SLUG: 'evil@x.com', __PLATFORM_EMAIL_DOMAIN: MAIL_DOMAIN },
         () => sendEmail({ to: 'b@y.dev', subject: 's', text: 't' }),
       );
       expect(result.ok).toBe(false);
@@ -547,7 +547,7 @@ describe('sendEmail (from defaulting)', () => {
     try {
       const slug = 'a'.repeat(56);
       const result = await withRuntimeEnv(
-        { __NOSAM_PROJECT_SLUG: slug, __NOSAM_EMAIL_DOMAIN: MAIL_DOMAIN },
+        { __PLATFORM_PROJECT_SLUG: slug, __PLATFORM_EMAIL_DOMAIN: MAIL_DOMAIN },
         () => sendEmail({ to: 'b@y.dev', subject: 's', text: 't' }),
       );
       expect(result.ok).toBe(true);
@@ -562,7 +562,7 @@ describe('sendEmail (from defaulting)', () => {
     try {
       const slug = 'a'.repeat(57);
       const result = await withRuntimeEnv(
-        { __NOSAM_PROJECT_SLUG: slug, __NOSAM_EMAIL_DOMAIN: MAIL_DOMAIN },
+        { __PLATFORM_PROJECT_SLUG: slug, __PLATFORM_EMAIL_DOMAIN: MAIL_DOMAIN },
         () => sendEmail({ to: 'b@y.dev', subject: 's', text: 't' }),
       );
       expect(result.ok).toBe(false);
@@ -1180,7 +1180,7 @@ describe('sendEmail (deprecated sendInDev)', () => {
     }
   });
 
-  // `bwf dev` binds neither `__NOSAM_PROXY` nor `SEND_EMAIL`, so there
+  // `bwf dev` binds neither `__PLATFORM_PROXY` nor `SEND_EMAIL`, so there
   // `sendInDev: true` reaches no transport.
   it('returns BINDING_MISSING under a real `bwf dev` env (no transport to fall through to)', async () => {
     const assets = {
@@ -1224,7 +1224,7 @@ describe('sendEmail platform idempotency', () => {
         ids: [{ recipient: 'b@y.dev', messageId: 'cf-1', state: 'provider_accepted' }],
       },
     }));
-    const result = await withRuntimeEnv({ __NOSAM_PROXY: proxy, ...PROXY_ENV_KEYS }, () =>
+    const result = await withRuntimeEnv({ __PLATFORM_PROXY: proxy, ...PROXY_ENV_KEYS }, () =>
       sendEmail({ ...options, idempotencyKey: 'invoice:42' }),
     );
     expect(calls[0]?.body).toMatchObject({ idempotencyKey: 'invoice:42' });
@@ -1251,7 +1251,7 @@ describe('sendEmail platform idempotency', () => {
         ],
       },
     }));
-    const result = await withRuntimeEnv({ __NOSAM_PROXY: proxy, ...PROXY_ENV_KEYS }, () =>
+    const result = await withRuntimeEnv({ __PLATFORM_PROXY: proxy, ...PROXY_ENV_KEYS }, () =>
       sendEmail(options),
     );
     expect(result).toMatchObject({

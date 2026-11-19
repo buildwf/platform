@@ -34,7 +34,7 @@ vi.mock('@voidzero-dev/vite-plus-prompts', () => ({
 
 function createClient() {
   return {
-    apiUrl: 'https://nosam.buildwithfriends.dev',
+    apiUrl: 'https://platform.buildwithfriends.dev',
     createProject: vi.fn(),
     listProjectChoices: vi.fn(),
   } as unknown as PlatformClient & {
@@ -47,11 +47,11 @@ describe('promptDeployProjectConfig', () => {
   let root: string;
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'nosam-deploy-project-'));
-    process.env.NOSAM_PLATFORM_REGISTRY_DIR = join(root, 'registry');
+    root = mkdtempSync(join(tmpdir(), 'platform-deploy-project-'));
+    process.env.PLATFORM_REGISTRY_DIR = join(root, 'registry');
     savePlatformConnection({
       accountId: null,
-      apiUrl: 'https://nosam.buildwithfriends.dev',
+      apiUrl: 'https://platform.buildwithfriends.dev',
       applicationDomain: 'void.app',
       displayName: 'bwf Cloud',
       installationId: null,
@@ -69,7 +69,7 @@ describe('promptDeployProjectConfig', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
-    delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+    delete process.env.PLATFORM_REGISTRY_DIR;
     rmSync(root, { recursive: true, force: true });
   });
 
@@ -82,7 +82,7 @@ describe('promptDeployProjectConfig', () => {
       const projectFile = join(root, '.bwf/project.json');
       mkdirSync(join(root, '.bwf'));
       const original = JSON.stringify({
-        platform: 'nosam',
+        platform: 'platform',
         platformUrl: 'https://original.example.com',
         projectId: 'original',
         slug: 'original',
@@ -134,8 +134,8 @@ describe('promptDeployProjectConfig', () => {
     expect(config).toEqual({ projectId: 'proj_new', slug: 'new-app' });
     expect(JSON.parse(readFileSync(join(root, '.bwf', 'project.json'), 'utf-8'))).toEqual({
       applicationDomain: 'void.app',
-      platform: 'nosam',
-      platformUrl: 'https://nosam.buildwithfriends.dev',
+      platform: 'platform',
+      platformUrl: 'https://platform.buildwithfriends.dev',
       proxyUrl: 'https://proxy.void.cloud',
       ...config,
     });

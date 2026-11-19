@@ -1,4 +1,4 @@
-# @nosamcloud/email-gateway
+# @platform-service/email-gateway
 
 The platform's dedicated inbound email Worker. Its source is packaged with the
 core Workers in `@builtbyfriends/platform`; the installer deploys it and enables platform

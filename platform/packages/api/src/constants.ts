@@ -1,6 +1,6 @@
 export const SITE_DOMAIN = 'buildwf.dev';
-export const DEFAULT_DASHBOARD_URL = 'https://nosam.buildwithfriends.dev';
-export const DEFAULT_DISPATCH_NAMESPACE = 'nosam-users';
+export const DEFAULT_DASHBOARD_URL = 'https://platform.buildwithfriends.dev';
+export const DEFAULT_DISPATCH_NAMESPACE = 'platform-users';
 export const MAX_SECRET_NAME_LENGTH = 256;
 export const MAX_SECRET_VALUE_BYTES = 128 * 1024; // 128 KB
 

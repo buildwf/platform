@@ -92,15 +92,15 @@ describe('parseDeployArgs', () => {
   );
 
   it('parses --platform bwf', () => {
-    expect(parseDeployArgs(['--platform', 'nosam']).platform).toBe('nosam');
+    expect(parseDeployArgs(['--platform', 'platform']).platform).toBe('platform');
   });
 
   it('rejects an unsupported or missing platform', () => {
     expect(() => parseDeployArgs(['--platform', 'other'])).toThrow(
-      "deploy: --platform must be 'cloudflare' or 'nosam'.",
+      "deploy: --platform must be 'cloudflare' or 'platform'.",
     );
     expect(() => parseDeployArgs(['--platform'])).toThrow(
-      "deploy: --platform requires a value ('cloudflare' or 'nosam').",
+      "deploy: --platform requires a value ('cloudflare' or 'platform').",
     );
   });
 
@@ -122,7 +122,7 @@ describe('parseDeployArgs', () => {
     expect(() => parseDeployArgs(['--provision'])).toThrow(
       'deploy: --provision requires --platform cloudflare.',
     );
-    expect(() => parseDeployArgs(['--platform', 'nosam', '--provision'])).toThrow(
+    expect(() => parseDeployArgs(['--platform', 'platform', '--provision'])).toThrow(
       'deploy: --provision requires --platform cloudflare.',
     );
   });
@@ -135,7 +135,7 @@ describe('parseDeployArgs', () => {
     expect(() => parseDeployArgs(['--require-email'])).toThrow(
       'deploy: --require-email requires --platform cloudflare.',
     );
-    expect(() => parseDeployArgs(['--platform', 'nosam', '--require-email'])).toThrow(
+    expect(() => parseDeployArgs(['--platform', 'platform', '--require-email'])).toThrow(
       'deploy: --require-email requires --platform cloudflare.',
     );
   });

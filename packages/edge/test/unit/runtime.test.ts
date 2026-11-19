@@ -27,7 +27,7 @@ describe('createStaticEdgeHandler', () => {
   it('answers the deployment readiness probe without touching assets', async () => {
     const binding = assets({});
     const response = await createStaticEdgeHandler({}).fetch(
-      new Request('https://example.com/__nosam/ready'),
+      new Request('https://example.com/__platform/ready'),
       { ASSETS: binding },
     );
 
@@ -40,7 +40,7 @@ describe('createStaticEdgeHandler', () => {
     const env = { ASSETS: assets({}), USER_VERSION: { id: 'served-version' } };
     const response = await createStaticEdgeHandler({
       versionMetadataBinding: 'USER_VERSION',
-    }).fetch(new Request('https://example.com/__nosam/ready'), env);
+    }).fetch(new Request('https://example.com/__platform/ready'), env);
     expect(await response.json()).toEqual({ ready: true, versionId: 'served-version' });
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(env.ASSETS.fetch).not.toHaveBeenCalled();
@@ -88,18 +88,18 @@ describe('createStaticEdgeHandler', () => {
     const request = binding.fetch.mock.calls[0]![0];
     expect(new URL(request.url).pathname).toBe('/new');
     expect(new URL(request.url).search).toBe('?q=1');
-    expect(request.headers.get('x-nosam-original-url')).toBe('https://example.com/old?q=1');
+    expect(request.headers.get('x-platform-original-url')).toBe('https://example.com/old?q=1');
   });
 
   it('runs fallback rewrites after an asset miss and applies effective-path headers', async () => {
     const binding = assets({ '/404.html': new Response('missing', { status: 404 }) });
     const response = await createStaticEdgeHandler({
       fallbackRules: [{ source: '/*', destination: '/404.html', status: 200 }],
-      headerRules: [{ pattern: '/404.html', headers: [['x-nosam-fallback', '1']] }],
+      headerRules: [{ pattern: '/404.html', headers: [['x-platform-fallback', '1']] }],
     }).fetch(new Request('https://example.com/nope'), { ASSETS: binding });
 
     expect(await response.text()).toBe('missing');
-    expect(response.headers.get('x-nosam-fallback')).toBe('1');
+    expect(response.headers.get('x-platform-fallback')).toBe('1');
     expect(binding.fetch).toHaveBeenCalledTimes(2);
   });
 

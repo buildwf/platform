@@ -30,7 +30,7 @@ vi.mock('@voidzero-dev/vite-plus-prompts', async (original) => ({
 }));
 vi.mock('../../src/cli/login.ts', () => ({ promptForLoginToken: login }));
 vi.mock('../../src/cli/keyring.ts', () => ({
-  readKeyringPassword: (service: string) => (service === 'dev.nosam.cli' ? 'saved-token' : null),
+  readKeyringPassword: (service: string) => (service === 'dev.platform.cli' ? 'saved-token' : null),
   writeKeyringPassword: vi.fn(),
   deleteKeyringPassword: vi.fn(),
 }));
@@ -57,19 +57,19 @@ const requests: Array<{
 const originalTTY = process.stdin.isTTY;
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'nosam-deploy-target-'));
+  root = mkdtempSync(join(tmpdir(), 'platform-deploy-target-'));
   projectFile = join(root, '.bwf/project.json');
   assets = join(root, 'public');
   mkdirSync(join(root, '.bwf'));
   mkdirSync(assets);
   writeFileSync(join(assets, 'index.html'), '<h1>My app</h1>');
   writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'my-app' }));
-  vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', join(root, 'registry'));
+  vi.stubEnv('PLATFORM_REGISTRY_DIR', join(root, 'registry'));
   vi.stubEnv('BWF_PROJECT', undefined);
   vi.stubEnv('BWF_TOKEN', 'alternate-token');
   vi.stubEnv('BWF_API_URL', alternateOrigin);
-  vi.stubEnv('NOSAM_ACCESS_CREDENTIALS', undefined);
-  vi.stubEnv('NOSAM_ACCESS_ORIGIN', undefined);
+  vi.stubEnv('PLATFORM_ACCESS_CREDENTIALS', undefined);
+  vi.stubEnv('PLATFORM_ACCESS_ORIGIN', undefined);
   for (const apiUrl of [alternateOrigin, originalOrigin]) {
     savePlatformConnection({
       apiUrl,
@@ -142,7 +142,7 @@ beforeEach(() => {
             {
               headers: {
                 'Content-Type': 'application/x-ndjson',
-                'x-nosam-deployment-id': 'deploy-test',
+                'x-platform-deployment-id': 'deploy-test',
               },
             },
           );
@@ -163,7 +163,7 @@ function saveOriginal(selection: Record<string, unknown> = {}) {
   const value =
     JSON.stringify(
       {
-        platform: 'nosam',
+        platform: 'platform',
         platformUrl: originalOrigin,
         projectId: 'project-original',
         slug: 'my-app',
@@ -176,7 +176,7 @@ function saveOriginal(selection: Record<string, unknown> = {}) {
   return value;
 }
 const deploy = () =>
-  runDeploy(root, { platform: 'nosam', projectSlug: 'my-app', dir: assets, skipBuild: true });
+  runDeploy(root, { platform: 'platform', projectSlug: 'my-app', dir: assets, skipBuild: true });
 
 it('deploys to another connected platform without sending the original project ID or changing its link', async () => {
   const saved = saveOriginal();
@@ -241,7 +241,7 @@ it.each(['cloudflare', 'none', 'other-platform', 'same-platform'])(
         ? saveOriginal({ platformUrl: alternateOrigin, slug: 'original-app' })
         : JSON.stringify(
             selection === 'other-platform'
-              ? { platform: 'nosam', platformUrl: originalOrigin }
+              ? { platform: 'platform', platformUrl: originalOrigin }
               : { platform: selection },
           ) + '\n';
     writeFileSync(projectFile, saved);
@@ -256,7 +256,7 @@ it('still saves the first project link when no default is configured', async () 
   missing = true;
   await deploy();
   expect(JSON.parse(readFileSync(projectFile, 'utf8'))).toMatchObject({
-    platform: 'nosam',
+    platform: 'platform',
     platformUrl: alternateOrigin,
     projectId: 'project-alternate',
     slug: 'my-app',
@@ -267,7 +267,7 @@ it('reuses a newly established first link when authentication expires during dep
   vi.stubEnv('BWF_TOKEN', undefined);
   Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
   expirePreflight = true;
-  await runDeploy(root, { platform: 'nosam', dir: assets, skipBuild: true });
+  await runDeploy(root, { platform: 'platform', dir: assets, skipBuild: true });
   expect(login).toHaveBeenCalledOnce();
   expect(
     vi.mocked(intro).mock.calls.map(([message]) => stripVTControlCharacters(message!)),
@@ -287,7 +287,7 @@ it('requires an explicit project before borrowing a different platform’s linke
   const saved = saveOriginal();
   vi.stubEnv('BWF_TOKEN', undefined);
   oidcAvailable.mockReturnValue(true);
-  await expect(runDeploy(root, { platform: 'nosam', dir: assets })).rejects.toThrow('--project');
+  await expect(runDeploy(root, { platform: 'platform', dir: assets })).rejects.toThrow('--project');
   expect(exchangeOidc).not.toHaveBeenCalled();
   expect(requests).toEqual([]);
   expect(readFileSync(projectFile, 'utf8')).toBe(saved);

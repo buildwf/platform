@@ -95,7 +95,7 @@ export function transformWorkerRequireBundle(
       continue;
     }
     pgpassCalls++;
-    edits.push({ start: node.start!, end: node.end!, replacement: '__nosamPgpassNoop' });
+    edits.push({ start: node.start!, end: node.end!, replacement: '__platformPgpassNoop' });
   }
   if (code.includes('createRequire') && !hasRequireBinding) {
     throw new Error(
@@ -118,6 +118,6 @@ export function transformWorkerRequireBundle(
     );
   }
   return pgpassCalls > 0
-    ? `const __nosamPgpassNoop = Object.assign(function pgpass(_connectionInfo, callback) { callback(undefined); }, { warnTo() {} });\n${transformed}`
+    ? `const __platformPgpassNoop = Object.assign(function pgpass(_connectionInfo, callback) { callback(undefined); }, { warnTo() {} });\n${transformed}`
     : transformed;
 }

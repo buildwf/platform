@@ -168,7 +168,7 @@ describe('platform installation planning', () => {
     const listQueues = vi.fn(async () => []);
     const old = await createPlatformInstallPlan(client({ listQueues }), input, null);
     expect(old.actions).not.toContainEqual(expect.objectContaining({ key: 'deployment-queue' }));
-    expect(listQueues.mock.calls).not.toContainEqual(['account', 'nosam-example-deployments']);
+    expect(listQueues.mock.calls).not.toContainEqual(['account', 'platform-example-deployments']);
     const current = await createPlatformInstallPlan(client({ listQueues }), input, null, {
       deploymentExecution: true,
     });
@@ -177,10 +177,10 @@ describe('platform installation planning', () => {
         action: 'create',
         key: 'deployment-queue',
         kind: 'queue',
-        name: 'nosam-example-deployments',
+        name: 'platform-example-deployments',
       }),
     );
-    expect(listQueues.mock.calls).toContainEqual(['account', 'nosam-example-deployments']);
+    expect(listQueues.mock.calls).toContainEqual(['account', 'platform-example-deployments']);
   });
 
   it('rejects a deployment Queue name collision without installation ownership', async () => {
@@ -188,7 +188,7 @@ describe('platform installation planning', () => {
       createPlatformInstallPlan(
         client({
           listQueues: async (_account: string, name: string) =>
-            name === 'nosam-example-deployments' ? [{ id: 'someone-elses-queue', name }] : [],
+            name === 'platform-example-deployments' ? [{ id: 'someone-elses-queue', name }] : [],
         }),
         input,
         null,
@@ -205,7 +205,7 @@ describe('platform installation planning', () => {
         ...manifest.deployment,
         resources: {
           ...manifest.deployment.resources,
-          deploymentQueue: 'nosam-example-deployments-legacy',
+          deploymentQueue: 'platform-example-deployments-legacy',
         },
       }),
     };
@@ -249,7 +249,7 @@ describe('platform installation planning', () => {
     expect(queue).toMatchObject({
       action: 'reuse',
       id: 'deployment-queue-id',
-      name: 'nosam-example-deployments-legacy',
+      name: 'platform-example-deployments-legacy',
     });
     await expect(
       revalidatePlatformInstallAction(api, recovered, manifest, queue),
@@ -396,7 +396,7 @@ describe('platform installation planning', () => {
   it('adopts an explicitly selected Hyperdrive without coupling its name to the installation', async () => {
     const fake = client({
       listHyperdriveConfigs: async () => [
-        { id: 'other-id', name: 'nosam-example-database' },
+        { id: 'other-id', name: 'platform-example-database' },
         { id: 'terraform-id', name: 'company-managed-postgres' },
       ],
     });
@@ -478,7 +478,7 @@ describe('platform installation planning', () => {
       ]) {
         await expect(
           createPlatformInstallPlan(client(), { ...input, ...emailSettings }, existing),
-        ).rejects.toThrow('NOSAM_EMAIL_SENDER_DOMAIN and NOSAM_EMAIL_SHARED_ZONE_ID together');
+        ).rejects.toThrow('PLATFORM_EMAIL_SENDER_DOMAIN and PLATFORM_EMAIL_SHARED_ZONE_ID together');
       }
     },
   );
@@ -521,7 +521,7 @@ describe('platform installation planning', () => {
       createPlatformInstallPlan(client({ listWorkerNames }), input, enabled, {
         includeEmailGateway: true,
       }),
-    ).rejects.toThrow('NOSAM_EMAIL_SENDER_DOMAIN and NOSAM_EMAIL_SHARED_ZONE_ID');
+    ).rejects.toThrow('PLATFORM_EMAIL_SENDER_DOMAIN and PLATFORM_EMAIL_SHARED_ZONE_ID');
     expect(listWorkerNames).not.toHaveBeenCalled();
 
     const configured = await createPlatformInstallPlan(
@@ -722,7 +722,7 @@ describe('platform installation planning', () => {
       reason: expect.stringContaining('AI Gateway: Edit'),
     });
     const output = formatPlatformInstallPlan(preview);
-    expect(output).toMatch(/^inspect\s+ai-gateway\s+nosam-example$/m);
+    expect(output).toMatch(/^inspect\s+ai-gateway\s+platform-example$/m);
     expect(output).not.toContain('AI Gateway access will be verified');
     await expect(installPlatform(preview, {} as never, null, {} as never)).rejects.toThrow(
       'verified before provisioning',
@@ -1015,7 +1015,7 @@ describe('platform installation planning', () => {
     const fake = client();
     const plan = await createPlatformInstallPlan(fake, input, null);
     expect(plan.apiUrl).toBe(`https://${plan.deployment.resources.apiWorker}.example.workers.dev`);
-    expect(plan.deployment.resources.apiWorker).toBe('nosam-example-api');
+    expect(plan.deployment.resources.apiWorker).toBe('platform-example-api');
     expect(plan.actions).toHaveLength(16);
     expect(plan.actions.every((action) => action.action === 'create')).toBe(true);
   });
@@ -1028,7 +1028,7 @@ describe('platform installation planning', () => {
     expect(applied.deployment.resources).toEqual(planned.deployment.resources);
   });
 
-  it.each(['a', 'example', 'nosam-e2e', 'abcdef-team', 'x'.repeat(40)])(
+  it.each(['a', 'example', 'platform-e2e', 'abcdef-team', 'x'.repeat(40)])(
     'uses the full readable name without a resource suffix for %s',
     async (installationSlug) => {
       for (const workersDev of [false, true]) {
@@ -1042,7 +1042,7 @@ describe('platform installation planning', () => {
           null,
         );
         expect(plan.deployment.installationSlug).toBe(installationSlug);
-        expect(plan.deployment.resources.apiWorker).toBe(`nosam-${installationSlug}-api`);
+        expect(plan.deployment.resources.apiWorker).toBe(`platform-${installationSlug}-api`);
         for (const name of Object.values(plan.deployment.resources)) {
           expect(name.length).toBeLessThanOrEqual(63);
           expect(name).not.toContain('--');
@@ -1057,7 +1057,7 @@ describe('platform installation planning', () => {
       const existing = legacyInstallation(suffix);
       const plan = await createPlatformInstallPlan(client(), input, existing);
       expect(plan.deployment.resources).toEqual(existing.deployment.resources);
-      expect(plan.apiUrl).toBe(`https://nosam-example-${suffix}-api.example.workers.dev`);
+      expect(plan.apiUrl).toBe(`https://platform-example-${suffix}-api.example.workers.dev`);
     },
   );
 
@@ -1066,8 +1066,8 @@ describe('platform installation planning', () => {
       listKvNamespaces: async (_account: string, title: string) =>
         title.endsWith('-routing') ? [{ id: 'someone-else', name: title }] : [],
     },
-    { listWorkerNames: async () => ['nosam-example-api'] },
-    { listR2Buckets: async () => [{ id: 'nosam-example-assets', name: 'nosam-example-assets' }] },
+    { listWorkerNames: async () => ['platform-example-api'] },
+    { listR2Buckets: async () => [{ id: 'platform-example-assets', name: 'platform-example-assets' }] },
     { listQueues: async (_account: string, name: string) => [{ id: 'other-queue', name }] },
   ])('refuses existing account resources instead of allocating another name', async (inventory) => {
     await expect(createPlatformInstallPlan(client(inventory), input, null)).rejects.toThrow(
@@ -1099,7 +1099,7 @@ describe('platform installation planning', () => {
         manifest,
       ),
     ).rejects.toThrow('The resource was left untouched.');
-    expect(manifest.deployment.resources.assetsBucket).toBe('nosam-example-assets');
+    expect(manifest.deployment.resources.assetsBucket).toBe('platform-example-assets');
   });
 
   it('refuses to replace an existing Worker custom domain or DNS record', async () => {
@@ -1239,7 +1239,7 @@ describe('platform installation planning', () => {
     { pattern: 'ai.example.app/', script: null },
     { pattern: 'ai.example.app/api/*', script: 'existing-ai' },
     { pattern: 'https://ai.example.app/*', script: 'existing-ai' },
-    { pattern: 'ai.example.app/*', script: 'nosam-example-dispatch' },
+    { pattern: 'ai.example.app/*', script: 'platform-example-dispatch' },
   ])('rejects routes that leave custom-domain traffic exposed: $pattern', async (route) => {
     await expect(
       createPlatformInstallPlan(
@@ -1309,7 +1309,7 @@ describe('platform installation planning', () => {
         client({
           findZone: async () => activeZone,
           listWorkerDomains: async () => [
-            { hostname: 'ai.example.app', id: 'custom-domain', service: 'nosam-example-dispatch' },
+            { hostname: 'ai.example.app', id: 'custom-domain', service: 'platform-example-dispatch' },
           ],
         }),
         input,
@@ -1774,7 +1774,7 @@ describe('platform installation planning', () => {
         id: 'created-before-crash',
         key: 'routing-kv',
         kind: 'kv-namespace',
-        name: 'nosam-example-routing',
+        name: 'platform-example-routing',
         ownership: 'created',
         state: 'ready',
       },
@@ -1784,7 +1784,7 @@ describe('platform installation planning', () => {
       client({
         getKvValue: async () => JSON.stringify(manifest),
         listKvNamespaces: async (_account: string, title: string) =>
-          title === 'nosam-example-routing' ? [{ id: 'created-before-crash', name: title }] : [],
+          title === 'platform-example-routing' ? [{ id: 'created-before-crash', name: title }] : [],
       }),
       input,
       local,
@@ -1854,7 +1854,7 @@ describe('platform installation planning', () => {
         id: 'missing-routing',
         key: 'routing-kv',
         kind: 'kv-namespace',
-        name: 'nosam-example-routing',
+        name: 'platform-example-routing',
         ownership: 'created',
         state: 'ready',
       },
@@ -1906,7 +1906,7 @@ describe('platform installation planning', () => {
         id: 'external-routing',
         key: 'routing-kv',
         kind: 'kv-namespace',
-        name: 'nosam-example-routing',
+        name: 'platform-example-routing',
         ownership: 'adopted',
         state: 'ready',
       },

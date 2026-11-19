@@ -17,7 +17,7 @@ describe('routeUrl types', () => {
     expectTypeOf<'/route-types/:id'>().toMatchTypeOf<RoutePath>();
     routeUrl('/route-types', { query: { page: 1, tags: ['one', 'two'] }, hash: 'heading' });
     routeUrl('/route-types/:id', { params: { id: '123' } });
-    routeUrl('/route-types/:org/:id', { params: { org: 'nosam', id: 123 } });
+    routeUrl('/route-types/:org/:id', { params: { org: 'platform', id: 123 } });
     routeUrl('/route-types/files/:path{.+}', { params: { path: 'a/b' } });
     routeUrl('/route-types/files/*', { params: { '*': 'a/b' } });
     const options: RouteOptions<'/route-types/:id'> = { params: { id: '123' } };

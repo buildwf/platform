@@ -9,11 +9,11 @@ import {
 describe('internal binding filtering (real implementation)', () => {
   const testEnv = {
     DB: 'd1-binding',
-    __NOSAM_PROXY_TOKEN: 'secret-token',
+    __PLATFORM_PROXY_TOKEN: 'secret-token',
     __PROJECT_ID: 'proj_123',
   };
 
-  it.each(['__NOSAM_PROXY_TOKEN', '__PROJECT_ID'])('hides %s from every env accessor', (name) => {
+  it.each(['__PLATFORM_PROXY_TOKEN', '__PROJECT_ID'])('hides %s from every env accessor', (name) => {
     withRuntimeEnv(testEnv, () => {
       const env = getRuntimeEnv();
       expect(env[name]).toBeUndefined();

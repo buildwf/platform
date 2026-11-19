@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vite-plus/test';
-// The tail worker owns the `nosam_logs` row shape and the script-name split.
+// The tail worker owns the `platform_logs` row shape and the script-name split.
 // Import its real implementation so the two cannot drift apart silently — a
 // "keep these in sync" comment does not hold, an assertion does.
 import { parseScriptName } from '../../../tail/src/index.ts';
@@ -62,7 +62,7 @@ describe('splitWorkerName', () => {
 
   it('returns null for a name dispatch must never attribute to a project', () => {
     expect(splitWorkerName('')).toBeNull();
-    expect(splitWorkerName('nosam-dispatch')).toBeNull();
+    expect(splitWorkerName('platform-dispatch')).toBeNull();
   });
 
   // The whole feature rests on writing the SAME `index1` the tail worker writes.
@@ -262,13 +262,13 @@ describe('recordPlatformLog with minimal runtime logs', () => {
 });
 
 // Analytics Engine caps the SUM of a data point's blobs at 16 KB (raised from
-// 5 KB in June 2025 — `nosam_logs` holds rows of 13,695 bytes today, which
+// 5 KB in June 2025 — `platform_logs` holds rows of 13,695 bytes today, which
 // proves the higher cap is live). There is NO per-blob limit. A data point over
 // the cap is dropped, and `recordPlatformLog` swallows the failure by design,
 // so an unbounded field would silently lose the very row this feature adds.
 //
 // The exposure is real, not theoretical: the longest URL already recorded in
-// `nosam_logs` is 6,703 bytes, and this row would carry it twice — once raw in
+// `platform_logs` is 6,703 bytes, and this row would carry it twice — once raw in
 // blob4 and once as the pathname inside the blob2 message.
 describe('recordPlatformLog blob bounds', () => {
   const encoder = new TextEncoder();

@@ -13,7 +13,7 @@ import { findBindingNameOwner } from './wrangler.ts';
 export const SEND_EMAIL_BINDING = 'SEND_EMAIL';
 
 /** The root-config `vars` key carrying `bwf.config.ts` `email.from` into the worker. */
-export const EMAIL_FROM_VAR = '__NOSAM_EMAIL_FROM';
+export const EMAIL_FROM_VAR = '__PLATFORM_EMAIL_FROM';
 
 const CLOUDFLARE_API_BASE_URL = 'https://api.cloudflare.com/client/v4';
 
@@ -71,7 +71,7 @@ export interface EmailCloudflareInputs {
   existingSendEmail?: Array<{ name?: unknown }>;
   /** Existing root-config top-level `addresses` array (verbatim), if any. */
   existingAddresses?: unknown;
-  /** Existing root-config `vars` object (verbatim) — `__NOSAM_EMAIL_FROM` is compared to `from`. */
+  /** Existing root-config `vars` object (verbatim) — `__PLATFORM_EMAIL_FROM` is compared to `from`. */
   existingVars?: Record<string, unknown>;
   /** Writer refusals (`findEmailConfigConflicts`); each blocks before the account changes. */
   configConflicts?: Array<string>;
@@ -85,7 +85,7 @@ export interface EmailCloudflareInputs {
 }
 
 /**
- * Config shapes the writer would refuse for `SEND_EMAIL` and `__NOSAM_EMAIL_FROM`, checked
+ * Config shapes the writer would refuse for `SEND_EMAIL` and `__PLATFORM_EMAIL_FROM`, checked
  * before anything is asked. The writer keeps the same guard, since the file can change first.
  */
 export function findEmailConfigConflicts(config: Record<string, unknown>): Array<string> {
@@ -458,7 +458,7 @@ export interface EmailPreflight {
     absent: Array<string>;
   };
   binding: { state: 'present' | 'absent' | 'foreign'; foreignName?: string };
-  /** Root-config `vars.__NOSAM_EMAIL_FROM` against `from` — a config row, not an account row. */
+  /** Root-config `vars.__PLATFORM_EMAIL_FROM` against `from` — a config row, not an account row. */
   sender: { state: 'ready' | 'stale' | 'absent' };
   addressesOwnership: { state: 'absent' | 'mine' | 'foreign'; foreign: Array<string> };
   /**

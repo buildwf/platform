@@ -18,14 +18,14 @@ it('migrates and validates in one uncredentialed process and removes its scratch
     'CLOUDFLARE_API_TOKEN',
     'CF_API_TOKEN',
     'WRANGLER_API_TOKEN',
-    'NOSAM_PLATFORM_TOKEN',
+    'PLATFORM_TOKEN',
     'DATABASE_URL',
-    'NOSAM_ACCESS_TOKEN',
+    'PLATFORM_ACCESS_TOKEN',
   ]) {
     vi.stubEnv(key, 'synthetic-credential');
   }
   const raw = {
-    name: 'nosam-migrate-test',
+    name: 'platform-migrate-test',
     compatibility_date: '2026-09-29',
     vars: { MESSAGE: 'hello' },
   };
@@ -43,7 +43,7 @@ it('migrates and validates in one uncredentialed process and removes its scratch
   expect(args).toContain(import.meta.resolve('@cloudflare/codemods'));
   expect(options).toMatchObject({ env: { CF_DELEGATION: '1' }, timeout: 30_000 });
   for (const key of Object.keys(process.env)) {
-    if (/^(?:CLOUDFLARE|CF_|WRANGLER|NOSAM_PLATFORM_|DATABASE_URL|NOSAM_ACCESS_)/i.test(key)) {
+    if (/^(?:CLOUDFLARE|CF_|WRANGLER|PLATFORM_|DATABASE_URL|PLATFORM_ACCESS_)/i.test(key)) {
       if (key !== 'CF_DELEGATION') {
         expect(options!.env).not.toHaveProperty(key);
       }
@@ -55,7 +55,7 @@ it('migrates and validates in one uncredentialed process and removes its scratch
 it('rejects unresolved blocking follow-ups instead of silently dropping settings', () => {
   expect(() =>
     migrateBuiltWranglerConfig({
-      name: 'nosam-migrate-test',
+      name: 'platform-migrate-test',
       compatibility_date: '2026-09-29',
       routes: [{ pattern: 'example.com', custom_domain: true, zone_id: 'zone-id' }],
     }),

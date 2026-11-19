@@ -22,7 +22,7 @@ describe('writeDrizzleConfig', () => {
   let root: string;
 
   beforeEach(() => {
-    root = join(tmpdir(), `nosam-drizzle-cfg-${Date.now()}`);
+    root = join(tmpdir(), `platform-drizzle-cfg-${Date.now()}`);
     mkdirSync(join(root, '.bwf'), { recursive: true });
     mkdirSync(join(root, 'db'), { recursive: true });
     writeFileSync(join(root, 'db/schema.ts'), 'export const users = {};');
@@ -98,7 +98,7 @@ describe('withPrivateDrizzleConfig', () => {
   const dbUrl = 'postgres://user:secret@db.example.com:5432/app';
 
   beforeEach(() => {
-    root = join(tmpdir(), `nosam-drizzle-private-${Date.now()}`);
+    root = join(tmpdir(), `platform-drizzle-private-${Date.now()}`);
     mkdirSync(join(root, 'db'), { recursive: true });
     writeFileSync(join(root, 'db/schema.ts'), 'export const users = {};');
   });

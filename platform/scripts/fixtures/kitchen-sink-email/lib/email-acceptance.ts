@@ -27,9 +27,9 @@ export function acceptEmail(route: string) {
       await replyEmail(message, { text: `Platform email acceptance reply: ${subject}` });
     }
     if (subject.startsWith('FORWARD ')) {
-      const destination = parsed.headers.find(({ key }) => key === 'x-nosam-e2e-forward')?.value;
+      const destination = parsed.headers.find(({ key }) => key === 'x-platform-e2e-forward')?.value;
       if (!destination) {
-        message.setReject('x-nosam-e2e-forward is required for this test');
+        message.setReject('x-platform-e2e-forward is required for this test');
         return;
       }
       await message.forward(destination);

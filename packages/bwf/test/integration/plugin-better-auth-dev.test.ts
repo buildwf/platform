@@ -18,7 +18,7 @@ afterEach(() => {
 
 describe('bwf dev better-auth module', () => {
   it('loads one OAuth state module for the worker runtime and app code', async () => {
-    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'nosam-better-auth-')));
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'platform-better-auth-')));
     roots.push(root);
     // The package export is `dist/index.mjs`.
     const betterAuthEntry = fileURLToPath(import.meta.resolve('better-auth'));
@@ -36,7 +36,7 @@ describe('bwf dev better-auth module', () => {
         worker: { compatibility_date: '2026-02-24', compatibility_flags: ['nodejs_compat'] },
       }),
     );
-    // An installed `nosam` is excluded from dependency optimization, so its import of
+    // An installed `platform` is excluded from dependency optimization, so its import of
     // better-auth stays on the package source. This probe is that file: the relative path
     // is the module the runtime reaches, and the route imports the public subpath a plugin uses.
     writeFileSync(

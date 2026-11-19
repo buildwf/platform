@@ -40,7 +40,7 @@ describe('Cloudflare static deployment', () => {
   });
 
   it('updates target fields, detaches worker-only configuration, and preserves migration history', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-static-config-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-static-config-'));
     const configPath = join(root, 'wrangler.jsonc');
     mkdirSync(join(root, 'dist'));
     writeFileSync(
@@ -100,7 +100,7 @@ describe('Cloudflare static deployment', () => {
   });
 
   it('writes authored html_handling instead of the default fallback', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-static-html-handling-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-static-html-handling-'));
     const configPath = join(root, 'wrangler.jsonc');
     writeFileSync(configPath, '{}\n');
 
@@ -120,7 +120,7 @@ describe('Cloudflare static deployment', () => {
   });
 
   it('writes the given run_worker_first and falls back to true', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-static-run-worker-first-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-static-run-worker-first-'));
     const configPath = join(root, 'wrangler.jsonc');
     writeFileSync(configPath, '{}\n');
     const input = {
@@ -134,10 +134,10 @@ describe('Cloudflare static deployment', () => {
 
     writeCloudflareStaticDeployConfig({
       ...input,
-      assetConfig: { not_found_handling: '404-page', run_worker_first: ['/__nosam', '/__nosam/*'] },
+      assetConfig: { not_found_handling: '404-page', run_worker_first: ['/__platform', '/__platform/*'] },
     });
     expect(parseRootWranglerConfig(configPath).assets).toMatchObject({
-      run_worker_first: ['/__nosam', '/__nosam/*'],
+      run_worker_first: ['/__platform', '/__platform/*'],
     });
 
     writeCloudflareStaticDeployConfig({
@@ -148,7 +148,7 @@ describe('Cloudflare static deployment', () => {
   });
 
   it('rejects duplicate keys before an edit can silently target the wrong member', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-static-duplicate-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-static-duplicate-'));
     const configPath = join(root, 'wrangler.jsonc');
     writeFileSync(configPath, '{"main":"first.mjs","main":"last.mjs"}\n');
 
@@ -167,7 +167,7 @@ describe('Cloudflare static deployment', () => {
   });
 
   it('preserves a UTF-8 BOM and fails closed rather than dropping nested comments', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-static-comments-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-static-comments-'));
     const configPath = join(root, 'wrangler.jsonc');
     const input = {
       configPath,
@@ -189,7 +189,7 @@ describe('Cloudflare static deployment', () => {
   });
 
   it('stages assets without routing files that the thin Worker already consumed', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-static-assets-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-static-assets-'));
     const sourceDirectory = join(root, 'public');
     const destinationDirectory = join(root, '.bwf/deploy/cloudflare/assets');
     mkdirSync(join(sourceDirectory, 'nested'), { recursive: true });

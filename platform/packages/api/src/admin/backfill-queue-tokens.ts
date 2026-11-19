@@ -13,7 +13,7 @@ export type BackfillQueueTokensOptions = Readonly<{
   dryRun?: boolean;
   /**
    * Override for tests. When set, replaces the live CF API call that
-   * reads `__NOSAM_PROXY_TOKEN` from the target worker's bindings.
+   * reads `__PLATFORM_PROXY_TOKEN` from the target worker's bindings.
    */
   fetchToken?: (workerName: string) => Promise<ProxyTokenLookup>;
 }>;
@@ -51,8 +51,8 @@ type QueueRoutingEntry = Readonly<{
 /**
  * Iterate every `queue:*` KV entry and stamp `proxyToken` on any entry
  * written before the dispatch relay started forwarding
- * `x-nosam-internal`. The stamped token is read from the target worker's
- * `__NOSAM_PROXY_TOKEN` binding so it survives `JWT_SECRET` rotation —
+ * `x-platform-internal`. The stamped token is read from the target worker's
+ * `__PLATFORM_PROXY_TOKEN` binding so it survives `JWT_SECRET` rotation —
  * a freshly `hmacSignState(projectId, currentSecret)` value would 401
  * any worker deployed before the rotation.
  *

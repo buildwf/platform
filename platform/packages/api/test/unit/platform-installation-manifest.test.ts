@@ -36,7 +36,7 @@ describe('platform installation manifest', () => {
         id: 'namespace-id',
         key: 'routing-kv',
         kind: 'kv-namespace',
-        name: 'nosam-test-platform-routing',
+        name: 'platform-test-platform-routing',
         ownership: 'created',
         state: 'ready',
       },

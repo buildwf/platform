@@ -51,11 +51,11 @@ export type Env = Readonly<{
   SEND_EMAIL: SendEmailBinding;
 
   /**
-   * Platform mail zone for this environment — `mail.void.cloud` in
-   * production, `mail.voidcloud.dev` in staging. Declared as a `vars`
+   * Platform mail zone for this environment — `mail.buildwf.dev` in
+   * production, `mail.staging.buildwf.dev` in staging. Declared as a `vars`
    * entry in every `wrangler.jsonc` scope (wrangler does not inherit vars
    * into a named env) and mirrored into deployed user workers as the
-   * `__NOSAM_EMAIL_DOMAIN` plain-text binding. Never defaulted in code: see
+   * `__PLATFORM_EMAIL_DOMAIN` plain-text binding. Never defaulted in code: see
    * `readSenderDomain` in `email.ts`.
    */
   EMAIL_SENDER_DOMAIN: string;

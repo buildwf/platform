@@ -1,13 +1,13 @@
 // Dev-only Vite plugin: owns the in-memory email buffer and serves
-// `/__nosam/inbox` routes for browsing captured messages. Activated when
+// `/__platform/inbox` routes for browsing captured messages. Activated when
 // binding inference detected `@builtbyfriends/bwf/email` usage.
 //
 // `sendEmail` runs in workerd, a separate OS process, so it POSTs each
-// captured message to `/__nosam/inbox/_capture` through its dev assets
+// captured message to `/__platform/inbox/_capture` through its dev assets
 // binding, which @cloudflare/vite-plugin wires into this middleware stack.
 //
 // Every route requires the project's dev-trigger token — the same one
-// `/__nosam/scheduled` and `/__nosam/queue` check. Vite's own host validation
+// `/__platform/scheduled` and `/__platform/queue` check. Vite's own host validation
 // only rejects DNS-rebinding hostnames: any IP-literal `Host` passes, so with
 // `--host` (or a shared port) every peer on the network could otherwise read
 // raw MIME (Bcc, attachments), clear the buffer, or plant captures.
@@ -47,7 +47,7 @@ export interface EmailDevInboxPluginOptions {
   /**
    * The per-project dev-trigger token (`.bwf/dev-trigger-token`), shared with
    * the cron/queue dev routes and injected into the worker as
-   * `__NOSAM_EMAIL_DEV_INBOX_TOKEN` so its capture POST can present it.
+   * `__PLATFORM_EMAIL_DEV_INBOX_TOKEN` so its capture POST can present it.
    */
   devTriggerToken: string;
 }
@@ -60,7 +60,7 @@ export function emailDevInboxPlugin(options: EmailDevInboxPluginOptions): Plugin
     `${DEV_INBOX_PREFIX}${path}?${DEV_INBOX_TOKEN_QUERY}=${encodeURIComponent(devTriggerToken)}`;
 
   return {
-    name: 'nosam:email-dev-inbox',
+    name: 'platform:email-dev-inbox',
     apply: 'serve',
     configureServer(server) {
       // The browser cannot add a header, so the inbox URL is printed with the
@@ -172,7 +172,7 @@ interface CaptureResponse {
 }
 
 /**
- * `POST /__nosam/inbox/_capture` — the worker's dev-inbox hop.
+ * `POST /__platform/inbox/_capture` — the worker's dev-inbox hop.
  *
  * Fails with a status the worker can distinguish, and only a success carries
  * the ack header, so the worker never mistakes an ordinary asset 200 for a

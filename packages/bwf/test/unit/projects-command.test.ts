@@ -13,7 +13,7 @@ vi.mock('../../src/cli/auth', async (importOriginal) => ({
 }));
 
 function createProjectRoot(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'nosam-project-'));
+  const dir = mkdtempSync(join(tmpdir(), 'platform-project-'));
   tempHomes.push(dir);
   return dir;
 }
@@ -30,7 +30,7 @@ describe('runProjectsCommand', () => {
   });
 
   afterEach(() => {
-    delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+    delete process.env.PLATFORM_REGISTRY_DIR;
     delete process.env.BWF_TOKEN;
     delete process.env.BWF_API_URL;
 
@@ -78,7 +78,7 @@ describe('runProjectsCommand', () => {
     expect(fetchMock).toHaveBeenCalledWith('https://api.example.test/projects', {
       headers: {
         Authorization: 'Bearer test-token',
-        'X-Nosam-CLI-Version': expect.stringMatching(/^\d+\.\d+\.\d+/) as unknown as string,
+        'X-Platform-CLI-Version': expect.stringMatching(/^\d+\.\d+\.\d+/) as unknown as string,
       },
       redirect: 'manual',
     });

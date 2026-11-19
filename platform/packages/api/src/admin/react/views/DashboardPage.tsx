@@ -64,7 +64,7 @@ function TopProjectsWidget({
   return (
     <AdminCard title="Top Projects by Traffic (last hour)">
       {projects.length > 0 ? (
-        <Table className="nosam-admin-top-projects-table" hasHover>
+        <Table className="platform-admin-top-projects-table" hasHover>
           <TableHeader>
             <TableRow>
               <TableHeaderCell>#</TableHeaderCell>
@@ -110,25 +110,25 @@ function TopProjectTableRow({
     <TableRow>
       <TableCell>{index + 1}</TableCell>
       <TableCell>
-        <div className="nosam-admin-top-project">
-          <div className="nosam-admin-top-project-heading">
+        <div className="platform-admin-top-project">
+          <div className="platform-admin-top-project-heading">
             <Link
-              className="nosam-admin-resource-link nosam-admin-top-project-name"
+              className="platform-admin-resource-link platform-admin-top-project-name"
               href={`/admin/projects/${project.id}`}
               title={project.slug}
             >
               {project.slug}
             </Link>
-            <span className="nosam-admin-top-project-type">{project.type}</span>
+            <span className="platform-admin-top-project-type">{project.type}</span>
           </div>
-          <div className="nosam-admin-top-project-meta">
+          <div className="platform-admin-top-project-meta">
             <ProjectUrlLink url={project.url ?? `https://${project.slug}.${siteDomain}`} />
           </div>
         </div>
       </TableCell>
       <TableCell>
         {project.owner_login ? (
-          <Link className="nosam-admin-resource-link" href={`/admin/users/${project.user_id}`}>
+          <Link className="platform-admin-resource-link" href={`/admin/users/${project.user_id}`}>
             {project.owner_login}
           </Link>
         ) : (
@@ -154,7 +154,7 @@ function DeferredTopProjects({
   const mounted = useSyncExternalStore(subscribeToClientRender, isClientRender, isServerRender);
   const fallback = (
     <AdminCard title="Top Projects by Traffic (last hour)">
-      <div className="nosam-admin-card-loading">
+      <div className="platform-admin-card-loading">
         <Skeleton width="100%" height={48} />
         <Skeleton width="100%" height={48} index={1} />
       </div>
@@ -182,7 +182,7 @@ export function DashboardPage({ platformName, username, healthCheckNames }: Dash
     <Layout platformName={platformName} title="Dashboard" username={username}>
       <Heading level={1}>Dashboard</Heading>
       <SystemStatusCard checkNames={healthCheckNames} />
-      <div className="nosam-admin-metrics">
+      <div className="platform-admin-metrics">
         <AdminCard title="Users" href="/admin/users">
           <Text type="display-3" display="block" hasTabularNumbers>
             {formatNumber(dashboard.userCount)}
@@ -199,7 +199,7 @@ export function DashboardPage({ platformName, username, healthCheckNames }: Dash
           </Text>
         </AdminCard>
       </div>
-      <PageStack className="nosam-admin-dashboard-sections">
+      <PageStack className="platform-admin-dashboard-sections">
         <DeferredTopProjects
           topProjects={dashboard.topProjects}
           siteDomain={dashboard.siteDomain}

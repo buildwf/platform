@@ -18,8 +18,8 @@
  *   BWF_TOKEN          project-scoped deploy JWT (consumed by `bwf deploy`).
  *                       Scrubbed from the install + any untrusted child env and
  *                       re-injected ONLY for the trusted `bwf deploy` spawn.
- *   BWF_API_URL        https://nosam.buildwithfriends.dev (or staging)
- *   NOSAM_PROXY_URL      Explicit platform resource proxy
+ *   BWF_API_URL        https://platform.buildwithfriends.dev (or staging)
+ *   PLATFORM_PROXY_URL      Explicit platform resource proxy
  *   BWF_PROJECT        project slug passed to `bwf deploy --project`
  *   CF_ACCESS_CLIENT_ID     staging CF Access service-token id (staging builds
  *   CF_ACCESS_CLIENT_SECRET only). Like BWF_TOKEN: scrubbed from untrusted
@@ -62,7 +62,7 @@ const PORT = 4000;
 // wiping one absolute path under each other is a race, not a flake. The container
 // never sets this: production is always `/tmp/build/src` (pinned by the
 // `childSpawnOptions` cwd assertion in build-manager.test.ts).
-const WORK_DIR = process.env.NOSAM_BUILD_WORK_DIR ?? '/tmp/build/src';
+const WORK_DIR = process.env.PLATFORM_BUILD_WORK_DIR ?? '/tmp/build/src';
 const LOG_FLUSH_MS = 500;
 // Hard timeout on each best-effort DO POST. Without it a hung DO connection would
 // stall the single-flight log flush forever (logging would silently stop for the
@@ -71,7 +71,7 @@ const LOG_FLUSH_MS = 500;
 const DO_POST_TIMEOUT_MS = 10000;
 // BuildManager injects BWF_CLI_VERSION. If absent, use the release manifest
 // copied into this image, never a mutable npm dist-tag or the untrusted app's manifest.
-export const DEFAULT_NOSAM_CLI_VERSION = bwfPackageJson.version;
+export const DEFAULT_PLATFORM_CLI_VERSION = bwfPackageJson.version;
 
 // --- source-download bounds --------------------------------------------------
 //
@@ -189,14 +189,14 @@ export function childSpawnOptions() {
 }
 
 /**
- * Pinned fallback version used when the repo has no local `nosam` to run via npx.
+ * Pinned fallback version used when the repo has no local `platform` to run via npx.
  * Reads BWF_CLI_VERSION (injected by BuildManager) at call time, falling back
  * to the baked-in default. Never `latest` — a moving dist-tag must not change
  * deploy behavior with no repo diff.
  * @returns {string}
  */
 function bwfFallbackVersion() {
-  return process.env.BWF_CLI_VERSION || DEFAULT_NOSAM_CLI_VERSION;
+  return process.env.BWF_CLI_VERSION || DEFAULT_PLATFORM_CLI_VERSION;
 }
 
 // --- mutable build state -----------------------------------------------------
@@ -1530,7 +1530,7 @@ async function downloadSourceAttempt(args) {
       headers: {
         authorization: `Bearer ${sourceToken}`,
         // GitHub codeload follows a redirect from api.github.com; UA keeps it happy.
-        'user-agent': 'nosam-build-agent',
+        'user-agent': 'platform-build-agent',
         accept: 'application/vnd.github+json',
       },
       redirect: 'follow',
@@ -1944,7 +1944,7 @@ export const SCRUBBED_ENV_VARS = [
   'BWF_TOKEN',
   'CF_ACCESS_CLIENT_ID',
   'CF_ACCESS_CLIENT_SECRET',
-  'NOSAM_ACCESS_CREDENTIALS',
+  'PLATFORM_ACCESS_CREDENTIALS',
 ];
 
 /**
@@ -2005,7 +2005,7 @@ export function resolveSourceBwfCli(root = WORK_DIR) {
   if (manifest.name !== '@builtbyfriends/bwf' || typeof manifest.bin?.bwf !== 'string') {
     return null;
   }
-  const cli = `${packageRoot}/${manifest.bin.nosam}`;
+  const cli = `${packageRoot}/${manifest.bin.platform}`;
   if (!existsSync(cli)) {
     throw new Error(
       'The workspace bwf CLI is not built. Run build:core during dependency installation.',
@@ -2047,8 +2047,8 @@ export async function runBuild(deps = {}) {
   // `node_modules` tree, so the deploy must run THROUGH the package manager
   // (`corepack yarn ...`) to activate the PnP runtime rather than bare npx.
   // `pnpPresent` only selects the RUNNER below — it must NOT be conflated with
-  // "void is locally resolvable": a PnP repo that does not declare `nosam` still
-  // needs the `yarn dlx bwf@<ver>` fetch fallback, so the local-nosam signal is
+  // "void is locally resolvable": a PnP repo that does not declare `platform` still
+  // needs the `yarn dlx bwf@<ver>` fetch fallback, so the local-platform signal is
   // an actual dependency check, not the mere presence of `.pnp.cjs`.
   //
   // Assigned AFTER the install step (below): a Yarn Berry PnP repo may not commit
@@ -2058,8 +2058,8 @@ export async function runBuild(deps = {}) {
   // `hasLocalBwf` and the runner selection both read it lazily (after install),
   // so a reassignable `let` is correct.
   let pnpPresent = false;
-  // Whether the repo DECLARES `nosam` as a dependency — the accurate "is void
-  // locally resolvable" signal under PnP, where `node_modules/.bin/nosam` never
+  // Whether the repo DECLARES `platform` as a dependency — the accurate "is void
+  // locally resolvable" signal under PnP, where `node_modules/.bin/platform` never
   // exists. Falls back to `false` on any read/parse error (→ fetch the CLI).
   const repoDeclaresBwf = () => {
     try {
@@ -2071,7 +2071,7 @@ export async function runBuild(deps = {}) {
   };
   const hasLocalBwf =
     deps.hasLocalBwf ??
-    (() => existsSync(`${WORK_DIR}/node_modules/.bin/nosam`) || (pnpPresent && repoDeclaresBwf()));
+    (() => existsSync(`${WORK_DIR}/node_modules/.bin/platform`) || (pnpPresent && repoDeclaresBwf()));
 
   try {
     // Capture the deploy token into a local, then drop it from the parent's heap
@@ -2099,7 +2099,7 @@ export async function runBuild(deps = {}) {
     delete process.env.CF_ACCESS_CLIENT_ID;
     delete process.env.CF_ACCESS_CLIENT_SECRET;
     const apiUrl = requireEnv('BWF_API_URL');
-    const proxyUrl = process.env.NOSAM_PROXY_URL;
+    const proxyUrl = process.env.PLATFORM_PROXY_URL;
     const project = requireEnv('BWF_PROJECT');
 
     if (cancelled) {
@@ -2168,7 +2168,7 @@ export async function runBuild(deps = {}) {
     // 4. Run the REAL deploy via the built CLI in Platform source checkouts or the
     //    repo-local CLI in consumer projects. `npx` resolves the
     //    version pinned in the repo's package.json (installed in step 2); if
-    //    the repo has no local `nosam`, npx fetches the pinned fallback. The
+    //    the repo has no local `platform`, npx fetches the pinned fallback. The
     //    --no-install guard is intentionally omitted so the fallback path works.
     //    The deploy child is the ONE trusted step that needs the deploy token,
     //    so BWF_TOKEN is RE-INJECTED here on top of the scrubbed base env (it
@@ -2211,16 +2211,16 @@ export async function runBuild(deps = {}) {
     } else if (pnpPresent) {
       deployCmd = 'corepack';
       deployArgs = localBwf
-        ? ['yarn', 'nosam', 'deploy', '--project', project]
-        : ['yarn', 'dlx', `nosam@${fallbackVersion}`, 'deploy', '--project', project];
+        ? ['yarn', 'platform', 'deploy', '--project', project]
+        : ['yarn', 'dlx', `platform@${fallbackVersion}`, 'deploy', '--project', project];
       if (!localBwf) {
         agentLog(`PnP repo; falling back to yarn dlx bwf@${fallbackVersion}`);
       }
     } else {
       deployCmd = 'npx';
       deployArgs = localBwf
-        ? ['--yes', 'nosam', 'deploy', '--project', project]
-        : ['--yes', `nosam@${fallbackVersion}`, 'deploy', '--project', project];
+        ? ['--yes', 'platform', 'deploy', '--project', project]
+        : ['--yes', `platform@${fallbackVersion}`, 'deploy', '--project', project];
       if (!localBwf) {
         agentLog(`no local void CLI found; falling back to npx bwf@${fallbackVersion}`);
       }
@@ -2238,7 +2238,7 @@ export async function runBuild(deps = {}) {
         ...builderCacheEnv(),
         CF_ACCESS_CLIENT_ID: cfAccessClientId,
         CF_ACCESS_CLIENT_SECRET: cfAccessClientSecret,
-        NOSAM_ACCESS_ORIGIN: apiUrl,
+        PLATFORM_ACCESS_ORIGIN: apiUrl,
       }),
     });
     if (connectCode !== 0) {
@@ -2266,8 +2266,8 @@ export async function runBuild(deps = {}) {
         ...nonInteractiveEnv(),
         ...builderCacheEnv(),
         BWF_TOKEN: bwfToken,
-        NOSAM_ACCESS_ORIGIN: apiUrl,
-        NOSAM_ACCESS_CREDENTIALS: accessCredentials,
+        PLATFORM_ACCESS_ORIGIN: apiUrl,
+        PLATFORM_ACCESS_CREDENTIALS: accessCredentials,
         // Re-inject the staging CF Access service token (undefined off staging,
         // which sanitizeChildEnv drops) so `bwf deploy` can pass CF Access.
         CF_ACCESS_CLIENT_ID: cfAccessClientId,

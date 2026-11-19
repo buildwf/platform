@@ -259,7 +259,7 @@ describe('configured platform login routes', () => {
         const context = await browser.newContext();
         await context.addCookies([
           {
-            name: 'nosam_account_session',
+            name: 'platform_account_session',
             value: human.token,
             url: origin,
             secure: true,
@@ -368,7 +368,7 @@ describe('configured platform login routes', () => {
     const retry = await launchLink(human.token);
     const start = await app.fetch(
       new Request((await retry.json<{ url: string }>()).url, {
-        headers: { Cookie: 'nosam_account_session=' + human.token },
+        headers: { Cookie: 'platform_account_session=' + human.token },
       }),
       env,
     );
@@ -387,7 +387,7 @@ describe('configured platform login routes', () => {
     ).toHaveLength(0);
     const cookie = response.headers
       .getSetCookie()
-      .find((value) => value.startsWith('nosam_link_confirm='))!
+      .find((value) => value.startsWith('platform_link_confirm='))!
       .split(';')[0]!;
     const confirm = (originHeader: string) =>
       app.fetch(
@@ -441,7 +441,7 @@ describe('configured platform login routes', () => {
       const launch = await launchLink(human.token);
       const start = await app.fetch(
         new Request((await launch.json<{ url: string }>()).url, {
-          headers: { Cookie: 'nosam_account_session=' + human.token },
+          headers: { Cookie: 'platform_account_session=' + human.token },
         }),
         env,
       );
@@ -453,7 +453,7 @@ describe('configured platform login routes', () => {
       expect(response.status).toBe(200);
       const cookie = response.headers
         .getSetCookie()
-        .find((value) => value.startsWith('nosam_link_confirm='))!
+        .find((value) => value.startsWith('platform_link_confirm='))!
         .split(';')[0]!;
       let otherId: string | undefined;
       if (reason === 'revoked') {
@@ -787,7 +787,7 @@ describe('configured platform login routes', () => {
     expect(launch.status).toBe(200);
     const providerStart = await app.fetch(
       new Request((await launch.json<{ url: string }>()).url, {
-        headers: { Cookie: `nosam_account_session=${human.token}` },
+        headers: { Cookie: `platform_account_session=${human.token}` },
       }),
       env,
     );
@@ -799,7 +799,7 @@ describe('configured platform login routes', () => {
     expect(completed.status).toBe(200);
     const confirmationCookie = completed.headers
       .getSetCookie()
-      .find((value) => value.startsWith('nosam_link_confirm='))!
+      .find((value) => value.startsWith('platform_link_confirm='))!
       .split(';')[0]!;
     const confirmed = await app.fetch(
       new Request(`${origin}/auth/link/confirm`, {
@@ -821,7 +821,7 @@ describe('configured platform login routes', () => {
       .update(platformLoginConnections)
       .set({ enabled: false })
       .where(eq(platformLoginConnections.id, 'google'));
-    const response = await app.fetch(new Request(`${origin}/.well-known/nosam-platform`), env);
+    const response = await app.fetch(new Request(`${origin}/.well-known/platform`), env);
     const discovery = await response.json();
     expect(discovery).toMatchObject({
       schemaVersion: 3,
@@ -876,7 +876,7 @@ describe('configured platform login routes', () => {
   it('does not consume a legitimate flow when another browser sends its state', async () => {
     const flow = await start();
     expect(
-      (await callback({ ...flow, cookie: 'nosam_platform_auth=another-browser' })).status,
+      (await callback({ ...flow, cookie: 'platform_auth=another-browser' })).status,
     ).toBe(400);
     expect(await env.db.select().from(platformAuthAttempts)).toHaveLength(1);
     expect((await callback(flow)).status).toBe(302);

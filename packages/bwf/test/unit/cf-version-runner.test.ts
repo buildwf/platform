@@ -56,7 +56,7 @@ it.each([false, true])(
   'uploads the same package versions as real cf when preserving secrets (atomic=%s)',
   async (atomic) => {
     const activeVersionId = '11111111-1111-4111-8111-111111111111';
-    const root = mkdtempSync(join(tmpdir(), 'nosam-cf-package-context-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-cf-package-context-'));
     roots.push(root);
     const worker = join(root, 'dist/ssr');
     const dependency = join(root, 'node_modules/example-framework');
@@ -116,7 +116,7 @@ it.each([false, true])(
     writeFileSync(
       join(worker, 'wrangler.json'),
       JSON.stringify({
-        name: 'nosam-test',
+        name: 'platform-test',
         main: 'index.js',
         compatibility_date: '2026-10-12',
       }),
@@ -131,7 +131,7 @@ it.each([false, true])(
       }
       let result: unknown = {};
       const path = new URL(request.url!, 'http://localhost').pathname;
-      if (request.method === 'POST' && path.endsWith('/workers/scripts/nosam-test/versions')) {
+      if (request.method === 'POST' && path.endsWith('/workers/scripts/platform-test/versions')) {
         const form = await new Request('http://localhost', {
           method: 'POST',
           headers: { 'content-type': request.headers['content-type']! },
@@ -142,17 +142,17 @@ it.each([false, true])(
         result = { id: '33333333-3333-4333-8333-333333333333', number: 1 };
       } else if (
         request.method === 'POST' &&
-        path.endsWith('/workers/workers/nosam-test/versions')
+        path.endsWith('/workers/workers/platform-test/versions')
       ) {
         uploads.push(JSON.parse(Buffer.concat(chunks).toString('utf8')));
         result = { id: '22222222-2222-4222-8222-222222222222', urls: [] };
       } else if (path.endsWith(`/versions/${activeVersionId}`)) {
         result = { id: activeVersionId, bindings: [{ name: 'AUTH_SECRET', type: 'secret_text' }] };
-      } else if (path.endsWith('/services/nosam-test')) {
+      } else if (path.endsWith('/services/platform-test')) {
         result = {
           default_environment: {
             environment: 'production',
-            script: { id: 'nosam-test', last_deployed_from: 'wrangler' },
+            script: { id: 'platform-test', last_deployed_from: 'wrangler' },
           },
         };
       }
@@ -187,7 +187,7 @@ it.each([false, true])(
         output: prepared!,
         accountId: 'account-id',
         apiBaseUrl,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         token: 'synthetic-token',
         atomic,
         verifyUploader: () => true,
@@ -220,7 +220,7 @@ it(
         }
         const path = new URL(request.url!, 'http://localhost').pathname;
         let result: unknown = {};
-        if (request.method === 'POST' && path.endsWith('/workers/scripts/nosam-test/versions')) {
+        if (request.method === 'POST' && path.endsWith('/workers/scripts/platform-test/versions')) {
           const form = await new Request('http://localhost', {
             method: 'POST',
             headers: { 'content-type': request.headers['content-type']! },
@@ -230,15 +230,15 @@ it(
           result = { id: '33333333-3333-4333-8333-333333333333', number: 1 };
         } else if (
           request.method === 'POST' &&
-          path.endsWith('/workers/workers/nosam-test/versions')
+          path.endsWith('/workers/workers/platform-test/versions')
         ) {
           uploads.push(JSON.parse(Buffer.concat(chunks).toString('utf8')));
           result = { id: '22222222-2222-4222-8222-222222222222', urls: [] };
-        } else if (path.endsWith('/services/nosam-test')) {
+        } else if (path.endsWith('/services/platform-test')) {
           result = {
             default_environment: {
               environment: 'production',
-              script: { id: 'nosam-test', last_deployed_from: 'wrangler' },
+              script: { id: 'platform-test', last_deployed_from: 'wrangler' },
             },
           };
         }
@@ -400,7 +400,7 @@ async function verifyPinnedUpload(atomic: boolean): Promise<void> {
           : path.includes('/workflows/')
             ? {
                 name: path.endsWith('/local-workflow') ? 'local-workflow' : 'export-only-workflow',
-                script_name: 'nosam-test',
+                script_name: 'platform-test',
                 class_name: path.endsWith('/local-workflow') ? 'LocalJob' : 'ExportOnlyJob',
               }
             : request.method === 'GET'
@@ -425,7 +425,7 @@ async function verifyPinnedUpload(atomic: boolean): Promise<void> {
       output: prepared,
       accountId: 'account-id',
       apiBaseUrl: await listen(server),
-      workerName: 'nosam-test',
+      workerName: 'platform-test',
       token: 'synthetic-token',
       atomic,
       verifyUploader: () => true,
@@ -674,7 +674,7 @@ it(
       const body = Buffer.concat(chunks);
       const path = new URL(request.url!, 'http://localhost').pathname;
       let result: unknown = {};
-      if (request.method === 'POST' && path.endsWith('/workers/scripts/nosam-test/versions')) {
+      if (request.method === 'POST' && path.endsWith('/workers/scripts/platform-test/versions')) {
         const form = await new Request('http://localhost', {
           method: 'POST',
           headers: { 'content-type': request.headers['content-type']! },
@@ -684,19 +684,19 @@ it(
         result = { id: '33333333-3333-4333-8333-333333333333', number: 2 };
       } else if (
         request.method === 'POST' &&
-        path.endsWith('/workers/workers/nosam-test/versions')
+        path.endsWith('/workers/workers/platform-test/versions')
       ) {
         uploads.push({ path, exports: JSON.parse(body.toString('utf8')).exports });
         result = { id: '22222222-2222-4222-8222-222222222222', urls: [] };
-      } else if (path.endsWith('/services/nosam-test')) {
+      } else if (path.endsWith('/services/platform-test')) {
         result = {
           default_environment: {
             environment: 'production',
-            script: { id: 'nosam-test', last_deployed_from: 'wrangler' },
+            script: { id: 'platform-test', last_deployed_from: 'wrangler' },
           },
         };
       } else if (path.endsWith('/workflows/jobs')) {
-        result = { name: 'jobs', script_name: 'nosam-test', class_name: 'Job' };
+        result = { name: 'jobs', script_name: 'platform-test', class_name: 'Job' };
       } else if (path.endsWith(`/versions/${activeVersionId}`)) {
         result = { id: activeVersionId, bindings: [{ name: 'AUTH_SECRET', type: 'secret_text' }] };
       }
@@ -722,7 +722,7 @@ it(
         output: prepared,
         accountId: 'account-id',
         apiBaseUrl,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         token: 'synthetic-token',
         atomic: false,
         verifyUploader: () => true,
@@ -759,7 +759,7 @@ it.each(
   (
     [
       [
-        'Nosam-generated',
+        'Platform-generated',
         `${GENERATED_ASSET_HEADERS_MARKER}\n/assets/a-12345678.js\n  Cache-Control: public, max-age=31536000, immutable\n`,
       ],
       ['user-authored', authoredAssetHeaders],
@@ -833,7 +833,7 @@ it.each(
         output: prepared,
         accountId: 'account-id',
         apiBaseUrl: await listen(server),
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         token: 'synthetic-token',
         atomic: false,
         verifyUploader: () => true,
@@ -907,7 +907,7 @@ it('fails a pinned upload when prepared _headers cannot be read', async () => {
         output: prepared,
         accountId: 'account-id',
         apiBaseUrl: await listen(server),
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         token: 'synthetic-token',
         atomic: false,
         verifyUploader: () => true,
@@ -963,7 +963,7 @@ it('uploads Worker limits, placement and cache with pinned secrets', async () =>
       output: prepared,
       accountId: 'account-id',
       apiBaseUrl: await listen(server),
-      workerName: 'nosam-test',
+      workerName: 'platform-test',
       token: 'synthetic-token',
       atomic: false,
       verifyUploader: () => true,
@@ -1038,7 +1038,7 @@ async function uploadTargeted(
       output: prepared,
       accountId: 'account-id',
       apiBaseUrl: await listen(server),
-      workerName: 'nosam-test',
+      workerName: 'platform-test',
       token: 'synthetic-token',
       atomic,
       verifyUploader: () => true,
@@ -1131,7 +1131,7 @@ it.each(['missing name', 'duplicate name', 'external collision', 'class collisio
         worker.env.JOB = {
           type: 'workflow',
           name: 'jobs',
-          worker: mode === 'external collision' ? 'foreign-worker' : 'nosam-test',
+          worker: mode === 'external collision' ? 'foreign-worker' : 'platform-test',
           exportName: mode === 'external collision' ? 'Job' : 'OtherJob',
         };
       }
@@ -1142,7 +1142,7 @@ it.each(['missing name', 'duplicate name', 'external collision', 'class collisio
           output: prepared,
           accountId: 'account-id',
           apiBaseUrl: 'http://127.0.0.1:1',
-          workerName: 'nosam-test',
+          workerName: 'platform-test',
           token: 'synthetic-token',
           atomic: true,
           verifyUploader: () => true,
@@ -1190,7 +1190,7 @@ it.each(['missing', 'owned', 'foreign', 'malformed', 'unrelated 404'] as const)(
           result: path.endsWith('/workflows/jobs')
             ? {
                 name: mode === 'malformed' ? 'another-workflow' : 'jobs',
-                script_name: mode === 'foreign' ? 'foreign-worker' : 'nosam-test',
+                script_name: mode === 'foreign' ? 'foreign-worker' : 'platform-test',
                 class_name: 'PreviousJob',
               }
             : path.endsWith('/assets-upload-session')
@@ -1210,7 +1210,7 @@ it.each(['missing', 'owned', 'foreign', 'malformed', 'unrelated 404'] as const)(
         output: prepared,
         accountId: 'account-id',
         apiBaseUrl,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         token: 'synthetic-token',
         atomic: true,
         verifyUploader: () => true,
@@ -1285,7 +1285,7 @@ it.each([
           output: prepared,
           accountId: 'account-id',
           apiBaseUrl: 'http://127.0.0.1:1',
-          workerName: 'nosam-test',
+          workerName: 'platform-test',
           token: 'synthetic-token',
           atomic: true,
           verifyUploader: () => true,
@@ -1333,7 +1333,7 @@ it('refuses a new imageless Container before version publication', async () => {
         output: prepared,
         accountId: 'account-id',
         apiBaseUrl: 'http://127.0.0.1:1',
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         token: 'synthetic-token',
         atomic: true,
         verifyUploader: () => true,
@@ -1376,7 +1376,7 @@ it('bounds pending Container image preparation before uploading a Worker version
         output: prepared,
         accountId: 'account-id',
         apiBaseUrl: 'http://127.0.0.1:1',
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         token: 'synthetic-token',
         atomic: true,
         verifyUploader: () => true,
@@ -1486,7 +1486,7 @@ async function containerApi(mode: ContainerMode) {
           }
         : {}),
       ...(mode === 'local'
-        ? { images: { default: { localReference: 'nosam-sandbox-build:fixture' } } }
+        ? { images: { default: { localReference: 'platform-sandbox-build:fixture' } } }
         : {}),
     }),
   });
@@ -1543,7 +1543,7 @@ async function containerApi(mode: ContainerMode) {
         id: activePinnedVersion,
         bindings: [
           { name: 'AUTH_SECRET', type: 'secret_text' },
-          ...(existing ? [{ ...binding, script_name: 'nosam-test' }] : []),
+          ...(existing ? [{ ...binding, script_name: 'platform-test' }] : []),
         ],
       };
     } else if (row.url.endsWith('/image-preparations')) {
@@ -1556,12 +1556,12 @@ async function containerApi(mode: ContainerMode) {
               ? 'pending'
               : 'ready',
       };
-    } else if (row.method === 'POST' && row.url.includes('/workers/workers/nosam-test/versions')) {
+    } else if (row.method === 'POST' && row.url.includes('/workers/workers/platform-test/versions')) {
       result = {
         id: uploadedPinnedVersion,
-        urls: ['https://22222222-nosam-test.account.workers.dev'],
+        urls: ['https://22222222-platform-test.account.workers.dev'],
       };
-    } else if (row.url.endsWith(`/scripts/nosam-test/versions/${uploadedPinnedVersion}`)) {
+    } else if (row.url.endsWith(`/scripts/platform-test/versions/${uploadedPinnedVersion}`)) {
       if (mode === 'pending' && ++counts.versionVisibleAttempts === 1) {
         status = 404;
         code = 100146;
@@ -1639,7 +1639,7 @@ it.each(['settings-change', 'keys-change', 'readiness-failure'] as const)(
       const commands: Array<Array<string>> = [];
       const runner = createCfVersionRunner({
         output: api.prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
         runCf: (args) => {
           commands.push(args);
@@ -1669,7 +1669,7 @@ it.each(['settings-change', 'keys-change', 'readiness-failure'] as const)(
       const readiness = vi.fn(async () => Response.json({ ready: false }, { status: 503 }));
       const result = await activateCloudflareVersion({
         runWrangler: runner,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         configPath: join(roots.at(-1)!, 'dist/ssr/wrangler.json'),
         verifyUploader: () => true,
         message: 'Verify Container candidate isolation.',
@@ -1750,7 +1750,7 @@ it.each([
       output: prepared,
       accountId: 'account-id',
       apiBaseUrl,
-      workerName: 'nosam-test',
+      workerName: 'platform-test',
       token: 'synthetic-token',
       atomic: true,
       verifyUploader: () => true,
@@ -1763,7 +1763,7 @@ it.each([
       expect(
         requests.some(
           (row) =>
-            row.method === 'POST' && row.url.includes('/workers/workers/nosam-test/versions'),
+            row.method === 'POST' && row.url.includes('/workers/workers/platform-test/versions'),
         ),
       ).toBe(false);
     } else if (['lost-readback', 'lost-image-metadata', 'foreign-namespace'].includes(mode)) {
@@ -1777,7 +1777,7 @@ it.each([
     } else {
       expect((await upload).id).toBe(uploadedPinnedVersion);
       const post = requests.find(
-        (row) => row.method === 'POST' && row.url.includes('/workers/workers/nosam-test/versions'),
+        (row) => row.method === 'POST' && row.url.includes('/workers/workers/platform-test/versions'),
       )!;
       expect(post.body.bindings).toContainEqual({
         name: 'AUTH_SECRET',
@@ -1824,7 +1824,7 @@ it.each([
       }
       if (mode === 'local') {
         expect(runCf).toHaveBeenCalledWith(
-          ['containers', 'push', '--tag', 'nosam-sandbox-build:fixture'],
+          ['containers', 'push', '--tag', 'platform-sandbox-build:fixture'],
           expect.objectContaining({
             cwd: prepared.directory,
             capture: true,
@@ -1884,7 +1884,7 @@ it.each([false, true])(
     const server = createServer(async (request, response) => {
       if (request.method === 'PATCH') {
         expect(request.url).toBe(
-          '/client/v4/accounts/account-id/workers/scripts/nosam-test/script-settings',
+          '/client/v4/accounts/account-id/workers/scripts/platform-test/script-settings',
         );
         const chunks: Array<Buffer> = [];
         for await (const chunk of request) {
@@ -1953,7 +1953,7 @@ it.each([false, true])(
       };
       const runner = createCfVersionRunner({
         output: prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         runCf,
         verifyResources: createCfResourceVerifier({
           configPath: join(roots.at(-1)!, 'dist/ssr/wrangler.json'),
@@ -1972,7 +1972,7 @@ it.each([false, true])(
       });
       const result = await activateCloudflareVersion({
         runWrangler: runner,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         configPath: join(roots.at(-1)!, 'dist/ssr/wrangler.json'),
         verifyUploader: () => true,
         pinActiveSecrets,
@@ -1981,7 +1981,7 @@ it.each([false, true])(
         readinessAttempts: 1,
         message: encodeCloudflareVersionMessage([], triggerConfig),
         fetch: async (url) => {
-          expect(url).toBe(`https://${domain}/__nosam/ready`);
+          expect(url).toBe(`https://${domain}/__platform/ready`);
           events.push('readiness');
           return Response.json({ ready: published });
         },
@@ -2028,7 +2028,7 @@ it('refuses to pin when a required secret is absent from the live version', asyn
 it(
   'does not delegate credentialed commands to a project-local cf',
   async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-cf-pinned-command-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-cf-pinned-command-'));
     roots.push(root);
     const local = join(root, 'node_modules', 'cf');
     mkdirSync(local, { recursive: true });
@@ -2068,7 +2068,7 @@ it.each([
 ])(
   'does not classify buffered diagnostics from a terminated real cf process ($diagnostic)',
   async ({ diagnostic, args }) => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-cf-interrupted-command-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-cf-interrupted-command-'));
     roots.push(root);
     const preload = join(root, 'interrupt.cjs');
     writeFileSync(
@@ -2136,7 +2136,7 @@ it('preserves interruption provenance before interpreting an empty cf deployment
 });
 
 it('uses the configured HTTP proxy for direct cf activation reads', async () => {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-cf-proxy-read-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-cf-proxy-read-'));
   roots.push(root);
   const requests: Array<string> = [];
   const respond = (
@@ -2197,7 +2197,7 @@ it('preserves activation metadata and sorts cf version history for the existing 
     const calls: Array<Array<string>> = [];
     const runner = createCfVersionRunner({
       output: prepared,
-      workerName: 'nosam-test',
+      workerName: 'platform-test',
       verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
       runCf: (args) => {
         calls.push(args);
@@ -2227,7 +2227,7 @@ it('preserves activation metadata and sorts cf version history for the existing 
         };
       },
     });
-    const target = { configPath: 'generated.json', workerName: 'nosam-test' };
+    const target = { configPath: 'generated.json', workerName: 'platform-test' };
     const deployment = await runner({ type: 'deployments.status', ...target }, { capture: true });
     expect(deployment.data).toEqual({
       versions: [{ version_id: 'one', percentage: 100 }],
@@ -2241,7 +2241,7 @@ it('preserves activation metadata and sorts cf version history for the existing 
       'versions',
       'list',
       '--worker-id',
-      'nosam-test',
+      'platform-test',
       '--per-page',
       '10',
       '--page',
@@ -2251,8 +2251,8 @@ it('preserves activation metadata and sorts cf version history for the existing 
       {
         type: 'versions.upload',
         ...target,
-        message: 'nosam:metadata',
-        previewAlias: 'nosam-ready',
+        message: 'platform:metadata',
+        previewAlias: 'platform-ready',
       },
       { capture: true },
     );
@@ -2261,18 +2261,18 @@ it('preserves activation metadata and sorts cf version history for the existing 
       'versions',
       'create',
       '--prebuilt',
-      '--message=nosam:metadata',
+      '--message=platform:metadata',
       '--preview-alias',
-      'nosam-ready',
+      'platform-ready',
     ]);
     // A leading "-" stays part of the message, not a cf flag.
-    await runner({ type: 'worker.deploy', ...target, message: '-nosam' }, { capture: true });
-    expect(calls.at(-1)).toEqual(['deploy', '--prebuilt', '--message=-nosam']);
+    await runner({ type: 'worker.deploy', ...target, message: '-platform' }, { capture: true });
+    expect(calls.at(-1)).toEqual(['deploy', '--prebuilt', '--message=-platform']);
     await runner(
       {
         type: 'versions.deploy',
         ...target,
-        message: 'nosam:metadata',
+        message: 'platform:metadata',
         versions: [{ versionId: '00000000-0000-0000-0000-000000000001', percentage: 100 }],
       },
       { capture: false },
@@ -2281,7 +2281,7 @@ it('preserves activation metadata and sorts cf version history for the existing 
     expect(deployArgs.slice(0, 3)).toEqual(['workers', 'deployments', 'create']);
     expect(JSON.parse(deployArgs[deployArgs.indexOf('--body') + 1]!)).toMatchObject({
       strategy: 'percentage',
-      annotations: { 'workers/message': 'nosam:metadata' },
+      annotations: { 'workers/message': 'platform:metadata' },
       versions: [{ version_id: '00000000-0000-0000-0000-000000000001', percentage: 100 }],
     });
   } finally {
@@ -2297,7 +2297,7 @@ it.each([undefined, false, true])(
       const calls: Array<Array<string>> = [];
       const runner = createCfVersionRunner({
         output: prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
         runCf: (args) => {
           calls.push(args);
@@ -2308,7 +2308,7 @@ it.each([undefined, false, true])(
         const result = await runner(
           {
             type: 'versions.deploy',
-            workerName: 'nosam-test',
+            workerName: 'platform-test',
             versions: [{ versionId: '00000000-0000-0000-0000-000000000001', percentage: 100 }],
             message,
             bypassDeploymentChecks,
@@ -2340,7 +2340,7 @@ it.each(['newest-first', 'oldest-first'] as const)(
       const pages: Array<number> = [];
       const runner = createCfVersionRunner({
         output: prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
         runCf: (args) => {
           const page = Number(args[args.indexOf('--page') + 1]);
@@ -2353,7 +2353,7 @@ it.each(['newest-first', 'oldest-first'] as const)(
         },
       });
       const result = await runner(
-        { type: 'versions.list', workerName: 'nosam-test' },
+        { type: 'versions.list', workerName: 'platform-test' },
         { capture: true },
       );
       expect(
@@ -2405,7 +2405,7 @@ it.each([
     try {
       const runner = createCfVersionRunner({
         output: prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         runCf: pinnedCf(apiBaseUrl),
         verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
         pinnedUpload: {
@@ -2418,7 +2418,7 @@ it.each([
       const configPath = join(roots.at(-1)!, 'dist/ssr/wrangler.json');
       const result = await deployCloudflareVersionTriggers({
         runWrangler: runner,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         configPath,
         triggerConfig: readCloudflareTriggerConfig(configPath),
       });
@@ -2428,7 +2428,7 @@ it.each([
           ? [
               {
                 method: 'PATCH',
-                path: '/client/v4/accounts/account-id/workers/scripts/nosam-test/script-settings',
+                path: '/client/v4/accounts/account-id/workers/scripts/platform-test/script-settings',
                 body: { observability },
                 authorization: 'Bearer synthetic-token',
               },
@@ -2449,7 +2449,7 @@ it('applies the immutable trigger snapshot through a private cf output copy', as
   writeFileSync(
     triggerConfig,
     JSON.stringify({
-      name: 'nosam-test',
+      name: 'platform-test',
       workers_dev: false,
       preview_urls: true,
       triggers: { crons: ['0 * * * *'] },
@@ -2459,7 +2459,7 @@ it('applies the immutable trigger snapshot through a private cf output copy', as
   try {
     const runner = createCfVersionRunner({
       output: prepared,
-      workerName: 'nosam-test',
+      workerName: 'platform-test',
       verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
       runCf: (args, run) => {
         expect(args).toEqual(['workers', 'triggers', 'deploy', '--prebuilt']);
@@ -2469,7 +2469,7 @@ it('applies the immutable trigger snapshot through a private cf output copy', as
       },
     });
     const result = await runner(
-      { type: 'triggers.deploy', configPath: triggerConfig, workerName: 'nosam-test' },
+      { type: 'triggers.deploy', configPath: triggerConfig, workerName: 'platform-test' },
       { capture: false },
     );
     expect(result.status).toBe(0);
@@ -2485,7 +2485,7 @@ it.each(['restore', 'remove'] as const)(
   async (operation) => {
     const workflow = {
       binding: 'JOB',
-      name: 'nosam-job',
+      name: 'platform-job',
       class_name: 'Job',
       schedules: ['0 * * * *'],
     };
@@ -2500,22 +2500,22 @@ it.each(['restore', 'remove'] as const)(
       const calls: Array<Array<string>> = [];
       const runner = createCfVersionRunner({
         output: prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
         runCf: (args, { cwd }) => {
           calls.push(args);
           const worker = JSON.parse(readFileSync(getWorkerConfigPath(cwd), 'utf8'));
           expect(worker.exports.Job).toEqual({
             type: 'workflow',
-            name: 'nosam-job',
+            name: 'platform-job',
             ...(operation === 'restore'
               ? { schedules: ['30 * * * *'], concurrency: { limit: 2 } }
               : {}),
           });
           expect(worker.env.JOB).toMatchObject({
             type: 'workflow',
-            name: 'nosam-job',
-            worker: 'nosam-test',
+            name: 'platform-job',
+            worker: 'platform-test',
             exportName: 'Job',
           });
           expect(worker.exports.State).toMatchObject({ type: 'durable-object', storage: 'sqlite' });
@@ -2532,7 +2532,7 @@ it.each(['restore', 'remove'] as const)(
         queueConsumers: [],
       };
       const result = await deployCloudflareVersionTriggers({
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         configPath: join(roots.at(-1)!, 'dist', 'ssr', 'wrangler.json'),
         runWrangler: runner,
         triggerConfig: {
@@ -2558,7 +2558,7 @@ it(
   async () => {
     const workflow = {
       binding: 'JOB',
-      name: 'nosam-job',
+      name: 'platform-job',
       class_name: 'Job',
       limits: { steps: 7 },
       concurrency: { limit: 2 },
@@ -2598,12 +2598,12 @@ it(
     try {
       const runner = createCfVersionRunner({
         output: prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         runCf: pinnedCf(apiBaseUrl),
         verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
       });
       const result = await deployCloudflareVersionTriggers({
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         configPath: join(roots.at(-1)!, 'dist', 'ssr', 'wrangler.json'),
         runWrangler: runner,
         triggerConfig: {
@@ -2619,9 +2619,9 @@ it(
       expect(requests.filter(({ path }) => path.includes('/workflows/'))).toEqual([
         {
           method: 'PUT',
-          path: '/client/v4/accounts/account-id/workflows/nosam-job',
+          path: '/client/v4/accounts/account-id/workflows/platform-job',
           body: {
-            script_name: 'nosam-test',
+            script_name: 'platform-test',
             class_name: 'Job',
             limits: { steps: 7 },
             concurrency: { limit: 2 },
@@ -2641,20 +2641,20 @@ it(
 
 it.each([
   {
-    rows: [{ type: 'worker', script_name: 'nosam-test', consumer_id: 'owned-id' }],
+    rows: [{ type: 'worker', script_name: 'platform-test', consumer_id: 'owned-id' }],
     status: 0,
     remove: true,
   },
-  { rows: [{ script: 'nosam-test', consumer_id: 'owned-id' }], status: 0, remove: true },
+  { rows: [{ script: 'platform-test', consumer_id: 'owned-id' }], status: 0, remove: true },
   {
     rows: [
-      { type: 'worker', script_name: 'nosam-test', script: 'foreign', consumer_id: 'owned-id' },
+      { type: 'worker', script_name: 'platform-test', script: 'foreign', consumer_id: 'owned-id' },
     ],
     status: 1,
     remove: false,
   },
   {
-    rows: [{ type: 'worker', script_name: null, script: 'nosam-test', consumer_id: 'owned-id' }],
+    rows: [{ type: 'worker', script_name: null, script: 'platform-test', consumer_id: 'owned-id' }],
     status: 1,
     remove: false,
   },
@@ -2664,20 +2664,20 @@ it.each([
     remove: false,
   },
   {
-    rows: [{ type: 'worker', script_name: 'nosam-test', consumer_id: '' }],
+    rows: [{ type: 'worker', script_name: 'platform-test', consumer_id: '' }],
     status: 1,
     remove: false,
   },
   {
-    rows: [{ type: 'http_pull', script_name: 'nosam-test', consumer_id: 'owned-id' }],
+    rows: [{ type: 'http_pull', script_name: 'platform-test', consumer_id: 'owned-id' }],
     status: 1,
     remove: false,
   },
   { rows: [{ type: 'worker', consumer_id: 'owned-id' }], status: 1, remove: false },
   {
     rows: [
-      { type: 'worker', script_name: 'nosam-test', consumer_id: 'one' },
-      { type: 'worker', script_name: 'nosam-test', consumer_id: 'two' },
+      { type: 'worker', script_name: 'platform-test', consumer_id: 'one' },
+      { type: 'worker', script_name: 'platform-test', consumer_id: 'two' },
     ],
     status: 1,
     remove: false,
@@ -2698,7 +2698,7 @@ it.each([
     try {
       const runner = createCfVersionRunner({
         output: prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
         runCf: (args) => {
           calls.push(args);
@@ -2716,7 +2716,7 @@ it.each([
         },
       });
       const result = await runner(
-        { type: 'queues.consumer.remove', queueName: 'jobs', workerName: 'nosam-test' },
+        { type: 'queues.consumer.remove', queueName: 'jobs', workerName: 'platform-test' },
         { capture: true },
       );
       expect(result.status).toBe(status);
@@ -2736,13 +2736,13 @@ it('uses cf for Queue triggers, consumer cleanup, and version binding reads', as
   const triggerConfig = join(roots.at(-1)!, 'legacy-trigger.json');
   writeFileSync(
     triggerConfig,
-    JSON.stringify({ name: 'nosam-test', queues: { consumers: [{ queue: 'jobs' }] } }),
+    JSON.stringify({ name: 'platform-test', queues: { consumers: [{ queue: 'jobs' }] } }),
   );
   const calls: Array<Array<string>> = [];
   try {
     const runner = createCfVersionRunner({
       output: prepared,
-      workerName: 'nosam-test',
+      workerName: 'platform-test',
       verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
       runCf: (args) => {
         calls.push(args);
@@ -2757,7 +2757,7 @@ it('uses cf for Queue triggers, consumer cleanup, and version binding reads', as
           return {
             status: 0,
             stdout: JSON.stringify([
-              { type: 'worker', script_name: 'nosam-test', consumer_id: 'consumer-id' },
+              { type: 'worker', script_name: 'platform-test', consumer_id: 'consumer-id' },
             ]),
             stderr: '',
           };
@@ -2778,24 +2778,24 @@ it('uses cf for Queue triggers, consumer cleanup, and version binding reads', as
     const invalid = await runner(
       {
         type: 'versions.deploy',
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         versions: [{ versionId: 'invalid', percentage: 100 }],
       },
       { capture: true },
     );
     expect(invalid.status).toBe(1);
     const trigger = await runner(
-      { type: 'triggers.deploy', configPath: triggerConfig, workerName: 'nosam-test' },
+      { type: 'triggers.deploy', configPath: triggerConfig, workerName: 'platform-test' },
       { capture: false },
     );
     expect(trigger.status).toBe(0);
     const remove = await runner(
-      { type: 'queues.consumer.remove', queueName: 'jobs', workerName: 'nosam-test' },
+      { type: 'queues.consumer.remove', queueName: 'jobs', workerName: 'platform-test' },
       { capture: false },
     );
     expect(remove.status).toBe(0);
     const version = await runner(
-      { type: 'versions.view', versionId: 'version-id', workerName: 'nosam-test' },
+      { type: 'versions.view', versionId: 'version-id', workerName: 'platform-test' },
       { capture: true },
     );
     expect(
@@ -2823,7 +2823,7 @@ it('accepts only the staged static assets directory already sealed into prebuilt
   try {
     const runner = createCfVersionRunner({
       output: prepared,
-      workerName: 'nosam-test',
+      workerName: 'platform-test',
       verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
       runCf: (args) => {
         calls.push(args);
@@ -2833,7 +2833,7 @@ it('accepts only the staged static assets directory already sealed into prebuilt
     expect(
       (
         await runner(
-          { type: 'versions.upload', workerName: 'nosam-test', assetsDirectory: '/staged/assets' },
+          { type: 'versions.upload', workerName: 'platform-test', assetsDirectory: '/staged/assets' },
           { capture: true },
         )
       ).status,
@@ -2842,7 +2842,7 @@ it('accepts only the staged static assets directory already sealed into prebuilt
     expect(
       (
         await runner(
-          { type: 'worker.deploy', workerName: 'nosam-test', assetsDirectory: '/wrong/assets' },
+          { type: 'worker.deploy', workerName: 'platform-test', assetsDirectory: '/wrong/assets' },
           { capture: true },
         )
       ).status,
@@ -2863,7 +2863,7 @@ it.each(['r2', 'queue'] as const)(
         : {}),
     });
     const triggerConfig = join(roots.at(-1)!, 'triggers.json');
-    writeFileSync(triggerConfig, JSON.stringify({ name: 'nosam-test', workers_dev: true }));
+    writeFileSync(triggerConfig, JSON.stringify({ name: 'platform-test', workers_dev: true }));
     const cfCalls: Array<Array<string>> = [];
     const runCf = (args: Array<string>) => {
       cfCalls.push(args);
@@ -2882,22 +2882,22 @@ it.each(['r2', 'queue'] as const)(
     try {
       const runner = createCfVersionRunner({
         output: prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         runCf,
         verifyResources: verifier,
       });
       expect(
-        (await runner({ type: 'versions.upload', workerName: 'nosam-test' }, { capture: true }))
+        (await runner({ type: 'versions.upload', workerName: 'platform-test' }, { capture: true }))
           .status,
       ).toBe(1);
       expect(
-        (await runner({ type: 'worker.deploy', workerName: 'nosam-test' }, { capture: true }))
+        (await runner({ type: 'worker.deploy', workerName: 'platform-test' }, { capture: true }))
           .status,
       ).toBe(1);
       expect(
         (
           await runner(
-            { type: 'triggers.deploy', configPath: triggerConfig, workerName: 'nosam-test' },
+            { type: 'triggers.deploy', configPath: triggerConfig, workerName: 'platform-test' },
             { capture: true },
           )
         ).status,
@@ -2929,7 +2929,7 @@ it('uploads when existing R2 and Queue bindings are verified by exact identity',
   try {
     const runner = createCfVersionRunner({
       output: prepared,
-      workerName: 'nosam-test',
+      workerName: 'platform-test',
       runCf,
       verifyResources: createCfResourceVerifier({
         configPath: join(roots.at(-1)!, 'dist', 'ssr', 'wrangler.json'),
@@ -2942,7 +2942,7 @@ it('uploads when existing R2 and Queue bindings are verified by exact identity',
       }),
     });
     expect(
-      (await runner({ type: 'versions.upload', workerName: 'nosam-test' }, { capture: true }))
+      (await runner({ type: 'versions.upload', workerName: 'platform-test' }, { capture: true }))
         .status,
     ).toBe(0);
     expect(cfCalls).toEqual([
@@ -2966,7 +2966,7 @@ it('uploads when existing R2 and Queue bindings are verified by exact identity',
 
 describe('session credential failures', () => {
   const nodeCrash =
-    "file:///nosam/dist/cli/cloudflare-operation-process.mjs:4\nimport { setGlobalProxyFromEnv } from 'node:http';\n         ^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module 'node:http' does not provide an export named 'setGlobalProxyFromEnv'\n\nNode.js v22.23.4";
+    "file:///platform/dist/cli/cloudflare-operation-process.mjs:4\nimport { setGlobalProxyFromEnv } from 'node:http';\n         ^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module 'node:http' does not provide an export named 'setGlobalProxyFromEnv'\n\nNode.js v22.23.4";
   /** The deploy's getToken bridge over a fake helper child. */
   const tokenFrom =
     (child: CloudflareCommandResult) => (): ReturnType<typeof readWranglerAuthToken> =>
@@ -2981,7 +2981,7 @@ describe('session credential failures', () => {
     prepared.activeSecrets = { versionId: '11111111-1111-4111-8111-111111111111', bindings: [] };
     return createCfVersionRunner({
       output: prepared,
-      workerName: 'nosam-test',
+      workerName: 'platform-test',
       verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
       runCf,
       pinnedUpload: {
@@ -3001,7 +3001,7 @@ describe('session credential failures', () => {
         tokenFrom({ status: 7, stdout: '', stderr: nodeCrash }),
       );
       const upload = await runner(
-        { type: 'versions.upload', workerName: 'nosam-test' },
+        { type: 'versions.upload', workerName: 'platform-test' },
         { capture: true },
       );
       expect(upload.status).toBe(7);
@@ -3029,7 +3029,7 @@ describe('session credential failures', () => {
         tokenFrom({ status: 1, stdout: '', stderr: '', error: 'spawn EACCES' }),
       );
       const upload = await runner(
-        { type: 'versions.upload', workerName: 'nosam-test' },
+        { type: 'versions.upload', workerName: 'platform-test' },
         { capture: true },
       );
       const text =
@@ -3055,7 +3055,7 @@ describe('session credential failures', () => {
         }),
       );
       const upload = await runner(
-        { type: 'versions.upload', workerName: 'nosam-test' },
+        { type: 'versions.upload', workerName: 'platform-test' },
         { capture: true },
       );
       expect(cloudflareCommandDiagnostic(upload)).toBe(
@@ -3071,7 +3071,7 @@ describe('session credential failures', () => {
     const triggerConfig = join(roots.at(-1)!, 'trigger.json');
     writeFileSync(
       triggerConfig,
-      JSON.stringify({ name: 'nosam-test', observability: { enabled: true } }),
+      JSON.stringify({ name: 'platform-test', observability: { enabled: true } }),
     );
     try {
       const runner = pinnedRunner(
@@ -3080,7 +3080,7 @@ describe('session credential failures', () => {
         () => ({ status: 0, stdout: '', stderr: '' }),
       );
       const result = await runner(
-        { type: 'triggers.deploy', configPath: triggerConfig, workerName: 'nosam-test' },
+        { type: 'triggers.deploy', configPath: triggerConfig, workerName: 'platform-test' },
         { capture: true },
       );
       expect(result).toMatchObject({ status: 1, signal: 'SIGKILL' });
@@ -3119,7 +3119,7 @@ describe('session credential failures', () => {
       const runner = pinnedRunner(prepared, getToken, () => missing);
       const operations: Array<string> = [];
       const result = await activateCloudflareVersion({
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         message: 'review',
         verifyUploader: () => true,
         verifyInheritedSecrets: true,
@@ -3170,7 +3170,7 @@ describe('settings credential before activation', () => {
     try {
       const runner = createCfVersionRunner({
         output: prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
         runCf: (args) => {
           const command = args.slice(0, 3).join(' ');
@@ -3206,7 +3206,7 @@ describe('settings credential before activation', () => {
       });
       const result = await activateCloudflareVersion({
         runWrangler: runner,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         verifyUploader: () => true,
         readinessAttempts: 1,
         message: encodeCloudflareVersionMessage([], triggerConfig),
@@ -3284,7 +3284,7 @@ describe('settings credential before activation', () => {
     const triggerConfig = join(roots.at(-1)!, 'trigger.json');
     writeFileSync(
       triggerConfig,
-      JSON.stringify({ name: 'nosam-test', observability: { enabled: true } }),
+      JSON.stringify({ name: 'platform-test', observability: { enabled: true } }),
     );
     const getToken = vi
       .fn<() => ReturnType<typeof readWranglerAuthToken>>()
@@ -3293,7 +3293,7 @@ describe('settings credential before activation', () => {
     try {
       const runner = createCfVersionRunner({
         output: prepared,
-        workerName: 'nosam-test',
+        workerName: 'platform-test',
         verifyResources: async () => ({ status: 0, stdout: '', stderr: '' }),
         runCf: (args) => ({
           status: 0,
@@ -3305,7 +3305,7 @@ describe('settings credential before activation', () => {
       const upload = await runner(
         {
           type: 'versions.upload',
-          workerName: 'nosam-test',
+          workerName: 'platform-test',
           message: encodeCloudflareVersionMessage([], {
             ...triggers,
             observability: { enabled: true },
@@ -3316,7 +3316,7 @@ describe('settings credential before activation', () => {
       expect(upload).toMatchObject({ status: 0, data: { versionId: next } });
       expect(getToken).toHaveBeenCalledTimes(1);
       const published = await runner(
-        { type: 'triggers.deploy', configPath: triggerConfig, workerName: 'nosam-test' },
+        { type: 'triggers.deploy', configPath: triggerConfig, workerName: 'platform-test' },
         { capture: true },
       );
       expect(published.status, published.stderr).toBe(0);

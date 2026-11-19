@@ -7,7 +7,7 @@ import { resolveDeploymentPlatform, runDeploy } from '../../src/cli/deploy.ts';
 const roots: Array<string> = [];
 
 function makeRoot(config?: Record<string, unknown>): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-deploy-platform-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-deploy-platform-'));
   roots.push(root);
   if (config) {
     mkdirSync(join(root, '.bwf'), { recursive: true });
@@ -25,11 +25,11 @@ describe('resolveDeploymentPlatform', () => {
 
   it('lets an explicit platform override the saved preference', () => {
     const root = makeRoot({ platform: 'cloudflare' });
-    expect(resolveDeploymentPlatform(root, { platform: 'nosam' })).toBe('nosam');
+    expect(resolveDeploymentPlatform(root, { platform: 'platform' })).toBe('platform');
   });
 
   it('retains bwf as the fallback for projects initialized by older SDKs', () => {
-    expect(resolveDeploymentPlatform(makeRoot())).toBe('nosam');
+    expect(resolveDeploymentPlatform(makeRoot())).toBe('platform');
   });
 
   it('stops with guidance when deployment setup was skipped', async () => {

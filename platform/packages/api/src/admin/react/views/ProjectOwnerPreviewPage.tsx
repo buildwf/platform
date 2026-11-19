@@ -144,7 +144,7 @@ export function ProjectOwnerPreviewPage({
           <form
             method="post"
             action={`/admin/projects/${projectId}/owner`}
-            className="nosam-admin-team-actions"
+            className="platform-admin-team-actions"
           >
             <input type="hidden" name="userId" defaultValue={userId} />
             <Button

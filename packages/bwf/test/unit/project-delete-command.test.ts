@@ -32,7 +32,7 @@ afterEach(() => {
 
 describe('bwf project delete', () => {
   it('reports the deletion once', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-root-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-root-'));
     roots.push(root);
     const { runDeleteCommand } = await import('../../src/cli/delete.ts');
 

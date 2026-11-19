@@ -41,9 +41,9 @@ it('authenticates a closed, fully drained deployment executor before allowing do
     fetcher,
   );
   expect(fetcher).toHaveBeenCalledWith(
-    'https://api.example.com/__nosam/platform/deployment-execution',
+    'https://api.example.com/__platform/platform/deployment-execution',
     expect.objectContaining({
-      headers: expect.objectContaining({ 'X-Nosam-Platform-Probe': 'probe' }),
+      headers: expect.objectContaining({ 'X-Platform-Probe': 'probe' }),
       redirect: 'manual',
     }),
   );
@@ -84,10 +84,10 @@ it.each([404, 503])(
 it.each([1, 0])(
   'fences admission and checks %s pending operations before any provisioning',
   async (pendingDeployments) => {
-    const directory = mkdtempSync(join(tmpdir(), 'nosam-deployment-drain-'));
+    const directory = mkdtempSync(join(tmpdir(), 'platform-deployment-drain-'));
     directories.push(directory);
-    vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', directory);
-    vi.stubEnv('NOSAM_PLATFORM_RECOVERY_KEY', Buffer.alloc(32, 7).toString('base64'));
+    vi.stubEnv('PLATFORM_REGISTRY_DIR', directory);
+    vi.stubEnv('PLATFORM_RECOVERY_KEY', Buffer.alloc(32, 7).toString('base64'));
     const plan = await createPlatformInstallPlan(
       {
         listAccounts: async () => [{ id: 'account', name: 'Account' }],

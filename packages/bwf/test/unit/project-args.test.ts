@@ -324,7 +324,7 @@ describe('parseProjectArgs', () => {
       });
     });
 
-    it.each([['nosam'], ['']])('rejects rollback --platform %o', (value) => {
+    it.each([['platform'], ['']])('rejects rollback --platform %o', (value) => {
       expect(() => parseProjectArgs(['rollback', `--platform=${value}`])).toThrow(
         "accepts only 'cloudflare'",
       );

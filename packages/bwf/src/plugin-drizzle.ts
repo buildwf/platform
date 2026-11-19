@@ -25,8 +25,8 @@ const envModuleResolved = fileURLToPath(import.meta.resolve('#self/_env'));
 const drizzleNodePgResolved = fileURLToPath(import.meta.resolve('drizzle-orm/node-postgres'));
 const drizzleMysql2Resolved = fileURLToPath(import.meta.resolve('drizzle-orm/mysql2'));
 
-const VIRTUAL_DB_ID = '\0virtual:nosam-db';
-const VIRTUAL_SCHEMA_DB_ID = '\0virtual:nosam-db-schema';
+const VIRTUAL_DB_ID = '\0virtual:platform-db';
+const VIRTUAL_SCHEMA_DB_ID = '\0virtual:platform-db-schema';
 
 // Workers tie a connection to the request that opened it. bwf/db's PostgreSQL and MySQL
 // templates share one drizzle instance whose client looks up the current request's pool on
@@ -97,7 +97,7 @@ function createBwfDbModule(
           return;
         } // Fall through to the real module (stub)
         // Don't redirect schema files to avoid circular dependency
-        // (virtual:nosam-db imports the schema, which imports bwf/db).
+        // (virtual:platform-db imports the schema, which imports bwf/db).
         // Schema files only need SQL helpers, not the runtime DB instance.
         if (schema && importer) {
           // Normalize separators for Windows — Vite uses forward slashes,
@@ -130,7 +130,7 @@ function createBwfDbModule(
 
     load: {
       // oxlint-disable-next-line no-control-regex -- \0 prefix is Vite's virtual module convention
-      filter: { id: /^\0virtual:nosam-db(?:-schema)?$/ },
+      filter: { id: /^\0virtual:platform-db(?:-schema)?$/ },
       handler(id: string): string {
         if (id === VIRTUAL_SCHEMA_DB_ID) {
           return `
@@ -359,7 +359,7 @@ export function drizzlePlugin(
   }
 
   return {
-    name: 'nosam:drizzle',
+    name: 'platform:drizzle',
     enforce: 'pre',
 
     config() {
@@ -462,7 +462,7 @@ export function bwfDbBundlerPlugin(
   const drivers = new Map<string, Promise<string>>();
   const driverDirs: Array<string> = [];
   return {
-    name: 'nosam:db',
+    name: 'platform:db',
     enforce: 'pre',
     async resolveId(id, importer, resolveOptions) {
       const promiseApi = driverPackage === 'mysql2' && MYSQL2_PROMISE.test(id);

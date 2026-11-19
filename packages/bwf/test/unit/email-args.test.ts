@@ -106,20 +106,20 @@ describe('parseEmailArgs', () => {
   });
 
   it('parses --platform bwf', () => {
-    expect(parseEmailArgs(['setup', '--platform', 'nosam'])).toEqual({
+    expect(parseEmailArgs(['setup', '--platform', 'platform'])).toEqual({
       subcommand: 'setup',
       projectSlug: undefined,
       limit: undefined,
       address: undefined,
-      platform: 'nosam',
+      platform: 'platform',
     });
-    expect(parseEmailArgs(['status', '--platform=nosam']).platform).toBe('nosam');
+    expect(parseEmailArgs(['status', '--platform=platform']).platform).toBe('platform');
     // The platform-only subcommands are the platform already, so naming it is a no-op
     // there — unlike `cloudflare`, which they reject.
-    expect(parseEmailArgs(['usage', '--platform', 'nosam', '--project', 'my-app'])).toMatchObject({
+    expect(parseEmailArgs(['usage', '--platform', 'platform', '--project', 'my-app'])).toMatchObject({
       subcommand: 'usage',
       projectSlug: 'my-app',
-      platform: 'nosam',
+      platform: 'platform',
     });
   });
 
@@ -134,16 +134,16 @@ describe('parseEmailArgs', () => {
 
   it('errors on --platform without a value or with another value', () => {
     expect(() => parseEmailArgs(['setup', '--platform'])).toThrow(
-      "email: --platform requires a value ('cloudflare' or 'nosam').",
+      "email: --platform requires a value ('cloudflare' or 'platform').",
     );
     expect(() => parseEmailArgs(['setup', '--platform', '--limit', '3'])).toThrow(
       /--platform requires a value/,
     );
     expect(() => parseEmailArgs(['setup', '--platform=', 'cloudflare'])).toThrow(
-      "email: --platform must be 'cloudflare' or 'nosam'.",
+      "email: --platform must be 'cloudflare' or 'platform'.",
     );
     expect(() => parseEmailArgs(['setup', '--platform', 'vercel'])).toThrow(
-      "email: --platform must be 'cloudflare' or 'nosam'.",
+      "email: --platform must be 'cloudflare' or 'platform'.",
     );
   });
 
@@ -217,7 +217,7 @@ describe('parseEmailArgs', () => {
     expect(() =>
       parseEmailArgs(['setup', '--platform', 'cloudflare', '--platform', 'cloudflare']),
     ).toThrow('email: --platform can only be specified once.');
-    expect(() => parseEmailArgs(['setup', '--platform', 'other', '--platform', 'nosam'])).toThrow(
+    expect(() => parseEmailArgs(['setup', '--platform', 'other', '--platform', 'platform'])).toThrow(
       'email: --platform can only be specified once.',
     );
   });

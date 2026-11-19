@@ -2,7 +2,7 @@
  * Public runtime env API — exposed via "@builtbyfriends/bwf/_env".
  *
  * All exports from this module are accessible to user code.
- * Internal platform bindings (__NOSAM_*, __PROJECT_*) are filtered
+ * Internal platform bindings (__PLATFORM_*, __PROJECT_*) are filtered
  * from getRuntimeEnv() and blocked in getRuntimeBinding().
  */
 import { AsyncLocalStorage } from 'node:async_hooks';

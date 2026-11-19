@@ -127,7 +127,7 @@ export function resolvePlatformInstallDatabaseUrl(
   checkpoint: Record<string, string> | null,
   manifest: PlatformInstallationManifest | null = null,
 ): string {
-  const explicit = process.env.NOSAM_PLATFORM_DATABASE_URL || process.env.DATABASE_URL || '';
+  const explicit = process.env.PLATFORM_DATABASE_URL || process.env.DATABASE_URL || '';
   const recorded = checkpoint?.databaseUrl || '';
   if (isPlatformInstallDatabaseBound(checkpoint, manifest)) {
     if (!recorded) {
@@ -139,12 +139,12 @@ export function resolvePlatformInstallDatabaseUrl(
         return explicit;
       }
       throw new Error(
-        'platform: The claimed PostgreSQL database URL is missing from local recovery state. Export NOSAM_PLATFORM_DATABASE_URL with the original installation database before continuing.',
+        'platform: The claimed PostgreSQL database URL is missing from local recovery state. Export PLATFORM_DATABASE_URL with the original installation database before continuing.',
       );
     }
     if (explicit && explicit !== recorded) {
       throw new Error(
-        'platform: This installation is already bound to its recorded PostgreSQL database. Unset DATABASE_URL and NOSAM_PLATFORM_DATABASE_URL before resuming; changing databases requires an explicit migration flow.',
+        'platform: This installation is already bound to its recorded PostgreSQL database. Unset DATABASE_URL and PLATFORM_DATABASE_URL before resuming; changing databases requires an explicit migration flow.',
       );
     }
     return recorded;
@@ -530,7 +530,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
         }
       }
     }
-    const externalHyperdriveId = process.env.NOSAM_PLATFORM_HYPERDRIVE_ID?.trim() || '';
+    const externalHyperdriveId = process.env.PLATFORM_HYPERDRIVE_ID?.trim() || '';
     const selectedHyperdriveId = args.hyperdrive || externalHyperdriveId;
     const savedPlanHyperdrive =
       !existing && reuseSavedPlan && selectedHyperdriveId && selectedHyperdriveId !== 'create'
@@ -560,10 +560,10 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
         'platform: The selected Hyperdrive differs from the saved installation. Resume with its original Hyperdrive.',
       );
     }
-    const externalHyperdriveHost = process.env.NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_HOST?.trim() || '';
+    const externalHyperdriveHost = process.env.PLATFORM_HYPERDRIVE_ORIGIN_HOST?.trim() || '';
     const serviceId =
-      process.env.NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID?.trim().toLowerCase() || '';
-    const externalHyperdriveUser = process.env.NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_USER?.trim() || '';
+      process.env.PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID?.trim().toLowerCase() || '';
+    const externalHyperdriveUser = process.env.PLATFORM_HYPERDRIVE_ORIGIN_USER?.trim() || '';
     if (externalHyperdriveHost && serviceId) {
       throw new Error(
         'platform: Specify either a Hyperdrive origin host or a Workers VPC service ID.',
@@ -574,7 +574,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       !(externalHyperdriveId && (externalHyperdriveHost || serviceId) && externalHyperdriveUser)
     ) {
       throw new Error(
-        'platform: Set NOSAM_PLATFORM_HYPERDRIVE_ID and NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_USER with either NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_HOST or NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID.',
+        'platform: Set PLATFORM_HYPERDRIVE_ID and PLATFORM_HYPERDRIVE_ORIGIN_USER with either PLATFORM_HYPERDRIVE_ORIGIN_HOST or PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID.',
       );
     }
     let externalHyperdrive: PlatformExternalHyperdrive | undefined = externalHyperdriveId
@@ -589,7 +589,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       externalHyperdrive &&
       requestedHyperdriveId !== externalHyperdrive.id
     ) {
-      throw new Error('platform: --hyperdrive conflicts with NOSAM_PLATFORM_HYPERDRIVE_ID.');
+      throw new Error('platform: --hyperdrive conflicts with PLATFORM_HYPERDRIVE_ID.');
     }
     if (
       savedHyperdrive &&
@@ -792,11 +792,11 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       dedicatedZone,
       displayName,
       ...(externalHyperdrive ? { externalHyperdrive } : {}),
-      ...(process.env.NOSAM_EMAIL_SHARED_ZONE_ID
-        ? { emailSharedZoneId: process.env.NOSAM_EMAIL_SHARED_ZONE_ID }
+      ...(process.env.PLATFORM_EMAIL_SHARED_ZONE_ID
+        ? { emailSharedZoneId: process.env.PLATFORM_EMAIL_SHARED_ZONE_ID }
         : {}),
-      ...(process.env.NOSAM_EMAIL_SENDER_DOMAIN
-        ? { emailSenderDomain: process.env.NOSAM_EMAIL_SENDER_DOMAIN }
+      ...(process.env.PLATFORM_EMAIL_SENDER_DOMAIN
+        ? { emailSenderDomain: process.env.PLATFORM_EMAIL_SENDER_DOMAIN }
         : {}),
       installationSlug,
       ...(args.runtimeLogs !== undefined ? { runtimeLogs: args.runtimeLogs } : {}),
@@ -862,7 +862,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       pc.bold(args.plan ? 'Read-only installation plan' : 'Installation plan'),
     );
     note(formatPlatformRuntime(runtime), pc.bold('Platform runtime'));
-    const managementAccess = process.env.NOSAM_PLATFORM_ACCESS_SETUP_TOKEN
+    const managementAccess = process.env.PLATFORM_ACCESS_SETUP_TOKEN
       ? undefined
       : platformManagementAccessForAuthentication(authenticationSelection, accountId, checkpoint);
     const needsManagementToken = platformOperatorNeedsManagementToken(
@@ -1035,17 +1035,17 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       return value;
     };
     const pages = platformSetupPages(plan);
-    if (!configured('cloudflareApiToken', 'NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN')) {
+    if (!configured('cloudflareApiToken', 'PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN')) {
       openPlatformSetupPage(pages.runtime);
     }
 
     const savedRuntimeToken = checkpoint?.cloudflareApiToken ?? '';
     const usingSavedRuntimeToken =
-      !process.env.NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN &&
+      !process.env.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN &&
       Boolean(values.cloudflareApiToken);
     let runtimeCloudflareApiToken = await collect(
       'cloudflareApiToken',
-      'NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN',
+      'PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN',
       'Paste runtime API token:',
       true,
       false,
@@ -1107,7 +1107,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       openPlatformSetupPage(pages.runtime);
       runtimeCloudflareApiToken = await collect(
         'cloudflareApiToken',
-        'NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN',
+        'PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN',
         'Paste runtime API token:',
         true,
         false,
@@ -1145,41 +1145,41 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       const previousLogin = values.bootstrapGitHubLogin;
       bootstrapGitHubLogin = await collect(
         'bootstrapGitHubLogin',
-        'NOSAM_PLATFORM_ADMIN_GITHUB_LOGIN',
+        'PLATFORM_ADMIN_GITHUB_LOGIN',
         'Initial administrator GitHub username:',
         false,
       );
       bootstrapGitHubId =
         (previousLogin === bootstrapGitHubLogin ? values.bootstrapGitHubId : '') ||
-        process.env.NOSAM_PLATFORM_ADMIN_GITHUB_ID ||
+        process.env.PLATFORM_ADMIN_GITHUB_ID ||
         (await resolveBootstrapGitHubId(bootstrapGitHubLogin));
       saveValues({ bootstrapGitHubId });
     }
     const installationDatabaseUrl =
       databaseUrl ||
-      (await collect('databaseUrl', 'NOSAM_PLATFORM_DATABASE_URL', 'PostgreSQL DATABASE_URL:'));
+      (await collect('databaseUrl', 'PLATFORM_DATABASE_URL', 'PostgreSQL DATABASE_URL:'));
     saveValues({ databaseUrl: installationDatabaseUrl });
     if (!authenticationSecrets) {
       if (
-        !configured('githubClientId', 'NOSAM_PLATFORM_GITHUB_CLIENT_ID') ||
-        !configured('githubClientSecret', 'NOSAM_PLATFORM_GITHUB_CLIENT_SECRET')
+        !configured('githubClientId', 'PLATFORM_GITHUB_CLIENT_ID') ||
+        !configured('githubClientSecret', 'PLATFORM_GITHUB_CLIENT_SECRET')
       ) {
         openPlatformSetupPage(
-          configured('githubClientId', 'NOSAM_PLATFORM_GITHUB_CLIENT_ID')
+          configured('githubClientId', 'PLATFORM_GITHUB_CLIENT_ID')
             ? { ...pages.github, url: 'https://github.com/settings/developers' }
             : pages.github,
         );
       }
       githubClientId = await collect(
         'githubClientId',
-        'NOSAM_PLATFORM_GITHUB_CLIENT_ID',
+        'PLATFORM_GITHUB_CLIENT_ID',
         'GitHub OAuth client ID:',
         false,
         false,
       );
       githubClientSecret = await collect(
         'githubClientSecret',
-        'NOSAM_PLATFORM_GITHUB_CLIENT_SECRET',
+        'PLATFORM_GITHUB_CLIENT_SECRET',
         'GitHub OAuth client secret:',
         true,
         false,
@@ -1187,21 +1187,21 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       saveValues({ githubClientId, githubClientSecret });
     }
     if (
-      !configured('r2AccessKeyId', 'NOSAM_PLATFORM_R2_ACCESS_KEY_ID') ||
-      !configured('r2SecretAccessKey', 'NOSAM_PLATFORM_R2_SECRET_ACCESS_KEY')
+      !configured('r2AccessKeyId', 'PLATFORM_R2_ACCESS_KEY_ID') ||
+      !configured('r2SecretAccessKey', 'PLATFORM_R2_SECRET_ACCESS_KEY')
     ) {
       openPlatformSetupPage(pages.r2);
     }
     const r2AccessKeyId = await collect(
       'r2AccessKeyId',
-      'NOSAM_PLATFORM_R2_ACCESS_KEY_ID',
+      'PLATFORM_R2_ACCESS_KEY_ID',
       'Access Key ID:',
       false,
       false,
     );
     const r2SecretAccessKey = await collect(
       'r2SecretAccessKey',
-      'NOSAM_PLATFORM_R2_SECRET_ACCESS_KEY',
+      'PLATFORM_R2_SECRET_ACCESS_KEY',
       'Secret Access Key:',
       true,
       false,
@@ -1210,8 +1210,8 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
     const hasFullProjectSecretKeyring = Boolean(
       checkpoint?.projectSecretKeysJson ||
       checkpoint?.projectSecretActiveKeyVersion ||
-      process.env.NOSAM_PLATFORM_PROJECT_SECRET_KEYS_JSON ||
-      process.env.NOSAM_PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION,
+      process.env.PLATFORM_PROJECT_SECRET_KEYS_JSON ||
+      process.env.PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION,
     );
     // Interactive fresh installs keep the identity keys in this machine's encrypted
     // recovery data, like the email signing key. Headless runners may lose that data,
@@ -1219,8 +1219,8 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
     const generateIdentityKeys = credentialSetup && !!process.stdin.isTTY;
     const generatedKeys = generateIdentityKeys
       ? [
-          configured('jwtSecret', 'NOSAM_PLATFORM_JWT_SECRET') ? '' : 'JWT signing key',
-          configured('projectSecretKey', 'NOSAM_PLATFORM_PROJECT_SECRET_KEY') ||
+          configured('jwtSecret', 'PLATFORM_JWT_SECRET') ? '' : 'JWT signing key',
+          configured('projectSecretKey', 'PLATFORM_PROJECT_SECRET_KEY') ||
           hasFullProjectSecretKeyring
             ? ''
             : 'project encryption key',
@@ -1250,7 +1250,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       emailSigningSecret:
         updateExistingWorkers && values.emailSigningSecret
           ? ''
-          : process.env.NOSAM_PLATFORM_EMAIL_SIGNING_SECRET || '',
+          : process.env.PLATFORM_EMAIL_SIGNING_SECRET || '',
       existingEmailEnabled: existing.deployment.capabilities.email,
       githubClientId: checkpointValue(githubClientId),
       githubClientSecret: checkpointValue(githubClientSecret),
@@ -1260,10 +1260,10 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       updateExistingWorkers,
       generateIdentityKeys,
       jwtSecret: generateIdentityKeys
-        ? configured('jwtSecret', 'NOSAM_PLATFORM_JWT_SECRET')
+        ? configured('jwtSecret', 'PLATFORM_JWT_SECRET')
         : await collect(
             'jwtSecret',
-            'NOSAM_PLATFORM_JWT_SECRET',
+            'PLATFORM_JWT_SECRET',
             'JWT signing key:',
             true,
             true,
@@ -1275,12 +1275,12 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
               : undefined,
           ),
       projectSecretKey:
-        configured('projectSecretKey', 'NOSAM_PLATFORM_PROJECT_SECRET_KEY') ||
+        configured('projectSecretKey', 'PLATFORM_PROJECT_SECRET_KEY') ||
         (hasFullProjectSecretKeyring || generateIdentityKeys
           ? ''
           : await collect(
               'projectSecretKey',
-              'NOSAM_PLATFORM_PROJECT_SECRET_KEY',
+              'PLATFORM_PROJECT_SECRET_KEY',
               'Project encryption key:',
               true,
               true,
@@ -1293,9 +1293,9 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
                   }
                 : undefined,
             )),
-      projectSecretKeysJson: process.env.NOSAM_PLATFORM_PROJECT_SECRET_KEYS_JSON || '',
+      projectSecretKeysJson: process.env.PLATFORM_PROJECT_SECRET_KEYS_JSON || '',
       projectSecretActiveKeyVersion:
-        process.env.NOSAM_PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION || '',
+        process.env.PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION || '',
     });
     if (generatedKeys.length) {
       log.info(
@@ -1499,7 +1499,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       );
       if (usingUnboundDatabase) {
         log.info(
-          'To use another PostgreSQL database, set NOSAM_PLATFORM_DATABASE_URL to its URL first.',
+          'To use another PostgreSQL database, set PLATFORM_DATABASE_URL to its URL first.',
         );
       }
     }
@@ -1692,7 +1692,7 @@ async function promptSecret(
 ): Promise<string> {
   if (!process.stdin.isTTY) {
     throw new Error(
-      `platform: ${message.replace(/:$/, '')} is required in non-interactive mode. Set the documented NOSAM_PLATFORM_* environment variable.`,
+      `platform: ${message.replace(/:$/, '')} is required in non-interactive mode. Set the documented PLATFORM_* environment variable.`,
     );
   }
   const options = {

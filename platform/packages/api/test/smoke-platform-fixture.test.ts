@@ -198,7 +198,7 @@ export const POST = () => sendEmail({ to: 'test@example.com', subject: 'Test', t
           encoding: 'utf8',
           timeout: 120_000,
           maxBuffer: 10 * 1024 * 1024,
-          env: { ...process.env, NOSAM_DEPLOY_PROJECT_ID: 'runtime-acceptance' },
+          env: { ...process.env, PLATFORM_DEPLOY_PROJECT_ID: 'runtime-acceptance' },
         });
         expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
       }

@@ -45,7 +45,7 @@ import { validateRecoveryTest } from './recovery.ts';
 import { isAllowedRedirect, isLocalhostRedirect, isAuthorizationRedirect } from './redirects.ts';
 import { createHumanSession, validateHumanSession, type CompanyIdentity } from './sessions.ts';
 
-const COOKIE = 'nosam_platform_auth';
+const COOKIE = 'platform_auth';
 const FLOW_SECONDS = 600;
 const providers = new Map<string, PlatformOidcProvider>();
 
@@ -299,7 +299,7 @@ export async function startLoginTest(
       | undefined;
     const actor = saved?.actor;
     if (purpose === 'link') {
-      const browserToken = getCookie(context, 'nosam_account_session');
+      const browserToken = getCookie(context, 'platform_account_session');
       const browserSession = browserToken
         ? await verifyJwt(browserToken, context.env.JWT_SECRET, 'api')
         : null;
@@ -624,7 +624,7 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
         identity,
         companyIdentity: currentCompany,
       });
-      setCookie(context, 'nosam_bootstrap_confirm', proof, {
+      setCookie(context, 'platform_bootstrap_confirm', proof, {
         httpOnly: true,
         secure: true,
         sameSite: 'Strict',
@@ -643,8 +643,8 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
           'Review the account below before giving it administrator access to this platform.',
         ) +
           browserPageIdentity(identity) +
-          '<p class="nosam-auth-note">This account will be able to manage the platform and its users.</p>' +
-          '<form method="post" action="/auth/bootstrap/confirm"><input type="hidden" name="confirm" value="yes"><button class="nosam-auth-button nosam-auth-button-primary" type="submit">Make this account the platform administrator</button></form>',
+          '<p class="platform-auth-note">This account will be able to manage the platform and its users.</p>' +
+          '<form method="post" action="/auth/bootstrap/confirm"><input type="hidden" name="confirm" value="yes"><button class="platform-auth-button platform-auth-button-primary" type="submit">Make this account the platform administrator</button></form>',
       );
     }
     if (attempt.purpose === 'test' || attempt.purpose === 'link') {
@@ -716,7 +716,7 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
           context: { phase: 'confirm', actor: saved.actor },
           expires_at: new Date(Date.now() + 300_000).toISOString(),
         });
-        setCookie(context, 'nosam_link_confirm', saved.testId + ':' + proof, {
+        setCookie(context, 'platform_link_confirm', saved.testId + ':' + proof, {
           httpOnly: true,
           secure: true,
           sameSite: 'Strict',
@@ -731,7 +731,7 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
             'Review the identity before linking it to your existing Platform account.',
           ) +
             browserPageIdentity(identity) +
-            '<form method="post" action="/auth/link/confirm"><input type="hidden" name="confirm" value="yes"><button class="nosam-auth-button nosam-auth-button-primary" type="submit">Link this identity</button></form>',
+            '<form method="post" action="/auth/link/confirm"><input type="hidden" name="confirm" value="yes"><button class="platform-auth-button platform-auth-button-primary" type="submit">Link this identity</button></form>',
         );
       }
       if (saved.actor?.audience === 'admin') {
@@ -781,7 +781,7 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
     }
     // Bind ordinary account-link launches to the browser that just proved the existing
     // account. A copied launch URL must never let another browser attach its identity.
-    setCookie(context, 'nosam_account_session', token, {
+    setCookie(context, 'platform_account_session', token, {
       httpOnly: true,
       secure: true,
       sameSite: 'Lax',
@@ -879,7 +879,7 @@ export async function confirmIdentityLink(context: Context<ApiEnv>): Promise<Res
     ) {
       throw new Error('Confirmation required');
     }
-    const [id, proof] = (getCookie(context, 'nosam_link_confirm') ?? '').split(':');
+    const [id, proof] = (getCookie(context, 'platform_link_confirm') ?? '').split(':');
     if (!id || !proof) {
       throw new Error('Confirmation expired');
     }
@@ -929,7 +929,7 @@ export async function confirmIdentityLink(context: Context<ApiEnv>): Promise<Res
       });
     }
     await db.delete(platformLoginTests).where(eq(platformLoginTests.id, attempt.id));
-    deleteCookie(context, 'nosam_link_confirm', { path: '/auth/link/confirm' });
+    deleteCookie(context, 'platform_link_confirm', { path: '/auth/link/confirm' });
     context.header('Cache-Control', 'no-store');
     return platformBrowserPage(
       context,

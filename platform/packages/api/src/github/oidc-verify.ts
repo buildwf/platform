@@ -67,7 +67,7 @@ function getJwks(): ReturnType<typeof createRemoteJWKSet> {
  */
 export async function verifyGithubOidcToken(
   token: string,
-  opts?: { audience?: string },
+  opts?: { audience?: string | Array<string> },
 ): Promise<GithubOidcClaims | null> {
   try {
     const { payload } = await jwtVerify(token, getJwks(), {

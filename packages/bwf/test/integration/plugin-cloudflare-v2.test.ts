@@ -174,7 +174,7 @@ describe('Cloudflare v2 compatibility', () => {
     } finally {
       await artifact?.dispose();
     }
-    const metadataPath = join(root, '.cloudflare/output/v0/nosam-containers.json');
+    const metadataPath = join(root, '.cloudflare/output/v0/platform-containers.json');
     writeFileSync(metadataPath, JSON.stringify({ workerDirectory: '../outside' }));
     await expect(prepareCfBuildOutput(root)).rejects.toThrow('Invalid bwf Container');
     // Two real Vite builds take about four seconds, near the default timeout.

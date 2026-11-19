@@ -33,7 +33,7 @@
 - `vp run <script> -- <args>` forwards the literal `--`. For Wrangler that
   hides `--env`: use `vp run --filter <pkg> deploy --env production|staging`.
   Production deploys must select `--env production` explicitly.
-- There is no separate `nosam-platform` repo: the platform was merged into
+- There is no separate `platform` repo: the platform was merged into
   the unified `voidzero-dev/void` repo. Framework code is `packages/`,
   platform code is `platform/packages/`, platform meta is `platform/meta/`.
   Do not reason about submodule pointers or a sibling platform checkout.
@@ -52,7 +52,7 @@
 
 ## Email and routing
 
-- Route platform email on the preserved wire recipient `__nosamPlatformTo`;
+- Route platform email on the preserved wire recipient `__platformTo`;
   strip its project prefix exactly once for the handler-facing message.
 - Match addresses case-insensitively without lowercasing captured parameters.
 - Check the zone's `support_subaddress` setting; it is not implied by a

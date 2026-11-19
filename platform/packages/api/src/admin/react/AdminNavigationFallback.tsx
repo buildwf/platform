@@ -39,7 +39,7 @@ const TITLES: Partial<Record<AdminPageId, string>> = {
 export function AdminNavigationFallback({ initialPageData }: { initialPageData: PageObject }) {
   const navigation = useNavigation();
   const path =
-    navigation.location?.pathname ?? new URL(initialPageData.url, 'https://nosam.invalid').pathname;
+    navigation.location?.pathname ?? new URL(initialPageData.url, 'https://platform.invalid').pathname;
   const title = TITLES[matchAdminRoute(path) ?? 'adminError'] ?? 'Admin';
   const platformName = String(initialPageData.props.platformName ?? 'Platform');
   const username =
@@ -48,10 +48,10 @@ export function AdminNavigationFallback({ initialPageData }: { initialPageData: 
   return (
     <AdminUiProviders>
       <Layout title={title} platformName={platformName} username={username}>
-        <SectionStack as="div" className="nosam-admin-loading" role="status" aria-live="polite">
+        <SectionStack as="div" className="platform-admin-loading" role="status" aria-live="polite">
           <Heading level={1}>{title}</Heading>
-          <span className="nosam-admin-sr-only">Loading {title.toLowerCase()}…</span>
-          <SectionStack as="div" className="nosam-admin-loading-lines" aria-hidden="true">
+          <span className="platform-admin-sr-only">Loading {title.toLowerCase()}…</span>
+          <SectionStack as="div" className="platform-admin-loading-lines" aria-hidden="true">
             <Skeleton width="32%" height={24} />
             <Skeleton width="100%" height={48} index={1} />
             <Skeleton width="100%" height={48} index={2} />

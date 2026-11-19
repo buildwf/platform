@@ -1,5 +1,5 @@
 ---
-name: migrate-cloudflare-to-nosam
+name: migrate-cloudflare-to-platform
 description: Migrate an existing Vite app using @cloudflare/vite-plugin to bwf while preserving its routes, bindings, and deployment identity.
 ---
 

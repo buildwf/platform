@@ -68,10 +68,10 @@ async function seedReconcilingProtection(projectId: string): Promise<void> {
       identityProviderIds: ['idp-1'],
       policyIds: ['policy-1'],
       credential: { ciphertext: 'unused', iv: 'unused', keyVersion: 'v1' },
-      wildcardApplicationName: 'nosam-test-projects',
+      wildcardApplicationName: 'platform-test-projects',
       wildcardApplication: {
         id: 'access-wildcard',
-        name: 'nosam-test-projects',
+        name: 'platform-test-projects',
         audience: 'access-audience',
         destinations: ['*.void.app'],
       },

@@ -16,7 +16,7 @@ export * from '@cloudflare/sandbox';
 export type { SandboxOptions, SandboxExecOptions };
 export const DEFAULT_SANDBOX_ID = 'default';
 export const DEFAULT_SANDBOX_BINDING = 'SANDBOX';
-export const SANDBOX_SERVICE_BINDING = '__NOSAM_SANDBOX';
+export const SANDBOX_SERVICE_BINDING = '__PLATFORM_SANDBOX';
 export type BwfSandboxOptions = SandboxOptions & { binding?: string; normalizeId?: boolean };
 export type SandboxProcess = {
   pid: number;
@@ -64,11 +64,11 @@ export function __setSandboxBindingName(bindingName: string): void {
 function rethrowSandboxError(error: unknown): never {
   const message = error instanceof Error ? error.message : String(error);
   for (const reason of ['concurrency', 'runtime_budget'] as const) {
-    if (message.includes(`NOSAM_SANDBOX_${reason}`)) {
+    if (message.includes(`PLATFORM_SANDBOX_${reason}`)) {
       throw new SandboxLimitError(reason);
     }
   }
-  if (message.includes('NOSAM_SANDBOX_unavailable')) {
+  if (message.includes('PLATFORM_SANDBOX_unavailable')) {
     throw new SandboxUnavailableError();
   }
   throw error;
@@ -222,7 +222,7 @@ function client(
 export class BwfPlatformSandbox<Env = unknown> extends SandboxContainer<Env> {
   protected override async beforeStart(): Promise<void> {
     const env = this.env as Record<string, unknown>;
-    if (env.__PROJECT_ID !== undefined || env.__NOSAM_PROXY !== undefined) {
+    if (env.__PROJECT_ID !== undefined || env.__PLATFORM_PROXY !== undefined) {
       throw new SandboxUnavailableError(
         'Managed Sandboxes require the platform Sandbox controller. Redeploy this application.',
       );
@@ -260,7 +260,7 @@ export async function getSandbox(
       rethrowSandboxError(error);
     }
   }
-  if (env.__PROJECT_ID !== undefined || env.__NOSAM_PROXY !== undefined) {
+  if (env.__PROJECT_ID !== undefined || env.__PLATFORM_PROXY !== undefined) {
     throw new SandboxUnavailableError(
       'This deployment has no managed Sandbox controller. Redeploy this application.',
     );

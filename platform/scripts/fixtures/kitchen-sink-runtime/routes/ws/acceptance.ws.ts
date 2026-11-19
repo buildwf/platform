@@ -1,7 +1,7 @@
 import { defineWebSocket } from '@builtbyfriends/bwf/ws';
 import * as v from 'valibot';
 
-const marker = v.pipe(v.string(), v.regex(/^nosam-e2e-[a-f0-9]{16}$/));
+const marker = v.pipe(v.string(), v.regex(/^platform-e2e-[a-f0-9]{16}$/));
 
 export default defineWebSocket({
   messages: {
@@ -13,7 +13,7 @@ export default defineWebSocket({
     if (
       typeof secret !== 'string' ||
       !secret ||
-      ctx.request.headers.get('x-nosam-e2e-token') !== secret
+      ctx.request.headers.get('x-platform-e2e-token') !== secret
     ) {
       return Response.json({ error: 'unauthorized' }, { status: 401 });
     }

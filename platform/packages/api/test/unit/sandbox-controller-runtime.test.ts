@@ -76,7 +76,7 @@ function fixture() {
       deleteAlarm: vi.fn(),
     },
   };
-  const env = { SANDBOX: { getByName: vi.fn() }, __NOSAM_SANDBOX_CONTROL: control };
+  const env = { SANDBOX: { getByName: vi.fn() }, __PLATFORM_SANDBOX_CONTROL: control };
   const controller = new SandboxController(ctx as never, env as never);
   env.SANDBOX.getByName.mockReturnValue(controller);
   return {
@@ -131,11 +131,11 @@ describe('trusted Sandbox lifecycle', () => {
     );
     expect(f.control.reserve).toHaveBeenCalledOnce();
     expect(f.control.started).toHaveBeenCalledWith('namespace-instance', expect.any(String));
-    expect(f.data.get('__nosamSandboxLease')).toMatchObject({ phase: 'running' });
+    expect(f.data.get('__platformSandboxLease')).toMatchObject({ phase: 'running' });
   });
   it('installs the matching helper into the managed Node image before admitting operations', async () => {
     const f = fixture();
-    Object.assign(f.env, { __NOSAM_SANDBOX_IMAGE: 'cloudflare/debian-trixie' });
+    Object.assign(f.env, { __PLATFORM_SANDBOX_IMAGE: 'cloudflare/debian-trixie' });
     vi.mocked(getSandboxShim).mockResolvedValue(new Uint8Array([127, 69, 76, 70]));
     await f.start();
     expect(f.container.start).toHaveBeenCalledWith(
@@ -151,7 +151,7 @@ describe('trusted Sandbox lifecycle', () => {
   });
   it('stops before billing when helper preparation fails', async () => {
     const f = fixture();
-    Object.assign(f.env, { __NOSAM_SANDBOX_IMAGE: 'cloudflare/debian-trixie' });
+    Object.assign(f.env, { __PLATFORM_SANDBOX_IMAGE: 'cloudflare/debian-trixie' });
     vi.mocked(getSandboxShim).mockRejectedValue(new Error('integrity check failed'));
     await expect(f.start()).rejects.toThrow('integrity check failed');
     expect(f.container.running).toBe(false);
@@ -160,7 +160,7 @@ describe('trusted Sandbox lifecycle', () => {
   it('never boots on failed admission', async () => {
     const f = fixture();
     f.control.reserve.mockResolvedValue({ ok: false, reason: 'concurrency' });
-    await expect(f.start()).rejects.toThrow('NOSAM_SANDBOX_concurrency');
+    await expect(f.start()).rejects.toThrow('PLATFORM_SANDBOX_concurrency');
     expect(f.container.start).not.toHaveBeenCalled();
     expect(f.control.started).not.toHaveBeenCalled();
   });
@@ -203,7 +203,7 @@ describe('trusted Sandbox lifecycle', () => {
   it('hard-kills a booted container when startup confirmation fails', async () => {
     const f = fixture();
     f.control.started.mockResolvedValue({ ok: false, reason: 'runtime_budget' });
-    await expect(f.start()).rejects.toThrow('NOSAM_SANDBOX_runtime_budget');
+    await expect(f.start()).rejects.toThrow('PLATFORM_SANDBOX_runtime_budget');
     expect(f.container.destroy).toHaveBeenCalledOnce();
     expect(f.control.stopped).toHaveBeenCalledOnce();
   });
@@ -224,7 +224,7 @@ describe('trusted Sandbox lifecycle', () => {
     const f = fixture();
     await f.start();
     f.control.heartbeat.mockResolvedValue({ ok: false, reason: 'runtime_budget' });
-    await expect(f.start()).rejects.toThrow('NOSAM_SANDBOX_runtime_budget');
+    await expect(f.start()).rejects.toThrow('PLATFORM_SANDBOX_runtime_budget');
     expect(f.container.running).toBe(false);
   });
   it('terminates after bounded control timeouts', async () => {
@@ -242,18 +242,18 @@ describe('trusted Sandbox lifecycle', () => {
   it('persists a stopped generation until final accounting succeeds', async () => {
     const f = fixture();
     await f.start();
-    const generation = (f.data.get('__nosamSandboxLease') as { generation: string }).generation;
+    const generation = (f.data.get('__platformSandboxLease') as { generation: string }).generation;
     f.container.running = false;
     f.control.stopped.mockRejectedValueOnce(new Error('unavailable'));
     await expect(f.controller.destroy()).rejects.toThrow('unavailable');
-    expect(f.data.get('__nosamSandboxLease')).toEqual({ generation, phase: 'stopped' });
+    expect(f.data.get('__platformSandboxLease')).toEqual({ generation, phase: 'stopped' });
     await f.controller.alarm();
     expect(f.control.stopped).toHaveBeenLastCalledWith('namespace-instance', generation);
     expect(f.data.size).toBe(0);
   });
   it('reconciles interrupted startup before granting another lease', async () => {
     const f = fixture();
-    f.data.set('__nosamSandboxLease', { generation: 'orphan', phase: 'pending' });
+    f.data.set('__platformSandboxLease', { generation: 'orphan', phase: 'pending' });
     f.container.running = true;
     await f.start();
     expect(f.container.destroy).toHaveBeenCalledOnce();
@@ -285,12 +285,12 @@ describe('trusted Sandbox lifecycle', () => {
     const f = fixture();
     await f.controller.configure({ inactivityTimeoutMs: 120_000 });
     await f.start();
-    const activity = structuredClone(f.data.get('__nosamSandboxActivity'));
+    const activity = structuredClone(f.data.get('__platformSandboxActivity'));
     for (let check = 0; check < 3; check++) {
       await vi.advanceTimersByTimeAsync(30_000);
       await f.controller.alarm();
       expect(f.container.running).toBe(true);
-      expect(f.data.get('__nosamSandboxActivity')).toEqual(activity);
+      expect(f.data.get('__platformSandboxActivity')).toEqual(activity);
     }
     await vi.advanceTimersByTimeAsync(30_000);
     await f.controller.alarm();
@@ -522,7 +522,7 @@ it('preserves budget termination for an old process after a new generation start
   const next = (await f.start()) as typeof process;
   expect(await next.capability.invoke('exitCode', [])).toBe(0);
   await expect(process.capability.invoke('exitCode', [])).rejects.toThrow(
-    'NOSAM_SANDBOX_runtime_budget',
+    'PLATFORM_SANDBOX_runtime_budget',
   );
 });
 

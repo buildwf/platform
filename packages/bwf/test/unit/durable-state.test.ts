@@ -18,7 +18,7 @@ function createObjectState(initial?: unknown): {
 } {
   const records = new Map<string, unknown>();
   if (initial !== undefined) {
-    records.set('__nosam_durable_state', initial);
+    records.set('__platform_durable_state', initial);
   }
   const alarms: Array<number | Date> = [];
   const storage = {
@@ -64,8 +64,8 @@ describe('defineDurableState', () => {
     const object = new Counter.class(fixture.state, {});
 
     expect(await Promise.all([object.increment(1), object.increment(2)])).toEqual([1, 3]);
-    expect(fixture.records.get('__nosam_durable_state')).toEqual({
-      __nosamDurableState: true,
+    expect(fixture.records.get('__platform_durable_state')).toEqual({
+      __platformDurableState: true,
       version: 0,
       value: { count: 3 },
     });
@@ -89,8 +89,8 @@ describe('defineDurableState', () => {
 
     await expect(object.fail()).rejects.toThrow('failed');
     expect(await object.read()).toBe(0);
-    expect(fixture.records.get('__nosam_durable_state')).toEqual({
-      __nosamDurableState: true,
+    expect(fixture.records.get('__platform_durable_state')).toEqual({
+      __platformDurableState: true,
       version: 0,
       value: { count: 0 },
     });
@@ -123,14 +123,14 @@ describe('defineDurableState', () => {
       },
     });
     const fixture = createObjectState({
-      __nosamDurableState: true,
+      __platformDurableState: true,
       version: 0,
       value: { count: 4 },
     });
     const object = new Counter.class(fixture.state, {});
 
     expect(await object.read()).toEqual({ count: 5, label: 'MIGRATED' });
-    expect(fixture.records.get('__nosam_durable_state')).toMatchObject({ version: 2 });
+    expect(fixture.records.get('__platform_durable_state')).toMatchObject({ version: 2 });
   });
 
   it('rejects gaps in the declared state migration history', () => {

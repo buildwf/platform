@@ -18,18 +18,18 @@ const config = readConfig('../../wrangler.jsonc');
 const proxyConfig = readConfig('../../../proxy/wrangler.jsonc');
 
 it.each([
-  ['default', config.vars, 'https://nosam.buildwithfriends.dev', 'nosam-cron-fires'],
+  ['default', config.vars, 'https://platform.buildwithfriends.dev', 'platform-cron-fires'],
   [
     'production',
     config.env.production.vars,
-    'https://nosam.buildwithfriends.dev',
-    'nosam-cron-fires',
+    'https://platform.buildwithfriends.dev',
+    'platform-cron-fires',
   ],
   [
     'staging',
     config.env.staging.vars,
     'https://api.staging.void.cloud',
-    'nosam-cron-fires-staging',
+    'platform-cron-fires-staging',
   ],
 ])('configures OAuth and cron queues for %s', (_name, vars, origin, queue) => {
   expect(vars).toMatchObject({

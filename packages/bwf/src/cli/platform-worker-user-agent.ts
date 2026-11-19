@@ -26,7 +26,7 @@ export function platformWorkerUploadAttribution(
     }
     const version = typeof vars.PLATFORM_VERSION === 'string' ? vars.PLATFORM_VERSION : 'unknown';
     // Keep each field one token. Never include the ownership nonce in request headers.
-    return `nosam-platform-install/${encodeURIComponent(version)} nosam-role/${marker.resourceKey} nosam-installation/${encodeURIComponent(marker.installationId)}`;
+    return `platform-install/${encodeURIComponent(version)} platform-role/${marker.resourceKey} platform-installation/${encodeURIComponent(marker.installationId)}`;
   } catch {
     // Attribution cannot make an otherwise valid upload fail.
     return undefined;

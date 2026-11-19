@@ -101,7 +101,7 @@ function run(args: Array<string>, input?: string) {
       env: {
         ...process.env,
         BWF_API_URL: origin,
-        NOSAM_OPERATOR_TOKEN: operatorToken,
+        PLATFORM_OPERATOR_TOKEN: operatorToken,
         // `vp run` forces color; combining it with NO_COLOR emits a Node warning
         // on stderr and corrupts the JSON error response this fixture asserts.
         FORCE_COLOR: undefined,
@@ -191,7 +191,7 @@ test('built CLI configures the logging policy enforced by the actual AI proxy', 
     { prompt: 'private' },
     expect.objectContaining({
       gateway: {
-        id: 'nosam',
+        id: 'platform',
         collectLog: true,
         metadata: { projectId: await deriveAiUsageTag(env.JWT_SECRET, project.id) },
       },
@@ -264,7 +264,7 @@ test('built CLI requires acknowledgement, exposes API validation, and honors rev
 });
 
 test('built CLI manages plans and refreshes existing app limits against recorded usage', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'nosam-plan-cli-'));
+  const directory = await mkdtemp(join(tmpdir(), 'platform-plan-cli-'));
   try {
     const preview = await run([
       'config',

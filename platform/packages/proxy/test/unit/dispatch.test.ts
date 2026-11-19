@@ -1,4 +1,4 @@
-import { deriveProxyInternalAuth, deriveProxyToken } from '@nosamcloud/api/proxy-token';
+import { deriveProxyInternalAuth, deriveProxyToken } from '@platform-service/api/proxy-token';
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vite-plus/test';
 import { createBindingHandler } from '../../../../../packages/bwf/src/runtime/remote/binding-handler.ts';
 import { dispatchToWorker } from '../../src/dispatch.ts';
@@ -59,7 +59,7 @@ function createMockDispatch(handler?: (url: string, init: RequestInit) => Promis
         if (handler) {
           return handler(url, init);
         }
-        // Default: 404 (old deploy without /__nosam handler)
+        // Default: 404 (old deploy without /__platform handler)
         return new Response('Not Found', { status: 404 });
       }),
     })),
@@ -142,11 +142,11 @@ function attachNativeBindingHandler(
   db: D1Database,
   afterResponse?: (response: Response) => void,
 ): void {
-  const bindingHandler = createBindingHandler({ DB: db, __NOSAM_PROXY_TOKEN: token });
+  const bindingHandler = createBindingHandler({ DB: db, __PLATFORM_PROXY_TOKEN: token });
   env.DISPATCH.get = vi.fn(() => ({
     fetch: async (url: string, init: RequestInit) => {
       const target = new URL(url);
-      target.pathname = target.pathname.replace(/^\/__nosam/, '');
+      target.pathname = target.pathname.replace(/^\/__platform/, '');
       const response = await bindingHandler.fetch(new Request(target, init));
       afterResponse?.(response);
       return response;
@@ -506,7 +506,7 @@ describe('WfP dispatch path', () => {
     });
 
     it('falls back when dispatch returns 404 (old deploy)', async () => {
-      // Worker resolved but returns 404 for /__nosam
+      // Worker resolved but returns 404 for /__platform
       const env = createEnv(
         { proj_000000000001: 'user-my-app' },
         async () => new Response('Not Found', { status: 404 }),
@@ -597,7 +597,7 @@ describe('WfP dispatch path', () => {
   });
 
   describe('auth forwarding', () => {
-    it('sends x-nosam-internal header to dispatched worker', async () => {
+    it('sends x-platform-internal header to dispatched worker', async () => {
       let capturedHeaders: Record<string, string> = {};
       const env = createEnv({ proj_000000000001: 'user-my-app' }, async (_url, init) => {
         capturedHeaders = Object.fromEntries(new Headers(init.headers as HeadersInit).entries());
@@ -615,8 +615,8 @@ describe('WfP dispatch path', () => {
         env,
       );
 
-      expect(capturedHeaders['x-nosam-internal']).toBe(token);
-      expect(capturedHeaders['x-nosam-proxy-internal']).toBeUndefined();
+      expect(capturedHeaders['x-platform-internal']).toBe(token);
+      expect(capturedHeaders['x-platform-proxy-internal']).toBeUndefined();
     });
 
     it('authenticates worker resolution with the proxy credential only', async () => {
@@ -629,10 +629,10 @@ describe('WfP dispatch path', () => {
       const [url, init] = env.API.fetch.mock.calls[0] as unknown as [string, RequestInit];
       expect(url).toBe('https://api/internal/resolve-worker/proj_000000000001');
       const headers = init.headers as Record<string, string>;
-      expect(headers['x-nosam-proxy-internal']).toBe(
+      expect(headers['x-platform-proxy-internal']).toBe(
         await deriveProxyInternalAuth(JWT_SECRET, 'resolve-worker', 'proj_000000000001'),
       );
-      expect(headers['x-nosam-internal']).toBeUndefined();
+      expect(headers['x-platform-internal']).toBeUndefined();
     });
   });
 });
@@ -668,7 +668,7 @@ describe('proxy token generations', () => {
     const sent: Array<Sent> = [];
     const handler = createBindingHandler({
       CACHE: { get: vi.fn(async () => 'hello') },
-      __NOSAM_PROXY_TOKEN: options.held,
+      __PLATFORM_PROXY_TOKEN: options.held,
     });
     const routingGet = vi.fn(async (key: string) =>
       key === `proxy-token:${PROJECT_ID}` ? (options.floor ?? null) : null,
@@ -686,13 +686,13 @@ describe('proxy token generations', () => {
       DISPATCH: {
         get: vi.fn(() => ({
           fetch: vi.fn(async (url: string, init: RequestInit) => {
-            const sentToken = new Headers(init.headers).get('x-nosam-internal');
+            const sentToken = new Headers(init.headers).get('x-platform-internal');
             sent.push({ token: sentToken, body: JSON.parse(init.body as string) });
             if (options.respond) {
               return options.respond(sentToken);
             }
             const target = new URL(url);
-            target.pathname = target.pathname.replace(/^\/__nosam/, '');
+            target.pathname = target.pathname.replace(/^\/__platform/, '');
             return handler.fetch(new Request(target, init));
           }),
         })),

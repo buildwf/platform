@@ -13,7 +13,7 @@ Build the runtime. From a Git checkout, the build automatically records the curr
 vp run build:core
 ```
 
-Build systems may set `NOSAM_PLATFORM_SOURCE_REVISION` when they need to override automatic detection with another immutable revision. A source archive without Git metadata builds normally but leaves the revision unrecorded.
+Build systems may set `PLATFORM_SOURCE_REVISION` when they need to override automatic detection with another immutable revision. A source archive without Git metadata builds normally but leaves the revision unrecorded.
 
 The runtime is written to `packages/platform/dist/runtime`. Use the built CLI to preview a new installation from those files:
 
@@ -68,7 +68,7 @@ To deploy the optional ingress:
 3. Deploy it from the repository root:
 
    ```sh
-   vp run --filter @nosamcloud/api deploy:github-webhook-ingress --env production
+   vp run --filter @platform-service/api deploy:github-webhook-ingress --env production
    ```
 
    Use `--env staging` for the staging entries in the same config.
@@ -89,22 +89,22 @@ The ingress accepts payloads up to 25 MiB. See [GitHub’s payload limit](https:
 
 Build `@builtbyfriends/platform` from your checkout and pass its runtime directory to `install`, `upgrade`, `repair`, `enable`, or `rollback` with `--runtime`. Custom runtimes get the same integrity, migration, health, and rollback checks as packaged releases.
 
-Use a clean Git checkout or set `NOSAM_PLATFORM_SOURCE_REVISION` to identify the revision you deploy.
+Use a clean Git checkout or set `PLATFORM_SOURCE_REVISION` to identify the revision you deploy.
 
-A fresh CI runner can discover the installation each time. Set `CLOUDFLARE_API_TOKEN` and `NOSAM_PLATFORM_DATABASE_URL` through its protected environment, then:
+A fresh CI runner can discover the installation each time. Set `CLOUDFLARE_API_TOKEN` and `PLATFORM_DATABASE_URL` through its protected environment, then:
 
 ::: details CI commands and recovery inputs
 
 ```sh
 vp run build:core
 
-export NOSAM_PLATFORM_REGISTRY_DIR="$RUNNER_TEMP/nosam-platform-registry"
-export NOSAM_PLATFORM_RECOVERY_KEY="$(openssl rand -base64 32)"
+export PLATFORM_REGISTRY_DIR="$RUNNER_TEMP/platform-registry"
+export PLATFORM_RECOVERY_KEY="$(openssl rand -base64 32)"
 node packages/bwf/dist/cli/cli.mjs platform discover --account "$CLOUDFLARE_ACCOUNT_ID" \
-  --installation "$NOSAM_PLATFORM_INSTALLATION"
-node packages/bwf/dist/cli/cli.mjs platform upgrade "$NOSAM_PLATFORM_INSTALLATION" \
+  --installation "$PLATFORM_INSTALLATION"
+node packages/bwf/dist/cli/cli.mjs platform upgrade "$PLATFORM_INSTALLATION" \
   --runtime packages/platform/dist/runtime --plan
-node packages/bwf/dist/cli/cli.mjs platform upgrade "$NOSAM_PLATFORM_INSTALLATION" \
+node packages/bwf/dist/cli/cli.mjs platform upgrade "$PLATFORM_INSTALLATION" \
   --runtime packages/platform/dist/runtime --yes
 ```
 

@@ -11,7 +11,7 @@ describe('deriveFromSource', () => {
   let dir: string;
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'nosam-source-cache-'));
+    dir = mkdtempSync(join(tmpdir(), 'platform-source-cache-'));
   });
 
   afterEach(() => {

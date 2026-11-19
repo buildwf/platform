@@ -391,7 +391,7 @@ async function completeAudit(
     console.error('[operator] audit completion failed', id, error);
     pending = true;
     if (!response) {
-      context.header('X-Nosam-Audit-Status', 'pending');
+      context.header('X-Platform-Audit-Status', 'pending');
     }
   }
   if (response) {
@@ -399,9 +399,9 @@ async function completeAudit(
     // audit metadata is applied consistently without changing their body or
     // status.
     const headers = new Headers(response.headers);
-    headers.set('X-Nosam-Audit-Id', id);
+    headers.set('X-Platform-Audit-Id', id);
     if (pending) {
-      headers.set('X-Nosam-Audit-Status', 'pending');
+      headers.set('X-Platform-Audit-Status', 'pending');
     }
     return new Response(response.body, {
       status: response.status,
@@ -409,7 +409,7 @@ async function completeAudit(
       headers,
     });
   } else {
-    context.header('X-Nosam-Audit-Id', id);
+    context.header('X-Platform-Audit-Id', id);
   }
 }
 

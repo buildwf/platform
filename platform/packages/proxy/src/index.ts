@@ -1,7 +1,7 @@
 import { isRecord } from '@builtbyfriends/deploy-core';
 import { usageLimitResponse } from '@builtbyfriends/edge';
 import { verifyEmailReceipt } from '@builtbyfriends/platform/email-protocol';
-import { isProjectId } from '@nosamcloud/api/id';
+import { isProjectId } from '@platform-service/api/id';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { ai } from './ai.ts';
@@ -27,7 +27,7 @@ app.use('/*', async (context, next) => {
     healthProbeToken !== undefined &&
     healthProbeToken !== '' &&
     context.req.path === '/health' &&
-    context.req.header('X-Nosam-Platform-Probe') === healthProbeToken;
+    context.req.header('X-Platform-Probe') === healthProbeToken;
   if (
     !installerProbe &&
     (context.env.PLATFORM_TRAFFIC_STATE === 'staging' ||
@@ -104,7 +104,7 @@ app.post('/email/verify-receipt', async (context) => {
   const tokenCheck = await verifyTenantProxyToken(
     context.env,
     input.projectId,
-    context.req.header('x-nosam-internal') ?? '',
+    context.req.header('x-platform-internal') ?? '',
   );
   if (tokenCheck !== 'ok') {
     return context.json({ valid: false }, tokenCheck === 'unavailable' ? 503 : 403);
@@ -131,7 +131,7 @@ app.post('/*', async (context, next) => {
 
   // Check credentials before buffering up to 8 MiB of JSON. Header tokens are
   // verified here. Body tokens (projectId + aiToken) come only from deployed
-  // Workers over the __NOSAM_PROXY service binding, which calls bare hosts
+  // Workers over the __PLATFORM_PROXY service binding, which calls bare hosts
   // (https://ai-proxy, https://proxy, https://email-proxy). Public hostnames
   // always contain a dot, so a public request without a header is refused unread.
   const authHeader = context.req.header('authorization');
@@ -264,7 +264,7 @@ app.post('/ai/*', async (context, next) => {
 });
 
 // Same gate for the email group. A deployed worker on a platform without
-// the email module still holds `__NOSAM_PROXY` and a valid project token, so
+// the email module still holds `__PLATFORM_PROXY` and a valid project token, so
 // an explicit-`from` `sendEmail()` reaches `/email/send` and would otherwise
 // answer with the sender-domain / send-binding configuration failures — or
 // send, if the operator left the bindings in place.

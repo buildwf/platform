@@ -23,9 +23,9 @@ const fixtures = [
   },
   {
     name: '003.sql',
-    sql: '-- nosam:allow-unsplit-multi-statement\nCREATE TABLE a (id TEXT); CREATE TABLE b (id TEXT);',
-    sqlHash: 'sha256:0c6d260cc468edd8a43b9c87fe4d94abfc73733349ad1ac5271855e8fb9b8af6',
-    planHash: 'sha256:676278f7949e5b4ae3093ea9dcf157be72f0681b5121f1287bf3d33be9c1e1e1',
+    sql: '-- platform:allow-unsplit-multi-statement\nCREATE TABLE a (id TEXT); CREATE TABLE b (id TEXT);',
+    sqlHash: 'sha256:379eb1045621a0302068af272137c4b38a0a1f5d354524fc5558e8136e65feb5',
+    planHash: 'sha256:017609811befd0a4fd80dfcab837dbae0b2258eab817aac22c8ec50c53b150b8',
   },
 ];
 

@@ -74,15 +74,15 @@ export function resolveAssetConfig(inputs: AssetRoutingInputs): AssetConfig {
   return resolveAssetRoutingPolicy(inputs).assetConfig;
 }
 
-// bwf's reserved internal namespace (`/__nosam/ready`, `/__nosam/migrate/*`,
+// bwf's reserved internal namespace (`/__platform/ready`, `/__platform/migrate/*`,
 // etc.). These must reach the worker before CF Static Assets can serve the SPA
 // shell — otherwise `not_found_handling: 'single-page-application'` returns
-// index.html for GET /__nosam/migrate/capabilities and migration capability
+// index.html for GET /__platform/migrate/capabilities and migration capability
 // negotiation fails at deploy time. The worker-first (`/**`) branch already
 // covers it; both SPA-fallback branches must list it explicitly, since a SPA
 // can advertise migrations without API/auth routes (e.g. a cron/queue-only app
 // with D1 migrations still emits manifest.migrations).
-export const BWF_INTERNAL_WORKER_FIRST: ReadonlyArray<string> = ['/__nosam', '/__nosam/*'];
+export const BWF_INTERNAL_WORKER_FIRST: ReadonlyArray<string> = ['/__platform', '/__platform/*'];
 
 export function resolveAssetRoutingPolicy(inputs: AssetRoutingInputs): AssetRoutingPolicy {
   const workerFirst = workerOwnsHtmlRouting(inputs);

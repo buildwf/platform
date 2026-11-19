@@ -174,7 +174,7 @@ function buildRouteUrl(path: string, options?: UrlOptions): string {
       return [name, String(value)];
     }),
   );
-  const url = new URL('https://nosam.invalid');
+  const url = new URL('https://platform.invalid');
   url.pathname = interpolateRouteParams(path, params, true);
 
   for (const [key, value] of Object.entries(options?.query ?? {})) {

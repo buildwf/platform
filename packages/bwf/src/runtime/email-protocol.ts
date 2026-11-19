@@ -114,7 +114,7 @@ export async function verifyEmailReceiptThroughProxy(
     response = await beforeDeadline(() =>
       proxy.fetch('https://proxy/email/verify-receipt', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-nosam-internal': projectToken },
+        headers: { 'content-type': 'application/json', 'x-platform-internal': projectToken },
         body: JSON.stringify(input),
         signal: controller.signal,
       }),

@@ -610,7 +610,7 @@ export async function changeCloudflareDomain(
   if (!update.modified) {
     return update;
   }
-  const triggerConfigDir = mkdtempSync(join(tmpdir(), 'nosam-domain-triggers-'));
+  const triggerConfigDir = mkdtempSync(join(tmpdir(), 'platform-domain-triggers-'));
   const triggerConfigPath = join(triggerConfigDir, 'wrangler.json');
   const deployRoutes = async (): Promise<void> => {
     if (readWranglerCustomDomains(root).domains.length === 0) {

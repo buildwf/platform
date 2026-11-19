@@ -1,5 +1,5 @@
 {
-  "name": "@nosamcloud/tail",
+  "name": "@platform-service/tail",
   "private": true,
   "type": "module",
   "scripts": {

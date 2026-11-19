@@ -73,6 +73,7 @@ import { reconcileSharedEmailRecipients } from './email/shared-recipient-service
 import { isDevBypass, type ApiEnv } from './env.ts';
 import { ErrorAlertMonitor } from './error-alert-monitor.ts';
 import { cancelContainerBuildDos } from './github/cancel-builds.ts';
+import { withCurrentRequestNames } from './legacy-request-names.ts';
 import { authMiddleware } from './middleware/auth.ts';
 import { platformAccessProtection } from './middleware/platform-access.ts';
 import {
@@ -221,11 +222,11 @@ const app = new Hono<ApiEnv>()
     const installerProbe =
       healthProbeToken !== undefined &&
       healthProbeToken !== '' &&
-      context.req.header('X-Nosam-Platform-Probe') === healthProbeToken &&
+      context.req.header('X-Platform-Probe') === healthProbeToken &&
       (context.req.path === '/health' ||
-        context.req.path === '/.well-known/nosam-platform' ||
+        context.req.path === '/.well-known/platform' ||
         context.req.path === '/internal/platform/sandbox-drain' ||
-        context.req.path === '/__nosam/platform/deployment-execution' ||
+        context.req.path === '/__platform/platform/deployment-execution' ||
         (context.req.path === '/internal/platform/email-bootstrap' &&
           context.req.method === 'POST') ||
         (context.req.path === '/internal/platform/app-access' && context.req.method === 'POST') ||
@@ -240,7 +241,7 @@ const app = new Hono<ApiEnv>()
       isSandboxDrainMaintenanceRequest(context.req.raw);
     const authenticationSetup =
       context.env.PLATFORM_AUTH_SETUP_TOKEN &&
-      context.req.header('X-Nosam-Auth-Setup') &&
+      context.req.header('X-Platform-Auth-Setup') &&
       context.req.method === 'POST' &&
       context.req.path === '/internal/platform/auth-initialize';
     // An upgrade or repair pauses traffic until it commits.
@@ -272,7 +273,7 @@ const app = new Hono<ApiEnv>()
         context.req.method === 'GET' &&
         (context.req.path === '/admin' || context.req.path.startsWith('/admin/')) &&
         (context.req.header('Accept')?.includes('text/html') ||
-          context.req.header('X-NosamPages') === 'true')
+          context.req.header('X-PlatformPages') === 'true')
       ) {
         context.header('Cache-Control', 'private, no-store');
         return context.redirect('/admin/status', 302);
@@ -347,7 +348,7 @@ const app = new Hono<ApiEnv>()
       return context.json({ status: 'unhealthy' }, 503);
     }
   })
-  .get('/.well-known/nosam-platform', async (context) => {
+  .get('/.well-known/platform', async (context) => {
     context.header('Cache-Control', 'no-store');
     const settings = await readAuthSettings(context.get('db'));
     const setupPending = settings && !!(await pendingAuthenticationSetup(context.get('db')));
@@ -396,7 +397,7 @@ const app = new Hono<ApiEnv>()
           context.env.PROXY_URL ??
           (context.env.PLATFORM_ENV === 'staging'
             ? 'https://proxy.staging.void.cloud'
-            : 'https://void-nosam-proxy.buildwithfriends.workers.dev'),
+            : 'https://void-platform-proxy.buildwithfriends.workers.dev'),
         usageProtocolVersion: USAGE_PROTOCOL_VERSION,
       }),
     );
@@ -409,7 +410,7 @@ const app = new Hono<ApiEnv>()
     const healthProbeToken = context.env.PLATFORM_HEALTH_PROBE_TOKEN;
     if (
       !healthProbeToken ||
-      context.req.header('X-Nosam-Platform-Probe') !== healthProbeToken ||
+      context.req.header('X-Platform-Probe') !== healthProbeToken ||
       !context.env.PLATFORM_INSTALLATION_ID ||
       !getPlatformCapabilities(context.env).email
     ) {
@@ -487,7 +488,7 @@ const app = new Hono<ApiEnv>()
   })
   .get('/internal/platform/sandbox-drain', async (context) => {
     const healthProbeToken = context.env.PLATFORM_HEALTH_PROBE_TOKEN;
-    if (!healthProbeToken || context.req.header('X-Nosam-Platform-Probe') !== healthProbeToken) {
+    if (!healthProbeToken || context.req.header('X-Platform-Probe') !== healthProbeToken) {
       return context.json({ error: 'not found' }, 404);
     }
     try {
@@ -505,9 +506,9 @@ const app = new Hono<ApiEnv>()
       );
     }
   })
-  .get('/__nosam/platform/deployment-execution', async (context) => {
+  .get('/__platform/platform/deployment-execution', async (context) => {
     const token = context.env.PLATFORM_HEALTH_PROBE_TOKEN;
-    if (!token || context.req.header('X-Nosam-Platform-Probe') !== token) {
+    if (!token || context.req.header('X-Platform-Probe') !== token) {
       return context.json({ error: 'not found' }, 404);
     }
     return context.json(
@@ -1291,7 +1292,8 @@ export {
 export { app, scheduled };
 
 export default {
-  fetch: app.fetch,
+  fetch: ((request, ...rest) =>
+    app.fetch(withCurrentRequestNames(request), ...rest)) as typeof app.fetch,
   scheduled,
   async queue(batch: MessageBatch<unknown>, env: ApiEnv['Bindings']): Promise<void> {
     env = await resolvePlatformApplicationEnvironment(env);

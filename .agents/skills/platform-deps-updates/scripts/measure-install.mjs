@@ -121,13 +121,13 @@ async function measure() {
     const environment = { ...process.env };
     for (const key of Object.keys(environment)) {
       if (
-        /^(NOSAM_|VP_|CLOUDFLARE_|CF_|WRANGLER_|NPM_TOKEN$|NODE_AUTH_TOKEN$|npm_config_)/i.test(key)
+        /^(PLATFORM_|VP_|CLOUDFLARE_|CF_|WRANGLER_|NPM_TOKEN$|NODE_AUTH_TOKEN$|npm_config_)/i.test(key)
       ) {
         delete environment[key];
       }
     }
     environment.npm_config_userconfig = config;
-    console.log(`Installing captured cohort: nosam@${version}, npm --omit=dev`);
+    console.log(`Installing captured cohort: platform@${version}, npm --omit=dev`);
     await new Promise((done, fail) => {
       const child = spawn('npm', ['install', '--omit=dev', '--no-audit', '--no-fund'], {
         cwd: output,

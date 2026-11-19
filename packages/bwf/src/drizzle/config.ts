@@ -86,7 +86,7 @@ export function withPrivateDrizzleConfig<T>(
   run: (configPath: string) => T,
 ): T {
   removeProjectDrizzleConfigWithUrl(root);
-  const dir = mkdtempSync(join(tmpdir(), 'nosam-drizzle-'));
+  const dir = mkdtempSync(join(tmpdir(), 'platform-drizzle-'));
   const noop = () => {};
   process.on('SIGINT', noop);
   try {

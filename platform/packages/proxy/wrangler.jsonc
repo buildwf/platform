@@ -1,5 +1,5 @@
 {
-  "name": "nosam-proxy",
+  "name": "platform-proxy",
   "main": "src/index.ts",
   "compatibility_date": "2026-02-12",
   "compatibility_flags": ["nodejs_compat"],
@@ -13,13 +13,13 @@
   "services": [
     {
       "binding": "API",
-      "service": "nosam-api",
+      "service": "platform-api",
     },
   ],
   "dispatch_namespaces": [
     {
       "binding": "DISPATCH",
-      "namespace": "nosam-users",
+      "namespace": "platform-users",
     },
   ],
   // Account-level send_email binding. No allowed_destination_addresses or
@@ -32,8 +32,8 @@
   "send_email": [{ "name": "SEND_EMAIL" }],
   // Platform mail zone for this environment. Read by src/email.ts and
   // src/email-router.ts; mirrored to deployed user workers as the
-  // __NOSAM_EMAIL_DOMAIN binding. Never defaulted in code.
-  "vars": { "EMAIL_SENDER_DOMAIN": "mail.void.cloud" },
+  // __PLATFORM_EMAIL_DOMAIN binding. Never defaulted in code.
+  "vars": { "EMAIL_SENDER_DOMAIN": "mail.buildwf.dev" },
   // Encrypted Worker secrets: JWT_SECRET, EMAIL_SIGNING_SECRET, CF_ACCOUNT_ID, CF_API_TOKEN
   "observability": {
     "logs": {
@@ -44,7 +44,7 @@
   "routes": [{ "pattern": "proxy.void.cloud", "custom_domain": true }],
   "env": {
     "production": {
-      "name": "nosam-proxy",
+      "name": "platform-proxy",
       "secrets": { "required": ["EMAIL_SIGNING_SECRET"] },
       "ai": { "binding": "AI" },
       "kv_namespaces": [
@@ -56,21 +56,21 @@
       "services": [
         {
           "binding": "API",
-          "service": "nosam-api",
+          "service": "platform-api",
         },
       ],
       "dispatch_namespaces": [
         {
           "binding": "DISPATCH",
-          "namespace": "nosam-users",
+          "namespace": "platform-users",
         },
       ],
       "send_email": [{ "name": "SEND_EMAIL" }],
-      "vars": { "EMAIL_SENDER_DOMAIN": "mail.void.cloud" },
+      "vars": { "EMAIL_SENDER_DOMAIN": "mail.buildwf.dev" },
       "routes": [{ "pattern": "proxy.void.cloud", "custom_domain": true }],
     },
     "staging": {
-      "name": "nosam-proxy-staging",
+      "name": "platform-proxy-staging",
       "secrets": { "required": ["EMAIL_SIGNING_SECRET"] },
       "ai": { "binding": "AI" },
       "kv_namespaces": [
@@ -82,17 +82,17 @@
       "services": [
         {
           "binding": "API",
-          "service": "nosam-api-staging",
+          "service": "platform-api-staging",
         },
       ],
       "dispatch_namespaces": [
         {
           "binding": "DISPATCH",
-          "namespace": "nosam-users-staging",
+          "namespace": "platform-users-staging",
         },
       ],
       "send_email": [{ "name": "SEND_EMAIL" }],
-      "vars": { "EMAIL_SENDER_DOMAIN": "mail.voidcloud.dev" },
+      "vars": { "EMAIL_SENDER_DOMAIN": "mail.staging.buildwf.dev" },
       "routes": [{ "pattern": "proxy.staging.void.cloud", "custom_domain": true }],
     },
   },

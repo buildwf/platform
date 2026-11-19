@@ -200,7 +200,7 @@ describe('durable zone email connections', () => {
     const response = await app.fetch(
       new Request('https://api/internal/email/resolve-ingress', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-nosam-internal': proof },
+        headers: { 'content-type': 'application/json', 'x-platform-internal': proof },
         body: JSON.stringify({
           accountId: connection.account_id,
           zoneId: connection.zone_id,
@@ -1896,7 +1896,7 @@ describe('durable zone email connections', () => {
     ).toBe('removed');
     expect(
       await resolveEmailIngress(env.db, {
-        installationId: 'nosam-hosted',
+        installationId: 'platform-hosted',
         accountId: 'customer-account',
         zoneId: zones['transfer.example.com'].id,
         ingressName: (await resolveEmailDomain(env.db, 'transfer.example.com'))!.connection
@@ -1957,7 +1957,7 @@ describe('durable zone email connections', () => {
       )[0]?.status,
     ).toBe('completed');
     const live = await resolveEmailIngress(env.db, {
-      installationId: 'nosam-hosted',
+      installationId: 'platform-hosted',
       accountId: 'customer-account',
       zoneId: zones['transfer.example.com'].id,
       ingressName: (await resolveEmailDomain(env.db, 'transfer.example.com'))!.connection
@@ -2952,7 +2952,7 @@ describe('durable zone email connections', () => {
       EMAIL_SENDER_DOMAIN: 'mail.example.com',
       EMAIL_SHARED_ACCOUNT_ID: env.CF_ACCOUNT_ID,
       EMAIL_SHARED_ZONE_ID: 'platform-mail-zone',
-      EMAIL_SHARED_INGRESS_NAME: 'nosam-email-gateway',
+      EMAIL_SHARED_INGRESS_NAME: 'platform-email-gateway',
     } as ApiEnv['Bindings'];
     const stub = stubCustomerCf({
       zones: {
@@ -2976,12 +2976,12 @@ describe('durable zone email connections', () => {
     const route = await resolveEmailDomain(env.db, 'example.com');
     expect(route?.route.inbound_status).toBe('ready');
     expect(route?.route.outbound_status).toBe('ready');
-    expect(route?.connection.ingress_worker_name).toBe('nosam-email-gateway');
+    expect(route?.connection.ingress_worker_name).toBe('platform-email-gateway');
     const nativeRoute = await resolveEmailIngress(env.db, {
-      installationId: 'nosam-hosted',
+      installationId: 'platform-hosted',
       accountId: env.CF_ACCOUNT_ID,
       zoneId: 'platform-mail-zone',
-      ingressName: 'nosam-email-gateway',
+      ingressName: 'platform-email-gateway',
       recipient: 'inbox@example.com',
     });
     expect(nativeRoute?.route.project_id).toBe(project.id);
@@ -3141,7 +3141,7 @@ describe('outbound-only email domains', () => {
     expect(inboundCalls(stub.calls)).toEqual([]);
     await expect(
       resolveEmailIngress(env.db, {
-        installationId: 'nosam-hosted',
+        installationId: 'platform-hosted',
         accountId: 'customer-account',
         zoneId: zones['outbound.example.com'].id,
         ingressName: resolved!.connection.ingress_worker_name,
@@ -3371,7 +3371,7 @@ describe('shared mail domain ingress', () => {
       EMAIL_SENDER_DOMAIN: 'mail.example.com',
       EMAIL_SHARED_ACCOUNT_ID: env.CF_ACCOUNT_ID,
       EMAIL_SHARED_ZONE_ID: 'platform-mail-zone',
-      EMAIL_SHARED_INGRESS_NAME: 'nosam-email-gateway',
+      EMAIL_SHARED_INGRESS_NAME: 'platform-email-gateway',
     } as ApiEnv['Bindings'];
   }
 
@@ -3436,7 +3436,7 @@ describe('shared mail domain ingress', () => {
     return app.fetch(
       new Request('https://api/internal/email/resolve-ingress', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-nosam-internal': proof },
+        headers: { 'content-type': 'application/json', 'x-platform-internal': proof },
         body: JSON.stringify({
           accountId: connection.account_id,
           zoneId: connection.zone_id,

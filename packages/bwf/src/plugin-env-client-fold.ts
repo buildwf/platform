@@ -77,7 +77,7 @@ export function envClientFoldPlugin(): Plugin {
   let loadedEnv: Record<string, string> = {};
 
   return {
-    name: 'nosam:env-client-fold',
+    name: 'platform:env-client-fold',
     apply: 'build',
     // Run after other transforms so the code arrives as plain JS we can parse and fold.
     enforce: 'post',

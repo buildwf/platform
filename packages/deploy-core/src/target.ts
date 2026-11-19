@@ -1,7 +1,7 @@
 /** A concrete destination that can execute a bwf deployment. */
-export type DeployTarget = 'cloudflare' | 'nosam';
+export type DeployTarget = 'cloudflare' | 'platform';
 
-export type DeployAppType = 'nosam' | 'spa' | 'static';
+export type DeployAppType = 'platform' | 'spa' | 'static';
 
 /**
  * @deprecated bwf does not read deploy target capabilities. Removed in the

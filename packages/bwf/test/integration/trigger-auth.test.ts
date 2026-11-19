@@ -8,13 +8,13 @@ import { compileRouteTable, compileWorkerEntry } from '../../src/router/compile.
 import type { ScanResult } from '../../src/router/scan.ts';
 
 /**
- * Manual trigger auth for `/__nosam/scheduled` and `/__nosam/queue` is fixed
+ * Manual trigger auth for `/__platform/scheduled` and `/__platform/queue` is fixed
  * when the route table is compiled. Both bundles below are built with
  * NODE_ENV=development, so `import.meta.env.DEV` is true in each: only the
  * compile-time `dev` flag may pick the rule.
  */
 
-const temporary = mkdtempSync(join(tmpdir(), 'nosam-trigger-auth-'));
+const temporary = mkdtempSync(join(tmpdir(), 'platform-trigger-auth-'));
 const DEV_TOKEN = 'dev-trigger-token';
 const PROXY_TOKEN = 'proxy-token';
 
@@ -34,7 +34,7 @@ async function buildWorker(name: string, dev: boolean): Promise<Worker> {
   writeFileSync(join(queuesDir, 'emails.ts'), 'export default async () => {};\n');
   const runtimeEnvPath = join(dir, 'runtime-env.ts');
   writeFileSync(runtimeEnvPath, 'export function withRuntimeEnv(_env, fn) { return fn(); }\n');
-  const routeTablePath = join(dir, 'virtual-nosam-routes.ts');
+  const routeTablePath = join(dir, 'virtual-platform-routes.ts');
   const workerPath = join(dir, 'worker.ts');
 
   const scan: ScanResult = {
@@ -59,7 +59,7 @@ async function buildWorker(name: string, dev: boolean): Promise<Worker> {
   writeFileSync(
     workerPath,
     `${compileWorkerEntry({ hasQueues: true, runtimeEnvPath })}
-export { __NOSAM_BUILD_KEY } from "virtual:nosam-routes";
+export { __PLATFORM_BUILD_KEY } from "virtual:platform-routes";
 export const __viteDev = import.meta.env.DEV;\n`,
   );
 
@@ -70,12 +70,12 @@ export const __viteDev = import.meta.env.DEV;\n`,
     mode: 'development',
     plugins: [
       {
-        name: 'nosam-trigger-auth-test',
+        name: 'platform-trigger-auth-test',
         resolveId(id) {
           if (id === 'cloudflare:workers') {
             return '\0test-workers-entrypoint';
           }
-          return id === 'virtual:nosam-routes' ? routeTablePath : null;
+          return id === 'virtual:platform-routes' ? routeTablePath : null;
         },
         load(id) {
           if (id === '\0test-workers-entrypoint') {
@@ -102,18 +102,18 @@ export const __viteDev = import.meta.env.DEV;\n`,
       ctx: ExecutionContext,
       env: Record<string, unknown>,
     ) => { fetch(request: Request): Promise<Response> };
-    __NOSAM_BUILD_KEY: string;
+    __PLATFORM_BUILD_KEY: string;
     __viteDev: boolean;
   };
   return {
     fetch: (request, env) => new module.default({} as ExecutionContext, env).fetch(request),
-    buildKey: module.__NOSAM_BUILD_KEY,
+    buildKey: module.__PLATFORM_BUILD_KEY,
     viteDev: module.__viteDev,
   };
 }
 
 function trigger(kind: 'scheduled' | 'queue', headers: Record<string, string>): Request {
-  return new Request(`https://internal/__nosam/${kind}`, {
+  return new Request(`https://internal/__platform/${kind}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...headers },
     body: JSON.stringify(
@@ -150,22 +150,22 @@ describe('generated trigger auth', () => {
   it.each(['scheduled', 'queue'] as const)(
     'keeps the build rule for %s in a dev=false compile with DEV=true',
     async (kind) => {
-      const withToken = { __NOSAM_PROXY_TOKEN: PROXY_TOKEN };
+      const withToken = { __PLATFORM_PROXY_TOKEN: PROXY_TOKEN };
       expect(
-        (await prod.fetch(trigger(kind, { 'x-nosam-internal': PROXY_TOKEN }), withToken)).status,
+        (await prod.fetch(trigger(kind, { 'x-platform-internal': PROXY_TOKEN }), withToken)).status,
       ).toBe(200);
       expect(
-        (await prod.fetch(trigger(kind, { 'x-nosam-dev-trigger': DEV_TOKEN }), withToken)).status,
+        (await prod.fetch(trigger(kind, { 'x-platform-dev-trigger': DEV_TOKEN }), withToken)).status,
       ).toBe(401);
       expect(
-        (await prod.fetch(trigger(kind, { 'x-nosam-internal': prod.buildKey }), withToken)).status,
+        (await prod.fetch(trigger(kind, { 'x-platform-internal': prod.buildKey }), withToken)).status,
       ).toBe(401);
 
       expect(
-        (await prod.fetch(trigger(kind, { 'x-nosam-internal': prod.buildKey }), {})).status,
+        (await prod.fetch(trigger(kind, { 'x-platform-internal': prod.buildKey }), {})).status,
       ).toBe(200);
       expect(
-        (await prod.fetch(trigger(kind, { 'x-nosam-dev-trigger': DEV_TOKEN }), {})).status,
+        (await prod.fetch(trigger(kind, { 'x-platform-dev-trigger': DEV_TOKEN }), {})).status,
       ).toBe(401);
     },
   );
@@ -173,20 +173,20 @@ describe('generated trigger auth', () => {
   it.each(['scheduled', 'queue'] as const)(
     'accepts only the dev trigger header for %s in a dev=true compile',
     async (kind) => {
-      const withToken = { __NOSAM_PROXY_TOKEN: PROXY_TOKEN };
+      const withToken = { __PLATFORM_PROXY_TOKEN: PROXY_TOKEN };
       expect(
-        (await dev.fetch(trigger(kind, { 'x-nosam-dev-trigger': DEV_TOKEN }), withToken)).status,
+        (await dev.fetch(trigger(kind, { 'x-platform-dev-trigger': DEV_TOKEN }), withToken)).status,
       ).toBe(200);
       expect(
-        (await dev.fetch(trigger(kind, { 'x-nosam-internal': PROXY_TOKEN }), withToken)).status,
+        (await dev.fetch(trigger(kind, { 'x-platform-internal': PROXY_TOKEN }), withToken)).status,
       ).toBe(401);
       expect(
-        (await dev.fetch(trigger(kind, { 'x-nosam-dev-trigger': DEV_TOKEN }), {})).status,
+        (await dev.fetch(trigger(kind, { 'x-platform-dev-trigger': DEV_TOKEN }), {})).status,
       ).toBe(200);
       expect(
-        (await dev.fetch(trigger(kind, { 'x-nosam-internal': dev.buildKey }), {})).status,
+        (await dev.fetch(trigger(kind, { 'x-platform-internal': dev.buildKey }), {})).status,
       ).toBe(401);
-      expect((await dev.fetch(trigger(kind, { 'x-nosam-dev-trigger': 'wrong' }), {})).status).toBe(
+      expect((await dev.fetch(trigger(kind, { 'x-platform-dev-trigger': 'wrong' }), {})).status).toBe(
         401,
       );
     },

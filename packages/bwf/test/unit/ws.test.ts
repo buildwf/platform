@@ -73,7 +73,7 @@ describe('typed websocket client', () => {
   beforeEach(() => {
     MockWebSocket.instances = [];
     vi.stubGlobal('WebSocket', MockWebSocket as unknown as typeof WebSocket);
-    vi.stubGlobal('location', { href: 'https://nosam.test/app' });
+    vi.stubGlobal('location', { href: 'https://platform.test/app' });
   });
 
   afterEach(() => {
@@ -86,13 +86,13 @@ describe('typed websocket client', () => {
     'expands catch-all tokens in %s',
     (path) => {
       connect(path, { params: { path: 'docs/start here' } });
-      expect(MockWebSocket.instances[0]!.url).toBe('wss://nosam.test/files/docs/start%20here');
+      expect(MockWebSocket.instances[0]!.url).toBe('wss://platform.test/files/docs/start%20here');
     },
   );
 
   it('interpolates bracket parameters in WebSocket URLs', () => {
     connect('/chat/[room]', { params: { room: 'a/b' } });
-    expect(MockWebSocket.instances[0]!.url).toBe('wss://nosam.test/chat/a%2Fb');
+    expect(MockWebSocket.instances[0]!.url).toBe('wss://platform.test/chat/a%2Fb');
   });
 
   it('keeps a secure wss baseURL secure', () => {

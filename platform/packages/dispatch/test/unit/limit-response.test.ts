@@ -20,7 +20,7 @@ describe('platform limit responses', () => {
     const page = vi.fn();
     const response = await createLimitResponse(
       new Request('https://app.test' + path, {
-        headers: { 'X-NosamPages': 'true', accept: 'text/html' },
+        headers: { 'X-PlatformPages': 'true', accept: 'text/html' },
       }),
       limit,
       page,

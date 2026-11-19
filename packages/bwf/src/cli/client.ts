@@ -20,7 +20,7 @@ import type {
   DeployWorkerUploadResponse,
 } from './types.ts';
 
-// Null omits `X-Nosam-CLI-Version`: the platform answers an unparseable version with 426.
+// Null omits `X-Platform-CLI-Version`: the platform answers an unparseable version with 426.
 function readCliVersion(): string | null {
   try {
     const pkgPath = join(getPackageDir(), 'package.json');
@@ -670,7 +670,7 @@ export class PlatformClient {
     this.accessHeaders = cfAccessHeaders(process.env, this.baseUrl);
     this.authHeaders = {
       Authorization: `Bearer ${token}`,
-      ...(BWF_CLI_VERSION !== null && { 'X-Nosam-CLI-Version': BWF_CLI_VERSION }),
+      ...(BWF_CLI_VERSION !== null && { 'X-Platform-CLI-Version': BWF_CLI_VERSION }),
     };
   }
 
@@ -738,7 +738,7 @@ export class PlatformClient {
   private async probePlatformVersion(): Promise<PlatformVersionProbe> {
     let response: Response;
     try {
-      response = await this.send(`${this.baseUrl}/.well-known/nosam-platform`, {
+      response = await this.send(`${this.baseUrl}/.well-known/platform`, {
         headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(15_000),
       });

@@ -17,7 +17,7 @@ it('renders the destination skeleton outside the Platform page context', () => {
       {
         value: {
           page: initialPageData,
-          pending: new URL('https://nosam.example/admin/users'),
+          pending: new URL('https://platform.example/admin/users'),
           visit: async () => {},
         },
       },
@@ -27,7 +27,7 @@ it('renders the destination skeleton outside the Platform page context', () => {
 
   expect(markup).toContain('Users');
   expect(markup).toContain('Loading users');
-  expect(markup).toContain('nosam-admin-loading-lines');
+  expect(markup).toContain('platform-admin-loading-lines');
 });
 
 it('renders the Zero Trust skeleton for client navigation', () => {
@@ -37,7 +37,7 @@ it('renders the Zero Trust skeleton for client navigation', () => {
       {
         value: {
           page: { component: 'dashboard', props: {}, shared: {}, url: '/admin/' },
-          pending: new URL('https://nosam.example/admin/zero-trust'),
+          pending: new URL('https://platform.example/admin/zero-trust'),
           visit: async () => {},
         },
       },

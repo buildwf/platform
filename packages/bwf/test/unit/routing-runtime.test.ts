@@ -151,7 +151,7 @@ describe('typed HTTP execution', () => {
       context,
     );
     expect(response.headers.get('location')).toBe('/new/42?set=1&keep=1');
-    expect(response.headers.get('X-Nosam-Routing')).toBe(
+    expect(response.headers.get('X-Platform-Routing')).toBe(
       'redirect[/old/:id] -> /new/42?set=1 301 (config)',
     );
   });
@@ -238,7 +238,7 @@ describe('typed HTTP execution', () => {
     app.get('/new', (c) => c.text('rewritten'));
     const response = await app.fetch(new Request('https://app.test/old'), {}, context);
     expect(await response.text()).toBe('rewritten');
-    expect(response.headers.get('X-Nosam-Routing')).toBe(
+    expect(response.headers.get('X-Platform-Routing')).toBe(
       dev ? 'c.rewrite -> /new (middleware)' : null,
     );
   });
@@ -425,36 +425,36 @@ describe('typed HTTP execution', () => {
     expect(response.status).toBe(404);
     // Only the destination's rules apply, as in edge routing and platform dispatch.
     expect(response.headers.get('x-rule')).toBe('one');
-    expect(response.headers.get('X-Nosam-Routing')).toBe('fallback[/a] -> /b (unknown)');
-    expect(response.headers.get('X-Nosam-No-Match')).toBe('1');
+    expect(response.headers.get('X-Platform-Routing')).toBe('fallback[/a] -> /b (unknown)');
+    expect(response.headers.get('X-Platform-No-Match')).toBe('1');
   });
 });
 
 function worker(overrides: Partial<Parameters<typeof createWorkerFetch>[0]> = {}) {
   const app = new Hono<{ Bindings: RuntimeEnvironment }>();
   app.get('/app', (c) =>
-    c.json({ public: c.env.PUBLIC, hidden: c.env.__NOSAM_PROXY_TOKEN, keys: Object.keys(c.env) }),
+    c.json({ public: c.env.PUBLIC, hidden: c.env.__PLATFORM_PROXY_TOKEN, keys: Object.keys(c.env) }),
   );
   return createWorkerFetch({
     app,
     assets: createAssetFallback(),
     withRawEnv: wrap,
     withRuntimeEnv: wrap,
-    filterBindings: (env) => filterInternalBindings(env, ['__NOSAM_']),
+    filterBindings: (env) => filterInternalBindings(env, ['__PLATFORM_']),
     internalRoute: async () => null,
     ...overrides,
   });
 }
 describe('typed Worker fetch execution', () => {
   it('proves the actual named metadata version and never echoes requested override or private metadata', async () => {
-    const fetch = worker({ versionMetadataBinding: '__NOSAM_VERSION_METADATA' });
-    const request = new Request('https://app.test/__nosam/ready', {
+    const fetch = worker({ versionMetadataBinding: '__PLATFORM_VERSION_METADATA' });
+    const request = new Request('https://app.test/__platform/ready', {
       headers: { 'Cloudflare-Workers-Version-Overrides': 'app="candidate-version"' },
     });
     const response = await fetch(
       request,
       {
-        __NOSAM_VERSION_METADATA: {
+        __PLATFORM_VERSION_METADATA: {
           id: 'served-version',
           tag: 'private-tag',
           timestamp: 'private-time',
@@ -505,7 +505,7 @@ describe('typed Worker fetch execution', () => {
       });
       const response = await fetch(
         new Request('https://app.test/token'),
-        { TOKEN: 'sk_test', __NOSAM_REMOTE: '1' },
+        { TOKEN: 'sk_test', __PLATFORM_REMOTE: '1' },
         context,
       );
       expect(await response.json()).toEqual({ token: 'SK_TEST' });
@@ -551,7 +551,7 @@ describe('typed Worker fetch execution', () => {
     }
   });
   it('resolves remote env after validating original bindings and enters scopes before internal routes', async () => {
-    const original = { __NOSAM_REMOTE: '1' };
+    const original = { __PLATFORM_REMOTE: '1' };
     const resolved = { PUBLIC: 'remote' };
     const calls: Array<string> = [];
     const fetch = worker({
@@ -587,7 +587,7 @@ describe('typed Worker fetch execution', () => {
     const emailReceipt = vi.fn(async () => new Response('receipt', { status: 202 }));
     const internalRoute = vi.fn(async () => null);
     const response = await worker({ emailReceipt, internalRoute })(
-      new Request('https://app.test/__nosam/email/receipt/v1', { method: 'POST' }),
+      new Request('https://app.test/__platform/email/receipt/v1', { method: 'POST' }),
       {},
       context,
     );
@@ -597,22 +597,22 @@ describe('typed Worker fetch execution', () => {
     expect(internalRoute).not.toHaveBeenCalled();
   });
   it('hides capabilities through property lookup, membership, enumeration and descriptors only when selected', () => {
-    const env = { __NOSAM_TOKEN: 'private', NOSAM_NORMAL: 'public', ISR_CACHE: 'user-cache' };
-    const publicEnv = filterInternalBindings(env, ['__NOSAM_']);
+    const env = { __PLATFORM_TOKEN: 'private', PLATFORM_NORMAL: 'public', ISR_CACHE: 'user-cache' };
+    const publicEnv = filterInternalBindings(env, ['__PLATFORM_']);
     expect(publicEnv.ISR_CACHE).toBe('user-cache');
-    const hidden = filterInternalBindings(env, ['__NOSAM_'], ['ISR_CACHE']);
-    expect(hidden.__NOSAM_TOKEN).toBeUndefined();
+    const hidden = filterInternalBindings(env, ['__PLATFORM_'], ['ISR_CACHE']);
+    expect(hidden.__PLATFORM_TOKEN).toBeUndefined();
     expect('ISR_CACHE' in hidden).toBe(false);
-    expect(Object.keys(hidden)).toEqual(['NOSAM_NORMAL']);
-    expect(Object.getOwnPropertyDescriptor(hidden, '__NOSAM_TOKEN')).toBeUndefined();
+    expect(Object.keys(hidden)).toEqual(['PLATFORM_NORMAL']);
+    expect(Object.getOwnPropertyDescriptor(hidden, '__PLATFORM_TOKEN')).toBeUndefined();
   });
 
   it('validates env for readiness and app requests and hides internal bindings', async () => {
     const validateEnv = vi.fn(async () => {});
     const fetch = worker({ validateEnv });
-    const env = { PUBLIC: 'yes', __NOSAM_PROXY_TOKEN: 'secret' };
+    const env = { PUBLIC: 'yes', __PLATFORM_PROXY_TOKEN: 'secret' };
     expect(
-      await (await fetch(new Request('https://app.test/__nosam/ready'), env, context)).json(),
+      await (await fetch(new Request('https://app.test/__platform/ready'), env, context)).json(),
     ).toEqual({ ready: true });
     expect(await (await fetch(new Request('https://app.test/app'), env, context)).json()).toEqual({
       public: 'yes',
@@ -813,7 +813,7 @@ describe('static asset marker', () => {
     app.use(routing.contextMiddleware);
     app.use(async (c, next) => {
       await next();
-      seen.push((c as unknown as { get(key: string): unknown }).get('__nosamStaticAsset'));
+      seen.push((c as unknown as { get(key: string): unknown }).get('__platformStaticAsset'));
     });
     app.get('/new', (c) => c.text('fallback rule'));
     app.notFound(createAssetNotFound({ routing, fallbackRules }));
@@ -867,18 +867,18 @@ describe('native HTTPS policy', () => {
       alwaysUseHttps: true,
       emailReceipt: async () => new Response('receipt', { status: 202 }),
       internalRoute: async (request) =>
-        new URL(request.url).pathname === '/__nosam/migrate' ? new Response('migrated') : null,
+        new URL(request.url).pathname === '/__platform/migrate' ? new Response('migrated') : null,
     });
-    const ready = await fetch(new Request('http://oxc.rs/__nosam/ready'), {}, context);
+    const ready = await fetch(new Request('http://oxc.rs/__platform/ready'), {}, context);
     expect(await ready.json()).toEqual({ ready: true });
     const receipt = await fetch(
-      new Request('http://oxc.rs/__nosam/email/receipt/v1', { method: 'POST' }),
+      new Request('http://oxc.rs/__platform/email/receipt/v1', { method: 'POST' }),
       {},
       context,
     );
     expect(receipt.status).toBe(202);
     const migrate = await fetch(
-      new Request('http://oxc.rs/__nosam/migrate', { method: 'POST' }),
+      new Request('http://oxc.rs/__platform/migrate', { method: 'POST' }),
       {},
       context,
     );

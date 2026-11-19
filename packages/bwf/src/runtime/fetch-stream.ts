@@ -75,14 +75,14 @@ export async function* fetchStream<
   let buffer = '';
   let event = '';
   const terminal = (data: string) => {
-    if (event !== 'nosam:error' && event !== 'nosam:limit') {
+    if (event !== 'platform:error' && event !== 'platform:limit') {
       return;
     }
     let message = 'Generation was interrupted.';
     let limit = null;
     try {
       const body = JSON.parse(data);
-      if (event === 'nosam:limit') {
+      if (event === 'platform:limit') {
         limit = asUsageLimit(body);
       }
       if (typeof body.message === 'string') {

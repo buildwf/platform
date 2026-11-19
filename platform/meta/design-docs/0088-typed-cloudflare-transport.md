@@ -27,5 +27,5 @@ pagination, ownership checks, absent-resource confirmation and fail-closed
 malformed responses. Cancellation, process-group termination and lock quarantine
 still dominate buffered provider results. Preserve uploader hashes and artifact
 verification, active-secret lineage, cutover, trigger publication and rollback.
-The matching platform payload stays bundled with `nosam`. Public CLI syntax,
+The matching platform payload stays bundled with `platform`. Public CLI syntax,
 authentication destinations and Workers Free defaults are unchanged.

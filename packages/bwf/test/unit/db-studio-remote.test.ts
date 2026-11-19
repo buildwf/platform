@@ -14,7 +14,7 @@ vi.mock('../../src/cli/auth', () => ({
 
 vi.mock('../../src/cli/project', () => ({
   readProjectConfig: () => mockReadProjectConfig(),
-  readDeploymentPlatform: () => 'nosam',
+  readDeploymentPlatform: () => 'platform',
 }));
 
 vi.mock('../../src/cli/client', () => ({
@@ -37,7 +37,7 @@ vi.mock('../../src/cli/client', () => ({
   },
 }));
 
-const PRIVATE_CONFIG_PATH = join(tmpdir(), 'nosam-drizzle-test', 'drizzle.config.json');
+const PRIVATE_CONFIG_PATH = join(tmpdir(), 'platform-drizzle-test', 'drizzle.config.json');
 
 // Mock the drizzle config writers to avoid needing a real schema on disk.
 const mockWriteDrizzleConfig = vi.fn<(root: string, dbPath: string, dialect?: string) => string>(
@@ -86,7 +86,7 @@ function expectDrizzleKitRunWithPrivateConfig(command: 'push' | 'studio'): void 
 }
 
 function createProjectRoot(options: { database?: 'pg' } = {}): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-db-studio-remote-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-db-studio-remote-'));
   roots.push(root);
 
   const bwfConfig = options.database === 'pg' ? { database: 'pg' } : {};

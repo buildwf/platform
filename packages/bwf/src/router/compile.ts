@@ -49,11 +49,11 @@ export type CompileOptions = {
   /**
    * Whether the generated route module is being compiled for the Vite dev
    * server. Also picks the manual trigger auth rule: dev accepts only
-   * `x-nosam-dev-trigger`; every build uses the proxy token or build key.
+   * `x-platform-dev-trigger`; every build uses the proxy token or build key.
    */
   dev?: boolean;
   /**
-   * Token for local dev manual trigger endpoints (`x-nosam-dev-trigger`).
+   * Token for local dev manual trigger endpoints (`x-platform-dev-trigger`).
    * Stable for a dev-server process so tooling can print paste-ready curl
    * commands.
    */
@@ -62,7 +62,7 @@ export type CompileOptions = {
   auth: AuthCompileOptions | null;
   /** Managed Cloudflare build whose dispatch worker owns edge routing. */
   managedDispatch?: boolean;
-  /** Absolute path to the binding handler module (for /__nosam/* native binding access) */
+  /** Absolute path to the binding handler module (for /__platform/* native binding access) */
   bindingHandlerPath?: string;
   /** Absolute path to the migration handler module */
   migrationHandlerPath?: string;
@@ -130,7 +130,7 @@ function createIdentifierNames(): (key: string) => string {
 }
 
 /**
- * Generate the code for the virtual route table module (virtual:nosam-routes).
+ * Generate the code for the virtual route table module (virtual:platform-routes).
  * This module creates a Hono app with:
  * - Middleware registered via app.use()
  * - Routes registered with lazy-loaded handlers and auto-conversion
@@ -163,12 +163,12 @@ export function compileRouteTable(
     lines.push(
       `import { ${authImports.join(', ')} } from ${JSON.stringify(auth.authRuntimePath)};`,
     );
-    lines.push(`import { __nosamAuthDatabase } from ${JSON.stringify(auth.authDatabasePath)};`);
+    lines.push(`import { __platformAuthDatabase } from ${JSON.stringify(auth.authDatabasePath)};`);
     lines.push(
-      `import { migrationSchema as __nosamAuthMigrationSchema } from ${JSON.stringify(auth.authSchemaPath)};`,
+      `import { migrationSchema as __platformAuthMigrationSchema } from ${JSON.stringify(auth.authSchemaPath)};`,
     );
     if (auth.authConfigPath) {
-      lines.push(`import __nosamAuthConfig from ${JSON.stringify(auth.authConfigPath)};`);
+      lines.push(`import __platformAuthConfig from ${JSON.stringify(auth.authConfigPath)};`);
     }
   }
   if (
@@ -211,11 +211,11 @@ export function compileRouteTable(
 
   if (auth) {
     lines.push(
-      `const __nosamAuthOptions = { dialect: ${JSON.stringify(auth.dialect)}, providers: ${JSON.stringify(auth.providers)}, userConfig: ${auth.authConfigPath ? '__nosamAuthConfig' : 'undefined'}, dev: ${JSON.stringify(options.dev === true)} };`,
+      `const __platformAuthOptions = { dialect: ${JSON.stringify(auth.dialect)}, providers: ${JSON.stringify(auth.providers)}, userConfig: ${auth.authConfigPath ? '__platformAuthConfig' : 'undefined'}, dev: ${JSON.stringify(options.dev === true)} };`,
     );
     if (webSockets.length > 0) {
       lines.push(
-        'const __resolveBwfAuthState = (request, env, runtime) => __resolveBwfAuthStateRuntime(request, env, runtime, __nosamAuthDatabase);',
+        'const __resolveBwfAuthState = (request, env, runtime) => __resolveBwfAuthStateRuntime(request, env, runtime, __platformAuthDatabase);',
       );
     }
     lines.push('');
@@ -267,7 +267,7 @@ export function compileRouteTable(
       lines.push('app.use("*", __routingRuntime.headerMiddleware(__headerRules, "auth-error"));');
     }
     lines.push('app.use(async (c, next) => {');
-    lines.push('  return runBwfAuthMiddleware(c, next, __nosamAuthOptions, __nosamAuthDatabase);');
+    lines.push('  return runBwfAuthMiddleware(c, next, __platformAuthOptions, __platformAuthDatabase);');
     lines.push('});');
     lines.push('');
   }
@@ -295,7 +295,7 @@ export function compileRouteTable(
       `  if (c.req.raw.headers.get("upgrade")?.toLowerCase() !== "websocket") return next();`,
     );
     lines.push(
-      `  return __forwardWebSocketRequest(c.req.raw, c.env, __nosamWebSocketRoutes[${i}]);`,
+      `  return __forwardWebSocketRequest(c.req.raw, c.env, __platformWebSocketRoutes[${i}]);`,
     );
     lines.push('});');
   }
@@ -305,11 +305,11 @@ export function compileRouteTable(
 
   if (auth) {
     lines.push('app.all("/api/auth", async (c) => {');
-    lines.push('  return handleBwfAuthRequest(c, __nosamAuthOptions, __nosamAuthDatabase);');
+    lines.push('  return handleBwfAuthRequest(c, __platformAuthOptions, __platformAuthDatabase);');
     lines.push('});');
     lines.push('');
     lines.push('app.all("/api/auth/*", async (c) => {');
-    lines.push('  return handleBwfAuthRequest(c, __nosamAuthOptions, __nosamAuthDatabase);');
+    lines.push('  return handleBwfAuthRequest(c, __platformAuthOptions, __platformAuthDatabase);');
     lines.push('});');
     lines.push('');
   }
@@ -367,12 +367,12 @@ export function compileRouteTable(
             bindingName: route.bindingName,
             ...(route.name !== undefined && { name: route.name }),
           },
-        )}, ${auth ? '__nosamAuthOptions' : 'undefined'}, ${auth ? '__resolveBwfAuthState' : 'undefined'});`,
+        )}, ${auth ? '__platformAuthOptions' : 'undefined'}, ${auth ? '__resolveBwfAuthState' : 'undefined'});`,
       );
     }
     lines.push('');
     lines.push(
-      `const __nosamWebSocketRoutes = ${JSON.stringify(
+      `const __platformWebSocketRoutes = ${JSON.stringify(
         webSockets.map((route) => ({
           pattern: route.pattern,
           params: route.params,
@@ -385,7 +385,7 @@ export function compileRouteTable(
     lines.push('');
   }
   for (let i = 0; i < webSockets.length; i++) {
-    lines.push(`__nosamWebSocketRoutes[${i}].key = websocket${i}.key;`);
+    lines.push(`__platformWebSocketRoutes[${i}].key = websocket${i}.key;`);
   }
   for (const className of options.webSocketTombstones ?? []) {
     lines.push(
@@ -397,7 +397,7 @@ export function compileRouteTable(
   }
 
   if (options.hasLive) {
-    lines.push('export const NosamLiveStreamDurableObject = __createLiveDurableObject();');
+    lines.push('export const PlatformLiveStreamDurableObject = __createLiveDurableObject();');
     lines.push('');
   }
 
@@ -405,7 +405,7 @@ export function compileRouteTable(
   // Pages handlers win for their methods; upgrades were forwarded above.
   for (let i = 0; i < webSockets.length; i++) {
     lines.push(
-      `app.all(${JSON.stringify(webSockets[i].pattern)}, (c) => __forwardWebSocketRequest(c.req.raw, c.env, __nosamWebSocketRoutes[${i}]));`,
+      `app.all(${JSON.stringify(webSockets[i].pattern)}, (c) => __forwardWebSocketRequest(c.req.raw, c.env, __platformWebSocketRoutes[${i}]));`,
     );
   }
   if (webSockets.length > 0) {
@@ -477,12 +477,12 @@ export function compileRouteTable(
   }
 
   if (scan.jobs.length > 0 || scan.queues.length > 0) {
-    lines.push('function __nosamTriggerUnauthorized(c) {');
-    lines.push('  const __token = c.req.header("x-nosam-internal");');
-    lines.push('  const __expected = __getRawEnv()?.__NOSAM_PROXY_TOKEN;');
-    lines.push('  const __devToken = c.req.header("x-nosam-dev-trigger");');
+    lines.push('function __platformTriggerUnauthorized(c) {');
+    lines.push('  const __token = c.req.header("x-platform-internal");');
+    lines.push('  const __expected = __getRawEnv()?.__PLATFORM_PROXY_TOKEN;');
+    lines.push('  const __devToken = c.req.header("x-platform-dev-trigger");');
     lines.push(
-      '  return __NOSAM_SERVE ? __devToken !== __NOSAM_DEV_TRIGGER_TOKEN : __expected ? __token !== __expected : __token !== __NOSAM_BUILD_KEY;',
+      '  return __PLATFORM_SERVE ? __devToken !== __PLATFORM_DEV_TRIGGER_TOKEN : __expected ? __token !== __expected : __token !== __PLATFORM_BUILD_KEY;',
     );
     lines.push('}');
     lines.push('');
@@ -491,14 +491,14 @@ export function compileRouteTable(
   if (scan.jobs.length > 0) {
     lines.push('const __scheduledHandler = async (c) => {');
     lines.push(
-      '  if (__nosamTriggerUnauthorized(c)) return c.json({ error: "unauthorized" }, 401);',
+      '  if (__platformTriggerUnauthorized(c)) return c.json({ error: "unauthorized" }, 401);',
     );
     lines.push('  const { cron, scheduledTime } = await c.req.json();');
     lines.push('  const controller = { cron, scheduledTime, noRetry() {} };');
     lines.push('  await scheduled(controller, c.env, c.executionCtx);');
     lines.push('  return c.json({ ok: true });');
     lines.push('};');
-    lines.push('app.post("/__nosam/scheduled", __scheduledHandler);');
+    lines.push('app.post("/__platform/scheduled", __scheduledHandler);');
     lines.push('');
   }
 
@@ -580,13 +580,13 @@ export function compileRouteTable(
 
     lines.push('const __queueHandler = async (c) => {');
     lines.push(
-      '  if (__nosamTriggerUnauthorized(c)) return c.json({ error: "unauthorized" }, 401);',
+      '  if (__platformTriggerUnauthorized(c)) return c.json({ error: "unauthorized" }, 401);',
     );
     lines.push('  const payload = await c.req.json();');
     lines.push('  const result = await __processQueue(payload, c.env);');
     lines.push('  return c.json(result);');
     lines.push('};');
-    lines.push('app.post("/__nosam/queue", __queueHandler);');
+    lines.push('app.post("/__platform/queue", __queueHandler);');
     lines.push('');
   }
 
@@ -620,7 +620,7 @@ export function compileRouteTable(
     lines.push('export async function __emailHandler(message, env, ctx, __opts) {');
     // Match the wire recipient: `createMessageProxy` already stripped the slug from `message.to`.
     // Keep the case; patterns use the `i` flag so captured tags stay intact.
-    lines.push('  const __platformTo = message ? message.__nosamPlatformTo : undefined;');
+    lines.push('  const __platformTo = message ? message.__platformTo : undefined;');
     lines.push('  const __to = String((__platformTo ?? (message && message.to)) || "");');
     lines.push('  const __localFull = __to.split("@")[0] || "";');
     // With a slug configured, `<slug>[+<tag>]` routes on the tag; a bare `<slug>@` has an empty tag.
@@ -667,7 +667,7 @@ export function compileRouteTable(
     lines.push('');
   }
 
-  // /__nosam/migrate handler — runs bundled DB + auth migrations in-worker
+  // /__platform/migrate handler — runs bundled DB + auth migrations in-worker
   if (options.migrationHandlerPath && (options.migrations?.length || auth)) {
     const d1BindingName = options.bindingNames?.d1;
     lines.push(
@@ -677,24 +677,24 @@ export function compileRouteTable(
     lines.push(`const __migrationPlanBundle = ${JSON.stringify(options.migrationPlanBundle)};`);
     if (d1BindingName) {
       lines.push(
-        `function __nosamGetMigrationEnv() {
+        `function __platformGetMigrationEnv() {
   const env = __getRawEnv();
   if (!env || env[${JSON.stringify(d1BindingName)}] == null) return env;
   return { ...env, DB: env[${JSON.stringify(d1BindingName)}] };
 }`,
       );
     } else {
-      lines.push('function __nosamGetMigrationEnv() { return __getRawEnv(); }');
+      lines.push('function __platformGetMigrationEnv() { return __getRawEnv(); }');
     }
     lines.push(
-      'function __nosamCreateMigrationRequestHandler(includeAuthMigrations, includePlanBundle) {',
+      'function __platformCreateMigrationRequestHandler(includeAuthMigrations, includePlanBundle) {',
     );
     lines.push('  return __createMigrationHandler(');
-    lines.push('    __nosamGetMigrationEnv(),');
+    lines.push('    __platformGetMigrationEnv(),');
     lines.push('    __migrations,');
     if (auth) {
       lines.push(
-        '    includeAuthMigrations ? () => runBwfAuthMigrations(__nosamGetMigrationEnv(), __nosamAuthOptions, __nosamAuthMigrationSchema) : undefined,',
+        '    includeAuthMigrations ? () => runBwfAuthMigrations(__platformGetMigrationEnv(), __platformAuthOptions, __platformAuthMigrationSchema) : undefined,',
       );
     } else {
       lines.push('    undefined,');
@@ -702,71 +702,71 @@ export function compileRouteTable(
     lines.push('    includePlanBundle ? __migrationPlanBundle : undefined,');
     lines.push('  );');
     lines.push('}');
-    lines.push('export async function __nosamHandleInternalRoute(request) {');
+    lines.push('export async function __platformHandleInternalRoute(request) {');
     lines.push('  const url = new URL(request.url);');
-    lines.push('  if (request.method === "POST" && url.pathname === "/__nosam/migrate") {');
+    lines.push('  if (request.method === "POST" && url.pathname === "/__platform/migrate") {');
     lines.push(
-      `    return __nosamCreateMigrationRequestHandler(${auth ? 'true' : 'false'}, false)(request);`,
+      `    return __platformCreateMigrationRequestHandler(${auth ? 'true' : 'false'}, false)(request);`,
     );
     lines.push('  }');
     lines.push(
-      '  if (request.method === "GET" && url.pathname === "/__nosam/migrate/capabilities") {',
+      '  if (request.method === "GET" && url.pathname === "/__platform/migrate/capabilities") {',
     );
     lines.push(
-      `    return __nosamCreateMigrationRequestHandler(${auth ? 'true' : 'false'}, true)(request);`,
+      `    return __platformCreateMigrationRequestHandler(${auth ? 'true' : 'false'}, true)(request);`,
     );
     lines.push('  }');
-    lines.push('  if (request.method === "POST" && url.pathname === "/__nosam/migrate/app") {');
-    lines.push('    return __nosamCreateMigrationRequestHandler(false, true)(request);');
+    lines.push('  if (request.method === "POST" && url.pathname === "/__platform/migrate/app") {');
+    lines.push('    return __platformCreateMigrationRequestHandler(false, true)(request);');
     lines.push('  }');
     lines.push(
-      '  if (request.method === "GET" && url.pathname.startsWith("/__nosam/migrate/app/attempt/")) {',
+      '  if (request.method === "GET" && url.pathname.startsWith("/__platform/migrate/app/attempt/")) {',
     );
-    lines.push('    return __nosamCreateMigrationRequestHandler(false, true)(request);');
+    lines.push('    return __platformCreateMigrationRequestHandler(false, true)(request);');
     lines.push('  }');
     if (auth) {
-      lines.push('  if (request.method === "POST" && url.pathname === "/__nosam/migrate/auth") {');
-      lines.push('    return __nosamCreateMigrationRequestHandler(true, true)(request);');
+      lines.push('  if (request.method === "POST" && url.pathname === "/__platform/migrate/auth") {');
+      lines.push('    return __platformCreateMigrationRequestHandler(true, true)(request);');
       lines.push('  }');
     }
     lines.push('  return null;');
     lines.push('}');
     lines.push(
-      `app.post("/__nosam/migrate", (c) => __nosamCreateMigrationRequestHandler(${auth ? 'true' : 'false'}, false)(c.req.raw));`,
+      `app.post("/__platform/migrate", (c) => __platformCreateMigrationRequestHandler(${auth ? 'true' : 'false'}, false)(c.req.raw));`,
     );
     lines.push(
-      `app.get("/__nosam/migrate/capabilities", (c) => __nosamCreateMigrationRequestHandler(${auth ? 'true' : 'false'}, true)(c.req.raw));`,
+      `app.get("/__platform/migrate/capabilities", (c) => __platformCreateMigrationRequestHandler(${auth ? 'true' : 'false'}, true)(c.req.raw));`,
     );
     lines.push(
-      'app.post("/__nosam/migrate/app", (c) => __nosamCreateMigrationRequestHandler(false, true)(c.req.raw));',
+      'app.post("/__platform/migrate/app", (c) => __platformCreateMigrationRequestHandler(false, true)(c.req.raw));',
     );
     lines.push(
-      'app.get("/__nosam/migrate/app/attempt/:attemptId", (c) => __nosamCreateMigrationRequestHandler(false, true)(c.req.raw));',
+      'app.get("/__platform/migrate/app/attempt/:attemptId", (c) => __platformCreateMigrationRequestHandler(false, true)(c.req.raw));',
     );
     if (auth) {
       lines.push(
-        'app.post("/__nosam/migrate/auth", (c) => __nosamCreateMigrationRequestHandler(true, true)(c.req.raw));',
+        'app.post("/__platform/migrate/auth", (c) => __platformCreateMigrationRequestHandler(true, true)(c.req.raw));',
       );
     }
     lines.push('');
   } else {
-    lines.push('export async function __nosamHandleInternalRoute() { return null; }');
+    lines.push('export async function __platformHandleInternalRoute() { return null; }');
     lines.push('');
   }
 
-  // /__nosam/* handler — native binding access via WfP dispatch (always injected for CF targets)
+  // /__platform/* handler — native binding access via WfP dispatch (always injected for CF targets)
   if (options.bindingHandlerPath) {
     lines.push(
       `import { createBindingHandler as __createBindingHandler } from ${JSON.stringify(options.bindingHandlerPath)};`,
     );
-    lines.push('let __nosamBindingApp;');
-    lines.push('app.all("/__nosam/*", async (c) => {');
+    lines.push('let __platformBindingApp;');
+    lines.push('app.all("/__platform/*", async (c) => {');
     lines.push(
-      '  if (!__nosamBindingApp) __nosamBindingApp = __createBindingHandler(__getRawEnv());',
+      '  if (!__platformBindingApp) __platformBindingApp = __createBindingHandler(__getRawEnv());',
     );
     lines.push('  const url = new URL(c.req.url);');
     lines.push('  url.pathname = url.pathname.slice(7);');
-    lines.push('  return __nosamBindingApp.fetch(new Request(url.toString(), c.req.raw));');
+    lines.push('  return __platformBindingApp.fetch(new Request(url.toString(), c.req.raw));');
     lines.push('});');
     lines.push('');
   }
@@ -777,17 +777,17 @@ export function compileRouteTable(
   lines.push('const __rawEnvStore = new AsyncLocalStorage();');
   lines.push('export function __withRawEnv(env, fn) { return __rawEnvStore.run(env, fn); }');
   lines.push('function __getRawEnv() { return __rawEnvStore.getStore(); }');
-  // Build-time key for internal route auth when __NOSAM_PROXY_TOKEN is absent.
+  // Build-time key for internal route auth when __PLATFORM_PROXY_TOKEN is absent.
   // Embedded in the compiled route table — only same-build callers know it.
-  lines.push(`export const __NOSAM_BUILD_KEY = ${JSON.stringify(crypto.randomUUID())};`);
+  lines.push(`export const __PLATFORM_BUILD_KEY = ${JSON.stringify(crypto.randomUUID())};`);
   lines.push(
-    `export const __NOSAM_DEV_TRIGGER_TOKEN = ${JSON.stringify(options.devTriggerToken ?? crypto.randomUUID())};`,
+    `export const __PLATFORM_DEV_TRIGGER_TOKEN = ${JSON.stringify(options.devTriggerToken ?? crypto.randomUUID())};`,
   );
-  // Manual trigger auth (`/__nosam/scheduled`, `/__nosam/queue`) is fixed when the
+  // Manual trigger auth (`/__platform/scheduled`, `/__platform/queue`) is fixed when the
   // module is compiled, not read from `import.meta.env.DEV`: a build with
   // NODE_ENV=development still has DEV=true, and must keep the proxy-token /
   // build-key rule. Only the Vite dev server compiles with `dev: true`.
-  lines.push(`const __NOSAM_SERVE = ${JSON.stringify(options.dev === true)};`);
+  lines.push(`const __PLATFORM_SERVE = ${JSON.stringify(options.dev === true)};`);
   lines.push('');
   lines.push(`export default app;`);
 
@@ -869,10 +869,10 @@ export interface WorkerEntryOptions {
  *
  * When `hasQueues` is true, also exports a `queue()` method that passes the
  * native MessageBatch to `__processQueue` and applies its ack/retry
- * decisions. Managed delivery uses the `/__nosam/queue` route instead.
+ * decisions. Managed delivery uses the `/__platform/queue` route instead.
  *
  * When `remote` is provided, wraps the fetch handler to detect
- * remote mode (`__NOSAM_REMOTE`) and replace local bindings with
+ * remote mode (`__PLATFORM_REMOTE`) and replace local bindings with
  * proxy-backed versions.
  */
 export function compileWorkerEntry(options: WorkerEntryOptions = {}): string {
@@ -911,41 +911,41 @@ export function compileWorkerEntry(options: WorkerEntryOptions = {}): string {
       ? (sandbox.runtimePath ?? '@builtbyfriends/bwf/sandbox')
       : '@builtbyfriends/bwf/sandbox';
   const sandboxImport = hasSandbox
-    ? `import { BwfPlatformSandbox as __NosamSandbox, __setSandboxBindingName } from ${JSON.stringify(sandboxRuntimePath)};\n`
+    ? `import { BwfPlatformSandbox as __PlatformSandbox, __setSandboxBindingName } from ${JSON.stringify(sandboxRuntimePath)};\n`
     : '';
   const sandboxInstanceType = typeof sandbox === 'object' ? sandbox.instanceType : undefined;
   const sandboxExport = hasSandbox
     ? sandboxClassName === DEFAULT_SANDBOX_CLASS_NAME && !sandboxInstanceType
-      ? `export { __NosamSandbox as SandboxV1 };\n__setSandboxBindingName(${JSON.stringify(sandboxBindingName)});\n`
-      : `export class ${sandboxClassName} extends __NosamSandbox {${sandboxInstanceType ? ` protected override instanceType = ${JSON.stringify(sandboxInstanceType)} as const; ` : ''}}\n__setSandboxBindingName(${JSON.stringify(sandboxBindingName)});\n`
+      ? `export { __PlatformSandbox as SandboxV1 };\n__setSandboxBindingName(${JSON.stringify(sandboxBindingName)});\n`
+      : `export class ${sandboxClassName} extends __PlatformSandbox {${sandboxInstanceType ? ` protected override instanceType = ${JSON.stringify(sandboxInstanceType)} as const; ` : ''}}\n__setSandboxBindingName(${JSON.stringify(sandboxBindingName)});\n`
     : '';
   const hasLive = live === true || typeof live === 'object';
   const liveBindingName = typeof live === 'object' ? (live.bindingName ?? 'BWF_LIVE') : 'BWF_LIVE';
   const liveClassName =
     typeof live === 'object'
-      ? (live.className ?? 'NosamLiveStreamDurableObject')
-      : 'NosamLiveStreamDurableObject';
-  const liveRouteImport = hasLive ? ', NosamLiveStreamDurableObject' : '';
+      ? (live.className ?? 'PlatformLiveStreamDurableObject')
+      : 'PlatformLiveStreamDurableObject';
+  const liveRouteImport = hasLive ? ', PlatformLiveStreamDurableObject' : '';
   const liveDev = hasLive && dev === true;
   const liveRuntimeImport = hasLive
     ? `import { __setLiveBindingName${liveDev ? ', __setLiveDev' : ''} } from "@builtbyfriends/bwf/live";\n`
     : '';
   const liveDevCall = liveDev ? '__setLiveDev(true);\n' : '';
   const liveExport = hasLive
-    ? liveClassName === 'NosamLiveStreamDurableObject'
-      ? `export { NosamLiveStreamDurableObject };\n__setLiveBindingName(${JSON.stringify(liveBindingName)});\n${liveDevCall}`
-      : `export { NosamLiveStreamDurableObject as ${liveClassName} };\n__setLiveBindingName(${JSON.stringify(liveBindingName)});\n${liveDevCall}`
+    ? liveClassName === 'PlatformLiveStreamDurableObject'
+      ? `export { PlatformLiveStreamDurableObject };\n__setLiveBindingName(${JSON.stringify(liveBindingName)});\n${liveDevCall}`
+      : `export { PlatformLiveStreamDurableObject as ${liveClassName} };\n__setLiveBindingName(${JSON.stringify(liveBindingName)});\n${liveDevCall}`
     : '';
   const durableObjectImports = durableObjects
     .map(
       ({ filePath }, index) =>
-        `import __nosamDurableObject${index} from ${JSON.stringify(filePath)};`,
+        `import __platformDurableObject${index} from ${JSON.stringify(filePath)};`,
     )
     .join('\n');
   const durableObjectExports = durableObjects
     .map(
       ({ bindingName, className, name }, index) =>
-        `__nosamDurableObject${index}.__bind(${JSON.stringify(bindingName)}${name !== undefined ? `, ${JSON.stringify(name)}` : ''});\nexport const ${className} = __nosamDurableObject${index}.class;`,
+        `__platformDurableObject${index}.__bind(${JSON.stringify(bindingName)}${name !== undefined ? `, ${JSON.stringify(name)}` : ''});\nexport const ${className} = __platformDurableObject${index}.class;`,
     )
     .join('\n');
   const runtimeEnvImport = `import { withRuntimeEnv } from ${JSON.stringify(runtimeEnvPath)};\n`;
@@ -966,10 +966,10 @@ const __filterInternalBindings = (env) => __filterBindings(env, ${JSON.stringify
   const fetchHandler = `__createWorkerFetch({
     app, assets: serveWithAssets, withRawEnv: __withRawEnv, withRuntimeEnv,
     filterBindings: __filterInternalBindings,
-    internalRoute: __nosamHandleInternalRoute${alwaysUseHttps ? ', alwaysUseHttps: true' : ''}${versionMetadataBinding ? ', versionMetadataBinding: ' + JSON.stringify(versionMetadataBinding) : ''}${envSchemaModule ? ', validateEnv: _validateEnvOnce' : ''}${remotePath ? ', remoteEnv: (env) => ' + createRemoteEnvCall : ''}${hasEmail ? ', emailReceipt: __handleEmailReceipt' : ''}
+    internalRoute: __platformHandleInternalRoute${alwaysUseHttps ? ', alwaysUseHttps: true' : ''}${versionMetadataBinding ? ', versionMetadataBinding: ' + JSON.stringify(versionMetadataBinding) : ''}${envSchemaModule ? ', validateEnv: _validateEnvOnce' : ''}${remotePath ? ', remoteEnv: (env) => ' + createRemoteEnvCall : ''}${hasEmail ? ', emailReceipt: __handleEmailReceipt' : ''}
   })`;
   const remoteEnvSwap = remotePath
-    ? `  if (env.__NOSAM_REMOTE === "1") env = ${createRemoteEnvCall};\n`
+    ? `  if (env.__PLATFORM_REMOTE === "1") env = ${createRemoteEnvCall};\n`
     : '';
   const scheduledHandler = `async function handleScheduled(controller, env, ctx) {
 ${envValidateCall}${remoteEnvSwap}  const userEnv = __filterInternalBindings(env);
@@ -991,7 +991,7 @@ ${envValidateCall}${remoteEnvSwap}  const userEnv = __filterInternalBindings(env
     ? `async function handleEmail(envelope, env, ctx) {
 ${envValidateCall}${remoteEnvSwap}  const userEnv = __filterInternalBindings(env);
   const __relayed = typeof envelope.viaDomain === "string" && envelope.viaDomain.length > 0;
-  const __slug = __relayed || typeof env.__NOSAM_PROJECT_SLUG !== "string" || env.__NOSAM_PROJECT_SLUG.length === 0 ? undefined : (String(envelope.to || "").split("@")[0].split("+")[0] || env.__NOSAM_PROJECT_SLUG);
+  const __slug = __relayed || typeof env.__PLATFORM_PROJECT_SLUG !== "string" || env.__PLATFORM_PROJECT_SLUG.length === 0 ? undefined : (String(envelope.to || "").split("@")[0].split("+")[0] || env.__PLATFORM_PROJECT_SLUG);
   const { message, getActions } = __createMessageProxy(envelope, { slug: __slug });
   await __withRawEnv(env, () => withRuntimeEnv(env, () => __emailHandler(message, userEnv, ctx, { slug: __slug })));
   const __actions = getActions();
@@ -1003,15 +1003,15 @@ ${envValidateCall}${remoteEnvSwap}  const userEnv = __filterInternalBindings(env
   const emailReceiptHandler = hasEmail
     ? `async function __handleEmailReceipt(request, env, ctx) {
   if (request.method !== "POST" || request.headers.get("content-encoding")) return new Response(null, { status: 404 });
-  const __token = request.headers.get("x-nosam-email-receipt");
-  const __recipient = request.headers.get("x-nosam-email-recipient");
+  const __token = request.headers.get("x-platform-email-receipt");
+  const __recipient = request.headers.get("x-platform-email-recipient");
   if (!__token || __token.length > 1536 || !__recipient || __recipient.length > 320 ||
-      !env.__NOSAM_PROXY_TOKEN || !env.__PROJECT_ID || !env.__NOSAM_EMAIL_DEPLOYMENT_ID || !env.__NOSAM_PROXY) {
+      !env.__PLATFORM_PROXY_TOKEN || !env.__PROJECT_ID || !env.__PLATFORM_EMAIL_DEPLOYMENT_ID || !env.__PLATFORM_PROXY) {
     return new Response(null, { status: 404 });
   }
-  const __verified = await __verifyEmailReceiptThroughProxy(env.__NOSAM_PROXY, env.__NOSAM_PROXY_TOKEN, {
+  const __verified = await __verifyEmailReceiptThroughProxy(env.__PLATFORM_PROXY, env.__PLATFORM_PROXY_TOKEN, {
     receipt: __token, projectId: env.__PROJECT_ID,
-    deploymentId: env.__NOSAM_EMAIL_DEPLOYMENT_ID, recipient: __recipient,
+    deploymentId: env.__PLATFORM_EMAIL_DEPLOYMENT_ID, recipient: __recipient,
   });
   if (!__verified) return new Response(null, { status: 404 });
   let __envelope;
@@ -1020,7 +1020,7 @@ ${envValidateCall}${remoteEnvSwap}  const userEnv = __filterInternalBindings(env
   if (__envelope.to !== __recipient) return new Response(null, { status: 400 });
   const __actions = await handleEmail(__envelope, env, ctx);
   return new Response(__encodeEmailActions(__actions), {
-    headers: { "content-type": "application/vnd.nosam.email-actions; version=" + __EMAIL_PROTOCOL_VERSION,
+    headers: { "content-type": "application/vnd.platform.email-actions; version=" + __EMAIL_PROTOCOL_VERSION,
       "cache-control": "no-store" },
   });
 }`
@@ -1030,26 +1030,26 @@ ${envValidateCall}${remoteEnvSwap}  const userEnv = __filterInternalBindings(env
   // Its email method accepts only native events on direct Cloudflare deploys;
   // platform mail enters through the authenticated receipt fetch endpoint.
   const entryImport = `import { WorkerEntrypoint } from "cloudflare:workers";\n`;
-  const fetchDeclaration = `const __nosamFetch = ${fetchHandler};`;
+  const fetchDeclaration = `const __platformFetch = ${fetchHandler};`;
   const queueMethodBody = hasQueues
-    ? `  async queue(batch) { return __nosamQueue(batch, this.env, this.ctx); }\n`
+    ? `  async queue(batch) { return __platformQueue(batch, this.env, this.ctx); }\n`
     : '';
   const emailMethodBody = hasEmail
     ? `  async email(message) {
-    if (this.env.__NOSAM_EMAIL_DEPLOYMENT_ID || !__isForwardableEmailMessage(message)) {
+    if (this.env.__PLATFORM_EMAIL_DEPLOYMENT_ID || !__isForwardableEmailMessage(message)) {
       throw new TypeError("Native email event required");
     }
     await handleEmail(message, this.env, this.ctx);
   }\n`
     : '';
   const entryClass = `export default class extends WorkerEntrypoint {
-  async fetch(request) { return __nosamFetch(request, this.env, this.ctx); }
+  async fetch(request) { return __platformFetch(request, this.env, this.ctx); }
   async scheduled(controller) { return handleScheduled(controller, this.env, this.ctx); }
 ${queueMethodBody}${emailMethodBody}}`;
 
   const queueImport = hasQueues ? ', __processQueue' : '';
   const queueFunction = hasQueues
-    ? `async function __nosamQueue(batch, env, ctx) {
+    ? `async function __platformQueue(batch, env, ctx) {
 ${envValidateCall}${remoteEnvSwap}  const userEnv = __filterInternalBindings(env);
   const messages = [...batch.messages].map(m => ({
     id: m.id, timestamp: m.timestamp.toISOString(),
@@ -1072,7 +1072,7 @@ ${envValidateCall}${remoteEnvSwap}  const userEnv = __filterInternalBindings(env
 
 `
     : '';
-  return `${sandboxImport}${entryImport}${liveRuntimeImport}import app, { scheduled, __nosamHandleInternalRoute, __withRawEnv${queueImport}${emailImport}${webSocketClasses.length > 0 ? `, ${webSocketClasses.join(', ')}` : ''}${liveRouteImport} } from 'virtual:nosam-routes';
+  return `${sandboxImport}${entryImport}${liveRuntimeImport}import app, { scheduled, __platformHandleInternalRoute, __withRawEnv${queueImport}${emailImport}${webSocketClasses.length > 0 ? `, ${webSocketClasses.join(', ')}` : ''}${liveRouteImport} } from 'virtual:platform-routes';
 ${durableObjectImports}\n${runtimeEnvImport}${emailProxyImport}${envSchemaImport}${remoteImport}${filterBindingsHelper}${assetHelper}
 ${fetchDeclaration}
 ${scheduledHandler}
@@ -1115,7 +1115,7 @@ export function compileWorkerClient(authClientPath: string): string {
   const envImport = 'import { env } from "cloudflare:workers";\n';
   const dispatch =
     'app.fetch(request, env, store?.executionCtx ?? { waitUntil() {}, passThroughOnException() {} })';
-  return `import app, { requestContext } from "virtual:nosam-routes";
+  return `import app, { requestContext } from "virtual:platform-routes";
 import { createServerFetch } from ${JSON.stringify(FETCH_SERVER_PATH)};
 export { FetchError } from ${JSON.stringify(FETCH_SERVER_PATH)};
 ${envImport}export { auth, createAuthClient } from ${JSON.stringify(authClientPath)};

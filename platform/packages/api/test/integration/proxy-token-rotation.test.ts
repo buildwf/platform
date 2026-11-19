@@ -177,8 +177,8 @@ function cfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle {
 function workerBindings(token: string): Array<Record<string, unknown>> {
   return [
     { type: 'd1', name: 'DB', id: 'd1-database-id' },
-    { type: 'service', name: '__NOSAM_PROXY', service: 'nosam-proxy' },
-    { type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: token },
+    { type: 'service', name: '__PLATFORM_PROXY', service: 'platform-proxy' },
+    { type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: token },
     { type: 'secret_text', name: 'API_KEY' },
   ];
 }
@@ -244,7 +244,7 @@ async function setupProject(
     retained?: number;
     staticRetained?: boolean;
     manifest?: object | null;
-    type?: 'nosam' | 'static';
+    type?: 'platform' | 'static';
     activeScript?: boolean;
   }> = {},
 ): Promise<Fixture> {
@@ -406,7 +406,7 @@ async function step(projectId: string): Promise<ProjectRotationOutcome> {
 }
 
 function scriptToken(cf: MockCfApiHandle, script: string): unknown {
-  return cf.state.hostScripts.get(script)?.bindings.find((b) => b.name === '__NOSAM_PROXY_TOKEN')
+  return cf.state.hostScripts.get(script)?.bindings.find((b) => b.name === '__PLATFORM_PROXY_TOKEN')
     ?.text;
 }
 
@@ -464,7 +464,7 @@ describe('proxy token rotation', () => {
         type: 'durable-object',
         cf_id: worker,
         binding_name: binding.className,
-        metadata: { dispatchNamespace: 'nosam-users', namespaceId, proxyTokenGen: 0 },
+        metadata: { dispatchNamespace: 'platform-users', namespaceId, proxyTokenGen: 0 },
       });
       cf.seedHostScript({
         scriptName: worker,
@@ -478,15 +478,15 @@ describe('proxy token rotation', () => {
           },
           {
             type: 'plain_text',
-            name: '__NOSAM_DURABLE_OWNER',
+            name: '__PLATFORM_DURABLE_OWNER',
             text: JSON.stringify({
               protocol: 1,
               projectId: fx.projectId,
-              dispatchNamespace: 'nosam-users',
+              dispatchNamespace: 'platform-users',
               className: binding.className,
             }),
           },
-          { type: 'plain_text', name: '__NOSAM_DURABLE_DEPLOYMENT', text: fx.active },
+          { type: 'plain_text', name: '__PLATFORM_DURABLE_DEPLOYMENT', text: fx.active },
         ],
       });
     }
@@ -540,8 +540,8 @@ describe('proxy token rotation', () => {
     for (const patch of patches) {
       expect(patch.bindings).toEqual([
         { type: 'inherit', name: 'DB' },
-        { type: 'inherit', name: '__NOSAM_PROXY' },
-        { type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: token },
+        { type: 'inherit', name: '__PLATFORM_PROXY' },
+        { type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: token },
         { type: 'inherit', name: 'API_KEY' },
       ]);
     }
@@ -601,10 +601,10 @@ describe('proxy token rotation', () => {
         }),
       );
     const legacy = async () => ({
-      'x-nosam-internal': await hmacSignState(fx.projectId, JWT_SECRET),
+      'x-platform-internal': await hmacSignState(fx.projectId, JWT_SECRET),
     });
     const tenant = (gen: number) => async () => ({
-      'x-nosam-internal': await tok(fx.projectId, gen),
+      'x-platform-internal': await tok(fx.projectId, gen),
     });
     const proxy = async (route: ProxyInternalRoute) => ({
       [PROXY_INTERNAL_AUTH_HEADER]: await deriveProxyInternalAuth(JWT_SECRET, route, fx.projectId),
@@ -790,7 +790,7 @@ describe('proxy token rotation', () => {
       }
       cf.state.hostScripts
         .get(script)!
-        .bindings.find((b) => b.name === '__NOSAM_PROXY_TOKEN')!.text = token;
+        .bindings.find((b) => b.name === '__PLATFORM_PROXY_TOKEN')!.text = token;
       return cfError('internal error', 500);
     };
     await request(fx.projectId);
@@ -919,7 +919,7 @@ describe('proxy token rotation', () => {
       }
       const binding = cf.state.hostScripts
         .get(script)!
-        .bindings.find((b) => b.name === '__NOSAM_PROXY_TOKEN')!;
+        .bindings.find((b) => b.name === '__PLATFORM_PROXY_TOKEN')!;
       binding.text = token;
       return cfError('internal error', 500);
     };
@@ -1180,7 +1180,7 @@ describe('proxy token rotation', () => {
       expect(await step(fx.projectId)).toEqual({ status: 'done', gen: 1 });
       expect(patchedScripts()).toEqual([fx.worker(fx.retained[1]!), fx.worker(fx.active)]);
       expect(log).toHaveBeenCalledWith(
-        `[proxy-token-rotation] skipped ${fx.projectId} worker=${fx.worker(fx.retained[0]!)} has no __NOSAM_PROXY_TOKEN binding; redeploy the project to give it one`,
+        `[proxy-token-rotation] skipped ${fx.projectId} worker=${fx.worker(fx.retained[0]!)} has no __PLATFORM_PROXY_TOKEN binding; redeploy the project to give it one`,
       );
       // Its row still names the token it holds; the floor rises past it.
       expect(await held(fx.retained[0]!)).toBe(0);
@@ -1230,7 +1230,7 @@ describe('proxy token rotation', () => {
       const cf = cfApi();
       const fx = await setupProject(cf);
       cf.state.hostScripts.get(fx.worker(fx.retained[0]!))!.bindings = [
-        { type: 'secret_text', name: '__NOSAM_PROXY_TOKEN' },
+        { type: 'secret_text', name: '__PLATFORM_PROXY_TOKEN' },
       ];
       await request(fx.projectId);
       expect(await advance(fx.projectId)).toMatchObject({ status: 'failed', phase: 'patch' });

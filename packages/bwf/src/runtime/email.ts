@@ -80,8 +80,8 @@ function makeError(code: SendEmailErrorCode, message: string, cause?: unknown): 
 }
 
 interface ProxyEnv {
-  __NOSAM_PROXY?: { fetch(req: Request | string, init?: RequestInit): Promise<Response> };
-  __NOSAM_PROXY_TOKEN?: string;
+  __PLATFORM_PROXY?: { fetch(req: Request | string, init?: RequestInit): Promise<Response> };
+  __PLATFORM_PROXY_TOKEN?: string;
   __PROJECT_ID?: string;
 }
 
@@ -258,14 +258,14 @@ function resolveDefaultFrom(opts: SendEmailOptions): SendEmailOptions {
   if (!isEmpty) {
     return opts;
   }
-  // `__NOSAM_EMAIL_FROM` (`email.from` in bwf.config.ts) wins over the
+  // `__PLATFORM_EMAIL_FROM` (`email.from` in bwf.config.ts) wins over the
   // platform's `<slug>+noreply@<domain>`: it names a sender on purpose.
-  const configured = readEnvString('__NOSAM_EMAIL_FROM');
+  const configured = readEnvString('__PLATFORM_EMAIL_FROM');
   if (configured) {
     return { ...opts, from: configured };
   }
   const slug = readProjectSlug();
-  const domain = readEnvString('__NOSAM_EMAIL_DOMAIN');
+  const domain = readEnvString('__PLATFORM_EMAIL_DOMAIN');
   if (!slug || !domain) {
     // Drop `null` so the caller reports a clean INVALID_FROM.
     if (supplied === null) {
@@ -689,7 +689,7 @@ function capturedResult(normalized: NormalizedEmail, captureId: string): SendEma
  * platform proxy.
  *
  * During `bwf dev` the message is captured by the local inbox
- * (`/__nosam/inbox`) and never reaches the proxy; an in-process sink
+ * (`/__platform/inbox`) and never reaches the proxy; an in-process sink
  * (`@builtbyfriends/bwf/email/testing`) takes precedence over it.
  */
 export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult> {
@@ -706,7 +706,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
   if (resolvedOpts.from === undefined) {
     return err(
       'INVALID_FROM',
-      "email: 'from' is required. Set it explicitly or deploy via bwf so the platform-injected __NOSAM_PROJECT_SLUG and __NOSAM_EMAIL_DOMAIN can default it to <slug>+noreply@<domain>.",
+      "email: 'from' is required. Set it explicitly or deploy via bwf so the platform-injected __PLATFORM_PROJECT_SLUG and __PLATFORM_EMAIL_DOMAIN can default it to <slug>+noreply@<domain>.",
     );
   }
 
@@ -769,15 +769,15 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
   }
 
   const env = rawEnv as ProxyEnv | undefined;
-  const proxy = env?.__NOSAM_PROXY;
+  const proxy = env?.__PLATFORM_PROXY;
   const projectId = env?.__PROJECT_ID;
-  const proxyToken = env?.__NOSAM_PROXY_TOKEN;
+  const proxyToken = env?.__PLATFORM_PROXY_TOKEN;
   if (!proxy || !projectId || !proxyToken) {
     return err(
       'BINDING_MISSING',
-      'email: neither SEND_EMAIL nor __NOSAM_PROXY is available, so nothing was sent. Deploy via bwf to bind the platform proxy, ' +
+      'email: neither SEND_EMAIL nor __PLATFORM_PROXY is available, so nothing was sent. Deploy via bwf to bind the platform proxy, ' +
         'or set `email.from` in bwf.config.ts so `bwf deploy --platform cloudflare` provisions the SEND_EMAIL binding. ' +
-        'Under `bwf dev` messages are captured by the local inbox at /__nosam/inbox instead — reaching this error there means ' +
+        'Under `bwf dev` messages are captured by the local inbox at /__platform/inbox instead — reaching this error there means ' +
         'that path was bypassed by the deprecated `sendInDev: true` (it never delivers) or unavailable ' +
         '(the worker has no assets binding to reach the dev server through).',
     );
@@ -831,7 +831,7 @@ export async function createEmail(
   if (opts.from === undefined) {
     throw new MimeError(
       'INVALID_FROM',
-      "createEmail: 'from' is required (this entrypoint does not apply __NOSAM_PROJECT_SLUG defaulting).",
+      "createEmail: 'from' is required (this entrypoint does not apply __PLATFORM_PROJECT_SLUG defaulting).",
     );
   }
   const email = await normalizeEmail(

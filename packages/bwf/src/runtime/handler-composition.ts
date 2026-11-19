@@ -8,7 +8,7 @@ type Leaf = (c: CloudContext) => unknown;
 
 export type HandlerComposition = { middlewares: Array<Middleware>; leaf: Leaf };
 
-const compositionKey = '__nosamHandlerComposition';
+const compositionKey = '__platformHandlerComposition';
 
 export function getHandlerComposition(handler: unknown): HandlerComposition | undefined {
   return (handler as { [compositionKey]?: HandlerComposition } | undefined)?.[compositionKey];

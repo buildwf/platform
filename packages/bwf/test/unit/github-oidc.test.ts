@@ -87,9 +87,9 @@ describe('exchangeGithubOidcForDeployToken', () => {
     expect(token).toBe('deploy-token');
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
-    // 1. GET the OIDC token with audience=nosam appended and the request bearer.
+    // 1. GET the OIDC token with audience=platform appended and the request bearer.
     const [getUrl, getInit] = fetchMock.mock.calls[0] as [URL, RequestInit];
-    expect(String(getUrl)).toContain('audience=nosam');
+    expect(String(getUrl)).toContain('audience=platform');
     expect(String(getUrl)).toContain('token.actions.githubusercontent.com');
     expect(getInit.method ?? 'GET').toBe('GET');
     expect(getInit.redirect).toBe('manual');
@@ -108,7 +108,7 @@ describe('exchangeGithubOidcForDeployToken', () => {
 
   it('forwards CF Access service-token headers on the API POST but not the GitHub GET', async () => {
     const gatedApiUrl = 'https://api.staging.void.cloud';
-    vi.stubEnv('NOSAM_ACCESS_ORIGIN', gatedApiUrl);
+    vi.stubEnv('PLATFORM_ACCESS_ORIGIN', gatedApiUrl);
     vi.stubEnv('CF_ACCESS_CLIENT_ID', 'cf-id');
     vi.stubEnv('CF_ACCESS_CLIENT_SECRET', 'cf-secret');
     fetchMock
@@ -131,7 +131,7 @@ describe('exchangeGithubOidcForDeployToken', () => {
 
   it('forwards a CF_ACCESS_TOKEN user JWT on the API POST but not the GitHub GET', async () => {
     const gatedApiUrl = 'https://api.staging.void.cloud';
-    vi.stubEnv('NOSAM_ACCESS_ORIGIN', gatedApiUrl);
+    vi.stubEnv('PLATFORM_ACCESS_ORIGIN', gatedApiUrl);
     vi.stubEnv('CF_ACCESS_TOKEN', accessJwt);
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ value: 'oidc-jwt' }))

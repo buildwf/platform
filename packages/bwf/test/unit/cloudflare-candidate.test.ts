@@ -11,7 +11,7 @@ import {
 
 describe('ordinary Cloudflare candidate receipt', () => {
   it('records a candidate for one live Worker and rejects changed local state', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-candidate-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-candidate-'));
     try {
       recordCloudflareCandidateUpload(root, null, 'account', 'worker', 'live', 'draft');
       const receipt = readCloudflareCandidate(root);
@@ -42,7 +42,7 @@ describe('ordinary Cloudflare candidate receipt', () => {
   });
 
   it('fails closed on malformed receipt', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-candidate-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-candidate-'));
     try {
       recordCloudflareCandidateUpload(root, null, 'account', 'worker', 'live', 'draft');
       const path = join(root, '.bwf', 'cloudflare-candidate.json');
@@ -54,7 +54,7 @@ describe('ordinary Cloudflare candidate receipt', () => {
   });
 
   it('starts a new chain only when the verified parent is the last saved candidate', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-candidate-activated-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-candidate-activated-'));
     try {
       recordCloudflareCandidateUpload(root, null, 'account', 'worker', 'live', 'draft');
       recordCloudflareCandidateUpload(

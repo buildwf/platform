@@ -93,7 +93,7 @@ async function preview(action: string, id: string, fields: Record<string, string
   const response = await request(
     `${home}/preview`,
     { action, id, revision: String(revision), ...fields },
-    { 'X-NosamPages': 'true' },
+    { 'X-PlatformPages': 'true' },
   );
   expect(response.status).toBe(200);
   return ((await response.json()) as { props: { preview: AdminPlanPreview } }).props.preview;
@@ -107,7 +107,7 @@ function apply(change: AdminPlanPreview) {
       revision: String(change.expectedRevision),
       body: JSON.stringify(change.body),
     },
-    { 'X-NosamPages': 'true' },
+    { 'X-PlatformPages': 'true' },
   );
 }
 async function editFields(id: string) {
@@ -167,13 +167,13 @@ describe('administrator plan dashboard', () => {
       expect(response.headers.get('Cache-Control')).toContain('no-store');
       const html = await adminHtml(response);
       expect(html).toContain('href="/admin/config/plans"');
-      expect(html).toContain('nosam-admin-page');
+      expect(html).toContain('platform-admin-page');
       if (path.endsWith('/free/edit')) {
         expect(html).toContain('value="3000000"');
         expect(html).toContain('Review changes');
         expect(html).toContain('Replacement plan');
       }
-      const navigation = await request(path, undefined, { 'X-NosamPages': 'true' });
+      const navigation = await request(path, undefined, { 'X-PlatformPages': 'true' });
       expect(await navigation.json()).toMatchObject({
         component: path === home ? 'plans' : 'planEdit',
       });

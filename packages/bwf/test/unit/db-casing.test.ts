@@ -72,7 +72,7 @@ const CORES: Record<Dialect, string> = {
 
 /** A project whose schema declares its columns without names, for drizzle's casing to name. */
 function createRoot(dialect: Dialect): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-db-casing-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-db-casing-'));
   roots.push(root);
   mkdirSync(join(root, 'db'));
   writeFileSync(
@@ -85,7 +85,7 @@ function createRoot(dialect: Dialect): string {
 function loadSource(root: string, dialect: Dialect, casing?: DatabaseCasing): string {
   const plugin = drizzlePlugin(root, false, dialect, casing ? { casing } : {});
   const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
-  return load.call({}, '\0virtual:nosam-db');
+  return load.call({}, '\0virtual:platform-db');
 }
 
 /** Load the app's generated `@builtbyfriends/bwf/db` with drizzle's real drivers. */
@@ -245,7 +245,7 @@ describe('@builtbyfriends/bwf/db with database.casing', () => {
       config: { database: { dialect: 'pg', casing: 'snake_case' } },
     });
     const load = plugin.load as (id: string) => string;
-    const code = load('\0virtual:nosam-db');
+    const code = load('\0virtual:platform-db');
     expect(code).toContain(
       `import { drizzle } from ${JSON.stringify(fileURLToPath(import.meta.resolve('drizzle-orm/node-postgres')))};`,
     );
@@ -256,15 +256,15 @@ describe('@builtbyfriends/bwf/db with database.casing', () => {
   });
 
   it('serves its own bwf/db for casing without a schema', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-db-casing-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-db-casing-'));
     roots.push(root);
     const plugin = bwfDbBundlerPlugin(root, { config: { database: { casing: 'snake_case' } } });
     const resolveId = plugin.resolveId as (id: string, importer?: string) => Promise<unknown>;
-    return expect(resolveId.call({}, '@builtbyfriends/bwf/db')).resolves.toBe('\0virtual:nosam-db');
+    return expect(resolveId.call({}, '@builtbyfriends/bwf/db')).resolves.toBe('\0virtual:platform-db');
   });
 
   it('keeps db.d.ts in bwf prepare for casing without a schema', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-db-casing-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-db-casing-'));
     roots.push(root);
     writeFileSync(join(root, 'bwf.json'), JSON.stringify({ database: { casing: 'snake_case' } }));
     drizzlePlugin(root, false, 'sqlite', { casing: 'snake_case' });

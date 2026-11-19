@@ -71,7 +71,7 @@ describe('ZeroTrustCloudflareClient', () => {
   function existingHealthApplication() {
     return {
       id: 'installer-health',
-      name: 'nosam-installation-health-dispatch-nonce',
+      name: 'platform-installation-health-dispatch-nonce',
       type: 'self_hosted',
       aud: 'health-audience',
       domain: healthDestination,
@@ -295,7 +295,7 @@ describe('ZeroTrustCloudflareClient', () => {
     });
     const client = new ZeroTrustCloudflareClient('account-1', 'secret', fetcher as typeof fetch);
     const spec = {
-      name: 'nosam-installation-project-zero-trust',
+      name: 'platform-installation-project-zero-trust',
       destinations: ['*.apps.example.com'],
       allowedIdentityProviderIds: ['idp-1'],
       policies: reusablePolicyReferences(['policy-1']),
@@ -351,7 +351,7 @@ describe('ZeroTrustCloudflareClient', () => {
   it('recovers and deletes an application from a durable name checkpoint', async () => {
     const application = {
       id: 'created-before-checkpoint',
-      name: 'nosam-installation-public-project',
+      name: 'platform-installation-public-project',
       aud: 'aud-recovered',
       domain: 'project.apps.example.com',
       destinations: [{ type: 'public', uri: 'project.apps.example.com' }],
@@ -408,7 +408,7 @@ describe('ZeroTrustCloudflareClient', () => {
 
     await expect(
       client.ensureApplication({
-        name: 'nosam-protected-project',
+        name: 'platform-protected-project',
         destinations: ['project.apps.example.com'],
         allowedIdentityProviderIds: ['idp-1'],
         policies: reusablePolicyReferences(['policy-1']),
@@ -423,7 +423,7 @@ describe('ZeroTrustCloudflareClient', () => {
         return envelope([
           {
             id: 'unowned-app',
-            name: 'nosam-installation-project-zero-trust',
+            name: 'platform-installation-project-zero-trust',
             aud: 'unowned-audience',
             domain: '*.apps.example.com',
           },
@@ -435,7 +435,7 @@ describe('ZeroTrustCloudflareClient', () => {
 
     await expect(
       client.ensureApplication({
-        name: 'nosam-installation-project-zero-trust',
+        name: 'platform-installation-project-zero-trust',
         destinations: ['*.apps.example.com'],
         policies: reusablePolicyReferences(['policy-1']),
       }),
@@ -448,8 +448,8 @@ describe('ZeroTrustCloudflareClient', () => {
     (operation) => {
       it('reads a recorded ID created after an earlier inventory instead of treating it as absent', async () => {
         const { applications, client, fetcher } = applicationFixture();
-        await client.ensureApplication(applicationSpec('nosam-earlier-project'));
-        const spec = applicationSpec('nosam-concurrent-project');
+        await client.ensureApplication(applicationSpec('platform-earlier-project'));
+        const spec = applicationSpec('platform-concurrent-project');
         applications.set('concurrent-app', { id: 'concurrent-app', name: spec.name });
         fetcher.mockClear();
 
@@ -478,8 +478,8 @@ describe('ZeroTrustCloudflareClient', () => {
 
       it('recovers a durable name checkpoint from a fresh inventory', async () => {
         const { applications, client, fetcher } = applicationFixture();
-        await client.ensureApplication(applicationSpec('nosam-earlier-project'));
-        const spec = applicationSpec('nosam-concurrent-project');
+        await client.ensureApplication(applicationSpec('platform-earlier-project'));
+        const spec = applicationSpec('platform-concurrent-project');
         applications.set('checkpoint-app', { id: 'checkpoint-app', name: spec.name });
         fetcher.mockClear();
 
@@ -499,7 +499,7 @@ describe('ZeroTrustCloudflareClient', () => {
 
       it('does not recover an earlier name match after the application was renamed', async () => {
         const { applications, client, fetcher } = applicationFixture();
-        const spec = applicationSpec('nosam-project');
+        const spec = applicationSpec('platform-project');
         const created = await client.ensureApplication(spec);
         applications.set(created.id, {
           ...applications.get(created.id),
@@ -523,7 +523,7 @@ describe('ZeroTrustCloudflareClient', () => {
 
       it('rejects ambiguous name recovery after another application acquires the same name', async () => {
         const { applications, client, fetcher } = applicationFixture();
-        const spec = applicationSpec('nosam-project');
+        const spec = applicationSpec('platform-project');
         await client.ensureApplication(spec);
         applications.set('duplicate-app', { id: 'duplicate-app', name: spec.name });
         fetcher.mockClear();
@@ -539,7 +539,7 @@ describe('ZeroTrustCloudflareClient', () => {
 
       it('preserves inventory errors during name checkpoint recovery', async () => {
         const { client, fetcher } = applicationFixture();
-        const spec = applicationSpec('nosam-project');
+        const spec = applicationSpec('platform-project');
         await client.ensureApplication(spec);
         fetcher.mockClear();
         fetcher.mockResolvedValueOnce(envelope(null, 429));
@@ -554,7 +554,7 @@ describe('ZeroTrustCloudflareClient', () => {
 
       it('refuses a recorded ID that was renamed after an earlier inventory', async () => {
         const { applications, client, fetcher } = applicationFixture();
-        const spec = applicationSpec('nosam-project');
+        const spec = applicationSpec('platform-project');
         const created = await client.ensureApplication(spec);
         applications.set(created.id, {
           ...applications.get(created.id),
@@ -573,7 +573,7 @@ describe('ZeroTrustCloudflareClient', () => {
 
       it("recovers the replacement holding a missing recorded ID's name", async () => {
         const { applications, client, fetcher } = applicationFixture();
-        const spec = applicationSpec('nosam-project');
+        const spec = applicationSpec('platform-project');
         const created = await client.ensureApplication(spec);
         const recorded = applications.get(created.id)!;
         applications.delete(created.id);
@@ -604,7 +604,7 @@ describe('ZeroTrustCloudflareClient', () => {
 
       it('rejects a missing recorded ID when several applications hold its name', async () => {
         const { applications, client, fetcher } = applicationFixture();
-        const spec = applicationSpec('nosam-project');
+        const spec = applicationSpec('platform-project');
         const created = await client.ensureApplication(spec);
         applications.delete(created.id);
         applications.set('replacement-app', { id: 'replacement-app', name: spec.name });
@@ -622,7 +622,7 @@ describe('ZeroTrustCloudflareClient', () => {
 
       it('treats an authoritative 404 as an absent recorded application', async () => {
         const { applications, client } = applicationFixture();
-        const spec = applicationSpec('nosam-project');
+        const spec = applicationSpec('platform-project');
         const created = await client.ensureApplication(spec);
         applications.delete(created.id);
 
@@ -645,7 +645,7 @@ describe('ZeroTrustCloudflareClient', () => {
             'secret',
             fetcher as typeof fetch,
           );
-          const spec = applicationSpec('nosam-project');
+          const spec = applicationSpec('platform-project');
           const result =
             operation === 'ensure'
               ? client.ensureApplication(spec, { id: 'recorded-app', name: spec.name })
@@ -660,7 +660,7 @@ describe('ZeroTrustCloudflareClient', () => {
       );
 
       it('rejects a read response for a different application ID', async () => {
-        const spec = applicationSpec('nosam-project');
+        const spec = applicationSpec('platform-project');
         const fetcher = vi.fn(async () => envelope({ id: 'different-app', name: spec.name }));
         const client = new ZeroTrustCloudflareClient(
           'account-1',
@@ -680,8 +680,8 @@ describe('ZeroTrustCloudflareClient', () => {
 
   it('rejects an unowned same-name application added after an earlier inventory', async () => {
     const { applications, client, fetcher } = applicationFixture();
-    await client.ensureApplication(applicationSpec('nosam-earlier-project'));
-    const spec = applicationSpec('nosam-project');
+    await client.ensureApplication(applicationSpec('platform-earlier-project'));
+    const spec = applicationSpec('platform-project');
     applications.set('unowned-app', { id: 'unowned-app', name: spec.name });
     fetcher.mockClear();
 

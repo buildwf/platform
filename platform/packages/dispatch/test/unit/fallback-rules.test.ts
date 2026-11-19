@@ -28,7 +28,7 @@ type StaticRoutingEntry = {
   staticDeploymentId: string;
   projectId: string;
   userId?: string;
-  type?: 'nosam' | 'spa' | 'static' | 'framework';
+  type?: 'platform' | 'spa' | 'static' | 'framework';
   assetConfig?: AssetConfig;
   version?: string;
   redirectRules?: Array<{ source: string; destination: string; status: number }>;
@@ -38,7 +38,7 @@ type StaticRoutingEntry = {
 type WorkerRoutingEntry = {
   workerName: string;
   projectId: string;
-  type?: 'nosam' | 'spa' | 'static' | 'framework';
+  type?: 'platform' | 'spa' | 'static' | 'framework';
   ssr?: boolean;
   revalidate?: number | Record<string, number>;
   version?: string;
@@ -533,9 +533,9 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
   it('does not re-dispatch Platform app handler 404s without the generated no-match marker', async () => {
     const { env, workerFetch } = createWorkerEnv({
       routing: {
-        workerName: 'nosam-worker',
+        workerName: 'platform-worker',
         projectId: 'proj_1',
-        type: 'nosam',
+        type: 'platform',
         fallbackRules: [{ source: '/*', destination: '/index.html', status: 200 }],
       },
       workerHandler: () => new Response('intentional missing', { status: 404 }),
@@ -550,15 +550,15 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
     expect(res.status).toBe(404);
     expect(await res.text()).toBe('intentional missing');
     expect(workerFetch).toHaveBeenCalledTimes(1);
-    expect(res.headers.get('X-Nosam-No-Match')).toBeNull();
+    expect(res.headers.get('X-Platform-No-Match')).toBeNull();
   });
 
   it('re-dispatches Platform app generated no-match 404s', async () => {
     const { env, workerFetch } = createWorkerEnv({
       routing: {
-        workerName: 'nosam-worker',
+        workerName: 'platform-worker',
         projectId: 'proj_1',
-        type: 'nosam',
+        type: 'platform',
         fallbackRules: [{ source: '/*', destination: '/index.html', status: 200 }],
       },
       workerHandler: (req) => {
@@ -570,7 +570,7 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
         }
         return new Response('not found', {
           status: 404,
-          headers: { 'X-Nosam-No-Match': '1' },
+          headers: { 'X-Platform-No-Match': '1' },
         });
       },
     });
@@ -584,7 +584,7 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
     expect(res.status).toBe(200);
     expect(await res.text()).toBe('<html>spa</html>');
     expect(workerFetch).toHaveBeenCalledTimes(2);
-    expect(res.headers.get('X-Nosam-No-Match')).toBeNull();
+    expect(res.headers.get('X-Platform-No-Match')).toBeNull();
   });
 
   it('preserves the request body across worker fallback re-dispatch on POST', async () => {
@@ -597,9 +597,9 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
     const seenBodies: Array<string> = [];
     const { env, workerFetch } = createWorkerEnv({
       routing: {
-        workerName: 'nosam-worker',
+        workerName: 'platform-worker',
         projectId: 'proj_1',
-        type: 'nosam',
+        type: 'platform',
         fallbackRules: [{ source: '/api/missing', destination: '/api/handler', status: 200 }],
       },
       workerHandler: async (req) => {
@@ -611,7 +611,7 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
         }
         return new Response('not found', {
           status: 404,
-          headers: { 'X-Nosam-No-Match': '1' },
+          headers: { 'X-Platform-No-Match': '1' },
         });
       },
     });

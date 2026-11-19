@@ -308,7 +308,7 @@ describe('runBwfAuthMiddleware Better Auth plugins', () => {
 
     expect((await app.request('/', undefined, env)).status).toBe(200);
 
-    expect(pluginsOf(0).map((plugin) => plugin.id)).toEqual(['first', 'second', 'nosam-cookies']);
+    expect(pluginsOf(0).map((plugin) => plugin.id)).toEqual(['first', 'second', 'platform-cookies']);
     expect(pluginsOf(0)[0]).toBe(plugins[0]);
     expect(plugins.map((plugin) => plugin.id)).toEqual(['first', 'second']);
   });
@@ -319,8 +319,8 @@ describe('runBwfAuthMiddleware Better Auth plugins', () => {
     await app.request('/', undefined, env);
     await app.request('/', undefined, env);
 
-    expect(pluginsOf(0).map((plugin) => plugin.id)).toEqual(['nosam-cookies']);
-    expect(pluginsOf(1).map((plugin) => plugin.id)).toEqual(['nosam-cookies']);
+    expect(pluginsOf(0).map((plugin) => plugin.id)).toEqual(['platform-cookies']);
+    expect(pluginsOf(1).map((plugin) => plugin.id)).toEqual(['platform-cookies']);
     expect(pluginsOf(0)[0]).not.toBe(pluginsOf(1)[0]);
   });
 
@@ -337,8 +337,8 @@ describe('runBwfAuthMiddleware Better Auth plugins', () => {
 
   it('skips Better Auth for internal routes', async () => {
     const app = pluginApp();
-    app.get('/__nosam/cron', (c) => c.text('internal'));
-    expect((await app.request('/__nosam/cron', undefined, env)).status).toBe(200);
+    app.get('/__platform/cron', (c) => c.text('internal'));
+    expect((await app.request('/__platform/cron', undefined, env)).status).toBe(200);
     expect(mocks.betterAuth).not.toHaveBeenCalled();
   });
 });

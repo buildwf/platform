@@ -177,7 +177,7 @@ export function promptSubcommand(
       }
     }
 
-    const title = command ? `bwf ${command}` : 'nosam';
+    const title = command ? `bwf ${command}` : 'platform';
 
     function headerLine(): string {
       const argPart = selectedArg ? ` ${selectedArg}` : '';

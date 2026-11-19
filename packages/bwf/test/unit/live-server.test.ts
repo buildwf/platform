@@ -49,13 +49,13 @@ describe('live Durable Object runtime', () => {
     });
     const connectionId = 'connection-control-1';
     const connectResponse = await stream.connect(
-      liveContext(harness.env, `https://nosam.live/live?connectionId=${connectionId}`),
+      liveContext(harness.env, `https://platform.live/live?connectionId=${connectionId}`),
     );
     const reader = connectResponse.body!.getReader();
     await readFrame(reader);
 
     const controlResponse = await stream.control(
-      liveContext(harness.env, 'https://nosam.live/live', {
+      liveContext(harness.env, 'https://platform.live/live', {
         connectionId,
         operations: [
           { kind: 'subscribe', id: 'valid-card', topic: 'post:12' },
@@ -532,7 +532,7 @@ describe('live Durable Object runtime', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       const response = await stream.control(
-        liveContext(harness.env, 'https://nosam.live/live', {
+        liveContext(harness.env, 'https://platform.live/live', {
           connectionId: 'connection-subscribe-error',
           operations: [{ kind: 'subscribe', id: 'card', topic: 'post:12' }],
         }),
@@ -563,7 +563,7 @@ describe('live Durable Object runtime', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       const response = await stream.connect(
-        liveContext(harness.env, 'https://nosam.live/live?connectionId=connection-connect-error'),
+        liveContext(harness.env, 'https://platform.live/live?connectionId=connection-connect-error'),
       );
       const text = await response.text();
 
@@ -590,7 +590,7 @@ describe('live Durable Object runtime', () => {
     });
     const control = () =>
       stream.control(
-        liveContext(harness.env, 'https://nosam.live/live', {
+        liveContext(harness.env, 'https://platform.live/live', {
           connectionId: 'connection-dev-error',
           operations: [{ kind: 'subscribe', id: 'card', topic: 'post:12' }],
         }),
@@ -627,7 +627,7 @@ describe('live Durable Object runtime', () => {
     const ctx = {
       env: harness.env,
       req: {
-        raw: new Request('https://nosam.live/live', { method: 'POST', body: 'not json' }),
+        raw: new Request('https://platform.live/live', { method: 'POST', body: 'not json' }),
       },
       get() {
         return undefined;
@@ -799,7 +799,7 @@ function createState(): DurableObjectState {
 }
 
 function jsonRequest(path: string, body: unknown): Request {
-  return new Request(`https://nosam.live${path}`, {
+  return new Request(`https://platform.live${path}`, {
     method: 'POST',
     body: JSON.stringify(body),
   });

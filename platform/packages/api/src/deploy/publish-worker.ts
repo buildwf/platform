@@ -161,8 +161,8 @@ export async function publishWorkerDeployment(input: {
   if (queueNames.length > 0) {
     emit({ event: 'queue_setup', queues: queueNames });
   }
-  const dispatchWorkerName = context.env.DISPATCH_WORKER_NAME ?? 'nosam-dispatch';
-  const proxyToken = workerBindings.find((b) => b.name === '__NOSAM_PROXY_TOKEN')?.text;
+  const dispatchWorkerName = context.env.DISPATCH_WORKER_NAME ?? 'platform-dispatch';
+  const proxyToken = workerBindings.find((b) => b.name === '__PLATFORM_PROXY_TOKEN')?.text;
   const queueConflicts: Array<{ queue: string; ownerScript: string }> = [];
   const projectResources = await getProjectResources(context.get('db'), projectId);
   await withProjectCutoverFence(deployment.id, async () => {
@@ -340,7 +340,7 @@ export async function publishWorkerDeployment(input: {
     deploymentId: deployment.id,
     cutoverOwnerId,
     deployBuild,
-    projectType: manifest.type ?? 'nosam',
+    projectType: manifest.type ?? 'platform',
   });
   input.cutoverCommitted = true;
   input.currentStatus = 'live';
@@ -488,7 +488,7 @@ export async function publishWorkerDeployment(input: {
                 const oldContainerAppName = perDeployContainerApplicationName(
                   projectId,
                   old.id,
-                  oldManifest.sandbox.containerName ?? 'nosam-sandbox',
+                  oldManifest.sandbox.containerName ?? 'platform-sandbox',
                 );
                 const existing = await findContainerApplication(
                   context.env.CF_ACCOUNT_ID,

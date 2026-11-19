@@ -106,7 +106,7 @@ const LIVE_FANOUT_CONCURRENCY = 6;
 const textEncoder = new TextEncoder();
 
 export function createLiveDurableObject(): LiveDurableObjectClass {
-  class NosamLiveStreamDurableObject implements LiveDurableObjectInstance {
+  class PlatformLiveStreamDurableObject implements LiveDurableObjectInstance {
     private connection: ActiveConnection | null = null;
     private publishChain: Promise<void> = Promise.resolve();
 
@@ -583,7 +583,7 @@ export function createLiveDurableObject(): LiveDurableObjectClass {
     }
   }
 
-  return NosamLiveStreamDurableObject;
+  return PlatformLiveStreamDurableObject;
 }
 
 function controlBatchError(code: LiveControlErrorCode, message: string, status: number): Response {

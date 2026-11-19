@@ -1481,7 +1481,7 @@ describe('UsageCounter ownership changes', () => {
     expect(queryProjectAiUsage).toHaveBeenLastCalledWith(
       undefined,
       undefined,
-      'nosam',
+      'platform',
       JWT_SECRET,
       'transferred',
       new Date(ownershipStartedAt),
@@ -1508,7 +1508,7 @@ describe('UsageCounter ownership changes', () => {
     expect(queryProjectAiUsage).toHaveBeenLastCalledWith(
       undefined,
       undefined,
-      'nosam',
+      'platform',
       JWT_SECRET,
       'transferred',
       new Date(ownershipStartedAt),
@@ -1530,7 +1530,7 @@ describe('UsageCounter ownership changes', () => {
     expect(queryProjectAiUsage).toHaveBeenLastCalledWith(
       undefined,
       undefined,
-      'nosam',
+      'platform',
       JWT_SECRET,
       'transferred',
       new Date(ownershipStartedAt),
@@ -1577,7 +1577,7 @@ describe('UsageCounter ownership changes', () => {
     expect(queryProjectAiUsage).toHaveBeenCalledWith(
       undefined,
       undefined,
-      'nosam',
+      'platform',
       JWT_SECRET,
       'transferred',
       new Date(ownershipStartedAt),
@@ -1656,7 +1656,7 @@ describe('UsageCounter ownership changes', () => {
     expect(queryProjectAiUsage).toHaveBeenCalledWith(
       undefined,
       undefined,
-      'nosam',
+      'platform',
       JWT_SECRET,
       'transferred',
       new Date(billingPeriodStart),
@@ -1776,7 +1776,7 @@ describe('UsageCounter ownership changes', () => {
     expect(queryProjectAiUsage).toHaveBeenCalledWith(
       undefined,
       undefined,
-      'nosam',
+      'platform',
       JWT_SECRET,
       'p1',
       new Date(ownershipStartedAt),
@@ -1887,7 +1887,7 @@ describe('UsageCounter ownership changes', () => {
       expect(queryProjectAiUsage).toHaveBeenCalledExactlyOnceWith(
         undefined,
         undefined,
-        'nosam',
+        'platform',
         JWT_SECRET,
         'deleted',
         new Date(billingPeriodStart),
@@ -1964,7 +1964,7 @@ describe('UsageCounter ownership changes', () => {
       expect(queryProjectAiUsage).toHaveBeenCalledExactlyOnceWith(
         undefined,
         undefined,
-        'nosam',
+        'platform',
         JWT_SECRET,
         'retained',
         new Date('2026-02-01T00:00:00.000Z'),
@@ -2020,7 +2020,7 @@ describe('UsageCounter ownership changes', () => {
     expect(queryProjectAiUsage).toHaveBeenCalledWith(
       undefined,
       undefined,
-      'nosam',
+      'platform',
       JWT_SECRET,
       'transferred',
       new Date(ownershipStartedAt),

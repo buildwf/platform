@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 import { getPackageDir } from '../../src/cli/agents.ts';
-import { assertInstalledBwfMatchesCli } from '../../src/cli/installed-nosam.ts';
+import { assertInstalledBwfMatchesCli } from '../../src/cli/installed-platform.ts';
 
 let root: string;
 const cliVersion = (
@@ -14,7 +14,7 @@ const cliVersion = (
 ).version;
 
 function project(installedVersion?: string | 'linked'): void {
-  root = mkdtempSync(join(tmpdir(), 'nosam-installed-plugin-version-test-'));
+  root = mkdtempSync(join(tmpdir(), 'platform-installed-plugin-version-test-'));
   writeFileSync(join(root, 'package.json'), '{"dependencies":{"@builtbyfriends/bwf":"^0.20.0"}}');
   if (installedVersion) {
     const packageRoot = join(root, 'node_modules', '@builtbyfriends', 'bwf');
@@ -48,7 +48,7 @@ describe('assertInstalledBwfMatchesCli', () => {
   it('stops a newer global CLI before an older project plugin can build', () => {
     project('0.20.0');
     expect(() => assertInstalledBwfMatchesCli(root)).toThrow(
-      `this CLI is nosam@${cliVersion}, but the project's installed Vite plugin is nosam@0.20.0`,
+      `this CLI is platform@${cliVersion}, but the project's installed Vite plugin is platform@0.20.0`,
     );
   });
 
@@ -56,7 +56,7 @@ describe('assertInstalledBwfMatchesCli', () => {
     project();
     // Vitest resolves missing bare imports through the workspace. Check the
     // missing-package case with Node's actual project-relative resolver.
-    const source = new URL('../../src/cli/installed-nosam.ts', import.meta.url).href;
+    const source = new URL('../../src/cli/installed-platform.ts', import.meta.url).href;
     const result = spawnSync(
       process.execPath,
       [

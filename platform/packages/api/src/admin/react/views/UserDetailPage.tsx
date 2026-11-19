@@ -39,7 +39,7 @@ export function UserDetailPage({ path, platformName, username }: AdminPageProps)
       <SectionStack>
         <h1>{user.login}</h1>
 
-        <Table className="nosam-admin-detail-table">
+        <Table className="platform-admin-detail-table">
           <TableBody>
             <TableRow>
               <TableHeaderCell>ID</TableHeaderCell>
@@ -76,7 +76,7 @@ export function UserDetailPage({ path, platformName, username }: AdminPageProps)
         <form
           method="post"
           action={`/admin/users/${user.id}/plan`}
-          className="nosam-admin-inline-form"
+          className="platform-admin-inline-form"
         >
           <FormSelector
             label="Plan"
@@ -173,7 +173,7 @@ export function UserDetailPage({ path, platformName, username }: AdminPageProps)
                   <TableRow key={p.projectId}>
                     <TableCell>
                       <Link
-                        className="nosam-admin-resource-link"
+                        className="platform-admin-resource-link"
                         href={`/admin/projects/${p.projectId}`}
                       >
                         {p.slug}
@@ -229,7 +229,7 @@ export function UserDetailPage({ path, platformName, username }: AdminPageProps)
               {projects.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell>
-                    <Link className="nosam-admin-resource-link" href={`/admin/projects/${p.id}`}>
+                    <Link className="platform-admin-resource-link" href={`/admin/projects/${p.id}`}>
                       {p.slug}
                     </Link>
                   </TableCell>

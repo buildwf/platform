@@ -86,7 +86,7 @@ function createDatabase(
   } as unknown as D1Database;
   const handler = (migrations: Array<MigrationEntry>) =>
     createMigrationHandler(
-      { DB: db, __NOSAM_PROXY_TOKEN: 'test-token' },
+      { DB: db, __PLATFORM_PROXY_TOKEN: 'test-token' },
       migrations,
       undefined,
       buildMigrationPlanBundle(migrations),
@@ -96,15 +96,15 @@ function createDatabase(
 
 const migrations = [{ name: '0001_debit.sql', sql: 'UPDATE balance SET amount = amount - 10;' }];
 function apply(attemptId: string) {
-  return new Request('https://example.test/__nosam/migrate/app', {
+  return new Request('https://example.test/__platform/migrate/app', {
     method: 'POST',
-    headers: { 'x-nosam-internal': 'test-token' },
+    headers: { 'x-platform-internal': 'test-token' },
     body: JSON.stringify({ attemptId }),
   });
 }
 function reconcile(attemptId: string) {
-  return new Request(`https://example.test/__nosam/migrate/app/attempt/${attemptId}`, {
-    headers: { 'x-nosam-internal': 'test-token' },
+  return new Request(`https://example.test/__platform/migrate/app/attempt/${attemptId}`, {
+    headers: { 'x-platform-internal': 'test-token' },
   });
 }
 

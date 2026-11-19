@@ -34,7 +34,7 @@ const token = process.env.CLOUDFLARE_API_TOKEN;
 if (accountId && token) {
   try {
     const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai-gateway/gateways/nosam`,
+      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai-gateway/gateways/platform`,
       { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) },
     );
     const gateway = (await response.json()) as { result?: { collect_logs?: boolean } };

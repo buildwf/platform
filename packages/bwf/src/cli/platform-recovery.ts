@@ -203,7 +203,7 @@ export async function verifyInstallationEndpoint(
   if (!apiUrl) {
     throw new Error(`platform: Installation ${manifest.id} has no API endpoint.`);
   }
-  const response = await fetcher(`${apiUrl}/.well-known/nosam-platform`, {
+  const response = await fetcher(`${apiUrl}/.well-known/platform`, {
     headers: {
       Accept: 'application/json',
       ...cfAccessHeaders(process.env, apiUrl),

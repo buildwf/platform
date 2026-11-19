@@ -473,19 +473,19 @@ declare global {
       SANDBOX: DurableObjectNamespace<import('./sandbox.ts').BwfPlatformSandbox>;
       ASSETS: Fetcher;
       /** @internal Service binding to proxy worker (AI, revalidation, future features) */
-      __NOSAM_PROXY?: Fetcher;
+      __PLATFORM_PROXY?: Fetcher;
       /** @internal Custom proxy URL override */
-      __NOSAM_PROXY_URL?: string;
+      __PLATFORM_PROXY_URL?: string;
       /** @internal Auth token for HTTP proxy (local dev) */
-      __NOSAM_TOKEN?: string;
+      __PLATFORM_TOKEN?: string;
       /** @internal Project ID for HTTP proxy (local dev) */
-      __NOSAM_PROJECT_ID?: string;
+      __PLATFORM_PROJECT_ID?: string;
       /** @internal Staging environment flag */
-      __NOSAM_STAGING?: string;
+      __PLATFORM_STAGING?: string;
       /** @internal Project ID (service binding path) */
       __PROJECT_ID?: string;
       /** @internal Proxy token (service binding path) */
-      __NOSAM_PROXY_TOKEN?: string;
+      __PLATFORM_PROXY_TOKEN?: string;
       [key: `QUEUE_${string}`]: Queue<unknown> | undefined;
     }
   }

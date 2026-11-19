@@ -31,7 +31,7 @@ export async function discoverPlatform(
   const apiUrl = normalizePlatformInputUrl(input);
   ensurePlatformAccessToken(apiUrl);
   const request = () =>
-    fetcher(`${apiUrl}/.well-known/nosam-platform`, {
+    fetcher(`${apiUrl}/.well-known/platform`, {
       headers: { Accept: 'application/json', ...cfAccessHeaders(process.env, apiUrl) },
       redirect: 'manual',
       signal: AbortSignal.timeout(15_000),

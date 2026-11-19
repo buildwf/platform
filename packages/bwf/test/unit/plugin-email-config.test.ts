@@ -33,7 +33,7 @@ function createProjectRoot(
   bwfConfig: Record<string, unknown> = {},
   { usesBwfEmail = true }: { usesBwfEmail?: boolean } = {},
 ): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-email-config-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-email-config-'));
   tempDirs.push(root);
   writeFileSync(join(root, 'package.json'), JSON.stringify({ type: 'module' }));
   writeFileSync(
@@ -83,7 +83,7 @@ async function resolveCloudflareConfig(
   const { bwfPlugin } = await import('../../src/index.ts');
   const plugins = bwfPlugin();
 
-  const envPlugin = plugins.find((plugin) => plugin.name === 'nosam:env');
+  const envPlugin = plugins.find((plugin) => plugin.name === 'platform:env');
   const config = getHookHandler(envPlugin?.config) as (
     config: import('vite').UserConfig,
     env: import('vite').ConfigEnv,
@@ -108,7 +108,7 @@ function provisionedRootConfig(): Record<string, unknown> {
   return {
     assets: { binding: 'ASSETS' },
     send_email: [{ name: 'SEND_EMAIL' }],
-    vars: { __NOSAM_EMAIL_FROM: 'Acme <noreply@mail.acme.com>' },
+    vars: { __PLATFORM_EMAIL_FROM: 'Acme <noreply@mail.acme.com>' },
   };
 }
 
@@ -131,12 +131,12 @@ describe('mergeBindings email config (bwf dev)', () => {
     expect('send_email' in result).toBe(false);
   });
 
-  it('injects __NOSAM_EMAIL_FROM from bwf.json email.from under serve', async () => {
+  it('injects __PLATFORM_EMAIL_FROM from bwf.json email.from under serve', async () => {
     const root = createProjectRoot({ email: { from: 'Acme <noreply@mail.acme.com>' } });
 
     const result = await resolveCloudflareConfig(root, { assets: { binding: 'ASSETS' } }, SERVE);
 
-    expect((result.vars as Record<string, string>).__NOSAM_EMAIL_FROM).toBe(
+    expect((result.vars as Record<string, string>).__PLATFORM_EMAIL_FROM).toBe(
       'Acme <noreply@mail.acme.com>',
     );
   });
@@ -146,7 +146,7 @@ describe('mergeBindings email config (bwf dev)', () => {
 
     const result = await resolveCloudflareConfig(root, { assets: { binding: 'ASSETS' } }, SERVE);
 
-    expect((result.vars as Record<string, string> | undefined)?.__NOSAM_EMAIL_FROM).toBeUndefined();
+    expect((result.vars as Record<string, string> | undefined)?.__PLATFORM_EMAIL_FROM).toBeUndefined();
   });
 
   it('strips send_email under serve even when email.from is unset', async () => {
@@ -190,10 +190,10 @@ describe('mergeBindings dev inbox vars (bwf dev)', () => {
     const result = await resolveCloudflareConfig(root, { assets: { binding: 'ASSETS' } }, SERVE);
 
     const vars = result.vars as Record<string, string>;
-    expect(vars.__NOSAM_EMAIL_DEV_INBOX).toBe('ASSETS');
+    expect(vars.__PLATFORM_EMAIL_DEV_INBOX).toBe('ASSETS');
     const persisted = readFileSync(join(root, '.bwf', 'dev-trigger-token'), 'utf8').trim();
     expect(persisted.length).toBeGreaterThan(0);
-    expect(vars.__NOSAM_EMAIL_DEV_INBOX_TOKEN).toBe(persisted);
+    expect(vars.__PLATFORM_EMAIL_DEV_INBOX_TOKEN).toBe(persisted);
   });
 
   it('injects neither var when the app does not import bwf/email', async () => {
@@ -202,8 +202,8 @@ describe('mergeBindings dev inbox vars (bwf dev)', () => {
     const result = await resolveCloudflareConfig(root, { assets: { binding: 'ASSETS' } }, SERVE);
 
     const vars = result.vars as Record<string, string> | undefined;
-    expect(vars?.__NOSAM_EMAIL_DEV_INBOX).toBeUndefined();
-    expect(vars?.__NOSAM_EMAIL_DEV_INBOX_TOKEN).toBeUndefined();
+    expect(vars?.__PLATFORM_EMAIL_DEV_INBOX).toBeUndefined();
+    expect(vars?.__PLATFORM_EMAIL_DEV_INBOX_TOKEN).toBeUndefined();
   });
 
   it('injects neither var on build — a production wrangler.json carries no dev token', async () => {
@@ -212,8 +212,8 @@ describe('mergeBindings dev inbox vars (bwf dev)', () => {
     const result = await resolveCloudflareConfig(root, { assets: { binding: 'ASSETS' } }, BUILD);
 
     const vars = result.vars as Record<string, string> | undefined;
-    expect(vars?.__NOSAM_EMAIL_DEV_INBOX).toBeUndefined();
-    expect(vars?.__NOSAM_EMAIL_DEV_INBOX_TOKEN).toBeUndefined();
+    expect(vars?.__PLATFORM_EMAIL_DEV_INBOX).toBeUndefined();
+    expect(vars?.__PLATFORM_EMAIL_DEV_INBOX_TOKEN).toBeUndefined();
   });
 });
 
@@ -247,7 +247,7 @@ describe('dev-trigger token file mode (inbox credential)', () => {
       // Tightening never rotates: saved curl scripts and the worker keep working.
       expect(readFileSync(tokenPath(root), 'utf8')).toBe('stable-token\n');
       const vars = result.vars as Record<string, string>;
-      expect(vars.__NOSAM_EMAIL_DEV_INBOX_TOKEN).toBe('stable-token');
+      expect(vars.__PLATFORM_EMAIL_DEV_INBOX_TOKEN).toBe('stable-token');
     },
   );
 
@@ -266,7 +266,7 @@ describe('dev-trigger token file mode (inbox credential)', () => {
     expect(after.ctimeMs).toBe(before.ctimeMs);
     expect(after.ino).toBe(before.ino);
     const vars = result.vars as Record<string, string>;
-    expect(vars.__NOSAM_EMAIL_DEV_INBOX_TOKEN).toBe('stable-token');
+    expect(vars.__PLATFORM_EMAIL_DEV_INBOX_TOKEN).toBe('stable-token');
   });
 });
 
@@ -281,11 +281,11 @@ describe('mergeBindings email config (build)', () => {
     expect('send_email' in result).toBe(false);
   });
 
-  it('leaves __NOSAM_EMAIL_FROM to the root wrangler config on build', async () => {
+  it('leaves __PLATFORM_EMAIL_FROM to the root wrangler config on build', async () => {
     const root = createProjectRoot({ email: { from: 'Acme <noreply@mail.acme.com>' } });
 
     const result = await resolveCloudflareConfig(root, { assets: { binding: 'ASSETS' } }, BUILD);
 
-    expect((result.vars as Record<string, string> | undefined)?.__NOSAM_EMAIL_FROM).toBeUndefined();
+    expect((result.vars as Record<string, string> | undefined)?.__PLATFORM_EMAIL_FROM).toBeUndefined();
   });
 });

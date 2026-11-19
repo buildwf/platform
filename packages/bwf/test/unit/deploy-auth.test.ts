@@ -131,7 +131,7 @@ describe('runDeploy auth failures', () => {
       new Error('platform does not support --skip-migrations'),
     );
     await expect(
-      runDeploy(process.cwd(), { platform: 'nosam', projectSlug: 'my-app', skipMigrations: true }),
+      runDeploy(process.cwd(), { platform: 'platform', projectSlug: 'my-app', skipMigrations: true }),
     ).rejects.toThrow('does not support --skip-migrations');
     expect(mockProjectLookup).not.toHaveBeenCalled();
   });
@@ -142,7 +142,7 @@ describe('runDeploy auth failures', () => {
     });
     mockIsOidcAvailable.mockReturnValue(true);
     await expect(
-      runDeploy(process.cwd(), { platform: 'nosam', projectSlug: 'my-app' }),
+      runDeploy(process.cwd(), { platform: 'platform', projectSlug: 'my-app' }),
     ).rejects.toThrow('bwf connect');
     expect(mockGetToken).not.toHaveBeenCalled();
     expect(mockExchangeOidc).not.toHaveBeenCalled();
@@ -156,7 +156,7 @@ describe('runDeploy auth failures', () => {
 
   it('does not print a deployment heading until the managed project is resolved', async () => {
     await expect(
-      runDeploy(process.cwd(), { platform: 'nosam', projectSlug: 'my-app' }),
+      runDeploy(process.cwd(), { platform: 'platform', projectSlug: 'my-app' }),
     ).rejects.toThrow();
 
     expect(intro).not.toHaveBeenCalled();
@@ -203,7 +203,7 @@ describe('runDeploy project access', () => {
   let savedProject: string | undefined;
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'nosam-deploy-project-access-'));
+    root = mkdtempSync(join(tmpdir(), 'platform-deploy-project-access-'));
     savedProject = process.env.BWF_PROJECT;
     delete process.env.BWF_PROJECT;
     // Stop allowed projects at app configuration, before building or uploading.
@@ -227,7 +227,7 @@ describe('runDeploy project access', () => {
       JSON.stringify({
         projectId: 'proj_1',
         slug,
-        platform: 'nosam',
+        platform: 'platform',
         platformUrl: 'https://api.test',
       }),
     );
@@ -246,7 +246,7 @@ describe('runDeploy project access', () => {
 
       await expect(
         runDeploy(root, {
-          platform: 'nosam',
+          platform: 'platform',
           ...(source === 'flag' ? { projectSlug: 'my-app' } : {}),
         }),
       ).rejects.toThrow(
@@ -262,7 +262,7 @@ describe('runDeploy project access', () => {
     async (role) => {
       mockProjectLookup.mockResolvedValue([{ id: 'proj_1', slug: 'my-app', role }]);
 
-      await expect(runDeploy(root, { platform: 'nosam', projectSlug: 'my-app' })).rejects.toThrow(
+      await expect(runDeploy(root, { platform: 'platform', projectSlug: 'my-app' })).rejects.toThrow(
         'migrate: Invalid JSON in bwf.json. Fix it before migrating.',
       );
 
@@ -276,7 +276,7 @@ describe('runDeploy project access', () => {
       linkProject();
       mockProjectLookup.mockResolvedValue([{ id: 'proj_1', slug: 'my-app', role }]);
 
-      await expect(runDeploy(root, { platform: 'nosam' })).rejects.toThrow(
+      await expect(runDeploy(root, { platform: 'platform' })).rejects.toThrow(
         'migrate: Invalid JSON in bwf.json. Fix it before migrating.',
       );
 
@@ -288,7 +288,7 @@ describe('runDeploy project access', () => {
     linkProject();
     mockProjectLookup.mockResolvedValue([{ id: 'proj_2', slug: 'my-app', role: 'owner' }]);
 
-    await expect(runDeploy(root, { platform: 'nosam' })).rejects.toThrow(
+    await expect(runDeploy(root, { platform: 'platform' })).rejects.toThrow(
       'The linked project "my-app" is unavailable or you no longer have access.',
     );
 
@@ -339,12 +339,12 @@ describe('runDeploy GitHub Actions OIDC exchange', () => {
   });
 
   it('rejects an explicit token before constructing a client when a custom origin is selected', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-deploy-origin-guard-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-deploy-origin-guard-'));
     const registry = join(root, 'registry');
-    const savedRegistry = process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+    const savedRegistry = process.env.PLATFORM_REGISTRY_DIR;
     const fetcher = vi.spyOn(globalThis, 'fetch');
     try {
-      process.env.NOSAM_PLATFORM_REGISTRY_DIR = registry;
+      process.env.PLATFORM_REGISTRY_DIR = registry;
       process.env.BWF_TOKEN = 'unbound-production-token';
       const { getToken: realGetToken } =
         await vi.importActual<typeof import('../../src/cli/auth.ts')>('../../src/cli/auth.ts');
@@ -362,7 +362,7 @@ describe('runDeploy GitHub Actions OIDC exchange', () => {
       });
       mockGetToken.mockImplementation((tokenRoot: string) => realGetToken(tokenRoot));
 
-      await expect(runDeploy(root, { platform: 'nosam', projectSlug: 'my-app' })).rejects.toThrow(
+      await expect(runDeploy(root, { platform: 'platform', projectSlug: 'my-app' })).rejects.toThrow(
         'Set BWF_API_URL alongside BWF_TOKEN',
       );
 
@@ -372,9 +372,9 @@ describe('runDeploy GitHub Actions OIDC exchange', () => {
     } finally {
       fetcher.mockRestore();
       if (savedRegistry === undefined) {
-        delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+        delete process.env.PLATFORM_REGISTRY_DIR;
       } else {
-        process.env.NOSAM_PLATFORM_REGISTRY_DIR = savedRegistry;
+        process.env.PLATFORM_REGISTRY_DIR = savedRegistry;
       }
       rmSync(root, { recursive: true, force: true });
     }
@@ -384,7 +384,7 @@ describe('runDeploy GitHub Actions OIDC exchange', () => {
     mockGetToken.mockReturnValue(null);
     mockIsOidcAvailable.mockReturnValue(true);
 
-    const root = mkdtempSync(join(tmpdir(), 'nosam-oidc-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-oidc-'));
     const savedProject = process.env.BWF_PROJECT;
     delete process.env.BWF_PROJECT;
     try {
@@ -476,7 +476,7 @@ describe('buildEnv', () => {
       process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN = 'actions-oidc-bearer';
       process.env.CF_ACCESS_READINESS_ORIGIN = 'https://dashboard.example.com';
 
-      const childEnv = buildEnv({ NOSAM_DEPLOY_PROJECT_ID: 'proj_1' });
+      const childEnv = buildEnv({ PLATFORM_DEPLOY_PROJECT_ID: 'proj_1' });
 
       expect(childEnv.CF_ACCESS_CLIENT_ID).toBeUndefined();
       expect(childEnv.CF_ACCESS_CLIENT_SECRET).toBeUndefined();
@@ -487,7 +487,7 @@ describe('buildEnv', () => {
       expect(childEnv.ACTIONS_ID_TOKEN_REQUEST_URL).toBeUndefined();
       expect(childEnv.ACTIONS_ID_TOKEN_REQUEST_TOKEN).toBeUndefined();
       expect(childEnv.CF_ACCESS_READINESS_ORIGIN).toBeUndefined();
-      expect(childEnv.NOSAM_DEPLOY_PROJECT_ID).toBe('proj_1');
+      expect(childEnv.PLATFORM_DEPLOY_PROJECT_ID).toBe('proj_1');
       expect(process.env.CF_ACCESS_CLIENT_ID).toBe('svc-id.access');
       expect(process.env.CF_ACCESS_CLIENT_SECRET).toBe('svc-secret');
       expect(process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN).toBe('actions-oidc-bearer');
@@ -552,7 +552,7 @@ describe('buildEnv — local node_modules/.bin on PATH', () => {
   }
 
   it('preserves the inherited PATH after the prepended entry', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-build-env-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-build-env-'));
     try {
       withInheritedPath(`/usr/bin${DELIMITER}/bin`, () => {
         const childPath = readPath(buildEnv(undefined, { localBinRoot: root }));
@@ -566,7 +566,7 @@ describe('buildEnv — local node_modules/.bin on PATH', () => {
   });
 
   it('sets PATH to just the bin dir when nothing was inherited', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-build-env-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-build-env-'));
     try {
       withInheritedPath(undefined, () => {
         expect(readPath(buildEnv(undefined, { localBinRoot: root }))).toBe(
@@ -579,13 +579,13 @@ describe('buildEnv — local node_modules/.bin on PATH', () => {
   });
 
   it('still scrubs the CF Access pair and still passes extras through', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-build-env-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-build-env-'));
     const savedId = process.env.CF_ACCESS_CLIENT_ID;
     try {
       process.env.CF_ACCESS_CLIENT_ID = 'svc-id.access';
-      const childEnv = buildEnv({ NOSAM_DEPLOY_PROJECT_ID: 'proj_1' }, { localBinRoot: root });
+      const childEnv = buildEnv({ PLATFORM_DEPLOY_PROJECT_ID: 'proj_1' }, { localBinRoot: root });
       expect(childEnv.CF_ACCESS_CLIENT_ID).toBeUndefined();
-      expect(childEnv.NOSAM_DEPLOY_PROJECT_ID).toBe('proj_1');
+      expect(childEnv.PLATFORM_DEPLOY_PROJECT_ID).toBe('proj_1');
       expect(readPath(childEnv)?.startsWith(toSlash(join(root, 'node_modules', '.bin')))).toBe(
         true,
       );
@@ -602,7 +602,7 @@ describe('buildEnv — local node_modules/.bin on PATH', () => {
   it('leaves PATH untouched when no localBinRoot is given', () => {
     withInheritedPath(`/usr/bin${DELIMITER}/bin`, () => {
       expect(readPath(buildEnv())).toBe(`/usr/bin${DELIMITER}/bin`);
-      expect(readPath(buildEnv({ NOSAM_DEPLOY_PROJECT_ID: 'proj_1' }))).toBe(
+      expect(readPath(buildEnv({ PLATFORM_DEPLOY_PROJECT_ID: 'proj_1' }))).toBe(
         `/usr/bin${DELIMITER}/bin`,
       );
     });

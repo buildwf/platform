@@ -22,7 +22,7 @@ and its tests authoritative.
 
 ## Check-run lifecycle
 
-Container builds publish a `Nosam Build` check run. Its head SHA comes from
+Container builds publish a `Platform Build` check run. Its head SHA comes from
 the build's captured commit, not a deployment row that may not exist yet.
 Creating or completing the check is best-effort: a GitHub API failure must
 not fail a build or prevent the scheduler from being notified.

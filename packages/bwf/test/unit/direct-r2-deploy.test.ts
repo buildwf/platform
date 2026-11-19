@@ -80,7 +80,7 @@ const fixtureFiles: Record<string, string | Buffer> = {
 };
 
 beforeEach(() => {
-  workdir = mkdtempSync(join(tmpdir(), 'nosam-direct-r2-'));
+  workdir = mkdtempSync(join(tmpdir(), 'platform-direct-r2-'));
   assetsDir = join(workdir, 'dist');
   mkdirSync(assetsDir, { recursive: true });
   for (const [relPath, content] of Object.entries(fixtureFiles)) {
@@ -233,7 +233,7 @@ function ndjsonResponse(events: Array<unknown>): Response {
   });
   return new Response(stream, {
     status: 200,
-    headers: { 'content-type': 'application/x-ndjson', 'x-nosam-deployment-id': 'dep_test' },
+    headers: { 'content-type': 'application/x-ndjson', 'x-platform-deployment-id': 'dep_test' },
   });
 }
 
@@ -535,7 +535,7 @@ describe('Worker module uploads', () => {
     version: 3,
     assetManifestVersion: 2,
     bindings: {},
-    type: 'nosam',
+    type: 'platform',
     ssr: true,
     workerMain: 'index.js',
   };

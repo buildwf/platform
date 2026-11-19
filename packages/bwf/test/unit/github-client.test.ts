@@ -35,7 +35,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 describe('PlatformClient.getGithubInstallUrl', () => {
   it('GETs the right URL, sends auth headers, returns parsed { url }', async () => {
     fetchMock.mockResolvedValueOnce(
-      jsonResponse({ url: 'https://github.com/apps/nosam-test/installations/new' }),
+      jsonResponse({ url: 'https://github.com/apps/platform-test/installations/new' }),
     );
 
     const client = makeClient();
@@ -47,7 +47,7 @@ describe('PlatformClient.getGithubInstallUrl', () => {
     expect(init.method).toBeUndefined();
     const headers = init.headers as Record<string, string>;
     expect(headers.Authorization).toBe(`Bearer ${token}`);
-    expect(result).toEqual({ url: 'https://github.com/apps/nosam-test/installations/new' });
+    expect(result).toEqual({ url: 'https://github.com/apps/platform-test/installations/new' });
   });
 
   it('throws PlatformApiError on non-2xx', async () => {

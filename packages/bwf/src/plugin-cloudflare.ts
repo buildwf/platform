@@ -63,7 +63,7 @@ export function cloudflare(options: {
   let pluginNative: ReturnType<typeof toNativeCloudflareConfig>;
   const outputDirectories = new Map<string, string>();
   const bridge: Plugin = {
-    name: 'nosam:cloudflare-config',
+    name: 'platform:cloudflare-config',
     config(_userConfig, environment) {
       if (environment.isPreview) {
         return;
@@ -105,7 +105,7 @@ export function cloudflare(options: {
     },
   };
   const directories: Plugin = {
-    name: 'nosam:cloudflare-output-directories',
+    name: 'platform:cloudflare-output-directories',
     enforce: 'post',
     config(userConfig) {
       const environmentNames = [
@@ -125,7 +125,7 @@ export function cloudflare(options: {
     },
   };
   const output: Plugin = {
-    name: 'nosam:cloudflare-build-output',
+    name: 'platform:cloudflare-build-output',
     enforce: 'post',
     writeBundle: {
       order: 'post',
@@ -209,7 +209,7 @@ export function cloudflare(options: {
         }
         if (native.containers.length > 0) {
           writeFileAtomic(
-            join(dirname(getRootConfigPath(root)), 'nosam-containers.json'),
+            join(dirname(getRootConfigPath(root)), 'platform-containers.json'),
             JSON.stringify({ workerDirectory: relative(root, destination) }),
           );
         }

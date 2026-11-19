@@ -67,7 +67,7 @@ describe('checkCliVersionOrRespond', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-nosam-cli-version': MIN_CLI_VERSION,
+        'x-platform-cli-version': MIN_CLI_VERSION,
       },
       body: '{}',
     });
@@ -79,7 +79,7 @@ describe('checkCliVersionOrRespond', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-nosam-cli-version': '99.0.0',
+        'x-platform-cli-version': '99.0.0',
       },
       body: '{}',
     });
@@ -91,7 +91,7 @@ describe('checkCliVersionOrRespond', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-nosam-cli-version': '0.6.0',
+        'x-platform-cli-version': '0.6.0',
       },
       body: '{}',
     });
@@ -142,7 +142,7 @@ describe('checkCliVersionOrRespond', () => {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
-            'x-nosam-cli-version': badVersion,
+            'x-platform-cli-version': badVersion,
           },
           body: '{}',
         });
@@ -160,7 +160,7 @@ describe('checkCliVersionOrRespond', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-nosam-cli-version': '0.7.0-rc.1',
+        'x-platform-cli-version': '0.7.0-rc.1',
       },
       body: '{}',
     });

@@ -17,7 +17,7 @@ afterEach(() => {
 });
 
 it.each(['', 'true'])('rejects secret sync with closed stdin and CI=%s', (ci) => {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-secret-cli-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-secret-cli-'));
   roots.push(root);
   mkdirSync(join(root, '.bwf'));
   writeFileSync(join(root, 'package.json'), '{"type":"module"}\n');

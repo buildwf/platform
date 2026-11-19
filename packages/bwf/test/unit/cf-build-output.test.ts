@@ -45,7 +45,7 @@ afterEach(() => {
 });
 
 function worker(config: Record<string, unknown>): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-cf-build-output-test-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-cf-build-output-test-'));
   roots.push(root);
   const output = join(root, 'dist', 'ssr');
   mkdirSync(output, { recursive: true });
@@ -85,7 +85,7 @@ function expectCfDryRun(directory: string, command = ['workers', 'versions', 'cr
 }
 
 async function nativeBuild() {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-native-cf-output-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-native-cf-output-'));
   roots.push(root);
   await writeRootConfig(
     root,
@@ -105,7 +105,7 @@ async function nativeBuild() {
   await writeWorkerConfig({
     root,
     config: {
-      name: 'nosam-native-test',
+      name: 'platform-native-test',
       compatibilityDate: '2026-10-12',
       env: { DATA: { type: 'r2', name: 'native-bucket' }, TOKEN: { type: 'secret' } },
     },
@@ -268,7 +268,7 @@ it('preserves native auxiliary Workers and already-built Container declarations'
     root,
     directoryName: 'auxiliary',
     config: {
-      name: 'nosam-native-aux',
+      name: 'platform-native-aux',
       compatibilityDate: '2026-10-12',
     },
     manifest: { type: 'partial', mainModule: 'index.js', modules: {} },
@@ -286,7 +286,7 @@ it('preserves native auxiliary Workers and already-built Container declarations'
     prepareCfBuildOutput(root, { accountId: 'account-id', mode: 'staging' }),
     async (prepared) => {
       const result = await readBuildOutput(prepared.directory);
-      expect(result.workers.auxiliary.config.name).toBe('nosam-native-aux');
+      expect(result.workers.auxiliary.config.name).toBe('platform-native-aux');
       expect(result.containers[0]?.config).toMatchObject({
         name: 'native-container',
         image: { reference: 'docker.io/example/native:1' },
@@ -342,13 +342,13 @@ it('names a declared native module that is missing from the bundle', async () =>
 });
 
 it('names the expected inputs when a directory holds no Worker build', async () => {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-cf-build-output-empty-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-cf-build-output-empty-'));
   roots.push(root);
   await expect(prepareCfBuildOutput(root)).rejects.toThrow('No Cloudflare Worker build found');
 });
 
 it('returns only the public fields of the prepared output', async () => {
-  const output = worker({ name: 'nosam-test', compatibility_date: '2026-09-29', main: 'index.js' });
+  const output = worker({ name: 'platform-test', compatibility_date: '2026-09-29', main: 'index.js' });
   await withPrepared(prepareCfBuildOutput(output), async (prepared) => {
     expect(Object.keys(prepared).sort()).toEqual(['directory', 'dispose']);
   });
@@ -358,7 +358,7 @@ it.skipIf(process.platform === 'win32')(
   'rejects a legacy asset symlink outside the asset directory',
   async () => {
     const output = worker({
-      name: 'nosam-test',
+      name: 'platform-test',
       compatibility_date: '2026-09-29',
       main: 'index.js',
       assets: { directory: '../client' },
@@ -407,7 +407,7 @@ it.each([undefined, 'account-id'])(
   'prepares public build output without credentials for built account %s',
   async (accountId) => {
     const config = {
-      name: 'nosam-test',
+      name: 'platform-test',
       compatibility_date: '2026-09-29',
       main: 'index.js',
       ...(accountId ? { account_id: accountId } : {}),
@@ -427,7 +427,7 @@ it.each([undefined, 'account-id'])(
 
 it('records an explicit build mode and matching target account', async () => {
   const output = worker({
-    name: 'nosam-test',
+    name: 'platform-test',
     compatibility_date: '2026-09-29',
     main: 'index.js',
     account_id: 'account-id',
@@ -444,7 +444,7 @@ it('records an explicit build mode and matching target account', async () => {
 
 it('rejects a mismatching explicit target account', async () => {
   const output = worker({
-    name: 'nosam-test',
+    name: 'platform-test',
     compatibility_date: '2026-09-29',
     main: 'index.js',
     account_id: 'built-account',
@@ -458,7 +458,7 @@ it(
   'preserves additional module types from a real Cloudflare Vite build',
   async () => {
     // Vite canonicalizes root; use the same path for Cloudflare's output directory.
-    const root = realpathSync(mkdtempSync(join(tmpdir(), 'nosam-cf-additional-modules-')));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'platform-cf-additional-modules-')));
     roots.push(root);
     writeFileSync(join(root, 'package.json'), JSON.stringify({ type: 'module' }));
     const assets = {
@@ -492,7 +492,7 @@ export default { fetch() {
         cloudflare({
           config: () => ({
             worker: {
-              name: 'nosam-additional-modules',
+              name: 'platform-additional-modules',
               entrypoint: join(root, 'index.js'),
               compatibilityDate: '2026-09-29',
               compatibilityFlags: [],
@@ -547,7 +547,7 @@ it(
   'produces deployable cf build output without changing the authored project',
   async () => {
     const output = worker({
-      name: 'nosam-test',
+      name: 'platform-test',
       compatibility_date: '2026-09-29',
       main: 'index.js',
       send_metrics: false,
@@ -585,7 +585,7 @@ it(
   'accepts a nested hashed Worker entry with a relative module import',
   async () => {
     const output = worker({
-      name: 'nosam-test',
+      name: 'platform-test',
       compatibility_date: '2026-09-29',
       main: './assets/index-hash.js',
     });
@@ -614,7 +614,7 @@ it(
 it.each(['../index.js', '/index.js', 'C:\\index.js'])(
   'rejects an out-of-bundle entry %s',
   async (main) => {
-    const output = worker({ name: 'nosam-test', compatibility_date: '2026-09-29', main });
+    const output = worker({ name: 'platform-test', compatibility_date: '2026-09-29', main });
     await expect(prepareCfBuildOutput(output, { accountId: 'account-id' })).rejects.toThrow(
       'inside its output directory',
     );
@@ -623,7 +623,7 @@ it.each(['../index.js', '/index.js', 'C:\\index.js'])(
 
 it('reports a missing built entry', async () => {
   const output = worker({
-    name: 'nosam-test',
+    name: 'platform-test',
     compatibility_date: '2026-09-29',
     main: 'assets/missing.js',
   });
@@ -633,7 +633,7 @@ it('reports a missing built entry', async () => {
 });
 
 it('preserves binary font modules in a deployable Worker bundle', async () => {
-  const output = worker({ name: 'nosam-test', compatibility_date: '2026-09-29', main: 'index.js' });
+  const output = worker({ name: 'platform-test', compatibility_date: '2026-09-29', main: 'index.js' });
   mkdirSync(join(output, 'assets'));
   writeFileSync(
     join(output, 'index.js'),
@@ -653,7 +653,7 @@ it('preserves binary font modules in a deployable Worker bundle', async () => {
 });
 
 it('names the file when a plugin emits an unsupported module', async () => {
-  const output = worker({ name: 'nosam-test', compatibility_date: '2026-09-29', main: 'index.js' });
+  const output = worker({ name: 'platform-test', compatibility_date: '2026-09-29', main: 'index.js' });
   writeFileSync(join(output, 'plugin.unknown'), 'unexpected');
   await expect(prepareCfBuildOutput(output, { accountId: 'account-id' })).rejects.toThrow(
     'unsupported module "plugin.unknown"',
@@ -662,7 +662,7 @@ it('names the file when a plugin emits an unsupported module', async () => {
 
 it('preserves limits and placement', async () => {
   const output = worker({
-    name: 'nosam-test',
+    name: 'platform-test',
     compatibility_date: '2026-09-29',
     main: 'index.js',
     limits: { cpu_ms: 100 },
@@ -682,7 +682,7 @@ it(
   'preserves existing Worker variables, secrets, and assets in the cf upload',
   async () => {
     const output = worker({
-      name: 'nosam-test',
+      name: 'platform-test',
       compatibility_date: '2026-09-29',
       main: 'index.js',
       keep_vars: true,
@@ -714,7 +714,7 @@ it.each([
 ])('keeps existing Worker secrets with $flags', async ({ flags, keep }) => {
   // A written keep_bindings replaces cf's default, so keep_vars alone must still list secrets.
   const output = worker({
-    name: 'nosam-test',
+    name: 'platform-test',
     compatibility_date: '2026-09-29',
     main: 'index.js',
     ...flags,
@@ -730,7 +730,7 @@ it.each([
 
 it('passes a user-written keep_bindings through unchanged', async () => {
   const output = worker({
-    name: 'nosam-test',
+    name: 'platform-test',
     compatibility_date: '2026-09-29',
     main: 'index.js',
     unsafe: { metadata: { keep_bindings: ['plain_text'] } },
@@ -746,13 +746,13 @@ it('passes a user-written keep_bindings through unchanged', async () => {
 
 it('deploys Worker Workflow declarations through cf build output', async () => {
   const output = worker({
-    name: 'nosam-test',
+    name: 'platform-test',
     compatibility_date: '2026-09-29',
     main: 'index.js',
     workflows: [
       {
         binding: 'FLOW',
-        name: 'nosam-test-flow',
+        name: 'platform-test-flow',
         class_name: 'Flow',
         schedules: '0 * * * *',
         limits: { steps: 100 },
@@ -769,13 +769,13 @@ it('deploys Worker Workflow declarations through cf build output', async () => {
       const built = await readBuildOutput(prepared.directory);
       expect(built.workers.default.config.env?.FLOW).toEqual({
         type: 'workflow',
-        name: 'nosam-test-flow',
-        worker: 'nosam-test',
+        name: 'platform-test-flow',
+        worker: 'platform-test',
         exportName: 'Flow',
       });
       expect(built.workers.default.config.exports?.Flow).toEqual({
         type: 'workflow',
-        name: 'nosam-test-flow',
+        name: 'platform-test-flow',
         schedules: '0 * * * *',
         limits: { steps: 100 },
       });
@@ -786,7 +786,7 @@ it('deploys Worker Workflow declarations through cf build output', async () => {
 
 it('copies an internal symlinked Worker module into the prebuilt artifact', async () => {
   const output = worker({
-    name: 'nosam-test',
+    name: 'platform-test',
     compatibility_date: '2026-09-29',
     main: 'index.js',
   });
@@ -807,7 +807,7 @@ it('copies an internal symlinked Worker module into the prebuilt artifact', asyn
 
 it('keeps Durable Objects, Queue triggers, and Containers in cf prebuilt output', async () => {
   const output = worker({
-    name: 'nosam-test',
+    name: 'platform-test',
     compatibility_date: '2026-09-29',
     main: 'index.js',
     durable_objects: { bindings: [{ name: 'COUNTER', class_name: 'Counter' }] },
@@ -867,7 +867,7 @@ it('bundles a generated static Worker and staged assets into prebuilt cf output'
   writeFileSync(
     configPath,
     JSON.stringify({
-      name: 'nosam-static-test',
+      name: 'platform-static-test',
       account_id: 'account-id',
       compatibility_date: '2026-09-29',
       main: 'static-edge.mjs',
@@ -905,14 +905,14 @@ it.skipIf(process.platform === 'win32')(
   'builds a named Sandbox image into cf prebuilt output and cleans up its local tag',
   async () => {
     const output = worker({
-      name: 'nosam-sandbox-test',
+      name: 'platform-sandbox-test',
       main: 'index.js',
       compatibility_date: '2026-09-30',
       durable_objects: { bindings: [{ name: 'SANDBOX', class_name: 'Sandbox' }] },
       migrations: [{ tag: 'v1', new_sqlite_classes: ['Sandbox'] }],
       containers: [
         {
-          name: 'void-sandbox-v1',
+          name: 'platform-sandbox-v1',
           class_name: 'Sandbox',
           scheduling_policy: 'durable_object',
           images: {
@@ -950,7 +950,7 @@ it.skipIf(process.platform === 'win32')(
           throw new Error('Expected a prepared local image');
         }
         expect(Object.keys(image)).toEqual(['localReference']);
-        expect(image.localReference.startsWith('nosam-sandbox-build:')).toBe(true);
+        expect(image.localReference.startsWith('platform-sandbox-build:')).toBe(true);
         tag = image.localReference;
         expectCfDryRun(prepared.directory);
       },

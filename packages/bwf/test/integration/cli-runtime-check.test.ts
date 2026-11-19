@@ -14,7 +14,7 @@ const VERSION = (
 let root: string;
 
 beforeAll(() => {
-  root = mkdtempSync(join(tmpdir(), 'nosam-cli-runtime-'));
+  root = mkdtempSync(join(tmpdir(), 'platform-cli-runtime-'));
 });
 
 afterAll(() => {

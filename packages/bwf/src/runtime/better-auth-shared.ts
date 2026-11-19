@@ -87,7 +87,7 @@ function resolveSecret(env: BwfAuthEnv, dev: boolean): string {
   }
 
   if (dev) {
-    return 'nosam-dev-better-auth-secret-1234567890';
+    return 'platform-dev-better-auth-secret-1234567890';
   }
 
   throw new Error('auth: Missing Better Auth secret. Set BETTER_AUTH_SECRET.');
@@ -456,7 +456,7 @@ function createCookieForwarder(): {
   let collecting = false;
   const cookies: Array<string> = [];
   const plugin: BetterAuthPlugin = {
-    id: 'nosam-cookies',
+    id: 'platform-cookies',
     hooks: {
       after: [
         {
@@ -772,7 +772,7 @@ export function createBwfAuthRuntime(
     const auth = await createBwfAuth(c.req.raw, c.env as BwfAuthEnv, runtime, database, [
       forwarder.plugin,
     ]);
-    c.set('__nosamAuth', auth);
+    c.set('__platformAuth', auth);
 
     const result = await auth.api.getSession({
       headers: await sessionHeaders(c.req.raw, auth),
@@ -831,7 +831,7 @@ export function createBwfAuthRuntime(
     runtime: BwfAuthRuntimeOptions,
     database: AuthDatabase,
   ): Promise<Response> {
-    const existingAuth = c.get('__nosamAuth') as ReturnType<typeof betterAuth> | undefined;
+    const existingAuth = c.get('__platformAuth') as ReturnType<typeof betterAuth> | undefined;
     if (existingAuth) {
       return existingAuth.handler(c.req.raw);
     }

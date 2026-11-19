@@ -4,7 +4,7 @@ import type { AuthArgs } from './auth-args.ts';
 import { listPlatformConnections, normalizePlatformApiUrl } from './platform-registry.ts';
 import { readDeploymentPlatform } from './project.ts';
 
-type Destination = { platform: 'cloudflare' | 'nosam'; apiUrl?: string };
+type Destination = { platform: 'cloudflare' | 'platform'; apiUrl?: string };
 
 async function chooseDestination(
   root: string,
@@ -18,7 +18,7 @@ async function chooseDestination(
   }
   if (!interactive) {
     throw new Error(
-      'auth: No deployment destination is saved. Use `bwf auth login --platform cloudflare|nosam`, `bwf account login`, or `bwf cloudflare login`.',
+      'auth: No deployment destination is saved. Use `bwf auth login --platform cloudflare|platform`, `bwf account login`, or `bwf cloudflare login`.',
     );
   }
   const connections = listPlatformConnections();
@@ -33,7 +33,7 @@ async function chooseDestination(
     ...(connections.length === 0
       ? [
           {
-            value: 'nosam',
+            value: 'platform',
             label: 'bwf platform',
             hint: 'Run `bwf connect <url>` first',
             disabled: true,
@@ -47,7 +47,7 @@ async function chooseDestination(
   }
   return selected === 'cloudflare'
     ? { platform: 'cloudflare' }
-    : { platform: 'nosam', apiUrl: selected };
+    : { platform: 'platform', apiUrl: selected };
 }
 
 export async function runAuthRouter(

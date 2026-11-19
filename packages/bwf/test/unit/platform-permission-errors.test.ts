@@ -238,12 +238,12 @@ describe('PlatformClient permission errors', () => {
       message: 'Deploying requires collaborator access. Ask a project admin to update your access.',
     });
     const original = new PlatformApiError('Deploy failed', 403, body, 'deploy');
-    const formatted = formatStreamDeployError(original, 'deploy_1', '/tmp/nosam.log');
+    const formatted = formatStreamDeployError(original, 'deploy_1', '/tmp/platform.log');
     expect(formatted).toBe(original);
     expect(formatted).toMatchObject({ code: 'forbidden', status: 403, body });
     expect(formatted.message).toContain('Ask a project admin');
     expect(formatted.message).toContain('Deployment: deploy_1');
-    expect(formatted.message).toContain('Detailed log: /tmp/nosam.log');
+    expect(formatted.message).toContain('Detailed log: /tmp/platform.log');
   });
 });
 

@@ -491,7 +491,7 @@ describe('syncWranglerBindings', () => {
         durable_objects: {
           bindings: [{ name: 'LEGACY', class_name: 'LegacyRoom' }],
         },
-        migrations: [{ tag: 'void-ws-v1', new_classes: ['LegacyRoom'] }],
+        migrations: [{ tag: 'platform-ws-v1', new_classes: ['LegacyRoom'] }],
       }),
     );
     const route = (className: string, bindingName: string) => ({
@@ -511,8 +511,8 @@ describe('syncWranglerBindings', () => {
 
     const parsed = JSON.parse(readFileSync(join(tmpDir, 'wrangler.jsonc'), 'utf-8'));
     expect(parsed.migrations).toEqual([
-      { tag: 'void-ws-v1', new_classes: ['LegacyRoom'] },
-      { tag: 'void-ws-v1-2', new_sqlite_classes: ['ChatRoom'] },
+      { tag: 'platform-ws-v1', new_classes: ['LegacyRoom'] },
+      { tag: 'platform-ws-v1-2', new_sqlite_classes: ['ChatRoom'] },
     ]);
   });
 
@@ -527,7 +527,7 @@ describe('syncWranglerBindings', () => {
           ],
         },
         migrations: [
-          { tag: 'void-ws-v1', new_sqlite_classes: ['OldChatWs'] },
+          { tag: 'platform-ws-v1', new_sqlite_classes: ['OldChatWs'] },
           { tag: 'durable-shopping-cart-v1', new_sqlite_classes: ['ShoppingCartDurableObject'] },
         ],
       }),
@@ -541,7 +541,7 @@ describe('syncWranglerBindings', () => {
       { name: 'CART', class_name: 'ShoppingCartDurableObject' },
     ]);
     expect(parsed.migrations).toEqual([
-      { tag: 'void-ws-v1', new_sqlite_classes: ['OldChatWs'] },
+      { tag: 'platform-ws-v1', new_sqlite_classes: ['OldChatWs'] },
       { tag: 'durable-shopping-cart-v1', new_sqlite_classes: ['ShoppingCartDurableObject'] },
     ]);
     expect(readWranglerWebSocketTombstones(tmpDir, [])).toEqual(['OldChatWs']);
@@ -552,7 +552,7 @@ describe('syncWranglerBindings', () => {
       'wrangler.jsonc',
       JSON.stringify({
         durable_objects: { bindings: [{ name: 'OLD_CHAT', class_name: 'OldChatWs' }] },
-        migrations: [{ tag: 'void-ws-v1', new_sqlite_classes: ['OldChatWs'] }],
+        migrations: [{ tag: 'platform-ws-v1', new_sqlite_classes: ['OldChatWs'] }],
       }),
     );
 
@@ -577,8 +577,8 @@ describe('syncWranglerBindings', () => {
       { name: 'CHAT', class_name: 'ChatWs' },
     ]);
     expect(parsed.migrations).toEqual([
-      { tag: 'void-ws-v1', new_sqlite_classes: ['OldChatWs'] },
-      { tag: 'void-ws-v1-2', new_sqlite_classes: ['ChatWs'] },
+      { tag: 'platform-ws-v1', new_sqlite_classes: ['OldChatWs'] },
+      { tag: 'platform-ws-v1-2', new_sqlite_classes: ['ChatWs'] },
     ]);
     expect(
       readWranglerWebSocketTombstones(tmpDir, [
@@ -604,13 +604,13 @@ describe('syncWranglerBindings', () => {
       filePath: join(tmpDir, 'durable-objects', 'zeta.ts'),
       bindingName: 'ZETA',
       className: 'ZetaDurableObject',
-      migrationTag: 'void-durable-zeta-v1',
+      migrationTag: 'platform-durable-zeta-v1',
     };
     const alpha = {
       filePath: join(tmpDir, 'durable-objects', 'alpha.ts'),
       bindingName: 'ALPHA',
       className: 'AlphaDurableObject',
-      migrationTag: 'void-durable-alpha-v1',
+      migrationTag: 'platform-durable-alpha-v1',
     };
 
     expect(syncWranglerDurableObjects(tmpDir, [zeta])).toBe(true);
@@ -618,8 +618,8 @@ describe('syncWranglerBindings', () => {
     const parsed = JSON.parse(readFileSync(join(tmpDir, 'wrangler.jsonc'), 'utf-8'));
 
     expect(parsed.migrations).toEqual([
-      { tag: 'void-durable-zeta-v1', new_sqlite_classes: ['ZetaDurableObject'] },
-      { tag: 'void-durable-alpha-v1', new_sqlite_classes: ['AlphaDurableObject'] },
+      { tag: 'platform-durable-zeta-v1', new_sqlite_classes: ['ZetaDurableObject'] },
+      { tag: 'platform-durable-alpha-v1', new_sqlite_classes: ['AlphaDurableObject'] },
     ]);
   });
 
@@ -640,7 +640,7 @@ describe('syncWranglerBindings', () => {
       filePath: join(tmpDir, 'durable-objects', 'counter.ts'),
       bindingName: 'COUNTER',
       className: 'CounterDurableObject',
-      migrationTag: 'void-durable-counter-v1',
+      migrationTag: 'platform-durable-counter-v1',
     };
     expect(syncWranglerDurableObjects(tmpDir, [counter])).toBe(true);
     const parsed = JSON.parse(readFileSync(join(tmpDir, 'wrangler.jsonc'), 'utf-8'));
@@ -651,7 +651,7 @@ describe('syncWranglerBindings', () => {
       routes: [{ pattern: 'example.com', custom_domain: true }],
       durable_objects: { bindings: [{ name: 'COUNTER', class_name: 'CounterDurableObject' }] },
       migrations: [
-        { tag: 'void-durable-counter-v1', new_sqlite_classes: ['CounterDurableObject'] },
+        { tag: 'platform-durable-counter-v1', new_sqlite_classes: ['CounterDurableObject'] },
       ],
     });
   });
@@ -662,10 +662,10 @@ describe('syncWranglerBindings', () => {
     expect(result).toBe(true);
     const parsed = JSON.parse(readFileSync(join(tmpDir, 'wrangler.jsonc'), 'utf-8'));
     expect(parsed.durable_objects.bindings).toEqual([
-      { name: 'BWF_LIVE', class_name: 'NosamLiveStreamDurableObject' },
+      { name: 'BWF_LIVE', class_name: 'PlatformLiveStreamDurableObject' },
     ]);
     expect(parsed.migrations).toEqual([
-      { tag: 'live-v1', new_sqlite_classes: ['NosamLiveStreamDurableObject'] },
+      { tag: 'live-v1', new_sqlite_classes: ['PlatformLiveStreamDurableObject'] },
     ]);
   });
 
@@ -674,16 +674,16 @@ describe('syncWranglerBindings', () => {
       'wrangler.jsonc',
       JSON.stringify({
         durable_objects: {
-          bindings: [{ name: 'BWF_LIVE', class_name: 'NosamLiveStreamDurableObject' }],
+          bindings: [{ name: 'BWF_LIVE', class_name: 'PlatformLiveStreamDurableObject' }],
         },
-        migrations: [{ tag: 'live-v1', new_sqlite_classes: ['NosamLiveStreamDurableObject'] }],
+        migrations: [{ tag: 'live-v1', new_sqlite_classes: ['PlatformLiveStreamDurableObject'] }],
       }),
     );
     const result = syncWranglerBindings(tmpDir, { ...noBindings, needsLive: true });
     expect(result).toBe(false);
     expect(readExistingLiveBindingConfig(tmpDir)).toEqual({
       bindingName: 'BWF_LIVE',
-      className: 'NosamLiveStreamDurableObject',
+      className: 'PlatformLiveStreamDurableObject',
     });
   });
 
@@ -699,7 +699,7 @@ describe('syncWranglerBindings', () => {
     const parsed = JSON.parse(readFileSync(join(tmpDir, 'wrangler.jsonc'), 'utf-8'));
     expect(parsed.migrations).toEqual([
       { tag: 'live-v1', new_sqlite_classes: ['OtherDurableObject'] },
-      { tag: 'live-v1-2', new_sqlite_classes: ['NosamLiveStreamDurableObject'] },
+      { tag: 'live-v1-2', new_sqlite_classes: ['PlatformLiveStreamDurableObject'] },
     ]);
   });
 
@@ -716,7 +716,7 @@ describe('syncWranglerBindings', () => {
     const result = syncWranglerBindings(tmpDir, { ...noBindings, needsLive: true }, { live });
     expect(result).toBe(true);
     expect(live.bindingName).toMatch(/^BWF_LIVE_[0-9a-f]{8}$/);
-    expect(live.className).toBe('NosamLiveStreamDurableObject');
+    expect(live.className).toBe('PlatformLiveStreamDurableObject');
     const parsed = JSON.parse(readFileSync(join(tmpDir, 'wrangler.jsonc'), 'utf-8'));
     expect(parsed.durable_objects.bindings).toEqual([
       { name: 'BWF_LIVE', class_name: 'UserLiveDurableObject' },
@@ -733,7 +733,7 @@ describe('syncWranglerBindings', () => {
           bindings: [
             {
               name: 'BWF_LIVE_custom',
-              class_name: 'NosamLiveStreamDurableObject_custom',
+              class_name: 'PlatformLiveStreamDurableObject_custom',
             },
           ],
         },
@@ -742,7 +742,7 @@ describe('syncWranglerBindings', () => {
 
     expect(resolveLiveBindingConfig(tmpDir)).toEqual({
       bindingName: 'BWF_LIVE',
-      className: 'NosamLiveStreamDurableObject',
+      className: 'PlatformLiveStreamDurableObject',
     });
     expect(readExistingLiveBindingConfig(tmpDir)).toBeUndefined();
   });
@@ -808,8 +808,8 @@ describe('writeProvisionedWranglerConfig', () => {
       { name: 'NOTIFICATIONSWS', class_name: 'NotificationsWs' },
     ]);
     expect(parsed.migrations).toEqual([
-      { tag: 'void-ws-v1', new_sqlite_classes: ['ChatWs'] },
-      { tag: 'void-ws-v1-2', new_sqlite_classes: ['NotificationsWs'] },
+      { tag: 'platform-ws-v1', new_sqlite_classes: ['ChatWs'] },
+      { tag: 'platform-ws-v1-2', new_sqlite_classes: ['NotificationsWs'] },
     ]);
     expect(readRaw('wrangler.jsonc')).toContain('// Keep unrelated bindings untouched.');
   });
@@ -820,7 +820,7 @@ describe('writeProvisionedWranglerConfig', () => {
     "bindings": [{ "name": "CHAT", "class_name": "ChatWs" }]
   },
   // This class is already deployed with legacy KV storage.
-  "migrations": [{ "tag": "void-ws-v1", "new_classes": ["ChatWs"] }]
+  "migrations": [{ "tag": "platform-ws-v1", "new_classes": ["ChatWs"] }]
 }`;
     setup('wrangler.jsonc', config);
     const result = writeProvisionedWranglerConfig(tmpDir, {
@@ -1096,7 +1096,7 @@ describe('writeProvisionedWranglerConfig', () => {
         reconcileBwfOwned: true,
       },
     });
-    expect(readRaw('wrangler.jsonc')).toContain('// nosam:managed-queues:v1:');
+    expect(readRaw('wrangler.jsonc')).toContain('// platform:managed-queues:v1:');
 
     writeProvisionedWranglerConfig(tmpDir, {
       queues: { producers: [], consumers: [], reconcileBwfOwned: true },
@@ -1104,12 +1104,12 @@ describe('writeProvisionedWranglerConfig', () => {
 
     expect(parseRaw('wrangler.jsonc').queues).toEqual({ producers: [], consumers: [] });
     const configPath = join(tmpDir, 'wrangler.jsonc');
-    expect(readRaw('wrangler.jsonc')).toContain('// nosam:managed-queues:v1:');
+    expect(readRaw('wrangler.jsonc')).toContain('// platform:managed-queues:v1:');
     expect(readWranglerManagedQueueCleanupCandidates(configPath)).toEqual(['old']);
 
     acknowledgeWranglerManagedQueueRemovals(configPath, ['old']);
     expect(readWranglerManagedQueueCleanupCandidates(configPath)).toEqual([]);
-    expect(readRaw('wrangler.jsonc')).not.toContain('// nosam:managed-queues:v1:');
+    expect(readRaw('wrangler.jsonc')).not.toContain('// platform:managed-queues:v1:');
   });
 
   it('reconciles a renamed framework queue without retaining the old binding', () => {
@@ -2675,13 +2675,13 @@ describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars
 }`,
     );
     const result = writeProvisionedWranglerConfig(tmpDir, {
-      vars: { __NOSAM_EMAIL_FROM: 'support@mail.acme.com' },
+      vars: { __PLATFORM_EMAIL_FROM: 'support@mail.acme.com' },
     });
     expect(result.modified).toBe(true);
     const raw = readRaw('wrangler.jsonc');
     expect(raw).toContain('"name": "acme-support", // worker name');
     expect(parseRaw('wrangler.jsonc').vars).toEqual({
-      __NOSAM_EMAIL_FROM: 'support@mail.acme.com',
+      __PLATFORM_EMAIL_FROM: 'support@mail.acme.com',
     });
   });
 
@@ -2691,17 +2691,17 @@ describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars
       `{
   "vars": {
     "APP_ENV": "production", // user var
-    "__NOSAM_EMAIL_FROM": "old@mail.acme.com",
+    "__PLATFORM_EMAIL_FROM": "old@mail.acme.com",
   },
 }`,
     );
-    const patch = { vars: { __NOSAM_EMAIL_FROM: 'support@mail.acme.com' } };
+    const patch = { vars: { __PLATFORM_EMAIL_FROM: 'support@mail.acme.com' } };
     expect(writeProvisionedWranglerConfig(tmpDir, patch).modified).toBe(true);
     const raw = readRaw('wrangler.jsonc');
     expect(raw).toContain('// user var');
     expect(parseRaw('wrangler.jsonc').vars).toEqual({
       APP_ENV: 'production',
-      __NOSAM_EMAIL_FROM: 'support@mail.acme.com',
+      __PLATFORM_EMAIL_FROM: 'support@mail.acme.com',
     });
     expect(writeProvisionedWranglerConfig(tmpDir, patch).modified).toBe(false);
     expect(readRaw('wrangler.jsonc')).toBe(raw);
@@ -2710,18 +2710,18 @@ describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars
   it('vars: fails closed when the key is already another binding’s name, or when vars is not an object — no write', () => {
     setup(
       'wrangler.jsonc',
-      `{ "kv_namespaces": [{ "binding": "__NOSAM_EMAIL_FROM", "id": "abc" }] }`,
+      `{ "kv_namespaces": [{ "binding": "__PLATFORM_EMAIL_FROM", "id": "abc" }] }`,
     );
     let before = readRaw('wrangler.jsonc');
     expect(() =>
-      writeProvisionedWranglerConfig(tmpDir, { vars: { __NOSAM_EMAIL_FROM: 'x@y' } }),
-    ).toThrow(/cannot write var "__NOSAM_EMAIL_FROM".*already used by a KV Namespace binding/s);
+      writeProvisionedWranglerConfig(tmpDir, { vars: { __PLATFORM_EMAIL_FROM: 'x@y' } }),
+    ).toThrow(/cannot write var "__PLATFORM_EMAIL_FROM".*already used by a KV Namespace binding/s);
     expect(readRaw('wrangler.jsonc')).toBe(before);
 
     setup('wrangler.jsonc', `{ "vars": ["not", "an", "object"] }`);
     before = readRaw('wrangler.jsonc');
     expect(() =>
-      writeProvisionedWranglerConfig(tmpDir, { vars: { __NOSAM_EMAIL_FROM: 'x@y' } }),
+      writeProvisionedWranglerConfig(tmpDir, { vars: { __PLATFORM_EMAIL_FROM: 'x@y' } }),
     ).toThrow(/"vars" must be an object mapping names to values/);
     expect(readRaw('wrangler.jsonc')).toBe(before);
   });
@@ -2743,7 +2743,7 @@ describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars
     const patch = {
       sendEmail: { name: 'SEND_EMAIL' },
       addresses: ['support@mail.acme.com'],
-      vars: { __NOSAM_EMAIL_FROM: 'support@mail.acme.com' },
+      vars: { __PLATFORM_EMAIL_FROM: 'support@mail.acme.com' },
     };
     expect(writeProvisionedWranglerConfig(tmpDir, patch).modified).toBe(true);
     const raw = readRaw('wrangler.jsonc');
@@ -2757,7 +2757,7 @@ describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars
     }
     expect(parseRaw('wrangler.jsonc')).toEqual({
       name: 'acme-support',
-      vars: { APP_ENV: 'production', __NOSAM_EMAIL_FROM: 'support@mail.acme.com' },
+      vars: { APP_ENV: 'production', __PLATFORM_EMAIL_FROM: 'support@mail.acme.com' },
       kv_namespaces: [{ binding: 'KV', id: 'abc' }],
       send_email: [{ name: 'SEND_EMAIL' }],
       addresses: ['support@mail.acme.com'],
@@ -2778,7 +2778,7 @@ describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars
     }
     expect(parseRaw('wrangler.jsonc')).toEqual({
       name: 'acme-support',
-      vars: { APP_ENV: 'production', __NOSAM_EMAIL_FROM: 'support@mail.acme.com' },
+      vars: { APP_ENV: 'production', __PLATFORM_EMAIL_FROM: 'support@mail.acme.com' },
       kv_namespaces: [{ binding: 'KV', id: 'abc' }],
       send_email: [{ name: 'SEND_EMAIL' }],
     });

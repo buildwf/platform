@@ -12,7 +12,7 @@ const ENV_PUBLIC_DIST = join(PACKAGE_ROOT, 'dist', 'runtime', 'env-public.mjs');
 const roots: Array<string> = [];
 
 function createProject(options: { withSources?: boolean; sourceDir?: string } = {}): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-prepare-cli-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-prepare-cli-'));
   roots.push(root);
 
   if (options.sourceDir) {

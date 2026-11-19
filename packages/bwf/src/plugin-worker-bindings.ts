@@ -242,10 +242,10 @@ export function mergeWorkerBindings(
   if (aiBindingName !== 'AI' || config.ai?.gateway) {
     const vars = (result.vars as Record<string, string>) ?? {};
     if (aiBindingName !== 'AI') {
-      vars.__NOSAM_AI_BINDING = aiBindingName;
+      vars.__PLATFORM_AI_BINDING = aiBindingName;
     }
     if (config.ai?.gateway) {
-      vars.__NOSAM_AI_GATEWAY = config.ai.gateway;
+      vars.__PLATFORM_AI_GATEWAY = config.ai.gateway;
     }
     result.vars = vars;
   }
@@ -280,11 +280,11 @@ export function mergeWorkerBindings(
     }
   }
 
-  // Serve only: on build the root wrangler config owns __NOSAM_EMAIL_FROM, which
+  // Serve only: on build the root wrangler config owns __PLATFORM_EMAIL_FROM, which
   // `bwf deploy --platform cloudflare` writes once the domain is ready.
   if (viteCommand === 'serve' && config.email?.from) {
     const vars = (result.vars as Record<string, string>) ?? {};
-    vars.__NOSAM_EMAIL_FROM = config.email.from;
+    vars.__PLATFORM_EMAIL_FROM = config.email.from;
     result.vars = vars;
   }
 
@@ -341,7 +341,7 @@ export function mergeWorkerBindings(
     const planned = appendSqliteClassMigration(
       Array.isArray(resolvedMigrations) ? resolvedMigrations : [],
       environmentWebsocketRoutes.map((route) => route.className),
-      'void-ws-v1',
+      'platform-ws-v1',
       existingDurableObjectBindings.map((binding) => binding.class_name),
     );
     if (planned.added) {
@@ -477,17 +477,17 @@ export function mergeWorkerBindings(
   }
 
   // AI — in local dev, inject bwf credentials for the HTTPS proxy path.
-  // In production, the platform adds a __NOSAM_PROXY service binding instead.
+  // In production, the platform adds a __PLATFORM_PROXY service binding instead.
   if (viteCommand === 'serve' && bindings.needsAI && !directCloudflareDestination) {
     const credentials = readBwfDevCredentials(root);
     if (credentials.status === 'ok') {
       // Prefer HTTPS proxy — inject credentials, skip direct AI binding
       const vars = (result.vars as Record<string, string>) ?? {};
-      vars.__NOSAM_TOKEN = credentials.token;
-      vars.__NOSAM_PROJECT_ID = credentials.projectId;
-      vars.__NOSAM_PROXY_URL = credentials.proxyUrl;
+      vars.__PLATFORM_TOKEN = credentials.token;
+      vars.__PLATFORM_PROJECT_ID = credentials.projectId;
+      vars.__PLATFORM_PROXY_URL = credentials.proxyUrl;
       if (credentials.accessCredentials) {
-        vars.__NOSAM_ACCESS_CREDENTIALS = credentials.accessCredentials;
+        vars.__PLATFORM_ACCESS_CREDENTIALS = credentials.accessCredentials;
       }
       result.vars = vars;
     }
@@ -504,13 +504,13 @@ export function mergeWorkerBindings(
     const credentials = readBwfDevCredentials(root);
     if (credentials.status === 'ok') {
       const vars = (result.vars as Record<string, string>) ?? {};
-      vars.__NOSAM_PROXY_URL = credentials.proxyUrl;
+      vars.__PLATFORM_PROXY_URL = credentials.proxyUrl;
       if (credentials.accessCredentials) {
-        vars.__NOSAM_ACCESS_CREDENTIALS = credentials.accessCredentials;
+        vars.__PLATFORM_ACCESS_CREDENTIALS = credentials.accessCredentials;
       }
-      vars.__NOSAM_TOKEN = credentials.token;
-      vars.__NOSAM_PROJECT_ID = credentials.projectId;
-      vars.__NOSAM_REMOTE = '1';
+      vars.__PLATFORM_TOKEN = credentials.token;
+      vars.__PLATFORM_PROJECT_ID = credentials.projectId;
+      vars.__PLATFORM_REMOTE = '1';
       result.vars = vars;
     }
   }

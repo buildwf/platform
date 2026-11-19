@@ -8,13 +8,13 @@ describe('Worker version messages from an earlier release', () => {
   it('reads the record that the old prefix wrote', () => {
     const metadata = { schema: 1, migrations: ['v1'] };
     expect(parseCloudflareVersionMessage(`void:${JSON.stringify(metadata)}`)).toEqual(metadata);
-    expect(parseCloudflareVersionMessage(`nosam:${JSON.stringify(metadata)}`)).toEqual(metadata);
+    expect(parseCloudflareVersionMessage(`platform:${JSON.stringify(metadata)}`)).toEqual(metadata);
     expect(parseCloudflareVersionMessage('other:{}')).toBeNull();
   });
 
   it('knows the old secret placeholder message', () => {
     expect(isSecretDraftMessage('void:secret-draft')).toBe(true);
-    expect(isSecretDraftMessage('nosam:secret-draft')).toBe(true);
+    expect(isSecretDraftMessage('platform:secret-draft')).toBe(true);
     expect(isSecretDraftMessage('anything else')).toBe(false);
   });
 });

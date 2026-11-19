@@ -654,11 +654,11 @@ function formatCloudflareActivationFailure(
       const accessHint = result.customRouteReadinessOrigin
         ? `\n\n${customRouteAccessHint(result.customRouteReadinessOrigin).join('\n')}`
         : '';
-      return `deploy: the atomic Worker deployment is live, but /__nosam/ready could not be verified. Inspect \`bwf project status\` and Worker logs immediately.${diagnostic}${accessHint}`;
+      return `deploy: the atomic Worker deployment is live, but /__platform/ready could not be verified. Inspect \`bwf project status\` and Worker logs immediately.${diagnostic}${accessHint}`;
     }
     case 'readiness-failed':
       return [
-        'deploy: the uploaded Worker Version did not pass /__nosam/ready.',
+        'deploy: the uploaded Worker Version did not pass /__platform/ready.',
         formatCloudflareReadinessRestoration(result),
       ].join('\n');
     case 'readiness-access-denied':
@@ -695,7 +695,7 @@ function formatCloudflareActivationFailure(
     case 'bootstrap-readiness-failed':
       return (
         [
-          'deploy: the first Worker deployment did not pass /__nosam/ready.',
+          'deploy: the first Worker deployment did not pass /__platform/ready.',
           'Cloudflare requires this bootstrap to be non-versioned, so the new Worker is already active;',
           'inspect its logs and `bwf project status` before retrying.',
         ].join('\n') + diagnostic
@@ -869,7 +869,7 @@ function workersDevReadinessRecovery(
 function formatCloudflarePublishWithoutUrl(published: string, recovery: string): string {
   return [
     `deploy: ${published}, but bwf could not determine its URL.`,
-    'bwf did not update its routes, workers.dev setting, or other triggers, and did not check /__nosam/ready.',
+    'bwf did not update its routes, workers.dev setting, or other triggers, and did not check /__platform/ready.',
     recovery,
     'Then inspect `bwf project status` before you deploy again.',
   ].join('\n');

@@ -5,7 +5,7 @@ import { ProxyR2Bucket } from './r2.ts';
 
 /**
  * Replace local D1/KV/R2 bindings with proxy-backed versions.
- * Called from the generated worker entry point when `__NOSAM_REMOTE` is set.
+ * Called from the generated worker entry point when `__PLATFORM_REMOTE` is set.
  *
  * @deprecated Internal to bwf. The generated worker calls this in remote mode.
  * `@builtbyfriends/bwf/remote` is not a supported import. Removed in the next major version.
@@ -15,9 +15,9 @@ export function createRemoteEnv(
   bindingNames?: { d1?: string; kv?: string; r2?: string },
 ): Record<string, unknown> {
   const client = new ProxyClient(
-    env.__NOSAM_PROXY_URL as string,
-    env.__NOSAM_TOKEN as string,
-    env.__NOSAM_PROJECT_ID as string,
+    env.__PLATFORM_PROXY_URL as string,
+    env.__PLATFORM_TOKEN as string,
+    env.__PLATFORM_PROJECT_ID as string,
     env,
   );
   const d1Name = bindingNames?.d1 ?? 'DB';

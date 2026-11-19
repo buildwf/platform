@@ -220,7 +220,7 @@ export function EmailProjectPage({ path, platformName, username }: AdminPageProp
         <form
           method="post"
           action={`/admin/email/${projectId}/domains/add`}
-          className="nosam-admin-inline-form"
+          className="platform-admin-inline-form"
         >
           <FormTextInput
             label="Domain"

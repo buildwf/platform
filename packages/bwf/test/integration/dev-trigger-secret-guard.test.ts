@@ -34,14 +34,14 @@ describe('dev server with the dev-trigger secret guard', () => {
   beforeAll(async () => {
     // `.native` expands Windows 8.3 names such as `RUNNER~1` in the CI temp dir;
     // Vite refuses to serve any file under a short-name path.
-    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'nosam-dev-secret-')));
+    root = realpathSync.native(mkdtempSync(join(tmpdir(), 'platform-dev-secret-')));
     mkdirSync(join(root, '.bwf'), { recursive: true });
     writeFileSync(join(root, 'index.html'), '<!doctype html><title>app</title>');
     writeFileSync(join(root, '.bwf', 'dev-trigger-token'), TOKEN);
     writeFileSync(join(root, '.bwf', 'routes.d.ts'), 'export {};\n');
     // Astro writes its background dev server output, startup hint included, here.
     mkdirSync(join(root, '.astro'), { recursive: true });
-    writeFileSync(join(root, '.astro', 'dev.log'), `x-nosam-dev-trigger: ${TOKEN}\n`);
+    writeFileSync(join(root, '.astro', 'dev.log'), `x-platform-dev-trigger: ${TOKEN}\n`);
     // Older CLI versions left the database URL of `bwf db push` / `db studio` here.
     writeFileSync(
       join(root, '.bwf', 'drizzle.config.json'),

@@ -37,7 +37,7 @@ export function cfAccessHeaders(
   } catch {
     return {};
   }
-  const encoded = env.NOSAM_ACCESS_CREDENTIALS ?? env.__NOSAM_ACCESS_CREDENTIALS;
+  const encoded = env.PLATFORM_ACCESS_CREDENTIALS ?? env.__PLATFORM_ACCESS_CREDENTIALS;
   if (typeof encoded === 'string' && encoded) {
     try {
       const records = JSON.parse(encoded) as Record<string, unknown>;
@@ -55,9 +55,9 @@ export function cfAccessHeaders(
       return {};
     }
   }
-  if (typeof env.NOSAM_ACCESS_ORIGIN === 'string' && env.NOSAM_ACCESS_ORIGIN) {
+  if (typeof env.PLATFORM_ACCESS_ORIGIN === 'string' && env.PLATFORM_ACCESS_ORIGIN) {
     try {
-      const selected = new URL(env.NOSAM_ACCESS_ORIGIN);
+      const selected = new URL(env.PLATFORM_ACCESS_ORIGIN);
       return selected.protocol === 'https:' &&
         !selected.username &&
         !selected.password &&

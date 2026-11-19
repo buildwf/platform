@@ -7,7 +7,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-p
 import { compileRouteTable, compileWorkerEntry } from '../../src/router/compile.ts';
 import type { ScanResult } from '../../src/router/scan.ts';
 
-const temporary = mkdtempSync(join(tmpdir(), 'nosam-queue-dispatch-'));
+const temporary = mkdtempSync(join(tmpdir(), 'platform-queue-dispatch-'));
 const output = join(temporary, 'dist');
 
 type QueueResult = {
@@ -56,7 +56,7 @@ function payload(queue: string): Record<string, unknown> {
 describe('generated queue dispatch', () => {
   beforeAll(async () => {
     const queuesDir = join(temporary, 'queues');
-    const routeTablePath = join(temporary, 'virtual-nosam-routes.ts');
+    const routeTablePath = join(temporary, 'virtual-platform-routes.ts');
     const workerPath = join(temporary, 'worker.ts');
     const runtimeEnvPath = join(temporary, 'runtime-env.ts');
     mkdirSync(join(queuesDir, 'nested'), { recursive: true });
@@ -99,7 +99,7 @@ describe('generated queue dispatch', () => {
     writeFileSync(
       workerPath,
       `${compileWorkerEntry({ hasQueues: true, runtimeEnvPath })}
-export { __processQueue } from "virtual:nosam-routes";\n`,
+export { __processQueue } from "virtual:platform-routes";\n`,
     );
 
     await build({
@@ -107,12 +107,12 @@ export { __processQueue } from "virtual:nosam-routes";\n`,
       logLevel: 'silent',
       plugins: [
         {
-          name: 'nosam-queue-dispatch-test',
+          name: 'platform-queue-dispatch-test',
           resolveId(id) {
             if (id === 'cloudflare:workers') {
               return '\0test-workers-entrypoint';
             }
-            return id === 'virtual:nosam-routes' ? routeTablePath : null;
+            return id === 'virtual:platform-routes' ? routeTablePath : null;
           },
           load(id) {
             if (id === '\0test-workers-entrypoint') {
@@ -219,11 +219,11 @@ export { __processQueue } from "virtual:nosam-routes";\n`,
   it.each(['emails', 'order-emails'])(
     'dispatches the hosted relay schema by exact logical name for %s',
     async (queue) => {
-      const env = { __NOSAM_PROXY_TOKEN: 'secret', calls: [] as Array<Record<string, unknown>> };
+      const env = { __PLATFORM_PROXY_TOKEN: 'secret', calls: [] as Array<Record<string, unknown>> };
       const response = await generated.default.fetch(
-        new Request('https://internal/__nosam/queue', {
+        new Request('https://internal/__platform/queue', {
           method: 'POST',
-          headers: { 'content-type': 'application/json', 'x-nosam-internal': 'secret' },
+          headers: { 'content-type': 'application/json', 'x-platform-internal': 'secret' },
           body: JSON.stringify(payload(queue)),
         }),
         env,

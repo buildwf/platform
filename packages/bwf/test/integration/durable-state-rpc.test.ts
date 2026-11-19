@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
 import { compileWorkerEntry } from '../../src/router/compile.ts';
 
 const root = join(import.meta.dirname, '..', '..', '..', '..');
-const temporary = mkdtempSync(join(tmpdir(), 'nosam-durable-rpc-'));
+const temporary = mkdtempSync(join(tmpdir(), 'platform-durable-rpc-'));
 const output = join(temporary, 'dist');
 type Runtime = { dispatchFetch(url: string): Promise<Response>; dispose(): Promise<void> };
 let runtime: Runtime;
@@ -39,9 +39,9 @@ export default defineDurableState({
       `
 import Counter from ${JSON.stringify(definition)};
 export const scheduled = async () => {};
-export const __nosamCollectPrerenderPaths = async () => [];
-export const __nosamRenderStaticNotFound = async () => new Response(null, { status: 204 });
-export const __nosamHandleInternalRoute = async () => null;
+export const __platformCollectPrerenderPaths = async () => [];
+export const __platformRenderStaticNotFound = async () => new Response(null, { status: 204 });
+export const __platformHandleInternalRoute = async () => null;
 export const __withRawEnv = (_env, fn) => fn();
 export default { async fetch(request) {
   const url = new URL(request.url);
@@ -76,7 +76,7 @@ export default { async fetch(request) {
       plugins: [
         {
           name: 'durable-rpc-fixture',
-          resolveId: (id) => (id === 'virtual:nosam-routes' ? routes : null),
+          resolveId: (id) => (id === 'virtual:platform-routes' ? routes : null),
         },
       ],
       ssr: { noExternal: true },

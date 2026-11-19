@@ -337,7 +337,7 @@ function readyAccount(
     handlers: scan(['support+[ticket].ts']),
     existingSendEmail: [{ name: 'SEND_EMAIL' }],
     existingAddresses: ['support@mail.acme.com'],
-    existingVars: { __NOSAM_EMAIL_FROM: 'noreply@mail.acme.com' },
+    existingVars: { __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' },
     ...rest,
   });
 }
@@ -717,18 +717,18 @@ describe('preflightEmail', () => {
 
   it('reads the sender var as ready / stale / absent, as a config row that does not gate ready', async () => {
     const stale = await preflightEmail(
-      readyAccount({ existingVars: { __NOSAM_EMAIL_FROM: 'hello@mail.acme.com' } }).inputs,
+      readyAccount({ existingVars: { __PLATFORM_EMAIL_FROM: 'hello@mail.acme.com' } }).inputs,
     );
     expect(stale.sender.state).toBe('stale');
     expect(stale.ready).toBe(true);
     expect(renderEmailChecklist(stale)).toContain(
-      '    + Cloudflare config                           vars.__NOSAM_EMAIL_FROM: "noreply@mail.acme.com"',
+      '    + Cloudflare config                           vars.__PLATFORM_EMAIL_FROM: "noreply@mail.acme.com"',
     );
     const absent = await preflightEmail(readyAccount({ existingVars: undefined }).inputs);
     expect(absent.sender.state).toBe('absent');
     expect(absent.ready).toBe(true);
     expect(renderEmailChecklist(absent)).toContain(
-      '    sender    noreply@mail.acme.com  (vars.__NOSAM_EMAIL_FROM absent)',
+      '    sender    noreply@mail.acme.com  (vars.__PLATFORM_EMAIL_FROM absent)',
     );
   });
 
@@ -1325,13 +1325,13 @@ describe('renderEmailChecklist', () => {
         '    sending   mail.acme.com  not onboarded',
         '    rules     support@mail.acme.com → acme-support   (absent)',
         '    binding   SEND_EMAIL             (absent)',
-        '    sender    noreply@mail.acme.com  (vars.__NOSAM_EMAIL_FROM absent)',
+        '    sender    noreply@mail.acme.com  (vars.__PLATFORM_EMAIL_FROM absent)',
         '',
         '  This changes YOUR Cloudflare account. acme.com itself is not touched.',
         '    + enable Email Routing on mail.acme.com       Cloudflare writes and locks 3 MX + 1 SPF record there',
         '    + turn on subaddressing for acme.com          support+anything@ reaches support@',
         '    + onboard mail.acme.com for Email Sending     MX/SPF/DKIM on cf-bounce.mail.acme.com, _dmarc.mail.acme.com (p=reject)',
-        '    + Cloudflare config                           send_email: [{ name: "SEND_EMAIL" }], addresses: ["support@mail.acme.com"], vars.__NOSAM_EMAIL_FROM: "noreply@mail.acme.com"',
+        '    + Cloudflare config                           send_email: [{ name: "SEND_EMAIL" }], addresses: ["support@mail.acme.com"], vars.__PLATFORM_EMAIL_FROM: "noreply@mail.acme.com"',
         '    + routing rule (created on deploy)            support@mail.acme.com → acme-support',
         '    ! email/_default.ts                           a catch-all exists only on an apex; other @mail.acme.com mail bounces',
       ].join('\n'),
@@ -1396,7 +1396,7 @@ describe('applyEmailSetup', () => {
     expect(out.inboundReady).toBe(true);
     expect(out.patch).toEqual({
       sendEmail: { name: 'SEND_EMAIL' },
-      vars: { __NOSAM_EMAIL_FROM: 'noreply@mail.acme.com' },
+      vars: { __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' },
       addresses: ['support@mail.acme.com'],
     });
     expect(out.lines).toEqual([
@@ -1543,7 +1543,7 @@ describe('applyEmailSetup', () => {
     expect(out.inboundReady).toBe(false);
     expect(out.patch).toEqual({
       sendEmail: { name: 'SEND_EMAIL' },
-      vars: { __NOSAM_EMAIL_FROM: 'noreply@mail.acme.com' },
+      vars: { __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' },
       addresses: null,
     });
     expect(out.lines).toEqual([
@@ -1710,7 +1710,7 @@ describe('applyEmailSetup', () => {
     expect(out.lines).toContain(`    ${SENDING_FREE_PLAN_HINT}`);
     expect(out.patch).toEqual({
       sendEmail: { name: 'SEND_EMAIL' },
-      vars: { __NOSAM_EMAIL_FROM: 'noreply@mail.acme.com' },
+      vars: { __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' },
       addresses: ['support@mail.acme.com'],
     });
 
@@ -1783,7 +1783,7 @@ describe('applyEmailSetup', () => {
     expect(fetchCalls).toEqual([]);
     expect(out.patch).toEqual({
       sendEmail: { name: 'SEND_EMAIL' },
-      vars: { __NOSAM_EMAIL_FROM: 'noreply@mail.acme.com' },
+      vars: { __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' },
       addresses: ['support@mail.acme.com'],
     });
   });
@@ -1860,9 +1860,9 @@ describe('findEmailConfigConflicts', () => {
       'Cloudflare config already uses SEND_EMAIL as a KV Namespace binding; rename it in bwf.config.ts (bwf writes SEND_EMAIL into send_email)',
     ]);
     expect(
-      findEmailConfigConflicts({ kv_namespaces: [{ binding: '__NOSAM_EMAIL_FROM', id: 'x' }] }),
+      findEmailConfigConflicts({ kv_namespaces: [{ binding: '__PLATFORM_EMAIL_FROM', id: 'x' }] }),
     ).toEqual([
-      'Cloudflare config already uses __NOSAM_EMAIL_FROM as a KV Namespace binding; rename it in bwf.config.ts (bwf writes __NOSAM_EMAIL_FROM into vars)',
+      'Cloudflare config already uses __PLATFORM_EMAIL_FROM as a KV Namespace binding; rename it in bwf.config.ts (bwf writes __PLATFORM_EMAIL_FROM into vars)',
     ]);
     expect(findEmailConfigConflicts({ send_email: { name: 'SEND_EMAIL' } })).toEqual([
       expect.stringContaining('"send_email"'),

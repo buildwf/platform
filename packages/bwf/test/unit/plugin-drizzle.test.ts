@@ -24,7 +24,7 @@ const fakeStateKeys: Array<string> = [];
 const warnMock = vi.mocked(bwfWarn);
 
 function createProjectRoot(options?: { schema?: boolean }): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-drizzle-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-drizzle-'));
   if (options?.schema !== false) {
     mkdirSync(join(root, 'db'), { recursive: true });
     writeFileSync(join(root, 'db', 'schema.ts'), 'export {};\n');
@@ -66,8 +66,8 @@ async function loadExecutableDbModule(
   const root = createProjectRoot({ schema: dialect !== 'sqlite' });
   const plugin = drizzlePlugin(root, false, dialect, { forceVirtualDb: true });
   const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
-  let code = load.call({}, '\0virtual:nosam-db');
-  const stateKey = `__nosam_db_scope_${dialect}_${crypto.randomUUID().replaceAll('-', '')}`;
+  let code = load.call({}, '\0virtual:platform-db');
+  const stateKey = `__platform_db_scope_${dialect}_${crypto.randomUUID().replaceAll('-', '')}`;
   const state: FakeDatabaseState = { nextId: 0, pools: [], instances: [], clients: [] };
   (globalThis as Record<string, unknown>)[stateKey] = state;
   fakeStateKeys.push(stateKey);
@@ -210,12 +210,12 @@ async function loadDriverDbModule(dialect: 'postgresql' | 'mysql'): Promise<{
   const plugin = drizzlePlugin(root, false, dialect, { forceVirtualDb: true });
   const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
   const envUrl = new URL('../../src/runtime/env.ts', import.meta.url).href;
-  const clientsKey = `__nosam_db_clients_${dialect}_${crypto.randomUUID().replaceAll('-', '')}`;
+  const clientsKey = `__platform_db_clients_${dialect}_${crypto.randomUUID().replaceAll('-', '')}`;
   const clients: Array<{ end(): unknown }> = [];
   (globalThis as Record<string, unknown>)[clientsKey] = clients;
   fakeStateKeys.push(clientsKey);
   const code = load
-    .call({}, '\0virtual:nosam-db')
+    .call({}, '\0virtual:platform-db')
     .replace(
       /^import \{ drizzle \} from (.*);$/m,
       (_match, driver: string) => `import { drizzle as createDrizzle } from ${driver};
@@ -252,7 +252,7 @@ async function loadMySqlDbModule(): Promise<{
   const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
   const envUrl = new URL('../../src/runtime/env.ts', import.meta.url).href;
   const code = load
-    .call({}, '\0virtual:nosam-db')
+    .call({}, '\0virtual:platform-db')
     .replace(
       /^import \{ (getRuntimeBinding, getRuntimeRequestResource) \} from .*;$/m,
       (_match, imports: string) => `import { ${imports} } from ${JSON.stringify(envUrl)};`,
@@ -598,7 +598,7 @@ describe('drizzlePlugin db typing generation', () => {
     const plugin = drizzlePlugin(root, false, dialect);
     const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
 
-    const code = load.call({}, '\0virtual:nosam-db');
+    const code = load.call({}, '\0virtual:platform-db');
     const specifiers = Array.from(
       code.matchAll(/\b(?:from|import)\s*\(?\s*("[^"]+")/g),
       (match) => JSON.parse(match[1]!) as string,
@@ -622,7 +622,7 @@ describe('drizzlePlugin db typing generation', () => {
       const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
       const envUrl = new URL('../../src/runtime/env.ts', import.meta.url).href;
       const code = load
-        .call({}, '\0virtual:nosam-db')
+        .call({}, '\0virtual:platform-db')
         .replace(
           /^import \{ (getRuntimeBinding, getRuntimeRequestResource) \} from .*;$/m,
           (_match, imports: string) => `import { ${imports} } from ${JSON.stringify(envUrl)};`,
@@ -725,7 +725,7 @@ export const requestPoolConfig = (env) =>
       const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
       const envUrl = new URL('../../src/runtime/env.ts', import.meta.url).href;
       const code = load
-        .call({}, '\0virtual:nosam-db')
+        .call({}, '\0virtual:platform-db')
         .replace(
           /^import \{ (getRuntimeBinding, getRuntimeRequestResource) \} from .*;$/m,
           (_match, imports: string) => `import { ${imports} } from ${JSON.stringify(envUrl)};`,
@@ -779,9 +779,9 @@ export const requestPoolOptions = (env) =>
       },
     );
 
-    expect(resolved).toBe('\0virtual:nosam-db-schema');
+    expect(resolved).toBe('\0virtual:platform-db-schema');
 
-    const code = load.call({}, '\0virtual:nosam-db-schema');
+    const code = load.call({}, '\0virtual:platform-db-schema');
     expect(code).toContain('export const db = {};');
     expect(code).toContain(
       'export { sql, eq, ne, gt, gte, lt, lte, and, or, not, desc, asc, like, ilike, notLike, inArray, notInArray, isNull, isNotNull, between, notBetween, exists, notExists, count, sum, avg, min, max }',
@@ -798,7 +798,7 @@ export const requestPoolOptions = (env) =>
       const plugin = drizzlePlugin(root, false, dialect);
       const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
 
-      const code = load.call({}, '\0virtual:nosam-db').trim();
+      const code = load.call({}, '\0virtual:platform-db').trim();
 
       expect(code.startsWith('export { sql, eq, ')).toBe(true);
       expect(code).toContain('import * as schema');
@@ -820,9 +820,9 @@ export const requestPoolOptions = (env) =>
         isEntry: false,
       });
 
-    expect(resolve(join(root, 'db', 'schema', 'todos.ts'))).toBe('\0virtual:nosam-db-schema');
-    expect(resolve(join(root, 'db', 'schema-helpers.ts'))).toBe('\0virtual:nosam-db');
-    expect(resolve(join(root, 'routes', 'api', 'todos', 'index.ts'))).toBe('\0virtual:nosam-db');
+    expect(resolve(join(root, 'db', 'schema', 'todos.ts'))).toBe('\0virtual:platform-db-schema');
+    expect(resolve(join(root, 'db', 'schema-helpers.ts'))).toBe('\0virtual:platform-db');
+    expect(resolve(join(root, 'routes', 'api', 'todos', 'index.ts'))).toBe('\0virtual:platform-db');
   });
 
   it('can virtualize bwf/db without a user schema when forced', () => {
@@ -844,7 +844,7 @@ export const requestPoolOptions = (env) =>
       },
     );
 
-    expect(resolved).toBe('\0virtual:nosam-db');
+    expect(resolved).toBe('\0virtual:platform-db');
 
     const dts = readFileSync(join(root, '.bwf', 'db.d.ts'), 'utf8');
     expect(dts).toContain('NodePgDatabase<Record<string, never>>');
@@ -854,7 +854,7 @@ export const requestPoolOptions = (env) =>
     expect(tsconfig.compilerOptions.paths['@builtbyfriends/bwf/db']).toEqual(['./db.d.ts']);
     expect(tsconfig.compilerOptions.paths['@schema']).toBeUndefined();
 
-    const code = load.call({}, '\0virtual:nosam-db');
+    const code = load.call({}, '\0virtual:platform-db');
     expect(code).toContain('import { drizzle } from "');
     expect(code).not.toMatch(/\bschema\b/);
   });
@@ -874,7 +874,7 @@ export const requestPoolOptions = (env) =>
       resolveId.call({ environment: { name: 'ssr' } }, '@builtbyfriends/bwf/db', undefined, {
         isEntry: false,
       }),
-    ).toBe('\0virtual:nosam-db');
+    ).toBe('\0virtual:platform-db');
     expect(readFileSync(join(root, '.bwf', 'db.d.ts'), 'utf8')).toContain('Record<string, never>');
   });
 
@@ -900,9 +900,9 @@ export const requestPoolOptions = (env) =>
       },
     );
 
-    expect(resolved).toBe('\0virtual:nosam-db');
+    expect(resolved).toBe('\0virtual:platform-db');
 
-    const code = load.call({}, '\0virtual:nosam-db');
+    const code = load.call({}, '\0virtual:platform-db');
     expect(code).toContain('requireRuntimeBinding("myapp_db")');
     expect(code).not.toContain('requireRuntimeBinding("DB")');
   });

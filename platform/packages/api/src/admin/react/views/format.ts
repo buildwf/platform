@@ -40,7 +40,7 @@ export function formatDateTime(iso: string, tz?: string) {
   // text until the next React render without treating that tick as a mismatch.
   return createElement(
     'span',
-    { className: 'nosam-admin-date-time', suppressHydrationWarning: true },
+    { className: 'platform-admin-date-time', suppressHydrationWarning: true },
     `${formatted} (${ago})`,
   );
 }

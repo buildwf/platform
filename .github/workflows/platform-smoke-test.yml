@@ -17,7 +17,7 @@ permissions: {}
 
 jobs:
   check-ref:
-    if: ${{ vars.NOSAM_PLATFORM_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main' }}
+    if: ${{ vars.PLATFORM_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       # Reusable runs use the caller's ref. Reject case variants before secrets.
@@ -25,7 +25,7 @@ jobs:
         run: test "$GITHUB_REF" = 'refs/heads/main'
 
   smoke-test:
-    if: ${{ vars.NOSAM_PLATFORM_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main' }}
+    if: ${{ vars.PLATFORM_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main' }}
     needs: check-ref
     runs-on: blacksmith-4vcpu-ubuntu-2404
     # Configure all three credentials in Staging. Reusable callers must declare
@@ -65,7 +65,7 @@ jobs:
         env:
           BWF_TOKEN: ${{ secrets.BWF_TOKEN_STAGING }}
           BWF_API_URL: https://api.staging.void.cloud
-          NOSAM_ACCESS_ORIGIN: https://api.staging.void.cloud
+          PLATFORM_ACCESS_ORIGIN: https://api.staging.void.cloud
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID_STAGING }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET_STAGING }}
       - name: Prepare the hosted kitchen-sink fixture
@@ -81,9 +81,9 @@ jobs:
           BWF_TOKEN: ${{ secrets.BWF_TOKEN_STAGING }}
           BWF_API_URL: https://api.staging.void.cloud
           STAGING: '1'
-          NOSAM_ACCESS_ORIGIN: https://api.staging.void.cloud
+          PLATFORM_ACCESS_ORIGIN: https://api.staging.void.cloud
           # Prerendering uses the separately protected resource proxy.
-          NOSAM_ACCESS_CREDENTIALS: >-
+          PLATFORM_ACCESS_CREDENTIALS: >-
             {"https://proxy.staging.void.cloud": {
               "CF_ACCESS_CLIENT_ID": ${{ toJSON(secrets.CF_ACCESS_CLIENT_ID_STAGING) }},
               "CF_ACCESS_CLIENT_SECRET": ${{ toJSON(secrets.CF_ACCESS_CLIENT_SECRET_STAGING) }}

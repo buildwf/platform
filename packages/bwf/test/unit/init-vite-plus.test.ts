@@ -8,7 +8,7 @@ import { SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES } from '../../src/cli/template.ts';
 
 const roots: Array<string> = [];
 function temporaryProject(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-viteplus-config-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-viteplus-config-'));
   roots.push(root);
   return root;
 }

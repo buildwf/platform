@@ -30,7 +30,7 @@ export function parseDeployArgs(
     if (message.includes('argument missing') || message.includes('argument is ambiguous')) {
       const optionMatch = message.match(/Option '(--[a-z-]+)/);
       if (optionMatch?.[1] === '--platform') {
-        throw new Error("deploy: --platform requires a value ('cloudflare' or 'nosam').");
+        throw new Error("deploy: --platform requires a value ('cloudflare' or 'platform').");
       }
       throw new Error('deploy: --project requires a slug.');
     }
@@ -75,8 +75,8 @@ export function parseDeployArgs(
 
   const platformValue =
     typeof parsed.values.platform === 'string' ? parsed.values.platform : undefined;
-  if (platformValue !== undefined && platformValue !== 'cloudflare' && platformValue !== 'nosam') {
-    throw new Error("deploy: --platform must be 'cloudflare' or 'nosam'.");
+  if (platformValue !== undefined && platformValue !== 'cloudflare' && platformValue !== 'platform') {
+    throw new Error("deploy: --platform must be 'cloudflare' or 'platform'.");
   }
   const platform = platformValue;
 

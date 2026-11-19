@@ -144,7 +144,7 @@ describe('renderRestartingPage', () => {
     const html = renderRestartingPage('/', '"</script><script>alert(1)</script>');
     expect(html).not.toContain('</script><script>alert(1)');
     expect(pageTokenOf(html)).toBe('"</script><script>alert(1)</script>');
-    expect(html).toContain('"x-nosam-restart":token');
+    expect(html).toContain('"x-platform-restart":token');
   });
 
   it('no longer reads the return value from location in the client', () => {
@@ -172,31 +172,31 @@ describe('restartPlugin middlewares', () => {
   });
 
   it.each(['javascript:alert(document.domain)', '//evil.com'])(
-    'GET /__nosam/restarting?return=%s navigates to /',
+    'GET /__platform/restarting?return=%s navigates to /',
     (value) => {
       const { dispatch } = createFakeViteServer();
-      const res = dispatch('GET', `/__nosam/restarting?return=${encodeURIComponent(value)}`);
+      const res = dispatch('GET', `/__platform/restarting?return=${encodeURIComponent(value)}`);
       expect(res.status).toBe(200);
       expect(targetOf(res.body)).toBe('/');
     },
   );
 
-  it('GET /__nosam/restarting keeps the token out of the return path and the referrer', () => {
+  it('GET /__platform/restarting keeps the token out of the return path and the referrer', () => {
     const { dispatch, token } = createFakeViteServer();
     const res = dispatch(
       'GET',
-      `/__nosam/restarting?return=${encodeURIComponent('/foo?x=1')}&t=${token}`,
+      `/__platform/restarting?return=${encodeURIComponent('/foo?x=1')}&t=${token}`,
     );
     expect(targetOf(res.body)).toBe('/foo?x=1');
     expect(pageTokenOf(res.body)).toBe(token);
     expect(res.headers['Referrer-Policy']).toBe('no-referrer');
   });
 
-  it('the toast navigates to /__nosam/restarting with the server token', () => {
+  it('the toast navigates to /__platform/restarting with the server token', () => {
     const { plugin, token } = createFakeViteServer();
     expect(token).toMatch(/^[\w-]{22}$/);
     expect(loadClientModule(plugin)).toContain(
-      '"/__nosam/restarting?return=" + encodeURIComponent(location.pathname + location.search) + "&t=" + encodeURIComponent(token)',
+      '"/__platform/restarting?return=" + encodeURIComponent(location.pathname + location.search) + "&t=" + encodeURIComponent(token)',
     );
   });
 
@@ -205,25 +205,25 @@ describe('restartPlugin middlewares', () => {
   it('does not restart from a foreign navigation without Fetch Metadata', () => {
     vi.useFakeTimers();
     const { dispatch, restart } = createFakeViteServer();
-    const page = dispatch('GET', '/__nosam/restarting?return=%2F');
+    const page = dispatch('GET', '/__platform/restarting?return=%2F');
     expect(page.status).toBe(200);
-    const res = dispatch('POST', '/__nosam/restart', {
+    const res = dispatch('POST', '/__platform/restart', {
       origin: 'http://localhost:5173',
-      'x-nosam-restart': pageTokenOf(page.body),
+      'x-platform-restart': pageTokenOf(page.body),
     });
     expect(res.status).toBe(403);
     vi.runAllTimers();
     expect(restart).not.toHaveBeenCalled();
-    expect(dispatch('GET', '/__nosam/ping').status).toBe(200);
+    expect(dispatch('GET', '/__platform/ping').status).toBe(200);
   });
 
   it('restarts from the toast navigation without Fetch Metadata', () => {
     vi.useFakeTimers();
     const { dispatch, restart, token } = createFakeViteServer();
-    const page = dispatch('GET', `/__nosam/restarting?return=%2F&t=${encodeURIComponent(token)}`);
-    const res = dispatch('POST', '/__nosam/restart', {
+    const page = dispatch('GET', `/__platform/restarting?return=%2F&t=${encodeURIComponent(token)}`);
+    const res = dispatch('POST', '/__platform/restart', {
       origin: 'http://localhost:5173',
-      'x-nosam-restart': pageTokenOf(page.body),
+      'x-platform-restart': pageTokenOf(page.body),
     });
     expect(res.status).toBe(200);
     vi.runAllTimers();
@@ -232,11 +232,11 @@ describe('restartPlugin middlewares', () => {
 
   it.each([
     ['no token', {}],
-    ['a wrong token', { 'x-nosam-restart': 'wrong' }],
-  ])('rejects a same-origin POST /__nosam/restart with %s', (_label, headers) => {
+    ['a wrong token', { 'x-platform-restart': 'wrong' }],
+  ])('rejects a same-origin POST /__platform/restart with %s', (_label, headers) => {
     vi.useFakeTimers();
     const { dispatch, restart } = createFakeViteServer();
-    const res = dispatch('POST', '/__nosam/restart', {
+    const res = dispatch('POST', '/__platform/restart', {
       'sec-fetch-site': 'same-origin',
       origin: 'http://localhost:5173',
       ...headers,
@@ -254,26 +254,26 @@ describe('restartPlugin middlewares', () => {
     expect(second.token).not.toBe(first.token);
     expect(tokenOf(loadClientModule(first.plugin))).toBe(second.token);
     expect(
-      second.dispatch('POST', '/__nosam/restart', { 'x-nosam-restart': first.token }).status,
+      second.dispatch('POST', '/__platform/restart', { 'x-platform-restart': first.token }).status,
     ).toBe(403);
     expect(
-      second.dispatch('POST', '/__nosam/restart', { 'x-nosam-restart': second.token }).status,
+      second.dispatch('POST', '/__platform/restart', { 'x-platform-restart': second.token }).status,
     ).toBe(200);
     // A restart that failed leaves the old instance checking its own token.
     expect(
-      first.dispatch('POST', '/__nosam/restart', { 'x-nosam-restart': first.token }).status,
+      first.dispatch('POST', '/__platform/restart', { 'x-platform-restart': first.token }).status,
     ).toBe(200);
   });
 
   it.each(['cross-site', 'same-site'])(
-    'refuses GET /__nosam/restarting with Sec-Fetch-Site: %s',
+    'refuses GET /__platform/restarting with Sec-Fetch-Site: %s',
     (site) => {
       const { dispatch } = createFakeViteServer();
-      const res = dispatch('GET', '/__nosam/restarting?return=%2Ffoo', { 'sec-fetch-site': site });
+      const res = dispatch('GET', '/__platform/restarting?return=%2Ffoo', { 'sec-fetch-site': site });
       expect(res.status).toBe(403);
       expect(res.headers['Content-Type']).toBe('text/plain');
       expect(res.body).not.toContain('var target=');
-      expect(res.body).not.toContain('fetch("/__nosam/restart"');
+      expect(res.body).not.toContain('fetch("/__platform/restart"');
     },
   );
 
@@ -281,17 +281,17 @@ describe('restartPlugin middlewares', () => {
     ['Sec-Fetch-Site: same-origin', { 'sec-fetch-site': 'same-origin' }],
     ['Sec-Fetch-Site: none', { 'sec-fetch-site': 'none' }],
     ['no Sec-Fetch-Site', {}],
-  ])('serves GET /__nosam/restarting with %s', (_label, headers) => {
+  ])('serves GET /__platform/restarting with %s', (_label, headers) => {
     const { dispatch } = createFakeViteServer();
-    const res = dispatch('GET', '/__nosam/restarting?return=%2Ffoo', headers);
+    const res = dispatch('GET', '/__platform/restarting?return=%2Ffoo', headers);
     expect(res.status).toBe(200);
     expect(res.headers['Cache-Control']).toBe('no-store');
     expect(targetOf(res.body)).toBe('/foo');
   });
 
-  it('serves GET /__nosam/restarting with a request url that does not parse', () => {
+  it('serves GET /__platform/restarting with a request url that does not parse', () => {
     const { dispatch } = createFakeViteServer();
-    const res = dispatch('GET', '/__nosam/restarting', {}, false, '//[');
+    const res = dispatch('GET', '/__platform/restarting', {}, false, '//[');
     expect(res.status).toBe(200);
     expect(targetOf(res.body)).toBe('/');
   });
@@ -306,14 +306,14 @@ describe('restartPlugin middlewares', () => {
     ['a different port', { origin: 'http://localhost:3000' }],
     ['a different scheme', { origin: 'https://localhost:5173' }],
     ['a null Origin', { origin: 'null' }],
-  ])('rejects a POST /__nosam/restart with %s', (_label, headers) => {
+  ])('rejects a POST /__platform/restart with %s', (_label, headers) => {
     vi.useFakeTimers();
     const { dispatch, restart, token } = createFakeViteServer();
-    const res = dispatch('POST', '/__nosam/restart', { ...headers, 'x-nosam-restart': token });
+    const res = dispatch('POST', '/__platform/restart', { ...headers, 'x-platform-restart': token });
     expect(res.status).toBe(403);
     vi.runAllTimers();
     expect(restart).not.toHaveBeenCalled();
-    expect(dispatch('GET', '/__nosam/ping').status).toBe(200);
+    expect(dispatch('GET', '/__platform/ping').status).toBe(200);
   });
 
   it.each([
@@ -323,12 +323,12 @@ describe('restartPlugin middlewares', () => {
     ],
     ['a matching Origin', { origin: 'http://localhost:5173' }],
     ['no browser origin headers', {}],
-  ])('accepts a POST /__nosam/restart with the token and %s', (_label, headers) => {
+  ])('accepts a POST /__platform/restart with the token and %s', (_label, headers) => {
     vi.useFakeTimers();
     const { dispatch, restart, token } = createFakeViteServer();
-    const res = dispatch('POST', '/__nosam/restart', { ...headers, 'x-nosam-restart': token });
+    const res = dispatch('POST', '/__platform/restart', { ...headers, 'x-platform-restart': token });
     expect(res.status).toBe(200);
-    expect(dispatch('GET', '/__nosam/ping').status).toBe(503);
+    expect(dispatch('GET', '/__platform/ping').status).toBe(503);
     vi.runAllTimers();
     expect(restart).toHaveBeenCalledOnce();
   });
@@ -339,15 +339,15 @@ describe('restartPlugin middlewares', () => {
     expect(
       dispatch(
         'POST',
-        '/__nosam/restart',
-        { origin: 'https://localhost:5173', 'x-nosam-restart': token },
+        '/__platform/restart',
+        { origin: 'https://localhost:5173', 'x-platform-restart': token },
         true,
       ).status,
     ).toBe(200);
   });
 
-  it('still answers 405 to a non-POST /__nosam/restart', () => {
+  it('still answers 405 to a non-POST /__platform/restart', () => {
     const { dispatch } = createFakeViteServer();
-    expect(dispatch('GET', '/__nosam/restart').status).toBe(405);
+    expect(dispatch('GET', '/__platform/restart').status).toBe(405);
   });
 });

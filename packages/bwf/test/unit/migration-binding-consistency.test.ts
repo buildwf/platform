@@ -62,10 +62,10 @@ describe('buildBwfManifest migration-binding consistency', () => {
 
     expect(manifest.live).toEqual({
       bindingName: 'BWF_LIVE',
-      className: 'NosamLiveStreamDurableObject',
+      className: 'PlatformLiveStreamDurableObject',
       storage: 'sqlite',
-      classes: ['NosamLiveStreamDurableObject'],
-      migrations: [{ tag: 'live-v1', newSqliteClasses: ['NosamLiveStreamDurableObject'] }],
+      classes: ['PlatformLiveStreamDurableObject'],
+      migrations: [{ tag: 'live-v1', newSqliteClasses: ['PlatformLiveStreamDurableObject'] }],
     });
   });
 
@@ -75,17 +75,17 @@ describe('buildBwfManifest migration-binding consistency', () => {
       options: {
         live: {
           bindingName: 'BWF_LIVE_abcd1234',
-          className: 'NosamLiveStreamDurableObject_abcd1234',
+          className: 'PlatformLiveStreamDurableObject_abcd1234',
         },
       },
     });
 
     expect(manifest.live).toEqual({
       bindingName: 'BWF_LIVE_abcd1234',
-      className: 'NosamLiveStreamDurableObject_abcd1234',
+      className: 'PlatformLiveStreamDurableObject_abcd1234',
       storage: 'sqlite',
-      classes: ['NosamLiveStreamDurableObject_abcd1234'],
-      migrations: [{ tag: 'live-v1', newSqliteClasses: ['NosamLiveStreamDurableObject_abcd1234'] }],
+      classes: ['PlatformLiveStreamDurableObject_abcd1234'],
+      migrations: [{ tag: 'live-v1', newSqliteClasses: ['PlatformLiveStreamDurableObject_abcd1234'] }],
     });
   });
 
@@ -133,14 +133,14 @@ describe('createMigrationHandler with missing D1 binding', () => {
   const proxyToken = 'test-token-123';
 
   function makeRequest() {
-    return new Request('https://example.com/__nosam/migrate', {
+    return new Request('https://example.com/__platform/migrate', {
       method: 'POST',
-      headers: { 'x-nosam-internal': proxyToken },
+      headers: { 'x-platform-internal': proxyToken },
     });
   }
 
   it('returns error when env.DB is undefined', async () => {
-    const handler = createMigrationHandler({ __NOSAM_PROXY_TOKEN: proxyToken }, sampleMigrations);
+    const handler = createMigrationHandler({ __PLATFORM_PROXY_TOKEN: proxyToken }, sampleMigrations);
 
     const response = await handler(makeRequest());
     const body = (await response.json()) as MigrationResponse;
@@ -153,7 +153,7 @@ describe('createMigrationHandler with missing D1 binding', () => {
 
   it('returns error when env.DB is null', async () => {
     const handler = createMigrationHandler(
-      { __NOSAM_PROXY_TOKEN: proxyToken, DB: null },
+      { __PLATFORM_PROXY_TOKEN: proxyToken, DB: null },
       sampleMigrations,
     );
 
@@ -166,11 +166,11 @@ describe('createMigrationHandler with missing D1 binding', () => {
   });
 
   it('rejects requests with wrong proxy token', async () => {
-    const handler = createMigrationHandler({ __NOSAM_PROXY_TOKEN: proxyToken }, sampleMigrations);
+    const handler = createMigrationHandler({ __PLATFORM_PROXY_TOKEN: proxyToken }, sampleMigrations);
 
-    const badRequest = new Request('https://example.com/__nosam/migrate', {
+    const badRequest = new Request('https://example.com/__platform/migrate', {
       method: 'POST',
-      headers: { 'x-nosam-internal': 'wrong-token' },
+      headers: { 'x-platform-internal': 'wrong-token' },
     });
     const response = await handler(badRequest);
     const body = (await response.json()) as MigrationResponse;
@@ -181,9 +181,9 @@ describe('createMigrationHandler with missing D1 binding', () => {
   });
 
   it('rejects requests with no proxy token', async () => {
-    const handler = createMigrationHandler({ __NOSAM_PROXY_TOKEN: proxyToken }, sampleMigrations);
+    const handler = createMigrationHandler({ __PLATFORM_PROXY_TOKEN: proxyToken }, sampleMigrations);
 
-    const noAuthRequest = new Request('https://example.com/__nosam/migrate', {
+    const noAuthRequest = new Request('https://example.com/__platform/migrate', {
       method: 'POST',
     });
     const response = await handler(noAuthRequest);
@@ -320,14 +320,14 @@ describe('createMigrationHandler D1 execution', () => {
           ? new Error('D1_EXEC_ERROR: Error in line 1: CREATE TABLE notes (: incomplete input')
           : undefined,
     });
-    const handler = createMigrationHandler({ __NOSAM_PROXY_TOKEN: proxyToken, DB: db }, [
+    const handler = createMigrationHandler({ __PLATFORM_PROXY_TOKEN: proxyToken, DB: db }, [
       { name: '0001_semicolon.sql', sql },
     ]);
 
     const response = await handler(
-      new Request('https://example.com/__nosam/migrate', {
+      new Request('https://example.com/__platform/migrate', {
         method: 'POST',
-        headers: { 'x-nosam-internal': proxyToken },
+        headers: { 'x-platform-internal': proxyToken },
       }),
     );
     const body = (await response.json()) as MigrationResponse;
@@ -355,14 +355,14 @@ describe('createMigrationHandler D1 execution', () => {
       'END;',
     ].join('\n');
     const { calls, db } = createMockD1();
-    const handler = createMigrationHandler({ __NOSAM_PROXY_TOKEN: proxyToken, DB: db }, [
+    const handler = createMigrationHandler({ __PLATFORM_PROXY_TOKEN: proxyToken, DB: db }, [
       { name: '0001_trigger.sql', sql },
     ]);
 
     const response = await handler(
-      new Request('https://example.com/__nosam/migrate', {
+      new Request('https://example.com/__platform/migrate', {
         method: 'POST',
-        headers: { 'x-nosam-internal': proxyToken },
+        headers: { 'x-platform-internal': proxyToken },
       }),
     );
     const body = (await response.json()) as MigrationResponse;
@@ -375,7 +375,7 @@ describe('createMigrationHandler D1 execution', () => {
 
   it('runs protocol v2 legacy multi-statement migrations through one D1 batch', async () => {
     const createTable = ['CREATE TABLE notes (', '  id INTEGER PRIMARY KEY', ');'].join('\n');
-    const sql = `-- nosam:allow-unsplit-multi-statement\n${createTable}\nINSERT INTO notes DEFAULT VALUES;`;
+    const sql = `-- platform:allow-unsplit-multi-statement\n${createTable}\nINSERT INTO notes DEFAULT VALUES;`;
     const migrations = [{ name: '0001_legacy.sql', sql }];
     const { calls, db } = createMockD1({
       failExec: (executedSql) =>
@@ -384,16 +384,16 @@ describe('createMigrationHandler D1 execution', () => {
           : undefined,
     });
     const handler = createMigrationHandler(
-      { __NOSAM_PROXY_TOKEN: proxyToken, DB: db },
+      { __PLATFORM_PROXY_TOKEN: proxyToken, DB: db },
       migrations,
       undefined,
       buildMigrationPlanBundle(migrations),
     );
 
     const response = await handler(
-      new Request('https://example.com/__nosam/migrate/app', {
+      new Request('https://example.com/__platform/migrate/app', {
         body: JSON.stringify({ attemptId: 'attempt_legacy', deploymentId: 'dpl_1' }),
-        headers: { 'content-type': 'application/json', 'x-nosam-internal': proxyToken },
+        headers: { 'content-type': 'application/json', 'x-platform-internal': proxyToken },
         method: 'POST',
       }),
     );
@@ -404,7 +404,7 @@ describe('createMigrationHandler D1 execution', () => {
     expect(body.confirmedApplied).toEqual(['0001_legacy.sql']);
     expect(calls.exec).toEqual([]);
     expect(calls.batchSql).toContainEqual([
-      `-- nosam:allow-unsplit-multi-statement\n${createTable}`,
+      `-- platform:allow-unsplit-multi-statement\n${createTable}`,
       'INSERT INTO notes DEFAULT VALUES;',
       'INSERT OR IGNORE INTO _void_migrations (name, applied_at) VALUES (?, ?)',
     ]);
@@ -423,14 +423,14 @@ describe('createMigrationHandler D1 execution', () => {
           ? new Error('D1_EXEC_ERROR: Error in line 1: CREATE TABLE `posts` (: incomplete input')
           : undefined,
     });
-    const handler = createMigrationHandler({ __NOSAM_PROXY_TOKEN: proxyToken, DB: db }, [
+    const handler = createMigrationHandler({ __PLATFORM_PROXY_TOKEN: proxyToken, DB: db }, [
       { name: '0000_generated.sql', sql },
     ]);
 
     const response = await handler(
-      new Request('https://example.com/__nosam/migrate', {
+      new Request('https://example.com/__platform/migrate', {
         method: 'POST',
-        headers: { 'x-nosam-internal': proxyToken },
+        headers: { 'x-platform-internal': proxyToken },
       }),
     );
     const body = (await response.json()) as MigrationResponse;
@@ -464,14 +464,14 @@ describe('createMigrationHandler D1 execution', () => {
       ');',
     ].join('\n');
     const { calls, db } = createMockD1();
-    const handler = createMigrationHandler({ __NOSAM_PROXY_TOKEN: proxyToken, DB: db }, [
+    const handler = createMigrationHandler({ __PLATFORM_PROXY_TOKEN: proxyToken, DB: db }, [
       { name: '0001_drizzle.sql', sql },
     ]);
 
     const response = await handler(
-      new Request('https://example.com/__nosam/migrate', {
+      new Request('https://example.com/__platform/migrate', {
         method: 'POST',
-        headers: { 'x-nosam-internal': proxyToken },
+        headers: { 'x-platform-internal': proxyToken },
       }),
     );
     const body = (await response.json()) as MigrationResponse;
@@ -504,14 +504,14 @@ describe('createMigrationHandler D1 execution', () => {
       '/* --> statement-breakpoint */',
     ].join('\n');
     const { calls, db } = createMockD1();
-    const handler = createMigrationHandler({ __NOSAM_PROXY_TOKEN: proxyToken, DB: db }, [
+    const handler = createMigrationHandler({ __PLATFORM_PROXY_TOKEN: proxyToken, DB: db }, [
       { name: '0001_literal_marker.sql', sql },
     ]);
 
     const response = await handler(
-      new Request('https://example.com/__nosam/migrate', {
+      new Request('https://example.com/__platform/migrate', {
         method: 'POST',
-        headers: { 'x-nosam-internal': proxyToken },
+        headers: { 'x-platform-internal': proxyToken },
       }),
     );
     const body = (await response.json()) as MigrationResponse;
@@ -537,16 +537,16 @@ describe('createMigrationHandler D1 execution', () => {
     const migrations = [{ name: '0001_users.sql', sql }];
     const { calls, db } = createMockD1();
     const handler = createMigrationHandler(
-      { __NOSAM_PROXY_TOKEN: proxyToken, DB: db },
+      { __PLATFORM_PROXY_TOKEN: proxyToken, DB: db },
       migrations,
       undefined,
       buildMigrationPlanBundle(migrations),
     );
 
     const response = await handler(
-      new Request('https://example.com/__nosam/migrate/app', {
+      new Request('https://example.com/__platform/migrate/app', {
         body: JSON.stringify({ attemptId: 'attempt_1', deploymentId: 'dpl_1' }),
-        headers: { 'content-type': 'application/json', 'x-nosam-internal': proxyToken },
+        headers: { 'content-type': 'application/json', 'x-platform-internal': proxyToken },
         method: 'POST',
       }),
     );
@@ -569,16 +569,16 @@ describe('createMigrationHandler D1 execution', () => {
     const migrations: Array<MigrationFile> = [];
     const { db, getLockAttemptId } = createMockD1({ lockAttemptId: 'attempt_orphan' });
     const handler = createMigrationHandler(
-      { __NOSAM_PROXY_TOKEN: proxyToken, DB: db },
+      { __PLATFORM_PROXY_TOKEN: proxyToken, DB: db },
       migrations,
       undefined,
       buildMigrationPlanBundle(migrations),
     );
 
     const response = await handler(
-      new Request('https://example.com/__nosam/migrate/app', {
+      new Request('https://example.com/__platform/migrate/app', {
         body: JSON.stringify({ attemptId: 'attempt_new', deploymentId: 'dpl_new' }),
-        headers: { 'content-type': 'application/json', 'x-nosam-internal': proxyToken },
+        headers: { 'content-type': 'application/json', 'x-platform-internal': proxyToken },
         method: 'POST',
       }),
     );

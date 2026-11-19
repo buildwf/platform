@@ -1,4 +1,4 @@
-# @nosamcloud/dashboard
+# @platform-service/dashboard
 
 Optional authentication frontend for a Platform, built as a React SPA
 with Platform server routes. The administrator UI is served by the API Worker.
@@ -8,7 +8,7 @@ with Platform server routes. The administrator UI is served by the API Worker.
 - **React SPA** - `index.html` + `src/`, with `bwfPlugin()` serving `routes/`. Each page
   loads its data from an internal `/api/page/*` endpoint (to be replaced by eeao procedures).
 - **Auth** - enabled platform login methods via the API's `/auth/login` flow. The JWT is
-  stored in an httpOnly cookie (`nosam_token`). Middleware validates the token with
+  stored in an httpOnly cookie (`platform_token`). Middleware validates the token with
   `GET /me`.
 - **Styling** - Dashboard-local CSS, fonts, assets, and React components in `ui/`,
   with Astryx's neutral theme for buttons, stacks, and the account menu.
@@ -30,14 +30,14 @@ running and its client tools on your path:
 
 ```sh
 vp run build:core
-vp run --filter @nosamcloud/api setup --admin-email dev@example.com
-vp run --filter @nosamcloud/api dev --local --enable-containers=false --host localhost --port 8787
+vp run --filter @platform-service/api setup --admin-email dev@example.com
+vp run --filter @platform-service/api dev --local --enable-containers=false --host localhost --port 8787
 ```
 
 In another terminal:
 
 ```sh
-vp run --filter @nosamcloud/dashboard dev
+vp run --filter @platform-service/dashboard dev
 ```
 
 Setup creates an ignored API `.dev.vars` file and a dashboard `.env` file.
@@ -113,7 +113,7 @@ ui/
   assets/                   # Platform logos and bundled social icons
   fonts/                    # APK Protocol, KH Teka Mono, and Inter
 middleware/
-  01.auth.ts                # nosam_token validation through /me
+  01.auth.ts                # platform_token validation through /me
 pages/
   layout.tsx                # Shared navigation progress
   _layouts/dashboard.tsx    # Authenticated shell with logout

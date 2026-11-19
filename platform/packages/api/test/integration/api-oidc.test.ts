@@ -60,8 +60,12 @@ function setVerifyResult(result: GithubOidcClaims | null): void {
 }
 
 vi.mock('../../src/github/oidc-verify.ts', () => ({
-  verifyGithubOidcToken: async (_token: string, opts?: { audience?: string }) => {
-    if (verifyResult && opts?.audience !== undefined && verifyResult.aud !== opts.audience) {
+  verifyGithubOidcToken: async (_token: string, opts?: { audience?: string | Array<string> }) => {
+    if (
+      verifyResult &&
+      opts?.audience !== undefined &&
+      ![opts.audience].flat().includes(String(verifyResult.aud))
+    ) {
       return null;
     }
     return verifyResult;
@@ -186,7 +190,7 @@ function makeClaims(overrides: Partial<GithubOidcClaims> = {}): GithubOidcClaims
     workflow_ref: scaffoldRef,
     job_workflow_ref: scaffoldRef,
     sub: `repo:${repository}:ref:${ref}`,
-    aud: 'nosam',
+    aud: 'platform',
     // The workflow trigger event. Defaults to the scaffolded `push` trigger so
     // every happy-path exchange satisfies the route's event allowlist; tests
     // exercising the allowlist override it (e.g. `pull_request_target`).
@@ -455,7 +459,7 @@ describe('POST /auth/github-oidc', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns 401 when the oidc token audience is not "nosam"', async () => {
+  it('returns 401 when the oidc token audience is not "platform"', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'oidc-aud');
     await seedActiveInstallation(env.db, '1');

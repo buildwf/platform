@@ -79,7 +79,7 @@ function createStarterApp(starterMode: Exclude<ScaffoldStarterMode, 'spa'>): str
 
   const nodeModulesDir = join(root, 'node_modules');
   mkdirSync(nodeModulesDir, { recursive: true });
-  symlinkSync(packageRoot, join(nodeModulesDir, 'nosam'), 'dir');
+  symlinkSync(packageRoot, join(nodeModulesDir, 'platform'), 'dir');
 
   return root;
 }

@@ -63,7 +63,7 @@ export function DeploymentDetailPage({ path, platformName, username }: AdminPage
           </SectionStack>
         )}
 
-      <Table className="nosam-admin-detail-table">
+      <Table className="platform-admin-detail-table">
         <TableBody>
           <TableRow>
             <TableHeaderCell>ID</TableHeaderCell>
@@ -71,7 +71,7 @@ export function DeploymentDetailPage({ path, platformName, username }: AdminPage
             <TableHeaderCell>Project</TableHeaderCell>
             <TableCell>
               {project ? (
-                <Link className="nosam-admin-resource-link" href={`/admin/projects/${project.id}`}>
+                <Link className="platform-admin-resource-link" href={`/admin/projects/${project.id}`}>
                   {project.slug}
                 </Link>
               ) : (

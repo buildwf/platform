@@ -5,8 +5,8 @@ status: implemented
 
 # First-class Drizzle database integration
 
-Nosam uses Drizzle as the application database abstraction. The app defines
-its schema in TypeScript, and nosam/db exposes an environment-bound Drizzle
+Platform uses Drizzle as the application database abstraction. The app defines
+its schema in TypeScript, and platform/db exposes an environment-bound Drizzle
 instance plus createDb for another compatible binding. This replaced the
 earlier custom query client and generated SQL-table types.
 

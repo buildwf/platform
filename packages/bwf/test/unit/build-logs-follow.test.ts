@@ -40,9 +40,9 @@ it.each(['complete', 'failed', 'cancelled'])(
     vi.stubEnv('BWF_TOKEN', 'test-build-logs-token');
     vi.stubEnv('BWF_API_URL', 'https://api.example.test');
     vi.stubEnv('BWF_PROJECT', '');
-    const registry = mkdtempSync(join(tmpdir(), 'nosam-build-completion-'));
+    const registry = mkdtempSync(join(tmpdir(), 'platform-build-completion-'));
     registries.push(registry);
-    vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', registry);
+    vi.stubEnv('PLATFORM_REGISTRY_DIR', registry);
     savePlatformConnection({
       accountId: null,
       apiUrl: 'https://api.example.test',
@@ -275,9 +275,9 @@ describe('followBuildLogs', () => {
     // Bind this fixture token explicitly so a saved platform cannot select the destination.
     vi.stubEnv('BWF_TOKEN', 'test-build-logs-token');
     vi.stubEnv('BWF_API_URL', 'https://api.example.test');
-    const registry = mkdtempSync(join(tmpdir(), 'nosam-build-connections-'));
+    const registry = mkdtempSync(join(tmpdir(), 'platform-build-connections-'));
     registries.push(registry);
-    vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', registry);
+    vi.stubEnv('PLATFORM_REGISTRY_DIR', registry);
     savePlatformConnection({
       accountId: null,
       apiUrl: 'https://api.example.test',

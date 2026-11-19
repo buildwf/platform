@@ -14,7 +14,7 @@ import { loadUserEnvFile } from '../../src/host/load-user-env.ts';
 const roots: Array<string> = [];
 
 function createTempProject(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-load-user-env-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-load-user-env-'));
   roots.push(root);
   return root;
 }

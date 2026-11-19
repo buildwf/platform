@@ -37,9 +37,9 @@ export async function runPlatformWrangler(
 
 const PLATFORM_WRANGLER_TIMEOUT_MS = 10 * 60 * 1000;
 
-/** Opt-in maintainer diagnostics, enabled with NOSAM_PLATFORM_TIMINGS=1. */
+/** Opt-in maintainer diagnostics, enabled with PLATFORM_TIMINGS=1. */
 export function writePlatformTiming(label: string, startedAt: number): void {
-  if (process.env.NOSAM_PLATFORM_TIMINGS === '1') {
+  if (process.env.PLATFORM_TIMINGS === '1') {
     process.stderr.write(
       `[platform timing] ${label} ${(performance.now() - startedAt).toFixed(0)} ms\n`,
     );

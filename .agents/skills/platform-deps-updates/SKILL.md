@@ -1,5 +1,5 @@
 ---
-name: nosam-deps-updates
+name: platform-deps-updates
 description: Update direct and transitive dependencies in the bwf framework repository while preserving compatibility and measuring the unpacked production install of void plus dependencies. Use for bwf dependency upgrades, Cloudflare toolchain alignment, and Vite+ starter updates.
 ---
 
@@ -37,9 +37,9 @@ When committing, use `Update deps.` unless the user specifies otherwise. Preserv
 Run from the repository root with its Node version and a **new output directory outside the checkout**:
 
 ```sh
-node .agents/skills/bwf-deps-updates/scripts/measure-install.mjs --repo . --out /tmp/nosam-deps-before
+node .agents/skills/bwf-deps-updates/scripts/measure-install.mjs --repo . --out /tmp/platform-deps-before
 # After the update/build, use a different fresh directory:
-node .agents/skills/bwf-deps-updates/scripts/measure-install.mjs --repo . --out /tmp/nosam-deps-after
+node .agents/skills/bwf-deps-updates/scripts/measure-install.mjs --repo . --out /tmp/platform-deps-after
 ```
 
 The helper uses the checkout's packed registry and `vp pm pack`, installs with npm `--omit=dev`, checks packaged platform integrity, and writes `footprint.json`. `--archives <dir>` reuses captured tarballs; external resolutions can still change unless their lockfile is preserved. It does not publish or deploy.

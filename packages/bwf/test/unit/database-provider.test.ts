@@ -46,7 +46,7 @@ describe('database provider adapters', () => {
   });
 
   it('updates DATABASE_URL without discarding other local env values', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-db-connect-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-db-connect-'));
     roots.push(root);
     writeFileSync(join(root, '.env'), 'API_KEY=test\nDATABASE_URL="old"\n');
 

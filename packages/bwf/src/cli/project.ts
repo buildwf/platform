@@ -79,13 +79,13 @@ export function readDeploymentPlatform(root: string): DeploymentPlatform | null 
   }
   if (
     config.platform === 'cloudflare' ||
-    config.platform === 'nosam' ||
+    config.platform === 'platform' ||
     config.platform === 'none'
   ) {
     return config.platform;
   }
   if (typeof config.projectId === 'string' && typeof config.slug === 'string') {
-    return 'nosam';
+    return 'platform';
   }
   return null;
 }
@@ -142,7 +142,7 @@ export function writePlatformSelection(
     JSON.stringify(
       {
         ...metadata,
-        platform: 'nosam',
+        platform: 'platform',
         platformUrl: normalizePlatformApiUrl(connection.apiUrl),
         applicationDomain: normalizeApplicationDomain(connection.applicationDomain),
         proxyUrl: normalizePlatformApiUrl(connection.proxyUrl),
@@ -203,7 +203,7 @@ export function writeProjectConfig(root: string, config: ProjectConfig): void {
   const filePath = join(root, PROJECT_FILE);
   const existing = readProjectConfigFile(root);
   const next: ProjectConfigFile = {
-    platform: 'nosam',
+    platform: 'platform',
     projectId: config.projectId,
     slug: config.slug,
   };

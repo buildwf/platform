@@ -27,7 +27,7 @@ function nestedMessage(generation: string, bodyLine: string) {
   const depth = 64;
   const boundaries = Array.from(
     { length: depth },
-    (_, index) => `=_nosam_mixed_${generation}_${index}`,
+    (_, index) => `=_parts_mixed_${generation}_${index}`,
   );
   const lines = [
     `Date: Fri, 18 Sep 2026 01:00:${generation.padStart(2, '0')} +0000`,
@@ -63,13 +63,13 @@ describe('email admission payload digest', () => {
     const a = message(
       'Fri, 18 Sep 2026 01:00:00 +0000',
       'one@mail.example.com',
-      '=_nosam_mixed_AAAA',
+      '=_parts_mixed_AAAA',
       'hello',
     );
     const b = message(
       'Fri, 18 Sep 2026 01:01:00 +0000',
       'two@mail.example.com',
-      '=_nosam_mixed_BBBB',
+      '=_parts_mixed_BBBB',
       'hello',
     );
     expect(
@@ -81,13 +81,13 @@ describe('email admission payload digest', () => {
     const boundaryEndingInDashesA = message(
       'Fri, 18 Sep 2026 01:00:00 +0000',
       'one@mail.example.com',
-      '=_nosam_mixed_A--',
+      '=_parts_mixed_A--',
       'hello',
     );
     const boundaryEndingInDashesB = message(
       'Fri, 18 Sep 2026 01:01:00 +0000',
       'two@mail.example.com',
-      '=_nosam_mixed_B--',
+      '=_parts_mixed_B--',
       'hello',
     );
     expect(
@@ -129,14 +129,14 @@ describe('email admission payload digest', () => {
     const a = message(
       'Fri, 18 Sep 2026 01:00:00 +0000',
       'one@mail.example.com',
-      '=_nosam_mixed_AAAA',
-      'hello =_nosam_mixed_AAAA',
+      '=_parts_mixed_AAAA',
+      'hello =_parts_mixed_AAAA',
     );
     const b = message(
       'Fri, 18 Sep 2026 01:01:00 +0000',
       'two@mail.example.com',
-      '=_nosam_mixed_BBBB',
-      'hello =_nosam_mixed_BBBB',
+      '=_parts_mixed_BBBB',
+      'hello =_parts_mixed_BBBB',
     );
     expect(
       await emailPayloadDigest('direct', 'acme@mail.example.com', ['recipient@example.com'], a),
@@ -146,7 +146,7 @@ describe('email admission payload digest', () => {
     const c = message(
       'Fri, 18 Sep 2026 01:00:00 +0000',
       'one@mail.example.com',
-      '=_nosam_mixed_AAAA',
+      '=_parts_mixed_AAAA',
       'changed',
     );
     expect(
@@ -160,14 +160,14 @@ describe('email admission payload digest', () => {
     const a = message(
       'Fri, 18 Sep 2026 01:00:00 +0000',
       'one@mail.example.com',
-      '=_nosam_mixed_AAAA',
-      'literal boundary="=_nosam_mixed_body_A"',
+      '=_parts_mixed_AAAA',
+      'literal boundary="=_parts_mixed_body_A"',
     );
     const b = message(
       'Fri, 18 Sep 2026 01:01:00 +0000',
       'two@mail.example.com',
-      '=_nosam_mixed_BBBB',
-      'literal boundary="=_nosam_mixed_body_B"',
+      '=_parts_mixed_BBBB',
+      'literal boundary="=_parts_mixed_body_B"',
     );
     expect(
       await emailPayloadDigest('direct', 'acme@mail.example.com', ['recipient@example.com'], a),
@@ -198,10 +198,10 @@ describe('email admission payload digest', () => {
 
     const ideographicSpace = String.fromCodePoint(0x3000);
 
-    const space = await digest(folded(' ', '=_nosam_alternative_AAAA'));
-    expect(await digest(folded('\t', '=_nosam_alternative_BBBB'))).toBe(space);
-    expect(await digest(folded('  \t ', '=_nosam_alternative_CCCC'))).toBe(space);
-    expect(await digest(folded(` ${ideographicSpace}`, '=_nosam_alternative_DDDD'))).not.toBe(
+    const space = await digest(folded(' ', '=_parts_alternative_AAAA'));
+    expect(await digest(folded('\t', '=_parts_alternative_BBBB'))).toBe(space);
+    expect(await digest(folded('  \t ', '=_parts_alternative_CCCC'))).toBe(space);
+    expect(await digest(folded(` ${ideographicSpace}`, '=_parts_alternative_DDDD'))).not.toBe(
       space,
     );
   });

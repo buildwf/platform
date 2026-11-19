@@ -12,7 +12,7 @@ const ENV_PUBLIC_DIST = join(PACKAGE_ROOT, 'dist', 'runtime', 'env-public.mjs');
 const roots: Array<string> = [];
 
 function createProject(envSchemaBody?: string): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-env-cli-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-env-cli-'));
   roots.push(root);
   // Node loads env.ts with the nearest package's module type; tmpdir has no package.json.
   writeFileSync(join(root, 'package.json'), '{"type":"module"}\n');

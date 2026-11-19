@@ -62,7 +62,7 @@ function fixture(workersDev = false) {
   return { env, input };
 }
 
-beforeEach(() => vi.stubEnv('NOSAM_PLATFORM_ACCESS_SETUP_TOKEN', ''));
+beforeEach(() => vi.stubEnv('PLATFORM_ACCESS_SETUP_TOKEN', ''));
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();

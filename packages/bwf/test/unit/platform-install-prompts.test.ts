@@ -78,8 +78,8 @@ const args = [
 
 beforeEach(() => {
   vi.clearAllMocks();
-  directory = mkdtempSync(join(tmpdir(), 'nosam-install-prompts-'));
-  vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', directory);
+  directory = mkdtempSync(join(tmpdir(), 'platform-install-prompts-'));
+  vi.stubEnv('PLATFORM_REGISTRY_DIR', directory);
   mocks.multiselect.mockResolvedValue(['github']);
   Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: true });
   vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -219,9 +219,9 @@ describe('interactive platform installation prompts', () => {
   });
 
   it('keeps the environment override for unattended installation', async () => {
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ID', 'terraform-id');
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_HOST', 'db.example.com');
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_USER', 'runtime_user');
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ID', 'terraform-id');
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ORIGIN_HOST', 'db.example.com');
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ORIGIN_USER', 'runtime_user');
 
     await runPlatformLifecycleCommand(parsePlatformArgs([...args, '--workers-dev']));
 
@@ -247,10 +247,10 @@ describe('interactive platform installation prompts', () => {
     { name: 'renamed-postgres' },
   ])('rejects Workers VPC selection drift on saved-plan replay: %j', async (drift) => {
     const serviceId = 'f537187c-73f7-4ad8-bcb6-38e3e3ac1177';
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ID', 'terraform-id');
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID', serviceId);
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_USER', 'runtime_user');
-    vi.stubEnv('NOSAM_PLATFORM_DATABASE_URL', 'postgresql://iam_owner@127.0.0.1/void_platform');
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ID', 'terraform-id');
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID', serviceId);
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ORIGIN_USER', 'runtime_user');
+    vi.stubEnv('PLATFORM_DATABASE_URL', 'postgresql://iam_owner@127.0.0.1/void_platform');
     const live = {
       id: 'terraform-id',
       name: 'company-managed-postgres',
@@ -281,9 +281,9 @@ describe('interactive platform installation prompts', () => {
       serviceId,
       user: live.origin.user,
     });
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ID', undefined);
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID', undefined);
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_USER', undefined);
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ID', undefined);
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID', undefined);
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ORIGIN_USER', undefined);
     vi.mocked(PlatformCloudflareClient.prototype.listHyperdriveConfigs).mockResolvedValue([
       { id: changed.id, name: changed.name },
     ]);
@@ -327,16 +327,16 @@ describe('interactive platform installation prompts', () => {
         user: 'runtime',
       },
     };
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ID', live.id);
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID', live.origin.serviceId);
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_USER', live.origin.user);
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ID', live.id);
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID', live.origin.serviceId);
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ORIGIN_USER', live.origin.user);
     const getConfig = vi
       .spyOn(PlatformCloudflareClient.prototype, 'getHyperdriveConfig')
       .mockResolvedValueOnce(live);
     await runPlatformLifecycleCommand(parsePlatformArgs([...args, '--workers-dev']));
 
     const currentUser = 'replacement_runtime';
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_USER', currentUser);
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ORIGIN_USER', currentUser);
     getConfig.mockResolvedValueOnce({ ...live, origin: { ...live.origin, user: currentUser } });
     mocks.select.mockResolvedValueOnce('new').mockResolvedValueOnce('workers-dev');
     mocks.text.mockResolvedValueOnce('test');
@@ -361,9 +361,9 @@ describe('interactive platform installation prompts', () => {
   it('refreshes a saved Workers VPC origin when asked for a new CI plan', async () => {
     Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: false });
     const serviceId = 'f537187c-73f7-4ad8-bcb6-38e3e3ac1177';
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ID', 'terraform-id');
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID', serviceId);
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_USER', 'runtime');
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ID', 'terraform-id');
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID', serviceId);
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ORIGIN_USER', 'runtime');
     const live = {
       id: 'terraform-id',
       name: 'managed-postgres',
@@ -384,7 +384,7 @@ describe('interactive platform installation prompts', () => {
     ]);
     await runPlatformLifecycleCommand(command);
 
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_USER', 'replacement_runtime');
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ORIGIN_USER', 'replacement_runtime');
     getConfig.mockResolvedValueOnce({
       ...live,
       origin: { ...live.origin, user: 'replacement_runtime' },
@@ -401,9 +401,9 @@ describe('interactive platform installation prompts', () => {
 
   it('accepts an uppercase Workers VPC service ID in CI', async () => {
     const serviceId = 'f537187c-73f7-4ad8-bcb6-38e3e3ac1177';
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ID', 'terraform-id');
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID', serviceId.toUpperCase());
-    vi.stubEnv('NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_USER', 'runtime');
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ID', 'terraform-id');
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID', serviceId.toUpperCase());
+    vi.stubEnv('PLATFORM_HYPERDRIVE_ORIGIN_USER', 'runtime');
     vi.spyOn(PlatformCloudflareClient.prototype, 'getHyperdriveConfig').mockResolvedValue({
       id: 'terraform-id',
       name: 'managed-postgres',
@@ -418,11 +418,11 @@ describe('interactive platform installation prompts', () => {
   it('suggests a matching name without requiring it', async () => {
     vi.spyOn(PlatformCloudflareClient.prototype, 'listHyperdriveConfigs').mockResolvedValue([
       { id: 'other-id', name: 'company-managed-postgres' },
-      { id: 'suggested-id', name: 'nosam-test-database' },
+      { id: 'suggested-id', name: 'platform-test-database' },
     ]);
     vi.spyOn(PlatformCloudflareClient.prototype, 'getHyperdriveConfig').mockResolvedValue({
       id: 'suggested-id',
-      name: 'nosam-test-database',
+      name: 'platform-test-database',
       origin: {
         database: 'void_platform',
         host: 'db.example.com',
@@ -447,7 +447,7 @@ describe('interactive platform installation prompts', () => {
       options: [
         {
           value: 'suggested-id',
-          label: 'nosam-test-database',
+          label: 'platform-test-database',
           hint: 'suggested · suggested-id',
         },
         { value: 'other-id', label: 'company-managed-postgres', hint: 'other-id' },
@@ -468,7 +468,7 @@ describe('interactive platform installation prompts', () => {
       ],
     });
     expect(notesWithoutColors()).toContainEqual([
-      expect.stringContaining('with any unused name such as nosam-test-database'),
+      expect.stringContaining('with any unused name such as platform-test-database'),
       'Set up Hyperdrive first',
     ]);
     expect(mocks.plan).not.toHaveBeenCalled();
@@ -476,7 +476,7 @@ describe('interactive platform installation prompts', () => {
 
   it('stops before planning if Hyperdrive selection is cancelled', async () => {
     vi.spyOn(PlatformCloudflareClient.prototype, 'listHyperdriveConfigs').mockResolvedValue([
-      { id: 'terraform-id', name: 'nosam-test-database' },
+      { id: 'terraform-id', name: 'platform-test-database' },
     ]);
     const getConfig = vi.spyOn(PlatformCloudflareClient.prototype, 'getHyperdriveConfig');
     mocks.select.mockImplementation(async ({ message }) =>

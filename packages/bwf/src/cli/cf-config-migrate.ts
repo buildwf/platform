@@ -177,7 +177,7 @@ function applyWorkflows(raw: JsonObject, worker: JsonObject): void {
 function uncredentialedEnvironment(): NodeJS.ProcessEnv {
   const env = { ...process.env };
   for (const key of Object.keys(env)) {
-    if (/^(?:CLOUDFLARE|CF_|WRANGLER|NOSAM_PLATFORM_|DATABASE_URL|NOSAM_ACCESS_)/i.test(key)) {
+    if (/^(?:CLOUDFLARE|CF_|WRANGLER|PLATFORM_|DATABASE_URL|PLATFORM_ACCESS_)/i.test(key)) {
       delete env[key];
     }
   }
@@ -388,14 +388,14 @@ export function migrateBuiltWranglerConfig(
     }
   }
   const cfPackage = fileURLToPath(import.meta.resolve('cf/package.json'));
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-cf-config-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-cf-config-'));
   try {
     mkdirSync(join(directory, 'node_modules'));
     symlinkSync(dirname(cfPackage), join(directory, 'node_modules', 'cf'), 'junction');
     writeFileSync(
       join(directory, 'package.json'),
       JSON.stringify({
-        name: 'nosam-private-cf-build',
+        name: 'platform-private-cf-build',
         private: true,
         type: 'module',
         dependencies: { cf: '1.0.0', '@cloudflare/vite-plugin': '1.0.0' },

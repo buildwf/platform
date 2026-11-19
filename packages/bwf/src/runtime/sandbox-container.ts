@@ -14,7 +14,7 @@ export type SandboxExecOptions = ContainerExecOptions & {
 export type SandboxCapability = {
   invoke(operation: string, args: Array<unknown>): Promise<unknown>;
 };
-export const SANDBOX_PORT_HEADER = 'x-nosam-sandbox-port';
+export const SANDBOX_PORT_HEADER = 'x-platform-sandbox-port';
 export type SandboxProcessWire = {
   capability: SandboxCapability;
   pid: number;
@@ -186,7 +186,7 @@ export class SandboxContainer<Env = unknown> extends DurableObject<Env> {
     super(ctx, env);
     // Inactivity timeouts are not retained across Durable Object restarts.
     this.#ready = ctx.blockConcurrencyWhile(async () => {
-      this.#options = (await ctx.storage.get<SandboxOptions>('__nosamSandboxOptions')) ?? {};
+      this.#options = (await ctx.storage.get<SandboxOptions>('__platformSandboxOptions')) ?? {};
       if (this.container.running) {
         await this.container.setInactivityTimeout(this.inactivityTimeoutMs);
       }
@@ -204,7 +204,7 @@ export class SandboxContainer<Env = unknown> extends DurableObject<Env> {
     validateSandboxOptions(options);
     await this.#ready;
     this.#options = { ...options };
-    await this.ctx.storage.put('__nosamSandboxOptions', this.#options);
+    await this.ctx.storage.put('__platformSandboxOptions', this.#options);
     if (this.container.running) {
       await this.container.setInactivityTimeout(this.inactivityTimeoutMs);
     }
@@ -339,7 +339,7 @@ export class SandboxContainer<Env = unknown> extends DurableObject<Env> {
       await this.container.destroy();
     }
     if (this.container.running) {
-      throw new Error('NOSAM_SANDBOX_unavailable');
+      throw new Error('PLATFORM_SANDBOX_unavailable');
     }
     if (!this.starting) {
       this.#setup = undefined;

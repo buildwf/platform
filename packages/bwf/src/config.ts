@@ -6,7 +6,7 @@ import {
   type AssetConfig,
   type StorageConfig,
 } from '@builtbyfriends/deploy-core';
-import { NOSAM_AUTH_PROVIDERS, isBwfAuthProvider, type BwfAuthProvider } from './auth/providers.ts';
+import { PLATFORM_AUTH_PROVIDERS, isBwfAuthProvider, type BwfAuthProvider } from './auth/providers.ts';
 import type { DevRedirectRule, HeaderRule } from './cli/types.ts';
 import { loadBwfConfig } from './config-loader.ts';
 import { validateSourceDir } from './project-paths.ts';
@@ -66,7 +66,7 @@ export type RoutingConfig = {
    * a built asset tree distinguishes the two, so this is an explicit opt-in.
    *
    * Only `not_found_handling` is affected — `run_worker_first` is unchanged, so
-   * API routes, auth, and `/__nosam/*` still reach the worker first.
+   * API routes, auth, and `/__platform/*` still reach the worker first.
    */
   notFound?: NotFoundHandling;
 };
@@ -83,7 +83,7 @@ export type InferenceConfig = {
   scanDirs?: ReadonlyArray<string>;
   build?: string;
   outputDir?: string;
-  appType?: 'spa' | 'static' | 'nosam';
+  appType?: 'spa' | 'static' | 'platform';
 };
 
 /** Auth configuration — high-level provider selection for Better Auth defaults. */
@@ -191,7 +191,7 @@ export type BwfConfig = {
 
 const CONFIG_FILE = 'bwf.json';
 
-const VALID_APP_TYPES = new Set(['spa', 'static', 'nosam']);
+const VALID_APP_TYPES = new Set(['spa', 'static', 'platform']);
 /**
  * Accepted `routing.notFound` values. Keep in sync with the schema.json enum
  * and `AssetConfig.not_found_handling` in `@builtbyfriends/deploy-core`.
@@ -486,7 +486,7 @@ function validateConfigObject(obj: unknown): BwfConfig {
         }
         if (!isBwfAuthProvider(provider)) {
           throw new Error(
-            `config: "auth.providers" value '${provider}' in ${CONFIG_FILE} must be one of: ${NOSAM_AUTH_PROVIDERS.join(', ')}.`,
+            `config: "auth.providers" value '${provider}' in ${CONFIG_FILE} must be one of: ${PLATFORM_AUTH_PROVIDERS.join(', ')}.`,
           );
         }
         if (seen.has(provider)) {

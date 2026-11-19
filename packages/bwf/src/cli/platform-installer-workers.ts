@@ -198,7 +198,7 @@ export async function recoverInterruptedPlatformWorkerCutover(
         // Recovery may have restored some Workers before Cloudflare refused an
         // old secret version. Accept only this cutover's old or staged version;
         // the next guarded generation reapplies the authorized credentials.
-        const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-resume-'));
+        const directory = mkdtempSync(join(tmpdir(), 'platform-resume-'));
         try {
           const configPath = join(directory, 'wrangler.json');
           writeFileSync(configPath, JSON.stringify(recoveryConfig), { mode: 0o600 });
@@ -503,7 +503,7 @@ export async function deployPlatformWorker(
   secrets: Record<string, string> | null,
   options: PlatformWorkerDeploymentOptions,
 ): Promise<PlatformWorkerRollback | null> {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-deploy-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-deploy-'));
   const workerName = String(config.name);
   const accountId = String(config.account_id);
   const readRunner = options.readCloudflare
@@ -995,7 +995,7 @@ export async function uploadPlatformWorkerForReview(
     interactive?: boolean;
   }>,
 ): Promise<CloudflareCommandResult> {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-review-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-review-'));
   const workerName = String(config.name);
   const accountId = String(config.account_id);
   const readRunner = platformWorkerApiReadRunner(
@@ -1088,7 +1088,7 @@ async function rollbackPlatformWorker(input: {
   workerExisted: boolean;
   workerName: string;
 }): Promise<void> {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-rollback-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-rollback-'));
   try {
     const configPath = join(directory, 'wrangler.json');
     const currentTraffic = isolatePlatformWorkerCustomDomains(input.config);

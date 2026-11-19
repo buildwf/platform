@@ -52,8 +52,8 @@ const discovery = {
 let root: string;
 beforeEach(() => {
   vi.clearAllMocks();
-  root = mkdtempSync(join(tmpdir(), 'nosam-connect-test-'));
-  vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', join(root, 'registry'));
+  root = mkdtempSync(join(tmpdir(), 'platform-connect-test-'));
+  vi.stubEnv('PLATFORM_REGISTRY_DIR', join(root, 'registry'));
   vi.stubEnv('BWF_TOKEN', '');
   vi.stubEnv('BWF_API_URL', '');
   mocks.discover.mockResolvedValue(discovery);
@@ -82,8 +82,8 @@ describe('connect arguments', () => {
     [['https://platform.example.com'], { url: discovery.apiUrl, platform: null, noLogin: false }],
     [['--platform', 'cloudflare'], { url: '', platform: 'cloudflare', noLogin: false }],
     [
-      ['--platform', 'nosam', '--no-login', discovery.apiUrl],
-      { url: discovery.apiUrl, platform: 'nosam', noLogin: true },
+      ['--platform', 'platform', '--no-login', discovery.apiUrl],
+      { url: discovery.apiUrl, platform: 'platform', noLogin: true },
     ],
   ])('parses %j', (args, expected) => {
     expect(parseConnectArgs(args as Array<string>)).toEqual(expected);
@@ -122,7 +122,7 @@ describe('connect workflow', () => {
     expect(mocks.login).toHaveBeenCalledWith(root, discovery);
     expect(getActivePlatformConnection()?.apiUrl).toBe(discovery.apiUrl);
     expect(JSON.parse(readFileSync(projectFile(), 'utf8'))).toEqual({
-      platform: 'nosam',
+      platform: 'platform',
       platformUrl: discovery.apiUrl,
       applicationDomain: discovery.applicationDomain,
       proxyUrl: discovery.proxyUrl,
@@ -131,7 +131,7 @@ describe('connect workflow', () => {
   });
   it('preserves a project linked to another platform while logging in to the new one', async () => {
     const original = seedProject({
-      platform: 'nosam',
+      platform: 'platform',
       projectId: 'old-project',
       slug: 'old',
       platformUrl: 'https://old.example.com',
@@ -233,7 +233,7 @@ describe('connect workflow', () => {
     expect(mocks.login).not.toHaveBeenCalled();
   });
   it('does not change the saved target after Cloudflare authentication fails', async () => {
-    const original = seedProject({ platform: 'nosam' });
+    const original = seedProject({ platform: 'platform' });
     mocks.cloudflare.mockRejectedValueOnce(new Error('cancelled'));
     await expect(
       runConnectCommand(root, parseConnectArgs(['--platform', 'cloudflare']), true),
@@ -245,7 +245,7 @@ describe('connect workflow', () => {
     await runConnectCommand(root, parseConnectArgs([]), true);
     expect(
       mocks.select.mock.calls[0][0].options.map((option: { value: string }) => option.value),
-    ).toEqual(['cloudflare', 'nosam']);
+    ).toEqual(['cloudflare', 'platform']);
     expect(mocks.cloudflare).toHaveBeenCalledOnce();
   });
   it('requires an explicit target in headless mode', async () => {

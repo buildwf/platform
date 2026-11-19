@@ -8,7 +8,7 @@ export function formatCloudflareUserMessage(message: string): string {
   const preserved: Array<string> = [];
   const protect = (value: string): string => {
     const index = preserved.push(value) - 1;
-    return `\uE000NOSAM_CF_TERM_${index}\uE001`;
+    return `\uE000PLATFORM_CF_TERM_${index}\uE001`;
   };
 
   let result = message
@@ -27,7 +27,7 @@ export function formatCloudflareUserMessage(message: string): string {
     .replace(/\bwrangler config\b/gi, 'Cloudflare config')
     .replace(/\bwrangler\b/gi, 'Cloudflare tooling');
 
-  result = result.replace(/\uE000NOSAM_CF_TERM_(\d+)\uE001/g, (_match, index: string) => {
+  result = result.replace(/\uE000PLATFORM_CF_TERM_(\d+)\uE001/g, (_match, index: string) => {
     return preserved[Number(index)] ?? '';
   });
   return result;

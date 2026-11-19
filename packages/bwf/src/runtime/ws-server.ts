@@ -286,7 +286,7 @@ export function createWebSocketDurableObject(
   }
   const instanceRoute = { ...route, key: definition.key };
 
-  class NosamWebSocketDurableObject implements WebSocketDurableObjectInstance {
+  class PlatformWebSocketDurableObject implements WebSocketDurableObjectInstance {
     constructor(
       public readonly state: DurableObjectState,
       public readonly env: Record<string, unknown>,
@@ -386,7 +386,7 @@ export function createWebSocketDurableObject(
         return;
       }
 
-      const request = new Request(`https://nosam.local${route.pattern}`);
+      const request = new Request(`https://platform.local${route.pattern}`);
       const ctx = this.context(request, webSocket, stored);
       await withAuthState(stored.authState ?? null, () =>
         definition.onMessage?.(ctx as never, result.value as never),
@@ -412,7 +412,7 @@ export function createWebSocketDurableObject(
     ): Promise<void> {
       completeWebSocketClose(webSocket, code, reason);
       const stored = getStoredConnection(webSocket);
-      const request = new Request(`https://nosam.local${route.pattern}`);
+      const request = new Request(`https://platform.local${route.pattern}`);
       const ctx = this.context(request, webSocket, stored);
       await withAuthState(stored.authState ?? null, () =>
         definition.onClose?.(ctx as never, { code, reason, wasClean }),
@@ -420,14 +420,14 @@ export function createWebSocketDurableObject(
     }
   }
 
-  return NosamWebSocketDurableObject;
+  return PlatformWebSocketDurableObject;
 }
 
 /** Keep a removed WebSocket Durable Object class deployable without deleting its storage. */
 export function createWebSocketTombstoneDurableObject(
   className: string,
 ): WebSocketDurableObjectClass {
-  return class NosamWebSocketTombstoneDurableObject implements WebSocketDurableObjectInstance {
+  return class PlatformWebSocketTombstoneDurableObject implements WebSocketDurableObjectInstance {
     constructor(
       public readonly state: DurableObjectState,
       public readonly env: Record<string, unknown>,

@@ -1,5 +1,5 @@
 -- Shared seed data for local dev
--- Local: psql -d nosam_api_dev -f scripts/seed.sql
+-- Local: psql -d platform_api_dev -f scripts/seed.sql
 
 -- Remove the demo projects older seeds created as proj_seed1..6: they hold
 -- the same slugs, so the projects below would not insert. Deployments,
@@ -18,9 +18,9 @@ INSERT INTO users (id, provider, provider_id, login, email, plan, billing_cycle_
 INSERT INTO users (id, provider, provider_id, login, email, plan, billing_cycle_start, suspended_reason, role, created_at) VALUES ('user_seed5', 'google', '100005', 'eve', 'eve@example.com', 'free', '2026-01-21T00:00:00.000Z', 'usage_limit_exceeded', 'user', '2026-01-21T00:00:00.000Z') ON CONFLICT (id) DO NOTHING;
 
 -- Projects
-INSERT INTO projects (id, user_id, slug, mode, created_at) VALUES ('proj_seed00000001', 'user_seed1', 'my-app', 'nosam', now() - interval '60 days') ON CONFLICT (id) DO NOTHING;
+INSERT INTO projects (id, user_id, slug, mode, created_at) VALUES ('proj_seed00000001', 'user_seed1', 'my-app', 'platform', now() - interval '60 days') ON CONFLICT (id) DO NOTHING;
 INSERT INTO projects (id, user_id, slug, mode, created_at) VALUES ('proj_seed00000002', 'user_seed1', 'docs-site', 'static', now() - interval '60 days') ON CONFLICT (id) DO NOTHING;
-INSERT INTO projects (id, user_id, slug, mode, created_at) VALUES ('proj_seed00000003', 'user_seed2', 'api-service', 'nosam', now() - interval '60 days') ON CONFLICT (id) DO NOTHING;
+INSERT INTO projects (id, user_id, slug, mode, created_at) VALUES ('proj_seed00000003', 'user_seed2', 'api-service', 'platform', now() - interval '60 days') ON CONFLICT (id) DO NOTHING;
 INSERT INTO projects (id, user_id, slug, mode, created_at) VALUES ('proj_seed00000004', 'user_seed2', 'landing-page', 'spa', now() - interval '60 days') ON CONFLICT (id) DO NOTHING;
 INSERT INTO projects (id, user_id, slug, mode, created_at) VALUES ('proj_seed00000005', 'user_seed3', 'dashboard', 'framework', now() - interval '60 days') ON CONFLICT (id) DO NOTHING;
 INSERT INTO projects (id, user_id, slug, mode, created_at) VALUES ('proj_seed00000006', 'user_seed4', 'blog', 'static', now() - interval '60 days') ON CONFLICT (id) DO NOTHING;

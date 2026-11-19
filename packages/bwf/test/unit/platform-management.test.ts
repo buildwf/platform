@@ -60,12 +60,12 @@ const directories: Array<string> = [];
 beforeEach(() => {
   vi.mocked(note).mockClear();
   vi.mocked(printSuccess).mockClear();
-  process.env.NOSAM_PLATFORM_RECOVERY_KEY = Buffer.alloc(32, 7).toString('base64');
+  process.env.PLATFORM_RECOVERY_KEY = Buffer.alloc(32, 7).toString('base64');
 });
 
 afterEach(() => {
-  delete process.env.NOSAM_PLATFORM_RECOVERY_KEY;
-  delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+  delete process.env.PLATFORM_RECOVERY_KEY;
+  delete process.env.PLATFORM_REGISTRY_DIR;
   for (const directory of directories.splice(0)) {
     rmSync(directory, { force: true, recursive: true });
   }
@@ -129,7 +129,7 @@ function installedManifest(zoneOwnership: ResourceOwnership = 'created') {
                   )
                   .digest('hex')
               : 'hash',
-        id: kind === 'worker' ? `nosam-example-${key.replace('-worker', '')}` : `${key}-id`,
+        id: kind === 'worker' ? `platform-example-${key.replace('-worker', '')}` : `${key}-id`,
         key,
         kind,
         name: key,
@@ -322,8 +322,8 @@ const uninstallDependencies = {
   readProjectZeroTrust: async () => projectZeroTrustUninstallState(undefined, []),
 };
 
-const wildcardName = 'nosam-example-a1b2c3d4-0123456789abcdef-aaaa-project-zero-trust';
-const healthName = 'nosam-example-a1b2c3d4-0123456789abcdef-bbbb-platform-health';
+const wildcardName = 'platform-example-a1b2c3d4-0123456789abcdef-aaaa-project-zero-trust';
+const healthName = 'platform-example-a1b2c3d4-0123456789abcdef-bbbb-platform-health';
 
 function zeroTrustSetting(overrides: Record<string, unknown> = {}) {
   return {
@@ -390,7 +390,7 @@ describe('uninstall with project Zero Trust', () => {
       interactive: false,
       readProjectZeroTrust: async () =>
         projectZeroTrustUninstallState(zeroTrustSetting(), [
-          projectApplications('proj_public', 'nosam-example-public-proj_public', null),
+          projectApplications('proj_public', 'platform-example-public-proj_public', null),
         ]),
     }).catch((reason: unknown) => reason as Error);
 
@@ -401,7 +401,7 @@ describe('uninstall with project Zero Trust', () => {
     expect(error!.message).toContain(`shared project application: ${wildcardName} (wildcard-app)`);
     expect(error!.message).toContain(`health check exception: ${healthName} (health-app)`);
     expect(error!.message).toContain(
-      'public exception for proj_public: nosam-example-public-proj_public',
+      'public exception for proj_public: platform-example-public-proj_public',
     );
     expect(error!.message).toContain('Zero Trust → Access → Applications');
     expectNothingChanged(fake);
@@ -455,14 +455,14 @@ describe('uninstall with project Zero Trust', () => {
       interactive: false,
       readProjectZeroTrust: async () =>
         projectZeroTrustUninstallState(disabledZeroTrust, [
-          projectApplications('proj_skipped', 'nosam-example-public-proj_skipped', null),
+          projectApplications('proj_skipped', 'platform-example-public-proj_skipped', null),
         ]),
     }).catch((reason: unknown) => reason as Error);
     expect(error!.message).toContain(
       'Refusing to uninstall while Platform-managed Access applications from project Zero Trust remain',
     );
     expect(error!.message).toContain(
-      'public exception for proj_skipped: nosam-example-public-proj_skipped (nosam-example-public-proj_skipped-id)',
+      'public exception for proj_skipped: platform-example-public-proj_skipped (platform-example-public-proj_skipped-id)',
     );
     expect(error!.message).not.toContain(wildcardName);
     expectNothingChanged(fake);
@@ -479,14 +479,14 @@ describe('uninstall with project Zero Trust', () => {
         readProjectZeroTrust: async () => projectZeroTrustUninstallState(disabledZeroTrust, rows),
       }).catch((reason: unknown) => reason as Error);
     const deleting = {
-      ...projectApplications('proj_gone', 'nosam-example-public-proj_gone', null),
+      ...projectApplications('proj_gone', 'platform-example-public-proj_gone', null),
       project_slug: 'gone-app',
       project_status: 'deleting',
     };
 
     const onlyDeleting = (await read([deleting])())!;
     expect(onlyDeleting.message).toContain(
-      'public exception for proj_gone: nosam-example-public-proj_gone',
+      'public exception for proj_gone: platform-example-public-proj_gone',
     );
     expect(onlyDeleting.message).toContain('Deletion of project gone-app stopped');
     expect(onlyDeleting.message).toContain('Rerun `bwf project delete <name>`');
@@ -495,7 +495,7 @@ describe('uninstall with project Zero Trust', () => {
     const mixed = (await read([
       deleting,
       {
-        ...projectApplications('proj_live', 'nosam-example-public-proj_live', null),
+        ...projectApplications('proj_live', 'platform-example-public-proj_live', null),
         project_slug: 'live-app',
         project_status: 'active',
       },
@@ -519,7 +519,7 @@ describe('uninstall with project Zero Trust', () => {
     expect(error!.message).toContain(
       'Refusing to uninstall because the project Zero Trust state could not be read from the platform database: connect ECONNREFUSED',
     );
-    expect(error!.message).toContain('NOSAM_PLATFORM_DATABASE_URL');
+    expect(error!.message).toContain('PLATFORM_DATABASE_URL');
     expectNothingChanged(fake);
 
     await expect(
@@ -891,7 +891,7 @@ describe('project Zero Trust database read', () => {
           return { rows: setting === undefined ? [] : [{ value: setting }] };
         }
         return {
-          rows: [projectApplications('proj_public', 'nosam-example-public-proj_public', null)],
+          rows: [projectApplications('proj_public', 'platform-example-public-proj_public', null)],
         };
       },
     };
@@ -980,9 +980,9 @@ describe('platform lifecycle management', () => {
   });
 
   it('prompts for an installation when a lifecycle selector is omitted', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-management-selection-test-'));
+    const directory = mkdtempSync(join(tmpdir(), 'platform-management-selection-test-'));
     directories.push(directory);
-    process.env.NOSAM_PLATFORM_REGISTRY_DIR = directory;
+    process.env.PLATFORM_REGISTRY_DIR = directory;
     const first = installedManifest();
     const second = {
       ...installedManifest(),
@@ -1552,11 +1552,11 @@ describe('platform lifecycle management', () => {
       'dns-record: application-dns (application-dns-id)',
       'queue: cron-queue (cron-queue-id)',
       'queue: usage-queue (usage-queue-id)',
-      'worker: api-worker (nosam-example-api)',
-      'worker: dispatch-worker (nosam-example-dispatch)',
+      'worker: api-worker (platform-example-api)',
+      'worker: dispatch-worker (platform-example-dispatch)',
       'dispatch-namespace: dispatch-namespace (dispatch-namespace-id)',
       // Cloudflare refuses the tail Worker while other Workers send it logs.
-      'worker: tail-worker (nosam-example-tail)',
+      'worker: tail-worker (platform-example-tail)',
       'kv-namespace: routing-kv (routing-kv-id)',
       'hyperdrive: hyperdrive (hyperdrive-id)',
       'r2-bucket: assets-bucket (assets-bucket-id)',
@@ -1583,7 +1583,7 @@ describe('platform lifecycle management', () => {
     expectInOrder(plan, [
       'dns-record: application-dns (application-dns-id)',
       'queue: usage-queue (usage-queue-id)',
-      'worker: api-worker (nosam-example-api)',
+      'worker: api-worker (platform-example-api)',
       'r2-bucket: assets-bucket (assets-bucket-id)',
       'ai-gateway: ai-gateway (ai-gateway-id)',
       'zone: zone (zone-id)',

@@ -187,7 +187,7 @@ describe('Zero Trust authoritative route metadata', () => {
       const deployment = await createTestDeployment(env.db, project.id, 'live');
       const manifest = {
         version: 3,
-        type: type === 'worker' ? 'nosam' : 'static',
+        type: type === 'worker' ? 'platform' : 'static',
         bindings: {},
         ...(customCpuMs ? { limits: { cpuMs: customCpuMs } } : {}),
       };
@@ -206,7 +206,7 @@ describe('Zero Trust authoritative route metadata', () => {
         projectId: project.id,
         userId: owner.id,
         version: deployment.id,
-        type: type === 'worker' ? 'nosam' : 'static',
+        type: type === 'worker' ? 'platform' : 'static',
         customMetadata: { preserve: true },
       });
       const domainKey = 'domain:metadata.example.com';

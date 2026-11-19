@@ -1,5 +1,5 @@
 import type { OutputOf } from '@builtbyfriends/realtime';
-import type { PlatformRegistry } from '@nosamcloud/api/rpc';
+import type { PlatformRegistry } from '@platform-service/api/rpc';
 import type { Context } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { dashboardRequestOrigin, isLocalDashboardHost } from './origin.ts';
@@ -12,7 +12,7 @@ export type ApiResponse = Pick<
 /** The signed in user, as `me.get` returns it. */
 export type CurrentUser = OutputOf<NonNullable<PlatformRegistry['~procedures']>['me.get']>;
 
-const API_URL = 'https://nosam.buildwithfriends.dev';
+const API_URL = 'https://platform.buildwithfriends.dev';
 const DEFAULT_API_TIMEOUT_MS = 10_000;
 
 export function getPublicApiUrl(context: Context): string {

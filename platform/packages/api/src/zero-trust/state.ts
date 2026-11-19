@@ -35,7 +35,7 @@ export async function applicationName(env: ApiEnv['Bindings'], suffix: string): 
     byte.toString(16).padStart(2, '0'),
   ).join('');
   const nonce = crypto.randomUUID().replaceAll('-', '');
-  return `nosam-${identity}-${fingerprint}-${nonce}-${suffix}`.slice(0, 120);
+  return `platform-${identity}-${fingerprint}-${nonce}-${suffix}`.slice(0, 120);
 }
 
 export async function clientForConfiguration(

@@ -7,7 +7,7 @@ import { expect, it } from 'vite-plus/test';
 import { generateRouteTypes } from '../../src/codegen/route-types.ts';
 
 it('preserves tuples and JSON omissions in generated typed fetch responses', () => {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-route-response-types-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-route-response-types-'));
   const bwfDist = join(import.meta.dirname, '..', '..', 'dist');
   const { dts } = generateRouteTypes(
     {

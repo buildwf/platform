@@ -80,7 +80,7 @@ export async function getInstallationToken(
       headers: {
         Accept: 'application/vnd.github+json',
         Authorization: `Bearer ${appJwt}`,
-        'User-Agent': 'nosam-api',
+        'User-Agent': 'platform-api',
         'X-GitHub-Api-Version': GITHUB_API_VERSION,
         ...(body ? { 'Content-Type': 'application/json' } : {}),
       },
@@ -206,7 +206,7 @@ export async function getBranchHeadComparisonStatus(
           headers: {
             Accept: 'application/vnd.github+json',
             Authorization: `Bearer ${token}`,
-            'User-Agent': 'nosam-api',
+            'User-Agent': 'platform-api',
             'X-GitHub-Api-Version': GITHUB_API_VERSION,
           },
         },
@@ -307,7 +307,7 @@ export async function getBranchExistence(
           headers: {
             Accept: 'application/vnd.github+json',
             Authorization: `Bearer ${token}`,
-            'User-Agent': 'nosam-api',
+            'User-Agent': 'platform-api',
             'X-GitHub-Api-Version': GITHUB_API_VERSION,
           },
         },
@@ -354,7 +354,7 @@ export async function getRepoInstallation(
     headers: {
       Accept: 'application/vnd.github+json',
       Authorization: `Bearer ${appJwt}`,
-      'User-Agent': 'nosam-api',
+      'User-Agent': 'platform-api',
       'X-GitHub-Api-Version': GITHUB_API_VERSION,
     },
   });
@@ -392,7 +392,7 @@ export async function getInstallationAccount(
       headers: {
         Accept: 'application/vnd.github+json',
         Authorization: `Bearer ${appJwt}`,
-        'User-Agent': 'nosam-api',
+        'User-Agent': 'platform-api',
         'X-GitHub-Api-Version': GITHUB_API_VERSION,
       },
     },

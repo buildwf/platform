@@ -30,14 +30,14 @@ export function generateAuthTypes(authFileAbs: string, outDir: string): AuthType
   lines.push('import type { InferAuthInstance, InferAuthSession } from "@builtbyfriends/bwf/auth";');
   lines.push('');
   lines.push(
-    `type _NosamAuthSession = InferAuthSession<typeof import("${importPath}")["default"]>;`,
+    `type _PlatformAuthSession = InferAuthSession<typeof import("${importPath}")["default"]>;`,
   );
   lines.push('');
   lines.push('declare module "@builtbyfriends/bwf/auth" {');
   lines.push('  interface BwfAuthTypes {');
   lines.push(`    auth: InferAuthInstance<typeof import("${importPath}")["default"]>;`);
-  lines.push('    user: _NosamAuthSession["user"];');
-  lines.push('    session: _NosamAuthSession["session"];');
+  lines.push('    user: _PlatformAuthSession["user"];');
+  lines.push('    session: _PlatformAuthSession["session"];');
   lines.push('  }');
   lines.push('}');
   lines.push('');

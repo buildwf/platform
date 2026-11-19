@@ -13,19 +13,19 @@ afterAll(async () => {
   await teardownEnv();
 });
 
-describe('GET /.well-known/nosam-platform', () => {
+describe('GET /.well-known/platform', () => {
   it('describes existing Platform without exposing resource ids or credentials', async () => {
     const response = await app.fetch(
-      new Request('https://nosam.buildwithfriends.dev/.well-known/nosam-platform'),
+      new Request('https://platform.buildwithfriends.dev/.well-known/platform'),
       env,
     );
     expect(response.status).toBe(200);
     const document = await response.json<Record<string, unknown>>();
     expect(document).toMatchObject({
-      apiUrl: 'https://nosam.buildwithfriends.dev',
+      apiUrl: 'https://platform.buildwithfriends.dev',
       applicationDomain: 'buildwf.dev',
       displayName: 'Platform',
-      proxyUrl: 'https://void-nosam-proxy.buildwithfriends.workers.dev',
+      proxyUrl: 'https://void-platform-proxy.buildwithfriends.workers.dev',
       schemaVersion: 1,
       usageProtocolVersion: 2,
     });
@@ -53,7 +53,7 @@ describe('GET /.well-known/nosam-platform', () => {
       SITE_DOMAIN: 'apps.example.com',
     };
     const response = await app.fetch(
-      new Request('https://platform.example.com/.well-known/nosam-platform'),
+      new Request('https://platform.example.com/.well-known/platform'),
       selfHostedEnv,
     );
     expect(await response.json()).toMatchObject({
@@ -98,8 +98,8 @@ describe('GET /.well-known/nosam-platform', () => {
     await env.ROUTING.put(PLATFORM_DISABLED_KEY, 'disabled');
     try {
       const response = await app.fetch(
-        new Request('https://nosam.buildwithfriends.dev/.well-known/nosam-platform', {
-          headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
+        new Request('https://platform.buildwithfriends.dev/.well-known/platform', {
+          headers: { 'X-Platform-Probe': 'probe-token' },
         }),
         {
           ...env,
@@ -118,8 +118,8 @@ describe('GET /.well-known/nosam-platform', () => {
     await env.ROUTING.put(PLATFORM_DISABLED_KEY, 'disabled');
     try {
       const response = await app.fetch(
-        new Request('https://nosam.buildwithfriends.dev/.well-known/nosam-platform', {
-          headers: { 'X-Health-Check': 'nosam-admin' },
+        new Request('https://platform.buildwithfriends.dev/.well-known/platform', {
+          headers: { 'X-Health-Check': 'platform-admin' },
         }),
         {
           ...env,

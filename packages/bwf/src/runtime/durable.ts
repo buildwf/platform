@@ -2,7 +2,7 @@ import { DurableObject as CloudflareDurableObject } from 'cloudflare:workers';
 import { isResourceName } from '../shared/resource-name.ts';
 import { requireRuntimeBinding, withRuntimeEnv } from './env.ts';
 
-const DEFAULT_STORAGE_KEY = '__nosam_durable_state';
+const DEFAULT_STORAGE_KEY = '__platform_durable_state';
 
 type NativeDurableClass = new (...args: Array<never>) => CloudflareDurableObject<unknown>;
 
@@ -160,7 +160,7 @@ export type DurableStateApi<TMethods> = {
 };
 
 type StoredState<TState> = {
-  __nosamDurableState: true;
+  __platformDurableState: true;
   version: number;
   value: TState;
 };
@@ -247,7 +247,7 @@ export function defineDurableState<
         await this.#persist();
         return;
       }
-      if (stored.__nosamDurableState !== true || !Number.isInteger(stored.version)) {
+      if (stored.__platformDurableState !== true || !Number.isInteger(stored.version)) {
         throw new Error(`durable: invalid state record at storage key '${storageKey}'.`);
       }
       if (stored.version > version) {
@@ -269,7 +269,7 @@ export function defineDurableState<
 
     #persist(): Promise<void> {
       return this.#objectState.storage.put(storageKey, {
-        __nosamDurableState: true,
+        __platformDurableState: true,
         version,
         value: this.#value,
       } satisfies StoredState<TState>);

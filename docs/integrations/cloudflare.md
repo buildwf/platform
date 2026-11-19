@@ -194,7 +194,7 @@ bwf project status
 bwf project rollback [version]
 ```
 
-bwf restores recorded triggers along with the code. Versions without a complete trigger snapshot keep current routes and schedules. Database recovery is separate: use [`bwf db restore`](../reference/cli/database.md#nosam-db-restore) to undo D1 migrations.
+bwf restores recorded triggers along with the code. Versions without a complete trigger snapshot keep current routes and schedules. Database recovery is separate: use [`bwf db restore`](../reference/cli/database.md#platform-db-restore) to undo D1 migrations.
 
 #### Scope and limitations
 
@@ -212,7 +212,7 @@ Commit Durable Object migration history in `bwf.lock.json`. Do not delete or reo
 
 `bwf secret`, `bwf domain`, `bwf project status|list|logs|rollback`, and remote `bwf db` commands use the selected account and Worker. Logs are a live tail.
 
-Custom domain commands update routes immediately. If a first deployment times out while DNS or TLS is propagating, check the domain in Cloudflare and retry once `/__nosam/ready` is reachable.
+Custom domain commands update routes immediately. If a first deployment times out while DNS or TLS is propagating, check the domain in Cloudflare and retry once `/__platform/ready` is reachable.
 
 `bwf project delete` does not remove Cloudflare resources. Review ownership and remove them in Cloudflare.
 

@@ -17,7 +17,7 @@ export function adminAccessRejected(
     title,
     browserPageStatus('error') +
       browserPageLead(title, message) +
-      '<a class="nosam-auth-button nosam-auth-button-primary" href="/admin/logout">Sign in with another account</a>',
+      '<a class="platform-auth-button platform-auth-button-primary" href="/admin/logout">Sign in with another account</a>',
     403,
   );
 }
@@ -34,7 +34,7 @@ export function adminRequestRejected(
       'Request could not be verified',
       browserPageStatus('error') +
         browserPageLead('Request could not be verified', message) +
-        '<a class="nosam-auth-button nosam-auth-button-primary" href="/admin/">Refresh dashboard</a>',
+        '<a class="platform-auth-button platform-auth-button-primary" href="/admin/">Refresh dashboard</a>',
       403,
     );
   }

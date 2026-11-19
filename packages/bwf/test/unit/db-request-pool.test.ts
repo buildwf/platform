@@ -43,7 +43,7 @@ afterEach(() => {
  * workerd does when a request finishes: nothing may reuse a request's connection afterwards.
  */
 async function loadDb(dialect: Dialect, url: string) {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-db-request-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-db-request-'));
   roots.push(root);
   const core = dialect === 'postgresql' ? 'pg-core' : 'mysql-core';
   const coreUrl = import.meta.resolve(`drizzle-orm/${core}`);
@@ -62,14 +62,14 @@ export const users = mysqlTable('users', { id: int('id').primaryKey(), name: var
   const plugin = drizzlePlugin(root, false, dialect);
   const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
   const envUrl = new URL('../../src/runtime/env.ts', import.meta.url).href;
-  const stateKey = `__nosam_db_request_pools_${crypto.randomUUID().replaceAll('-', '')}`;
+  const stateKey = `__platform_db_request_pools_${crypto.randomUUID().replaceAll('-', '')}`;
   const state = { pools: [] as Array<Pool>, checkouts: 0 };
   (globalThis as Record<string, unknown>)[stateKey] = state;
   stateKeys.push(stateKey);
   // Both drivers check a connection out of the pool for each query and each transaction.
   const checkout = dialect === 'postgresql' ? 'connect' : 'getConnection';
   const code = load
-    .call({}, '\0virtual:nosam-db')
+    .call({}, '\0virtual:platform-db')
     .replace(
       /^import \{ drizzle \} from (.*);$/m,
       (_match, driver: string) => `import { drizzle as createDrizzle } from ${driver};
@@ -166,7 +166,7 @@ describe.each(['postgresql', 'mysql'] as const)('@builtbyfriends/bwf/db %s acros
     // Module-level queries: built once, run by every request.
     const { built, prepared, relational } = await request(async () => {
       const built = db.select().from(users);
-      const prepared = db.select().from(users).prepare('nosam_users');
+      const prepared = db.select().from(users).prepare('platform_users');
       const relational = db.query.users.findMany();
       expect(await built).toEqual(USERS);
       return { built, prepared, relational };

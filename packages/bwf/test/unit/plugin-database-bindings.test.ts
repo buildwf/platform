@@ -12,7 +12,7 @@ vi.mock('../../src/plugin-cloudflare.ts', () => import('../helpers/cloudflare-vi
 const roots: Array<string> = [];
 
 function project(framework = false): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-pg-bindings-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-pg-bindings-'));
   roots.push(root);
   writeFileSync(join(root, 'bwf.json'), JSON.stringify({ database: 'pg' }));
   writeFileSync(

@@ -81,7 +81,7 @@ export type ApiEnv = Env & {
      * staging deploy endpoint — non-interactive automation can't do the
      * `cloudflared` browser flow. Optional: unset everywhere except staging, so
      * production (not Access-gated) and dev tolerate absence. See
-     * `meta/operations.md` (Staging Access Control) and the `nosam-staging-programmatic`
+     * `meta/operations.md` (Staging Access Control) and the `platform-staging-programmatic`
      * service token.
      */
     CF_ACCESS_CLIENT_ID_STAGING?: string;
@@ -100,17 +100,17 @@ export type ApiEnv = Env & {
      * Name of the tail-consumer Worker that receives runtime logs (Tail Worker).
      * Wired into per-user-script `tail_consumers` metadata on each WfP upload.
      * This is the only log path for invocations that skip the dispatch Worker
-     * (crons, `/__nosam/migrate`, Durable Object alarms). Queue deliveries go
+     * (crons, `/__platform/migrate`, Durable Object alarms). Queue deliveries go
      * through the dispatch Worker. The dispatch Worker's own consumer also
      * receives the user items it invoked, each in its own tail invocation, so
      * those rows are stored twice; log queries collapse them
      * (`observability/log-rows.ts`).
-     * Falls back to `nosam-tail` when unset.
+     * Falls back to `platform-tail` when unset.
      */
     TAIL_SERVICE_NAME?: string;
     /** Set to `minimal` when URLs, log messages and exception messages are not recorded. */
     PLATFORM_RUNTIME_LOGS?: 'minimal';
-    NOSAM_PROXY_SERVICE?: string;
+    PLATFORM_PROXY_SERVICE?: string;
     /** Private readiness checks, attached after the proxy Worker has been provisioned. */
     PLATFORM_PROXY?: Fetcher;
     SANDBOX_CONTROL_SERVICE?: string;
@@ -191,8 +191,8 @@ export type ApiEnv = Env & {
     /** Cloudflare-verified sender address. Required when a self-hosted platform enables email. */
     EMAIL_FROM?: string;
     /**
-     * Platform mail domain for this environment (`mail.void.cloud` in
-     * production, `mail.voidcloud.dev` in staging). The proxy worker
+     * Platform mail domain for this environment (`mail.buildwf.dev` in
+     * production, `mail.staging.buildwf.dev` in staging). The proxy worker
      * declares the SAME var and validates every sender against it, so the two
      * values must match or a correctly-signed send is rejected by its own
      * proxy. Optional on the type because the var is absent until the mail

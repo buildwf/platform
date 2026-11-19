@@ -122,7 +122,7 @@ async function probePlatformVersion(origin: string): Promise<DiscoveryProbe> {
   ensurePlatformAccessToken(origin);
   let response: Response;
   try {
-    response = await fetch(`${origin}/.well-known/nosam-platform`, {
+    response = await fetch(`${origin}/.well-known/platform`, {
       headers: { Accept: 'application/json', ...cfAccessHeaders(process.env, origin) },
       redirect: 'manual',
       signal: AbortSignal.timeout(15_000),

@@ -1,10 +1,10 @@
 # Design archive
 
-These records explain implemented Nosam framework and platform decisions. Keep unresolved proposals, task lists, release signoff, commercial strategy, and private operational inventories outside this archive. Git history preserves earlier drafts and superseded approaches.
+These records explain implemented Platform framework and platform decisions. Keep unresolved proposals, task lists, release signoff, commercial strategy, and private operational inventories outside this archive. Git history preserves earlier drafts and superseded approaches.
 
 Start with maintained guides for current usage and operations:
 
-- [Self-host a Nosam platform](../../../docs/guide/self-hosted-platform.md)
+- [Self-host a Platform platform](../../../docs/guide/self-hosted-platform.md)
 - [Platform Administration](../../../docs/guide/platform-administration.md)
 - [Platform architecture](../architecture.md)
 - [Platform development](../../README.md)

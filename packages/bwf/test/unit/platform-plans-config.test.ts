@@ -25,7 +25,7 @@ let calls: Array<{ url: string; body?: Record<string, unknown> }>;
 let revision = 7;
 let pending = false;
 beforeEach(async () => {
-  directory = await mkdtemp(join(tmpdir(), 'nosam-plans-config-'));
+  directory = await mkdtemp(join(tmpdir(), 'platform-plans-config-'));
   calls = [];
   revision = 7;
   pending = false;

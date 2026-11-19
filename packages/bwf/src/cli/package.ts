@@ -40,7 +40,7 @@ type ProgressCallback = (message: string) => void;
  * Strip dev-only / internal-only fields from each rule before shipping the
  * manifest. The resulting entries contain only `{ source, destination, status }`.
  *
- * - `origin` is used to build the `X-Nosam-Routing` trace header during local
+ * - `origin` is used to build the `X-Platform-Routing` trace header during local
  *   dev; the deployed platform doesn't consume it.
  * - `force` is used internally by the CLI/router to split rules into the
  *   `redirectRules` (pre-asset, always-fires) and `fallbackRules` (post-asset,
@@ -424,7 +424,7 @@ function toMigrationsManifest(
 }
 
 /**
- * Build a Nosam-app deploy manifest from the inferred bindings + per-feature
+ * Build a Platform-app deploy manifest from the inferred bindings + per-feature
  * inputs. Pure shape transformation: reads no files, has no I/O.
  *
  * Note: callers are responsible for surfacing the non-SPA-fallbacks warning
@@ -529,7 +529,7 @@ export function buildBwfManifest(opts: {
     manifest.ssr = true;
   }
 
-  manifest.type = 'nosam';
+  manifest.type = 'platform';
 
   let resolvedAssetConfig = assetConfig;
   let resolvedFallbackRules = fallbackRules;

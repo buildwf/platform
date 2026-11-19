@@ -20,12 +20,12 @@ vi.mock('../../src/cli/auth', () => ({
 
 vi.mock('../../src/cli/project', () => ({
   readProjectConfig: () => mockReadProjectConfig(),
-  readDeploymentPlatform: () => 'nosam',
+  readDeploymentPlatform: () => 'platform',
 }));
 
 vi.mock('../../src/cli/client', () => ({
   PlatformClient: class {
-    apiUrl = 'https://nosam.buildwithfriends.dev';
+    apiUrl = 'https://platform.buildwithfriends.dev';
     getResources() {
       return mockGetResources();
     }
@@ -87,7 +87,7 @@ vi.mock('@voidzero-dev/vite-plus-prompts', () => ({
 const roots: Array<string> = [];
 
 function createProjectRoot(options: { database?: 'pg'; d1Binding?: string } = {}): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-db-execute-remote-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-db-execute-remote-'));
   roots.push(root);
 
   const bwfConfig: Record<string, unknown> = options.database === 'pg' ? { database: 'pg' } : {};
@@ -167,12 +167,12 @@ describe('bwf db execute --remote (D1)', () => {
 
   it('sends custom platform credentials only to its pinned proxy', async () => {
     const root = createProjectRoot();
-    const proxyOrigin = 'https://nosam-company-proxy.example.workers.dev';
+    const proxyOrigin = 'https://platform-company-proxy.example.workers.dev';
     mockGetProxyUrl.mockReturnValue(proxyOrigin);
     vi.stubEnv(
-      'NOSAM_ACCESS_CREDENTIALS',
+      'PLATFORM_ACCESS_CREDENTIALS',
       JSON.stringify({
-        'https://nosam.buildwithfriends.dev': {
+        'https://platform.buildwithfriends.dev': {
           CF_ACCESS_CLIENT_ID: 'api-id',
           CF_ACCESS_CLIENT_SECRET: 'api-secret',
         },
@@ -187,7 +187,7 @@ describe('bwf db execute --remote (D1)', () => {
     await runDbCommand(root, { action: 'execute', command: 'SELECT 1', remote: true });
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      'https://nosam-company-proxy.example.workers.dev/d1/query',
+      'https://platform-company-proxy.example.workers.dev/d1/query',
     );
     const headers = (fetchMock.mock.calls[0]![1] as RequestInit).headers as Record<string, string>;
     expect(headers['CF-Access-Client-Id']).toBe('proxy-id');
@@ -200,12 +200,12 @@ describe('bwf db execute --remote (D1)', () => {
     const proxyOrigin = 'https://proxy.example.com';
     mockGetProxyUrl.mockReturnValue(proxyOrigin);
     vi.stubEnv(
-      'NOSAM_ACCESS_CREDENTIALS',
+      'PLATFORM_ACCESS_CREDENTIALS',
       JSON.stringify({ [proxyOrigin]: { CF_ACCESS_TOKEN: 'stale-user-token' } }),
     );
     mockEnsurePlatformAccessToken.mockImplementation(() => {
       vi.stubEnv(
-        'NOSAM_ACCESS_CREDENTIALS',
+        'PLATFORM_ACCESS_CREDENTIALS',
         JSON.stringify({ [proxyOrigin]: { CF_ACCESS_TOKEN: 'fresh-user-token' } }),
       );
     });
@@ -252,7 +252,7 @@ describe('bwf db execute --remote (D1)', () => {
     const proxyOrigin = 'https://proxy.example.com';
     mockGetProxyUrl.mockReturnValue(proxyOrigin);
     vi.stubEnv(
-      'NOSAM_ACCESS_CREDENTIALS',
+      'PLATFORM_ACCESS_CREDENTIALS',
       JSON.stringify({
         [proxyOrigin]: {
           CF_ACCESS_CLIENT_ID: 'ci-id',

@@ -403,7 +403,7 @@ export type ProxyTokenLookup =
   | { kind: 'error'; error: Error };
 
 /**
- * Read the `__NOSAM_PROXY_TOKEN` plain-text binding that was baked into a
+ * Read the `__PLATFORM_PROXY_TOKEN` plain-text binding that was baked into a
  * user worker at deploy time. Used on rollback/backfill so we hand
  * dispatch the EXACT token the target worker expects, rather than
  * re-deriving from the current `JWT_SECRET` — which would 401 if the
@@ -411,7 +411,7 @@ export type ProxyTokenLookup =
  *
  * Returns a typed result so callers can distinguish:
  *   - `found`: use the baked token as-is.
- *   - `missing`: bindings list returned but no `__NOSAM_PROXY_TOKEN` —
+ *   - `missing`: bindings list returned but no `__PLATFORM_PROXY_TOKEN` —
  *     a legacy worker. Callers may fall back to re-derivation with a
  *     visible warning.
  *   - `error`: CF API failure (rate limit, transport, auth, 5xx).
@@ -434,7 +434,7 @@ export async function getDispatchWorkerProxyToken(
     return { kind: 'error', error };
   }
   const token = bindings.find(
-    (binding) => binding.type === 'plain_text' && binding.name === '__NOSAM_PROXY_TOKEN',
+    (binding) => binding.type === 'plain_text' && binding.name === '__PLATFORM_PROXY_TOKEN',
   )?.text;
   if (!token) {
     return { kind: 'missing' };

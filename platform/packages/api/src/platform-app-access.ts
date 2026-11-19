@@ -181,14 +181,14 @@ async function verifyAppAccessProof(
   const token = context.env.PLATFORM_HEALTH_PROBE_TOKEN;
   if (
     !token ||
-    context.req.header('X-Nosam-Platform-Probe') !== token ||
+    context.req.header('X-Platform-Probe') !== token ||
     !context.env.PLATFORM_INSTALLATION_ID ||
     !context.env.PLATFORM_APP_ACCESS
   ) {
     return null;
   }
   const setupKey = context.env.PLATFORM_APP_ACCESS_SETUP_TOKEN;
-  const signature = context.req.header('X-Nosam-App-Access-Setup') ?? '';
+  const signature = context.req.header('X-Platform-App-Access-Setup') ?? '';
   if (!setupKey || setupKey.length < 32 || !/^[A-Za-z0-9_-]{43}$/.test(signature)) {
     return null;
   }

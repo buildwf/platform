@@ -78,7 +78,7 @@ function request(token?: string, application: unknown = target) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { 'X-Nosam-Platform-Probe': token } : {}),
+      ...(token ? { 'X-Platform-Probe': token } : {}),
     },
     body: JSON.stringify({ application }),
   });
@@ -283,7 +283,7 @@ describe('installer domain activation', () => {
     const wildcard = (await readZeroTrustConfigurationStrict(env.db))?.wildcardApplication;
     expect(wildcard?.destinations).toContain('*.apps.example.com');
     expect(wildcard?.destinations).toContain(
-      'nosam-123456abcdef-*.' + original.workersDev.subdomain + '.workers.dev',
+      'platform-123456abcdef-*.' + original.workersDev.subdomain + '.workers.dev',
     );
     expect(await zeroTrustStatus(bindings(), env.db, { check: true })).toMatchObject({
       live: { present: true, drifted: false },

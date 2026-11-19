@@ -27,8 +27,8 @@ const { buildMime, normalizeEmail } =
 
 const JWT_SECRET = 'test-secret-key';
 const EMAIL_SIGNING_SECRET = 'test-email-signing-key-independent';
-const PROD_DOMAIN = 'mail.void.cloud';
-const STAGING_DOMAIN = 'mail.voidcloud.dev';
+const PROD_DOMAIN = 'mail.buildwf.dev';
+const STAGING_DOMAIN = 'mail.staging.buildwf.dev';
 
 // --- HMAC helper (mirrors the worker's project token signing) ---
 
@@ -1210,7 +1210,7 @@ describe('POST /email/send — sender domain is configuration, never a baked-in 
     ['whitespace only', '   '],
     ['a non-string', 123],
   ])('fails closed with 502 when EMAIL_SENDER_DOMAIN is %s', async (_label, value) => {
-    // The old build hard-coded `mail.void.cloud`. A fallback here would let a
+    // The old build hard-coded `mail.buildwf.dev`. A fallback here would let a
     // misconfigured staging proxy accept — and send — production senders.
     const kv = happyPathKv();
     const sender = createSender();

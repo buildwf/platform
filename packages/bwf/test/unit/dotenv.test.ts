@@ -117,7 +117,7 @@ describe('parseDotenvFile', () => {
   });
 
   it('reads an on-disk file and expands', () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-dotenv-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-dotenv-'));
     const file = join(root, '.env');
     writeFileSync(file, 'HOST=api.example.com\nURL=https://${HOST}\n');
     expect(parseDotenvFile(file)).toEqual({
@@ -248,7 +248,7 @@ describe('expandDotenv — security', () => {
 
 describe('scanWranglerDotenvKeys', () => {
   it('reads keys the way Wrangler does, including export and colon forms', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'nosam-dotenv-scan-'));
+    const dir = mkdtempSync(join(tmpdir(), 'platform-dotenv-scan-'));
     const file = join(dir, '.env');
     writeFileSync(
       file,
@@ -257,7 +257,7 @@ describe('scanWranglerDotenvKeys', () => {
         'PLAIN=ok',
         'export EXPORTED=x',
         'COLON: a@b.c',
-        'VALUE=has__NOSAM_inside',
+        'VALUE=has__PLATFORM_inside',
         'MULTI="line one',
         'INSIDE_QUOTES=no"',
         '',

@@ -13,7 +13,7 @@ vi.mock('../../src/plugin-ai-setup.ts', async (importOriginal) => ({
   // Signed in to bwf, with no project linked.
   readBwfDevCredentials: () => ({
     status: 'no-project',
-    apiUrl: 'https://nosam.example',
+    apiUrl: 'https://platform.example',
     token: 'token',
   }),
   runAiSetupPrompt,
@@ -32,9 +32,9 @@ afterEach(() => {
   }
 });
 
-/** Starts `nosam:env` for an app that uses `@builtbyfriends/bwf/ai`, in a server with the given plugins. */
+/** Starts `platform:env` for an app that uses `@builtbyfriends/bwf/ai`, in a server with the given plugins. */
 async function startAiApp(plugins: Array<PluginOption>): Promise<void> {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-ai-onboarding-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-ai-onboarding-'));
   roots.push(root);
   writeFileSync(join(root, 'package.json'), JSON.stringify({ type: 'module' }));
   writeFileSync(
@@ -49,7 +49,7 @@ async function startAiApp(plugins: Array<PluginOption>): Promise<void> {
   vi.spyOn(process, 'cwd').mockReturnValue(root);
 
   const { bwfPlugin } = await import('../../src/index.ts');
-  const envPlugin = bwfPlugin().find((plugin) => plugin.name === 'nosam:env');
+  const envPlugin = bwfPlugin().find((plugin) => plugin.name === 'platform:env');
   const config = getHookHandler(envPlugin?.config) as (config: UserConfig, env: ConfigEnv) => void;
   config({}, { command: 'serve', mode: 'development' });
   const configureServer = getHookHandler(envPlugin?.configureServer) as (

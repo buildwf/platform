@@ -88,7 +88,7 @@ beforeEach(() => {
 
   mockGetToken.mockReturnValue('test-token');
   mockReadProjectConfig.mockReturnValue({ projectId: 'proj_default', slug: 'default' });
-  mockReadDeploymentPlatform.mockReturnValue('nosam');
+  mockReadDeploymentPlatform.mockReturnValue('platform');
   mockListProjects.mockResolvedValue([]);
   mockListDomains.mockResolvedValue([]);
   delete process.env.BWF_PROJECT;

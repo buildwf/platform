@@ -9,7 +9,7 @@ Use `@builtbyfriends/bwf/deploy` from Node.js to prepare a built bwf app, SPA, o
 Build the app in managed mode inside its isolated environment:
 
 ```sh
-BWF_DEPLOY_BUILD=1 NOSAM_DEPLOY_PROJECT_ID=artifact npm run build
+BWF_DEPLOY_BUILD=1 PLATFORM_DEPLOY_PROJECT_ID=artifact npm run build
 ```
 
 These values select a platform-compatible build. The target project is selected during publish approval.

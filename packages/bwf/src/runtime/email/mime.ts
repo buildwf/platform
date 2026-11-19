@@ -1119,7 +1119,7 @@ function makeBoundary(prefix: string): string {
   // 16 random bytes → 24-char base64. Workers + browsers expose crypto.
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
-  return `=_nosam_${prefix}_${bytesToBase64(bytes).replace(/[+/=]/g, '')}`;
+  return `=_parts_${prefix}_${bytesToBase64(bytes).replace(/[+/=]/g, '')}`;
 }
 
 function wrapMultipart(
@@ -1226,7 +1226,7 @@ function minVerbatimOctets(value: string): number {
  */
 const ATTACHMENT_PART_MIN_OCTETS: number =
   CRLF.length + // the join between this part and the one before it
-  ('--=_nosam_mixed_'.length + CRLF.length) +
+  ('--=_parts_mixed_'.length + CRLF.length) +
   ('Content-Type: '.length + '; name=""'.length + CRLF.length) +
   ('Content-Transfer-Encoding: base64'.length + CRLF.length) +
   ('Content-Disposition: '.length + '; filename=""'.length + CRLF.length) +

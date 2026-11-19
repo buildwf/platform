@@ -43,7 +43,7 @@ const input = {
   admission: { mode: 'company', connections: ['google'], access: false },
 };
 beforeEach(async () => {
-  directory = await mkdtemp(join(tmpdir(), 'nosam-install-auth-'));
+  directory = await mkdtemp(join(tmpdir(), 'platform-install-auth-'));
 });
 afterEach(async () => {
   vi.restoreAllMocks();

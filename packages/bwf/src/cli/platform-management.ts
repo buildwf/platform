@@ -289,7 +289,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
   const timingStart = performance.now();
   let timingPrevious = timingStart;
   const markPhase = (phase: string) => {
-    if (process.env.NOSAM_PLATFORM_TIMINGS !== '1') {
+    if (process.env.PLATFORM_TIMINGS !== '1') {
       return;
     }
     const current = performance.now();
@@ -336,7 +336,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
     }
     const recovery = readInstallationRecoverySecrets(manifest);
     const gatewayToken =
-      process.env.NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN || recovery?.cloudflareApiToken;
+      process.env.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN || recovery?.cloudflareApiToken;
     const client =
       operatorCredential.source === 'oauth' && gatewayToken
         ? operatorClient.withAiGatewayToken(gatewayToken)
@@ -418,7 +418,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
       }
       if (!manifest.deployment.authentication.configurable) {
         throw new Error(
-          'platform: This installation signs in with the GitHub OAuth App from its installation settings. Set NOSAM_PLATFORM_GITHUB_CLIENT_ID and NOSAM_PLATFORM_GITHUB_CLIENT_SECRET when running repair to replace it.',
+          'platform: This installation signs in with the GitHub OAuth App from its installation settings. Set PLATFORM_GITHUB_CLIENT_ID and PLATFORM_GITHUB_CLIENT_SECRET when running repair to replace it.',
         );
       }
       if (!recovery?.authenticationSetupJson || !recovery.authSetupToken) {
@@ -435,11 +435,11 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
     const deployment = manifest.deployment;
     const planInput = {
       accountId: manifest.account.id,
-      ...(args.subcommand === 'upgrade' && process.env.NOSAM_EMAIL_SHARED_ZONE_ID
-        ? { emailSharedZoneId: process.env.NOSAM_EMAIL_SHARED_ZONE_ID }
+      ...(args.subcommand === 'upgrade' && process.env.PLATFORM_EMAIL_SHARED_ZONE_ID
+        ? { emailSharedZoneId: process.env.PLATFORM_EMAIL_SHARED_ZONE_ID }
         : {}),
-      ...(args.subcommand === 'upgrade' && process.env.NOSAM_EMAIL_SENDER_DOMAIN
-        ? { emailSenderDomain: process.env.NOSAM_EMAIL_SENDER_DOMAIN }
+      ...(args.subcommand === 'upgrade' && process.env.PLATFORM_EMAIL_SENDER_DOMAIN
+        ? { emailSenderDomain: process.env.PLATFORM_EMAIL_SENDER_DOMAIN }
         : {}),
       applicationDomain: deployment.application.baseDomain,
       controlPlaneDomain: deployment.controlPlane.apiHostname ?? '',
@@ -595,31 +595,31 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
         ? setInstallationDesiredState(manifest, 'enabled', new Date().toISOString())
         : manifest;
     const bootstrapGitHubLogin =
-      process.env.NOSAM_PLATFORM_ADMIN_GITHUB_LOGIN || recovery?.bootstrapGitHubLogin || '';
+      process.env.PLATFORM_ADMIN_GITHUB_LOGIN || recovery?.bootstrapGitHubLogin || '';
     const bootstrapGitHubId =
-      process.env.NOSAM_PLATFORM_ADMIN_GITHUB_ID ||
+      process.env.PLATFORM_ADMIN_GITHUB_ID ||
       recovery?.bootstrapGitHubId ||
       (bootstrapGitHubLogin ? await resolveBootstrapGitHubId(bootstrapGitHubLogin) : '');
     const secrets = createPlatformInstallationSecrets({
       bootstrapGitHubId,
       bootstrapGitHubLogin,
-      cloudflareApiToken: process.env.NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN || '',
+      cloudflareApiToken: process.env.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN || '',
       checkpoint: recovery,
       databaseUrl,
       emailEnabled: plan.deployment.capabilities.email,
-      emailSigningSecret: process.env.NOSAM_PLATFORM_EMAIL_SIGNING_SECRET || '',
+      emailSigningSecret: process.env.PLATFORM_EMAIL_SIGNING_SECRET || '',
       existingEmailEnabled: manifest.deployment.capabilities.email,
       existingInstallation: true,
       updateExistingWorkers: true,
-      githubClientId: process.env.NOSAM_PLATFORM_GITHUB_CLIENT_ID || '',
-      githubClientSecret: process.env.NOSAM_PLATFORM_GITHUB_CLIENT_SECRET || '',
-      jwtSecret: process.env.NOSAM_PLATFORM_JWT_SECRET || '',
-      projectSecretKey: process.env.NOSAM_PLATFORM_PROJECT_SECRET_KEY || '',
-      projectSecretKeysJson: process.env.NOSAM_PLATFORM_PROJECT_SECRET_KEYS_JSON || '',
+      githubClientId: process.env.PLATFORM_GITHUB_CLIENT_ID || '',
+      githubClientSecret: process.env.PLATFORM_GITHUB_CLIENT_SECRET || '',
+      jwtSecret: process.env.PLATFORM_JWT_SECRET || '',
+      projectSecretKey: process.env.PLATFORM_PROJECT_SECRET_KEY || '',
+      projectSecretKeysJson: process.env.PLATFORM_PROJECT_SECRET_KEYS_JSON || '',
       projectSecretActiveKeyVersion:
-        process.env.NOSAM_PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION || '',
-      r2AccessKeyId: process.env.NOSAM_PLATFORM_R2_ACCESS_KEY_ID || '',
-      r2SecretAccessKey: process.env.NOSAM_PLATFORM_R2_SECRET_ACCESS_KEY || '',
+        process.env.PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION || '',
+      r2AccessKeyId: process.env.PLATFORM_R2_ACCESS_KEY_ID || '',
+      r2SecretAccessKey: process.env.PLATFORM_R2_SECRET_ACCESS_KEY || '',
       ...replacedLogin,
     });
     const runtimeTokenToPreflight = resolvePlatformRuntimeTokenToPreflight(plan, secrets, {
@@ -658,7 +658,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
           throw error;
         }
         log.warn(
-          'The runtime API token saved on this machine is not valid (HTTP 401). bwf cannot check the platform email permissions before it changes the platform, and it continues without this check. To do the check, set NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to the runtime token of the platform.',
+          'The runtime API token saved on this machine is not valid (HTTP 401). bwf cannot check the platform email permissions before it changes the platform, and it continues without this check. To do the check, set PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to the runtime token of the platform.',
         );
       }
     }
@@ -1029,7 +1029,7 @@ export function resolvePlatformRuntimeTokenToPreflight(
   if (options.enablingCustomDomains) {
     if (!secrets.cloudflareApiToken) {
       throw new Error(
-        'platform: Before enabling project custom domains, set NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to the platform runtime token with Zone → SSL and Certificates → Edit on the application zone so bwf can check its access.',
+        'platform: Before enabling project custom domains, set PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to the platform runtime token with Zone → SSL and Certificates → Edit on the application zone so bwf can check its access.',
       );
     }
     return secrets.cloudflareApiToken;

@@ -32,7 +32,7 @@ export function ProjectsTable({
 }) {
   return (
     <>
-      <Table className="nosam-admin-projects-table" hasHover>
+      <Table className="platform-admin-projects-table" hasHover>
         <TableHeader>
           <TableRow>
             <TableHeaderCell>Name</TableHeaderCell>
@@ -47,7 +47,7 @@ export function ProjectsTable({
           {projects.map((p) => (
             <TableRow key={p.id}>
               <TableCell>
-                <Link className="nosam-admin-resource-link" href={`/admin/projects/${p.id}`}>
+                <Link className="platform-admin-resource-link" href={`/admin/projects/${p.id}`}>
                   {p.slug}
                 </Link>
               </TableCell>
@@ -56,7 +56,7 @@ export function ProjectsTable({
               </TableCell>
               <TableCell>
                 {p.owner_login ? (
-                  <Link className="nosam-admin-resource-link" href={`/admin/users/${p.user_id}`}>
+                  <Link className="platform-admin-resource-link" href={`/admin/users/${p.user_id}`}>
                     {p.owner_login}
                   </Link>
                 ) : (

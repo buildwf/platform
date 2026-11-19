@@ -80,7 +80,7 @@ Keys use route patterns such as `/api/users/[id]` and `/docs/[...slug]`.
 import type { RouteMap } from '@builtbyfriends/bwf/routes';
 ```
 
-## `@builtbyfriends/bwf/routes` {#nosam-routes}
+## `@builtbyfriends/bwf/routes` {#platform-routes}
 
 ### `routeUrl(path, options?)` {#routeurl-path-options}
 

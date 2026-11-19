@@ -12,12 +12,12 @@ import gateway from '../../src/index.ts';
 
 const identityHeaders = {
   authorization: 'Bearer relay-secret',
-  'x-nosam-email-account': 'account-1',
-  'x-nosam-email-zone': 'zone-1',
-  'x-nosam-email-ingress': 'gateway-1',
-  'x-nosam-email-request-id': '12345678-1234-4234-8234-123456789abc',
-  'x-nosam-email-from': 'sender@example.net',
-  'x-nosam-email-to': 'support@example.com',
+  'x-platform-email-account': 'account-1',
+  'x-platform-email-zone': 'zone-1',
+  'x-platform-email-ingress': 'gateway-1',
+  'x-platform-email-request-id': '12345678-1234-4234-8234-123456789abc',
+  'x-platform-email-from': 'sender@example.net',
+  'x-platform-email-to': 'support@example.com',
 };
 const route = {
   routeId: 'route-1',
@@ -320,7 +320,7 @@ describe('dedicated email gateway', () => {
       expect(
         await hmacVerifyState(
           raw,
-          request.headers.get('x-nosam-internal') ?? '',
+          request.headers.get('x-platform-internal') ?? '',
           'platform-secret',
         ),
       ).toBe(true);
@@ -359,11 +359,11 @@ describe('dedicated email gateway', () => {
     const raw = new TextEncoder().encode('From: sender@example.net\r\n\r\nbody');
     const first = await gateway.fetch(request(raw), environment, context);
     expect(first.status).toBe(204);
-    expect(first.headers.get('x-nosam-email-receipt')).toMatch(/^[a-f0-9]{64}$/);
+    expect(first.headers.get('x-platform-email-receipt')).toMatch(/^[a-f0-9]{64}$/);
     expect((await gateway.fetch(request(raw), environment, context)).status).toBe(204);
     for (const headers of [
-      { 'x-nosam-email-from': 'other@example.net' },
-      { 'x-nosam-email-to': 'other@example.com' },
+      { 'x-platform-email-from': 'other@example.net' },
+      { 'x-platform-email-to': 'other@example.com' },
     ]) {
       expect((await gateway.fetch(request(raw, headers), environment, context)).status).toBe(409);
     }
@@ -551,7 +551,7 @@ describe('dedicated email gateway', () => {
   it('requires complete ingress identity', async () => {
     const apiFetch = vi.fn();
     const response = await gateway.fetch(
-      request(new Uint8Array(), { 'x-nosam-email-zone': '' }),
+      request(new Uint8Array(), { 'x-platform-email-zone': '' }),
       env(apiFetch),
       context,
     );
@@ -615,7 +615,7 @@ describe('dedicated email gateway', () => {
         expect(
           await hmacVerifyState(
             'email-ingress-v1\naccount-1\nzone-1\ngateway-1\nsupport@example.com',
-            request.headers.get('x-nosam-internal') ?? '',
+            request.headers.get('x-platform-internal') ?? '',
             'platform-secret',
           ),
         ).toBe(true);
@@ -703,7 +703,7 @@ describe('dedicated email gateway', () => {
         expect(
           await hmacVerifyState(
             'email-probe-v1\naccount-1\nzone-1\ngateway-1',
-            request.headers.get('x-nosam-internal') ?? '',
+            request.headers.get('x-platform-internal') ?? '',
             'platform-secret',
           ),
         ).toBe(true);

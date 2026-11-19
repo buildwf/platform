@@ -31,9 +31,9 @@ import {
 beforeEach(() => {
   home.value = mkdtempSync(join(tmpdir(), 'bwf-registry-home-'));
   keyring.clear();
-  vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', undefined);
+  vi.stubEnv('PLATFORM_REGISTRY_DIR', undefined);
   vi.stubEnv('VOID_PLATFORM_REGISTRY_DIR', undefined);
-  vi.stubEnv('NOSAM_PLATFORM_RECOVERY_KEY', undefined);
+  vi.stubEnv('PLATFORM_RECOVERY_KEY', undefined);
   vi.stubEnv('VOID_PLATFORM_RECOVERY_KEY', undefined);
 });
 afterEach(() => {
@@ -56,8 +56,8 @@ describe('platform registry from earlier releases', () => {
   it('keeps using an earlier registry in place', () => {
     const voidDirectory = addRegistry('.void');
     expect(platformRegistryDirectory()).toBe(voidDirectory);
-    const nosamDirectory = addRegistry('.nosam');
-    expect(platformRegistryDirectory()).toBe(nosamDirectory);
+    const platformDirectory = addRegistry('.platform');
+    expect(platformRegistryDirectory()).toBe(platformDirectory);
     const bwfDirectory = addRegistry('.bwf');
     expect(platformRegistryDirectory()).toBe(bwfDirectory);
   });
@@ -65,7 +65,7 @@ describe('platform registry from earlier releases', () => {
   it('reads the old registry directory variable', () => {
     vi.stubEnv('VOID_PLATFORM_REGISTRY_DIR', '/tmp/old-registry');
     expect(platformRegistryDirectory()).toBe('/tmp/old-registry');
-    vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', '/tmp/new-registry');
+    vi.stubEnv('PLATFORM_REGISTRY_DIR', '/tmp/new-registry');
     expect(platformRegistryDirectory()).toBe('/tmp/new-registry');
   });
 
@@ -77,10 +77,10 @@ describe('platform registry from earlier releases', () => {
       ownershipNonce: 'nonce',
     } as never;
     const key = Buffer.alloc(32, 9).toString('base64');
-    vi.stubEnv('NOSAM_PLATFORM_RECOVERY_KEY', key);
+    vi.stubEnv('PLATFORM_RECOVERY_KEY', key);
     mkdirSync(join(directory, 'account_1'), { recursive: true });
     writePendingInstallationSecrets(manifest, { token: 'secret' }, directory);
-    vi.stubEnv('NOSAM_PLATFORM_RECOVERY_KEY', undefined);
+    vi.stubEnv('PLATFORM_RECOVERY_KEY', undefined);
     expect(() => readPendingInstallationSecrets(manifest, directory)).toThrow('encryption key');
     const account = `recovery:${createHash('sha256').update(directory).digest('hex')}`;
     keyring.set(`dev.void.cli.platform\0${account}`, key);
@@ -95,10 +95,10 @@ describe('platform registry from earlier releases', () => {
       ownershipNonce: 'nonce',
     } as never;
     const key = Buffer.alloc(32, 9).toString('base64');
-    vi.stubEnv('NOSAM_PLATFORM_RECOVERY_KEY', key);
+    vi.stubEnv('PLATFORM_RECOVERY_KEY', key);
     mkdirSync(join(directory, 'account_1'), { recursive: true });
     writePendingInstallationSecrets(manifest, { token: 'secret' }, directory);
-    vi.stubEnv('NOSAM_PLATFORM_RECOVERY_KEY', undefined);
+    vi.stubEnv('PLATFORM_RECOVERY_KEY', undefined);
     vi.stubEnv('VOID_PLATFORM_RECOVERY_KEY', key);
     expect(readPendingInstallationSecrets(manifest, directory)).toEqual({ token: 'secret' });
   });

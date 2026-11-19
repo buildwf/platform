@@ -26,7 +26,7 @@ import type { StandardSchemaV1 } from '../../src/standard-schema.ts';
 const roots: Array<string> = [];
 
 function createTempProject(opts?: { withEnvTs?: boolean }): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-selfhost-env-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-selfhost-env-'));
   roots.push(root);
   if (opts?.withEnvTs !== false) {
     // Empty module body is enough — schema is pre-registered via defineEnv.

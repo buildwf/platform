@@ -998,7 +998,7 @@ function createEmailWranglerConfigContext(configPath: string): EmailWranglerConf
     return { path: configPath, cleanup: () => {} };
   }
 
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-email-wrangler-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-email-wrangler-'));
   const path = join(directory, 'wrangler.jsonc');
   try {
     writeFileSync(path, '{}\n', { encoding: 'utf8', flag: 'wx', mode: 0o600 });

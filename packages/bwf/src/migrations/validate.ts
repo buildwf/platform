@@ -17,7 +17,7 @@ export type MigrationFile = {
 
 /**
  * Destructive SQL patterns that are rejected unless the migration
- * contains the `-- nosam:allow-destructive` pragma comment.
+ * contains the `-- platform:allow-destructive` pragma comment.
  */
 const DESTRUCTIVE_PATTERNS = [
   /\bDROP\s+TABLE\b/i,

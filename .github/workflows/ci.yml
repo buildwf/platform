@@ -109,9 +109,9 @@ jobs:
       group: cloudflare-live-e2e
       cancel-in-progress: false
     env:
-      NOSAM_E2E_CF_TOKEN: ${{ secrets.NOSAM_E2E_CF_TOKEN }}
-      NOSAM_E2E_CF_ACCOUNT_ID: ${{ secrets.NOSAM_E2E_CF_ACCOUNT_ID }}
-      NOSAM_E2E_NAMESPACE: ci
+      PLATFORM_E2E_CF_TOKEN: ${{ secrets.PLATFORM_E2E_CF_TOKEN }}
+      PLATFORM_E2E_CF_ACCOUNT_ID: ${{ secrets.PLATFORM_E2E_CF_ACCOUNT_ID }}
+      PLATFORM_E2E_NAMESPACE: ci
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -125,10 +125,10 @@ jobs:
       # secret to '').
       - name: Require live Cloudflare credentials
         run: |
-          : "${NOSAM_E2E_CF_TOKEN:?empty — set it as a cloudflare-e2e environment secret}"
-          : "${NOSAM_E2E_CF_ACCOUNT_ID:?empty — set it as a cloudflare-e2e environment secret}"
+          : "${PLATFORM_E2E_CF_TOKEN:?empty — set it as a cloudflare-e2e environment secret}"
+          : "${PLATFORM_E2E_CF_ACCOUNT_ID:?empty — set it as a cloudflare-e2e environment secret}"
       # build:core produces the core package and its workspace dependencies, including
-      # dist/cli/cli.mjs and the built `nosam` plugin the deploy uses to build the app.
+      # dist/cli/cli.mjs and the built `platform` plugin the deploy uses to build the app.
       - run: vp run build:core
       - run: vp test run packages/bwf/test/e2e/cloudflare-deploy-live.test.ts
 

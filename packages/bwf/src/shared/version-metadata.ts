@@ -1,8 +1,8 @@
 import { bindingNamesForField, findBindingNameOwner } from '../cli/wrangler.ts';
 
 /** Build-only marker: an existing-site handoff must not add Worker bindings. */
-export const CLOUDFLARE_PRESERVE_BINDINGS_BUILD_ENV = 'NOSAM_CLOUDFLARE_PRESERVE_BINDINGS';
-export const DEFAULT_VERSION_METADATA_BINDING = '__NOSAM_VERSION_METADATA';
+export const CLOUDFLARE_PRESERVE_BINDINGS_BUILD_ENV = 'PLATFORM_CLOUDFLARE_PRESERVE_BINDINGS';
+export const DEFAULT_VERSION_METADATA_BINDING = '__PLATFORM_VERSION_METADATA';
 
 /** Keep the authored singleton name, and reject a cross-type binding collision. */
 export function readVersionMetadataBinding(config: Record<string, unknown>): string | undefined {

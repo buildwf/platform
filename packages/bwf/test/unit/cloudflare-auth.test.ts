@@ -101,7 +101,7 @@ describe('Cloudflare authentication', () => {
         CF_ACCESS_CLIENT_SECRET: 'access',
         DATABASE_URL: 'postgres://secret',
         PATH: '/bin',
-        NOSAM_PLATFORM_RECOVERY_KEY: 'recovery',
+        PLATFORM_RECOVERY_KEY: 'recovery',
       }),
     ).toEqual({ PATH: '/bin', CLOUDFLARE_AUTH_USE_KEYRING: 'true' });
   });

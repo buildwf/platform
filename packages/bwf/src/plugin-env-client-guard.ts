@@ -231,7 +231,7 @@ function recordHit(node: AstMemberExpression, hits: Array<Hit>): void {
  */
 export function envClientGuardPlugin(root: string): Plugin {
   return {
-    name: 'nosam:env-client-guard',
+    name: 'platform:env-client-guard',
     // Run after other transforms so the `code` we get is plain JS we can parse.
     enforce: 'post',
     async transform(code, id) {

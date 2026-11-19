@@ -9,14 +9,14 @@ export async function createLimitResponse(
 ): Promise<Response> {
   const headers = new Headers({
     'Cache-Control': 'no-store',
-    Vary: 'Accept, Sec-Fetch-Dest, X-NosamPages',
+    Vary: 'Accept, Sec-Fetch-Dest, X-PlatformPages',
   });
   const json = usageLimitResponse(limit);
   const retry = json.headers.get('retry-after');
   if (retry) {
     headers.set('Retry-After', retry);
   }
-  if (request.headers.get('X-NosamPages') === 'true' || !shouldServeHtmlErrorPage(request)) {
+  if (request.headers.get('X-PlatformPages') === 'true' || !shouldServeHtmlErrorPage(request)) {
     headers.set('Content-Type', 'application/json');
     return new Response(request.method === 'HEAD' ? null : json.body, { status: 429, headers });
   }

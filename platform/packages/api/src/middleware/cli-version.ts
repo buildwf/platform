@@ -5,7 +5,7 @@ import type { Context } from 'hono';
  * (direct-to-R2 + JSON-mode finalize). Bump alongside any future
  * wire-protocol break that requires CLI cooperation.
  *
- * Sourced from the framework `nosam` package on npm. 0.7.0 was the first
+ * Sourced from the framework `platform` package on npm. 0.7.0 was the first
  * release shipping the direct-to-R2 path; everything earlier sent the
  * removed multipart body.
  */
@@ -64,7 +64,7 @@ export type CliOutdatedBody = Readonly<{
  *      of a pre-direct-to-R2 CLI. The new handlers can't parse multipart
  *      and would otherwise return an opaque "invalid JSON body" 400.
  *
- *   2. `X-Nosam-CLI-Version` header policy:
+ *   2. `X-Platform-CLI-Version` header policy:
  *      - present, parses, ≥ MIN_CLI_VERSION → pass (`null`)
  *      - present, parses, < MIN_CLI_VERSION → 426 cli_outdated
  *      - present, *unparseable* → 426 cli_outdated (FAIL CLOSED — anything
@@ -72,7 +72,7 @@ export type CliOutdatedBody = Readonly<{
  *        forged bypass attempt; pre-release tags are explicitly allowed
  *        by the regex, so legitimate CLIs won't hit this path)
  *      - missing → pass (`null`) — pre-header CLIs that already speak
- *        the JSON wire format (nosam@0.7.0 / 0.7.1) ship without this
+ *        the JSON wire format (platform@0.7.0 / 0.7.1) ship without this
  *        header; rejecting "missing" today would brick them.
  *
  * **Migration policy for missing headers:** This is a permanent
@@ -103,7 +103,7 @@ export function cliVersionProblem(
     return {
       error: 'cli_outdated',
       message:
-        'Your nosam CLI is too old: it sent a multipart deploy body, which is no longer supported. ' +
+        'Your platform CLI is too old: it sent a multipart deploy body, which is no longer supported. ' +
         `Upgrade with: npm i -g @builtbyfriends/bwf@latest (minimum version ${MIN_CLI_VERSION}).`,
       minVersion: MIN_CLI_VERSION,
     };
@@ -115,9 +115,9 @@ export function cliVersionProblem(
         error: 'cli_outdated',
         message:
           cmp === null
-            ? `Your nosam CLI sent an unrecognized version "${cliVersion}". ` +
+            ? `Your platform CLI sent an unrecognized version "${cliVersion}". ` +
               'Upgrade with: npm i -g @builtbyfriends/bwf@latest'
-            : `Your nosam CLI ${cliVersion} is below the minimum supported version ${MIN_CLI_VERSION}. ` +
+            : `Your platform CLI ${cliVersion} is below the minimum supported version ${MIN_CLI_VERSION}. ` +
               'Upgrade with: npm i -g @builtbyfriends/bwf@latest',
         minVersion: MIN_CLI_VERSION,
         clientVersion: cliVersion,
@@ -130,7 +130,7 @@ export function cliVersionProblem(
 export function checkCliVersionOrRespond(context: Context): Response | null {
   const problem = cliVersionProblem(
     context.req.header('content-type') ?? null,
-    context.req.header('x-nosam-cli-version') ?? null,
+    context.req.header('x-platform-cli-version') ?? null,
   );
   return problem ? context.json(problem, 426) : null;
 }

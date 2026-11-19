@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import { inspectPackage } from './packed-registry.mjs';
 
 function createPackage(t, overrides = {}, includeLicense = true) {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-packed-metadata-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-packed-metadata-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const directory = join(root, 'package');
   mkdirSync(directory);

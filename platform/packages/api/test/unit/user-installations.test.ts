@@ -114,7 +114,7 @@ describe('listAuthorizedInstallationIds', () => {
     const result = await listAuthorizedInstallationIds(
       CONFIGURED_ENV,
       'code-x',
-      'https://api.nosam.example/cb',
+      'https://api.platform.example/cb',
     );
 
     expect(result.installationIds.size).toBe(102);
@@ -124,7 +124,7 @@ describe('listAuthorizedInstallationIds', () => {
     expect(result.callerAccountId).toBe('4242');
     // The token-exchange POST forwarded the authorize redirect_uri byte-for-byte.
     expect(tokenBodies).toHaveLength(1);
-    expect(tokenBodies[0].redirect_uri).toBe('https://api.nosam.example/cb');
+    expect(tokenBodies[0].redirect_uri).toBe('https://api.platform.example/cb');
   });
 
   it('returns an empty set and null id when the token exchange errors, and omits redirect_uri when none is passed', async () => {
@@ -163,12 +163,12 @@ describe('verifyUserRepoAccess', () => {
       'code',
       '12345',
       'octo/target',
-      'https://api.nosam.example/cb',
+      'https://api.platform.example/cb',
     );
 
     expect(result.repositoryId).toBe(42);
     expect(result.callerAccountId).toBe('555');
-    expect(tokenBodies[0].redirect_uri).toBe('https://api.nosam.example/cb');
+    expect(tokenBodies[0].redirect_uri).toBe('https://api.platform.example/cb');
   });
 
   it('paginates past a full page 1 to find the repo on page 2', async () => {

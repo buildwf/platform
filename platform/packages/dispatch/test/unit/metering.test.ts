@@ -1,4 +1,4 @@
-import { verifyUsageEnvelope } from '@nosamcloud/api/usage-auth';
+import { verifyUsageEnvelope } from '@platform-service/api/usage-auth';
 import { describe, it, expect } from 'vite-plus/test';
 import type { Env } from '../../src/env.ts';
 import { recordRequest, sendUsageEvent } from '../../src/metering.ts';

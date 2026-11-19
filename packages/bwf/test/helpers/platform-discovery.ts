@@ -1,6 +1,6 @@
 import { MIN_PLATFORM_VERSION } from '../../src/cli/client.ts';
 
-const DISCOVERY_PATH = '/.well-known/nosam-platform';
+const DISCOVERY_PATH = '/.well-known/platform';
 
 /** Optional discovery fields. A field left out is absent, as on an older platform. */
 export type PlatformDiscoveryFeatures = { directWorkerUpload?: unknown };

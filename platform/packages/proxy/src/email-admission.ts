@@ -74,7 +74,7 @@ async function call<T>(
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-nosam-internal': proof,
+        'x-platform-internal': proof,
       },
       body: raw,
       signal: controller.signal,
@@ -207,11 +207,11 @@ export function canonicalizeBwfMime(raw: Uint8Array): Uint8Array {
           afterHeader = headerEnd === raw.byteLength ? raw.byteLength : headerEnd + 2;
         }
         const normalized = line.replace(
-          /boundary="(=_nosam_(?:mixed|alternative|related)_[A-Za-z0-9_-]+)"/g,
+          /boundary="(=_parts_(?:mixed|alternative|related)_[A-Za-z0-9_-]+)"/g,
           (_, token: string) => {
             let marker = boundaries.get(token);
             if (!marker) {
-              marker = `<nosam-boundary-${boundaries.size}>`;
+              marker = `<platform-boundary-${boundaries.size}>`;
               boundaries.set(token, marker);
             }
             return `boundary="${marker}"`;

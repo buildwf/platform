@@ -8,7 +8,7 @@ import { scanProceduresSync } from '../../src/procedures/scan.ts';
 import { compileRouteTable, compileWorkerEntry } from '../../src/router/compile.ts';
 import type { ScanResult } from '../../src/router/scan.ts';
 
-const temporary = mkdtempSync(join(tmpdir(), 'nosam-procedures-'));
+const temporary = mkdtempSync(join(tmpdir(), 'platform-procedures-'));
 const procedureModule = fileURLToPath(new URL('../../src/runtime/procedure.ts', import.meta.url));
 const proceduresRuntime = fileURLToPath(
   new URL('../../src/runtime/procedures.ts', import.meta.url),
@@ -83,7 +83,7 @@ async function buildWorker(name: string, sources: Record<string, string>): Promi
     queues: [],
     procedures: scanProceduresSync(proceduresDir),
   };
-  const routeTablePath = join(root, 'virtual-nosam-routes.ts');
+  const routeTablePath = join(root, 'virtual-platform-routes.ts');
   writeFileSync(
     routeTablePath,
     compileRouteTable(scan, root, middlewareDir, root, root, {
@@ -116,12 +116,12 @@ async function buildWorker(name: string, sources: Record<string, string>): Promi
     },
     plugins: [
       {
-        name: 'nosam-procedures-test',
+        name: 'platform-procedures-test',
         resolveId(id) {
           if (id === 'cloudflare:workers') {
             return '\0test-workers-entrypoint';
           }
-          return id === 'virtual:nosam-routes' ? routeTablePath : null;
+          return id === 'virtual:platform-routes' ? routeTablePath : null;
         },
         load(id) {
           if (id === '\0test-workers-entrypoint') {

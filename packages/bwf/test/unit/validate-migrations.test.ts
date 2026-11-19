@@ -108,7 +108,7 @@ describe('validateMigrations', () => {
   });
 
   it('allows destructive migration with pragma', () => {
-    const sql = '-- nosam:allow-destructive\nDROP TABLE old_users;';
+    const sql = '-- platform:allow-destructive\nDROP TABLE old_users;';
     const result = validateMigrations([{ name: '003_drop.sql', sql }]);
     expect(result).toHaveLength(1);
     expect(result[0].destructive).toBe(true);
@@ -171,7 +171,7 @@ describe('assertJournalCoherence', () => {
   let migrationsDir: string;
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'nosam-journal-'));
+    root = mkdtempSync(join(tmpdir(), 'platform-journal-'));
     migrationsDir = join(root, 'db', 'migrations');
     mkdirSync(join(migrationsDir, 'meta'), { recursive: true });
   });

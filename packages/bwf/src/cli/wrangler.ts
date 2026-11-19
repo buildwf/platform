@@ -94,10 +94,10 @@ function durableObjectBindingsOf(
   );
 }
 
-const MANAGED_QUEUES_MARKER = /^\s*\/\/ nosam:managed-queues:v1:([A-Za-z0-9_-]+)\s*$/m;
-const PUBLISHED_TRAFFIC_MARKER = /^\s*\/\/ nosam:published-traffic:v1:([A-Za-z0-9_-]+)\s*$/m;
+const MANAGED_QUEUES_MARKER = /^\s*\/\/ platform:managed-queues:v1:([A-Za-z0-9_-]+)\s*$/m;
+const PUBLISHED_TRAFFIC_MARKER = /^\s*\/\/ platform:published-traffic:v1:([A-Za-z0-9_-]+)\s*$/m;
 export const DEFAULT_LIVE_BINDING = 'BWF_LIVE';
-export const DEFAULT_LIVE_CLASS = 'NosamLiveStreamDurableObject';
+export const DEFAULT_LIVE_CLASS = 'PlatformLiveStreamDurableObject';
 export const LIVE_MIGRATION_TAG = 'live-v1';
 
 export type WranglerCustomDomain = {
@@ -179,7 +179,7 @@ export function writeWranglerPublishedTrafficSnapshot(
   }
   const raw = readFileSync(configPath, 'utf-8');
   const encoded = Buffer.from(JSON.stringify(snapshot), 'utf8').toString('base64url');
-  const marker = `// nosam:published-traffic:v1:${encoded}`;
+  const marker = `// platform:published-traffic:v1:${encoded}`;
   const existing = PUBLISHED_TRAFFIC_MARKER.exec(raw);
   if (!existing && options?.create === false) {
     return;
@@ -602,9 +602,9 @@ export function syncWranglerBindings(
       const vars = (parsed.vars as Record<string, unknown> | undefined) ?? {};
       const nextVars = {
         ...vars,
-        ...(binding !== 'AI' ? { __NOSAM_AI_BINDING: binding } : {}),
+        ...(binding !== 'AI' ? { __PLATFORM_AI_BINDING: binding } : {}),
         ...(options.directCloudflareAi.gateway
-          ? { __NOSAM_AI_GATEWAY: options.directCloudflareAi.gateway }
+          ? { __PLATFORM_AI_GATEWAY: options.directCloudflareAi.gateway }
           : {}),
       };
       if (JSON.stringify(vars) !== JSON.stringify(nextVars)) {
@@ -653,7 +653,7 @@ export function syncWranglerBindings(
     const planned = appendSqliteClassMigration(
       migrations,
       options.websockets.map((route) => route.className),
-      'void-ws-v1',
+      'platform-ws-v1',
       existing.map((binding) => binding.class_name),
     );
     if (planned.added) {
@@ -799,7 +799,7 @@ export function readWranglerWebSocketTombstones(
     : [];
   const historicalClasses = new Set(
     migrations.flatMap((migration) =>
-      /^void-ws-v1(?:-\d+)?$/.test(migration.tag ?? '')
+      /^(?:platform|void)-ws-v1(?:-\d+)?$/.test(migration.tag ?? '')
         ? [...(migration.new_classes ?? []), ...(migration.new_sqlite_classes ?? [])]
         : [],
     ),
@@ -968,7 +968,7 @@ function writeManagedQueueProvenance(text: string, provenance: ManagedQueueProve
     return text.slice(0, start) + text.slice(end + trailingNewline.length);
   }
   const encoded = Buffer.from(JSON.stringify(normalized), 'utf8').toString('base64url');
-  const marker = `// nosam:managed-queues:v1:${encoded}`;
+  const marker = `// platform:managed-queues:v1:${encoded}`;
   if (existing) {
     return text.slice(0, existing.index) + marker + text.slice(existing.index + existing[0].length);
   }
@@ -1177,7 +1177,7 @@ export function writeProvisionedWranglerConfig(
     const planned = appendSqliteClassMigration(
       migrations,
       [...requested.values()].map((route) => route.className),
-      'void-ws-v1',
+      'platform-ws-v1',
       knownExistingClasses,
     );
     if (planned.added) {

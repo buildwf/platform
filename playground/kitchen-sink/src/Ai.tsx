@@ -108,7 +108,7 @@ export default function AiPage() {
             }
             try {
               const parsed = JSON.parse(data);
-              if (event === 'nosam:error' || event === 'nosam:limit') {
+              if (event === 'platform:error' || event === 'platform:limit') {
                 setError(
                   typeof parsed.message === 'string'
                     ? parsed.message

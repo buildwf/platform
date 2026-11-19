@@ -210,7 +210,7 @@ const INITIAL_WRANGLER = `{
 `;
 
 function makeProject(overrides: { from?: string; wrangler?: string } = {}): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-email-cli-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-email-cli-'));
   writeFileSync(
     join(root, 'bwf.json'),
     JSON.stringify({ email: { from: overrides.from ?? 'noreply@mail.acme.com' } }),
@@ -295,7 +295,7 @@ function freeAfterSetup(extra: { runnerTable?: Record<string, EmailWranglerRunRe
   "name": "acme-support",
   "send_email": [{ "name": "SEND_EMAIL" }],
   "addresses": ["support@mail.acme.com"],
-  "vars": { "__NOSAM_EMAIL_FROM": "noreply@mail.acme.com" },
+  "vars": { "__PLATFORM_EMAIL_FROM": "noreply@mail.acme.com" },
 }
 `,
   });
@@ -402,7 +402,7 @@ describe('bwf email setup --platform cloudflare', () => {
       compatibility_date: '2026-01-01',
       send_email: [{ name: 'SEND_EMAIL' }],
       addresses: ['support@mail.acme.com'],
-      vars: { __NOSAM_EMAIL_FROM: 'noreply@mail.acme.com' },
+      vars: { __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' },
     });
 
     // The checklist came before the prompt; the ✔ rows and the address map after.
@@ -539,7 +539,7 @@ describe('bwf email setup --platform cloudflare', () => {
     // Routing DID come up, so the binding + sender var are written; `addresses` is not.
     const config = readJsonc(configPath);
     expect(config.send_email).toEqual([{ name: 'SEND_EMAIL' }]);
-    expect(config.vars).toEqual({ __NOSAM_EMAIL_FROM: 'noreply@acme.com' });
+    expect(config.vars).toEqual({ __PLATFORM_EMAIL_FROM: 'noreply@acme.com' });
     expect(config.addresses).toBeUndefined();
     // The verdict: not "set up" — what is missing, and the rerun.
     const verdict = logged.lines.join('\n');
@@ -728,7 +728,7 @@ describe('bwf email setup --platform cloudflare', () => {
   });
 
   it('refuses without email.from before touching wrangler', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-email-cli-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-email-cli-'));
     roots.push(root);
     writeFileSync(join(root, 'bwf.json'), '{}');
     writeFileSync(join(root, 'wrangler.jsonc'), INITIAL_WRANGLER);
@@ -761,7 +761,7 @@ describe('bwf email setup --platform cloudflare', () => {
 
 describe('bwf email status --platform cloudflare', () => {
   it('fences off an ancestor config without creating a root config, then removes the temporary config', async () => {
-    const parent = mkdtempSync(join(tmpdir(), 'nosam-email-cli-parent-'));
+    const parent = mkdtempSync(join(tmpdir(), 'platform-email-cli-parent-'));
     roots.push(parent);
     const parentConfigPath = join(parent, 'wrangler.jsonc');
     const parentConfig = '{ "account_id": "wrong-account", "name": "wrong-worker" }\n';
@@ -938,13 +938,13 @@ describe('bwf email setup|status without --platform cloudflare', () => {
   });
 
   it('explains that both need --platform cloudflare and exits 1 before any platform call', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-email-cli-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-email-cli-'));
     roots.push(root);
     for (const subcommand of ['setup', 'status'] as const) {
       await expect(runEmailCommand(root, { subcommand })).rejects.toBeInstanceOf(ExitSignal);
       expect(exitSpy).toHaveBeenLastCalledWith(1);
       // `--platform bwf` is that default spelled out: the same exit, still no platform call.
-      await expect(runEmailCommand(root, { subcommand, platform: 'nosam' })).rejects.toBeInstanceOf(
+      await expect(runEmailCommand(root, { subcommand, platform: 'platform' })).rejects.toBeInstanceOf(
         ExitSignal,
       );
       expect(exitSpy).toHaveBeenLastCalledWith(1);
@@ -952,7 +952,7 @@ describe('bwf email setup|status without --platform cloudflare', () => {
   });
 
   it('says status reads your own Cloudflare account and names the bwf platform commands', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-email-cli-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-email-cli-'));
     roots.push(root);
     const logged = captureLog();
     try {

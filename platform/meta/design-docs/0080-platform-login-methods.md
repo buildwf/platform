@@ -6,7 +6,7 @@ created: 2026-09-18
 
 # Configurable platform login methods
 
-A Nosam platform can use GitHub, Google, generic OpenID Connect (OIDC), or
+A Platform platform can use GitHub, Google, generic OpenID Connect (OIDC), or
 Cloudflare Access for human login. The installer accepts more than one method.
 The API-hosted administrator UI and `bwf platform config auth` manage methods
 after installation without redeploying. The current setup and command syntax
@@ -54,7 +54,7 @@ An external identity is scoped by its login connection and stable provider
 subject. The same email address at two providers does not automatically merge
 accounts. An existing user links another identity through an explicit
 authenticated flow, with a fresh provider proof. This keeps project ownership
-on the same Nosam user and prevents an email match from granting administrator
+on the same Platform user and prevents an email match from granting administrator
 access. Existing provider identities are preserved during migration.
 
 Login eligibility and account creation are separate choices. Administrators

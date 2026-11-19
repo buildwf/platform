@@ -14,7 +14,7 @@ import type { SelfHostSchemaFacts, SelfHostSchemaFailureReason } from './env-val
  */
 
 /** argv[2] marker that runs this module as the child. */
-const PROBE_MARKER = '__nosam-deploy-env-schema-probe__';
+const PROBE_MARKER = '__platform-deploy-env-schema-probe__';
 
 const RESULT_FD = 3;
 

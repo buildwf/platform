@@ -15,7 +15,7 @@ import {
 
 const roots: Array<string> = [];
 function makeRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-project-config-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-project-config-'));
   roots.push(root);
   return root;
 }
@@ -35,12 +35,12 @@ function connection(apiUrl = 'https://platform.example.test') {
   });
 }
 beforeEach(() => {
-  process.env.NOSAM_PLATFORM_REGISTRY_DIR = makeRoot();
+  process.env.PLATFORM_REGISTRY_DIR = makeRoot();
 });
 afterEach(() => {
   delete process.env.BWF_API_URL;
-  delete process.env.NOSAM_PROXY_URL;
-  delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+  delete process.env.PLATFORM_PROXY_URL;
+  delete process.env.PLATFORM_REGISTRY_DIR;
   while (roots.length > 0) {
     rmSync(roots.pop()!, { recursive: true, force: true });
   }
@@ -63,7 +63,7 @@ describe('project config', () => {
       if (active) {
         connection();
       }
-      expect(readDeploymentPlatform(root)).toBe('nosam');
+      expect(readDeploymentPlatform(root)).toBe('platform');
       expect(() => getApiUrl(root)).toThrow('project link has no platform URL');
       expect(() => getProxyUrl(root)).toThrow('project link has no platform URL');
       expect(() => getSiteDomain(root)).toThrow('project link has no platform URL');
@@ -88,7 +88,7 @@ describe('project config', () => {
     expect(readProjectConfig(root)).toBeNull();
     expect(getApiUrl(root)).toBe(selected.apiUrl);
     expect(JSON.parse(readFileSync(join(root, '.bwf/project.json'), 'utf8'))).toEqual({
-      platform: 'nosam',
+      platform: 'platform',
       platformUrl: selected.apiUrl,
       applicationDomain: selected.applicationDomain,
       proxyUrl: selected.proxyUrl,
@@ -177,7 +177,7 @@ describe('project config', () => {
     expect(getProxyUrl(root)).toBe('https://proxy.example.test');
   });
 
-  it.each(['https://attacker.example', 'https://nosam.buildwithfriends.dev'])(
+  it.each(['https://attacker.example', 'https://platform.buildwithfriends.dev'])(
     'requires a registered connection for %s',
     (platformUrl) => {
       const root = makeRoot();

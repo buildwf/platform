@@ -2,8 +2,8 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingHttpHeaders } from 'node:http';
 import { join } from 'node:path';
 import {
-  NOSAM_SECRET_DRAFT_MESSAGE,
-  NOSAM_SECRET_DRAFT_SOURCE,
+  PLATFORM_SECRET_DRAFT_MESSAGE,
+  PLATFORM_SECRET_DRAFT_SOURCE,
   type CloudflareOperation,
 } from '@builtbyfriends/deploy-cloudflare';
 import { expect, it } from 'vite-plus/test';
@@ -55,7 +55,7 @@ async function runSecretScenario(options: {
   api?: (method: string, path: string) => ApiReply;
   env?: NodeJS.ProcessEnv;
 }) {
-  const directory = temporaryDirectory('nosam-cf-secret-test-');
+  const directory = temporaryDirectory('platform-cf-secret-test-');
   const apiCalls: Array<{ method: string; path: string; body: unknown }> = [];
   const apiHeaders: Array<IncomingHttpHeaders> = [];
   const api = await listen(
@@ -177,12 +177,12 @@ it('creates a missing Worker and deploys the placeholder with its secret in one 
         {
           name: 'index.js',
           content_type: 'application/javascript+module',
-          content_base64: Buffer.from(NOSAM_SECRET_DRAFT_SOURCE).toString('base64'),
+          content_base64: Buffer.from(PLATFORM_SECRET_DRAFT_SOURCE).toString('base64'),
         },
       ],
       compatibility_date: '2025-01-01',
       bindings: [{ type: 'secret_text', name: 'S1', text: 'one' }],
-      annotations: { 'workers/message': NOSAM_SECRET_DRAFT_MESSAGE },
+      annotations: { 'workers/message': PLATFORM_SECRET_DRAFT_MESSAGE },
     },
   });
   expect(apiCalls).toHaveLength(2);

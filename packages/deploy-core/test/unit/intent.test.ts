@@ -5,7 +5,7 @@ describe('createDeployIntent', () => {
   it('interprets a full worker manifest without provider details', () => {
     const manifest: DeployManifest = {
       version: 3,
-      type: 'nosam',
+      type: 'platform',
       auth: true,
       bindings: { d1: ['DB'], ai: true },
       migrations: { dialect: 'sqlite', pending: 2 },
@@ -21,7 +21,7 @@ describe('createDeployIntent', () => {
 
     const intent = createDeployIntent(manifest);
 
-    expect(intent.appType).toBe('nosam');
+    expect(intent.appType).toBe('platform');
     expect(intent.hasWorker).toBe(true);
     expect(intent.manifest).toBe(manifest);
     expect(intent.features).toEqual({
@@ -55,6 +55,6 @@ describe('createDeployIntent', () => {
   });
 
   it('preserves the historical default app type', () => {
-    expect(createDeployIntent({ version: 3, bindings: {} }).appType).toBe('nosam');
+    expect(createDeployIntent({ version: 3, bindings: {} }).appType).toBe('platform');
   });
 });

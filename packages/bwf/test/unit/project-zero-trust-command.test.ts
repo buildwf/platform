@@ -9,9 +9,9 @@ import { withPlatformDiscovery } from '../helpers/platform-discovery.ts';
 const roots: Array<string> = [];
 
 function linkedProject(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-project-zero-trust-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-project-zero-trust-'));
   roots.push(root);
-  process.env.NOSAM_PLATFORM_REGISTRY_DIR = join(root, 'registry');
+  process.env.PLATFORM_REGISTRY_DIR = join(root, 'registry');
   savePlatformConnection({
     accountId: null,
     apiUrl: 'https://api.example.test',
@@ -25,7 +25,7 @@ function linkedProject(): string {
   writeFileSync(
     join(root, '.bwf', 'project.json'),
     JSON.stringify({
-      platform: 'nosam',
+      platform: 'platform',
       platformUrl: 'https://api.example.test',
       projectId: 'project_1',
       slug: 'linked-app',
@@ -35,7 +35,7 @@ function linkedProject(): string {
 }
 
 afterEach(() => {
-  delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+  delete process.env.PLATFORM_REGISTRY_DIR;
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();

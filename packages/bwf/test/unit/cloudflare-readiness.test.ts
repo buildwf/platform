@@ -12,7 +12,7 @@ import {
 
 const roots: Array<string> = [];
 function tempRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-readiness-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-readiness-'));
   roots.push(root);
   return root;
 }
@@ -56,7 +56,7 @@ describe('Cloudflare readiness state', () => {
       rememberCloudflareWorkersDevSubdomain(
         root,
         'account-a',
-        'https://nosam-ready-abc-app.developer-platform-experience.workers.dev',
+        'https://platform-ready-abc-app.developer-platform-experience.workers.dev',
       ),
     ).toBe(true);
     expect(resolveCloudflareWorkersDevSubdomain(root, 'account-a', {})).toBe(
@@ -97,7 +97,7 @@ describe('Cloudflare readiness Access origin', () => {
 
   it.each([
     'http://dashboard.example.com',
-    'https://dashboard.example.com/__nosam/ready',
+    'https://dashboard.example.com/__platform/ready',
     'https://dashboard.example.com/?token=1',
     'https://dashboard.example.com/#ready',
     'https://user:pass@dashboard.example.com',

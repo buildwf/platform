@@ -27,7 +27,7 @@ vi.mock('../../src/cli/deploy-managed-events.ts', async (original) => ({
 }));
 
 describe('explicit deployment migration opt-out', () => {
-  it.each(['nosam', 'cloudflare'])('accepts --skip-migrations on %s', (platform) => {
+  it.each(['platform', 'cloudflare'])('accepts --skip-migrations on %s', (platform) => {
     expect(parseDeployArgs(['--platform', platform, '--skip-migrations'])).toMatchObject({
       platform,
       skipMigrations: true,
@@ -38,10 +38,10 @@ describe('explicit deployment migration opt-out', () => {
     expect(parseDeployArgs([])).not.toMatchObject({ skipMigrations: true });
   });
 
-  it.each(['nosam'] as const)(
+  it.each(['platform'] as const)(
     'preserves the bundled migration plan when skipping in a %s app',
     async () => {
-      const root = mkdtempSync(join(tmpdir(), 'nosam-skip-sql-'));
+      const root = mkdtempSync(join(tmpdir(), 'platform-skip-sql-'));
       try {
         for (const [path, content] of Object.entries({
           'package.json': '{"name":"skip-sql"}',

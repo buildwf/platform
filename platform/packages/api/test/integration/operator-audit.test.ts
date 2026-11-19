@@ -157,7 +157,7 @@ test('validates operator project Zero Trust targets', async () => {
 test('records actor, target, and success without recording credentials', async () => {
   const res = await request('/signup/restrict', { credential: 'must-not-be-audited' });
   expect(res.status).toBe(200);
-  expect(res.headers.get('X-Nosam-Audit-Id')).toBeTruthy();
+  expect(res.headers.get('X-Platform-Audit-Id')).toBeTruthy();
   const events = await env.db.select().from(operatorEvents);
   expect(events).toHaveLength(1);
   expect(events[0]).toMatchObject({
@@ -186,7 +186,7 @@ test('records failed validation as a failed mutation attempt', async () => {
 });
 
 test('records complete and partial 207 mutation outcomes as failed', async () => {
-  cloudflareWorkerStub('nosam-api');
+  cloudflareWorkerStub('platform-api');
   const failed = await request('/workers/api/rollback', {
     environment: 'production',
     versionId: 'previous',
@@ -195,7 +195,7 @@ test('records complete and partial 207 mutation outcomes as failed', async () =>
   expect(await failed.json()).toMatchObject({ ok: false, partial: false });
 
   vi.restoreAllMocks();
-  cloudflareWorkerStub('nosam-api-staging');
+  cloudflareWorkerStub('platform-api-staging');
   const partial = await request('/workers/rollback-all', {
     environment: 'staging',
     versions: {
@@ -257,7 +257,7 @@ test('browser mutations record canonical targets and explicit redirect outcomes'
 
   expect(response.status).toBe(302);
   expect(response.headers.get('Location')).toBe(`/admin/users/${target.id}`);
-  expect(response.headers.get('X-Nosam-Audit-Id')).toBeTruthy();
+  expect(response.headers.get('X-Platform-Audit-Id')).toBeTruthy();
   expect(await env.db.select().from(operatorEvents)).toEqual([
     expect.objectContaining({
       login: 'audit-admin',
@@ -327,9 +327,9 @@ test('records the effective worker environment for implicit and explicit rollbac
   expect(
     Object.fromEntries(events.map((event) => [event.id, JSON.parse(event.target).environment])),
   ).toEqual({
-    [implicitWorker.headers.get('X-Nosam-Audit-Id')!]: 'staging',
-    [implicitAll.headers.get('X-Nosam-Audit-Id')!]: 'staging',
-    [explicitWorker.headers.get('X-Nosam-Audit-Id')!]: 'production',
+    [implicitWorker.headers.get('X-Platform-Audit-Id')!]: 'staging',
+    [implicitAll.headers.get('X-Platform-Audit-Id')!]: 'staging',
+    [explicitWorker.headers.get('X-Platform-Audit-Id')!]: 'production',
   });
 });
 

@@ -8,7 +8,7 @@ import type { BwfConfig } from '../../src/config.ts';
 const roots: Array<string> = [];
 
 function root(): string {
-  const value = mkdtempSync(join(tmpdir(), 'nosam-analysis-'));
+  const value = mkdtempSync(join(tmpdir(), 'platform-analysis-'));
   roots.push(value);
   return value;
 }

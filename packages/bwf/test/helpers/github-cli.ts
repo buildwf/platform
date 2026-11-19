@@ -11,7 +11,7 @@ export function makeProject(): ProjectResponse {
     id: projectId,
     user_id: 'user_1',
     slug,
-    type: 'nosam',
+    type: 'platform',
     created_at: '2024-01-01T00:00:00Z',
     custom_domain: null,
     role: 'owner',

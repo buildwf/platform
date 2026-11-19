@@ -99,7 +99,7 @@ export async function ensurePlatformAccessHealthChecks(input: {
   const token = appAccess?.managed
     ? appAccess.apiToken
     : identityAccountId === accountId
-      ? process.env.NOSAM_PLATFORM_ACCESS_SETUP_TOKEN || input.checkpoint.accessManagementToken
+      ? process.env.PLATFORM_ACCESS_SETUP_TOKEN || input.checkpoint.accessManagementToken
       : undefined;
   if (!token && !input.client.request) {
     throw new Error(

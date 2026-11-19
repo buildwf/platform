@@ -2,10 +2,10 @@
  * Check the selected platform with the public operator CLI.
  *
  * From the repository root:
- *   vp run --filter @nosamcloud/platform health --connection https://platform.example.com
- *   vp run --filter @nosamcloud/platform health:staging  # Platform maintainers
+ *   vp run --filter @platform-service/platform health --connection https://platform.example.com
+ *   vp run --filter @platform-service/platform health:staging  # Platform maintainers
  *
- * Sign in with `bwf platform auth login`, or supply NOSAM_OPERATOR_TOKEN and
+ * Sign in with `bwf platform auth login`, or supply PLATFORM_OPERATOR_TOKEN and
  * BWF_API_URL in automation. Build the SDK with `vp run build` first.
  */
 

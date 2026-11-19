@@ -25,7 +25,7 @@ const configuration = {
   issuer: 'https://identity.example.com',
 };
 beforeEach(async () => {
-  directory = await mkdtemp(join(tmpdir(), 'nosam-auth-config-'));
+  directory = await mkdtemp(join(tmpdir(), 'platform-auth-config-'));
   calls = [];
   vi.stubEnv('AUTH_CONFIG_TEST_SECRET', 'fixture-secret-do-not-print');
   vi.stubGlobal(

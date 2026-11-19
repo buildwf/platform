@@ -55,7 +55,7 @@ export function findBwfAuthConfig(
  * module runner reads the config again once its files are invalidated, and the
  * module graph lists the local files the config imports.
  */
-export const AUTH_CONFIG_ENVIRONMENT = 'nosam_auth_config';
+export const AUTH_CONFIG_ENVIRONMENT = 'platform_auth_config';
 
 export type ModuleImporter = (path: string) => Promise<Record<string, unknown>>;
 

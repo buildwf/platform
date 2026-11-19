@@ -3,7 +3,7 @@ description: 'Install a bwf platform from the CLI, set its domain, and run its l
 outline: deep
 ---
 
-# Platform Installation {#nosam-platform-install}
+# Platform Installation {#platform-install}
 
 ```sh
 bwf platform install [options] [--yes]
@@ -42,7 +42,7 @@ Read-only plans, workers.dev installations with the default API hostname, and su
 
 The installed platform needs a separate runtime token to provision resources for apps. The interactive installer prompts for it and the other setup values. For non-interactive installs, inject the variables listed in [Install from CI](../../guide/platform/installation/ci.md).
 
-To enable email during install or upgrade, set both `NOSAM_EMAIL_SENDER_DOMAIN` and `NOSAM_EMAIL_SHARED_ZONE_ID`. bwf records the pair for later upgrades; supplying only one is an error.
+To enable email during install or upgrade, set both `PLATFORM_EMAIL_SENDER_DOMAIN` and `PLATFORM_EMAIL_SHARED_ZONE_ID`. bwf records the pair for later upgrades; supplying only one is an error.
 
 Use `--dashboard-url https://dash.example.com` when deploying the optional user
 dashboard separately. The URL must be an HTTPS origin without credentials, a
@@ -57,7 +57,7 @@ the installer recommends reusing its company policy; otherwise it defaults to
 public apps. Use `--app-access custom` to select separate hosting-account policies.
 Public apps in a Default-Deny account receive scoped public Access rules. The
 installer explains and collects the encrypted management credential when needed;
-scripts supply `NOSAM_PLATFORM_APP_ACCESS_TOKEN` or `appAccess.tokenEnv` in the
+scripts supply `PLATFORM_APP_ACCESS_TOKEN` or `appAccess.tokenEnv` in the
 authentication file. Upgrades preserve administrator settings.
 
 New resources use `void-<name>-<role>` names; choose an unused installation name. The installer opens setup pages for missing credentials and reuses values already supplied.
@@ -78,7 +78,7 @@ Use an empty PostgreSQL database dedicated to the installation. You can correct 
 
 Choose whether bwf creates Hyperdrive or uses an existing configuration. An existing Hyperdrive must point to the platform database with SQL result caching disabled. Supply a database owner URL for migrations. See [Use an existing Hyperdrive](../../guide/platform/installation/prerequisites.md#use-an-existing-hyperdrive) for setup and [Install from CI](../../guide/platform/installation/ci.md) for unattended inputs.
 
-Recovery secrets are encrypted using your system keychain. Without one, supply a base64-encoded 32-byte `NOSAM_PLATFORM_RECOVERY_KEY`. Keep the original credentials in protected CI secrets for recovery.
+Recovery secrets are encrypted using your system keychain. Without one, supply a base64-encoded 32-byte `PLATFORM_RECOVERY_KEY`. Keep the original credentials in protected CI secrets for recovery.
 
 If a newly created zone is waiting for registrar delegation, resume after it becomes active:
 
@@ -88,7 +88,7 @@ bwf platform install --resume --name <installation-id>
 
 See [Self-host a bwf platform](../../guide/self-hosted-platform.md) for prerequisites, token scope, exact footprint, domain behavior, and an end-to-end walkthrough.
 
-## `bwf platform domain set` {#nosam-platform-domain-set}
+## `bwf platform domain set` {#platform-domain-set}
 
 ```sh
 bwf platform domain set <domain> [--installation <id>] [--zone <domain>] [--dedicated-zone] [--plan] [--yes]
@@ -131,7 +131,7 @@ Interactive repair offers the same change with the saved values filled in. Login
 methods and Access protection stay as installed. Run it on the computer that
 installed the platform. See [First administrator sign-in fails](../../guide/platform/installation/maintenance.md#first-administrator-sign-in-fails).
 
-After discovery on another machine, set `NOSAM_PLATFORM_DATABASE_URL`. See [Manage an installation from another machine](../../guide/platform/installation/maintenance.md#manage-an-installation-from-another-machine) for the secrets needed to recreate a missing Worker.
+After discovery on another machine, set `PLATFORM_DATABASE_URL`. See [Manage an installation from another machine](../../guide/platform/installation/maintenance.md#manage-an-installation-from-another-machine) for the secrets needed to recreate a missing Worker.
 
 | Command     | Behavior                                                                                                    |
 | ----------- | ----------------------------------------------------------------------------------------------------------- |
@@ -145,7 +145,7 @@ After discovery on another machine, set `NOSAM_PLATFORM_DATABASE_URL`. See [Mana
 
 Repair and upgrade preserve disabled state. New, resumed, and previously disabled installations block user traffic until all target Workers pass verification; the installer's health probes can still run. Routes and custom domains remain attached.
 
-Replacing platform Worker configuration changed outside bwf requires interactive approval. Follow [Platform Workers changed outside bwf](../../guide/platform/installation/maintenance.md#workers-changed-outside-nosam) if maintenance asks for it.
+Replacing platform Worker configuration changed outside bwf requires interactive approval. Follow [Platform Workers changed outside bwf](../../guide/platform/installation/maintenance.md#workers-changed-outside-platform) if maintenance asks for it.
 
 `--runtime` selects a custom platform build. Relative paths resolve from your current directory. bwf verifies the build before making changes; see [Platform Development](../../guide/platform/development/runtime.md#deploying-your-runtime) for creating one.
 

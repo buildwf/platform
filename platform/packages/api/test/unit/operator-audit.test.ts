@@ -181,8 +181,8 @@ describe('browser audited mutation execution', () => {
 
     expect(result.status).toBe(302);
     expect(result.headers.get('location')).toBe('https://example.com/admin/users');
-    expect(result.headers.get('X-Nosam-Audit-Id')).toBeTruthy();
-    expect(result.headers.get('X-Nosam-Audit-Status')).toBe('pending');
+    expect(result.headers.get('X-Platform-Audit-Id')).toBeTruthy();
+    expect(result.headers.get('X-Platform-Audit-Status')).toBe('pending');
     expect(error).toHaveBeenCalledWith(
       '[operator] audit completion failed',
       expect.any(String),

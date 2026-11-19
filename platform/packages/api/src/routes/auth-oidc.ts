@@ -8,7 +8,7 @@ import {
   setBuildCheckRunId,
 } from '../db.ts';
 import type { ApiEnv } from '../env.ts';
-import { NOSAM_BUILD_CHECK_RUN_NAME, createCheckRun } from '../github/check-run.ts';
+import { PLATFORM_BUILD_CHECK_RUN_NAME, createCheckRun } from '../github/check-run.ts';
 import {
   getBranchHeadComparisonStatus,
   getRepoInstallation,
@@ -84,10 +84,13 @@ app.post('/github-oidc', async (context) => {
   }
   const projectSlug = typeof body.project === 'string' ? body.project : undefined;
 
-  // The scaffolded workflow requests audience `nosam` (see the CLI's GitHub
+  // The scaffolded workflow requests audience `platform` (see the CLI's GitHub
   // Actions workflow). Enforce it so a token minted for some other audience
   // can't be replayed here.
-  const claims = await verifyGithubOidcToken(body.oidcToken, { audience: 'nosam' });
+  const claims = await verifyGithubOidcToken(body.oidcToken, {
+    // bwf 1.9.1 on npm asks GitHub for a token with the old audience.
+    audience: ['platform', 'nosam'],
+  });
   if (!claims) {
     return context.json({ error: 'invalid or expired oidc token' }, 401);
   }
@@ -419,7 +422,7 @@ app.post('/github-oidc', async (context) => {
         connection.installation_id,
         claims.repository,
         {
-          name: NOSAM_BUILD_CHECK_RUN_NAME,
+          name: PLATFORM_BUILD_CHECK_RUN_NAME,
           headSha: claims.sha,
           externalId: build.id,
           // The GitHub Actions run page is this build's real details view (the

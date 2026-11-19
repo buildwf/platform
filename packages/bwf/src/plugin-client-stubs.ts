@@ -1,7 +1,7 @@
 import { type Plugin } from 'vite';
 
 export function createClientStubsPlugin(): Plugin {
-  const STUB_PREFIX = '\0nosam-client-stub:';
+  const STUB_PREFIX = '\0platform-client-stub:';
   const SERVER_ONLY_STUBS: Record<string, string> = {
     '@builtbyfriends/bwf/db': 'export const db = {}; export const createDb = () => ({});',
     '@builtbyfriends/bwf/kv': 'export const kv = {}; export const createKV = () => ({});',
@@ -63,10 +63,10 @@ export function createClientStubsPlugin(): Plugin {
     `^(${Object.keys(SERVER_ONLY_STUBS).join('|').replaceAll('/', '\\/')})$`,
   );
   // eslint-disable-next-line no-control-regex -- Vite virtual module null-byte prefix
-  const STUB_LOAD_FILTER = new RegExp(`^\\0nosam-client-stub:`);
+  const STUB_LOAD_FILTER = new RegExp(`^\\0platform-client-stub:`);
 
   const clientStubsPlugin: Plugin = {
-    name: 'nosam:client-stubs',
+    name: 'platform:client-stubs',
     enforce: 'pre',
     resolveId: {
       filter: { id: STUB_RESOLVE_FILTER },

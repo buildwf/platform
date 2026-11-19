@@ -12,7 +12,7 @@ export type Props = {
 };
 export const loader = defineHandler<Props>(async (context) => {
   try {
-    const response = await fetchApi(context, '/.well-known/nosam-platform');
+    const response = await fetchApi(context, '/.well-known/platform');
     if (!response.ok) {
       throw new Error('Login methods unavailable');
     }

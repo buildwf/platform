@@ -14,7 +14,7 @@ const app = new Hono<ApiEnv>();
 app.onError(renderOperationError);
 
 app.get('/', async (context) =>
-  context.req.header('X-NosamPages') === 'true'
+  context.req.header('X-PlatformPages') === 'true'
     ? renderFateListPage(context, 'invitations')
     : context.redirect('/admin/signup-control'),
 );

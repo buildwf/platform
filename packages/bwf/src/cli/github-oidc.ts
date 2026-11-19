@@ -9,7 +9,7 @@
 import { cfAccessHeaders } from '../shared/cf-access.ts';
 import { ensurePlatformAccessToken } from './cf-access.ts';
 
-const OIDC_AUDIENCE = 'nosam';
+const OIDC_AUDIENCE = 'platform';
 
 export function isGithubActionsOidcAvailable(env: NodeJS.ProcessEnv = process.env): boolean {
   return (

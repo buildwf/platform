@@ -17,7 +17,7 @@ type BundleOutput =
 
 function injectWorkersTypesReferencePlugin() {
   return {
-    name: 'nosam:inject-workers-types-reference',
+    name: 'platform:inject-workers-types-reference',
     // tsdown's declaration emit currently drops source-level triple-slash references.
     // Our public handler types use Cloudflare global types (D1Database, KVNamespace, etc.),
     // so we inject the reference into the emitted .d.mts to keep consumer DX zero-config.
@@ -134,7 +134,7 @@ export default defineConfig({
     clean: true,
     plugins: [
       {
-        name: 'nosam:raw-assets',
+        name: 'platform:raw-assets',
         load: {
           filter: { id: /\.(?:css|html|js)\?raw$/ },
           handler(id) {

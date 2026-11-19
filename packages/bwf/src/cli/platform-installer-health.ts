@@ -81,7 +81,7 @@ export async function verifyPlatformHealth(
       try {
         return await fetcher(url, {
           headers: {
-            'X-Nosam-Platform-Probe': healthProbeToken,
+            'X-Platform-Probe': healthProbeToken,
             ...cfAccessHeaders(process.env, url),
           },
           // A login redirect must not forward the installation's probe credential.
@@ -103,7 +103,7 @@ export async function verifyPlatformHealth(
     dispatchOrigin ?? `https://${PLATFORM_HEALTH_HOSTNAME_LABEL}.${applicationBaseDomain}`;
   const [health, discovery, proxy, dispatch, emailGateway] = await Promise.all([
     request(`${apiUrl}/health`),
-    request(`${apiUrl}/.well-known/nosam-platform`),
+    request(`${apiUrl}/.well-known/platform`),
     request(`${proxyUrl}/health`),
     request(`${dispatchUrl}/health`),
     context?.emailGatewayUrl ? request(`${context.emailGatewayUrl}/health`) : undefined,
@@ -114,7 +114,7 @@ export async function verifyPlatformHealth(
   if (!discovery.ok) {
     throw await platformProbeFailure(
       'Discovery check',
-      `${apiUrl}/.well-known/nosam-platform`,
+      `${apiUrl}/.well-known/platform`,
       discovery,
       context,
     );
@@ -179,7 +179,7 @@ export async function verifyPlatformSandboxDrain(
 ): Promise<boolean> {
   const response = await fetcher(`${apiUrl}/internal/platform/sandbox-drain`, {
     headers: {
-      'X-Nosam-Platform-Probe': healthProbeToken,
+      'X-Platform-Probe': healthProbeToken,
       ...cfAccessHeaders(process.env, apiUrl),
     },
     signal: AbortSignal.timeout(30_000),
@@ -246,9 +246,9 @@ export async function verifyPlatformDeploymentExecutionDrain(
   installationId: string,
   fetcher: typeof fetch = fetch,
 ): Promise<void> {
-  const response = await fetcher(`${apiUrl}/__nosam/platform/deployment-execution`, {
+  const response = await fetcher(`${apiUrl}/__platform/platform/deployment-execution`, {
     headers: {
-      'X-Nosam-Platform-Probe': healthProbeToken,
+      'X-Platform-Probe': healthProbeToken,
       ...cfAccessHeaders(process.env, apiUrl),
     },
     signal: AbortSignal.timeout(30_000),
@@ -329,7 +329,7 @@ export async function bootstrapPlatformSharedEmail(
       response = await fetcher(`${apiUrl}/internal/platform/email-bootstrap`, {
         method: 'POST',
         headers: {
-          'X-Nosam-Platform-Probe': healthProbeToken,
+          'X-Platform-Probe': healthProbeToken,
           ...cfAccessHeaders(process.env, apiUrl),
         },
         signal,
@@ -452,7 +452,7 @@ export async function bootstrapPlatformSharedEmail(
       // step uses.
       const permission = sharedEmailStepPermissions.get(currentStep);
       details.push(
-        `This step needs ${permission} on the runtime API token. If the token does not have it, edit the token in the Cloudflare dashboard and add it. The token value stays the same. Or set NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to a token that has it. Then resume this installation.`,
+        `This step needs ${permission} on the runtime API token. If the token does not have it, edit the token in the Cloudflare dashboard and add it. The token value stays the same. Or set PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to a token that has it. Then resume this installation.`,
       );
     }
     const detail = details.length ? ` ${details.join(' ')}` : '';

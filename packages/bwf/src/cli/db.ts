@@ -1636,7 +1636,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
   const config = readProjectConfig(root);
   if (
     platform === 'cloudflare' ||
-    (!config && platform !== 'nosam' && (await hasDeployedCloudflareDatabase(root)))
+    (!config && platform !== 'platform' && (await hasDeployedCloudflareDatabase(root)))
   ) {
     log.error(
       '`bwf db rename-migrations` does not support direct Cloudflare deploys.\n' +
@@ -1646,7 +1646,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
     process.exit(1);
   }
   // A hosted project renames its deployed records only through its link.
-  if (platform === 'nosam' && !config) {
+  if (platform === 'platform' && !config) {
     log.error(
       'This project deploys to bwf but is not linked, so bwf cannot rename the migration records in its deployed database.\n' +
         'Run `bwf project link`, then run `bwf db rename-migrations` again.',

@@ -216,7 +216,7 @@ function ssgWithBackendMessage(ssgDep: string, backendSources: Array<string>): s
     '    { "inference": { "appType": "static" } }',
     '',
     '  Deploy both — the SSG emits the site, then bwf packages it with the worker:',
-    '    { "inference": { "appType": "nosam", "build": "<ssg> build && vite build" } }',
+    '    { "inference": { "appType": "platform", "build": "<ssg> build && vite build" } }',
     '    ...and in vite.config.ts add bwfPlugin() plus `publicDir: "<ssg output dir>"`,',
     '    so the generated site is copied into the client build alongside the worker.',
   ].join('\n');

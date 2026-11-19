@@ -1051,12 +1051,12 @@ describe('authoritative email admission', () => {
       emailPayloadDigest('direct', original.from, original.recipients, raw);
     const first = await admitEmailAction(env.db, {
       ...original,
-      digest: await digest(mime('=_nosam_alternative_1573725Jyj8yLCojOVRltQ')),
+      digest: await digest(mime('=_parts_alternative_1573725Jyj8yLCojOVRltQ')),
     });
     expect(
       await admitEmailAction(env.db, {
         ...original,
-        digest: await digest(mime('=_nosam_alternative_rebuilt')),
+        digest: await digest(mime('=_parts_alternative_rebuilt')),
       }),
     ).toMatchObject({ operationId: first.operationId, replay: true });
     expect((await getProjectEmailUsage(env.db, project.id)).attempts).toBe(1);

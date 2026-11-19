@@ -107,10 +107,10 @@ async function seedZeroTrustConfiguration(
       identityProviderIds: ['idp-1'],
       policyIds: ['policy-1'],
       credential: { ciphertext: 'unused', iv: 'unused', keyVersion: 'v1' },
-      wildcardApplicationName: 'nosam-test-projects',
+      wildcardApplicationName: 'platform-test-projects',
       wildcardApplication: {
         id: 'access-wildcard',
-        name: 'nosam-test-projects',
+        name: 'platform-test-projects',
         audience: 'access-audience',
         destinations: ['*.void.app'],
       },
@@ -359,7 +359,7 @@ describe('project route membership capabilities', () => {
       effective_protected: true,
       status: 'ready',
       protected_application_id: 'access-app-internal',
-      protected_application_name: 'nosam-internal-name',
+      protected_application_name: 'platform-internal-name',
       protected_application_audience: 'internal-audience',
     });
 
@@ -453,7 +453,7 @@ describe('project route membership capabilities', () => {
         effective_protected: false,
         status: 'ready',
         bypass_application_id: 'access-bypass',
-        bypass_application_name: 'nosam-test-public',
+        bypass_application_name: 'platform-test-public',
       });
       const route = JSON.stringify({ projectId: project.id, userId: owner.id });
       await env.ROUTING.put(project.slug, route);
@@ -511,7 +511,7 @@ describe('project route membership capabilities', () => {
         identityProviderIds: ['idp-1'],
         policyIds: ['policy-1'],
         credential: { ciphertext: 'saved', iv: 'saved', keyVersion: 'v1' },
-        wildcardApplicationName: 'nosam-test-projects',
+        wildcardApplicationName: 'platform-test-projects',
         wildcardApplication: null,
         operation: null,
         lastError: null,

@@ -276,16 +276,16 @@ describe('Better Auth Drizzle codegen', () => {
       drizzleAdapterPath: '/resolved/better-auth/adapters/drizzle.mjs',
     });
 
-    expect(code).toContain('import { db as __nosamDb } from "@builtbyfriends/bwf/db"');
+    expect(code).toContain('import { db as __platformDb } from "@builtbyfriends/bwf/db"');
     expect(code).toContain(
-      'let __nosamAuthDatabaseInstance: ReturnType<typeof drizzleAdapter> | undefined;',
+      'let __platformAuthDatabaseInstance: ReturnType<typeof drizzleAdapter> | undefined;',
     );
     expect(code).toContain(
-      'export const __nosamAuthDatabase: ReturnType<typeof drizzleAdapter> = (options) => {',
+      'export const __platformAuthDatabase: ReturnType<typeof drizzleAdapter> = (options) => {',
     );
-    expect(code).toContain('__nosamAuthDatabaseInstance ??= drizzleAdapter(__nosamDb');
-    expect(code).toContain('return __nosamAuthDatabaseInstance(options);');
-    expect(code).not.toContain('export const __nosamAuthDatabase = drizzleAdapter(__nosamDb');
+    expect(code).toContain('__platformAuthDatabaseInstance ??= drizzleAdapter(__platformDb');
+    expect(code).toContain('return __platformAuthDatabaseInstance(options);');
+    expect(code).not.toContain('export const __platformAuthDatabase = drizzleAdapter(__platformDb');
     expect(code).not.toContain('import pg from');
     expect(code).not.toContain('first-primary');
   });

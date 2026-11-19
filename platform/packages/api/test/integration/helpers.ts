@@ -80,8 +80,8 @@ export type TestEnv = {
   EMAIL?: SendEmail;
   EMAIL_GATEWAY_ORIGIN?: string;
   /**
-   * Platform mail zone for the environment (`mail.void.cloud` in production,
-   * `mail.voidcloud.dev` in staging). Left UNSET by `setupEnv` on
+   * Platform mail zone for the environment (`mail.buildwf.dev` in production,
+   * `mail.staging.buildwf.dev` in staging). Left UNSET by `setupEnv` on
    * purpose: every reader fails closed without it, and a test that wants the
    * email paths must opt in with `{ ...env, EMAIL_SENDER_DOMAIN: '...' }` so
    * the fail-closed branch stays reachable. Verification-mail tests also set
@@ -554,13 +554,13 @@ export async function setupEnv(options: SetupEnvOptions = {}): Promise<TestEnv> 
     PROJECT_SECRET_ACTIVE_KEY_VERSION,
     R2_ACCESS_KEY_ID: 'test-r2-access-key-id',
     R2_SECRET_ACCESS_KEY: 'test-r2-secret-access-key',
-    R2_STATIC_ASSETS_BUCKET: 'nosam-static-assets-overflow-test',
+    R2_STATIC_ASSETS_BUCKET: 'platform-static-assets-overflow-test',
     GITHUB_CLIENT_ID: 'test-github-client-id',
     GITHUB_CLIENT_SECRET: 'test-github-client-secret',
     GOOGLE_CLIENT_ID: 'test-google-client-id',
     GOOGLE_CLIENT_SECRET: 'test-google-client-secret',
-    REQUESTS_DATASET: 'nosam_requests',
-    TAIL_SERVICE_NAME: 'nosam-tail',
+    REQUESTS_DATASET: 'platform_requests',
+    TAIL_SERVICE_NAME: 'platform-tail',
     USAGE_COUNTER: createMockDoNamespace(),
     CRON_SCHEDULER: createMockDoNamespace(),
     ERROR_ALERT_MONITOR: createMockDoNamespace(),
@@ -1418,7 +1418,7 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
       return cfSuccess(script.bindings);
     }
     return cfSuccess([
-      { type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: 'mock-proxy-token' },
+      { type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: 'mock-proxy-token' },
     ]);
   };
 
@@ -1988,13 +1988,13 @@ export function withLegacyDeploy<
       return fetchApp(request, ...rest);
     }
     const headers = new Headers({ 'Content-Type': 'application/json' });
-    for (const name of ['authorization', 'x-nosam-cli-version', 'user-agent']) {
+    for (const name of ['authorization', 'x-platform-cli-version', 'user-agent']) {
       const value = request.headers.get(name);
       if (value) {
         headers.set(name, value);
       }
     }
-    const key = request.headers.get('x-nosam-deploy-idempotency-key');
+    const key = request.headers.get('x-platform-deploy-idempotency-key');
     const text = await request.text();
     const res = await fetchApp(
       new Request('http://localhost/rpc/deploy.finalize', {
@@ -2092,7 +2092,7 @@ export function withLegacyDeploy<
       status: 200,
       headers: {
         'content-type': 'application/x-ndjson',
-        ...(body.data.deploymentId ? { 'x-nosam-deployment-id': body.data.deploymentId } : {}),
+        ...(body.data.deploymentId ? { 'x-platform-deployment-id': body.data.deploymentId } : {}),
       },
     });
   };

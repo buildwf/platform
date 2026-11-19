@@ -165,7 +165,7 @@ function fakeAssetsBinding(server: FakeServer): {
 }
 
 function subjectsInListHtml(html: string): Array<string> {
-  return [...html.matchAll(/<a href="\/__nosam\/inbox\/[^"]+">([^<]*)<\/a>/g)].map((m) => m[1]);
+  return [...html.matchAll(/<a href="\/__platform\/inbox\/[^"]+">([^<]*)<\/a>/g)].map((m) => m[1]);
 }
 
 function hrefsInHtml(html: string): Array<string> {
@@ -317,7 +317,7 @@ describe('sendEmail -> dev inbox (cross-process transport)', () => {
       { url: `http://localhost${DEV_INBOX_CAPTURE_URL}`, method: 'POST' },
     ]);
 
-    // ...and the Node-side buffer that `/__nosam/inbox` renders now has it.
+    // ...and the Node-side buffer that `/__platform/inbox` renders now has it.
     const messages = listDevMessages();
     expect(messages).toHaveLength(1);
     expect(messages[0].subject).toBe('Cross-process hello');
@@ -326,7 +326,7 @@ describe('sendEmail -> dev inbox (cross-process transport)', () => {
     expect(messages[0].html).toBe('<p>Hi there</p>');
     expect(new TextDecoder().decode(messages[0].raw)).toContain('Subject: Cross-process hello');
 
-    const listed = await server.dispatch(authed('http://localhost/__nosam/inbox'));
+    const listed = await server.dispatch(authed('http://localhost/__platform/inbox'));
     expect(subjectsInListHtml(await listed.text())).toContain('Cross-process hello');
   });
 
@@ -368,7 +368,7 @@ describe('sendEmail -> dev inbox (cross-process transport)', () => {
     expect(result.ok).toBe(false);
     if (!result.ok && 'error' in result) {
       expect(result.error.code).toBe('UPSTREAM_ERROR');
-      expect(result.error.message).toContain('/__nosam/inbox');
+      expect(result.error.message).toContain('/__platform/inbox');
     }
   });
 
@@ -441,10 +441,10 @@ describe('dev inbox auth (dev-trigger token on every route)', () => {
   });
 
   it.each([
-    ['GET list', 'http://localhost/__nosam/inbox', {}],
-    ['GET detail', 'http://localhost/__nosam/inbox/dev_seeded', {}],
-    ['GET raw', 'http://localhost/__nosam/inbox/dev_seeded/raw', {}],
-    ['DELETE clear', 'http://localhost/__nosam/inbox', { method: 'DELETE' }],
+    ['GET list', 'http://localhost/__platform/inbox', {}],
+    ['GET detail', 'http://localhost/__platform/inbox/dev_seeded', {}],
+    ['GET raw', 'http://localhost/__platform/inbox/dev_seeded/raw', {}],
+    ['DELETE clear', 'http://localhost/__platform/inbox', { method: 'DELETE' }],
     ['POST capture', `http://localhost${DEV_INBOX_CAPTURE_URL}`, captureInit()],
   ] as Array<[string, string, RequestInit]>)(
     '%s: 401 without the token, 401 with a wrong one, and nothing happens',
@@ -491,15 +491,15 @@ describe('dev inbox auth (dev-trigger token on every route)', () => {
     const server = createFakeViteServer();
     pushToDevBuffer(seeded());
 
-    const list = await server.dispatch(authed('http://localhost/__nosam/inbox'));
+    const list = await server.dispatch(authed('http://localhost/__platform/inbox'));
     expect(list.status).toBe(200);
     expect(subjectsInListHtml(await list.text())).toContain('seeded');
 
-    const detail = await server.dispatch(authed('http://localhost/__nosam/inbox/dev_seeded'));
+    const detail = await server.dispatch(authed('http://localhost/__platform/inbox/dev_seeded'));
     expect(detail.status).toBe(200);
     expect(await detail.text()).toContain('hidden@bcc.dev');
 
-    const raw = await server.dispatch(authed('http://localhost/__nosam/inbox/dev_seeded/raw'));
+    const raw = await server.dispatch(authed('http://localhost/__platform/inbox/dev_seeded/raw'));
     expect(raw.status).toBe(200);
     expect(await raw.text()).toContain('Bcc: hidden@bcc.dev');
 
@@ -511,7 +511,7 @@ describe('dev inbox auth (dev-trigger token on every route)', () => {
     expect(listDevMessages().map((m) => m.id)).toEqual(['dev_planted', 'dev_seeded']);
 
     const cleared = await server.dispatch(
-      authed('http://localhost/__nosam/inbox', { method: 'DELETE' }),
+      authed('http://localhost/__platform/inbox', { method: 'DELETE' }),
     );
     expect(cleared.status).toBe(204);
     expect(listDevMessages()).toHaveLength(0);
@@ -522,25 +522,25 @@ describe('dev inbox auth (dev-trigger token on every route)', () => {
     pushToDevBuffer(seeded());
     const q = `?${DEV_INBOX_TOKEN_QUERY}=${TOKEN}`;
 
-    const list = await server.dispatch(new Request(`http://localhost/__nosam/inbox${q}`));
+    const list = await server.dispatch(new Request(`http://localhost/__platform/inbox${q}`));
     expect(list.status).toBe(200);
     const listHrefs = hrefsInHtml(await list.text());
     expect(listHrefs).toEqual([
-      `/__nosam/inbox/dev_seeded${q}`,
-      `/__nosam/inbox/dev_seeded/raw${q}`,
+      `/__platform/inbox/dev_seeded${q}`,
+      `/__platform/inbox/dev_seeded/raw${q}`,
     ]);
 
     const detail = await server.dispatch(
-      new Request(`http://localhost/__nosam/inbox/dev_seeded${q}`),
+      new Request(`http://localhost/__platform/inbox/dev_seeded${q}`),
     );
     expect(detail.status).toBe(200);
     expect(hrefsInHtml(await detail.text())).toEqual([
-      `/__nosam/inbox${q}`,
-      `/__nosam/inbox/dev_seeded/raw${q}`,
+      `/__platform/inbox${q}`,
+      `/__platform/inbox/dev_seeded/raw${q}`,
     ]);
 
     const raw = await server.dispatch(
-      new Request(`http://localhost/__nosam/inbox/dev_seeded/raw${q}`),
+      new Request(`http://localhost/__platform/inbox/dev_seeded/raw${q}`),
     );
     expect(raw.status).toBe(200);
     expect(raw.headers.get('content-type')).toBe('message/rfc822');
@@ -599,7 +599,7 @@ describe('dev inbox auth (dev-trigger token on every route)', () => {
       await new Promise((r) => setTimeout(r, 150));
       const output = log.mock.calls.map((c) => String(c[0] ?? '')).join('\n');
       expect(output).toContain(
-        `Email inbox: http://localhost:5173/__nosam/inbox?${DEV_INBOX_TOKEN_QUERY}=${TOKEN}`,
+        `Email inbox: http://localhost:5173/__platform/inbox?${DEV_INBOX_TOKEN_QUERY}=${TOKEN}`,
       );
     } finally {
       log.mockRestore();

@@ -155,12 +155,12 @@ export function resolvePersistedDeploymentType(
   manifest: DeployManifest,
   deployment: Deployment,
   committedProjectType?: Project['type'],
-): 'nosam' | 'spa' | 'static' {
+): 'platform' | 'spa' | 'static' {
   if (manifest.type) {
     return manifest.type;
   }
   if (deployment.bundle_stored || manifest.workerMain) {
-    return 'nosam';
+    return 'platform';
   }
   if (committedProjectType) {
     return committedProjectType;
@@ -350,7 +350,7 @@ export async function replayDeploymentCutover(
     await clearCronScheduler(env, project.id);
   }
 
-  const dispatchWorkerName = env.DISPATCH_WORKER_NAME ?? 'nosam-dispatch';
+  const dispatchWorkerName = env.DISPATCH_WORKER_NAME ?? 'platform-dispatch';
   for (const queue of desiredQueues) {
     const resource = desiredQueueResources.get(queue.name)!;
     const consumer = await addQueueConsumer(
@@ -397,7 +397,7 @@ export async function clearProjectExternalState(
   await env.ROUTING.delete(projectRouteKey(project));
   await reconcileProjectDomainRoutes(env, domains, null);
   await clearCronScheduler(env, project.id);
-  const dispatchWorkerName = env.DISPATCH_WORKER_NAME ?? 'nosam-dispatch';
+  const dispatchWorkerName = env.DISPATCH_WORKER_NAME ?? 'platform-dispatch';
   for (const queueName of queueNames) {
     await detachProjectQueue(env, resources, dispatchWorkerName, project.id, queueName);
   }

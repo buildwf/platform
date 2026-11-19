@@ -872,7 +872,7 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:platform
         version: 5.20261110.1
-      '@nosamcloud/api':
+      '@platform-service/api':
         specifier: workspace:*
         version: link:../api
       '@types/react':
@@ -902,7 +902,7 @@ importers:
       '@builtbyfriends/edge':
         specifier: workspace:*
         version: link:../../../packages/edge
-      '@nosamcloud/api':
+      '@platform-service/api':
         specifier: workspace:*
         version: link:../api
       jose:
@@ -930,10 +930,10 @@ importers:
       '@builtbyfriends/platform':
         specifier: workspace:*
         version: link:../../../packages/platform
-      '@nosamcloud/api':
+      '@platform-service/api':
         specifier: workspace:*
         version: link:../api
-      '@nosamcloud/proxy':
+      '@platform-service/proxy':
         specifier: workspace:*
         version: link:../proxy
       email-validator:
@@ -964,7 +964,7 @@ importers:
       '@builtbyfriends/platform':
         specifier: workspace:*
         version: link:../../../packages/platform
-      '@nosamcloud/api':
+      '@platform-service/api':
         specifier: workspace:*
         version: link:../api
       email-validator:

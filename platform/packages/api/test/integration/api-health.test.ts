@@ -89,7 +89,7 @@ describe('GET /health', () => {
     await establishBootstrapSandboxDrainCheckpoint();
     const res = await app.fetch(
       new Request('http://localhost/internal/platform/sandbox-drain', {
-        headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
+        headers: { 'X-Platform-Probe': 'probe-token' },
       }),
       {
         ...env,
@@ -124,7 +124,7 @@ describe('GET /health', () => {
     try {
       const res = await app.fetch(
         new Request('http://localhost/internal/platform/sandbox-drain', {
-          headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
+          headers: { 'X-Platform-Probe': 'probe-token' },
         }),
         {
           ...env,
@@ -161,7 +161,7 @@ describe('GET /health', () => {
     try {
       const res = await app.fetch(
         new Request('http://localhost/internal/platform/sandbox-drain', {
-          headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
+          headers: { 'X-Platform-Probe': 'probe-token' },
         }),
         {
           ...env,
@@ -188,7 +188,7 @@ describe('GET /health', () => {
     try {
       const res = await app.fetch(
         new Request('http://localhost/health', {
-          headers: { 'X-Nosam-Platform-Probe': 'probe-token' },
+          headers: { 'X-Platform-Probe': 'probe-token' },
         }),
         {
           ...env,
@@ -209,7 +209,7 @@ describe('GET /health', () => {
     try {
       const res = await app.fetch(
         new Request('http://localhost/health', {
-          headers: { 'X-Health-Check': 'nosam-admin' },
+          headers: { 'X-Health-Check': 'platform-admin' },
         }),
         {
           ...env,

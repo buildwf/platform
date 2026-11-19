@@ -105,7 +105,7 @@ export default ${helper}({
         {
           name: 'jsx-websocket-test',
           resolveId(id) {
-            return id === 'virtual:nosam-routes' ? routeTable : null;
+            return id === 'virtual:platform-routes' ? routeTable : null;
           },
           generateBundle() {
             modules = [...this.getModuleIds()];

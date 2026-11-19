@@ -56,18 +56,18 @@ import type { BwfAuthRuntimeOptions } from './runtime/better-auth-shared.ts';
 import { loadLocalEnv } from './shared/env.ts';
 import { invalidateSourceAnalysis } from './shared/source-analysis-cache.ts';
 
-const VIRTUAL_ROUTES_ID = 'virtual:nosam-routes';
-const VIRTUAL_CLIENT_WORKER_ID = 'virtual:nosam-client-worker';
-const VIRTUAL_CLIENT_BROWSER_ID = 'virtual:nosam-client-browser';
+const VIRTUAL_ROUTES_ID = 'virtual:platform-routes';
+const VIRTUAL_CLIENT_WORKER_ID = 'virtual:platform-client-worker';
+const VIRTUAL_CLIENT_BROWSER_ID = 'virtual:platform-client-browser';
 const AUTH_CLIENT_FRAMEWORKS = ['react'] as const;
 type AuthClientFramework = (typeof AUTH_CLIENT_FRAMEWORKS)[number];
 const CLIENT_IMPORT_RE = /^@builtbyfriends\/bwf\/client(?:\/(react))?$/;
-const VIRTUAL_CLIENT_RE = /^virtual:nosam-client-(browser|worker)(?::(react))?$/;
+const VIRTUAL_CLIENT_RE = /^virtual:platform-client-(browser|worker)(?::(react))?$/;
 // Rolldown resolveId hook filters currently require RegExp for `id`.
 const RESOLVE_ID_FILTER =
-  /^(virtual:nosam-(routes|client-worker(?::(react))?|client-browser(?::(react))?)|@builtbyfriends\/bwf(\/client(\/(react))?|\/queues)?)$/;
+  /^(virtual:platform-(routes|client-worker(?::(react))?|client-browser(?::(react))?)|@builtbyfriends\/bwf(\/client(\/(react))?|\/queues)?)$/;
 const LOAD_ID_FILTER =
-  /^virtual:nosam-(routes|client-worker(?::(react))?|client-browser(?::(react))?)$/;
+  /^virtual:platform-(routes|client-worker(?::(react))?|client-browser(?::(react))?)$/;
 
 type RoutingPluginOptions = {
   getApplicationAnalysis: (environment: RouteEnvironment, refresh?: boolean) => ApplicationAnalysis;
@@ -199,7 +199,7 @@ export function routingPlugin(
 
   // Pre-resolve all runtime module paths so generated code uses absolute paths.
   // This is necessary because:
-  // 1. "nosam" bare import would pull in the entire plugin
+  // 1. "platform" bare import would pull in the entire plugin
   // 2. "hono" is a dep of void, not the user's project
   // 3. Virtual modules have no filesystem location for relative resolution
   const resolveFile = (specifier: string) => fileURLToPath(import.meta.resolve(specifier));
@@ -591,7 +591,7 @@ export function routingPlugin(
   );
 
   return {
-    name: 'nosam:routing',
+    name: 'platform:routing',
     api: { finalizeCloudflareAssets },
     enforce: 'pre',
     configResolved(config) {
@@ -634,7 +634,7 @@ export function routingPlugin(
           : {};
       compileOptions.hasLive = options.live !== undefined;
       compileOptions.managedDispatch =
-        env.command === 'build' && Boolean(process.env.NOSAM_DEPLOY_PROJECT_ID);
+        env.command === 'build' && Boolean(process.env.PLATFORM_DEPLOY_PROJECT_ID);
 
       if (env.command === 'serve' && options.isAuthEnabled()) {
         // Alias better-auth client subpaths to absolute file paths so
@@ -737,7 +737,7 @@ export function routingPlugin(
         if (id === VIRTUAL_CLIENT_BROWSER_ID) {
           return VIRTUAL_CLIENT_BROWSER_ID;
         }
-        // Redirect bare "nosam" imports to the lightweight handler
+        // Redirect bare "platform" imports to the lightweight handler
         // subpath to avoid pulling the entire plugin into the Worker bundle.
         if (id === '@builtbyfriends/bwf') {
           return handlerFile;
@@ -766,7 +766,7 @@ export function routingPlugin(
           return;
         }
         // The route table embeds the dev-trigger token. Only server environments import
-        // it; refusing the client environment keeps `/@id/virtual:nosam-routes` from
+        // it; refusing the client environment keeps `/@id/virtual:platform-routes` from
         // returning it, either as the module or as code on Vite's error page.
         if (this?.environment?.name === 'client') {
           throw new Error(

@@ -268,8 +268,8 @@ export function cloudflareAuthEnvironment(
   ]);
   for (const key of Object.keys(env)) {
     if (
-      /^NOSAM_PLATFORM_/i.test(key) ||
-      /^(?:DATABASE_URL|CF_ACCESS_CLIENT_ID|CF_ACCESS_CLIENT_SECRET|CF_ACCESS_TOKEN|CF_ACCESS_READINESS_ORIGIN|NOSAM_ACCESS_CREDENTIALS|NOSAM_ACCESS_ORIGIN)$/i.test(
+      /^PLATFORM_/i.test(key) ||
+      /^(?:DATABASE_URL|CF_ACCESS_CLIENT_ID|CF_ACCESS_CLIENT_SECRET|CF_ACCESS_TOKEN|CF_ACCESS_READINESS_ORIGIN|PLATFORM_ACCESS_CREDENTIALS|PLATFORM_ACCESS_ORIGIN)$/i.test(
         key,
       ) ||
       scrubbedKeys.has(key.toUpperCase())

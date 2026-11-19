@@ -633,7 +633,7 @@ describe('runLocalBwfAuthMigrations', () => {
   it(
     'creates the local D1 directory on the first dev run',
     async () => {
-      const root = mkdtempSync(join(tmpdir(), 'nosam-auth-migrations-'));
+      const root = mkdtempSync(join(tmpdir(), 'platform-auth-migrations-'));
       try {
         const persistRoot = join(root, '.bwf');
         await runLocalBwfAuthMigrations(root, 'sqlite', persistRoot, 'local', null);
@@ -662,7 +662,7 @@ describe('runLocalBwfAuthMigrations', () => {
 
   // An empty DATABASE_URL in the shell counts as unset, so the one in .env is used.
   it('uses DATABASE_URL from .env when the shell value is empty', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-auth-migrations-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-auth-migrations-'));
     writeFileSync(join(root, '.env'), 'DATABASE_URL=postgres://localhost/app\n');
     vi.stubEnv('DATABASE_URL', '');
     state.connections.length = 0;
@@ -686,7 +686,7 @@ describe('runLocalBwfAuthMigrations', () => {
   });
 
   it('gives a function-form config the DATABASE_URL that the migration uses', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'nosam-auth-migrations-'));
+    const root = mkdtempSync(join(tmpdir(), 'platform-auth-migrations-'));
     writeFileSync(join(root, '.env'), 'DATABASE_URL=postgres://localhost/app\n');
     const configPath = join(root, 'auth.mjs');
     writeFileSync(

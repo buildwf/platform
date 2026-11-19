@@ -428,6 +428,13 @@
       "when": 1795031127148,
       "tag": "0067_app_people",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1795124602042,
+      "tag": "0068_project_mode_platform",
+      "breakpoints": true
     }
   ]
 }

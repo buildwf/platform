@@ -58,7 +58,7 @@ describe('project Worker runtime logs', () => {
   it('updates only project Workers, a few at a time', async () => {
     const scripts = [
       ...Array.from({ length: 9 }, (_, index) => `user-app-dpl${index}`),
-      'nosam-do-project1-0123456789abcdef',
+      'platform-do-project1-0123456789abcdef',
     ];
     const fake = fakeClient([...scripts, 'other-script']);
     const warning = await updateProjectWorkerRuntimeLogs(fake.client, { ...target, minimal: true });

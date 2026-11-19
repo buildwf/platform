@@ -17,10 +17,10 @@ function capture(action: () => void): string {
 
 it('separates the final success with a blank line and exactly one space after the checkmark', () => {
   const output = capture(() =>
-    printSuccess('Created and linked to viteconf-nosam.nosam.cloudflare.dev'),
+    printSuccess('Created and linked to viteconf-platform.cloudflare.dev'),
   );
   expect(stripVTControlCharacters(output)).toBe(
-    '\n✓ Created and linked to viteconf-nosam.nosam.cloudflare.dev\n\n',
+    '\n✓ Created and linked to viteconf-platform.cloudflare.dev\n\n',
   );
 });
 

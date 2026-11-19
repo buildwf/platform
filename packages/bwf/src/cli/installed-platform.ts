@@ -49,8 +49,8 @@ export function assertInstalledBwfMatchesCli(root: string): void {
   }
   if (installedVersion !== cli.version) {
     throw new Error(
-      `deploy: this CLI is nosam@${cli.version}, but the project's installed Vite plugin is ` +
-        `${installedVersion ? `nosam@${installedVersion}` : 'missing'}. ` +
+      `deploy: this CLI is platform@${cli.version}, but the project's installed Vite plugin is ` +
+        `${installedVersion ? `platform@${installedVersion}` : 'missing'}. ` +
         'Install the same bwf version in the project (or link this development checkout) ' +
         'before deploying. The build imports the project package; mixing versions can ' +
         'rewrite legacy config and produce an unsafe Cloudflare deploy target.',

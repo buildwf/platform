@@ -69,7 +69,7 @@ type ConfigureServerHook =
   | HookWithHandler<(server: unknown) => Promise<void> | void>;
 
 function createProjectRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-migrations-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-migrations-'));
   const migrationsDir = join(root, 'db', 'migrations');
   mkdirSync(migrationsDir, { recursive: true });
   writeFileSync(

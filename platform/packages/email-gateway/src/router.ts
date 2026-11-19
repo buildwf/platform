@@ -1,6 +1,6 @@
 /** Inbound email actions after the gateway resolves an authoritative route. */
 
-import { isReservedEmailSlug } from '@nosamcloud/api/reserved-slugs';
+import { isReservedEmailSlug } from '@platform-service/api/reserved-slugs';
 import { EmailMessage } from 'cloudflare:email';
 import { validate as isValidEmailSyntax } from 'email-validator';
 import {

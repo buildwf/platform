@@ -7,7 +7,7 @@ const originalLocation = (globalThis as { location?: unknown }).location;
 describe('connectLiveStream', () => {
   beforeEach(() => {
     MockEventSource.instances = [];
-    vi.stubGlobal('location', { href: 'https://nosam.test/page' });
+    vi.stubGlobal('location', { href: 'https://platform.test/page' });
   });
 
   afterEach(() => {

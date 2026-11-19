@@ -2,7 +2,7 @@ import type { SubcommandDef } from './subcommand-prompt.ts';
 
 const PLATFORM_FLAG = {
   name: '--platform',
-  arg: '<cloudflare|nosam>',
+  arg: '<cloudflare|platform>',
   description: 'Your own Cloudflare account (`cloudflare`) instead of the bwf platform',
 };
 
@@ -61,8 +61,8 @@ export interface EmailArgs {
   projectSlug?: string;
   limit?: number;
   address?: string;
-  /** `cloudflare` is the developer's own account; `nosam` (the default) is the bwf platform. */
-  platform?: 'cloudflare' | 'nosam';
+  /** `cloudflare` is the developer's own account; `platform` (the default) is the bwf platform. */
+  platform?: 'cloudflare' | 'platform';
   /** `bwf email alias <name> --yes` sets the permanent alias without a prompt. */
   yes?: boolean;
 }
@@ -132,7 +132,7 @@ export function parseEmailArgs(args: Array<string>): EmailArgs {
     } else if (rest[i] === '--platform' || rest[i]?.startsWith('--platform=')) {
       const { value, next } = readFlagValue(rest, i, '--platform');
       if (value === undefined) {
-        throw new Error("email: --platform requires a value ('cloudflare' or 'nosam').");
+        throw new Error("email: --platform requires a value ('cloudflare' or 'platform').");
       }
       platformValues.push(value);
       i = next;
@@ -159,8 +159,8 @@ export function parseEmailArgs(args: Array<string>): EmailArgs {
   let platform: EmailArgs['platform'];
   const platformValue = platformValues[0];
   if (platformValue !== undefined) {
-    if (platformValue !== 'cloudflare' && platformValue !== 'nosam') {
-      throw new Error("email: --platform must be 'cloudflare' or 'nosam'.");
+    if (platformValue !== 'cloudflare' && platformValue !== 'platform') {
+      throw new Error("email: --platform must be 'cloudflare' or 'platform'.");
     }
     platform = platformValue;
   }

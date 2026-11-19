@@ -79,7 +79,7 @@ describe('PlatformClient.requestUploadUrls', () => {
     // Version header so the platform's cliVersionGate middleware can refuse
     // stale CLIs cleanly (HTTP 426 + cli_outdated). Format must look like a
     // semver triplet — exact value is package.json-driven.
-    expect(headers['X-Nosam-CLI-Version']).toMatch(/^\d+\.\d+\.\d+/);
+    expect(headers['X-Platform-CLI-Version']).toMatch(/^\d+\.\d+\.\d+/);
 
     const body = JSON.parse(init.body as string);
     expect(body).toEqual({
@@ -517,7 +517,7 @@ describe('PlatformClient.finalizeDeploy', () => {
 // the client captures the Access headers at construction and reuses them.
 describe('PlatformClient CF Access header capture (survives a later env scrub)', () => {
   it('keeps sending CF-Access headers after CF_ACCESS_* are deleted from process.env', async () => {
-    vi.stubEnv('NOSAM_ACCESS_ORIGIN', 'https://api.staging.void.cloud');
+    vi.stubEnv('PLATFORM_ACCESS_ORIGIN', 'https://api.staging.void.cloud');
     vi.stubEnv('CF_ACCESS_CLIENT_ID', 'svc-id.access');
     vi.stubEnv('CF_ACCESS_CLIENT_SECRET', 'svc-secret');
     const client = new PlatformClient(token, { apiUrl: 'https://api.staging.void.cloud' });
@@ -555,8 +555,8 @@ describe('PlatformClient CF Access header capture (survives a later env scrub)',
   it('uses a browser-renewed Access token acquired after construction', async () => {
     vi.stubEnv('CF_ACCESS_CLIENT_ID', undefined);
     vi.stubEnv('CF_ACCESS_CLIENT_SECRET', undefined);
-    vi.stubEnv('NOSAM_ACCESS_CREDENTIALS', undefined);
-    vi.stubEnv('NOSAM_ACCESS_ORIGIN', 'https://api.staging.void.cloud');
+    vi.stubEnv('PLATFORM_ACCESS_CREDENTIALS', undefined);
+    vi.stubEnv('PLATFORM_ACCESS_ORIGIN', 'https://api.staging.void.cloud');
     const tokenFor = (label: string) =>
       'header.' +
       Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600, label })).toString(
@@ -593,7 +593,7 @@ describe('PlatformClient Cloudflare Access challenge renewal', () => {
     accessKeyring.write.mockReset().mockReturnValue(true);
     stdinTty = process.stdin.isTTY;
     stdoutTty = process.stdout.isTTY;
-    vi.stubEnv('NOSAM_ACCESS_ORIGIN', undefined);
+    vi.stubEnv('PLATFORM_ACCESS_ORIGIN', undefined);
   });
 
   afterEach(() => {
@@ -605,7 +605,7 @@ describe('PlatformClient Cloudflare Access challenge renewal', () => {
     const stale = accessJwt(600);
     const fresh = accessJwt(900);
     vi.stubEnv(
-      'NOSAM_ACCESS_CREDENTIALS',
+      'PLATFORM_ACCESS_CREDENTIALS',
       JSON.stringify({ [origin]: { CF_ACCESS_TOKEN: stale } }),
     );
     Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: true });
@@ -642,7 +642,7 @@ describe('PlatformClient Cloudflare Access challenge renewal', () => {
 
   it('does not retry ambiguous API errors', async () => {
     vi.stubEnv(
-      'NOSAM_ACCESS_CREDENTIALS',
+      'PLATFORM_ACCESS_CREDENTIALS',
       JSON.stringify({ [origin]: { CF_ACCESS_TOKEN: accessJwt(600) } }),
     );
     fetchMock.mockResolvedValueOnce(new Response('application failure', { status: 500 }));
@@ -656,7 +656,7 @@ describe('PlatformClient Cloudflare Access challenge renewal', () => {
 
   it('does not replace a rejected scoped service credential with a human login', async () => {
     vi.stubEnv(
-      'NOSAM_ACCESS_CREDENTIALS',
+      'PLATFORM_ACCESS_CREDENTIALS',
       JSON.stringify({
         [origin]: { CF_ACCESS_CLIENT_ID: 'ci-client', CF_ACCESS_CLIENT_SECRET: 'ci-secret' },
       }),
@@ -664,7 +664,7 @@ describe('PlatformClient Cloudflare Access challenge renewal', () => {
     Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: false });
     Object.defineProperty(process.stdout, 'isTTY', { configurable: true, value: false });
     const client = new PlatformClient(token, { apiUrl: origin });
-    vi.stubEnv('NOSAM_ACCESS_CREDENTIALS', undefined);
+    vi.stubEnv('PLATFORM_ACCESS_CREDENTIALS', undefined);
     fetchMock.mockResolvedValueOnce(
       new Response(null, {
         status: 302,

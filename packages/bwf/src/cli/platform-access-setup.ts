@@ -387,20 +387,20 @@ export function activatePlatformAccessCredentials(
       );
     }
     const headers = cfAccessHeaders(
-      { NOSAM_ACCESS_CREDENTIALS: JSON.stringify({ [origin]: value }) },
+      { PLATFORM_ACCESS_CREDENTIALS: JSON.stringify({ [origin]: value }) },
       origin,
     );
     if (!Object.keys(headers).length) {
       throw new Error('platform: Saved Access credentials are incomplete.');
     }
   }
-  const current: unknown = process.env.NOSAM_ACCESS_CREDENTIALS
-    ? JSON.parse(process.env.NOSAM_ACCESS_CREDENTIALS)
+  const current: unknown = process.env.PLATFORM_ACCESS_CREDENTIALS
+    ? JSON.parse(process.env.PLATFORM_ACCESS_CREDENTIALS)
     : {};
   if (!current || typeof current !== 'object' || Array.isArray(current)) {
-    throw new Error('platform: NOSAM_ACCESS_CREDENTIALS must contain an origin-keyed object.');
+    throw new Error('platform: PLATFORM_ACCESS_CREDENTIALS must contain an origin-keyed object.');
   }
-  process.env.NOSAM_ACCESS_CREDENTIALS = JSON.stringify({ ...current, ...entries });
+  process.env.PLATFORM_ACCESS_CREDENTIALS = JSON.stringify({ ...current, ...entries });
 }
 
 export async function preparePlatformAccessSetup(input: {
@@ -506,7 +506,7 @@ export async function preparePlatformAccessSetup(input: {
   input.save({ accessSetupSpecJson: JSON.stringify(spec) });
   const accountId = spec.accountId ?? input.plan.account.id;
   const credential =
-    process.env.NOSAM_PLATFORM_ACCESS_SETUP_TOKEN || input.checkpoint.accessManagementToken;
+    process.env.PLATFORM_ACCESS_SETUP_TOKEN || input.checkpoint.accessManagementToken;
   let management = credential
     ? new PlatformCloudflareClient(credential, { apiBase: input.client.apiBaseUrl })
     : input.client;

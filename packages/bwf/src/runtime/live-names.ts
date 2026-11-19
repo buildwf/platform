@@ -18,5 +18,5 @@ export function topicInstanceName(streamId: string, topicKey: string): string {
 }
 
 export function internalUrl(path: string): string {
-  return `https://nosam.live${path}`;
+  return `https://platform.live${path}`;
 }

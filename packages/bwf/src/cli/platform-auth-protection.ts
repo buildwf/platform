@@ -286,7 +286,7 @@ export async function runPlatformProtectionConfig(args: PlatformConfigArgs): Pro
         origins = lockedOrigins;
         await verifyPlatformInstallationOwnership(cloudflare, currentManifest);
         await verifyProtectionWorkerOrigins(cloudflare, currentManifest, origins, true);
-        const originalCredentials = process.env.NOSAM_ACCESS_CREDENTIALS;
+        const originalCredentials = process.env.PLATFORM_ACCESS_CREDENTIALS;
         try {
           const prepared = await preparePlatformAccessSetup({
             plan: {
@@ -311,9 +311,9 @@ export async function runPlatformProtectionConfig(args: PlatformConfigArgs): Pro
         } finally {
           // Provisioning stores machine credentials. Management still requires the human's Access session.
           if (originalCredentials === undefined) {
-            delete process.env.NOSAM_ACCESS_CREDENTIALS;
+            delete process.env.PLATFORM_ACCESS_CREDENTIALS;
           } else {
-            process.env.NOSAM_ACCESS_CREDENTIALS = originalCredentials;
+            process.env.PLATFORM_ACCESS_CREDENTIALS = originalCredentials;
           }
         }
       } finally {

@@ -45,7 +45,7 @@ const DEFAULT_REGISTRY: PlatformConnectionRegistry = {
   schemaVersion: PLATFORM_REGISTRY_SCHEMA_VERSION,
 };
 
-const PLATFORM_RECOVERY_KEYRING_SERVICE = 'dev.nosam.cli.platform';
+const PLATFORM_RECOVERY_KEYRING_SERVICE = 'dev.platform.cli.platform';
 // Earlier releases saved the recovery key under this service, so a machine that
 // upgrades can still decrypt its installation secrets.
 const LEGACY_PLATFORM_RECOVERY_KEYRING_SERVICE = 'dev.void.cli.platform';
@@ -61,16 +61,16 @@ type PlatformRecoveryEnvelope = Readonly<{
 
 /**
  * The registry lives in `~/.bwf/platforms`. A machine that already has a registry in
- * `~/.nosam/platforms` or `~/.void/platforms` from an earlier release keeps using it in
+ * `~/.platform/platforms` or `~/.void/platforms` from an earlier release keeps using it in
  * place, so its saved connections and keychain entries still match.
  */
 export function platformRegistryDirectory(): string {
   const fromEnvironment =
-    process.env.NOSAM_PLATFORM_REGISTRY_DIR ?? process.env.VOID_PLATFORM_REGISTRY_DIR;
+    process.env.PLATFORM_REGISTRY_DIR ?? process.env.VOID_PLATFORM_REGISTRY_DIR;
   if (fromEnvironment) {
     return fromEnvironment;
   }
-  const candidates = ['.bwf', '.nosam', '.void'].map((name) => join(homedir(), name, 'platforms'));
+  const candidates = ['.bwf', '.platform', '.void'].map((name) => join(homedir(), name, 'platforms'));
   return (
     candidates.find((directory) => existsSync(join(directory, 'registry.json'))) ?? candidates[0]!
   );
@@ -629,7 +629,7 @@ function readRecoveryMaterial(
     const key = platformRecoveryKey(directory, false);
     if (!key) {
       throw new Error(
-        'the encryption key is unavailable; restore it from the system keychain or set NOSAM_PLATFORM_RECOVERY_KEY',
+        'the encryption key is unavailable; restore it from the system keychain or set PLATFORM_RECOVERY_KEY',
       );
     }
     const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(envelope.iv, 'base64'));
@@ -699,9 +699,9 @@ function recoveryAad(manifest: PlatformInstallationManifest, kind: 'pending' | '
 }
 
 function platformRecoveryKey(directory: string, create: boolean): Buffer | null {
-  const fromEnvironment = process.env.NOSAM_PLATFORM_RECOVERY_KEY;
+  const fromEnvironment = process.env.PLATFORM_RECOVERY_KEY;
   if (fromEnvironment) {
-    return parseRecoveryKey(fromEnvironment, 'NOSAM_PLATFORM_RECOVERY_KEY');
+    return parseRecoveryKey(fromEnvironment, 'PLATFORM_RECOVERY_KEY');
   }
   const legacyEnvironment = process.env.VOID_PLATFORM_RECOVERY_KEY;
   if (legacyEnvironment) {
@@ -722,7 +722,7 @@ function platformRecoveryKey(directory: string, create: boolean): Buffer | null 
     !writeKeyringPassword(PLATFORM_RECOVERY_KEYRING_SERVICE, account, generated.toString('base64'))
   ) {
     throw new Error(
-      'platform: The system keychain is unavailable. Refusing to write platform secrets to disk. Configure a system keychain or set a base64-encoded 32-byte NOSAM_PLATFORM_RECOVERY_KEY from your secret manager.',
+      'platform: The system keychain is unavailable. Refusing to write platform secrets to disk. Configure a system keychain or set a base64-encoded 32-byte PLATFORM_RECOVERY_KEY from your secret manager.',
     );
   }
   return generated;

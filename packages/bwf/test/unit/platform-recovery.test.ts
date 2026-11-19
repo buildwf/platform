@@ -33,10 +33,10 @@ import { ownershipMarker } from '../helpers/platform-installation.ts';
 const directories: Array<string> = [];
 
 afterEach(() => {
-  delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+  delete process.env.PLATFORM_REGISTRY_DIR;
   delete process.env.CF_ACCESS_CLIENT_ID;
   delete process.env.CF_ACCESS_CLIENT_SECRET;
-  delete process.env.NOSAM_ACCESS_ORIGIN;
+  delete process.env.PLATFORM_ACCESS_ORIGIN;
   for (const directory of directories.splice(0)) {
     rmSync(directory, { force: true, recursive: true });
   }
@@ -152,18 +152,18 @@ function remoteManifest() {
   return setInstallationEndpoints(
     manifest,
     {
-      apiUrl: 'https://nosam-example-api.example-workers.workers.dev',
+      apiUrl: 'https://platform-example-api.example-workers.workers.dev',
       dashboardUrl: null,
-      proxyUrl: 'https://nosam-example-proxy.example-workers.workers.dev',
+      proxyUrl: 'https://platform-example-proxy.example-workers.workers.dev',
     },
     '2026-09-14T00:00:03.000Z',
   );
 }
 
 function useRegistryDir(): string {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-recovery-test-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-recovery-test-'));
   directories.push(directory);
-  process.env.NOSAM_PLATFORM_REGISTRY_DIR = directory;
+  process.env.PLATFORM_REGISTRY_DIR = directory;
   return directory;
 }
 
@@ -265,7 +265,7 @@ describe('platform recovery', () => {
   it('authenticates endpoint verification with explicitly scoped Access proof', async () => {
     process.env.CF_ACCESS_CLIENT_ID = 'service-id';
     process.env.CF_ACCESS_CLIENT_SECRET = 'service-secret';
-    process.env.NOSAM_ACCESS_ORIGIN = 'https://api.staging.void.cloud';
+    process.env.PLATFORM_ACCESS_ORIGIN = 'https://api.staging.void.cloud';
     const manifest = {
       ...remoteManifest(),
       endpoints: {
@@ -545,7 +545,7 @@ describe('platform recovery', () => {
     useRegistryDir();
     const base = remoteManifest();
     const installationId = 'example-a1b2c3d4e5f6';
-    const workerName = 'nosam-example-a1b2c3d4e5f6-api';
+    const workerName = 'platform-example-a1b2c3d4e5f6-api';
     let interrupted: PlatformInstallationManifest = {
       ...base,
       deployment: {

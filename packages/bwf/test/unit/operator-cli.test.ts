@@ -37,10 +37,10 @@ vi.mock('../../src/cli/keyring.ts', () => ({
 }));
 let directory: string;
 beforeEach(() => {
-  directory = mkdtempSync(join(tmpdir(), 'nosam-operator-'));
-  vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', directory);
+  directory = mkdtempSync(join(tmpdir(), 'platform-operator-'));
+  vi.stubEnv('PLATFORM_REGISTRY_DIR', directory);
   vi.stubEnv('BWF_API_URL', '');
-  vi.stubEnv('NOSAM_OPERATOR_TOKEN', '');
+  vi.stubEnv('PLATFORM_OPERATOR_TOKEN', '');
   vi.stubEnv('BWF_TOKEN', 'deployment-only');
   keyring.read.mockReturnValue(null);
   keyring.write.mockReturnValue(true);
@@ -69,7 +69,7 @@ describe('operator mutation completion output', () => {
   async function runMutation(result: Record<string, unknown>, flags: Array<string> = []) {
     connect('https://one.example');
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     vi.spyOn(process.stderr, 'write').mockReturnValue(true);
     const details = vi.spyOn(console, 'log').mockImplementation(() => {});
     let terminal = '';
@@ -636,7 +636,7 @@ describe('operator credential isolation', () => {
   });
   it('rejects headless credentials with an implicit origin', () => {
     const connection = connect('https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     expect(() => resolveOperatorOrigin()).toThrow('explicit');
     expect(resolveOperatorOrigin(connection.id)).toBe(connection.apiUrl);
   });
@@ -672,7 +672,7 @@ describe('deployment asset migration', () => {
   });
   beforeEach(() => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
   });
@@ -1021,7 +1021,7 @@ describe('operator transport and execution', () => {
   });
   it('requires authorization before preview and validates preview before executing', async () => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ ok: true }));
     vi.stubGlobal('fetch', fetcher);
     await expect(runOperatorCommand(parseOperatorArgs(['user', 'delete', 'id']))).rejects.toThrow(
@@ -1035,7 +1035,7 @@ describe('operator transport and execution', () => {
   });
   it('performs plan only and pins rollback-all execution to previewed versions', async () => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const preview = {
@@ -1057,7 +1057,7 @@ describe('operator transport and execution', () => {
   });
   it('pins project normalization to its previewed database changes', async () => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const changes = { activeDeployment: { from: null, to: 'dpl_older' }, queues: [] };
@@ -1075,7 +1075,7 @@ describe('operator transport and execution', () => {
     'reads a cleanup token once for %s without printing it',
     async (mode) => {
       vi.stubEnv('BWF_API_URL', 'https://one.example');
-      vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+      vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
       const output = vi.spyOn(console, 'log').mockImplementation(() => {});
       const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
       const stdin = vi
@@ -1116,7 +1116,7 @@ describe('operator transport and execution', () => {
   );
   it('prints email recipient outcomes through the operator logs command', async () => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     const output = vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.stubGlobal(
       'fetch',
@@ -1143,7 +1143,7 @@ describe('operator transport and execution', () => {
   });
   it('previews then submits an attested email attempt resolution', async () => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     vi.spyOn(console, 'log').mockImplementation(() => {});
     const fetcher = vi
       .fn<typeof fetch>()
@@ -1183,7 +1183,7 @@ describe('operator transport and execution', () => {
   });
   it('pins email operation recovery execution to the previewed step fence', async () => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     vi.spyOn(console, 'log').mockImplementation(() => {});
     const fetcher = vi
       .fn<typeof fetch>()
@@ -1235,7 +1235,7 @@ describe('operator transport and execution', () => {
   });
   it('pins shared recipient recovery to the inspected preview and rejects missing fences', async () => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator-token');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator-token');
     vi.spyOn(console, 'log').mockImplementation(() => {});
     const fetcher = vi
       .fn<typeof fetch>()
@@ -1276,7 +1276,7 @@ describe('operator transport and execution', () => {
   });
   it('stops an outbound-only add when the platform preview ignores the mode', async () => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     vi.spyOn(console, 'log').mockImplementation(() => {});
     const preview = (target: Record<string, unknown>) =>
       Response.json({ dryRun: true, action: 'email.domain.add', target });
@@ -1430,7 +1430,7 @@ describe('operator transport and execution', () => {
   });
   it('renders deployment status, log messages, and exceptions in human output', async () => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     const write = vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.stubGlobal(
       'fetch',
@@ -1464,7 +1464,7 @@ describe('operator transport and execution', () => {
 
   it('notes minimal runtime logs once and prints rows without a URL cleanly', async () => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     const write = vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.stubGlobal(
       'fetch',
@@ -1499,7 +1499,7 @@ describe('operator transport and execution', () => {
   });
   it('keeps the full-mode row format for an empty URL or message', async () => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     const write = vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.stubGlobal(
       'fetch',
@@ -1531,7 +1531,7 @@ describe('operator transport and execution', () => {
   });
   it('neutralizes C1 terminal controls in human operator output', async () => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     const write = vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.stubGlobal(
       'fetch',
@@ -1567,7 +1567,7 @@ describe('operator transport and execution', () => {
 
   it('renders every worker and audit event field without table-column truncation', async () => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     const write = vi.spyOn(console, 'log').mockImplementation(() => {});
     const fetcher = vi
       .fn<typeof fetch>()
@@ -1583,7 +1583,7 @@ describe('operator transport and execution', () => {
               worker_name: 'api',
               environment: 'production',
               version_id: 'version-failed',
-              script_name: 'nosam-api',
+              script_name: 'platform-api',
               status: 'failed',
               error_message: 'Version no longer exists.',
               auditError: 'Could not persist the outcome.',
@@ -1626,7 +1626,7 @@ describe('operator transport and execution', () => {
 
   it('renders sentence-case field labels that keep known acronyms', async () => {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     const write = vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.stubGlobal(
       'fetch',
@@ -1774,7 +1774,7 @@ describe('operator transport and execution', () => {
       }),
     );
     vi.stubGlobal('fetch', fetcher);
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator-token');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator-token');
     vi.stubEnv('BWF_API_URL', 'https://one.example');
 
     await runOperatorCommand(parseOperatorArgs(['build', 'logs', 'id', '--json']));
@@ -1801,11 +1801,11 @@ describe('project AI logging commands', () => {
     replies: Array<Record<string, unknown> | Response>,
   ): ReturnType<typeof vi.fn<typeof fetch>> {
     vi.stubEnv('BWF_API_URL', 'https://one.example');
-    vi.stubEnv('NOSAM_OPERATOR_TOKEN', 'operator');
+    vi.stubEnv('PLATFORM_OPERATOR_TOKEN', 'operator');
     const queue = [...replies];
     const fetcher = vi.fn<typeof fetch>().mockImplementation(async (input) => {
       const url = new URL(String(input));
-      if (url.pathname === '/.well-known/nosam-platform') {
+      if (url.pathname === '/.well-known/platform') {
         return typeof platformVersion === 'number'
           ? new Response(null, { status: platformVersion })
           : platformDiscoveryResponse(url.origin, platformVersion);
@@ -1836,7 +1836,7 @@ describe('project AI logging commands', () => {
       ].join('\n'),
     );
     expect(fetcher.mock.calls.map(([input]) => new URL(String(input)).pathname)).toEqual([
-      '/.well-known/nosam-platform',
+      '/.well-known/platform',
       '/operator/v1/projects/p1/ai-logging',
       '/operator/v1/projects/p1/ai-logging',
     ]);

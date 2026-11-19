@@ -52,12 +52,12 @@ beforeEach(() => {
   vi.mocked(log.warn).mockClear();
   vi.mocked(printSuccess).mockClear();
   vi.mocked(log.step).mockClear();
-  process.env.NOSAM_PLATFORM_RECOVERY_KEY = Buffer.alloc(32, 7).toString('base64');
+  process.env.PLATFORM_RECOVERY_KEY = Buffer.alloc(32, 7).toString('base64');
 });
 
 afterEach(() => {
-  delete process.env.NOSAM_PLATFORM_RECOVERY_KEY;
-  delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+  delete process.env.PLATFORM_RECOVERY_KEY;
+  delete process.env.PLATFORM_REGISTRY_DIR;
   for (const directory of directories.splice(0)) {
     rmSync(directory, { force: true, recursive: true });
   }
@@ -183,7 +183,7 @@ function installedManifest(
         kind: 'application',
         accountId: 'account',
         id: 'access-app',
-        name: `nosam-${INSTALLATION_ID}-login-0123456789abcdef`,
+        name: `platform-${INSTALLATION_ID}-login-0123456789abcdef`,
         ownership: 'created',
       },
       {
@@ -191,7 +191,7 @@ function installedManifest(
         kind: 'service-token',
         accountId: 'account',
         id: 'access-token',
-        name: `nosam-${INSTALLATION_ID}-access-probes-0123456789abcdef`,
+        name: `platform-${INSTALLATION_ID}-access-probes-0123456789abcdef`,
         ownership: 'created',
       },
       {
@@ -637,8 +637,8 @@ describe('uninstall --purge-resources', () => {
       `1. worker-route: *.apps.example.com/* (route-1) -> ${names.dispatchWorker}`,
       `1. worker-route: *.apps.example.com (route-2) -> ${names.dispatchWorker}`,
       '2. dns-record: *.apps.example.com (dns-id)',
-      `3. Access application: nosam-${INSTALLATION_ID}-login-0123456789abcdef (access-app)`,
-      `3. Access service-token: nosam-${INSTALLATION_ID}-access-probes-0123456789abcdef (access-token)`,
+      `3. Access application: platform-${INSTALLATION_ID}-login-0123456789abcdef (access-app)`,
+      `3. Access service-token: platform-${INSTALLATION_ID}-access-probes-0123456789abcdef (access-token)`,
       "4. queue consumers run by this installation's Workers on:",
       names.cronQueue,
       names.usageQueue,
@@ -925,7 +925,7 @@ describe('uninstall --purge-resources', () => {
     expect(fake.live.access.get('access-app')?.name).toBe('renamed');
     expect(listInstallationManifests()[0]?.status).toBe('uninstalled');
     expect(noteText('Kept resources')).toContain(
-      `created application: nosam-${INSTALLATION_ID}-login-0123456789abcdef (access-app, account account), kept because its live name "renamed" is not the name this installation recorded`,
+      `created application: platform-${INSTALLATION_ID}-login-0123456789abcdef (access-app, account account), kept because its live name "renamed" is not the name this installation recorded`,
     );
   });
 
@@ -1100,7 +1100,7 @@ describe('uninstall --purge-resources', () => {
     await uninstallPlatform(fake, stopped, { ...purgeResourcesArgs, plan: true }, dependencies());
 
     const plan = noteText('Uninstall plan');
-    const kept = `created application: nosam-${INSTALLATION_ID}-login-0123456789abcdef (access-app, account account), kept because its live name "renamed" is not the name this installation recorded`;
+    const kept = `created application: platform-${INSTALLATION_ID}-login-0123456789abcdef (access-app, account account), kept because its live name "renamed" is not the name this installation recorded`;
     expectInOrder(plan, [
       'Keep for manual cleanup:',
       kept,

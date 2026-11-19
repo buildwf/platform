@@ -44,23 +44,23 @@ export async function provisionBindings(
    * transposed pair would provision against the wrong project silently.
    */
   platform: {
-    /** Project slug. Framework reads it as `__NOSAM_PROJECT_SLUG`. */
+    /** Project slug. Framework reads it as `__PLATFORM_PROJECT_SLUG`. */
     projectSlug: string;
-    /** Token the Worker presents to the proxy. Framework reads it as `__NOSAM_PROXY_TOKEN`. */
+    /** Token the Worker presents to the proxy. Framework reads it as `__PLATFORM_PROXY_TOKEN`. */
     proxyToken: string;
     /** Immutable deployment identity for signed inbound email receipts. */
     deploymentId?: string;
     /**
      * Platform mail domain for this environment (`EMAIL_SENDER_DOMAIN` on
-     * the api worker — `mail.void.cloud` in production,
-     * `mail.voidcloud.dev` in staging). Never hard-coded: the proxy
+     * the api worker — `mail.buildwf.dev` in production,
+     * `mail.staging.buildwf.dev` in staging). Never hard-coded: the proxy
      * validates outbound senders against its own copy of the same value,
      * so a baked-in production domain would make staging unsendable.
      *
      * Optional so a deployment environment with email unconfigured still
      * deploys. When absent the binding is omitted entirely rather than
      * injected empty — the framework's `sendEmail`/`replyEmail` then fail
-     * naming `__NOSAM_EMAIL_DOMAIN`, which is a far better error than a
+     * naming `__PLATFORM_EMAIL_DOMAIN`, which is a far better error than a
      * malformed `slug+noreply@` the proxy rejects for a different reason.
      */
     emailSenderDomain?: string;
@@ -176,29 +176,29 @@ export async function provisionBindings(
   // Always inject proxy bindings — used by AI, revalidation, email, and future
   // platform features. The AI-specific usage limit check stays in the proxy
   // (/ai/* middleware).
-  bindings.push({ type: 'service', name: '__NOSAM_PROXY', service: aiProxyService });
+  bindings.push({ type: 'service', name: '__PLATFORM_PROXY', service: aiProxyService });
   bindings.push({ type: 'plain_text', name: '__PROJECT_ID', text: projectId });
-  bindings.push({ type: 'plain_text', name: '__NOSAM_PROXY_TOKEN', text: platform.proxyToken });
-  // Project slug — the SINGLE producer of `__NOSAM_PROJECT_SLUG`. `@builtbyfriends/bwf/email`
+  bindings.push({ type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: platform.proxyToken });
+  // Project slug — the SINGLE producer of `__PLATFORM_PROJECT_SLUG`. `@builtbyfriends/bwf/email`
   // needs it on every worker to default an outbound `from` to
   // `<slug>+noreply@<domain>`, and the sandbox runtime reads the same name.
   // Emitted after the user's vars in the upload array, so it cannot be
   // shadowed — see `reserved-bindings.ts`.
-  bindings.push({ type: 'plain_text', name: '__NOSAM_PROJECT_SLUG', text: platform.projectSlug });
+  bindings.push({ type: 'plain_text', name: '__PLATFORM_PROJECT_SLUG', text: platform.projectSlug });
   if (manifest.emailProtocolVersion === 1) {
     if (!platform.deploymentId) {
       throw new Error('email delivery requires a deployment identity');
     }
     bindings.push({
       type: 'plain_text',
-      name: '__NOSAM_EMAIL_DEPLOYMENT_ID',
+      name: '__PLATFORM_EMAIL_DEPLOYMENT_ID',
       text: platform.deploymentId,
     });
   }
   if (platform.emailSenderDomain) {
     bindings.push({
       type: 'plain_text',
-      name: '__NOSAM_EMAIL_DOMAIN',
+      name: '__PLATFORM_EMAIL_DOMAIN',
       text: platform.emailSenderDomain,
     });
   }

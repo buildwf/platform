@@ -5,7 +5,7 @@
 // load on any Node or Bun release: it has no imports and uses no new APIs.
 //
 // packages/bwf/src/cli/runtime-support.ts and packages/create-bwf/src/runtime-support.ts
-// are byte-identical copies, because create-bwf runs before `nosam` is installed.
+// are byte-identical copies, because create-bwf runs before `platform` is installed.
 // A unit test keeps the two files and both `engines.node` fields equal.
 
 /** Must equal `engines.node` in packages/bwf and packages/create-bwf. */

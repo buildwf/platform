@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "displayName": "Platform",
+  "installationSlug": "cloud",
+  "application": {
+    "baseDomain": "void.app",
+    "zoneName": "void.app",
+    "dedicatedZone": true
+  },
+  "controlPlane": {
+    "apiHostname": "api.void.cloud",
+    "dashboardHostname": "dash.void.cloud",
+    "proxyHostname": "proxy.void.cloud"
+  },
+  "authentication": {
+    "providers": ["github", "google"]
+  },
+  "capabilities": {
+    "ai": true,
+    "customDomains": true,
+    "email": true,
+    "githubActions": true,
+    "githubOAuth": true,
+    "googleOAuth": true,
+    "managedBuilds": true,
+    "sandbox": true
+  },
+  "resources": {
+    "aiGateway": "platform",
+    "apiWorker": "platform-api",
+    "assetsBucket": "platform-static-assets-overflow",
+    "cronQueue": "platform-cron-fires",
+    "dashboardWorker": "platform-dashboard",
+    "dispatchNamespace": "platform-users",
+    "dispatchWorker": "platform-dispatch",
+    "hyperdrive": "platform-api",
+    "isrCacheKv": "platform-isr-cache",
+    "legacyAssetsKv": "platform-static-assets",
+    "logsDataset": "platform_logs",
+    "proxyWorker": "platform-proxy",
+    "requestsDataset": "platform_requests",
+    "routingKv": "platform-routing",
+    "tailWorker": "platform-tail",
+    "usageQueue": "platform-usage-events"
+  }
+}

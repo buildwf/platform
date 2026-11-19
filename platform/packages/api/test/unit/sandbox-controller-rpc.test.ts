@@ -9,7 +9,7 @@ const root = join(import.meta.dirname, '..', '..', '..', '..', '..');
 // Reuse the core SDK's declared Miniflare test dependency.
 const require = createRequire(join(root, 'packages/bwf/package.json'));
 const { Miniflare, convertV4MiniflareOptions } = await import(require.resolve('miniflare'));
-const temporary = mkdtempSync(join(tmpdir(), 'nosam-controller-rpc-'));
+const temporary = mkdtempSync(join(tmpdir(), 'platform-controller-rpc-'));
 let runtime: { dispatchFetch(url: string): Promise<Response>; dispose(): Promise<void> };
 
 describe('managed Sandbox idle expiry through actual Workers RPC', () => {
@@ -40,7 +40,7 @@ export class Native extends SandboxController {
     },
   };
   constructor(ctx, env) {
-    super(ctx, { ...env, __NOSAM_SANDBOX_CONTROL: {
+    super(ctx, { ...env, __PLATFORM_SANDBOX_CONTROL: {
       reserve: async () => ({ ok: true }), started: async () => ({ ok: true }),
       heartbeat: async () => ({ ok: true }), stopped: async () => {},
     } });
@@ -66,8 +66,8 @@ export default { async fetch(request, env) {
   const waiting = id === 'waiting' ? process.exitCode : undefined;
   // Keep the same RPC session and its unconsumed stdout capability open.
   await new Promise(resolve => setTimeout(resolve, 150));
-  const running = await env.__NOSAM_SANDBOX.check(id);
-  if (waiting) { await env.__NOSAM_SANDBOX.complete(id); await waiting; }
+  const running = await env.__PLATFORM_SANDBOX.check(id);
+  if (waiting) { await env.__PLATFORM_SANDBOX.complete(id); await waiting; }
   return Response.json({ running, pid: process.pid });
 } };
 `,
@@ -117,7 +117,7 @@ export default { async fetch(request, env) {
             modulesRoot: temporary,
             scriptPath: join(temporary, 'application.mjs'),
             routes: ['*/*'],
-            serviceBindings: { __NOSAM_SANDBOX: 'controller' },
+            serviceBindings: { __PLATFORM_SANDBOX: 'controller' },
           },
         ],
       }),

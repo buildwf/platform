@@ -90,9 +90,9 @@ describe('parseEmailArgs — domain group', () => {
     expect(() => parseEmailArgs(['domain', 'add', 'acme.com', '--platform', 'cloudflare'])).toThrow(
       'email: --platform cloudflare applies to `bwf email status` and `bwf email setup` only (`domain` is a bwf platform command).',
     );
-    expect(parseEmailArgs(['domain', 'list', '--platform', 'nosam'])).toMatchObject({
+    expect(parseEmailArgs(['domain', 'list', '--platform', 'platform'])).toMatchObject({
       domainVerb: 'list',
-      platform: 'nosam',
+      platform: 'platform',
     });
   });
 });

@@ -12,7 +12,7 @@ const logsFixture = vi.hoisted(() => ({
 
 vi.mock('../../src/cli/auth.ts', () => ({ getToken: () => 'fixture-token' }));
 vi.mock('../../src/cli/project.ts', () => ({
-  readDeploymentPlatform: () => 'nosam',
+  readDeploymentPlatform: () => 'platform',
   readProjectConfig: () => ({ projectId: 'fixture-project', slug: 'my-app' }),
 }));
 vi.mock('../../src/cli/client.ts', () => ({

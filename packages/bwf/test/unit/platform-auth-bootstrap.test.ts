@@ -96,8 +96,8 @@ describe('installer authentication handoff', () => {
       expect(url).toBe('https://api.example.com/internal/platform/auth-initialize');
       expect(options?.redirect).toBe('manual');
       const headers = new Headers(options?.headers);
-      expect(headers.has('X-Nosam-Platform-Probe')).toBe(false);
-      expect(headers.get('X-Nosam-Auth-Setup')).not.toBe('setup-key');
+      expect(headers.has('X-Platform-Probe')).toBe(false);
+      expect(headers.get('X-Platform-Auth-Setup')).not.toBe('setup-key');
       const key = await crypto.subtle.importKey(
         'raw',
         new TextEncoder().encode('setup-key'),
@@ -109,7 +109,7 @@ describe('installer authentication handoff', () => {
         await crypto.subtle.verify(
           'HMAC',
           key,
-          Buffer.from(headers.get('X-Nosam-Auth-Setup')!, 'base64url'),
+          Buffer.from(headers.get('X-Platform-Auth-Setup')!, 'base64url'),
           new TextEncoder().encode(
             `${PLATFORM_AUTH_SETUP_PROOF_PREFIX}\ninstallation\n${options?.body}`,
           ),

@@ -35,7 +35,7 @@ function build<T>(parse: Parser<T>, state: BuilderState<T>): EnvSchema<T> {
   const schema: EnvSchema<T> = {
     '~standard': {
       version: 1,
-      vendor: 'nosam',
+      vendor: 'platform',
       validate(value) {
         const isMissing = value === undefined || value === null || value === '';
         if (isMissing) {

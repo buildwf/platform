@@ -40,7 +40,7 @@ authority.
 
 Release 1.8.0 read the policy from the API, and so from PostgreSQL, on every AI
 call, and the API refused that read unless `PLATFORM_AUTH_DATABASE_UNCACHED=true`.
-That flag is a self-hosted statement about the auth database path. Hosted Nosam
+That flag is a self-hosted statement about the auth database path. Hosted Platform
 Cloud never sets it, so every hosted AI call returned 503. A setting that changes
 rarely does not belong on the per-call path.
 

@@ -18,7 +18,7 @@ import { envSchemaPlugin } from '../../src/plugin-env-schema.ts';
 const roots: Array<string> = [];
 
 function createTempRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-plugin-env-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-plugin-env-'));
   roots.push(root);
   return root;
 }
@@ -143,8 +143,8 @@ describe('envSchemaPlugin auto-discovery', () => {
     expect(dts).toContain('export {}');
     expect(dts).toContain('declare module "@builtbyfriends/bwf/env"');
     expect(dts).toContain('declare module "@builtbyfriends/bwf/handler"');
-    expect(dts).toContain('interface ValidatedEnv extends _NosamEnvShape');
-    expect(dts).toContain('interface CloudBindings extends _NosamEnvShape');
+    expect(dts).toContain('interface ValidatedEnv extends _PlatformEnvShape');
+    expect(dts).toContain('interface CloudBindings extends _PlatformEnvShape');
     expect(dts).toContain('typeof import("../env.ts")');
   });
 
@@ -497,7 +497,7 @@ describe('envSchemaPlugin auto-discovery', () => {
   });
 });
 
-describe('envSchemaPlugin reserved __NOSAM_ names', () => {
+describe('envSchemaPlugin reserved __PLATFORM_ names', () => {
   async function runConfigFor(root: string, command: 'serve' | 'build'): Promise<void> {
     const handler = envSchemaPlugin(root).config as (c: unknown, e: unknown) => Promise<void>;
     await handler.call(
@@ -514,7 +514,7 @@ describe('envSchemaPlugin reserved __NOSAM_ names', () => {
 
   // The .env check does not depend on the command, so serve covers it.
   for (const withEnvTs of [false, true]) {
-    it.each(['__NOSAM_PROXY_TOKEN', '__NOSAM_EMAIL_FROM'])(
+    it.each(['__PLATFORM_PROXY_TOKEN', '__PLATFORM_EMAIL_FROM'])(
       `rejects %s in .env (env.ts: ${withEnvTs})`,
       async (key) => {
         const root = createTempRoot();
@@ -525,7 +525,7 @@ describe('envSchemaPlugin reserved __NOSAM_ names', () => {
 
         await expect(runConfigFor(root, 'serve')).rejects.toThrow(
           `.env defines names reserved for bwf: ${key}. bwf sets these itself; remove them. ` +
-            'To trigger crons or queues locally, use the x-nosam-dev-trigger header printed at dev start.',
+            'To trigger crons or queues locally, use the x-platform-dev-trigger header printed at dev start.',
         );
       },
     );
@@ -533,8 +533,8 @@ describe('envSchemaPlugin reserved __NOSAM_ names', () => {
 
   // Wrangler loads these forms into the dev Worker too.
   it.each([
-    ['export __NOSAM_PROXY_TOKEN=x', '__NOSAM_PROXY_TOKEN'],
-    ['__NOSAM_EMAIL_FROM: a@b.c', '__NOSAM_EMAIL_FROM'],
+    ['export __PLATFORM_PROXY_TOKEN=x', '__PLATFORM_PROXY_TOKEN'],
+    ['__PLATFORM_EMAIL_FROM: a@b.c', '__PLATFORM_EMAIL_FROM'],
   ])('rejects the Wrangler-only line %s in .env', async (line, key) => {
     const root = createTempRoot();
     writeFileSync(join(root, '.env'), `API_URL=http://localhost\n${line}\n`);
@@ -544,11 +544,11 @@ describe('envSchemaPlugin reserved __NOSAM_ names', () => {
     );
   });
 
-  it('ignores __NOSAM_ in a comment or a value', async () => {
+  it('ignores __PLATFORM_ in a comment or a value', async () => {
     const root = createTempRoot();
     writeFileSync(
       join(root, '.env'),
-      '# __NOSAM_X=1\nAPI_URL=http://localhost/__NOSAM_X\nNOTE: __NOSAM_Y=2\n',
+      '# __PLATFORM_X=1\nAPI_URL=http://localhost/__PLATFORM_X\nNOTE: __PLATFORM_Y=2\n',
     );
 
     await expect(runConfigFor(root, 'serve')).resolves.toBeUndefined();
@@ -557,7 +557,7 @@ describe('envSchemaPlugin reserved __NOSAM_ names', () => {
   it('accepts a normal .env and a reserved name set only in the shell', async () => {
     const root = createTempRoot();
     writeFileSync(join(root, '.env'), 'API_URL=http://localhost\n');
-    vi.stubEnv('__NOSAM_PROXY_TOKEN', 'from-shell');
+    vi.stubEnv('__PLATFORM_PROXY_TOKEN', 'from-shell');
 
     await expect(runConfigFor(root, 'serve')).resolves.toBeUndefined();
   });
@@ -569,10 +569,10 @@ describe('envSchemaPlugin reserved __NOSAM_ names', () => {
       const { string } = await import('../../src/runtime/env-helpers.ts');
       const root = createTempRoot();
       writeFileSync(join(root, 'env.ts'), 'export default {};\n');
-      defineEnv({ API_URL: string(), __NOSAM_X: string().optional() });
+      defineEnv({ API_URL: string(), __PLATFORM_X: string().optional() });
 
       await expect(runConfigFor(root, command)).rejects.toThrow(
-        'env.ts declares names reserved for bwf: __NOSAM_X.',
+        'env.ts declares names reserved for bwf: __PLATFORM_X.',
       );
     },
   );

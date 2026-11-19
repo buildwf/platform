@@ -7,12 +7,12 @@ import { scanQueuesSync } from './queues/scan.ts';
 
 /**
  * Prints a one-shot hint on dev server start when the project has crons
- * or queues, explaining how to trigger them locally through `/__nosam/scheduled`
- * and `/__nosam/queue`.
+ * or queues, explaining how to trigger them locally through `/__platform/scheduled`
+ * and `/__platform/queue`.
  */
 export function devTriggersHintPlugin(root: string, devTriggerToken: string): Plugin {
   return {
-    name: 'nosam:dev-triggers-hint',
+    name: 'platform:dev-triggers-hint',
     apply: 'serve',
     configureServer(server) {
       const paths = readProjectPaths(root);
@@ -42,18 +42,18 @@ export function devTriggersHintPlugin(root: string, devTriggerToken: string): Pl
         bwfLog(`Detected ${summary.join(' and ')}. Trigger locally:`);
         // Dev dispatchers accept only this header (see the serve branch in
         // router/compile.ts and the framework triggers dispatcher).
-        const authHeader = `x-nosam-dev-trigger: ${devTriggerToken}`;
+        const authHeader = `x-platform-dev-trigger: ${devTriggerToken}`;
 
         if (jobs.length > 0) {
           const sample = jobs[0].crons[0];
           console.log(
-            `         \x1b[2mcurl -X POST ${baseUrl}/__nosam/scheduled \\\n           -H "${authHeader}" \\\n           -d '{"cron":"${sample}","scheduledTime":'"$(date +%s000)"'}'\x1b[22m`,
+            `         \x1b[2mcurl -X POST ${baseUrl}/__platform/scheduled \\\n           -H "${authHeader}" \\\n           -d '{"cron":"${sample}","scheduledTime":'"$(date +%s000)"'}'\x1b[22m`,
           );
         }
         if (queues.length > 0) {
           const sample = queues[0].name;
           console.log(
-            `         \x1b[2mcurl -X POST ${baseUrl}/__nosam/queue \\\n           -H "${authHeader}" \\\n           -d '{"queue":"${sample}","messages":[{"id":"1","timestamp":'"$(date +%s000)"',"body":{},"attempts":1}]}'\x1b[22m`,
+            `         \x1b[2mcurl -X POST ${baseUrl}/__platform/queue \\\n           -H "${authHeader}" \\\n           -d '{"queue":"${sample}","messages":[{"id":"1","timestamp":'"$(date +%s000)"',"body":{},"attempts":1}]}'\x1b[22m`,
           );
         }
       });

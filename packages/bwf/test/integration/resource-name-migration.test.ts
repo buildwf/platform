@@ -71,7 +71,7 @@ afterEach(async () => {
 
 describe('persistent resource names through generated Workers', () => {
   it('preserves deployed namespaces, migration history and actual state when pinning and moving code', async () => {
-    directory = mkdtempSync(join(tmpdir(), 'nosam-resource-name-'));
+    directory = mkdtempSync(join(tmpdir(), 'platform-resource-name-'));
     const routesDirectory = join(directory, 'routes');
     const durableDirectory = join(directory, 'durable-objects');
     const output = join(directory, 'dist');
@@ -183,7 +183,7 @@ export default defineRoom({
         plugins: [
           {
             name: 'resource-name-migration-fixture',
-            resolveId: (id) => (id === 'virtual:nosam-routes' ? routeTable : null),
+            resolveId: (id) => (id === 'virtual:platform-routes' ? routeTable : null),
           },
         ],
         ssr: { noExternal: true },
@@ -234,15 +234,15 @@ export default defineRoom({
     expect(original.durable).toMatchObject({
       bindingName: 'COUNTER',
       className: 'CounterDurableObject',
-      migrationTag: 'void-durable-counter-v1',
+      migrationTag: 'platform-durable-counter-v1',
     });
     expect(original.room).toMatchObject({
       className: 'ChatRoomWs',
       bindingName: 'ChatRoomWs',
     });
     expect(JSON.parse(original.identity.config).migrations).toEqual([
-      { tag: 'void-durable-counter-v1', new_sqlite_classes: ['CounterDurableObject'] },
-      { tag: 'void-ws-v1', new_sqlite_classes: ['ChatRoomWs'] },
+      { tag: 'platform-durable-counter-v1', new_sqlite_classes: ['CounterDurableObject'] },
+      { tag: 'platform-ws-v1', new_sqlite_classes: ['ChatRoomWs'] },
     ]);
     expect(original.identity.hostedClasses).toEqual(['ChatRoomWs']);
     expect(await counter('?amount=7')).toBe(7);
@@ -286,7 +286,7 @@ export default defineRoom({
   it(
     'carries explicit names through a public bwf plugin build into the running Worker',
     async () => {
-      directory = mkdtempSync(join(tmpdir(), 'nosam-named-resource-plugin-'));
+      directory = mkdtempSync(join(tmpdir(), 'platform-named-resource-plugin-'));
       mkdirSync(join(directory, 'durable-objects'));
       mkdirSync(join(directory, 'routes', 'api'), { recursive: true });
       mkdirSync(join(directory, 'routes', 'rooms'), { recursive: true });
@@ -296,7 +296,7 @@ export default defineRoom({
       // links do not depend on the temporary app's ancestors on Windows.
       for (const [name, source] of [
         ['vite-plus', join(repository, 'node_modules/vite-plus')],
-        ['nosam', join(repository, 'packages/bwf')],
+        ['platform', join(repository, 'packages/bwf')],
       ]) {
         symlinkSync(
           realpathSync(source),
@@ -306,7 +306,7 @@ export default defineRoom({
       }
       writeFileSync(
         join(directory, 'package.json'),
-        JSON.stringify({ name: 'nosam-resource-name-fixture', private: true, type: 'module' }),
+        JSON.stringify({ name: 'platform-resource-name-fixture', private: true, type: 'module' }),
       );
       writeFileSync(
         join(directory, 'vite.config.ts'),
@@ -376,8 +376,8 @@ export default defineRoom({
         { name: 'ChatRoomWs', class_name: 'ChatRoomWs' },
       ]);
       expect(config.migrations).toEqual([
-        { tag: 'void-durable-counter-v1', new_sqlite_classes: ['CounterDurableObject'] },
-        { tag: 'void-ws-v1', new_sqlite_classes: ['ChatRoomWs'] },
+        { tag: 'platform-durable-counter-v1', new_sqlite_classes: ['CounterDurableObject'] },
+        { tag: 'platform-ws-v1', new_sqlite_classes: ['ChatRoomWs'] },
       ]);
       // Source maps belong in uploads, but are not executable Worker modules.
       const main = String(config.main).replace(/^\.\//, '');

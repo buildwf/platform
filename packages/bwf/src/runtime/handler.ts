@@ -413,7 +413,7 @@ function timingSafeStringEqual(actual: string, expected: string) {
 }
 
 function isBwfInternalPath(pathname: string) {
-  return pathname === '/__nosam' || pathname.startsWith('/__nosam/');
+  return pathname === '/__platform' || pathname.startsWith('/__platform/');
 }
 
 function basicAuthChallenge(realm: string, message: string) {
@@ -439,7 +439,7 @@ function resolveBasicAuthOption(value: BasicAuthOptionValue | undefined, fallbac
  * Create Basic authentication middleware for temporary site gates and
  * pre-launch protection.
  *
- * bwf internal endpoints under `/__nosam` are always excluded so deploy-time
+ * bwf internal endpoints under `/__platform` are always excluded so deploy-time
  * migrations, prerendering, cron/queue dispatch, and remote binding helpers
  * continue to reach bwf's own internal-token checks.
  */

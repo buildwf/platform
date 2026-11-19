@@ -44,7 +44,7 @@ function getTemplateHash(): string {
   return hash.digest('hex').slice(0, 16);
 }
 
-const TEMPLATE_BUNDLE_PATH = join(tmpdir(), `nosam-api-pglite-${getTemplateHash()}.tar`);
+const TEMPLATE_BUNDLE_PATH = join(tmpdir(), `platform-api-pglite-${getTemplateHash()}.tar`);
 
 async function buildTemplateBundle(path: string): Promise<void> {
   const tempPath = `${path}.${process.pid}.${Date.now().toString(36)}.tmp`;

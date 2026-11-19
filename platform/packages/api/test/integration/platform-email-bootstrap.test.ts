@@ -51,7 +51,7 @@ function bindings(): ApiEnv['Bindings'] {
     EMAIL_SENDER_DOMAIN: 'mail.example.com',
     EMAIL_SHARED_ACCOUNT_ID: env.CF_ACCOUNT_ID,
     EMAIL_SHARED_ZONE_ID: 'platform-mail-zone',
-    EMAIL_SHARED_INGRESS_NAME: 'nosam-email-gateway',
+    EMAIL_SHARED_INGRESS_NAME: 'platform-email-gateway',
     PLATFORM_CAPABILITIES: JSON.stringify({
       ai: true,
       customDomains: false,
@@ -71,7 +71,7 @@ function bindings(): ApiEnv['Bindings'] {
 function request(token = 'probe-token') {
   return new Request('http://localhost/internal/platform/email-bootstrap', {
     method: 'POST',
-    headers: { 'X-Nosam-Platform-Probe': token },
+    headers: { 'X-Platform-Probe': token },
   });
 }
 
@@ -86,7 +86,7 @@ describe('POST /internal/platform/email-bootstrap', () => {
         },
       },
       mx: { 'mail.example.com': ['route1.mx.cloudflare.net'] },
-      catchAllRule: { enabled: true, workerName: 'nosam-email-gateway' },
+      catchAllRule: { enabled: true, workerName: 'platform-email-gateway' },
     });
     // Retain the real installed identities and completed operation, but model
     // the old bootstrap's exact key/step and provider observation.
@@ -103,7 +103,7 @@ describe('POST /internal/platform/email-bootstrap', () => {
     );
     await env.db
       .update(emailOperationSteps)
-      .set({ kind: 'catchall_ensure', outcome: { workerName: 'nosam-email-gateway' } })
+      .set({ kind: 'catchall_ensure', outcome: { workerName: 'platform-email-gateway' } })
       .where(eq(emailOperationSteps.id, plusStep!.id));
     provider.routingSettingsStates.get('platform-mail-zone')!.support_subaddress = false;
     provider.calls.length = 0;
@@ -142,7 +142,7 @@ describe('POST /internal/platform/email-bootstrap', () => {
     expect(callsByTag(provider.calls, 'literalRuleCreate')).toHaveLength(0);
     expect(
       await createCfCustomerClient(bindings().CF_API_TOKEN).getCatchAll('platform-mail-zone'),
-    ).toMatchObject({ enabled: true, workerName: 'nosam-email-gateway' });
+    ).toMatchObject({ enabled: true, workerName: 'platform-email-gateway' });
     const retry = await app.fetch(request(), bindings());
     expect(retry.status).toBe(200);
     expect(callsByTag(provider.calls, 'subaddressing')).toHaveLength(1);

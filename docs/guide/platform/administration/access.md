@@ -31,7 +31,7 @@ the company sign-in before bwf login. Interactive Access authentication uses a
 locally installed `cloudflared` and saves its short-lived credential in your
 system keychain for that platform origin. You do not need to copy browser cookies.
 
-For CI, use a [project deploy token](/guide/platform/installation/first-deployment) alongside your Access credentials in origin-keyed `NOSAM_ACCESS_CREDENTIALS`. An Access service token does not authorize a bwf deployment. See [CI deployment setup](/guide/platform/installation/first-deployment) for the required origins and shape.
+For CI, use a [project deploy token](/guide/platform/installation/first-deployment) alongside your Access credentials in origin-keyed `PLATFORM_ACCESS_CREDENTIALS`. An Access service token does not authorize a bwf deployment. See [CI deployment setup](/guide/platform/installation/first-deployment) for the required origins and shape.
 
 ## Choosing a Platform
 

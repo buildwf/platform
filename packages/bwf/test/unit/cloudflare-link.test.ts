@@ -16,7 +16,7 @@ let root: string;
 const config =
   '// Existing site\n{"name":"site","account_id":"personal","compatibility_date":"2026-02-24"}';
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'nosam-cf-link-'));
+  root = mkdtempSync(join(tmpdir(), 'platform-cf-link-'));
   vi.stubEnv('BWF_PROJECT', '');
   writeFileSync(join(root, 'wrangler.jsonc'), config);
 });
@@ -62,7 +62,7 @@ describe('Cloudflare deployment onboarding', () => {
     },
   );
   it.each([
-    { platform: 'nosam' as const },
+    { platform: 'platform' as const },
     { platform: 'cloudflare' as const },
     { projectSlug: 'chosen' },
   ])('honors an explicit destination %j', async (options) => {
@@ -73,7 +73,7 @@ describe('Cloudflare deployment onboarding', () => {
     expect(confirm).not.toHaveBeenCalled();
   });
   it.each([
-    { platform: 'nosam' },
+    { platform: 'platform' },
     { platform: 'cloudflare' },
     { platform: 'none' },
     { projectId: 'project', slug: 'linked' },
@@ -154,9 +154,9 @@ describe('verified existing Worker link', () => {
     expect(readFileSync(deps.configPath, 'utf8')).toBe(config);
   });
   it.each([
-    ['legacy', '__NOSAM_VERSION_METADATA'],
+    ['legacy', '__PLATFORM_VERSION_METADATA'],
     ['legacy', 'APP_VERSION'],
-    ['typed', '__NOSAM_VERSION_METADATA'],
+    ['typed', '__PLATFORM_VERSION_METADATA'],
     ['typed', 'APP_VERSION'],
   ])('preserves omitted existing metadata %s config / %s binding', async (kind, binding) => {
     const deps = options();

@@ -99,7 +99,7 @@ describe('materializeCloudflareConfig', () => {
   it('restores exact JSONC provenance from a migration seed', () => {
     config('export default { cloudflare: { name: "app" } };\n');
     const raw =
-      '// nosam:published-traffic:v1:eyJ3b3JrZXJzX2RldiI6ZmFsc2UsInByZXZpZXdfdXJscyI6ZmFsc2UsInJvdXRlcyI6W119\n{ "name": "app" }\n';
+      '// platform:published-traffic:v1:eyJ3b3JrZXJzX2RldiI6ZmFsc2UsInByZXZpZXdfdXJscyI6ZmFsc2UsInJvdXRlcyI6W119\n{ "name": "app" }\n';
     seedCloudflareConfig(root, { name: 'app' }, raw);
     expect(readFileSync(materializeCloudflareConfig(root), 'utf8')).toBe(raw);
   });

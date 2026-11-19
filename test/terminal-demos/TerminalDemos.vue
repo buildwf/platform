@@ -150,8 +150,8 @@ onBeforeUnmount(() => {
 <template>
   <section
     :id="studio ? undefined : 'terminal'"
-    class="nosam-demos"
-    :class="{ 'nosam-demos-studio': studio, 'nosam-demos-capture': capture }"
+    class="platform-demos"
+    :class="{ 'platform-demos-studio': studio, 'platform-demos-capture': capture }"
   >
     <div class="demos-container">
       <header v-if="!capture" class="demos-header">
@@ -292,7 +292,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.nosam-demos {
+.platform-demos {
   background: #101116;
   color: #e9eaf1;
   padding: 88px 32px;
@@ -532,11 +532,11 @@ onBeforeUnmount(() => {
   line-height: 1.7;
   border-radius: 6px;
 }
-.nosam-demos-studio {
+.platform-demos-studio {
   min-height: 100vh;
   padding-block: 60px;
 }
-.nosam-demos-capture {
+.platform-demos-capture {
   position: fixed;
   inset: 0;
   z-index: 1000;
@@ -548,7 +548,7 @@ onBeforeUnmount(() => {
   overflow: auto;
   background: #101116;
 }
-.nosam-demos-capture .demos-container {
+.platform-demos-capture .demos-container {
   width: min(100%, 1040px);
 }
 .demo-exit-capture {
@@ -569,16 +569,16 @@ onBeforeUnmount(() => {
   width: 18px;
   height: 18px;
 }
-.nosam-demos button:focus-visible,
-.nosam-demos a:focus-visible,
-.nosam-demos input:focus-visible,
-.nosam-demos select:focus-visible,
-.nosam-demos summary:focus-visible {
+.platform-demos button:focus-visible,
+.platform-demos a:focus-visible,
+.platform-demos input:focus-visible,
+.platform-demos select:focus-visible,
+.platform-demos summary:focus-visible {
   outline: 2px solid #a2b1ff;
   outline-offset: 5px;
 }
 @media (max-width: 740px) {
-  .nosam-demos {
+  .platform-demos {
     padding: 48px 24px;
   }
   .demos-header {
@@ -617,7 +617,7 @@ onBeforeUnmount(() => {
   .demo-footnote {
     align-items: flex-start;
   }
-  .nosam-demos-capture {
+  .platform-demos-capture {
     padding: 20px;
   }
 }

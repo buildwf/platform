@@ -7,7 +7,7 @@ export function BwfLogo() {
       aria-label="Platform"
       viewBox="0 0 270 58"
       fill="none"
-      className="nosam-admin-logo"
+      className="platform-admin-logo"
     >
       <circle cx="262" cy="48.96" r="8" fill="currentColor" />
       <text
@@ -21,7 +21,7 @@ export function BwfLogo() {
         lengthAdjust="spacingAndGlyphs"
         fill="currentColor"
       >
-        nosam
+        platform
       </text>
     </svg>
   );

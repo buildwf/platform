@@ -131,7 +131,7 @@ export function buildSandboxUploadBindings(
   return [
     {
       type: 'service',
-      name: '__NOSAM_SANDBOX',
+      name: '__PLATFORM_SANDBOX',
       service: controllerWorkerName,
     },
   ];

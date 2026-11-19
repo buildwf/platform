@@ -13,8 +13,8 @@ export function createMigrationHandler(
   runAuthMigrations?: () => Promise<void>,
 ) {
   return async (request: Request): Promise<Response> => {
-    const token = request.headers.get('x-nosam-internal');
-    if (!token || token !== (env as Record<string, string>).__NOSAM_PROXY_TOKEN) {
+    const token = request.headers.get('x-platform-internal');
+    if (!token || token !== (env as Record<string, string>).__PLATFORM_PROXY_TOKEN) {
       return Response.json(
         { ok: false, error: 'unauthorized', migrations: [] } satisfies MigrationResponse,
         { status: 401 },

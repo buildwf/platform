@@ -224,7 +224,7 @@ export function createPlatformWorkerConfigs(input: {
         ? { PLATFORM_APPLICATION: JSON.stringify(deployment.application) }
         : {}),
       TAIL_SERVICE_NAME: names.tailWorker,
-      NOSAM_PROXY_SERVICE: names.proxyWorker,
+      PLATFORM_PROXY_SERVICE: names.proxyWorker,
       SANDBOX_CONTROL_SERVICE: names.apiWorker,
     },
   };

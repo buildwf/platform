@@ -192,7 +192,7 @@
         },
         "appType": {
           "type": "string",
-          "enum": ["spa", "static", "nosam"],
+          "enum": ["spa", "static", "platform"],
           "description": "App type. If omitted, auto-detected on first deploy."
         }
       },
@@ -225,7 +225,7 @@
             },
             "containerName": {
               "type": "string",
-              "description": "Cloudflare Container application name. Defaults to void-sandbox-v1."
+              "description": "Cloudflare Container application name. Defaults to platform-sandbox-v1."
             },
             "image": {
               "type": "string",

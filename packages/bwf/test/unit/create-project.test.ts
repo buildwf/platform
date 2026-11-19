@@ -27,7 +27,7 @@ function createClient() {
   return {
     // `promptAndCreateProject` records the platform identity behind the client's
     // API URL, verified by an explicit connection.
-    apiUrl: 'https://nosam.buildwithfriends.dev',
+    apiUrl: 'https://platform.buildwithfriends.dev',
     createProject: vi.fn(),
   } as unknown as PlatformClient & {
     createProject: ReturnType<typeof vi.fn>;
@@ -38,11 +38,11 @@ describe('promptAndCreateProject', () => {
   let root: string;
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'nosam-create-project-'));
-    process.env.NOSAM_PLATFORM_REGISTRY_DIR = join(root, 'registry');
+    root = mkdtempSync(join(tmpdir(), 'platform-create-project-'));
+    process.env.PLATFORM_REGISTRY_DIR = join(root, 'registry');
     savePlatformConnection({
       accountId: null,
-      apiUrl: 'https://nosam.buildwithfriends.dev',
+      apiUrl: 'https://platform.buildwithfriends.dev',
       applicationDomain: 'void.app',
       displayName: 'Test platform',
       installationId: null,
@@ -57,7 +57,7 @@ describe('promptAndCreateProject', () => {
   });
 
   afterEach(() => {
-    delete process.env.NOSAM_PLATFORM_REGISTRY_DIR;
+    delete process.env.PLATFORM_REGISTRY_DIR;
     rmSync(root, { recursive: true, force: true });
   });
 
@@ -100,11 +100,11 @@ describe('promptAndCreateProject', () => {
     expect(config).toEqual({ projectId: 'proj_new', slug: 'new-app' });
     expect(mockInfo).not.toHaveBeenCalled();
     expect(JSON.parse(readFileSync(join(root, '.bwf', 'project.json'), 'utf-8'))).toEqual({
-      platform: 'nosam',
+      platform: 'platform',
       ...config,
       // The platform identity behind the client's API URL, recorded on every new link.
       applicationDomain: 'void.app',
-      platformUrl: 'https://nosam.buildwithfriends.dev',
+      platformUrl: 'https://platform.buildwithfriends.dev',
       proxyUrl: 'https://proxy.void.cloud',
     });
   });

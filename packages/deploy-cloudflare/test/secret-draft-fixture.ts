@@ -39,7 +39,7 @@ export function apiSecretDraftVersion(): ReturnType<typeof bwfSecretDraftVersion
     number: 1,
     startup_time_ms: 0,
     annotations: {
-      'workers/message': 'nosam:secret-draft',
+      'workers/message': 'platform:secret-draft',
       'workers/triggered_by': 'create_version_api',
     },
     source: 'api',

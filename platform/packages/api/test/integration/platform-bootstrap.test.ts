@@ -174,7 +174,7 @@ async function initialize(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Nosam-Auth-Setup': signature,
+        'X-Platform-Auth-Setup': signature,
       },
       body,
     }),
@@ -796,7 +796,7 @@ describe('provider-independent first administrator setup', () => {
     expect((await initialize()).status).toBe(200);
     expect((await initialize()).status).toBe(200);
     const discovery = await (
-      await app.fetch(new Request(`${origin}/.well-known/nosam-platform`), bindings())
+      await app.fetch(new Request(`${origin}/.well-known/platform`), bindings())
     ).json();
     expect(discovery).toMatchObject({
       schemaVersion: 3,
@@ -829,7 +829,7 @@ describe('provider-independent first administrator setup', () => {
     expect(await env.db.select().from(users)).toHaveLength(0);
     const proofCookie = callback.headers
       .getSetCookie()
-      .find((cookie) => cookie.startsWith('nosam_bootstrap_confirm='))!
+      .find((cookie) => cookie.startsWith('platform_bootstrap_confirm='))!
       .split(';')[0]!;
     expect(
       (

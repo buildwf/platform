@@ -1,5 +1,5 @@
 {
-  "name": "nosam-tail",
+  "name": "platform-tail",
   "main": "src/index.ts",
   "compatibility_date": "2026-02-12",
   "observability": {
@@ -8,25 +8,25 @@
   "analytics_engine_datasets": [
     {
       "binding": "ANALYTICS",
-      "dataset": "nosam_logs",
+      "dataset": "platform_logs",
     },
   ],
   "env": {
     "production": {
-      "name": "nosam-tail",
+      "name": "platform-tail",
       "analytics_engine_datasets": [
         {
           "binding": "ANALYTICS",
-          "dataset": "nosam_logs",
+          "dataset": "platform_logs",
         },
       ],
     },
     "staging": {
-      "name": "nosam-tail-staging",
+      "name": "platform-tail-staging",
       "analytics_engine_datasets": [
         {
           "binding": "ANALYTICS",
-          "dataset": "nosam_logs_staging",
+          "dataset": "platform_logs_staging",
         },
       ],
     },

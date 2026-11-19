@@ -64,18 +64,23 @@ export function isWranglerSecretOnlyDraft(entry: Record<string, unknown>): boole
 // Cloudflare secret transport. Unlike the legacy Wrangler placeholder, cf
 // uploads include a compatibility date, so metadata alone cannot distinguish
 // them from an existing fetch-only application after a secret update.
-export const NOSAM_SECRET_DRAFT_SOURCE =
+export const PLATFORM_SECRET_DRAFT_SOURCE =
   'export default { fetch() { return new Response(""); } };\n';
 
 /** Message on the placeholder that bwf's secret transport deploys to a Worker without code. */
-export const NOSAM_SECRET_DRAFT_MESSAGE = 'nosam:secret-draft';
+export const PLATFORM_SECRET_DRAFT_MESSAGE = 'platform:secret-draft';
 
 // Placeholders that earlier releases deployed carry this message.
-const LEGACY_SECRET_DRAFT_MESSAGE = 'void:secret-draft';
+const LEGACY_SECRET_DRAFT_MESSAGES: ReadonlyArray<unknown> = [
+  'nosam:secret-draft',
+  'void:secret-draft',
+];
 
 /** Whether a Worker version message marks a secret placeholder, from this or an earlier release. */
 export function isSecretDraftMessage(message: unknown): boolean {
-  return message === NOSAM_SECRET_DRAFT_MESSAGE || message === LEGACY_SECRET_DRAFT_MESSAGE;
+  return (
+    message === PLATFORM_SECRET_DRAFT_MESSAGE || LEGACY_SECRET_DRAFT_MESSAGES.includes(message)
+  );
 }
 
 /**
@@ -141,7 +146,7 @@ export function isBwfSecretOnlyDraft(entry: Record<string, unknown>): boolean {
     Object.keys(module).length !== 3 ||
     module.name !== 'index.js' ||
     module.content_type !== 'application/javascript+module' ||
-    module.content_base64 !== Buffer.from(NOSAM_SECRET_DRAFT_SOURCE).toString('base64')
+    module.content_base64 !== Buffer.from(PLATFORM_SECRET_DRAFT_SOURCE).toString('base64')
   ) {
     return false;
   }

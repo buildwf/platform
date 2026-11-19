@@ -21,14 +21,14 @@ import { getSharedEmailRecipientReadiness } from './shared-recipient-service.ts'
 
 const app = new Hono<ApiEnv>();
 app.use('*', async (context, next) => {
-  if (!context.req.header('x-nosam-internal')) {
+  if (!context.req.header('x-platform-internal')) {
     return context.json({ error: 'forbidden' }, 403);
   }
   await next();
 });
 
 async function verifyInternalSignature(context: Context<ApiEnv>, signed: string): Promise<boolean> {
-  const auth = context.req.header('x-nosam-internal');
+  const auth = context.req.header('x-platform-internal');
   return (
     !!context.env.EMAIL_SIGNING_SECRET &&
     !!auth &&

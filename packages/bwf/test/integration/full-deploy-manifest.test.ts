@@ -150,7 +150,7 @@ function ndjson(events: Array<unknown>): Response {
   });
   return new Response(stream, {
     status: 200,
-    headers: { 'content-type': 'application/x-ndjson', 'x-nosam-deployment-id': 'dep_test' },
+    headers: { 'content-type': 'application/x-ndjson', 'x-platform-deployment-id': 'dep_test' },
   });
 }
 
@@ -193,7 +193,7 @@ describe('managed deployment manifests (built Worker)', () => {
     // Explicit token bypasses getToken() + the GitHub-Actions OIDC branch.
     process.env.BWF_TOKEN = 'test-token-do-not-use';
     vi.stubEnv('BWF_API_URL', 'https://platform.example.test');
-    vi.stubEnv('NOSAM_PLATFORM_REGISTRY_DIR', join(fixture, 'registry'));
+    vi.stubEnv('PLATFORM_REGISTRY_DIR', join(fixture, 'registry'));
     savePlatformConnection({
       accountId: null,
       apiUrl: 'https://platform.example.test',
@@ -285,7 +285,7 @@ describe('managed deployment manifests (built Worker)', () => {
       projectId: 'project-on-original-platform',
       slug: 'named-layouts-test',
       platformUrl: 'https://original.example.test',
-      platform: 'nosam',
+      platform: 'platform',
     });
     writeFileSync(projectJson, saved);
     try {

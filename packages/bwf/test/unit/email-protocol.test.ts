@@ -24,7 +24,7 @@ describe('email receipt proxy verification', () => {
     expect(fetch).toHaveBeenCalledOnce();
     const [url, init] = fetch.mock.calls[0];
     expect(url).toBe('https://proxy/email/verify-receipt');
-    expect(init?.headers).toMatchObject({ 'x-nosam-internal': 'project-token' });
+    expect(init?.headers).toMatchObject({ 'x-platform-internal': 'project-token' });
     expect(JSON.parse(String(init?.body))).toEqual(input);
   });
 

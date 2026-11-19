@@ -7,7 +7,7 @@ const BASE_OPTS = {
   accountId: 'acct12345',
   accessKeyId: 'AKIAIOSFODNN7EXAMPLE',
   secretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-  bucket: 'nosam-static-assets-overflow',
+  bucket: 'platform-static-assets-overflow',
   key: 'assets/proj_abc/dead', // 'dead' stands in for a blake3 prefix
   // MD5 of empty string — the canonical fixture.
   md5: 'd41d8cd98f00b204e9800998ecf8427e',
@@ -35,7 +35,7 @@ describe('presignAssetPut', () => {
     const out = await presignAssetPut(BASE_OPTS);
     const u = new URL(out.url);
     expect(u.hostname).toBe('acct12345.r2.cloudflarestorage.com');
-    expect(u.pathname).toBe('/nosam-static-assets-overflow/assets/proj_abc/dead');
+    expect(u.pathname).toBe('/platform-static-assets-overflow/assets/proj_abc/dead');
   });
 
   it('returns headers with Content-Md5 set to base64 of the raw digest', async () => {

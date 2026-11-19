@@ -271,7 +271,7 @@ describe('readConfig', () => {
   });
 
   it('ignores $schema field', () => {
-    setup(JSON.stringify({ $schema: 'https://unpkg.com/nosam/schema.json' }));
+    setup(JSON.stringify({ $schema: 'https://unpkg.com/platform/schema.json' }));
     const config = readConfig(tmpDir);
     expect(config).toEqual({});
     cleanup();

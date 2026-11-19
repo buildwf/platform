@@ -14,27 +14,27 @@ Inject the following values from protected CI secrets. Do not commit them in a w
 | Environment variable                          | Value from the interactive setup                                                            |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `CLOUDFLARE_API_TOKEN`                        | Management API token                                                                        |
-| `NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN` | Runtime API token                                                                           |
-| `NOSAM_PLATFORM_DATABASE_URL`                 | Dedicated PostgreSQL URL                                                                    |
-| `NOSAM_PLATFORM_HYPERDRIVE_ID`                | Existing externally managed Hyperdrive ID, when applicable                                  |
-| `NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_HOST`       | Origin host of that Hyperdrive; set with its ID and user                                    |
-| `NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_USER`       | Runtime database user of that Hyperdrive; set with its ID and host (or service ID)          |
-| `NOSAM_PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID` | For a Workers VPC origin, set the service ID in place of the origin host                    |
-| `NOSAM_PLATFORM_R2_ACCESS_KEY_ID`             | R2 Access Key ID                                                                            |
-| `NOSAM_PLATFORM_R2_SECRET_ACCESS_KEY`         | R2 Secret Access Key                                                                        |
-| `NOSAM_PLATFORM_JWT_SECRET`                   | Original JWT signing secret                                                                 |
-| `NOSAM_PLATFORM_EMAIL_SIGNING_SECRET`         | Dedicated email signing secret when email is enabled                                        |
-| `NOSAM_PLATFORM_PROJECT_SECRET_KEY`           | Original base64-encoded project-encryption key                                              |
-| `NOSAM_PLATFORM_RECOVERY_KEY`                 | Base64-encoded 32-byte key for local encrypted recovery state when no keychain is available |
-| `NOSAM_EMAIL_SENDER_DOMAIN`                   | Optional shared mail domain; requires `NOSAM_EMAIL_SHARED_ZONE_ID`                          |
-| `NOSAM_EMAIL_SHARED_ZONE_ID`                  | Cloudflare zone ID for that mail domain; requires `NOSAM_EMAIL_SENDER_DOMAIN`               |
+| `PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN` | Runtime API token                                                                           |
+| `PLATFORM_DATABASE_URL`                 | Dedicated PostgreSQL URL                                                                    |
+| `PLATFORM_HYPERDRIVE_ID`                | Existing externally managed Hyperdrive ID, when applicable                                  |
+| `PLATFORM_HYPERDRIVE_ORIGIN_HOST`       | Origin host of that Hyperdrive; set with its ID and user                                    |
+| `PLATFORM_HYPERDRIVE_ORIGIN_USER`       | Runtime database user of that Hyperdrive; set with its ID and host (or service ID)          |
+| `PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID` | For a Workers VPC origin, set the service ID in place of the origin host                    |
+| `PLATFORM_R2_ACCESS_KEY_ID`             | R2 Access Key ID                                                                            |
+| `PLATFORM_R2_SECRET_ACCESS_KEY`         | R2 Secret Access Key                                                                        |
+| `PLATFORM_JWT_SECRET`                   | Original JWT signing secret                                                                 |
+| `PLATFORM_EMAIL_SIGNING_SECRET`         | Dedicated email signing secret when email is enabled                                        |
+| `PLATFORM_PROJECT_SECRET_KEY`           | Original base64-encoded project-encryption key                                              |
+| `PLATFORM_RECOVERY_KEY`                 | Base64-encoded 32-byte key for local encrypted recovery state when no keychain is available |
+| `PLATFORM_EMAIL_SENDER_DOMAIN`                   | Optional shared mail domain; requires `PLATFORM_EMAIL_SHARED_ZONE_ID`                          |
+| `PLATFORM_EMAIL_SHARED_ZONE_ID`                  | Cloudflare zone ID for that mail domain; requires `PLATFORM_EMAIL_SENDER_DOMAIN`               |
 
-For the default GitHub-only login, also set `NOSAM_PLATFORM_GITHUB_CLIENT_ID`,
-`NOSAM_PLATFORM_GITHUB_CLIENT_SECRET`, and `NOSAM_PLATFORM_ADMIN_GITHUB_LOGIN`.
+For the default GitHub-only login, also set `PLATFORM_GITHUB_CLIENT_ID`,
+`PLATFORM_GITHUB_CLIENT_SECRET`, and `PLATFORM_ADMIN_GITHUB_LOGIN`.
 For Google, OIDC, or Access login, pass `--auth-config <path>` using the
 [configuration format](/guide/platform/installation/setup#choose-login-methods).
 Inject each `clientSecretEnv` named in that file from your CI secret manager.
-Automatic Access protection may also need `NOSAM_PLATFORM_ACCESS_SETUP_TOKEN`
+Automatic Access protection may also need `PLATFORM_ACCESS_SETUP_TOKEN`
 with the [setup permissions](/guide/platform/installation/setup#cloudflare-access).
 
 Use that installation's saved signing and encryption keys on every resume or repair that needs them. After a keyring rotation, use the [complete keyring recovery inputs](/guide/platform/installation/maintenance#manage-an-installation-from-another-machine). The database claim and tables remain after uninstall; use a fresh database for a different installation.
@@ -53,7 +53,7 @@ bwf platform install \
 
 Mutations require `--yes` in CI; a read-only `--plan` does not. Custom runtimes also require `--runtime <directory>`. For a new installation, run `--plan` with the same account, name, and domain options as the unattended install. If you use `--auth-config`, pass the same file to both commands. Register `<platform-api-url>/auth/callback` when creating a login provider's OAuth or OIDC client manually; automatic Access setup manages its own application. A custom API hostname is optional.
 
-In CI, `upgrade`, `repair`, `enable`, `rollback`, and `install --resume` stop before they change a platform Worker or pause traffic when a platform Worker was changed in the Cloudflare dashboard or with the Cloudflare API, or has an active version without a bwf deployment record. See [Platform Workers changed outside bwf](/guide/platform/installation/maintenance#workers-changed-outside-nosam).
+In CI, `upgrade`, `repair`, `enable`, `rollback`, and `install --resume` stop before they change a platform Worker or pause traffic when a platform Worker was changed in the Cloudflare dashboard or with the Cloudflare API, or has an active version without a bwf deployment record. See [Platform Workers changed outside bwf](/guide/platform/installation/maintenance#workers-changed-outside-platform).
 
 :::
 

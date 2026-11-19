@@ -86,13 +86,13 @@ Operator tokens expire after one hour. For CI, mint a new operator token at the 
 
 ```sh
 export BWF_API_URL=https://platform.example.com
-NOSAM_OPERATOR_TOKEN="$(
+PLATFORM_OPERATOR_TOKEN="$(
   printf '%s' "$BWF_TOKEN" | bwf platform auth token --token-stdin
 )" || exit 1
-export NOSAM_OPERATOR_TOKEN
+export PLATFORM_OPERATOR_TOKEN
 unset BWF_TOKEN
 bwf platform system health --json
-unset NOSAM_OPERATOR_TOKEN
+unset PLATFORM_OPERATOR_TOKEN
 ```
 
 Disable shell tracing for the exchange and do not write either token to logs or plaintext files. A full API login session expires after 30 days and can be revoked sooner; renew it through the normal authenticated login flow and update the protected CI secret. A job that runs longer than one hour must repeat the exchange while its full API session is still valid. An expired operator token cannot refresh itself, and bwf does not issue permanent service tokens for administrator automation.

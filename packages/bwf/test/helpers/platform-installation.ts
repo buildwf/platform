@@ -20,9 +20,9 @@ export function persistInstallation(
   manifest: PlatformInstallationManifest,
   directories: Array<string>,
 ): void {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-platform-installation-test-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-installation-test-'));
   directories.push(directory);
-  process.env.NOSAM_PLATFORM_REGISTRY_DIR = directory;
+  process.env.PLATFORM_REGISTRY_DIR = directory;
   writeInstallationManifest(manifest);
   writePendingInstallationSecrets(manifest, { databaseUrl: 'postgres://recovery' });
   promoteInstallationSecrets(manifest);

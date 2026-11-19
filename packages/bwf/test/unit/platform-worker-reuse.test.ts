@@ -37,7 +37,7 @@ async function attemptReuse(input: {
   versionDrift?: boolean;
   waitForPriorWorker?: () => Promise<void>;
 }) {
-  const directory = mkdtempSync(join(tmpdir(), 'nosam-worker-reuse-'));
+  const directory = mkdtempSync(join(tmpdir(), 'platform-worker-reuse-'));
   const calls: Array<string> = [];
   const onTrafficPublished = vi.fn(async () => {});
   const onUnsafeTraffic = vi.fn(async () => {});
@@ -53,7 +53,7 @@ async function attemptReuse(input: {
       account_id: 'account',
       compatibility_date: '2026-09-30',
       main,
-      name: 'nosam-test-api',
+      name: 'platform-test-api',
       preview_urls: false,
       vars: { PLATFORM_OWNERSHIP_MARKER: marker, VERSION: 'one' },
       workers_dev: true,
@@ -108,9 +108,9 @@ async function attemptReuse(input: {
         return version;
       }
       if (input.liveTriggers) {
-        if (path.endsWith('/workers/workers/nosam-test-api')) {
+        if (path.endsWith('/workers/workers/platform-test-api')) {
           return {
-            name: 'nosam-test-api',
+            name: 'platform-test-api',
             subdomain: { enabled: true, previews_enabled: false },
             references: { queues: [] },
           };
@@ -252,7 +252,7 @@ it('uses direct Cloudflare reads for a verified matching version', async () => {
     'deployments',
     VERSION,
     'deployments',
-    'nosam-test-api',
+    'platform-test-api',
     'schedules',
     'workflows?page=1&per_page=100',
     'workflows?page=2&per_page=100',

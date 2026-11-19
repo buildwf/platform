@@ -7,7 +7,7 @@ outline: deep
 
 ## `bwfPlugin(options?)` {#voidplugin-options}
 
-Named export from `"nosam"`. Returns an array of Vite plugins that set up file-based routing, migration support, and the Cloudflare Workers runtime. Application-level configuration is read from [`bwf.config.ts`](../config.md); the optional `options` object controls Vite/Cloudflare plugin behavior.
+Named export from `"platform"`. Returns an array of Vite plugins that set up file-based routing, migration support, and the Cloudflare Workers runtime. Application-level configuration is read from [`bwf.config.ts`](../config.md); the optional `options` object controls Vite/Cloudflare plugin behavior.
 
 ```ts
 import { bwfPlugin } from '@builtbyfriends/bwf';

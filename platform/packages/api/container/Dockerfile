@@ -88,10 +88,10 @@ RUN COREPACK_HOME=/home/builder/.cache/node/corepack \
 # Build from the repository root. The root .dockerignore limits the context to
 # these files. Keep their relative layout so Node can import the release manifest
 # without node_modules or a generated version file. Both remain root-owned.
-COPY packages/bwf/package.json /opt/nosam/packages/bwf/package.json
-COPY platform/packages/api/container/build-agent.mjs /opt/nosam/platform/packages/api/container/build-agent.mjs
+COPY packages/bwf/package.json /opt/platform/packages/bwf/package.json
+COPY platform/packages/api/container/build-agent.mjs /opt/platform/platform/packages/api/container/build-agent.mjs
 
 # Health-check / control port the DO talks to (GET / health, POST /cancel).
 EXPOSE 4000
 
-CMD ["node", "/opt/nosam/platform/packages/api/container/build-agent.mjs"]
+CMD ["node", "/opt/platform/platform/packages/api/container/build-agent.mjs"]

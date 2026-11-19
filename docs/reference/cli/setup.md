@@ -5,7 +5,7 @@ outline: deep
 
 # Project Setup {#setup}
 
-## `bwf info` {#nosam-info}
+## `bwf info` {#platform-info}
 
 ```sh
 bwf info
@@ -20,13 +20,13 @@ Resources recorded in `bwf.lock.json` without a matching definition appear separ
 
 `--json` returns `resources` and `recordedResources`. Current entries contain `file`, `definition`, `name`, `nameSource` (`inferred` or `explicit`), `className`, `bindingName`, and an optional `route`. Recorded entries contain `className` and `bindingName`, with `name` and `definition` when a matching name is available.
 
-## `bwf migrate` {#nosam-migrate}
+## `bwf migrate` {#platform-migrate}
 
 `bwf migrate` converts legacy `bwf.json` and root `wrangler.jsonc` or `wrangler.json` files into `bwf.config.ts`. It also accepts one root `wrangler*.json(c)` file referenced by a supported framework adapter. bwf saves backups in `.bwf/config-migration/`, records resource IDs in `bwf.lock.json`, and updates supported adapters to use its generated Cloudflare config.
 
 The command adds generated `.cloudflare/` and `.bwf-wrangler.jsonc` files to `.gitignore` as needed. Review and commit `bwf.config.ts`, `bwf.lock.json`, and `.gitignore`. `bwf init` and `bwf deploy` migrate legacy files automatically. Resolve conflicting Cloudflare configs first, and keep the project's `bwf` package and CLI on the same version.
 
-## `bwf init` {#nosam-init}
+## `bwf init` {#platform-init}
 
 ```sh
 bwf init [--tsconfig] [--github] [--git | --no-git]
@@ -46,7 +46,7 @@ Pass your choices as flags to scaffold from a script or coding agent:
 
 ```sh
 bwf init --toolchain vite-plus --starter sqlite --deploy none
-npm create nosam@latest my-app -- --toolchain vite-plus --starter sqlite --deploy none
+npm create platform@latest my-app -- --toolchain vite-plus --starter sqlite --deploy none
 ```
 
 For non-interactive scaffolding, choose `--deploy none` and run `bwf connect` later to sign in.
@@ -79,7 +79,7 @@ For Cloudflare workflows, add a `CLOUDFLARE_API_TOKEN` repository secret. Postgr
 
 bwf platforms with GitHub Actions support use short-lived OIDC credentials. Authorize the repository with `bwf github connect <project> --repo <owner/repo> --executor github_actions`. Core self-hosted platforms do not support that integration. See [Deployment](../../guide/deployment.md#github).
 
-## `bwf prepare` {#nosam-prepare}
+## `bwf prepare` {#platform-prepare}
 
 ```
 bwf prepare

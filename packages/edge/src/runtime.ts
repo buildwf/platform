@@ -40,7 +40,7 @@ export function createStaticEdgeHandler(config: StaticEdgeConfig): StaticEdgeHan
   return {
     async fetch(request, env): Promise<Response> {
       const originalUrl = new URL(request.url);
-      if (request.method === 'GET' && originalUrl.pathname === '/__nosam/ready') {
+      if (request.method === 'GET' && originalUrl.pathname === '/__platform/ready') {
         if (!config.versionMetadataBinding) {
           return Response.json({ ready: true });
         }
@@ -115,6 +115,6 @@ function rewriteUrl(url: URL, destination: string): URL {
 
 function rewriteRequest(request: Request, url: URL, originalUrl: string): Request {
   const rewritten = new Request(url.toString(), request);
-  rewritten.headers.set('X-Nosam-Original-URL', originalUrl);
+  rewritten.headers.set('X-Platform-Original-URL', originalUrl);
   return rewritten;
 }

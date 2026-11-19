@@ -103,7 +103,7 @@ describe('hashed assets in the Workers runtime', () => {
         expect(hit.headers.get('X-Origin-Call')).toBe(originCall);
         expect(hit.headers.get('Content-Type')).toBe('text/javascript');
         expect(hit.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
-        expect(hit.headers.get('x-nosam-shared-cache-policy')).toBeNull();
+        expect(hit.headers.get('x-platform-shared-cache-policy')).toBeNull();
         expect(hit.headers.get('X-Test')).toBe(scenario === 'matched-rules' ? 'matched' : null);
       }
     },

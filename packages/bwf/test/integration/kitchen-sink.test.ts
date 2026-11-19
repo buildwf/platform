@@ -457,14 +457,14 @@ function preparePreviewWranglerConfig(pg: string): string {
   // Preview executes the production build, which requires an auth secret.
   wranglerConfig.vars = {
     ...(wranglerConfig.vars ?? {}),
-    BETTER_AUTH_SECRET: 'nosam-preview-test-secret-1234567890',
+    BETTER_AUTH_SECRET: 'platform-preview-test-secret-1234567890',
   };
   delete wranglerConfig.ai;
   writeFileSync(wranglerPath, `${JSON.stringify(wranglerConfig, null, 2)}\n`);
   // v2 preview reads the native artifact, while the CLI still uses the validated dist build.
   const nativePath = getWorkerConfigPath(pg);
   const native = JSON.parse(readFileSync(nativePath, 'utf8'));
-  native.env.BETTER_AUTH_SECRET = { type: 'text', value: 'nosam-preview-test-secret-1234567890' };
+  native.env.BETTER_AUTH_SECRET = { type: 'text', value: 'platform-preview-test-secret-1234567890' };
   delete native.env.AI;
   writeFileSync(nativePath, JSON.stringify(native));
   return databaseId;

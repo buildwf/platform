@@ -17,7 +17,7 @@ vi.mock('@voidzero-dev/vite-plus-prompts', () => ({
 let root: string;
 beforeEach(() => {
   vi.clearAllMocks();
-  root = mkdtempSync(join(tmpdir(), 'nosam-cf-connect-'));
+  root = mkdtempSync(join(tmpdir(), 'platform-cf-connect-'));
   for (const name of [
     'CLOUDFLARE_ENV',
     'CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH',

@@ -192,7 +192,7 @@ export async function createPlatformInstallPlan(
   const emailSenderDomain = existing?.deployment.emailSenderDomain ?? providedEmailSenderDomain;
   if (!!emailSharedZoneId !== !!emailSenderDomain) {
     throw new Error(
-      'platform: Set NOSAM_EMAIL_SENDER_DOMAIN and NOSAM_EMAIL_SHARED_ZONE_ID together to enable email.',
+      'platform: Set PLATFORM_EMAIL_SENDER_DOMAIN and PLATFORM_EMAIL_SHARED_ZONE_ID together to enable email.',
     );
   }
   const normalizedEmailSenderDomain = emailSenderDomain
@@ -220,7 +220,7 @@ export async function createPlatformInstallPlan(
   }
   if (capabilities.email && options?.includeEmailGateway !== false && !enableEmail) {
     throw new Error(
-      'platform: Email-enabled installations require NOSAM_EMAIL_SENDER_DOMAIN and NOSAM_EMAIL_SHARED_ZONE_ID before deploying this runtime.',
+      'platform: Email-enabled installations require PLATFORM_EMAIL_SENDER_DOMAIN and PLATFORM_EMAIL_SHARED_ZONE_ID before deploying this runtime.',
     );
   }
   if (
@@ -912,7 +912,7 @@ export async function revalidatePlatformInstallAction(
 function resourceSlugForManifest(manifest: PlatformInstallationManifest): string {
   const apiWorker = manifest.deployment.resources.apiWorker;
   // Installations made before the rename named their resources void-<slug>-<role>.
-  const prefix = ['nosam-', 'void-'].find((candidate) => apiWorker.startsWith(candidate));
+  const prefix = ['platform-', 'void-'].find((candidate) => apiWorker.startsWith(candidate));
   if (!prefix || !apiWorker.endsWith('-api')) {
     return manifest.deployment.installationSlug;
   }

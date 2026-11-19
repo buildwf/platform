@@ -12,7 +12,7 @@ import {
 const roots: Array<string> = [];
 
 function createDir(): string {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-runner-sqlite-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-runner-sqlite-'));
   roots.push(root);
   return root;
 }

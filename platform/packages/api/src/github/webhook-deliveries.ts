@@ -106,7 +106,7 @@ function appJwtHeaders(appJwt: string): Record<string, string> {
   return {
     Accept: 'application/vnd.github+json',
     Authorization: `Bearer ${appJwt}`,
-    'User-Agent': 'nosam-api',
+    'User-Agent': 'platform-api',
     'X-GitHub-Api-Version': GITHUB_API_VERSION,
   };
 }

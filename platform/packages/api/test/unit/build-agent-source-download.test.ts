@@ -12,7 +12,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 // file — `WORK_DIR` is read once, at import. build-manager.test.ts wipes and
 // rewrites the default `/tmp/build/src` in its own `beforeEach`, and vitest runs
 // the two files in parallel workers, so sharing that path is a cross-file race.
-process.env.NOSAM_BUILD_WORK_DIR = join(tmpdir(), `nosam-source-download-${process.pid}`);
+process.env.PLATFORM_BUILD_WORK_DIR = join(tmpdir(), `platform-source-download-${process.pid}`);
 
 // The source download needs its own deadlines: a GitHub tarball stream can
 // degrade to short bursts separated by dead minutes, and undici's `bodyTimeout`
@@ -846,8 +846,8 @@ describe('build-agent source download bounds', () => {
 // an unhandled 'error', would pass every injected-dep test above and still let a
 // build hang.
 describe('build-agent source download, real stream + tar', () => {
-  const WORK_DIR = process.env.NOSAM_BUILD_WORK_DIR!;
-  const fixtureRoot = join(tmpdir(), 'nosam-source-download-fixture');
+  const WORK_DIR = process.env.PLATFORM_BUILD_WORK_DIR!;
+  const fixtureRoot = join(tmpdir(), 'platform-source-download-fixture');
   /** Bytes the stalling first response hands over before going silent. */
   const TRUNCATE_AT = 2048;
   let archive: Buffer;

@@ -89,7 +89,12 @@ function readRecordedResources(
         }
         const identity = deriveDurableResourceIdentity(name);
         const matchesMigration = migrations.some((migration) => {
-          if (!isRecord(migration) || migration.tag !== identity.migrationTag) {
+          // Apps made before the rename keep their void-durable-* tags.
+          const legacyTag = identity.migrationTag.replace(/^platform-/, 'void-');
+          if (
+            !isRecord(migration) ||
+            (migration.tag !== identity.migrationTag && migration.tag !== legacyTag)
+          ) {
             return false;
           }
           return [migration.new_classes, migration.new_sqlite_classes].some(

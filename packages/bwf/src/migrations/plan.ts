@@ -10,7 +10,7 @@ import {
   type MigrationPlanHashInput,
 } from '@builtbyfriends/deploy-core';
 
-export const DESTRUCTIVE_PRAGMA = '-- nosam:allow-destructive';
+export const DESTRUCTIVE_PRAGMA = '-- platform:allow-destructive';
 
 export type MigrationExecutionPlan = MigrationPlanHashInput & {
   planHash: string;

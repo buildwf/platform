@@ -108,12 +108,12 @@ You can also place rules in Vite's `publicDir`, which defaults to `public/`:
 
 The file can include [3xx redirects](./redirects) too. Rules in `bwf.config.ts` take precedence over file rules; within each group, the first match wins.
 
-## Debugging with `X-Nosam-Routing`
+## Debugging with `X-Platform-Routing`
 
-During development, inspect the `X-Nosam-Routing` response header in your browser's Network tab. It shows the matching rule and where it was declared:
+During development, inspect the `X-Platform-Routing` response header in your browser's Network tab. It shows the matching rule and where it was declared:
 
 ```text
-X-Nosam-Routing: rewrite[/docs/*] -> /en/docs/:splat (bwf.config.ts#routing.rewrites)
-X-Nosam-Routing: c.rewrite -> /new-path (middleware)
-X-Nosam-Routing: pass-through
+X-Platform-Routing: rewrite[/docs/*] -> /en/docs/:splat (bwf.config.ts#routing.rewrites)
+X-Platform-Routing: c.rewrite -> /new-path (middleware)
+X-Platform-Routing: pass-through
 ```

@@ -240,7 +240,7 @@ describe('parseDbArgs', () => {
     [['--timestamp', '2026-10-16T24:00:00Z'], 'must be a valid ISO 8601 time'],
     // `new Date` would truncate this to .123, an earlier instant than the user wrote.
     [['--timestamp', '2026-10-16T09:30:00.123456Z'], 'at most millisecond precision'],
-    [['--platform', 'nosam', '--bookmark', '00000085-0000024c'], "accepts only 'cloudflare'"],
+    [['--platform', 'platform', '--bookmark', '00000085-0000024c'], "accepts only 'cloudflare'"],
     [['--bookmark=--dry-run'], '--bookmark must be a D1 restore point'],
     [['--bookmark', 'not-hex'], '--bookmark must be a D1 restore point'],
     [['--remote', '--bookmark', '00000085-0000024c'], 'does not support --remote'],

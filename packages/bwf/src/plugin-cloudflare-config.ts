@@ -74,7 +74,7 @@ export function toNativeCloudflareConfig(
     env &&
     Object.fromEntries(
       Object.entries(env).map(([name, { vars: _vars, ...config }]) => [
-        `nosam-environment-${name}`,
+        `platform-environment-${name}`,
         config,
       ]),
     );
@@ -86,8 +86,8 @@ export function toNativeCloudflareConfig(
       ...(environments && process.env.CLOUDFLARE_ENV ? { env: environments } : {}),
     },
     process.env.CLOUDFLARE_ENV
-      ? `nosam-environment-${process.env.CLOUDFLARE_ENV}`
-      : 'nosam-top-level',
+      ? `platform-environment-${process.env.CLOUDFLARE_ENV}`
+      : 'platform-top-level',
   );
   if (!config.worker) {
     throw new Error('bwf requires a Cloudflare Worker configuration.');

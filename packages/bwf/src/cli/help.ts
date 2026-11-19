@@ -108,10 +108,10 @@ const HELP_TREE: HelpTree = {
   connect: {
     summary:
       'Connect this project to Cloudflare or an existing bwf platform. Platform hostnames default to HTTPS.',
-    usage: ['bwf connect [url] [--platform <cloudflare|nosam>] [--no-login]'],
+    usage: ['bwf connect [url] [--platform <cloudflare|platform>] [--no-login]'],
     options: [
       {
-        command: '--platform <cloudflare|nosam>',
+        command: '--platform <cloudflare|platform>',
         description: 'Choose the deployment destination',
       },
       { command: '--no-login', description: 'Save a bwf connection without authenticating' },
@@ -175,7 +175,7 @@ const HELP_TREE: HelpTree = {
         description: 'Deploy without applying application or authentication database migrations',
       },
       {
-        command: '--platform <cloudflare|nosam>',
+        command: '--platform <cloudflare|platform>',
         description: 'Override the platform saved by bwf init',
       },
       {
@@ -211,7 +211,7 @@ const HELP_TREE: HelpTree = {
   auth: {
     summary:
       'Authenticate with this project’s saved Cloudflare or bwf destination. Without one, choose interactively or pass --platform.',
-    usage: ['bwf auth <login|status|logout> [--platform cloudflare|nosam]'],
+    usage: ['bwf auth <login|status|logout> [--platform cloudflare|platform]'],
     commands: [
       { command: 'login', description: 'Sign in to the selected destination' },
       { command: 'status', description: 'Show the selected destination’s identity' },
@@ -219,22 +219,22 @@ const HELP_TREE: HelpTree = {
     ],
     options: [
       {
-        command: '--platform <cloudflare|nosam>',
+        command: '--platform <cloudflare|platform>',
         description: 'Choose the destination explicitly',
       },
     ],
     children: {
       login: basicSubcommand(
         'Sign in to the selected destination.',
-        'bwf auth login [--platform cloudflare|nosam]',
+        'bwf auth login [--platform cloudflare|platform]',
       ),
       status: basicSubcommand(
         'Show the selected destination’s identity.',
-        'bwf auth status [--platform cloudflare|nosam]',
+        'bwf auth status [--platform cloudflare|platform]',
       ),
       logout: basicSubcommand(
         'Sign out of the selected destination.',
-        'bwf auth logout [--platform cloudflare|nosam]',
+        'bwf auth logout [--platform cloudflare|platform]',
       ),
     },
   },
@@ -953,7 +953,7 @@ const HELP_TREE: HelpTree = {
         ],
       },
       // The one nested group: verbs parse in email-args.ts (`domain <add|status|list|sync|rotate-secret|remove>`).
-      // Nosam-platform-only; custom inbound requires a zone apex.
+      // Platform-platform-only; custom inbound requires a zone apex.
       domain: {
         summary: 'Send and receive at your own domain on a Cloudflare zone.',
         usage: ['bwf email domain <verb> [<domain>] [options]'],

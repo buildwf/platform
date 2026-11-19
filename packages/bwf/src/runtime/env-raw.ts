@@ -9,7 +9,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 export type RuntimeEnv = Record<string, unknown>;
 
 /** Prefixes for platform-internal bindings that must be hidden from user code. */
-export const INTERNAL_BINDING_PREFIXES = ['__NOSAM_', '__PROJECT_'] as const;
+export const INTERNAL_BINDING_PREFIXES = ['__PLATFORM_', '__PROJECT_'] as const;
 
 /**
  * One process or isolate can evaluate this module more than once: Vite's SSR module

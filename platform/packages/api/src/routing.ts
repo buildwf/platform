@@ -296,7 +296,7 @@ export function buildRoutingJson(opts: {
     workerName: opts.workerName,
     projectId: opts.projectId,
     userId: opts.userId,
-    type: manifest?.type ?? 'nosam',
+    type: manifest?.type ?? 'platform',
     ...(manifest?.ssr ? { ssr: true } : {}),
     ...(manifest?.hashedAssetsPrefix ? { hashedAssetsPrefix: manifest.hashedAssetsPrefix } : {}),
     ...(manifest?.headerRules?.length ? { headerRules: manifest.headerRules } : {}),

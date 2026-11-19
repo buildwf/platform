@@ -40,7 +40,7 @@ function unproxiedEnv(api: string): NodeJS.ProcessEnv {
 it.each(['apac', undefined] as const)(
   'creates R2 buckets with location hint %s through installed cf',
   async (locationHint) => {
-    const directory = temporaryDirectory('nosam-cf-r2-location-');
+    const directory = temporaryDirectory('platform-cf-r2-location-');
     const configPath = join(directory, 'wrangler.json');
     writeFileSync(configPath, JSON.stringify({ name: 'test-worker', account_id: 'test-account' }));
     const requests: Array<{ path: string; body: Record<string, unknown> }> = [];
@@ -99,7 +99,7 @@ it.each([
 ])(
   'publishes explicit Worker settings from the trigger operation: %j',
   async (settings) => {
-    const directory = temporaryDirectory('nosam-cf-observability-');
+    const directory = temporaryDirectory('platform-cf-observability-');
     const configPath = join(directory, 'wrangler.json');
     writeFileSync(
       configPath,
@@ -159,7 +159,7 @@ it.each([
 it.each([false, true])(
   'requests immutable version source without provisioning (large=%s)',
   async (large) => {
-    const directory = temporaryDirectory('nosam-cf-secret-source-');
+    const directory = temporaryDirectory('platform-cf-secret-source-');
     const draft = bwfSecretDraftVersion();
     if (large) {
       draft.modules[0]!.content_base64 = Buffer.from(
@@ -210,7 +210,7 @@ it.each([false, true])(
 it.each([undefined, false, true])(
   'sends bypassDeploymentChecks=%s through cf alongside the deployment body',
   async (bypassDeploymentChecks) => {
-    const directory = temporaryDirectory('nosam-cf-deployment-checks-');
+    const directory = temporaryDirectory('platform-cf-deployment-checks-');
     const requests: Array<{ url: string | undefined; body: unknown }> = [];
     const api = await listen(
       createServer(async (request, response) => {
@@ -273,7 +273,7 @@ syncBuiltinESMExports();
 it.each([200, 503])(
   'reports HTTP %i without loading the build toolchain when domain cleanup returns non-JSON',
   async (status) => {
-    const directory = temporaryDirectory('nosam-cf-domain-error-');
+    const directory = temporaryDirectory('platform-cf-domain-error-');
     const api = await listen(
       createServer((request, response) => {
         request.resume();
@@ -313,7 +313,7 @@ registerHooks({
 it.each(['clear-crons', 'clear-domains'])(
   'clears %s through the pinned account API',
   async (operation) => {
-    const directory = temporaryDirectory('nosam-cf-clear-crons-');
+    const directory = temporaryDirectory('platform-cf-clear-crons-');
     let requested = false;
     const api = await listen(
       createServer(async (request, response) => {
@@ -365,7 +365,7 @@ it.each([
 ])(
   'uses browser credentials for %s with keyring %s',
   async (operation, keyringSetting) => {
-    const directory = temporaryDirectory('nosam-cf-clear-crons-oauth-');
+    const directory = temporaryDirectory('platform-cf-clear-crons-oauth-');
     const requests: Array<{
       method: string | undefined;
       url: string | undefined;
@@ -403,7 +403,7 @@ import { createCfAuth } from ${JSON.stringify(import.meta.resolve('@cloudflare/w
 let key;
 setKeyProviderFactoryForTesting(() => ({ getKey: () => key, setKey: (value) => { key = value; }, deleteKey: () => { key = undefined; }, describe: () => 'synthetic provider' }));
 const logger = { debug() {}, info() {}, log() {}, warn() {}, error() {} };
-const auth = createCfAuth({ logger, userAgent: 'nosam-test', prompt: async () => '', select: async () => '', isNoDefaultValueProvidedError: () => false });
+const auth = createCfAuth({ logger, userAgent: 'platform-test', prompt: async () => '', select: async () => '', isNoDefaultValueProvidedError: () => false });
 auth.writeAuthCredentials({ oauth_token: 'synthetic-oauth-token', refresh_token: 'synthetic-refresh', expiration_time: new Date(Date.now() + 3600000).toISOString(), scopes: [] });
 const credentialPath = auth.getCredentialStore().path();
 child.spawnSync = (_binary, args, options) => {
@@ -450,7 +450,7 @@ syncBuiltinESMExports();
 );
 
 it('reports an absent cf session as authentication failure', async () => {
-  const directory = temporaryDirectory('nosam-cf-no-auth-');
+  const directory = temporaryDirectory('platform-cf-no-auth-');
   const output = await runOperation(
     directory,
     { type: 'auth.whoami' },
@@ -473,7 +473,7 @@ it('reports an absent cf session as authentication failure', async () => {
 it.each([false, true])(
   'forwards the cf auth whoami failure from auth.token (Global API Key=%s)',
   async (apiKey) => {
-    const directory = temporaryDirectory('nosam-cf-token-whoami-');
+    const directory = temporaryDirectory('platform-cf-token-whoami-');
     const preload = join(directory, 'mock-cf.mjs');
     writeFileSync(
       preload,
@@ -508,13 +508,13 @@ syncBuiltinESMExports();
 );
 
 it('discovers KV namespaces beyond the first cf API page', async () => {
-  const directory = temporaryDirectory('nosam-cf-kv-pages-');
+  const directory = temporaryDirectory('platform-cf-kv-pages-');
   const requestedPages: Array<number> = [];
   const namespaces = Array.from({ length: 100 }, (_, index) => ({
     id: (index + 1).toString(16).padStart(32, '0'),
     title: `other-${index}`,
   }));
-  const target = { id: 'f'.repeat(32), title: 'existing-nosam-kv' };
+  const target = { id: 'f'.repeat(32), title: 'existing-platform-kv' };
   const api = await listen(
     createServer((request, response) => {
       const url = new URL(request.url ?? '', 'http://127.0.0.1');
@@ -548,7 +548,7 @@ it('discovers KV namespaces beyond the first cf API page', async () => {
 }, 30_000);
 
 it('finds existing Queues beyond the first cf API page', async () => {
-  const directory = temporaryDirectory('nosam-cf-queue-pages-');
+  const directory = temporaryDirectory('platform-cf-queue-pages-');
   const requestedPages: Array<number> = [];
   const api = await listen(
     createServer((request, response) => {
@@ -563,7 +563,7 @@ it('finds existing Queues beyond the first cf API page', async () => {
           result: [
             page === 1
               ? { queue_id: 'first-queue', queue_name: 'another-queue' }
-              : { queue_id: 'target-queue', queue_name: 'existing-nosam-queue' },
+              : { queue_id: 'target-queue', queue_name: 'existing-platform-queue' },
           ],
           result_info: { page, per_page: 1, total_pages: 2, total_count: 2 },
         }),
@@ -574,11 +574,11 @@ it('finds existing Queues beyond the first cf API page', async () => {
   writeFileSync(configPath, JSON.stringify({ account_id: 'test-account' }));
   const output = await runOperation(
     directory,
-    { type: 'queues.info', name: 'existing-nosam-queue', configPath },
+    { type: 'queues.info', name: 'existing-platform-queue', configPath },
     tokenEnv(api, 'CF_API_TOKEN'),
   );
   expect(output.status, output.stderr).toBe(0);
-  expect(JSON.parse(output.stdout).data).toMatchObject({ name: 'existing-nosam-queue' });
+  expect(JSON.parse(output.stdout).data).toMatchObject({ name: 'existing-platform-queue' });
   expect(requestedPages).toEqual([1, 2]);
 }, 30_000);
 
@@ -627,7 +627,7 @@ it.each([
 ])(
   'reports a queue with $label',
   async ({ queue, consumers }) => {
-    const directory = temporaryDirectory('nosam-cf-queue-consumers-');
+    const directory = temporaryDirectory('platform-cf-queue-consumers-');
     const api = await listen(
       createServer((_request, response) => {
         response.setHeader('Content-Type', 'application/json');
@@ -726,7 +726,7 @@ it.each([
 ])(
   'cleans up Queue consumers using verified identities: $label',
   async ({ consumers, deleted, status }) => {
-    const directory = temporaryDirectory('nosam-cf-queue-cleanup-');
+    const directory = temporaryDirectory('platform-cf-queue-cleanup-');
     const deletes: Array<string> = [];
     const api = await listen(
       createServer((request, response) => {
@@ -778,7 +778,7 @@ it.each([
 );
 
 it('uses pinned cf despite a project-local CLI and preserves D1 results and the CF token alias', async () => {
-  const directory = temporaryDirectory('nosam-cf-d1-contract-');
+  const directory = temporaryDirectory('platform-cf-d1-contract-');
   const requests: Array<{ method: string; path: string; authorization: string | undefined }> = [];
   const api = await listen(
     createServer((request, response) => {
@@ -834,7 +834,7 @@ it('uses pinned cf despite a project-local CLI and preserves D1 results and the 
 }, 30_000);
 
 it('sends D1 SQL that starts with a comment as one --sql value through the pinned cf', async () => {
-  const directory = temporaryDirectory('nosam-cf-d1-comment-sql-');
+  const directory = temporaryDirectory('platform-cf-d1-comment-sql-');
   const bodies: Array<unknown> = [];
   const api = await listen(
     createServer(async (request, response) => {
@@ -873,7 +873,7 @@ it('sends D1 SQL that starts with a comment as one --sql value through the pinne
 }, 30_000);
 
 it('uses the configured HTTP proxy for cf resource requests', async () => {
-  const directory = temporaryDirectory('nosam-cf-resource-proxy-');
+  const directory = temporaryDirectory('platform-cf-resource-proxy-');
   let proxied = 0;
   let queried = 0;
   const api = await listen(
@@ -939,7 +939,7 @@ it('uses the configured HTTP proxy for cf resource requests', async () => {
 it.each([401, 403, 404, 503])(
   'stops a prebuilt platform upload before cf can provision an unavailable R2 bucket (HTTP %s)',
   async (status) => {
-    const directory = temporaryDirectory('nosam-cf-platform-r2-preflight-');
+    const directory = temporaryDirectory('platform-cf-platform-r2-preflight-');
     const requests: Array<string> = [];
     const api = await listen(
       createServer((request, response) => {
@@ -981,7 +981,7 @@ it.each([401, 403, 404, 503])(
 it.each(['ordinary', 'versions.upload', 'worker.deploy'] as const)(
   'allows a prebuilt %s upload and scopes installation attribution to the cf child',
   async (uploadType) => {
-    const directory = temporaryDirectory('nosam-cf-platform-resource-preflight-');
+    const directory = temporaryDirectory('platform-cf-platform-resource-preflight-');
     const requests: Array<string> = [];
     const jurisdictions: Array<string | undefined> = [];
     const api = await listen(
@@ -1084,7 +1084,7 @@ syncBuiltinESMExports();`,
         bwfVersion +
         (uploadType === 'ordinary'
           ? ''
-          : ' nosam-platform-install/0.27.0 nosam-role/api-worker nosam-installation/installation-one'),
+          : ' platform-install/0.27.0 platform-role/api-worker platform-installation/installation-one'),
       telemetry: 'false',
     });
     expect(JSON.stringify(uploadEnvironment)).not.toContain('private-ownership-proof');
@@ -1101,7 +1101,7 @@ it.each([
 ])(
   'inspects existing Worker versions with $label',
   async ({ lowercase, bypass, authenticated }) => {
-    const directory = temporaryDirectory('nosam-cf-proxy-contract-');
+    const directory = temporaryDirectory('platform-cf-proxy-contract-');
     const versionId = '11111111-1111-4111-8111-111111111111';
     let proxied = 0;
     let inspected = 0;
@@ -1294,7 +1294,7 @@ it.each([
     ],
   },
 ])('returns structured email data for $operation', async ({ operation, commands, ...example }) => {
-  const directory = temporaryDirectory('nosam-cf-email-json-');
+  const directory = temporaryDirectory('platform-cf-email-json-');
   const preload = join(directory, 'mock-cf.mjs');
   const callsPath = join(directory, 'calls.json');
   writeFileSync(
@@ -1347,7 +1347,7 @@ it.each([
     extra: ['--json'],
   },
 ])('rejects $label before invoking the provider', async ({ request, extra }) => {
-  const directory = temporaryDirectory('nosam-operation-protocol-');
+  const directory = temporaryDirectory('platform-operation-protocol-');
   const capture = join(directory, 'provider-ran');
   const preload = join(directory, 'mock-provider.mjs');
   writeFileSync(
@@ -1376,7 +1376,7 @@ it.each([
   { label: 'spawn error', code: 10007, signal: null, spawnError: true },
   { label: 'missing exit status', code: 10006, signal: null, spawnError: false },
 ])('preserves an inner provider $label without authorizing resource absence', async (example) => {
-  const directory = temporaryDirectory('nosam-operation-provider-failure-');
+  const directory = temporaryDirectory('platform-operation-provider-failure-');
   const preload = join(directory, 'failed-provider.mjs');
   writeFileSync(
     preload,
@@ -1421,7 +1421,7 @@ syncBuiltinESMExports();`,
 });
 
 it('rejects a changed tail target before any provider request', async () => {
-  const directory = temporaryDirectory('nosam-tail-target-');
+  const directory = temporaryDirectory('platform-tail-target-');
   const configPath = join(directory, 'wrangler.jsonc');
   writeFileSync(configPath, JSON.stringify({ name: 'changed-worker', account_id: 'test-account' }));
   const output = await runOperation(
@@ -1435,7 +1435,7 @@ it('rejects a changed tail target before any provider request', async () => {
 });
 
 it('renders binary and text frames from a real Node WebSocket in order and removes the captured tail', async () => {
-  const directory = temporaryDirectory('nosam-tail-binary-');
+  const directory = temporaryDirectory('platform-tail-binary-');
   const sockets = new Set<Duplex>();
   const requests: Array<{ method: string | undefined; url: string | undefined; body: string }> = [];
   let initialization: string | undefined;
@@ -1569,7 +1569,7 @@ it('renders binary and text frames from a real Node WebSocket in order and remov
 it.each([false, true])(
   'attaches cf to the terminal only for an interactive platform upload (interactive: %s)',
   async (interactive) => {
-    const directory = temporaryDirectory('nosam-cf-interactive-upload-');
+    const directory = temporaryDirectory('platform-cf-interactive-upload-');
     const requests: Array<string> = [];
     const api = await listen(
       createServer((request, response) => {
@@ -1648,7 +1648,7 @@ syncBuiltinESMExports();`,
 it.each(['canonical', 'alias', 'bearer'] as const)(
   'reads the account workers.dev subdomain with %s credentials',
   async (credentials) => {
-    const directory = temporaryDirectory('nosam-cf-subdomain-');
+    const directory = temporaryDirectory('platform-cf-subdomain-');
     const requests: Array<{
       path: string | undefined;
       key: string | undefined;
@@ -1701,7 +1701,7 @@ it.each([
   { name: 'invalid type', status: 200, body: { success: true, result: { subdomain: 42 } } },
   { name: 'redirect', status: 302, body: {} },
 ])('rejects a subdomain lookup with $name', async ({ status, body }) => {
-  const directory = temporaryDirectory('nosam-cf-subdomain-error-');
+  const directory = temporaryDirectory('platform-cf-subdomain-error-');
   let redirected = false;
   const api = await listen(
     createServer((request, response) => {

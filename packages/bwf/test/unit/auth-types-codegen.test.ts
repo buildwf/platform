@@ -13,7 +13,7 @@ function withTempProject(setup: (root: string) => void): {
   outDir: string;
   cleanup: () => void;
 } {
-  const root = mkdtempSync(join(tmpdir(), 'nosam-auth-codegen-'));
+  const root = mkdtempSync(join(tmpdir(), 'platform-auth-codegen-'));
   setup(root);
   const outDir = join(root, '.bwf');
   mkdirSync(outDir, { recursive: true });
@@ -54,13 +54,13 @@ describe('generateAuthTypes', () => {
       );
       expect(dts).not.toContain('from "better-auth"');
       expect(dts).toContain(
-        'type _NosamAuthSession = InferAuthSession<typeof import("../auth.ts")["default"]>;',
+        'type _PlatformAuthSession = InferAuthSession<typeof import("../auth.ts")["default"]>;',
       );
       expect(dts).toContain('declare module "@builtbyfriends/bwf/auth"');
       expect(dts).toContain('interface BwfAuthTypes {');
       expect(dts).toContain('auth: InferAuthInstance<typeof import("../auth.ts")["default"]>;');
-      expect(dts).toContain('user: _NosamAuthSession["user"];');
-      expect(dts).toContain('session: _NosamAuthSession["session"];');
+      expect(dts).toContain('user: _PlatformAuthSession["user"];');
+      expect(dts).toContain('session: _PlatformAuthSession["session"];');
     } finally {
       cleanup();
     }

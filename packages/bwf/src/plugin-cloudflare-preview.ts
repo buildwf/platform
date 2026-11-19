@@ -56,7 +56,7 @@ export function withLocalPreviewBindings(plugins: Array<Plugin>, root: string): 
   return [
     ...plugins,
     {
-      name: 'nosam:cloudflare-preview-cleanup',
+      name: 'platform:cloudflare-preview-cleanup',
       configurePreviewServer(server) {
         server.httpServer.once('close', cleanup);
       },

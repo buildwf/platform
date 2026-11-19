@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import RiveAnimation from '@components/shared/RiveAnimation.vue';
 import { useData } from 'vitepress';
-import heroAnimation from './assets/animations/640_x_630_vite_to_nosam_box_vertical_v3.riv';
+import heroAnimation from './assets/animations/640_x_630_vite_to_platform_box_vertical_v3.riv';
 
 if (typeof document !== 'undefined') {
   const preload = document.createElement('link');

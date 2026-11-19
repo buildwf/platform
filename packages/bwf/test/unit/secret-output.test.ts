@@ -20,7 +20,7 @@ vi.mock('../../src/cli/client.ts', () => ({
   },
 }));
 vi.mock('../../src/cli/project.ts', () => ({
-  readDeploymentPlatform: () => 'nosam',
+  readDeploymentPlatform: () => 'platform',
   readProjectConfig: () => ({ projectId: 'project' }),
 }));
 vi.mock('../../src/cli/env-validation.ts', () => ({ validateSecretValues: vi.fn() }));

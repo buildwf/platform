@@ -23,7 +23,7 @@ function query(failOnError = true): Promise<{ neurons: number }> {
   return queryProjectAiUsage(
     'account-1',
     apiToken,
-    'nosam',
+    'platform',
     jwtSecret,
     'project-1',
     since,
@@ -45,7 +45,7 @@ describe('queryProjectAiUsage strict accounting', () => {
     const request = JSON.parse(String(init?.body));
     expect(request.query).toContain('aiGatewayRequests: aiGatewayRequestsAdaptiveGroups(');
     expect(request.query).toContain('limit: 1');
-    expect(request.query).toContain('gateway: "nosam"');
+    expect(request.query).toContain('gateway: "platform"');
     expect(request.query).toContain(
       `metadataRaw: ${JSON.stringify(
         JSON.stringify({ projectId: await deriveAiUsageTag(jwtSecret, 'project-1') }),
@@ -197,7 +197,7 @@ describe('account usage query bounds', () => {
     });
     const intervals = Array.from({ length: 12 }, () => ({ start: since, end: until }));
     await expect(
-      sumAiUsageForWindows('account-1', apiToken, 'nosam', jwtSecret, [
+      sumAiUsageForWindows('account-1', apiToken, 'platform', jwtSecret, [
         { projectId: 'one', intervals },
         { projectId: 'two', intervals: [intervals[0]!] },
       ]),
@@ -219,7 +219,7 @@ describe('account usage query bounds', () => {
       },
     ] as never;
     await expect(
-      queryBatchProjectUsageWindows('account-1', apiToken, 'nosam_requests', windows, true),
+      queryBatchProjectUsageWindows('account-1', apiToken, 'platform_requests', windows, true),
     ).resolves.toEqual(new Map([['one', { requests: 6, bandwidthBytes: 14 }]]));
     expect(queries).toHaveLength(2);
     expect(queries[0]!.match(/blob1 =/g)).toHaveLength(50);

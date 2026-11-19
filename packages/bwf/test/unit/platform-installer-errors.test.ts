@@ -56,12 +56,12 @@ it.each(['stdout', 'stderr'] as const)(
       ].join('\n'),
     };
 
-    expect(() => assertCleanPlatformWrangler(result, 'upload nosam-team-api')).toThrow(
-      'platform: The Cloudflare CLI did not upload nosam-team-api: ' +
+    expect(() => assertCleanPlatformWrangler(result, 'upload platform-team-api')).toThrow(
+      'platform: The Cloudflare CLI did not upload platform-team-api: ' +
         'The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard.' +
         OUTSIDE_CHANGE_ADVICE,
     );
-    expect(() => assertCleanPlatformWrangler(result, 'upload nosam-team-api')).not.toThrow(
+    expect(() => assertCleanPlatformWrangler(result, 'upload platform-team-api')).not.toThrow(
       /team@example\.com|--strict/,
     );
   },
@@ -83,7 +83,7 @@ describe('cf upload conflicts that do not show a change outside bwf', () => {
           '◆  Version upload complete',
         ].join('\n'),
       },
-      'upload nosam-x-api',
+      'upload platform-x-api',
     );
 
   const message = (warning: ReadonlyArray<string>) => {
@@ -103,7 +103,7 @@ describe('cf upload conflicts that do not show a change outside bwf', () => {
       '▲  Environment variables `AUTH_REDIRECT_URI` and `DASHBOARD_URL` conflict with existing remote secrets. This deployment will replace these remote secrets with your environment variables.',
     ]);
     expect(output).toBe(
-      'platform: The Cloudflare CLI did not upload nosam-x-api: the Worker has secrets with the same names as values that bwf sets: `AUTH_REDIRECT_URI` and `DASHBOARD_URL`. Delete those secrets from the Worker in the Cloudflare dashboard, then run the command again.',
+      'platform: The Cloudflare CLI did not upload platform-x-api: the Worker has secrets with the same names as values that bwf sets: `AUTH_REDIRECT_URI` and `DASHBOARD_URL`. Delete those secrets from the Worker in the Cloudflare dashboard, then run the command again.',
     );
     expect(output).not.toMatch(SECRET_REPLACEMENT);
   });
@@ -113,7 +113,7 @@ describe('cf upload conflicts that do not show a change outside bwf', () => {
       '▲  Binding `ROUTING` conflicts with an existing remote secret. This deployment will replace the remote secret with your binding.',
     ]);
     expect(output).toBe(
-      'platform: The Cloudflare CLI did not upload nosam-x-api: the Worker has a secret with the same name as a value that bwf sets: `ROUTING`. Delete that secret from the Worker in the Cloudflare dashboard, then run the command again.',
+      'platform: The Cloudflare CLI did not upload platform-x-api: the Worker has a secret with the same name as a value that bwf sets: `ROUTING`. Delete that secret from the Worker in the Cloudflare dashboard, then run the command again.',
     );
     expect(output).not.toMatch(SECRET_REPLACEMENT);
   });
@@ -123,7 +123,7 @@ describe('cf upload conflicts that do not show a change outside bwf', () => {
       '▲  Configuration values (`AUTH_REDIRECT_URI`, `DASHBOARD_URL`, and `ROUTING`) conflict with existing remote secrets. This deployment will replace these remote secrets with the configuration values.',
     ]);
     expect(output).toBe(
-      'platform: The Cloudflare CLI did not upload nosam-x-api: the Worker has secrets with the same names as values that bwf sets: `AUTH_REDIRECT_URI`, `DASHBOARD_URL`, and `ROUTING`. Delete those secrets from the Worker in the Cloudflare dashboard, then run the command again.',
+      'platform: The Cloudflare CLI did not upload platform-x-api: the Worker has secrets with the same names as values that bwf sets: `AUTH_REDIRECT_URI`, `DASHBOARD_URL`, and `ROUTING`. Delete those secrets from the Worker in the Cloudflare dashboard, then run the command again.',
     );
     expect(output).not.toMatch(SECRET_REPLACEMENT);
   });
@@ -131,12 +131,12 @@ describe('cf upload conflicts that do not show a change outside bwf', () => {
   it('names a workflow that another Worker owns', () => {
     const output = message([
       '▲  The following workflow(s) already exist and belong to different workers:',
-      '│    - "nosam-x-jobs" (currently belongs to "someone-else")',
+      '│    - "platform-x-jobs" (currently belongs to "someone-else")',
       '│',
-      '│  Deploying will reassign these workflows to "nosam-x-api". Workflow names must be unique per account. If this reassignment is unintended, rename the workflow(s) in your Wrangler config file.',
+      '│  Deploying will reassign these workflows to "platform-x-api". Workflow names must be unique per account. If this reassignment is unintended, rename the workflow(s) in your Wrangler config file.',
     ]);
     expect(output).toBe(
-      'platform: The Cloudflare CLI did not upload nosam-x-api: The following workflow(s) already exist and belong to different workers: - "nosam-x-jobs" (currently belongs to "someone-else"). Another Worker owns this workflow. Delete the workflow, or rename it in the configuration of that Worker. Then run the command again.',
+      'platform: The Cloudflare CLI did not upload platform-x-api: The following workflow(s) already exist and belong to different workers: - "platform-x-jobs" (currently belongs to "someone-else"). Another Worker owns this workflow. Delete the workflow, or rename it in the configuration of that Worker. Then run the command again.',
     );
     expect(output).not.toMatch(/outside bwf|--strict|Wrangler|reassign/);
   });
@@ -145,19 +145,19 @@ describe('cf upload conflicts that do not show a change outside bwf', () => {
     expect(
       message([
         '▲  The following workflow(s) already exist and belong to different workers:',
-        '│    - "nosam-x-jobs" (currently belongs to "someone-else")',
-        '│    - "nosam-x-cleanup" (currently belongs to "another-worker")',
+        '│    - "platform-x-jobs" (currently belongs to "someone-else")',
+        '│    - "platform-x-cleanup" (currently belongs to "another-worker")',
         '│',
-        '│  Deploying will reassign these workflows to "nosam-x-api".',
+        '│  Deploying will reassign these workflows to "platform-x-api".',
       ]),
     ).toBe(
-      'platform: The Cloudflare CLI did not upload nosam-x-api: The following workflow(s) already exist and belong to different workers: - "nosam-x-jobs" (currently belongs to "someone-else") - "nosam-x-cleanup" (currently belongs to "another-worker"). Other Workers own these workflows. Delete each workflow, or rename it in the configuration of the Worker that owns it. Then run the command again.',
+      'platform: The Cloudflare CLI did not upload platform-x-api: The following workflow(s) already exist and belong to different workers: - "platform-x-jobs" (currently belongs to "someone-else") - "platform-x-cleanup" (currently belongs to "another-worker"). Other Workers own these workflows. Delete each workflow, or rename it in the configuration of the Worker that owns it. Then run the command again.',
     );
   });
 
   it('does not guess the cause of a conflict that it does not know', () => {
     expect(() => upload(['▲  Something else needs an answer.'])).toThrow(
-      `platform: The Cloudflare CLI did not upload nosam-x-api.${CONFLICT_ADVICE}`,
+      `platform: The Cloudflare CLI did not upload platform-x-api.${CONFLICT_ADVICE}`,
     );
     expect(() => upload(['▲  Something else needs an answer.'])).not.toThrow(
       /outside bwf|Something else/,
@@ -195,11 +195,11 @@ it('replaces the Analytics Engine APIError token advice with account activation 
         errorCode: 10089,
         errors: [{ code: 10089, message }],
       },
-      'bootstrap nosam-team-tail',
+      'bootstrap platform-team-tail',
       accountId,
     );
   expect(upload).toThrow(
-    'platform: Cloudflare could not bootstrap nosam-team-tail: Analytics Engine is not enabled for this account (code 10089). ' +
+    'platform: Cloudflare could not bootstrap platform-team-tail: Analytics Engine is not enabled for this account (code 10089). ' +
       `Open ${dashboard}, then select Enable. ` +
       'Analytics Engine is available on Workers Free. After enabling it, use the printed recovery command if one is shown; otherwise retry this command. ' +
       'If Enable is unavailable, see https://github.com/builtbyfriends/platform/blob/main/docs/guide/platform/installation/prerequisites.md#if-cloudflare-rejects-analytics-engine.',
@@ -216,7 +216,7 @@ it('explains how to select the account when only a structured Analytics Engine e
         stderr: '',
         errors: [{ code: 10089, message: 'You need to enable Analytics Engine.' }],
       },
-      'bootstrap nosam-team-tail',
+      'bootstrap platform-team-tail',
     ),
   ).toThrow(
     'Open https://dash.cloudflare.com/, select your account, and open Analytics Engine, then select Enable.',
@@ -229,7 +229,7 @@ it.each(['[code: 10089]', '[10089]'])(
     expect(() =>
       assertCleanPlatformWrangler(
         { status: 1, stdout: '', stderr: `You need to enable Analytics Engine. ${code}` },
-        'bootstrap nosam-team-tail',
+        'bootstrap platform-team-tail',
       ),
     ).toThrow('Analytics Engine is not enabled for this account (code 10089).');
   },
