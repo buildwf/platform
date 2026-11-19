@@ -171,7 +171,7 @@ catalogs:
       specifier: 0.7.13
       version: 0.7.13
     '@cloudflare/build-output-utils':
-      specifier: ^0.9.13
+      specifier: 0.9.13
       version: 0.9.13
     '@cloudflare/codemods':
       specifier: ^0.7.7
@@ -183,7 +183,7 @@ catalogs:
       specifier: ^1.0.3
       version: 1.0.3
     '@cloudflare/vite-plugin':
-      specifier: ^2.0.0-beta.v.15
+      specifier: 2.0.0-beta.v.15
       version: 2.0.0-beta.v.15
     '@cloudflare/workers-auth':
       specifier: ^0.18.1
