@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parsePlatformAuthenticationSetup } from '@buildwf/platform';
+import { parsePlatformAuthenticationSetup } from '@builtbyfriends/platform';
 import { password, text } from '@voidzero-dev/vite-plus-prompts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { PlatformCloudflareClient } from '../../src/cli/platform-cloudflare.ts';

@@ -1,4 +1,4 @@
-import { bwfPlugin } from '@buildwf/bwf';
+import { bwfPlugin } from '@builtbyfriends/bwf';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite-plus';
 

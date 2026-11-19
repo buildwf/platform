@@ -34,8 +34,8 @@ const workers = [
   ['dispatch', join(repositoryRoot, 'platform', 'packages', 'dispatch', 'src', 'index.ts')],
 ];
 const sourceAliases = {
-  '@buildwf/deploy-core': join(repositoryRoot, 'packages', 'deploy-core', 'src', 'index.ts'),
-  '@buildwf/edge': join(repositoryRoot, 'packages', 'edge', 'src', 'index.ts'),
+  '@builtbyfriends/deploy-core': join(repositoryRoot, 'packages', 'deploy-core', 'src', 'index.ts'),
+  '@builtbyfriends/edge': join(repositoryRoot, 'packages', 'edge', 'src', 'index.ts'),
 };
 
 try {

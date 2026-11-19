@@ -100,7 +100,7 @@ interface EmailEnvelope {
 /** Shared with the dedicated gateway. */
 export type { EmailEnvelope };
 
-/** Mirrors `@buildwf/bwf/email`'s EmailAction. */
+/** Mirrors `@builtbyfriends/bwf/email`'s EmailAction. */
 type EmailAction =
   | { type: 'reject'; reason: string }
   | { type: 'forward'; to: string; headers?: Record<string, string> }

@@ -4,7 +4,7 @@ import {
   resolvePlatformApplicationEnvironment,
   PLATFORM_DISABLED_KEY,
   PLATFORM_DISABLED_VALUE,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { eq, lt, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { adminFateHandler } from './admin/fate/server.ts';

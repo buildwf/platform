@@ -36,7 +36,7 @@ Place the environment suffix **before** `.ws`, as in `chat.dev.ws.ts`.
 Use `defineRoom()` when clients should share a room or document identified by the route.
 
 ```ts
-import { defineRoom } from '@buildwf/bwf/ws';
+import { defineRoom } from '@builtbyfriends/bwf/ws';
 // routes/chat/[room].ws.ts
 import * as v from 'valibot';
 
@@ -92,7 +92,7 @@ export default defineRoom({
 Use `defineWebSocket()` when each connection is handled independently instead of as a shared room.
 
 ```ts
-import { defineWebSocket } from '@buildwf/bwf/ws';
+import { defineWebSocket } from '@builtbyfriends/bwf/ws';
 // routes/notifications.ws.ts
 import * as v from 'valibot';
 
@@ -114,10 +114,10 @@ export default defineWebSocket({
 
 ## Client
 
-Use `connect()` from `@buildwf/bwf/ws` on the client:
+Use `connect()` from `@builtbyfriends/bwf/ws` on the client:
 
 ```ts
-import { connect } from '@buildwf/bwf/ws';
+import { connect } from '@builtbyfriends/bwf/ws';
 
 const socket = connect('/chat/[room]', {
   params: { room: 'general' },

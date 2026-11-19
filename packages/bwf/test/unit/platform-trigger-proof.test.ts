@@ -1,4 +1,4 @@
-import type { CloudflareTriggerConfig } from '@buildwf/deploy-cloudflare';
+import type { CloudflareTriggerConfig } from '@builtbyfriends/deploy-cloudflare';
 import { expect, it } from 'vite-plus/test';
 import { platformWorkerLiveTriggersMatch } from '../../src/cli/platform-trigger-proof.ts';
 

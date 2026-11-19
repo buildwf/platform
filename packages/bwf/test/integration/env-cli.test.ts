@@ -121,8 +121,8 @@ describe('bwf env types (subprocess)', () => {
     const dtsPath = join(root, '.bwf', 'env.d.ts');
     expect(existsSync(dtsPath)).toBe(true);
     const dts = readFileSync(dtsPath, 'utf-8');
-    expect(dts).toContain('declare module "@buildwf/bwf/env"');
-    expect(dts).toContain('declare module "@buildwf/bwf/handler"');
+    expect(dts).toContain('declare module "@builtbyfriends/bwf/env"');
+    expect(dts).toContain('declare module "@builtbyfriends/bwf/handler"');
     expect(dts).toContain('typeof import("../env.ts")');
   });
 

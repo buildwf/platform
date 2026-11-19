@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
-    "@buildwf/edge": "workspace:*",
+    "@builtbyfriends/edge": "workspace:*",
     "@nosamcloud/api": "workspace:*",
     "jose": "catalog:"
   },

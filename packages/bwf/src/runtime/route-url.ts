@@ -1,4 +1,4 @@
-import type { EncodedRoutePathMap, RoutePathMap, RouteTypesConfig } from '@buildwf/bwf/routes';
+import type { EncodedRoutePathMap, RoutePathMap, RouteTypesConfig } from '@builtbyfriends/bwf/routes';
 
 /**
  * Encode one path segment of a route param. `encodeURIComponent` keeps dots, and
@@ -114,7 +114,7 @@ export type Href = TypedRoutes extends true
  * A URL an HTTP request can target: one of the app's routes or an absolute
  * `http://`/`https://` URL. A plain string unless `routing.typedRoutes` is on.
  */
-// Not re-exported from `@buildwf/bwf/routes`: apps cast runtime strings with `as RouteUrl`.
+// Not re-exported from `@builtbyfriends/bwf/routes`: apps cast runtime strings with `as RouteUrl`.
 export type RequestUrl = TypedRoutes extends true
   ? RouteUrl | `${'http://' | 'https://'}${string}`
   : string;

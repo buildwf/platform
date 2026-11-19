@@ -9,7 +9,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "types": ["@buildwf/bwf/env"],
+    "types": ["@builtbyfriends/bwf/env"],
     "allowImportingTsExtensions": true
   },
   "include": ["src", "routes", "db"]

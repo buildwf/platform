@@ -1,7 +1,7 @@
 import { describe, expectTypeOf, it } from 'vite-plus/test';
 import { routeUrl, type RouteOptions, type RoutePath } from '../../src/routes-stub.ts';
 
-declare module '@buildwf/bwf/routes' {
+declare module '@builtbyfriends/bwf/routes' {
   interface RoutePathMap {
     '/route-types': never;
     '/route-types/:id': 'id';

@@ -1,4 +1,4 @@
-import type { RedirectRule } from '@buildwf/deploy-core';
+import type { RedirectRule } from '@builtbyfriends/deploy-core';
 
 export type {
   AssetConfig,
@@ -20,7 +20,7 @@ export type {
   SandboxManifestMeta,
   ScheduleMeta,
   WebSocketManifestMeta,
-} from '@buildwf/deploy-core';
+} from '@builtbyfriends/deploy-core';
 
 /** CLI- and development-only routing metadata, stripped before serialization. */
 export type DevRedirectRule = RedirectRule & {

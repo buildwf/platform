@@ -5,12 +5,12 @@ import {
   createPlatformInstallationManifest,
   PLATFORM_DISABLED_KEY,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import {
   getPlatformRuntimeDirectory,
   PLATFORM_ADMIN_CLIENT_ASSET_PATH,
   PLATFORM_ADMIN_STYLE_ASSET_PATH,
-} from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform/installer';
 import { eq, sql } from 'drizzle-orm';
 import { chromium } from 'playwright';
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vite-plus/test';

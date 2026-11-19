@@ -68,11 +68,11 @@ describe('application analysis consumer parity', () => {
       const root = project(
         { inference: { bindings: { kv } } },
         {
-          'routes/api/data.ts': `import { storage } from '@buildwf/bwf/storage';
-import { kv } from '@buildwf/bwf/kv';
-import { requireAuth } from '@buildwf/bwf/auth';
+          'routes/api/data.ts': `import { storage } from '@builtbyfriends/bwf/storage';
+import { kv } from '@builtbyfriends/bwf/kv';
+import { requireAuth } from '@builtbyfriends/bwf/auth';
 export const GET = (c) => ({ storage, kv, user: requireAuth(c) });`,
-          'src/live.ts': `import { defineLiveStream } from '@buildwf/bwf/live';
+          'src/live.ts': `import { defineLiveStream } from '@builtbyfriends/bwf/live';
 export const live = defineLiveStream({ id: 'app' });`,
         },
       );

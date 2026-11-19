@@ -1,4 +1,4 @@
-import { defineMiddleware } from '@buildwf/bwf';
+import { defineMiddleware } from '@builtbyfriends/bwf';
 
 // No dashboard page is meant to be framed. Only HTML is touched, so redirects,
 // WebSocket upgrades and other responses pass through unchanged.

@@ -4,8 +4,8 @@ import { isIdentifier, isMemberExpression, type AstNode, type AstProgram } from 
 import { staticLiteral, unwrapStaticExpression } from '../shared/static-exports.ts';
 
 export const CLIENT_MODULES: ReadonlySet<string> = new Set([
-  '@buildwf/bwf/client',
-  '@buildwf/bwf/client/react',
+  '@builtbyfriends/bwf/client',
+  '@builtbyfriends/bwf/client/react',
 ]);
 
 function name(node: AstNode | undefined): unknown {

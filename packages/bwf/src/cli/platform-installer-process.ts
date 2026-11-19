@@ -10,7 +10,7 @@ import {
   type CloudflareCommandResult,
   type CloudflareOperation,
   type CloudflareCommandRunner,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import {
   type ConditionalWorkerCreateProxy,
   type ConditionalWorkerCreateState,

@@ -28,7 +28,7 @@ The framework, CLI, and platform share one workspace:
 | `platform/packages/dashboard`                        | User dashboard and its local UI components, styles and assets   |
 
 The installer consumes integrity-checked runtime artifacts from
-[`@buildwf/platform`](../../packages/platform/README.md). It generates resource
+[`@builtbyfriends/platform`](../../packages/platform/README.md). It generates resource
 names, bindings and hostnames for the selected installation. A fork can build
 that same runtime from its own source and supply it to `bwf platform upgrade`.
 

@@ -139,7 +139,7 @@ bwf project logs --level error --range 12h
 bwf project logs --level error --filter websocket
 ```
 
-Logs include top-level `console.*` calls and uncaught errors captured by Cloudflare Tail. If you catch an error and save it only to your database, it won't appear here. Also log it with `console.error()` or `logger.error()` from `@buildwf/bwf/log`. On hosted bwf targets, pass the `Error` object itself to `console.error()`, as in `console.error('Save failed:', error)`, to see its stack trace under the log line. Logging only `error.message` shows no stack.
+Logs include top-level `console.*` calls and uncaught errors captured by Cloudflare Tail. If you catch an error and save it only to your database, it won't appear here. Also log it with `console.error()` or `logger.error()` from `@builtbyfriends/bwf/log`. On hosted bwf targets, pass the `Error` object itself to `console.error()`, as in `console.error('Save failed:', error)`, to see its stack trace under the log line. Logging only `error.message` shows no stack.
 
 For errors that never reach your Worker, such as edge routing errors or static site requests, use `bwf project requests --status 5xx`.
 

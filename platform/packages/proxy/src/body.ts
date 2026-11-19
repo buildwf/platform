@@ -1,4 +1,4 @@
-import { isRecord } from '@buildwf/deploy-core';
+import { isRecord } from '@builtbyfriends/deploy-core';
 
 export function asString(value: unknown): string | null {
   return typeof value === 'string' ? value : null;

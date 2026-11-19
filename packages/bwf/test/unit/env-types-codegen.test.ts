@@ -88,8 +88,8 @@ describe('generateEnvTypes', () => {
     try {
       const { dts } = generateEnvTypes(join(root, 'env.ts'), outDir);
       expect(dts).toContain('export {}');
-      expect(dts).toContain('declare module "@buildwf/bwf/env"');
-      expect(dts).toContain('declare module "@buildwf/bwf/handler"');
+      expect(dts).toContain('declare module "@builtbyfriends/bwf/env"');
+      expect(dts).toContain('declare module "@builtbyfriends/bwf/handler"');
       expect(dts).toContain('interface ValidatedEnv extends _NosamEnvShape');
       expect(dts).toContain('interface CloudBindings extends _NosamEnvShape');
       // Path is relative to outDir and keeps the source extension for NodeNext.

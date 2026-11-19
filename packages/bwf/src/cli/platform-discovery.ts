@@ -1,4 +1,4 @@
-import { parsePlatformDiscoveryDocument, type PlatformDiscoveryDocument } from '@buildwf/platform';
+import { parsePlatformDiscoveryDocument, type PlatformDiscoveryDocument } from '@builtbyfriends/platform';
 import { normalizePlatformApiUrl } from './platform-registry.ts';
 
 /** Discovery was refused because the platform traffic gate is closed. */

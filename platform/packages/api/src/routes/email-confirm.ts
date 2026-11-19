@@ -15,7 +15,7 @@
  * See the email design's recipient-consent section for the trust boundary.
  */
 
-import { browserPageLead, browserPageStatus } from '@buildwf/platform/browser-page';
+import { browserPageLead, browserPageStatus } from '@builtbyfriends/platform/browser-page';
 import { Hono, type Context } from 'hono';
 import { verifyConfirmToken } from '../auth/confirm-token.ts';
 import { platformBrowserPage } from '../browser-page.ts';

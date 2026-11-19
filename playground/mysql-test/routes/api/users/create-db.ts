@@ -1,5 +1,5 @@
-import { defineHandler } from '@buildwf/bwf';
-import { createDb } from '@buildwf/bwf/db';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { createDb } from '@builtbyfriends/bwf/db';
 import { users } from '@schema';
 
 export const GET = defineHandler(async (c) => {

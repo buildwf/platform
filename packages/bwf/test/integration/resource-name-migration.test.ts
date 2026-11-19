@@ -311,7 +311,7 @@ export default defineRoom({
       writeFileSync(
         join(directory, 'vite.config.ts'),
         `import { defineConfig } from 'vite-plus';
-import { bwfPlugin } from '@buildwf/bwf';
+import { bwfPlugin } from '@builtbyfriends/bwf';
 export default defineConfig({ plugins: [bwfPlugin()] });\n`,
       );
       writeFileSync(
@@ -325,7 +325,7 @@ export default defineConfig({ plugins: [bwfPlugin()] });\n`,
       writeFileSync(join(directory, 'index.html'), '<!doctype html><p>Named resource fixture</p>');
       writeFileSync(
         join(directory, 'durable-objects', 'visits.ts'),
-        `import { defineDurableState } from '@buildwf/bwf/durable';
+        `import { defineDurableState } from '@builtbyfriends/bwf/durable';
 export default defineDurableState({
   name: 'counter',
   initialState: { count: 41 },
@@ -339,7 +339,7 @@ export async function GET(c) { return c.json(await Counter.get('global').increme
       );
       writeFileSync(
         join(directory, 'routes', 'rooms', '[id].ws.ts'),
-        `import { defineRoom } from '@buildwf/bwf/ws';
+        `import { defineRoom } from '@builtbyfriends/bwf/ws';
 const schema = { '~standard': { version: 1, vendor: 'fixture', validate: value => ({ value }) } };
 export default defineRoom({
   name: 'chat-room',

@@ -1,5 +1,5 @@
 import { execFile, spawn } from 'node:child_process';
-import type { CloudflareOperation } from '@buildwf/deploy-cloudflare';
+import type { CloudflareOperation } from '@builtbyfriends/deploy-cloudflare';
 import {
   createCloudflareProcessRunner,
   encodeCloudflareOperation,

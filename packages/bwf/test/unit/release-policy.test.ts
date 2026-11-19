@@ -11,8 +11,8 @@ describe('public package release policy', () => {
   ])('publishes %s only to %s', (version, npmTag) => {
     expect(
       releasePolicy(`v${version}`, [
-        { name: '@buildwf/bwf', version },
-        { name: '@buildwf/platform', version },
+        { name: '@builtbyfriends/bwf', version },
+        { name: '@builtbyfriends/platform', version },
       ]),
     ).toEqual({ version, npmTag });
   });
@@ -27,8 +27,8 @@ describe('public package release policy', () => {
   ])('treats %s as an attempt to publish %s to %s', (tag, version, npmTag) => {
     expect(
       releasePolicy(tag, [
-        { name: '@buildwf/bwf', version },
-        { name: '@buildwf/platform', version },
+        { name: '@builtbyfriends/bwf', version },
+        { name: '@builtbyfriends/platform', version },
       ]),
     ).toEqual({ version, npmTag });
   });
@@ -51,7 +51,7 @@ describe('public package release policy', () => {
   });
 
   it('keeps numeric prereleases distinct from stable release retries', () => {
-    expect(() => releasePolicy('v0.21.0-1', [{ name: '@buildwf/bwf', version: '0.21.0' }])).toThrow(
+    expect(() => releasePolicy('v0.21.0-1', [{ name: '@builtbyfriends/bwf', version: '0.21.0' }])).toThrow(
       'Retry tags use +retry.N',
     );
   });
@@ -59,7 +59,7 @@ describe('public package release policy', () => {
   it.each(['0.21.1', '0.21.0+retry.1'])(
     'requires retry tags to match the plain package version (%s)',
     (version) => {
-      expect(() => releasePolicy('v0.21.0+retry.1', [{ name: '@buildwf/bwf', version }])).toThrow(
+      expect(() => releasePolicy('v0.21.0+retry.1', [{ name: '@builtbyfriends/bwf', version }])).toThrow(
         'does not match release',
       );
     },
@@ -68,14 +68,14 @@ describe('public package release policy', () => {
   it('checks every package on a retry, not just the CLI', () => {
     expect(() =>
       releasePolicy('v0.21.0+retry.1', [
-        { name: '@buildwf/bwf', version: '0.21.0' },
-        { name: '@buildwf/platform', version: '0.20.0' },
+        { name: '@builtbyfriends/bwf', version: '0.21.0' },
+        { name: '@builtbyfriends/platform', version: '0.20.0' },
       ]),
-    ).toThrow('@buildwf/platform@0.20.0 does not match');
+    ).toThrow('@builtbyfriends/platform@0.20.0 does not match');
   });
 
   it.each(['v0.1.0', 'v3.0.1'])('rejects the unavailable version %s', (tag) => {
-    expect(() => releasePolicy(tag, [{ name: '@buildwf/bwf', version: tag.slice(1) }])).toThrow(
+    expect(() => releasePolicy(tag, [{ name: '@builtbyfriends/bwf', version: tag.slice(1) }])).toThrow(
       'cannot be reused',
     );
   });
@@ -84,7 +84,7 @@ describe('public package release policy', () => {
     'rejects retrying an unavailable version: %s',
     (tag) => {
       expect(() =>
-        releasePolicy(tag, [{ name: '@buildwf/bwf', version: tag.slice(1).split('+')[0]! }]),
+        releasePolicy(tag, [{ name: '@builtbyfriends/bwf', version: tag.slice(1).split('+')[0]! }]),
       ).toThrow('cannot be reused');
     },
   );
@@ -99,7 +99,7 @@ describe('public package release policy', () => {
   it('rejects mismatched CLI, scaffolder, adapter, or runtime versions', () => {
     expect(() =>
       releasePolicy('v0.11.0-beta.1', [
-        { name: '@buildwf/bwf', version: '0.11.0-beta.1' },
+        { name: '@builtbyfriends/bwf', version: '0.11.0-beta.1' },
         { name: 'create-bwf', version: '0.10.14' },
       ]),
     ).toThrow('create-bwf@0.10.14 does not match');

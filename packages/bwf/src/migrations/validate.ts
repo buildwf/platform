@@ -1,5 +1,5 @@
 import { existsSync, readdirSync } from 'node:fs';
-import { hasStandalonePragma } from '@buildwf/deploy-core';
+import { hasStandalonePragma } from '@builtbyfriends/deploy-core';
 import { join } from 'pathslash';
 import {
   readJournal,

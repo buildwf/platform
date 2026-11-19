@@ -50,7 +50,7 @@ let platformRegistryDirectory: string;
 it('pins compatibility date in the lock without rewriting authored TypeScript', () => {
   const root = mkdtempSync(join(tmpdir(), 'nosam-init-authored-config-'));
   const source =
-    "import { defineConfig } from '@buildwf/bwf/config';\nexport default defineConfig({ remote: process.env.REMOTE === '1' });\n";
+    "import { defineConfig } from '@builtbyfriends/bwf/config';\nexport default defineConfig({ remote: process.env.REMOTE === '1' });\n";
   try {
     writeFileSync(join(root, 'bwf.config.ts'), source);
     ensureBwfWorkerCompatibilityDate(root);
@@ -393,7 +393,7 @@ function withTempDir(run: (root: string) => void): void {
 
 function writeMockGeneratedMigration(root: string): void {
   const schema = readFileSync(join(root, 'db', 'schema.ts'), 'utf-8');
-  const isPostgres = schema.includes('from "@buildwf/bwf/schema-pg"');
+  const isPostgres = schema.includes('from "@builtbyfriends/bwf/schema-pg"');
   const migrationsDir = join(root, 'db', 'migrations');
   const metaDir = join(migrationsDir, 'meta');
   mkdirSync(metaDir, { recursive: true });
@@ -502,10 +502,10 @@ function workspaceNotes() {
 }
 
 function writeInstalledBwf(dir: string): void {
-  mkdirSync(join(dir, 'node_modules', '@buildwf', 'bwf'), { recursive: true });
+  mkdirSync(join(dir, 'node_modules', '@builtbyfriends', 'bwf'), { recursive: true });
   writeFileSync(
-    join(dir, 'node_modules', '@buildwf', 'bwf', 'package.json'),
-    JSON.stringify({ name: '@buildwf/bwf', version: '0.0.0' }, null, 2) + '\n',
+    join(dir, 'node_modules', '@builtbyfriends', 'bwf', 'package.json'),
+    JSON.stringify({ name: '@builtbyfriends/bwf', version: '0.0.0' }, null, 2) + '\n',
   );
 }
 
@@ -517,7 +517,7 @@ function writeExistingViteApp(
   mkdirSync(root, { recursive: true });
   const devDependencies: Record<string, string> = { vite: '^8.0.0' };
   if (options.bwf !== undefined) {
-    devDependencies['@buildwf/bwf'] = options.bwf;
+    devDependencies['@builtbyfriends/bwf'] = options.bwf;
   }
   writeFileSync(
     join(root, 'package.json'),
@@ -545,9 +545,9 @@ async function runInitWithDemo(root: string): Promise<void> {
 function expectBwfDeclared(root: string): void {
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
   const bwfSpec =
-    pkg.devDependencies?.['@buildwf/bwf'] ??
-    pkg.dependencies?.['@buildwf/bwf'] ??
-    pkg.peerDependencies?.['@buildwf/bwf'];
+    pkg.devDependencies?.['@builtbyfriends/bwf'] ??
+    pkg.dependencies?.['@builtbyfriends/bwf'] ??
+    pkg.peerDependencies?.['@builtbyfriends/bwf'];
   expect(typeof bwfSpec).toBe('string');
   expect(bwfSpec.length).toBeGreaterThan(0);
 }
@@ -833,8 +833,8 @@ describe('isBwfResolvableFrom', () => {
   function probeCalls(kind: 'cjs' | 'esm'): number {
     const argv =
       kind === 'cjs'
-        ? ['-e', "require.resolve('@buildwf/bwf')"]
-        : ['--input-type=module', '-e', "import.meta.resolve('@buildwf/bwf')"];
+        ? ['-e', "require.resolve('@builtbyfriends/bwf')"]
+        : ['--input-type=module', '-e', "import.meta.resolve('@builtbyfriends/bwf')"];
     return mockSpawnSync.mock.calls.filter((call) => {
       const args: unknown = call[1];
       return Array.isArray(args) && argv.every((arg, index) => args[index] === arg);
@@ -913,7 +913,7 @@ describe('isBwfResolvableFrom', () => {
     }
   });
 
-  it('returns true when `node_modules/@buildwf/bwf/package.json` exists at `start` (unchanged legacy shape)', () => {
+  it('returns true when `node_modules/@builtbyfriends/bwf/package.json` exists at `start` (unchanged legacy shape)', () => {
     const root = mkdtempSync(join(tmpdir(), 'nosam-init-nm-'));
     try {
       writeInstalledBwf(root);
@@ -923,7 +923,7 @@ describe('isBwfResolvableFrom', () => {
     }
   });
 
-  it('returns true when `node_modules/@buildwf/bwf/package.json` exists at an ancestor (hoisted monorepo shape)', () => {
+  it('returns true when `node_modules/@builtbyfriends/bwf/package.json` exists at an ancestor (hoisted monorepo shape)', () => {
     const root = mkdtempSync(join(tmpdir(), 'nosam-init-hoist-'));
     try {
       writeInstalledBwf(root);
@@ -936,7 +936,7 @@ describe('isBwfResolvableFrom', () => {
   });
 
   // Installed PnP data can be stale (for example after `nosam` was removed on another branch).
-  it('returns false when the PnP probe for `require.resolve("@buildwf/bwf")` fails (stale .pnp.cjs)', () => {
+  it('returns false when the PnP probe for `require.resolve("@builtbyfriends/bwf")` fails (stale .pnp.cjs)', () => {
     const root = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-stale-'));
     try {
       writeFileSync(join(root, '.pnp.cjs'), '// pnp stub\n');
@@ -951,7 +951,7 @@ describe('isBwfResolvableFrom', () => {
     }
   });
 
-  it('returns true when the PnP probe for `require.resolve("@buildwf/bwf")` succeeds', () => {
+  it('returns true when the PnP probe for `require.resolve("@builtbyfriends/bwf")` succeeds', () => {
     const root = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-ok-'));
     try {
       writeFileSync(join(root, '.pnp.cjs'), '// pnp stub\n');
@@ -1015,7 +1015,7 @@ describe('isBwfResolvableFrom', () => {
     }
   });
 
-  it('does not spawn the PnP probe when node_modules/@buildwf/bwf exists at start (even with PnP markers)', () => {
+  it('does not spawn the PnP probe when node_modules/@builtbyfriends/bwf exists at start (even with PnP markers)', () => {
     const root = mkdtempSync(join(tmpdir(), 'nosam-init-pnp-nm-'));
     try {
       writeInstalledBwf(root);
@@ -1169,7 +1169,7 @@ describe('isScaffoldableEmptyProject', () => {
           {
             name: 'my-app',
             devDependencies: {
-              '@buildwf/bwf': '^0.0.1',
+              '@builtbyfriends/bwf': '^0.0.1',
             },
           },
           null,
@@ -1189,7 +1189,7 @@ describe('isScaffoldableEmptyProject', () => {
         JSON.stringify(
           {
             devDependencies: {
-              '@buildwf/bwf': '^0.8.9',
+              '@builtbyfriends/bwf': '^0.8.9',
             },
           },
           null,
@@ -1210,9 +1210,9 @@ describe('isScaffoldableEmptyProject', () => {
           '',
         ].join('\n'),
       );
-      mkdirSync(join(root, 'node_modules', '@buildwf', 'bwf'), { recursive: true });
+      mkdirSync(join(root, 'node_modules', '@builtbyfriends', 'bwf'), { recursive: true });
       writeFileSync(
-        join(root, 'node_modules', '@buildwf', 'bwf', 'package.json'),
+        join(root, 'node_modules', '@builtbyfriends', 'bwf', 'package.json'),
         '{"name":"nosam"}\n',
       );
 
@@ -1228,7 +1228,7 @@ describe('isScaffoldableEmptyProject', () => {
           {
             name: 'my-app',
             devDependencies: {
-              '@buildwf/bwf': '^0.2.3',
+              '@builtbyfriends/bwf': '^0.2.3',
               '@vitejs/plugin-react': '^6.3.0',
             },
           },
@@ -1249,7 +1249,7 @@ describe('isScaffoldableEmptyProject', () => {
         JSON.stringify(
           {
             devDependencies: {
-              '@buildwf/bwf': '^0.8.9',
+              '@builtbyfriends/bwf': '^0.8.9',
             },
           },
           null,
@@ -1286,7 +1286,7 @@ describe('isScaffoldableEmptyProject', () => {
               react: '^19.2.4',
             },
             devDependencies: {
-              '@buildwf/bwf': '^0.2.3',
+              '@builtbyfriends/bwf': '^0.2.3',
               '@vitejs/plugin-react': '^6.3.0',
               vite: '^8.0.10',
               'vite-plus': '^0.1.21',
@@ -1354,7 +1354,7 @@ describe('isScaffoldableEmptyProject', () => {
           {
             name: 'my-app',
             devDependencies: {
-              '@buildwf/bwf': '^0.0.1',
+              '@builtbyfriends/bwf': '^0.0.1',
               express: '^4.18.0',
             },
           },
@@ -1381,7 +1381,7 @@ describe('isScaffoldableEmptyProject', () => {
       expect(pkg.dependencies.hono).toBeDefined();
       expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
       expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
-      expect(pkg.devDependencies['@buildwf/bwf']).toBeDefined();
+      expect(pkg.devDependencies['@builtbyfriends/bwf']).toBeDefined();
       expect(pkg.devDependencies.typescript).toBeDefined();
       expect(pkg.devDependencies['@vitejs/plugin-react']).toBeDefined();
       expect(pkg.devDependencies['@types/react']).toBeDefined();
@@ -1424,7 +1424,7 @@ describe('isScaffoldableEmptyProject', () => {
         'export const GET = defineHandler',
       );
       expect(readFileSync(join(root, 'db', 'schema.ts'), 'utf-8')).toContain(
-        'from "@buildwf/bwf/schema-d1"',
+        'from "@builtbyfriends/bwf/schema-d1"',
       );
       expect(readFileSync(join(root, 'db', 'seed.ts'), 'utf-8')).toContain('defineSeed');
       expect(listMigrationSqlFiles(root)).toEqual(['0000_generated.sql']);
@@ -1469,7 +1469,7 @@ describe('isScaffoldableEmptyProject', () => {
       expect(pkg.dependencies.react).toBeDefined();
       expect(pkg.dependencies['react-dom']).toBeDefined();
       expect(pkg.dependencies.hono).toBeDefined();
-      expect(pkg.devDependencies['@buildwf/bwf']).toBeDefined();
+      expect(pkg.devDependencies['@builtbyfriends/bwf']).toBeDefined();
       expect(pkg.devDependencies['@vitejs/plugin-react']).toBeDefined();
       expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
       expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
@@ -1484,7 +1484,7 @@ describe('isScaffoldableEmptyProject', () => {
       expect(page).toContain('This starter is a React single-page app with no backend yet.');
       expect(page).toContain('features.');
       expect(page).not.toContain('href="/api/hello"');
-      expect(page).not.toContain('@buildwf/bwf/client');
+      expect(page).not.toContain('@builtbyfriends/bwf/client');
 
       expect(() => readFileSync(join(root, 'routes', 'api', 'messages.ts'), 'utf-8')).toThrow();
       expect(() => readFileSync(join(root, 'routes', 'api', 'hello.ts'), 'utf-8')).toThrow();
@@ -1571,7 +1571,7 @@ describe('isScaffoldableEmptyProject', () => {
         JSON.stringify(
           {
             devDependencies: {
-              '@buildwf/bwf': '^0.8.9',
+              '@builtbyfriends/bwf': '^0.8.9',
             },
           },
           null,
@@ -1592,9 +1592,9 @@ describe('isScaffoldableEmptyProject', () => {
           '',
         ].join('\n'),
       );
-      mkdirSync(join(root, 'node_modules', '@buildwf', 'bwf'), { recursive: true });
+      mkdirSync(join(root, 'node_modules', '@builtbyfriends', 'bwf'), { recursive: true });
       writeFileSync(
-        join(root, 'node_modules', '@buildwf', 'bwf', 'package.json'),
+        join(root, 'node_modules', '@builtbyfriends', 'bwf', 'package.json'),
         '{"name":"nosam"}\n',
       );
 
@@ -1606,7 +1606,7 @@ describe('isScaffoldableEmptyProject', () => {
       const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
       expect(pkg.scripts.dev).toBe('vp dev');
       expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
-      expect(pkg.devDependencies['@buildwf/bwf']).toBe('^0.8.9');
+      expect(pkg.devDependencies['@builtbyfriends/bwf']).toBe('^0.8.9');
       expect(readFileSync(join(root, 'vite.config.ts'), 'utf-8')).toContain(
         'plugins: [react(), bwfPlugin()]',
       );
@@ -1676,7 +1676,7 @@ describe('isScaffoldableEmptyProject', () => {
 
       const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
       expect(pkg.type).toBe('module');
-      expect(pkg.devDependencies['@buildwf/bwf']).toBeDefined();
+      expect(pkg.devDependencies['@builtbyfriends/bwf']).toBeDefined();
       expect(pkg.scripts.dev).toBe('vite');
       expect(existsSync(join(root, 'vite.config.ts'))).toBe(true);
       expect(mockText).not.toHaveBeenCalled();
@@ -1702,12 +1702,12 @@ describe('isScaffoldableEmptyProject', () => {
       expect(pkg.type).toBeUndefined();
       expect(pkg.scripts.dev).toBe('vite');
       expect(pkg.scripts.build).toBe('vite build');
-      expect(pkg.devDependencies['@buildwf/bwf']).toBeDefined();
+      expect(pkg.devDependencies['@builtbyfriends/bwf']).toBeDefined();
       expect(pkg.devDependencies.vite).toBe('^8.0.10');
 
       expect(existsSync(join(root, 'vite.config.ts'))).toBe(false);
       const viteConfig = readFileSync(join(root, 'vite.config.mts'), 'utf-8');
-      expect(viteConfig).toContain('import { bwfPlugin } from "@buildwf/bwf";');
+      expect(viteConfig).toContain('import { bwfPlugin } from "@builtbyfriends/bwf";');
       expect(viteConfig).toContain('plugins: [bwfPlugin()]');
       expect(mockConfirm).toHaveBeenCalledWith({
         message: 'Create .github/workflows/bwf-deploy.yml to deploy on pushes to main?',
@@ -1896,7 +1896,7 @@ jobs:
             },
             devDependencies: {
               vite: '^8.0.10',
-              '@buildwf/bwf': '^0.6.0',
+              '@builtbyfriends/bwf': '^0.6.0',
             },
           },
           null,
@@ -1927,7 +1927,7 @@ export default defineConfig({
       expect(pkg.scripts.test).toBe('vitest');
 
       const viteConfig = readFileSync(join(root, 'vite.config.ts'), 'utf-8');
-      expect(viteConfig).toContain('import { bwfPlugin } from "@buildwf/bwf";');
+      expect(viteConfig).toContain('import { bwfPlugin } from "@builtbyfriends/bwf";');
       expect(viteConfig).toContain(`plugins: [
     bwfPlugin(),
     react(),`);
@@ -1955,7 +1955,7 @@ export default defineConfig({
             name: 'nested-vite-plugins-app',
             devDependencies: {
               vite: '^8.0.10',
-              '@buildwf/bwf': '^0.6.0',
+              '@builtbyfriends/bwf': '^0.6.0',
             },
           },
           null,
@@ -2007,7 +2007,7 @@ export default defineConfig({
             name: 'nested-vite-no-top-level-plugins-app',
             devDependencies: {
               vite: '^8.0.10',
-              '@buildwf/bwf': '^0.6.0',
+              '@builtbyfriends/bwf': '^0.6.0',
             },
           },
           null,
@@ -2055,7 +2055,7 @@ export default defineConfig({
             name: 'dynamic-vite-app',
             devDependencies: {
               vite: '^8.0.10',
-              '@buildwf/bwf': '^0.6.0',
+              '@builtbyfriends/bwf': '^0.6.0',
             },
           },
           null,
@@ -2098,7 +2098,7 @@ export default config;
             name: 'dynamic-nested-vite-app',
             devDependencies: {
               vite: '^8.0.10',
-              '@buildwf/bwf': '^0.6.0',
+              '@builtbyfriends/bwf': '^0.6.0',
             },
           },
           null,
@@ -2192,7 +2192,7 @@ export default config;
 
         const instructions = readFileSync(join(root, 'AGENTS.md'), 'utf-8');
         expect(instructions).toContain('## bwf');
-        expect(instructions).toContain('node_modules/@buildwf/bwf/docs/');
+        expect(instructions).toContain('node_modules/@builtbyfriends/bwf/docs/');
         expect(instructions.match(/^- /gm)).toHaveLength(2);
         expect(existsSync(join(root, 'CLAUDE.md'))).toBe(false);
         expect(mockSelect).not.toHaveBeenCalled();
@@ -2268,7 +2268,7 @@ export default config;
           expect(updated).toContain(`<!--injected-by-nosam-v${currentVersion}-->`);
           expect(updated).not.toContain('1.2.3-beta.2+build.7');
           expect(updated).not.toContain('Stale managed instructions.');
-          expect(updated).toContain('node_modules/@buildwf/bwf/docs/');
+          expect(updated).toContain('node_modules/@builtbyfriends/bwf/docs/');
           expect(updated.match(/<!--injected-by-nosam-v/g)).toHaveLength(1);
           expect(updated.match(/<!--\/injected-by-nosam-->/g)).toHaveLength(1);
           expect(mockConfirm).toHaveBeenCalledExactlyOnceWith({
@@ -2402,7 +2402,7 @@ export default config;
 
       const tsconfig = JSON.parse(readFileSync(join(root, 'tsconfig.json'), 'utf-8'));
       expect(tsconfig.extends).toBeDefined();
-      expect(tsconfig.compilerOptions.types).toContain('@buildwf/bwf/env');
+      expect(tsconfig.compilerOptions.types).toContain('@builtbyfriends/bwf/env');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -2439,9 +2439,9 @@ export default config;
       expect(tsconfig.files).toEqual(['./src/main.ts', './.bwf/routes.d.ts']);
       expect(tsconfig.compilerOptions.paths).toEqual({
         '@/*': ['./src/*'],
-        '@buildwf/bwf/routes': ['./.bwf/routes.d.ts'],
+        '@builtbyfriends/bwf/routes': ['./.bwf/routes.d.ts'],
       });
-      expect(tsconfig.compilerOptions.types).toContain('@buildwf/bwf/env');
+      expect(tsconfig.compilerOptions.types).toContain('@builtbyfriends/bwf/env');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -2486,7 +2486,7 @@ export default config;
       expect(tsconfig.files).toEqual(['./base.d.ts', './.bwf/routes.d.ts']);
       expect(tsconfig.compilerOptions.paths).toEqual({
         '~/*': ['./src/*'],
-        '@buildwf/bwf/routes': ['./.bwf/routes.d.ts'],
+        '@builtbyfriends/bwf/routes': ['./.bwf/routes.d.ts'],
       });
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -2531,7 +2531,7 @@ export default config;
       expect(tsconfig.extends).toEqual(['../../tsconfig.base.json', './.bwf/tsconfig.json']);
       expect(tsconfig.compilerOptions.paths).toEqual({
         '@shared/*': ['./shared/*'],
-        '@buildwf/bwf/routes': ['./packages/app/.bwf/routes.d.ts'],
+        '@builtbyfriends/bwf/routes': ['./packages/app/.bwf/routes.d.ts'],
       });
     } finally {
       rmSync(workspaceRoot, { recursive: true, force: true });
@@ -2580,7 +2580,7 @@ export default config;
       expect(tsconfig.extends).toEqual(['./tsconfig.base.json', './.bwf/tsconfig.json']);
       expect(tsconfig.files).toEqual(['./.bwf/routes.d.ts']);
       expect(tsconfig.compilerOptions.paths).toEqual({
-        '@buildwf/bwf/routes': ['./.bwf/routes.d.ts'],
+        '@builtbyfriends/bwf/routes': ['./.bwf/routes.d.ts'],
       });
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -2597,7 +2597,7 @@ export default config;
             name: 'my-app',
             private: true,
             devDependencies: {
-              '@buildwf/bwf': '^0.2.3',
+              '@builtbyfriends/bwf': '^0.2.3',
               '@vitejs/plugin-react': '^6.3.0',
               vite: '^8.0.10',
               'vite-plus': '^0.1.21',
@@ -2618,7 +2618,7 @@ export default config;
       expect(pkg.scripts.dev).toBe('vp dev');
       expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
       expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
-      expect(pkg.devDependencies['@buildwf/bwf']).toBe('^0.2.3');
+      expect(pkg.devDependencies['@builtbyfriends/bwf']).toBe('^0.2.3');
       expectPnpmAllowBuilds(root);
 
       expect(mockSelect.mock.calls[0]?.[0].message).toBe('Choose a scaffold toolchain:');
@@ -2910,7 +2910,7 @@ export default config;
           {
             name: 'my-app',
             devDependencies: {
-              '@buildwf/bwf': '^0.0.1',
+              '@builtbyfriends/bwf': '^0.0.1',
               vite: '^8.0.0',
             },
           },
@@ -2953,7 +2953,7 @@ export default config;
     }
   });
 
-  it('skips install after demo scaffold when node_modules/@buildwf/bwf is already populated (workspace subpackage)', async () => {
+  it('skips install after demo scaffold when node_modules/@builtbyfriends/bwf is already populated (workspace subpackage)', async () => {
     const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
     try {
       // Without a lockfile init falls back to npm, which rejects `workspace:` specs.
@@ -3005,7 +3005,7 @@ export default config;
 
   it('skips install and starter migration in a fresh workspace subpackage', async () => {
     // Before the first workspace install, a leaf install rejects `workspace:`
-    // specs and drizzle-kit cannot resolve `@buildwf/bwf/schema-d1`.
+    // specs and drizzle-kit cannot resolve `@builtbyfriends/bwf/schema-d1`.
     const wsroot = mkdtempSync(join(tmpdir(), 'nosam-init-'));
     try {
       writeFileSync(join(wsroot, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
@@ -3095,7 +3095,7 @@ export default config;
     }
   });
 
-  it('runs install after demo scaffold when node_modules/@buildwf/bwf is missing (fresh clone)', async () => {
+  it('runs install after demo scaffold when node_modules/@builtbyfriends/bwf is missing (fresh clone)', async () => {
     const root = mkdtempSync(join(tmpdir(), 'nosam-init-'));
     try {
       writeExistingViteApp(root, { bwf: '^0.0.1' });
@@ -3112,8 +3112,8 @@ export default config;
   });
 
   it.each([
-    ['postgresql', 'pg', '@buildwf/bwf/schema-pg'],
-    ['mysql', 'mysql', '@buildwf/bwf/schema-mysql'],
+    ['postgresql', 'pg', '@builtbyfriends/bwf/schema-pg'],
+    ['mysql', 'mysql', '@builtbyfriends/bwf/schema-mysql'],
   ] as const)(
     'scaffolds the demo for the chosen %s database',
     async (dialect, configValue, schemaModule) => {
@@ -3128,7 +3128,7 @@ export default config;
         expect(readConfig(root).database).toBe(configValue);
         const schema = readFileSync(join(root, 'db', 'schema.ts'), 'utf-8');
         expect(schema).toContain(`from "${schemaModule}"`);
-        expect(schema).not.toContain('@buildwf/bwf/schema-d1');
+        expect(schema).not.toContain('@builtbyfriends/bwf/schema-d1');
         expect(drizzleGenerateCalls()).toHaveLength(1);
         const drizzleConfig = JSON.parse(
           readFileSync(join(root, '.bwf', 'drizzle.config.json'), 'utf-8'),
@@ -3266,7 +3266,7 @@ export default config;
       await runInitCommand(subpkgRoot);
 
       const pkg = JSON.parse(readFileSync(join(subpkgRoot, 'package.json'), 'utf-8'));
-      expect(pkg.devDependencies['@buildwf/bwf']).toBeDefined();
+      expect(pkg.devDependencies['@builtbyfriends/bwf']).toBeDefined();
       expect(pkg.devDependencies['@vitejs/plugin-react']).toBeDefined();
       expect(installCalls()).toHaveLength(0);
       expect(drizzleGenerateCalls()).toHaveLength(0);
@@ -3853,7 +3853,7 @@ describe('generateStarterMigration', () => {
     mkdirSync(join(root, 'db'), { recursive: true });
     writeFileSync(
       join(root, 'db', 'schema.ts'),
-      'import { sqliteTable } from "@buildwf/bwf/schema-d1";\nexport const messages = sqliteTable("messages", {});\n',
+      'import { sqliteTable } from "@builtbyfriends/bwf/schema-d1";\nexport const messages = sqliteTable("messages", {});\n',
     );
   }
 

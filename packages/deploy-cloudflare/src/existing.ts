@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
-import { isRecord } from '@buildwf/deploy-core';
+import { isRecord } from '@builtbyfriends/deploy-core';
 import { parseRootWranglerConfig } from './config.ts';
 import { isCleanCommandExit, isWorkerNotFound, type CloudflareCommandRunner } from './execute.ts';
 import type { CloudflareOperation } from './operations.ts';

@@ -8,7 +8,7 @@
       "*": ["./*"],
       "nosam": ["./src/index.ts"],
       "bwf/*": ["./src/*"],
-      "@buildwf/bwf/routes": ["./src/routes-stub.ts"]
+      "@builtbyfriends/bwf/routes": ["./src/routes-stub.ts"]
     },
     "strict": true,
     "noUnusedLocals": true,

@@ -32,7 +32,7 @@ afterEach(() => {
   }
 });
 
-/** Starts `nosam:env` for an app that uses `@buildwf/bwf/ai`, in a server with the given plugins. */
+/** Starts `nosam:env` for an app that uses `@builtbyfriends/bwf/ai`, in a server with the given plugins. */
 async function startAiApp(plugins: Array<PluginOption>): Promise<void> {
   const root = mkdtempSync(join(tmpdir(), 'nosam-ai-onboarding-'));
   roots.push(root);
@@ -44,7 +44,7 @@ async function startAiApp(plugins: Array<PluginOption>): Promise<void> {
   mkdirSync(join(root, 'routes/api'), { recursive: true });
   writeFileSync(
     join(root, 'routes/api/chat.ts'),
-    "import { ai } from '@buildwf/bwf/ai';\n\nexport const POST = () => ai;\n",
+    "import { ai } from '@builtbyfriends/bwf/ai';\n\nexport const POST = () => ai;\n",
   );
   vi.spyOn(process, 'cwd').mockReturnValue(root);
 

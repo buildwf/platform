@@ -15,7 +15,7 @@ vi.mock('ofetch', () => {
   };
 });
 
-declare module '@buildwf/bwf/routes' {
+declare module '@builtbyfriends/bwf/routes' {
   interface RouteMap {
     '/api/stream/[...path]': RouteMap['/api/stream/:path{.+}'];
     '/api/chat': {

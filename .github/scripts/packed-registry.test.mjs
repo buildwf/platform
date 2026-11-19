@@ -12,7 +12,7 @@ function createPackage(t, overrides = {}, includeLicense = true) {
   const directory = join(root, 'package');
   mkdirSync(directory);
   const manifest = {
-    name: '@buildwf/test',
+    name: '@builtbyfriends/test',
     version: '0.0.0',
     description: 'A bwf test package.',
     license: 'MIT',
@@ -33,7 +33,7 @@ function createPackage(t, overrides = {}, includeLicense = true) {
 
 test('accepts complete metadata and license in a real package tarball', (t) => {
   const inspected = inspectPackage(createPackage(t));
-  assert.equal(inspected.manifest.name, '@buildwf/test');
+  assert.equal(inspected.manifest.name, '@builtbyfriends/test');
   assert.match(inspected.integrity, /^sha512-/);
 });
 

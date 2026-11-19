@@ -7,7 +7,7 @@ import {
   readWranglerTopLevelString,
   type CloudflareCommandRunner,
   type ExistingCloudflareWorker,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { join } from 'pathslash';
 import { materializeCloudflareConfig } from '../cloudflare-config.ts';
 import { trustedCloudflareWorkerAccessHeaders } from '../shared/cf-access.ts';

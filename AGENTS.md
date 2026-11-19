@@ -6,7 +6,7 @@ React single-page apps with an optional backend on Cloudflare Workers, powered b
 
 - Documentation source lives in `docs/`.
   - Docs is a Vitepress project using our custom theme. When asked to "link the theme", temporarily edit `docs/package.json` so that `@voidzero-dev/vitepress-theme` point to `link:../../../theme`. Rerun `vp install` to link it. Revert these when asked to "unlink the theme".
-- Packages publish to npm as `bwf` and `@buildwf/*`. Consumer-facing code, docs examples, playground source, and package manifests should use only those public package names.
+- Packages publish to npm as `bwf` and `@builtbyfriends/*`. Consumer-facing code, docs examples, playground source, and package manifests should use only those public package names.
 - Published external runtime dependencies use compatible semver ranges. Preserve `workspace:*` for dependencies and peers between bwf packages. The lockfile fixes the versions tested in this repository. Keep Miniflare's dated alpha coordinated with the Cloudflare toolchain: a caret does not accept the next date's alpha. Keep the Sandbox SDK version aligned with its packaged Docker helper and verified platform helper layer.
 
 ## Important Note for Release Workflows
@@ -63,10 +63,10 @@ pnpm workspaces managed through Vite+. Shared dependency versions use the **pnpm
 
 | Package                                                      | npm name                     | Purpose                                                           |
 | ------------------------------------------------------------ | ---------------------------- | ----------------------------------------------------------------- |
-| [`packages/deploy-core`](./packages/deploy-core)             | `@buildwf/deploy-core`       | Shared deployment manifests, events, and target-neutral contracts |
-| [`packages/deploy-cloudflare`](./packages/deploy-cloudflare) | `@buildwf/deploy-cloudflare` | Direct Cloudflare config and verified upload primitives           |
-| [`packages/edge`](./packages/edge)                           | `@buildwf/edge`              | Shared routing, headers, and static edge runtime                  |
-| [`packages/platform`](./packages/platform/README.md)         | `@buildwf/platform`          | Self-hosted installation contracts and packaged platform runtime  |
+| [`packages/deploy-core`](./packages/deploy-core)             | `@builtbyfriends/deploy-core`       | Shared deployment manifests, events, and target-neutral contracts |
+| [`packages/deploy-cloudflare`](./packages/deploy-cloudflare) | `@builtbyfriends/deploy-cloudflare` | Direct Cloudflare config and verified upload primitives           |
+| [`packages/edge`](./packages/edge)                           | `@builtbyfriends/edge`              | Shared routing, headers, and static edge runtime                  |
+| [`packages/platform`](./packages/platform/README.md)         | `@builtbyfriends/platform`          | Self-hosted installation contracts and packaged platform runtime  |
 | [`packages/bwf`](./packages/bwf/AGENTS.md)                   | `bwf`                        | Core Vite plugin — routing, inference, migrations, CLI            |
 | [`docs`](./docs)                                             | (private)                    | Documentation site (VitePress)                                    |
 | [`platform`](./platform/README.md)                           | (private)                    | Self-hosted platform source, routing, proxy, logs, and dashboard  |

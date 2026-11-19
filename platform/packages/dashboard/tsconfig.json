@@ -8,7 +8,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "types": ["@buildwf/bwf/env", "@cloudflare/workers-types"],
+    "types": ["@builtbyfriends/bwf/env", "@cloudflare/workers-types"],
     "allowImportingTsExtensions": true,
     "noEmit": true
   },

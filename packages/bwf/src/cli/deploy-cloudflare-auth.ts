@@ -4,7 +4,7 @@ import {
   CloudflareWorkerInspectionError,
   type CloudflareCommandResult,
   type ExistingCloudflareWorker,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { isCancel, select } from '@voidzero-dev/vite-plus-prompts';
 import { isCI as ciInfoIsCI } from 'ci-info';
 import {

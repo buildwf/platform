@@ -39,10 +39,10 @@ function createProject(ext: string, sourceDir = ''): string {
   );
   writeFileSync(
     join(root, sourceDir, 'routes', 'api', `debug.dev.${ext}`),
-    `import { db } from '@buildwf/bwf/db';
-import { kv } from '@buildwf/bwf/kv';
-import { storage } from '@buildwf/bwf/storage';
-import { ai } from '@buildwf/bwf/ai';
+    `import { db } from '@builtbyfriends/bwf/db';
+import { kv } from '@builtbyfriends/bwf/kv';
+import { storage } from '@builtbyfriends/bwf/storage';
+import { ai } from '@builtbyfriends/bwf/ai';
 export const GET = () => ({ db, kv, storage, ai });`,
   );
   return root;
@@ -85,11 +85,11 @@ describe('environment-specific route binding inference', () => {
       mkdirSync(join(routesDir, '_components'));
       writeFileSync(
         join(routesDir, '.well-known', `status.prod.${ext}`),
-        "import { kv } from '@buildwf/bwf/kv'; export const GET = () => <p>{kv.get('status')}</p>;",
+        "import { kv } from '@builtbyfriends/bwf/kv'; export const GET = () => <p>{kv.get('status')}</p>;",
       );
       writeFileSync(
         join(routesDir, '_components', `Toolbar.prod.${ext}`),
-        "import { storage } from '@buildwf/bwf/storage'; export const Toolbar = () => <p>Toolbar</p>;",
+        "import { storage } from '@builtbyfriends/bwf/storage'; export const Toolbar = () => <p>Toolbar</p>;",
       );
 
       const development = await generatedBindings(root, { command: 'serve', mode: 'development' });
@@ -108,8 +108,8 @@ describe('environment-specific route binding inference', () => {
       rmSync(join(root, 'routes', 'api', `debug.dev.${ext}`));
       writeFileSync(
         join(root, 'routes', 'api', `debug.dev.ws.${ext}`),
-        `import { kv } from '@buildwf/bwf/kv';
-import { defineWebSocket } from '@buildwf/bwf/ws';
+        `import { kv } from '@builtbyfriends/bwf/kv';
+import { defineWebSocket } from '@builtbyfriends/bwf/ws';
 export default defineWebSocket({ onMessage() { return <p>{kv.get('debug')}</p>; } });`,
       );
 
@@ -156,7 +156,7 @@ export default defineWebSocket({ onMessage() { return <p>{kv.get('debug')}</p>; 
       const root = createProject(ext);
       writeFileSync(
         join(root, 'routes', 'api', `debug.dev.${ext}`),
-        "import { getSandbox } from '@buildwf/bwf/sandbox'; import { defineLiveStream } from '@buildwf/bwf/live'; export const GET = () => ({ getSandbox, defineLiveStream });",
+        "import { getSandbox } from '@builtbyfriends/bwf/sandbox'; import { defineLiveStream } from '@builtbyfriends/bwf/live'; export const GET = () => ({ getSandbox, defineLiveStream });",
       );
 
       const config = await generatedBindings(root, { command: 'build', mode: 'production' });

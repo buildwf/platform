@@ -4,8 +4,8 @@ import type { Plugin } from 'vite';
 type BindingNames = { kv?: string; r2?: string };
 
 const envModuleResolved = fileURLToPath(import.meta.resolve('#self/_env'));
-const kvModuleResolved = fileURLToPath(import.meta.resolve('@buildwf/bwf/kv'));
-const storageModuleResolved = fileURLToPath(import.meta.resolve('@buildwf/bwf/storage'));
+const kvModuleResolved = fileURLToPath(import.meta.resolve('@builtbyfriends/bwf/kv'));
+const storageModuleResolved = fileURLToPath(import.meta.resolve('@builtbyfriends/bwf/storage'));
 const VIRTUAL_KV_ID = '\0virtual:nosam-kv';
 const VIRTUAL_STORAGE_ID = '\0virtual:nosam-storage';
 
@@ -14,15 +14,15 @@ export function bindingRuntimePlugin(bindingNames: BindingNames | undefined): Pl
     name: 'nosam:binding-runtime',
     enforce: 'pre',
     resolveId: {
-      filter: { id: /^(@buildwf\/bwf\/kv|@buildwf\/bwf\/storage)$/ },
+      filter: { id: /^(@builtbyfriends\/bwf\/kv|@builtbyfriends\/bwf\/storage)$/ },
       handler(id) {
         if (this.environment?.name === 'client') {
           return;
         }
-        if (id === '@buildwf/bwf/kv' && bindingNames?.kv) {
+        if (id === '@builtbyfriends/bwf/kv' && bindingNames?.kv) {
           return VIRTUAL_KV_ID;
         }
-        if (id === '@buildwf/bwf/storage' && bindingNames?.r2) {
+        if (id === '@builtbyfriends/bwf/storage' && bindingNames?.r2) {
           return VIRTUAL_STORAGE_ID;
         }
       },

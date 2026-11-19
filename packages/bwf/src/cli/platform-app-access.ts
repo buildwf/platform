@@ -7,7 +7,7 @@ import {
   type PlatformAppAccess,
   type PlatformAppAccessSetup,
   type PlatformDeploymentManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { confirm, log, multiselect, password, select } from '@voidzero-dev/vite-plus-prompts';
 import { cfAccessHeaders } from '../shared/cf-access.ts';
 import {

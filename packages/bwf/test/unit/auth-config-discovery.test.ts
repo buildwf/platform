@@ -22,14 +22,14 @@ describe('auth config discovery', () => {
 
   it('finds a real bwf/auth import', () => {
     const root = rootWithAuth(
-      "import { betterAuth } from '@buildwf/bwf/auth';\nexport default betterAuth;",
+      "import { betterAuth } from '@builtbyfriends/bwf/auth';\nexport default betterAuth;",
     );
     expect(findBwfAuthConfig(root)).toBe(toSlash(join(root, 'auth.ts')));
   });
 
   it('ignores bwf/auth text in comments and strings', () => {
     const root = rootWithAuth(
-      "// import { betterAuth } from '@buildwf/bwf/auth';\nconst example = 'from \\\"@buildwf/bwf/auth\\\"';",
+      "// import { betterAuth } from '@builtbyfriends/bwf/auth';\nconst example = 'from \\\"@builtbyfriends/bwf/auth\\\"';",
     );
     expect(findBwfAuthConfig(root)).toBeNull();
   });

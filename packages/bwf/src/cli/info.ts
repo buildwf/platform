@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { isRecord } from '@buildwf/deploy-core';
+import { isRecord } from '@builtbyfriends/deploy-core';
 import { join, relative } from 'pathslash';
 import { analyzeApplicationSync } from '../application-analysis.ts';
 import { BWF_LOCK_FILE } from '../cloudflare-config.ts';

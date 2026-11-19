@@ -1,4 +1,4 @@
-import { createDefaultPlanCatalog } from '@buildwf/platform/plans';
+import { createDefaultPlanCatalog } from '@builtbyfriends/platform/plans';
 import { desc, eq, sql } from 'drizzle-orm';
 import {
   describe,

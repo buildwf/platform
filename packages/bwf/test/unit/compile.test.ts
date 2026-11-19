@@ -1,4 +1,4 @@
-import { compilePattern as sharedCompilePattern, matchPatternCaptures } from '@buildwf/edge';
+import { compilePattern as sharedCompilePattern, matchPatternCaptures } from '@builtbyfriends/edge';
 /* oxlint-disable typescript-eslint/no-explicit-any -- these tests wire the bwf context augmentations by hand (`c.rewrite`, `c.originalUrl`, `c.isRewritten`) to exercise generated code paths directly; `as any` is the least noisy way to assign/read those members without re-declaring the full Hono context shape per test. */
 import { Hono } from 'hono';
 import { parseSync } from 'vite';
@@ -566,7 +566,7 @@ describe('compileWorkerEntry', () => {
       hasQueues: false,
       assetsDir: 'assets',
       webSocketClasses: [],
-      runtimeEnvPath: '@buildwf/bwf/_env',
+      runtimeEnvPath: '@builtbyfriends/bwf/_env',
       sandbox: false,
       serveSpaFallback: false,
       live: true,
@@ -582,7 +582,7 @@ describe('compileWorkerEntry', () => {
       hasQueues: false,
       assetsDir: 'assets',
       webSocketClasses: [],
-      runtimeEnvPath: '@buildwf/bwf/_env',
+      runtimeEnvPath: '@builtbyfriends/bwf/_env',
       sandbox: false,
       serveSpaFallback: false,
       live: {
@@ -602,7 +602,7 @@ describe('compileWorkerEntry', () => {
       hasQueues: false,
       assetsDir: 'assets',
       webSocketClasses: [],
-      runtimeEnvPath: '@buildwf/bwf/_env',
+      runtimeEnvPath: '@builtbyfriends/bwf/_env',
       sandbox: false,
       serveSpaFallback: false,
       live: true,
@@ -610,7 +610,7 @@ describe('compileWorkerEntry', () => {
 
     const devCode = compileWorkerEntry({ ...options, dev: true });
     expect(devCode).toContain(
-      'import { __setLiveBindingName, __setLiveDev } from "@buildwf/bwf/live";',
+      'import { __setLiveBindingName, __setLiveDev } from "@builtbyfriends/bwf/live";',
     );
     expect(devCode).toContain('__setLiveDev(true);');
 
@@ -628,13 +628,13 @@ describe('compileWorkerEntry', () => {
       hasQueues: false,
       assetsDir: 'assets',
       webSocketClasses: [],
-      runtimeEnvPath: '@buildwf/bwf/_env',
+      runtimeEnvPath: '@builtbyfriends/bwf/_env',
       sandbox: true,
     });
 
     // BwfPlatformSandbox carries the metering/gate hooks, so user subclasses inherit them.
     expect(code).toContain(
-      'import { BwfPlatformSandbox as __NosamSandbox, __setSandboxBindingName } from "@buildwf/bwf/sandbox"',
+      'import { BwfPlatformSandbox as __NosamSandbox, __setSandboxBindingName } from "@builtbyfriends/bwf/sandbox"',
     );
     expect(code).not.toContain('from "@cloudflare/sandbox"');
     expect(code).toContain('export { __NosamSandbox as SandboxV1 };');
@@ -646,16 +646,16 @@ describe('compileWorkerEntry', () => {
       hasQueues: false,
       assetsDir: 'assets',
       webSocketClasses: [],
-      runtimeEnvPath: '@buildwf/bwf/_env',
+      runtimeEnvPath: '@builtbyfriends/bwf/_env',
       sandbox: {
         bindingName: 'CODE',
         className: 'CodeSandbox',
-        runtimePath: '@buildwf/bwf/sandbox',
+        runtimePath: '@builtbyfriends/bwf/sandbox',
       },
     });
 
     expect(code).toContain(
-      'import { BwfPlatformSandbox as __NosamSandbox, __setSandboxBindingName } from "@buildwf/bwf/sandbox"',
+      'import { BwfPlatformSandbox as __NosamSandbox, __setSandboxBindingName } from "@builtbyfriends/bwf/sandbox"',
     );
     expect(code).not.toContain('from "@cloudflare/sandbox"');
     expect(code).toContain('export class CodeSandbox extends __NosamSandbox {}');
@@ -667,7 +667,7 @@ describe('compileWorkerEntry', () => {
       hasQueues: false,
       assetsDir: 'assets',
       webSocketClasses: [],
-      runtimeEnvPath: '@buildwf/bwf/_env',
+      runtimeEnvPath: '@builtbyfriends/bwf/_env',
       sandbox: {
         runtimePath: '/abs/path/to/sandbox.mjs',
       },
@@ -754,7 +754,7 @@ describe('compileWorkerEntry', () => {
       hasQueues: false,
       assetsDir: 'assets',
       webSocketClasses: [],
-      runtimeEnvPath: '@buildwf/bwf/_env',
+      runtimeEnvPath: '@builtbyfriends/bwf/_env',
       sandbox: false,
       serveSpaFallback: false,
       notFound: 'none',

@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Duplex } from 'node:stream';
 import timers from 'node:timers/promises';
-import type { CloudflareCommandResult } from '@buildwf/deploy-cloudflare';
+import type { CloudflareCommandResult } from '@builtbyfriends/deploy-cloudflare';
 import {
   getWorkerAssetsDir,
   getWorkerConfigPath,

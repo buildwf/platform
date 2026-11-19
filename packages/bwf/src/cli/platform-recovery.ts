@@ -2,7 +2,7 @@ import {
   parsePlatformInstallationManifest,
   setInstallationEndpoints,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { cfAccessHeaders } from '../shared/cf-access.ts';
 import type { PlatformCloudflareClient } from './platform-cloudflare.ts';
 import { REMOTE_INSTALLATION_MANIFEST_KEY } from './platform-installer.ts';

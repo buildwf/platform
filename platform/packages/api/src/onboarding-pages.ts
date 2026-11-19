@@ -2,7 +2,7 @@ import {
   browserPageLead,
   escapeBrowserHtml,
   renderBrowserPage,
-} from '@buildwf/platform/browser-page';
+} from '@builtbyfriends/platform/browser-page';
 import { platformConnectCommand } from './platform-identity.ts';
 
 export function platformWelcomePage(platformName: string, apiUrl: string): string {

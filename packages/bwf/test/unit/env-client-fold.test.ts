@@ -91,7 +91,7 @@ describe('envClientFoldPlugin', () => {
     'function title() { enum env { VITE_TITLE }; return env.VITE_TITLE; }',
     'namespace Local { export namespace env { export const VITE_TITLE = "local"; console.log(env.VITE_TITLE); } }',
   ])('preserves shadowed reads in %s', async (body) => {
-    const code = `import { env } from '@buildwf/bwf/env';\n${body}\nconsole.log(env.VITE_TITLE);`;
+    const code = `import { env } from '@builtbyfriends/bwf/env';\n${body}\nconsole.log(env.VITE_TITLE);`;
     const { result } = await runFold(code, `${ROOT}/src/page.ts`, {
       env: { VITE_TITLE: 'build title' },
     });
@@ -102,7 +102,7 @@ describe('envClientFoldPlugin', () => {
   it('preserves a shadowed namespace and still folds the outer import', async () => {
     const body = 'function title(ns) { return ns.env.VITE_TITLE; }';
     const { result } = await runFold(
-      `import * as ns from '@buildwf/bwf/env'; ${body} console.log(ns.env.VITE_TITLE);`,
+      `import * as ns from '@builtbyfriends/bwf/env'; ${body} console.log(ns.env.VITE_TITLE);`,
       `${ROOT}/src/page.ts`,
       { env: { VITE_TITLE: 'build title' } },
     );
@@ -112,7 +112,7 @@ describe('envClientFoldPlugin', () => {
 
   it('folds imported reads in parameter defaults outside the body var scope', async () => {
     const { result } = await runFold(
-      `import { env } from '@buildwf/bwf/env'; function title(value = env.VITE_TITLE) { var env; return value; }`,
+      `import { env } from '@builtbyfriends/bwf/env'; function title(value = env.VITE_TITLE) { var env; return value; }`,
       `${ROOT}/src/page.ts`,
       { env: { VITE_TITLE: 'build title' } },
     );
@@ -121,7 +121,7 @@ describe('envClientFoldPlugin', () => {
 
   it('folds a switch discriminant outside the case block scope', async () => {
     const { result } = await runFold(
-      `import { env } from '@buildwf/bwf/env'; switch (env.VITE_TITLE) { default: let env; }`,
+      `import { env } from '@builtbyfriends/bwf/env'; switch (env.VITE_TITLE) { default: let env; }`,
       `${ROOT}/src/page.ts`,
       { env: { VITE_TITLE: 'build title' } },
     );
@@ -132,7 +132,7 @@ describe('envClientFoldPlugin', () => {
     const body =
       'namespace Local { export const env = { VITE_TITLE: "local" }; console.log(env.VITE_TITLE); }';
     const { result } = await runFold(
-      `import { env } from '@buildwf/bwf/env'; ${body} console.log(env.VITE_TITLE);`,
+      `import { env } from '@builtbyfriends/bwf/env'; ${body} console.log(env.VITE_TITLE);`,
       `${ROOT}/src/page.ts`,
       { env: { VITE_TITLE: 'build title' } },
     );
@@ -141,7 +141,7 @@ describe('envClientFoldPlugin', () => {
   });
 
   it('folds a VITE_-prefixed key with a .env value into a string literal', async () => {
-    const code = `import { env } from "@buildwf/bwf/env";\nconsole.log(env.VITE_TITLE);\n`;
+    const code = `import { env } from "@builtbyfriends/bwf/env";\nconsole.log(env.VITE_TITLE);\n`;
     const { result } = await runFold(code, `${ROOT}/src/page.ts`, {
       env: { VITE_TITLE: 'Hello' },
     });
@@ -151,7 +151,7 @@ describe('envClientFoldPlugin', () => {
   });
 
   it('folds env["VITE_FOO"] bracket access with a string literal', async () => {
-    const code = `import { env } from "@buildwf/bwf/env";\nconst v = env["VITE_API"];\n`;
+    const code = `import { env } from "@builtbyfriends/bwf/env";\nconst v = env["VITE_API"];\n`;
     const { result } = await runFold(code, `${ROOT}/src/page.ts`, {
       env: { VITE_API: 'https://api.example' },
     });
@@ -160,7 +160,7 @@ describe('envClientFoldPlugin', () => {
   });
 
   it('does NOT fold server-only keys (no prefix match)', async () => {
-    const code = `import { env } from "@buildwf/bwf/env";\nconst v = env.STRIPE_KEY;\n`;
+    const code = `import { env } from "@builtbyfriends/bwf/env";\nconst v = env.STRIPE_KEY;\n`;
     const { result } = await runFold(code, `${ROOT}/src/page.ts`, {
       // Server keys aren't in config.env (Vite filters them out), but even
       // if a user somehow passes one, prefix enforcement keeps us honest.
@@ -171,7 +171,7 @@ describe('envClientFoldPlugin', () => {
 
   it('leaves dynamic computed access (env[key]) for the runtime Proxy', async () => {
     const code = [
-      `import { env } from "@buildwf/bwf/env";`,
+      `import { env } from "@builtbyfriends/bwf/env";`,
       `const key = "VITE_TITLE";`,
       `console.log(env[key]);`,
     ].join('\n');
@@ -182,7 +182,7 @@ describe('envClientFoldPlugin', () => {
   });
 
   it('leaves unknown keys untouched so the runtime Proxy can serve them', async () => {
-    const code = `import { env } from "@buildwf/bwf/env";\nconsole.log(env.VITE_MISSING);\n`;
+    const code = `import { env } from "@builtbyfriends/bwf/env";\nconsole.log(env.VITE_MISSING);\n`;
     const { result } = await runFold(code, `${ROOT}/src/page.ts`, {
       env: {},
     });
@@ -190,7 +190,7 @@ describe('envClientFoldPlugin', () => {
   });
 
   it('is a no-op for non-client environments (ssr / worker)', async () => {
-    const code = `import { env } from "@buildwf/bwf/env";\nconsole.log(env.VITE_TITLE);\n`;
+    const code = `import { env } from "@builtbyfriends/bwf/env";\nconsole.log(env.VITE_TITLE);\n`;
     for (const envName of ['ssr', 'worker', 'rsc']) {
       const { result } = await runFold(code, `${ROOT}/src/page.ts`, {
         environmentName: envName,
@@ -201,7 +201,7 @@ describe('envClientFoldPlugin', () => {
   });
 
   it('skips node_modules', async () => {
-    const code = `import { env } from "@buildwf/bwf/env";\nconsole.log(env.VITE_TITLE);\n`;
+    const code = `import { env } from "@builtbyfriends/bwf/env";\nconsole.log(env.VITE_TITLE);\n`;
     const { result } = await runFold(code, `${ROOT}/node_modules/lib/index.js`, {
       env: { VITE_TITLE: 'Hello' },
     });
@@ -209,7 +209,7 @@ describe('envClientFoldPlugin', () => {
   });
 
   it('folds namespace imports (`import * as bwfEnv`)', async () => {
-    const code = `import * as bwfEnv from "@buildwf/bwf/env";\nconst t = bwfEnv.env.VITE_TITLE;\n`;
+    const code = `import * as bwfEnv from "@builtbyfriends/bwf/env";\nconst t = bwfEnv.env.VITE_TITLE;\n`;
     const { result } = await runFold(code, `${ROOT}/src/page.ts`, {
       env: { VITE_TITLE: 'Ns' },
     });
@@ -218,14 +218,14 @@ describe('envClientFoldPlugin', () => {
   });
 
   it('folds renamed imports (`import { env as e }`)', async () => {
-    const code = `import { env as e } from "@buildwf/bwf/env";\nconst t = e.VITE_TITLE;\n`;
+    const code = `import { env as e } from "@builtbyfriends/bwf/env";\nconst t = e.VITE_TITLE;\n`;
     const { result } = await runFold(code, `${ROOT}/src/page.ts`, {
       env: { VITE_TITLE: 'R' },
     });
     expect(result?.code).toContain(`"R"`);
   });
 
-  it('fast-paths files with no `@buildwf/bwf/env` mention', async () => {
+  it('fast-paths files with no `@builtbyfriends/bwf/env` mention', async () => {
     const code = `const env = { VITE_TITLE: "x" };\nconsole.log(env.VITE_TITLE);\n`;
     const { result } = await runFold(code, `${ROOT}/src/page.ts`, {
       env: { VITE_TITLE: 'Hello' },
@@ -235,7 +235,7 @@ describe('envClientFoldPlugin', () => {
 
   it('handles multiple folds in one file', async () => {
     const code = [
-      `import { env } from "@buildwf/bwf/env";`,
+      `import { env } from "@builtbyfriends/bwf/env";`,
       `console.log(env.VITE_A, env.VITE_B);`,
     ].join('\n');
     const { result } = await runFold(code, `${ROOT}/src/page.ts`, {

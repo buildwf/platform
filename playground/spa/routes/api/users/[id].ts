@@ -1,5 +1,5 @@
-import { defineHandler } from '@buildwf/bwf';
-import { db, eq } from '@buildwf/bwf/db';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { db, eq } from '@builtbyfriends/bwf/db';
 import { users } from '@schema';
 import * as v from 'valibot';
 

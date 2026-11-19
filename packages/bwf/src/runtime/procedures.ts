@@ -1,12 +1,12 @@
-import { analyticsEngine } from '@eeao/analytics';
 import {
   defineRegistry,
   withProcedureName,
   type AnalyticsProvider,
   type AnyProcedure,
   type Registry,
-} from '@eeao/core';
-import { rpcHandler } from '@eeao/http';
+} from '@builtbyfriends/realtime';
+import { analyticsEngine } from '@builtbyfriends/realtime-analytics';
+import { rpcHandler } from '@builtbyfriends/realtime-http';
 import type { Hono } from 'hono';
 
 /** The Analytics Engine binding bwf adds when an app has procedures. */
@@ -24,7 +24,7 @@ export function collectProcedures(modules: ReadonlyArray<ProcedureModule>): Arra
   const found: Array<AnyProcedure> = [];
   for (const [prefix, exports] of modules) {
     for (const [exportName, value] of Object.entries(exports)) {
-      const kind = (value as { '~eeao'?: unknown } | null)?.['~eeao'];
+      const kind = (value as { '~realtime'?: unknown } | null)?.['~realtime'];
       if (kind !== 'procedure' && kind !== 'builder') {
         continue;
       }
@@ -68,7 +68,7 @@ export function mountProcedures(
   // Every procedure that chose `.mcp()` is a tool. The MCP server loads on the first request,
   // so apps that never use it pay no startup cost.
   const mcp = (async () => {
-    const { mcpHandler } = await import('@eeao/mcp');
+    const { mcpHandler } = await import('@builtbyfriends/realtime-mcp');
     return mcpHandler(registry, { name: options.name, version: options.version, route: MCP_PATH });
   })();
   app.all(MCP_PATH, async (c) =>

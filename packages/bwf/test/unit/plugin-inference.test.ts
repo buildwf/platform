@@ -28,9 +28,9 @@ describe('inferProjectBindings', () => {
   it('infers namespace auth use across the project without mistaking fetch aliases for auth', () => {
     const root = createTempRoot();
     const file = join(root, 'src/client.ts');
-    writeFileSync(file, 'import { type auth, fetch as authFetch } from "@buildwf/bwf/client";');
+    writeFileSync(file, 'import { type auth, fetch as authFetch } from "@builtbyfriends/bwf/client";');
     expect(inferProjectBindings(root).needsAuth).toBe(false);
-    writeFileSync(file, 'import * as client from "@buildwf/bwf/client"; client.auth.signOut();');
+    writeFileSync(file, 'import * as client from "@builtbyfriends/bwf/client"; client.auth.signOut();');
     expect(inferProjectBindings(root).needsAuth).toBe(true);
   });
 
@@ -70,13 +70,13 @@ describe('inferProjectBindings', () => {
       writeFileSync(
         join(root, 'routes', 'api', `debug.dev.${ext}`),
         `
-      import { storage } from "@buildwf/bwf/storage";
+      import { storage } from "@builtbyfriends/bwf/storage";
       export const GET = async () => Response.json(await storage.list());
       `,
       );
       writeFileSync(
         join(root, 'routes', 'api', `events.dev.ws.${ext}`),
-        "import { defineLiveStream } from '@buildwf/bwf/live';",
+        "import { defineLiveStream } from '@builtbyfriends/bwf/live';",
       );
 
       expect(inferProjectBindings(root, undefined, ['routes']).needsR2).toBe(true);
@@ -97,19 +97,19 @@ describe('inferProjectBindings', () => {
     mkdirSync(join(routesDir, '_helpers'), { recursive: true });
     writeFileSync(
       join(routesDir, 'status.dev.tsx'),
-      "import { kv } from '@buildwf/bwf/kv'; export const GET = () => <p>{kv.get('status')}</p>;",
+      "import { kv } from '@builtbyfriends/bwf/kv'; export const GET = () => <p>{kv.get('status')}</p>;",
     );
     writeFileSync(
       join(routesDir, 'status.prod.jsx'),
-      "import { storage } from '@buildwf/bwf/storage'; export const GET = () => <p>{storage.list()}</p>;",
+      "import { storage } from '@builtbyfriends/bwf/storage'; export const GET = () => <p>{storage.list()}</p>;",
     );
     writeFileSync(
       join(routesDir, 'events.dev.ws.jsx'),
-      "import { db } from '@buildwf/bwf/db'; export default defineWebSocket({ onMessage: () => <p>{db.select()}</p> });",
+      "import { db } from '@builtbyfriends/bwf/db'; export default defineWebSocket({ onMessage: () => <p>{db.select()}</p> });",
     );
     writeFileSync(
       join(routesDir, '_helpers', 'stream.prod.tsx'),
-      "import { defineLiveStream } from '@buildwf/bwf/live'; export const Stream = () => <p>Stream</p>;",
+      "import { defineLiveStream } from '@builtbyfriends/bwf/live'; export const Stream = () => <p>Stream</p>;",
     );
 
     expect(inferProjectBindings(root, { environment: 'dev' })).toMatchObject({
@@ -138,7 +138,7 @@ describe('inferProjectBindings', () => {
     mkdirSync(join(root, 'app/routes/.well-known'), { recursive: true });
     writeFileSync(
       join(root, 'app/routes/.well-known/status.prod.jsx'),
-      "import { kv } from '@buildwf/bwf/kv'; export const GET = () => <p>Status</p>;",
+      "import { kv } from '@builtbyfriends/bwf/kv'; export const GET = () => <p>Status</p>;",
     );
 
     expect(inferProjectBindings(root, { environment: 'prod' }, ['server']).needsKV).toBe(true);
@@ -151,15 +151,15 @@ describe('inferProjectBindings', () => {
     mkdirSync(join(root, 'routes/components'), { recursive: true });
     writeFileSync(
       join(root, `routes/_components/Toolbar.prod.${ext}`),
-      "import { kv } from '@buildwf/bwf/kv'; export const Toolbar = () => <p>Toolbar</p>;",
+      "import { kv } from '@builtbyfriends/bwf/kv'; export const Toolbar = () => <p>Toolbar</p>;",
     );
     writeFileSync(
       join(root, `routes/components/_Toolbar.dev.${ext}`),
-      "import { storage } from '@buildwf/bwf/storage'; export const Toolbar = () => <p>Toolbar</p>;",
+      "import { storage } from '@builtbyfriends/bwf/storage'; export const Toolbar = () => <p>Toolbar</p>;",
     );
     writeFileSync(
       join(root, `routes/_helper.prod.ws.${ext}`),
-      "import { db } from '@buildwf/bwf/db'; export const helper = () => <p>Helper</p>;",
+      "import { db } from '@builtbyfriends/bwf/db'; export const helper = () => <p>Helper</p>;",
     );
 
     for (const environment of ['dev', 'prod'] as const) {
@@ -177,9 +177,9 @@ describe('inferProjectBindings', () => {
     mkdirSync(join(root, 'queues'), { recursive: true });
     writeFileSync(
       join(root, 'queues', 'sync.dev.ts'),
-      "import { storage } from '@buildwf/bwf/storage';",
+      "import { storage } from '@builtbyfriends/bwf/storage';",
     );
-    writeFileSync(join(root, 'src', 'helper.dev.ts'), "import { kv } from '@buildwf/bwf/kv';");
+    writeFileSync(join(root, 'src', 'helper.dev.ts'), "import { kv } from '@builtbyfriends/bwf/kv';");
 
     const result = inferProjectBindings(root, { environment: 'prod' });
     expect(result.needsR2).toBe(true);
@@ -191,7 +191,7 @@ describe('inferProjectBindings', () => {
     writeFileSync(
       join(root, 'src', 'App.tsx'),
       `
-      import { auth } from "@buildwf/bwf/client";
+      import { auth } from "@builtbyfriends/bwf/client";
       export default function App() {
         auth.signIn;
       }
@@ -208,14 +208,14 @@ describe('inferProjectBindings', () => {
     writeFileSync(
       join(root, 'src', 'live.ts'),
       `
-      import { defineLiveStream } from "@buildwf/bwf/live";
+      import { defineLiveStream } from "@builtbyfriends/bwf/live";
       export const live = defineLiveStream({ id: "app" });
       `,
     );
     writeFileSync(
       join(root, 'routes', 'live.ts'),
       `
-      import { defineHandler } from "@buildwf/bwf";
+      import { defineHandler } from "@builtbyfriends/bwf";
       import { live } from "../src/live";
       export const GET = defineHandler((c) => live.connect(c));
       export const POST = defineHandler((c) => live.control(c));
@@ -232,8 +232,8 @@ describe('inferProjectBindings', () => {
     writeFileSync(
       join(root, 'durable-objects', 'agent.ts'),
       `
-      import { createAi } from '@buildwf/bwf/ai';
-      import { createStorage } from '@buildwf/bwf/storage';
+      import { createAi } from '@builtbyfriends/bwf/ai';
+      import { createStorage } from '@builtbyfriends/bwf/storage';
       export function resources(env) { return [createAi(env), createStorage(env.STORAGE)]; }
     `,
     );
@@ -255,14 +255,14 @@ describe('inferProjectBindings', () => {
     writeFileSync(
       join(root, 'lib', 'live.ts'),
       `
-      import { defineLiveStream } from "@buildwf/bwf/live";
+      import { defineLiveStream } from "@builtbyfriends/bwf/live";
       export const live = defineLiveStream({ id: "app" });
       `,
     );
     writeFileSync(
       join(root, 'routes', 'live.ts'),
       `
-      import { defineHandler } from "@buildwf/bwf";
+      import { defineHandler } from "@builtbyfriends/bwf";
       import { live } from "../lib/live";
       export const GET = defineHandler((c) => live.connect(c));
       `,
@@ -278,7 +278,7 @@ describe('inferProjectBindings', () => {
     writeFileSync(
       join(root, 'routes', 'api', 'profile.ts'),
       `
-      import { requireAuth } from "@buildwf/bwf/auth";
+      import { requireAuth } from "@builtbyfriends/bwf/auth";
       export const GET = (c) => {
         const user = requireAuth(c);
         return { user };
@@ -295,7 +295,7 @@ describe('inferProjectBindings', () => {
     writeFileSync(
       join(root, 'src', 'App.tsx'),
       `
-      import { fetch } from "@buildwf/bwf/client";
+      import { fetch } from "@builtbyfriends/bwf/client";
       export default function App() {
         fetch("/api/hello");
       }
@@ -316,12 +316,12 @@ describe('inferProjectBindings', () => {
       mkdirSync(join(root, directory), { recursive: true });
       writeFileSync(
         join(root, directory, 'hidden.tsx'),
-        "import { storage } from '@buildwf/bwf/storage';",
+        "import { storage } from '@builtbyfriends/bwf/storage';",
       );
     }
     writeFileSync(
       join(root, 'routes/.well-known/status.tsx'),
-      "import { kv } from '@buildwf/bwf/kv'; export const GET = () => <p>Status</p>;",
+      "import { kv } from '@builtbyfriends/bwf/kv'; export const GET = () => <p>Status</p>;",
     );
 
     expect(inferProjectBindings(root)).toMatchObject({ needsKV: true, needsR2: false });
@@ -332,7 +332,7 @@ describe('inferProjectBindings', () => {
     writeFileSync(
       join(root, 'src', 'App.tsx'),
       `
-      import { auth } from "@buildwf/bwf/client/react";
+      import { auth } from "@builtbyfriends/bwf/client/react";
       export default function App() {
         auth.useSession();
       }
@@ -441,9 +441,9 @@ describe('detectFramework', () => {
               throw new Error(message);
             },
           },
-          '@buildwf/bwf/live',
+          '@builtbyfriends/bwf/live',
         ),
-      ).toThrow('@buildwf/bwf/live is server-only');
+      ).toThrow('@builtbyfriends/bwf/live is server-only');
       expect(() =>
         resolveId.call(
           {
@@ -452,9 +452,9 @@ describe('detectFramework', () => {
               throw new Error(message);
             },
           },
-          '@buildwf/bwf/durable',
+          '@builtbyfriends/bwf/durable',
         ),
-      ).toThrow('@buildwf/bwf/durable is server-only');
+      ).toThrow('@builtbyfriends/bwf/durable is server-only');
     } finally {
       cwd.mockRestore();
     }
@@ -467,14 +467,14 @@ describe('detectFramework', () => {
     writeFileSync(
       join(root, 'src', 'live.ts'),
       `
-      import { defineLiveStream } from "@buildwf/bwf/live";
+      import { defineLiveStream } from "@builtbyfriends/bwf/live";
       export const live = defineLiveStream({ id: "app" });
       `,
     );
     writeFileSync(
       join(root, 'routes', 'live.ts'),
       `
-      import { defineHandler } from "@buildwf/bwf";
+      import { defineHandler } from "@builtbyfriends/bwf";
       import { live } from "../src/live";
       export const GET = defineHandler((c) => live.connect(c));
       export const POST = defineHandler((c) => live.control(c));

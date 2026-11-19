@@ -9,7 +9,7 @@ Receive mail with handlers in the top-level `email/` directory. Inbound handlers
 
 ```ts
 // email/_default.ts — fallback for any unmatched recipient
-import { defineEmail, parseEmail } from '@buildwf/bwf/email';
+import { defineEmail, parseEmail } from '@builtbyfriends/bwf/email';
 
 export default defineEmail(async (message, env, ctx) => {
   const parsed = await parseEmail(message);
@@ -67,7 +67,7 @@ If nothing matches and there's no `_default.ts`, control returns to Cloudflare a
 
 ```ts
 // email/support+[ticket].ts
-import { defineEmail, parseEmail, replyEmail } from '@buildwf/bwf/email';
+import { defineEmail, parseEmail, replyEmail } from '@builtbyfriends/bwf/email';
 
 export default defineEmail(async (message, env, ctx, info) => {
   const parsed = await parseEmail(message);
@@ -106,7 +106,7 @@ Test inbound handlers locally with `createInboundTestHarness` below.
 Use `createInboundTestHarness` to capture replies, forwards, and rejections. For shared platform mail, pass the full address including the project prefix, such as `acme+support+abc-123@acme.dev`. For direct Cloudflare mail, set `slug: null` and use `support+abc-123@mail.acme.com`.
 
 ```ts
-import { createInboundTestHarness } from '@buildwf/bwf/email/testing';
+import { createInboundTestHarness } from '@builtbyfriends/bwf/email/testing';
 import { describe, it, expect } from 'vite-plus/test';
 import defaultHandler from './email/_default';
 import support from './email/support+[ticket]';

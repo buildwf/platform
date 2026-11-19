@@ -10,7 +10,7 @@ import {
   type PlatformPlanCatalog,
   type PlatformPlanDefinition,
   type PlatformPlanReconciliation,
-} from '@buildwf/platform/plans';
+} from '@builtbyfriends/platform/plans';
 import { and, asc, count, eq, gt, inArray } from 'drizzle-orm';
 import type { Context } from 'hono';
 import {

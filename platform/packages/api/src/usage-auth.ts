@@ -1,4 +1,4 @@
-import { PLATFORM_USAGE_PROTOCOL_VERSION } from '@buildwf/platform';
+import { PLATFORM_USAGE_PROTOCOL_VERSION } from '@builtbyfriends/platform';
 
 export const USAGE_PROTOCOL_VERSION = PLATFORM_USAGE_PROTOCOL_VERSION;
 

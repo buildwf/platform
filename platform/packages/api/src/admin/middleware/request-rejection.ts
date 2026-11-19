@@ -1,4 +1,4 @@
-import { browserPageLead, browserPageStatus } from '@buildwf/platform/browser-page';
+import { browserPageLead, browserPageStatus } from '@builtbyfriends/platform/browser-page';
 import type { Context } from 'hono';
 import { platformBrowserPage } from '../../browser-page.ts';
 import type { ApiEnv } from '../../env.ts';

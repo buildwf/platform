@@ -1,6 +1,6 @@
-import { defineHandler } from '@buildwf/bwf';
-import { UsageLimit } from '@buildwf/bwf/limits';
-import { getSandbox, type SandboxClient } from '@buildwf/bwf/sandbox';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { UsageLimit } from '@builtbyfriends/bwf/limits';
+import { getSandbox, type SandboxClient } from '@builtbyfriends/bwf/sandbox';
 import { sampleRequests } from '../../lib/sandbox-demo.ts';
 
 const MAX_CODE_LENGTH = 8_000;

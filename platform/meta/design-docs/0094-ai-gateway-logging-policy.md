@@ -84,7 +84,7 @@ plan default and loosen logging on re-upgrade. Plan limits must also be an exact
 numeric key set, and the plan publish must not wait on the usage-counter Durable
 Object calls that account reconciliation makes.
 
-Shared code lives in `@buildwf/platform/ai-logging`
+Shared code lives in `@builtbyfriends/platform/ai-logging`
 ([source](../../../packages/platform/src/ai-logging.ts)), so the proxy, the API and
 the installer in `packages/bwf` use one resolver, one key name and one parser
 without importing `platform/`.

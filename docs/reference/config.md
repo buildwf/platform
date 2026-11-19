@@ -9,11 +9,11 @@ outline: deep
 
 Use `bwf.config.ts` to configure your app. For a guided introduction, start with [What is bwf?](../guide/).
 
-Put `bwf.config.ts` at the project root and import `defineConfig` from `@buildwf/bwf/config`. All fields are optional. `bwf init`, `bwf deploy`, and `bwf migrate` can convert older bwf and Cloudflare JSON config files, saving backups under `.bwf/config-migration/`. Commit `bwf.config.ts` and `bwf.lock.json` when bwf creates the lock; it records resource IDs and migration history.
+Put `bwf.config.ts` at the project root and import `defineConfig` from `@builtbyfriends/bwf/config`. All fields are optional. `bwf init`, `bwf deploy`, and `bwf migrate` can convert older bwf and Cloudflare JSON config files, saving backups under `.bwf/config-migration/`. Commit `bwf.config.ts` and `bwf.lock.json` when bwf creates the lock; it records resource IDs and migration history.
 
 ```ts
 // bwf.config.ts
-import { defineConfig } from '@buildwf/bwf/config';
+import { defineConfig } from '@builtbyfriends/bwf/config';
 
 export default defineConfig({
   sourceDir: 'src',
@@ -153,13 +153,13 @@ Use an object to also set how Drizzle names columns declared without a name:
 | Key       | Values                                  | Description                                                                                                                                                                                |
 | --------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `dialect` | `"sqlite"` (default), `"pg"`, `"mysql"` | Database backend. `"sqlite"` is D1                                                                                                                                                         |
-| `casing`  | `"snake_case"`, `"camelCase"`           | [Drizzle casing](https://orm.drizzle.team/docs/sql-schema-declaration#camel-and-snake-casing) for `@buildwf/bwf/db` queries and `bwf db` commands. Omit to use each key as its column name |
+| `casing`  | `"snake_case"`, `"camelCase"`           | [Drizzle casing](https://orm.drizzle.team/docs/sql-schema-declaration#camel-and-snake-casing) for `@builtbyfriends/bwf/db` queries and `bwf db` commands. Omit to use each key as its column name |
 
 When using an external database:
 
 - Add `DATABASE_URL` to `.env` for local development
-- Import schema helpers from `@buildwf/bwf/schema-pg` or `@buildwf/bwf/schema-mysql`
-- `@buildwf/bwf/db` connects via Hyperdrive in production, direct connection locally
+- Import schema helpers from `@builtbyfriends/bwf/schema-pg` or `@builtbyfriends/bwf/schema-mysql`
+- `@builtbyfriends/bwf/db` connects via Hyperdrive in production, direct connection locally
 - `bwf gen model` generates dialect-appropriate table and column builders
 
 ### `email`
@@ -204,7 +204,7 @@ BWF_REMOTE=1 pnpm dev
 
 ### `sandbox`
 
-Enable and configure Cloudflare Sandboxes. Importing from `@buildwf/bwf/sandbox` enables this automatically.
+Enable and configure Cloudflare Sandboxes. Importing from `@builtbyfriends/bwf/sandbox` enables this automatically.
 
 ```json
 {
@@ -229,7 +229,7 @@ Enable and configure Cloudflare Sandboxes. Importing from `@buildwf/bwf/sandbox`
 
 Supported sizes are `lite` and `standard-1` through `standard-4`. Native deploys build Dockerfiles with Docker; registry images must be digest-pinned references from the Cloudflare managed registry. Custom images must include the matching Sandbox SDK helper. For a local Dockerfile, supply `platformImage` when deploying to a managed platform. See [Sandboxes](../guide/sandboxes.md) for image setup and runtime examples.
 
-Set `durableObject` to a file name in `durable-objects/` (for example `"bot"`) to attach the container image to that class instead of bwf's `SandboxV1`. The class must use `this.ctx.container`; its binding and class come from the file, so `binding` and `className` must be omitted. It needs a native Cloudflare deploy: managed platforms run containers in their own controller, so use `getSandbox` from `@buildwf/bwf/sandbox` there.
+Set `durableObject` to a file name in `durable-objects/` (for example `"bot"`) to attach the container image to that class instead of bwf's `SandboxV1`. The class must use `this.ctx.container`; its binding and class come from the file, so `binding` and `className` must be omitted. It needs a native Cloudflare deploy: managed platforms run containers in their own controller, so use `getSandbox` from `@builtbyfriends/bwf/sandbox` there.
 
 Sandbox requires [Workers Paid](https://dash.cloudflare.com/?to=/:account/workers/plans) and Containers access. Managed runtime tokens need Account / Containers: Edit and Account / Cloudchamber: Edit. See [Sandbox deployment](../guide/sandboxes.md#deployment).
 
@@ -437,9 +437,9 @@ Each binding accepts `true` (use default name), `false` (disable), or a string (
 | `ai`      | `AI`            | `Ai`          | `"ai": "MY_AI"`          |
 | `email`   | —               | —             | Boolean only             |
 
-Custom binding names work with `@buildwf/bwf/db`, `@buildwf/bwf/kv`, and `@buildwf/bwf/storage` during development and deployment. Custom AI names also work with `@buildwf/bwf/ai` on direct Cloudflare deploys; managed Workers AI uses the platform's proxy.
+Custom binding names work with `@builtbyfriends/bwf/db`, `@builtbyfriends/bwf/kv`, and `@builtbyfriends/bwf/storage` during development and deployment. Custom AI names also work with `@builtbyfriends/bwf/ai` on direct Cloudflare deploys; managed Workers AI uses the platform's proxy.
 
-`email` is a boolean feature switch. Set it to `true` to enable [email](../guide/email.md) and the local email inbox without an import from `@buildwf/bwf/email`, or `false` to disable them. On a bwf platform, sending uses the platform proxy. Direct Cloudflare setup records a `SEND_EMAIL` binding in `bwf.lock.json`; see [`email.from`](#email).
+`email` is a boolean feature switch. Set it to `true` to enable [email](../guide/email.md) and the local email inbox without an import from `@builtbyfriends/bwf/email`, or `false` to disable them. On a bwf platform, sending uses the platform proxy. Direct Cloudflare setup records a `SEND_EMAIL` binding in `bwf.lock.json`; see [`email.from`](#email).
 
 #### `inference.build`
 

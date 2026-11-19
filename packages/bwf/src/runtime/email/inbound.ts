@@ -10,7 +10,7 @@ import {
   EMAIL_MAX_REPLY_BYTES,
   EMAIL_MAX_RESPONSE_BYTES,
   type EmailWireAction,
-} from '@buildwf/platform/email-protocol';
+} from '@builtbyfriends/platform/email-protocol';
 import type { Email as PostalMimeEmail } from 'postal-mime';
 import { base64ToBytes } from '../base64.ts';
 import { withTimeout } from '../email-protocol.ts';

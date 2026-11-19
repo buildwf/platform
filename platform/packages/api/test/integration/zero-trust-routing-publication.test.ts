@@ -1,4 +1,4 @@
-import type { ProjectZeroTrustRouting } from '@buildwf/edge';
+import type { ProjectZeroTrustRouting } from '@builtbyfriends/edge';
 import { eq } from 'drizzle-orm';
 import {
   afterAll,

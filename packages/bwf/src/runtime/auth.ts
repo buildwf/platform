@@ -60,7 +60,7 @@ export type BwfAuthConfig = BetterAuthOptions | ((ctx: BwfAuthConfigContext) => 
  *
  * Stored on `globalThis` under a `Symbol.for` key so duplicate module loads
  * (e.g. once by void's bundled runtime and once by Vite's SSR module runner
- * when user code imports from `@buildwf/bwf/auth`) share a single ALS instance. Without
+ * when user code imports from `@builtbyfriends/bwf/auth`) share a single ALS instance. Without
  * this, the middleware writes to one instance and `getUser()` reads another,
  * always returning null.
  */

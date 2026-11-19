@@ -7,14 +7,14 @@ outline: deep
 
 ## KV {#kv}
 
-Imported from `"@buildwf/bwf/kv"`.
+Imported from `"@builtbyfriends/bwf/kv"`.
 
 ### `kv` {#kv-1}
 
 Typed JSON-aware client for the inferred `KV` binding.
 
 ```ts
-import { kv } from '@buildwf/bwf/kv';
+import { kv } from '@builtbyfriends/bwf/kv';
 
 await kv.put('settings', { theme: 'dark' });
 const settings = await kv.get<{ theme: string }>('settings');
@@ -26,14 +26,14 @@ const settings = await kv.get<{ theme: string }>('settings');
 
 ## Storage {#storage}
 
-Imported from `"@buildwf/bwf/storage"`.
+Imported from `"@builtbyfriends/bwf/storage"`.
 
 ### `storage` {#storage-1}
 
 Default [R2 bucket](https://developers.cloudflare.com/r2/) proxy for the inferred `STORAGE` binding.
 
 ```ts
-import { storage } from '@buildwf/bwf/storage';
+import { storage } from '@builtbyfriends/bwf/storage';
 
 await storage.put('avatars/alice.png', file);
 const object = await storage.get('avatars/alice.png');
@@ -43,14 +43,14 @@ const object = await storage.get('avatars/alice.png');
 
 ## AI {#ai}
 
-Imported from `"@buildwf/bwf/ai"`.
+Imported from `"@builtbyfriends/bwf/ai"`.
 
 ### `ai` {#ai-1}
 
 Typed AI client for Cloudflare AI models and provider-native AI Gateway requests.
 
 ```ts
-import { ai } from '@buildwf/bwf/ai';
+import { ai } from '@builtbyfriends/bwf/ai';
 
 const result = await ai.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
   messages: [{ role: 'user', content: 'Summarize this release note.' }],
@@ -66,7 +66,7 @@ const response = await ai.provider('openai').fetch('/chat/completions', {
 
 **Key exports:** `ai`, `BwfAi`, provider request types. See [AI](../../guide/ai.md) for provider setup and streaming examples.
 
-AI methods return promises and reject usage limits with `UsageLimit` from `@buildwf/bwf/limits`. bwf routes and Pages actions return a structured HTTP 429 for uncaught limits. See [usage limits](../../guide/ai.md#usage-limits) for optional `instanceof UsageLimit` handling.
+AI methods return promises and reject usage limits with `UsageLimit` from `@builtbyfriends/bwf/limits`. bwf routes and Pages actions return a structured HTTP 429 for uncaught limits. See [usage limits](../../guide/ai.md#usage-limits) for optional `instanceof UsageLimit` handling.
 
 ### Provider keys
 
@@ -97,14 +97,14 @@ Default secret names for `ai.provider()`. Use `apiKeyEnv` to choose another name
 
 ## Logging {#logging}
 
-Imported from `"@buildwf/bwf/log"`.
+Imported from `"@builtbyfriends/bwf/log"`.
 
 ### `logger` {#logger}
 
 Structured logger that emits one JSON line per call so deployed logs can be filtered by message and fields.
 
 ```ts
-import { logger } from '@buildwf/bwf/log';
+import { logger } from '@builtbyfriends/bwf/log';
 
 logger.info('checkout completed', { orderId, userId });
 logger.error('webhook failed', { provider: 'stripe', attempt: 3 });

@@ -1,4 +1,4 @@
-import { canonicalJson } from '@buildwf/deploy-core';
+import { canonicalJson } from '@builtbyfriends/deploy-core';
 import { describe, expect, it } from 'vite-plus/test';
 import {
   classifyServerMigrationPlan,

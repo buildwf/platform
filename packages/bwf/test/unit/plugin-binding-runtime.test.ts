@@ -13,12 +13,12 @@ describe('bindingRuntimePlugin', () => {
     ) => string | undefined;
     const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
 
-    const kvId = resolveId.call({ environment: { name: 'ssr' } }, '@buildwf/bwf/kv', undefined, {
+    const kvId = resolveId.call({ environment: { name: 'ssr' } }, '@builtbyfriends/bwf/kv', undefined, {
       isEntry: false,
     });
     expect(kvId).toBe('\0virtual:nosam-kv');
     expect(
-      resolveId.call({ environment: { name: 'client' } }, '@buildwf/bwf/kv', undefined, {
+      resolveId.call({ environment: { name: 'client' } }, '@builtbyfriends/bwf/kv', undefined, {
         isEntry: false,
       }),
     ).toBeUndefined();
@@ -28,7 +28,7 @@ describe('bindingRuntimePlugin', () => {
 
     const storageId = resolveId.call(
       { environment: { name: 'ssr' } },
-      '@buildwf/bwf/storage',
+      '@builtbyfriends/bwf/storage',
       undefined,
       {
         isEntry: false,

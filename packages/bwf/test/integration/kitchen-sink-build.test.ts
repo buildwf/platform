@@ -87,7 +87,7 @@ describe('playground/kitchen-sink build', () => {
 
   it('binds Workers AI and emits the AI Gateway var for self-host deploys', () => {
     const wranglerConfig = JSON.parse(readFileSync(join(dist, 'ssr', 'wrangler.json'), 'utf-8'));
-    // kitchen-sink imports `@buildwf/bwf/ai` at request time, so the build infers
+    // kitchen-sink imports `@builtbyfriends/bwf/ai` at request time, so the build infers
     // `needsAI` and injects the Workers AI binding on `command === 'build'`.
     expect(wranglerConfig.ai).toEqual({ binding: 'AI' });
     // `ai.gateway` in playground/kitchen-sink/bwf.config.ts becomes the runtime var

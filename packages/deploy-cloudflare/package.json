@@ -1,5 +1,5 @@
 {
-  "name": "@buildwf/deploy-cloudflare",
+  "name": "@builtbyfriends/deploy-cloudflare",
   "version": "1.9.1",
   "description": "Cloudflare deployment primitives for bwf runtimes and deployment adapters.",
   "homepage": "https://github.com/builtbyfriends/platform",
@@ -31,7 +31,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@buildwf/deploy-core": "workspace:*",
+    "@builtbyfriends/deploy-core": "workspace:*",
     "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-import type { OutputOf } from '@eeao/core';
+import type { OutputOf } from '@builtbyfriends/realtime';
 import type { PlatformRegistry } from '@nosamcloud/api/rpc';
 import type { Context } from 'hono';
 import { getCookie } from 'hono/cookie';

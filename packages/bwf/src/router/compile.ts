@@ -821,7 +821,7 @@ export interface WorkerEntryOptions {
   assetsDir?: string;
   webSocketClasses?: Array<string>;
   runtimeEnvPath?: string;
-  /** Path to the `@buildwf/bwf/email` runtime used by the generated email handlers. */
+  /** Path to the `@builtbyfriends/bwf/email` runtime used by the generated email handlers. */
   runtimeEmailPath?: string;
   envSchemaModule?: { importPath: string; helperPath: string };
   sandbox?:
@@ -883,8 +883,8 @@ export function compileWorkerEntry(options: WorkerEntryOptions = {}): string {
     remote,
     assetsDir = 'assets',
     webSocketClasses = [],
-    runtimeEnvPath = '@buildwf/bwf/_env',
-    runtimeEmailPath = '@buildwf/bwf/email',
+    runtimeEnvPath = '@builtbyfriends/bwf/_env',
+    runtimeEmailPath = '@builtbyfriends/bwf/email',
     envSchemaModule,
     sandbox,
     serveSpaFallback = false,
@@ -908,8 +908,8 @@ export function compileWorkerEntry(options: WorkerEntryOptions = {}): string {
     typeof sandbox === 'object' ? (sandbox.bindingName ?? 'SANDBOX') : 'SANDBOX';
   const sandboxRuntimePath =
     typeof sandbox === 'object'
-      ? (sandbox.runtimePath ?? '@buildwf/bwf/sandbox')
-      : '@buildwf/bwf/sandbox';
+      ? (sandbox.runtimePath ?? '@builtbyfriends/bwf/sandbox')
+      : '@builtbyfriends/bwf/sandbox';
   const sandboxImport = hasSandbox
     ? `import { BwfPlatformSandbox as __NosamSandbox, __setSandboxBindingName } from ${JSON.stringify(sandboxRuntimePath)};\n`
     : '';
@@ -928,7 +928,7 @@ export function compileWorkerEntry(options: WorkerEntryOptions = {}): string {
   const liveRouteImport = hasLive ? ', NosamLiveStreamDurableObject' : '';
   const liveDev = hasLive && dev === true;
   const liveRuntimeImport = hasLive
-    ? `import { __setLiveBindingName${liveDev ? ', __setLiveDev' : ''} } from "@buildwf/bwf/live";\n`
+    ? `import { __setLiveBindingName${liveDev ? ', __setLiveDev' : ''} } from "@builtbyfriends/bwf/live";\n`
     : '';
   const liveDevCall = liveDev ? '__setLiveDev(true);\n' : '';
   const liveExport = hasLive
@@ -981,7 +981,7 @@ ${envValidateCall}${remoteEnvSwap}  const userEnv = __filterInternalBindings(env
   // message; receipts return bounded action frames to the platform.
   const emailImport = hasEmail ? ', __emailHandler' : '';
   const emailProxyImport = hasEmail
-    ? `import { createMessageProxy as __createMessageProxy, enactEmailActions as __enactEmailActions, isForwardableEmailMessage as __isForwardableEmailMessage } from ${JSON.stringify(runtimeEmailPath)};\nimport { EMAIL_PROTOCOL_VERSION as __EMAIL_PROTOCOL_VERSION, encodeEmailActions as __encodeEmailActions, readEmailEnvelope as __readEmailEnvelope, verifyEmailReceiptThroughProxy as __verifyEmailReceiptThroughProxy } from "@buildwf/bwf/_email-protocol";\n`
+    ? `import { createMessageProxy as __createMessageProxy, enactEmailActions as __enactEmailActions, isForwardableEmailMessage as __isForwardableEmailMessage } from ${JSON.stringify(runtimeEmailPath)};\nimport { EMAIL_PROTOCOL_VERSION as __EMAIL_PROTOCOL_VERSION, encodeEmailActions as __encodeEmailActions, readEmailEnvelope as __readEmailEnvelope, verifyEmailReceiptThroughProxy as __verifyEmailReceiptThroughProxy } from "@builtbyfriends/bwf/_email-protocol";\n`
     : '';
   // Custom-domain receipts (`viaDomain`) carry no `<slug>+` prefix, so they get no slug.
   // On the shared domain the prefix is the slug or the project's email alias. The

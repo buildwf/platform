@@ -5,7 +5,7 @@ import { stripVTControlCharacters } from 'node:util';
 import {
   createPlatformDeploymentManifest,
   createPlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { hasHelpPage } from '../../src/cli/help.ts';
 import { operatorCommands, parseOperatorArgs } from '../../src/cli/operator-args.ts';

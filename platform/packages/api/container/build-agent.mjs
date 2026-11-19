@@ -2002,7 +2002,7 @@ export function resolveSourceBwfCli(root = WORK_DIR) {
   } catch {
     return null;
   }
-  if (manifest.name !== '@buildwf/bwf' || typeof manifest.bin?.bwf !== 'string') {
+  if (manifest.name !== '@builtbyfriends/bwf' || typeof manifest.bin?.bwf !== 'string') {
     return null;
   }
   const cli = `${packageRoot}/${manifest.bin.nosam}`;

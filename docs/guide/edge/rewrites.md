@@ -10,7 +10,7 @@ A rewrite serves a route at a different URL without changing the browser's addre
 Define rewrites in [`bwf.config.ts`](../../reference/config):
 
 ```ts
-import { defineConfig } from '@buildwf/bwf/config';
+import { defineConfig } from '@builtbyfriends/bwf/config';
 
 export default defineConfig({
   routing: {
@@ -37,7 +37,7 @@ A request to `/docs/getting-started` serves `/en/docs/getting-started`. Other lo
 Use `c.rewrite()` when the destination depends on the request, such as a locale chosen from a cookie:
 
 ```ts
-import { defineMiddleware } from '@buildwf/bwf';
+import { defineMiddleware } from '@builtbyfriends/bwf';
 
 export default defineMiddleware(async (c, next) => {
   if (c.req.path.match(/^\/(en|ja)(\/|$)/)) return next();
@@ -57,7 +57,7 @@ Keep access checks on any destination that needs them.
 
 A destination without `?` preserves the incoming query string. `c.rewrite('/search')` keeps `?q=...`, while `c.rewrite('/search?q=all')` replaces it.
 
-Your editor suggests known routes through [`RewriteDestination`](../../reference/api/rewrites.md#rewritedestination). Enable [`routing.typedRoutes`](../../reference/config.md#routing-typedroutes) to reject strings that don't match a route. For a path you build at runtime, import `RouteUrl` from `@buildwf/bwf/routes` and use a cast, such as ``c.rewrite(`/en${c.req.path}` as RouteUrl)``.
+Your editor suggests known routes through [`RewriteDestination`](../../reference/api/rewrites.md#rewritedestination). Enable [`routing.typedRoutes`](../../reference/config.md#routing-typedroutes) to reject strings that don't match a route. For a path you build at runtime, import `RouteUrl` from `@builtbyfriends/bwf/routes` and use a cast, such as ``c.rewrite(`/en${c.req.path}` as RouteUrl)``.
 
 ### Runtime rewrites cannot reach static assets
 
@@ -68,7 +68,7 @@ Your editor suggests known routes through [`RewriteDestination`](../../reference
 `c.originalUrl()` returns the URL requested before a static or middleware rewrite, or `null` when no rewrite occurred. Use it for canonical links or locale detection:
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 
 export default defineHandler((c) => {
   const original = c.originalUrl();
@@ -81,7 +81,7 @@ export default defineHandler((c) => {
 `routing.fallbacks` uses the same patterns as rewrites, but applies only when no asset or route matches:
 
 ```ts
-import { defineConfig } from '@buildwf/bwf/config';
+import { defineConfig } from '@builtbyfriends/bwf/config';
 
 export default defineConfig({
   routing: {

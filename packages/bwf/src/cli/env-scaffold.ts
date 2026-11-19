@@ -67,7 +67,7 @@ export function collectInferredEntries(root: string): Array<InferredEntry> {
 export function renderEnvTs(entries: Array<InferredEntry>): string {
   if (entries.length === 0) {
     return [
-      `import { defineEnv } from '@buildwf/bwf/env';`,
+      `import { defineEnv } from '@builtbyfriends/bwf/env';`,
       ``,
       `// Define your environment variables here. See https://void.cloud/guide/env-vars`,
       `export default defineEnv({});`,
@@ -84,7 +84,7 @@ export function renderEnvTs(entries: Array<InferredEntry>): string {
   );
 
   const lines: Array<string> = [];
-  lines.push(`import { defineEnv, ${importList.join(', ')} } from '@buildwf/bwf/env';`);
+  lines.push(`import { defineEnv, ${importList.join(', ')} } from '@builtbyfriends/bwf/env';`);
   lines.push('');
   lines.push(`// Scaffolded from .env. Inference is conservative — review each`);
   lines.push(`// entry and tighten types as needed (e.g. oneOf([...]), url(), .optional(),`);

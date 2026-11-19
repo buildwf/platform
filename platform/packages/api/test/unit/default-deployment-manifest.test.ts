@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { createApplicationRoutes, parsePlatformDeploymentManifest } from '@buildwf/platform';
+import { createApplicationRoutes, parsePlatformDeploymentManifest } from '@builtbyfriends/platform';
 import { describe, expect, it } from 'vite-plus/test';
 
 const manifestPath = resolve(import.meta.dirname, '../../../../deployments/nosam-cloud.json');

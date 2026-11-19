@@ -1,5 +1,5 @@
-import type { PlatformApplication } from '@buildwf/platform';
-import { platformProjectHostnames } from '@buildwf/platform';
+import type { PlatformApplication } from '@builtbyfriends/platform';
+import { platformProjectHostnames } from '@builtbyfriends/platform';
 import { describe, expect, it } from 'vite-plus/test';
 import { resolveAccessAudience } from '../../../dispatch/src/access.ts';
 import {

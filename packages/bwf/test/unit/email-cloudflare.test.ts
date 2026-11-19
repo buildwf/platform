@@ -1,4 +1,4 @@
-import type { CloudflareOperation } from '@buildwf/deploy-cloudflare';
+import type { CloudflareOperation } from '@builtbyfriends/deploy-cloudflare';
 import { describe, expect, it } from 'vite-plus/test';
 import {
   applyEmailSetup,

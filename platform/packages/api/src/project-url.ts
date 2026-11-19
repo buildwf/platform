@@ -2,7 +2,7 @@ import {
   platformProjectHostname,
   readPlatformApplication,
   type PlatformApplicationProject,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import type { ApiEnv } from './env.ts';
 
 export function projectUrl(project: PlatformApplicationProject, env: ApiEnv['Bindings']): string {

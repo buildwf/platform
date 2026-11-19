@@ -4,7 +4,7 @@
 // `EmailMessage` per recipient), or the bwf platform proxy, which enforces
 // project policy and quotas.
 
-import { isRecord } from '@buildwf/deploy-core';
+import { isRecord } from '@builtbyfriends/deploy-core';
 import { bytesToBase64 } from './base64.ts';
 import { readBoundedJson, withTimeout } from './email-protocol.ts';
 import {
@@ -690,7 +690,7 @@ function capturedResult(normalized: NormalizedEmail, captureId: string): SendEma
  *
  * During `bwf dev` the message is captured by the local inbox
  * (`/__nosam/inbox`) and never reaches the proxy; an in-process sink
- * (`@buildwf/bwf/email/testing`) takes precedence over it.
+ * (`@builtbyfriends/bwf/email/testing`) takes precedence over it.
  */
 export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult> {
   if (

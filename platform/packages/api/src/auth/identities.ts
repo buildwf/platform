@@ -1,4 +1,4 @@
-import { parsePlatformAdmissionPolicy } from '@buildwf/platform';
+import { parsePlatformAdmissionPolicy } from '@builtbyfriends/platform';
 import { and, eq } from 'drizzle-orm';
 import { createOAuthAccount, createUser, getUserByEmail, type Db } from '../db.ts';
 import type { ApiEnv } from '../env.ts';

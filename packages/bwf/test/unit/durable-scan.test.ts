@@ -29,7 +29,7 @@ describe('scanDurableObjectModules', () => {
   it('discovers explicit native Durable Object identities through imported aliases', () => {
     const root = createModule(
       'agent.ts',
-      `import { defineDurableObject as durable } from '@buildwf/bwf/durable';
+      `import { defineDurableObject as durable } from '@builtbyfriends/bwf/durable';
       class Agent {};
       export default durable({ name: 'workspace-agent', class: Agent });`,
     );
@@ -105,9 +105,9 @@ describe('scanDurableObjectModules', () => {
   });
 
   it.each([
-    `import { defineDurableState as state } from '@buildwf/bwf/durable'; export default state({ name: 'counter' });`,
-    `import * as durable from '@buildwf/bwf/durable'; export default durable.defineDurableState({ name: 'counter' });`,
-    `import * as durable from '@buildwf/bwf/durable'; const Counter = durable['defineDurableState']({ name: 'counter' }); export default Counter;`,
+    `import { defineDurableState as state } from '@builtbyfriends/bwf/durable'; export default state({ name: 'counter' });`,
+    `import * as durable from '@builtbyfriends/bwf/durable'; export default durable.defineDurableState({ name: 'counter' });`,
+    `import * as durable from '@builtbyfriends/bwf/durable'; const Counter = durable['defineDurableState']({ name: 'counter' }); export default Counter;`,
   ])('reads explicit identities through aliased or namespace imports', (source) => {
     const root = createModule('moved.ts', source);
     expect(scanDurableObjectModules(root)[0]).toMatchObject({
@@ -133,7 +133,7 @@ describe('scanDurableObjectModules', () => {
     const root = createModule(
       'cart.ts',
       `
-      import { defineDurableState as state } from '@buildwf/bwf/durable';
+      import { defineDurableState as state } from '@builtbyfriends/bwf/durable';
       export default state({ name: process.env.NAME });
     `,
     );

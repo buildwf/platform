@@ -4,8 +4,8 @@ import {
   transitionInstallation,
   type PlatformInstallationManifest,
   type PlatformLifecycleOperation,
-} from '@buildwf/platform';
-import type { PlatformRuntimeManifest } from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform';
+import type { PlatformRuntimeManifest } from '@builtbyfriends/platform/installer';
 import { platformWorkerAction, platformWorkerDeployCallbacks } from './platform-install-workers.ts';
 import { verifyPlatformHealth, bootstrapPlatformSharedEmail } from './platform-installer-health.ts';
 import {

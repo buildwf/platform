@@ -122,7 +122,7 @@ describe('readConfig', () => {
     const path = join(tmpDir, 'bwf.config.ts');
     writeFileSync(
       path,
-      `import { defineConfig } from '@buildwf/bwf/config';\nexport default defineConfig({ worker: { compatibility_date: '2026-02-24' } } satisfies import('@buildwf/bwf/config').BwfConfig);\n`,
+      `import { defineConfig } from '@builtbyfriends/bwf/config';\nexport default defineConfig({ worker: { compatibility_date: '2026-02-24' } } satisfies import('@builtbyfriends/bwf/config').BwfConfig);\n`,
     );
     expect(readConfig(tmpDir).worker?.compatibility_date).toBe('2026-02-24');
     writeFileSync(path, `export default { worker: { compatibility_date: '2026-02-25' } };\n`);

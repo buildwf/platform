@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 
 import { Button } from '@astryxdesign/core/Button';
-import type { PlatformLoginConfiguration } from '@buildwf/platform';
+import type { PlatformLoginConfiguration } from '@builtbyfriends/platform';
 import { CodeBlock } from './CodeBlock.tsx';
 import { FormTextInput } from './FormControls.tsx';
 import { SectionStack } from './SectionStack.tsx';

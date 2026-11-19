@@ -87,7 +87,7 @@ The ingress accepts payloads up to 25 MiB. See [GitHub’s payload limit](https:
 
 ## Deploying Source Builds from CI
 
-Build `@buildwf/platform` from your checkout and pass its runtime directory to `install`, `upgrade`, `repair`, `enable`, or `rollback` with `--runtime`. Custom runtimes get the same integrity, migration, health, and rollback checks as packaged releases.
+Build `@builtbyfriends/platform` from your checkout and pass its runtime directory to `install`, `upgrade`, `repair`, `enable`, or `rollback` with `--runtime`. Custom runtimes get the same integrity, migration, health, and rollback checks as packaged releases.
 
 Use a clean Git checkout or set `NOSAM_PLATFORM_SOURCE_REVISION` to identify the revision you deploy.
 

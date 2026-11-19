@@ -1,7 +1,7 @@
-import type { RedirectRule } from '@buildwf/deploy-core';
+import type { RedirectRule } from '@builtbyfriends/deploy-core';
 import { compilePattern, matchPatternCaptures, substituteParams } from './pattern.ts';
 
-export type { RedirectRule } from '@buildwf/deploy-core';
+export type { RedirectRule } from '@builtbyfriends/deploy-core';
 
 export type RoutingRuleResult =
   | { type: 'redirect'; destination: string; status: number }

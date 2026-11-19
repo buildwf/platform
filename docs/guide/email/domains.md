@@ -40,7 +40,7 @@ On an administrator-managed platform, `add` prints the administrator command for
 Set a sender on a Cloudflare zone you own:
 
 ```ts
-import { defineConfig } from '@buildwf/bwf/config';
+import { defineConfig } from '@builtbyfriends/bwf/config';
 
 export default defineConfig({
   email: { from: 'Acme <support@mail.acme.com>' },

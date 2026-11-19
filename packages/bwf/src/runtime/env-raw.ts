@@ -2,7 +2,7 @@
  * Raw runtime env resolution — framework-internal only.
  *
  * This module is NOT exported in package.json, so it cannot be imported
- * via "@buildwf/bwf/..." subpaths. Only framework modules can import it by relative path.
+ * via "@builtbyfriends/bwf/..." subpaths. Only framework modules can import it by relative path.
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
 

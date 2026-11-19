@@ -3,7 +3,7 @@ import type {
   RouteDestination,
   RouteUrl,
   RouteUrlInput,
-} from '@buildwf/bwf/routes';
+} from '@builtbyfriends/bwf/routes';
 import type { Context, Env, MiddlewareHandler, Next, TypedResponse } from 'hono';
 import type { RedirectStatusCode } from 'hono/utils/http-status';
 import type { AuthSession, AuthUser } from './auth.ts';

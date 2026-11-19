@@ -10,11 +10,11 @@ import {
   transitionInstallation,
   type PlatformInstallationManifest,
   type PlatformLifecycleOperation,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import {
   PLATFORM_ADMIN_ASSETS_DIRECTORY,
   resolvePlatformRuntime,
-} from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform/installer';
 import { join } from 'pathslash';
 import { ensurePlatformAccessToken } from './cf-access.ts';
 import { getErrorMessage } from './output.ts';
@@ -95,7 +95,7 @@ import { assertPlatformWorkerSecretUpdateAuthority } from './platform-secret-upd
 import { assertPlatformStorageSupported } from './platform-storage.ts';
 import { platformManagedWorkerTraffic } from './platform-traffic.ts';
 
-export { PLATFORM_REMOTE_INSTALLATION_MANIFEST_KEY as REMOTE_INSTALLATION_MANIFEST_KEY } from '@buildwf/platform';
+export { PLATFORM_REMOTE_INSTALLATION_MANIFEST_KEY as REMOTE_INSTALLATION_MANIFEST_KEY } from '@builtbyfriends/platform';
 
 // Preserve the routing gate first; rollback and manifest failure checkpoints
 // follow while the database lifecycle lock is still held by the caller.

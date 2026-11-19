@@ -28,7 +28,7 @@ let bwfConfig = '';
 let dist = '';
 const AUTH_HEADER = 'Basic Z3Vlc3Q6d2VkZGluZw==';
 
-const middlewareSource = `import { basicAuth } from '@buildwf/bwf';
+const middlewareSource = `import { basicAuth } from '@builtbyfriends/bwf';
 
 export default basicAuth({
   username: 'guest',

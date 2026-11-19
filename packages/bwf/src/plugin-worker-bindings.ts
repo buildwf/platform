@@ -1,4 +1,4 @@
-import { appendSqliteClassMigration } from '@buildwf/deploy-core';
+import { appendSqliteClassMigration } from '@builtbyfriends/deploy-core';
 import { type ApplicationAnalysis } from './application-analysis.ts';
 import { SEND_EMAIL_BINDING } from './cli/email-cloudflare.ts';
 import {
@@ -263,7 +263,7 @@ export function mergeWorkerBindings(
     result.vars = vars;
   }
 
-  // Serve with `@buildwf/bwf/email`: drop only the reserved SEND_EMAIL entry so the dev
+  // Serve with `@builtbyfriends/bwf/email`: drop only the reserved SEND_EMAIL entry so the dev
   // inbox stays the only sink; other send_email bindings are the user's. The
   // patch is defu-merged over `resolved`, so mutating it is the only removal.
   if (viteCommand === 'serve' && bindings.needsEmail) {

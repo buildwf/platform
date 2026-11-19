@@ -4,14 +4,14 @@ description: 'Declare environment variables in env.ts and read the typed values 
 
 # Environment variables
 
-Declare your environment variables in `env.ts`, then read them through `env` from `@buildwf/bwf/env`. Use `.env` for local values and `bwf secret put` for production server values.
+Declare your environment variables in `env.ts`, then read them through `env` from `@builtbyfriends/bwf/env`. Use `.env` for local values and `bwf secret put` for production server values.
 
 ## Define the schema
 
 Create `env.ts` at the project root:
 
 ```ts
-import { defineEnv, number, string, url } from '@buildwf/bwf/env';
+import { defineEnv, number, string, url } from '@builtbyfriends/bwf/env';
 
 export default defineEnv({
   DATABASE_URL: url(),
@@ -24,7 +24,7 @@ export default defineEnv({
 Import the typed `env` object in your app:
 
 ```ts
-import { env } from '@buildwf/bwf/env';
+import { env } from '@builtbyfriends/bwf/env';
 
 const databaseUrl = env.DATABASE_URL;
 ```

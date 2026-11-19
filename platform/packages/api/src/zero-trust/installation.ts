@@ -3,7 +3,7 @@ import {
   readPlatformApplication,
   platformHealthHostname,
   type PlatformApplication,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import type { Db } from '../db.ts';
 import type { ApiEnv } from '../env.ts';
 import { getPlatformSetting, setPlatformSetting } from '../platform-settings.ts';

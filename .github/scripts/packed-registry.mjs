@@ -28,7 +28,7 @@ export function inspectPackage(tarball) {
   assert(isHttpsUrl(manifest.homepage), `${manifest.name}: homepage must be an HTTPS URL`);
   assert(isHttpsUrl(manifest.bugs?.url), `${manifest.name}: bugs.url must be an HTTPS URL`);
   assert(files.has('package/LICENSE'), `${manifest.name}: missing packaged LICENSE`);
-  if (manifest.name === '@buildwf/bwf') {
+  if (manifest.name === '@builtbyfriends/bwf') {
     for (const file of [
       'docs/guide/quickstart.md',
       'docs/reference/cli.md',
@@ -132,7 +132,7 @@ export async function startPackedRegistry(packages) {
         name.startsWith('bwf/') ||
         name === 'create-bwf' ||
         name.startsWith('create-bwf/') ||
-        name.startsWith('@buildwf/')
+        name.startsWith('@builtbyfriends/')
       ) {
         // Never let missing local versions silently resolve to a registry release.
         response.writeHead(404).end('Package is outside the packed release cohort.');

@@ -1,8 +1,8 @@
 import {
   createPlatformDeploymentManifest,
   createPlatformInstallationManifest,
-} from '@buildwf/platform';
-import type { PlatformRuntime, PlatformRuntimeMigration } from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform';
+import type { PlatformRuntime, PlatformRuntimeMigration } from '@builtbyfriends/platform/installer';
 import { describe, expect, it } from 'vite-plus/test';
 import { assertPlatformRuntimeSafety } from '../../src/cli/platform-installer-database.ts';
 import { assertPlatformRollbackCompatibility } from '../../src/cli/platform-management.ts';

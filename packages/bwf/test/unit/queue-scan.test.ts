@@ -21,7 +21,7 @@ describe('scanQueuesSync', () => {
   it('extracts all consumer options together', () => {
     writeFileSync(
       join(root, 'queues', 'full.ts'),
-      `import { defineQueue } from "@buildwf/bwf";
+      `import { defineQueue } from "@builtbyfriends/bwf";
 export const maxBatchSize = 50;
 export const maxBatchTimeout = 10;
 export const maxRetries = 3;

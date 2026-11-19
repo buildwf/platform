@@ -2507,7 +2507,7 @@ async function importLocalModule(modulePath: string): Promise<Record<string, unk
   return jiti.import<Record<string, unknown>>(modulePath);
 }
 
-/** The schema and casing that `@buildwf/bwf/db` gives drizzle, or undefined when neither is set. */
+/** The schema and casing that `@builtbyfriends/bwf/db` gives drizzle, or undefined when neither is set. */
 function getDrizzleSchemaOptions(
   schema: Record<string, unknown>,
   casing: DatabaseCasing | undefined,

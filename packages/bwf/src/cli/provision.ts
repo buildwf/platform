@@ -16,8 +16,8 @@ import {
 import { createRequire } from 'node:module';
 import { resolve as resolvePosixPath } from 'node:path/posix';
 import { resolve as resolveWindowsPath } from 'node:path/win32';
-import type { CloudflareOperation } from '@buildwf/deploy-cloudflare';
-import { isRecord, type R2LocationHint } from '@buildwf/deploy-core';
+import type { CloudflareOperation } from '@builtbyfriends/deploy-cloudflare';
+import { isRecord, type R2LocationHint } from '@builtbyfriends/deploy-core';
 import { parse, type ParseError } from 'jsonc-parser';
 import { basename, dirname, join, normalize, resolve } from 'pathslash';
 import lockfile from 'proper-lockfile';

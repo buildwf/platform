@@ -1,4 +1,4 @@
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { fetchApi, getPublicApiUrl } from '../lib/api.ts';
 import { isLocalDashboardHost } from '../lib/origin.ts';

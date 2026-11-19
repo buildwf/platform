@@ -4,8 +4,8 @@ import {
   parseCloudflareVersionMessage,
   readCloudflareTriggerConfig,
   type CloudflareTriggerConfig,
-} from '@buildwf/deploy-cloudflare';
-import { recordInstallationStep, type PlatformInstallationManifest } from '@buildwf/platform';
+} from '@builtbyfriends/deploy-cloudflare';
+import { recordInstallationStep, type PlatformInstallationManifest } from '@builtbyfriends/platform';
 import { join } from 'pathslash';
 import {
   readActivePlatformWorkerSnapshot,

@@ -85,7 +85,7 @@ describe('Cloudflare deployment onboarding', () => {
     ).toBeNull();
   });
   it('does not infer the destination from SDK usage or unrelated metadata', async () => {
-    writeFileSync(join(root, 'package.json'), '{"dependencies":{"@buildwf/bwf":"*"}}');
+    writeFileSync(join(root, 'package.json'), '{"dependencies":{"@builtbyfriends/bwf":"*"}}');
     mkdirSync(join(root, '.bwf'));
     writeFileSync(join(root, '.bwf/project.json'), '{"bwfInternalStaging":false}');
     expect(

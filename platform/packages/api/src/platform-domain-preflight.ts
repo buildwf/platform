@@ -1,4 +1,4 @@
-import { normalizeApplicationDomain } from '@buildwf/platform';
+import { normalizeApplicationDomain } from '@builtbyfriends/platform';
 import type { Context } from 'hono';
 import type { ApiEnv } from './env.ts';
 

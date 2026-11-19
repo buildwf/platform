@@ -2,7 +2,7 @@ import {
   deployArtifactDigest,
   createDeployArtifact,
   type DeployArtifact,
-} from '@buildwf/deploy-core';
+} from '@builtbyfriends/deploy-core';
 import { and, eq, gt, isNull, sql, type SQL } from 'drizzle-orm';
 import type { Db, DbOrTx } from '../db.ts';
 import type { ApiEnv } from '../env.ts';

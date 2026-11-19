@@ -15,18 +15,18 @@ const cliVersion = (
 
 function project(installedVersion?: string | 'linked'): void {
   root = mkdtempSync(join(tmpdir(), 'nosam-installed-plugin-version-test-'));
-  writeFileSync(join(root, 'package.json'), '{"dependencies":{"@buildwf/bwf":"^0.20.0"}}');
+  writeFileSync(join(root, 'package.json'), '{"dependencies":{"@builtbyfriends/bwf":"^0.20.0"}}');
   if (installedVersion) {
-    const packageRoot = join(root, 'node_modules', '@buildwf', 'bwf');
+    const packageRoot = join(root, 'node_modules', '@builtbyfriends', 'bwf');
     if (installedVersion === 'linked') {
-      mkdirSync(join(root, 'node_modules', '@buildwf'), { recursive: true });
+      mkdirSync(join(root, 'node_modules', '@builtbyfriends'), { recursive: true });
       symlinkSync(getPackageDir(), packageRoot, 'dir');
       return;
     }
     mkdirSync(join(packageRoot, 'dist'), { recursive: true });
     writeFileSync(
       join(packageRoot, 'package.json'),
-      JSON.stringify({ name: '@buildwf/bwf', version: installedVersion, main: './dist/index.mjs' }),
+      JSON.stringify({ name: '@builtbyfriends/bwf', version: installedVersion, main: './dist/index.mjs' }),
     );
     writeFileSync(join(packageRoot, 'dist', 'index.mjs'), 'export default {};\n');
   }

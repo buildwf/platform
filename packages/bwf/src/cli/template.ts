@@ -157,7 +157,7 @@ export function createSpaStarterTemplate(options: {
       ...(starterMode !== 'spa' ? { zod: '^4.6.7' } : {}),
     },
     devDependencies: {
-      '@buildwf/bwf': bwfPackageSpec,
+      '@builtbyfriends/bwf': bwfPackageSpec,
       ...SCAFFOLD_BASE_DEV_DEPENDENCIES,
       ...(toolchain === 'vite-plus' ? SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES : {}),
       ...config.devDependencies,
@@ -169,7 +169,7 @@ export function createSpaStarterTemplate(options: {
 function getViteConfig(): string {
   return `import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import { bwfPlugin } from "@buildwf/bwf";
+import { bwfPlugin } from "@builtbyfriends/bwf";
 
 export default defineConfig({
   plugins: [react(), bwfPlugin()],
@@ -208,10 +208,10 @@ createRoot(document.getElementById("root")!).render(
 }
 
 function getMessagesRoute(): string {
-  return `import { defineHandler } from "@buildwf/bwf";
-import { db, desc } from "@buildwf/bwf/db";
+  return `import { defineHandler } from "@builtbyfriends/bwf";
+import { db, desc } from "@builtbyfriends/bwf/db";
 import { messages } from "@schema";
-import { createInsertSchema } from "@buildwf/bwf/drizzle-zod";
+import { createInsertSchema } from "@builtbyfriends/bwf/drizzle-zod";
 
 export const GET = defineHandler(async () => {
   return db.select().from(messages).orderBy(desc(messages.id));
@@ -234,7 +234,7 @@ function getHelloRoute(
 ): string {
   const databaseLabel =
     starterMode === 'postgresql' ? 'PostgreSQL' : starterMode === 'mysql' ? 'MySQL' : 'D1';
-  return `import { defineHandler } from "@buildwf/bwf";
+  return `import { defineHandler } from "@builtbyfriends/bwf";
 
 export const GET = defineHandler(() => {
   return {
@@ -248,7 +248,7 @@ export const GET = defineHandler(() => {
 
 function getSchemaFile(starterMode: Exclude<ScaffoldStarterMode, 'spa'>): string {
   if (starterMode === 'postgresql') {
-    return `import { pgTable, serial, text, timestamp } from "@buildwf/bwf/schema-pg";
+    return `import { pgTable, serial, text, timestamp } from "@builtbyfriends/bwf/schema-pg";
 
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
@@ -259,7 +259,7 @@ export const messages = pgTable("messages", {
   }
 
   if (starterMode === 'mysql') {
-    return `import { int, mysqlTable, text, timestamp } from "@buildwf/bwf/schema-mysql";
+    return `import { int, mysqlTable, text, timestamp } from "@builtbyfriends/bwf/schema-mysql";
 
 export const messages = mysqlTable("messages", {
   id: int("id").autoincrement().primaryKey(),
@@ -269,8 +269,8 @@ export const messages = mysqlTable("messages", {
 `;
   }
 
-  return `import { sql } from "@buildwf/bwf/db";
-import { integer, sqliteTable, text } from "@buildwf/bwf/schema-d1";
+  return `import { sql } from "@builtbyfriends/bwf/db";
+import { integer, sqliteTable, text } from "@builtbyfriends/bwf/schema-d1";
 
 export const messages = sqliteTable("messages", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -281,7 +281,7 @@ export const messages = sqliteTable("messages", {
 }
 
 function getSeedFile(): string {
-  return `import { defineSeed } from "@buildwf/bwf/seed";
+  return `import { defineSeed } from "@builtbyfriends/bwf/seed";
 
 const SAMPLE_MESSAGES = ["Hello from bwf"];
 
@@ -401,7 +401,7 @@ ${indent(jsx, 4)}
 `;
   }
   return `import { useEffect, useState, type FormEvent } from "react";
-import { fetch } from "@buildwf/bwf/client";
+import { fetch } from "@builtbyfriends/bwf/client";
 
 const loadMessages = () => fetch("/api/messages");
 

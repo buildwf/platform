@@ -58,7 +58,7 @@ The source must use `https://` and a literal hostname without wildcards or a por
 Set `routing.alwaysUseHttps` to redirect HTTP requests to HTTPS:
 
 ```ts
-import { defineConfig } from '@buildwf/bwf/config';
+import { defineConfig } from '@builtbyfriends/bwf/config';
 
 export default defineConfig({
   routing: {

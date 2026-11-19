@@ -14,28 +14,28 @@ In an empty directory, install bwf and run setup:
 ::: code-group
 
 ```sh [npm]
-npm install -D @buildwf/bwf
+npm install -D @builtbyfriends/bwf
 npx bwf init
 ```
 
 ```sh [pnpm]
-pnpm add -D @buildwf/bwf
+pnpm add -D @builtbyfriends/bwf
 pnpm bwf init
 ```
 
 ```sh [yarn]
-yarn add -D @buildwf/bwf
+yarn add -D @builtbyfriends/bwf
 yarn bwf init
 ```
 
 ```sh [bun]
 # bunx runs bwf with the `node` on your PATH: use Node.js 24.22+ or 26.12+
-bun add -D @buildwf/bwf
+bun add -D @builtbyfriends/bwf
 bunx bwf init
 ```
 
 ```sh [vp]
-vp add -D @buildwf/bwf
+vp add -D @builtbyfriends/bwf
 vpx bwf init
 ```
 
@@ -80,7 +80,7 @@ Open `http://localhost:5173`. `src/` contains your React app, and `routes/` cont
 Edit `routes/api/hello.ts`, or create it if your starter doesn't include it:
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 
 export const GET = defineHandler(() => {
   return { message: 'Hello from bwf' };
@@ -90,7 +90,7 @@ export const GET = defineHandler(() => {
 Visit `http://localhost:5173/api/hello` to see the response. From your client code, call it with bwf's typed fetch:
 
 ```ts
-import { fetch } from '@buildwf/bwf/client';
+import { fetch } from '@builtbyfriends/bwf/client';
 
 const { message } = await fetch('/api/hello');
 ```

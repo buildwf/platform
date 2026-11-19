@@ -1,5 +1,5 @@
-import { defineEmail, parseEmail, replyEmail } from '@buildwf/bwf/email';
-import { kv } from '@buildwf/bwf/kv';
+import { defineEmail, parseEmail, replyEmail } from '@builtbyfriends/bwf/email';
+import { kv } from '@builtbyfriends/bwf/kv';
 
 export function acceptEmail(route: string) {
   return defineEmail(async (message, _env, _ctx, info) => {

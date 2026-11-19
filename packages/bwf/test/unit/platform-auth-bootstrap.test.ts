@@ -1,4 +1,4 @@
-import { PLATFORM_AUTH_SETUP_PROOF_PREFIX } from '@buildwf/platform';
+import { PLATFORM_AUTH_SETUP_PROOF_PREFIX } from '@builtbyfriends/platform';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import {
   initializeInstalledPlatformAuthentication,

@@ -381,7 +381,7 @@ async function runManagedDeploy(
 
 export { type RunDeployOptions } from './deploy-types.ts';
 
-export { parseRootWranglerConfig } from '@buildwf/deploy-cloudflare';
+export { parseRootWranglerConfig } from '@builtbyfriends/deploy-cloudflare';
 export { resolveDeployTransport } from './deploy-transport.ts';
 export { deriveWorkerName } from './deploy-resources.ts';
 export { checkWranglerMigrationApplySet } from './deploy-migrations.ts';

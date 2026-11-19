@@ -1,7 +1,7 @@
 import {
   createPlatformDeploymentManifest,
   createPlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { CANCEL_SYMBOL } from '@voidzero-dev/vite-plus-prompts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { platformAccessNonce } from '../../src/cli/platform-access-provision.ts';

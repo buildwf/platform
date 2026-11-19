@@ -2,7 +2,7 @@ import {
   MIGRATION_CLASSIFIER_VERSION,
   validateManifestShape,
   isSandboxRegistryImage,
-} from '@buildwf/deploy-core';
+} from '@builtbyfriends/deploy-core';
 import { and, eq, sql as drizzleSql } from 'drizzle-orm';
 import { type Context } from 'hono';
 import { paginatedR2Delete, type AssetManifestEntry } from '../assets.ts';

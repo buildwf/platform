@@ -2,7 +2,7 @@ import {
   parsePlatformAccessProtection,
   type PlatformAccessProtection,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { cfAccessHeaders } from '../shared/cf-access.ts';
 import {
   inspectPlatformAccess,

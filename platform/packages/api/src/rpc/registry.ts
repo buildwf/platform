@@ -1,4 +1,4 @@
-import { defineRegistry } from '@eeao/core';
+import { defineRegistry } from '@builtbyfriends/realtime';
 import * as billing from './procedures/billing.ts';
 import * as credentials from './procedures/credentials.ts';
 import * as database from './procedures/database.ts';

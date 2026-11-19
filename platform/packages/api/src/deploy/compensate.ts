@@ -1,4 +1,4 @@
-import { platformProjectHostname, readPlatformApplication } from '@buildwf/platform';
+import { platformProjectHostname, readPlatformApplication } from '@builtbyfriends/platform';
 import { sql as drizzleSql } from 'drizzle-orm';
 import { type Context } from 'hono';
 import { deleteDispatchScript } from '../cf-api.ts';

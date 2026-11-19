@@ -1,6 +1,6 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import type { CloudflareCommandResult, CloudflareOperation } from '@buildwf/deploy-cloudflare';
+import type { CloudflareCommandResult, CloudflareOperation } from '@builtbyfriends/deploy-cloudflare';
 import {
   encodeCloudflareVersionMessage,
   deployCloudflareVersionTraffic,
@@ -12,7 +12,7 @@ import {
   readWranglerTopLevelString,
   resolveD1MigrateTarget,
   type CloudflareVersionMetadata,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { join } from 'pathslash';
 import { materializeCloudflareConfig, persistCloudflareConfig } from '../cloudflare-config.ts';
 import { createCloudflareProcessRunner } from './cloudflare-process.ts';

@@ -17,7 +17,7 @@ The backend is optional. Files in `routes/` define [server routes](./server-rout
 
 ## Resources from your code
 
-Import `db` from `@buildwf/bwf/db` to query your database. bwf provides a local database during development and provisions one when you deploy. Imports also enable resources such as [KV](./kv.md), [object storage](./storage.md), and [queues](./queues.md). Use configuration when you need to connect existing resources.
+Import `db` from `@builtbyfriends/bwf/db` to query your database. bwf provides a local database during development and provisions one when you deploy. Imports also enable resources such as [KV](./kv.md), [object storage](./storage.md), and [queues](./queues.md). Use configuration when you need to connect existing resources.
 
 Your Drizzle schema defines database types. Handlers infer response types, and typed fetch checks their callers. Changing a field shows you which parts of the app need to change.
 

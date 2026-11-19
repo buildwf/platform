@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
-import { isRecord } from '@buildwf/deploy-core';
+import { isRecord } from '@builtbyfriends/deploy-core';
 
 /**
  * `wrangler secret put` creates a fetch-only draft before attaching a first secret to a Worker.

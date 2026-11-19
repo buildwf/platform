@@ -1,4 +1,4 @@
-import { readPlatformApplication, type PlatformApplication } from '@buildwf/platform';
+import { readPlatformApplication, type PlatformApplication } from '@builtbyfriends/platform';
 import type { DbOrTx } from '../db.ts';
 import type { ApiEnv } from '../env.ts';
 import { getPlatformSetting } from '../platform-settings.ts';

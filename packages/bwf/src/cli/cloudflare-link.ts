@@ -5,7 +5,7 @@ import {
   readExistingCloudflareWorker,
   type ExistingCloudflareWorker,
   type CloudflareCommandRunner,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { confirm, isCancel, log } from '@voidzero-dev/vite-plus-prompts';
 import { applyEdits, modify, parse, type ParseError } from 'jsonc-parser';
 import { basename, join } from 'pathslash';

@@ -1,6 +1,6 @@
-import { defineHandler } from '@buildwf/bwf';
-import { db, desc, eq } from '@buildwf/bwf/db';
-import { queues } from '@buildwf/bwf/queues';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { db, desc, eq } from '@builtbyfriends/bwf/db';
+import { queues } from '@builtbyfriends/bwf/queues';
 import { queueResults } from '@schema';
 
 export const GET = defineHandler(() =>

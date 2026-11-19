@@ -1,5 +1,5 @@
 {
-  "name": "@buildwf/docs",
+  "name": "@builtbyfriends/docs",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "preview": "vitepress preview"
   },
   "devDependencies": {
-    "@buildwf/bwf": "workspace:*",
+    "@builtbyfriends/bwf": "workspace:*",
     "@iconify/vue": "catalog:",
     "@voidzero-dev/vitepress-theme": "catalog:",
     "reka-ui": "catalog:",

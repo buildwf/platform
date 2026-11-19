@@ -5,4 +5,4 @@ export {
   safeDecodePathname,
   type AssetConfig,
   type ResolvedAsset,
-} from '@buildwf/edge';
+} from '@builtbyfriends/edge';

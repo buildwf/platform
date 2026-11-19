@@ -32,10 +32,10 @@ export function releasePolicy(
   }
   const version = match[1];
   if (UNAVAILABLE_BWF_VERSIONS.has(version)) {
-    throw new Error(`@buildwf/bwf@${version} was previously unpublished and cannot be reused.`);
+    throw new Error(`@builtbyfriends/bwf@${version} was previously unpublished and cannot be reused.`);
   }
-  if (!packages.some((pkg) => pkg.name === '@buildwf/bwf')) {
-    throw new Error('The release must include the public @buildwf/bwf package.');
+  if (!packages.some((pkg) => pkg.name === '@builtbyfriends/bwf')) {
+    throw new Error('The release must include the public @builtbyfriends/bwf package.');
   }
   for (const pkg of packages) {
     if (pkg.version !== version) {

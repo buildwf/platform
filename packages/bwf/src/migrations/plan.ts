@@ -8,7 +8,7 @@ import {
   splitSqlStatements,
   tokenizeSql,
   type MigrationPlanHashInput,
-} from '@buildwf/deploy-core';
+} from '@builtbyfriends/deploy-core';
 
 export const DESTRUCTIVE_PRAGMA = '-- nosam:allow-destructive';
 

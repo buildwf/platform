@@ -1,4 +1,4 @@
-import { PLATFORM_DISABLED_KEY } from '@buildwf/platform';
+import { PLATFORM_DISABLED_KEY } from '@builtbyfriends/platform';
 import { eq } from 'drizzle-orm';
 import {
   afterAll,

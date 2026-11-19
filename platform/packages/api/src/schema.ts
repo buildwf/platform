@@ -3,7 +3,7 @@ import type {
   PlatformAdmissionPolicy,
   PlatformLoginConfiguration,
   PlatformLoginKind,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { sql } from 'drizzle-orm';
 import {
   boolean,

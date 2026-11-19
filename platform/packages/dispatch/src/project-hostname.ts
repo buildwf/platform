@@ -3,7 +3,7 @@ import {
   platformWorkersDevAliasKey,
   readPlatformApplication,
   type PlatformApplicationProject,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import type { Env } from './env.ts';
 import { extractSlug } from './hostname.ts';
 

@@ -28,7 +28,7 @@ With [`routing.typedRoutes`](../config.md#routing-typedroutes), `c.redirect()` c
 For a string TypeScript can't check, such as a payment provider's checkout URL, use `as Href`:
 
 ```ts
-import { routeUrl, type Href } from '@buildwf/bwf/routes';
+import { routeUrl, type Href } from '@builtbyfriends/bwf/routes';
 
 declare const checkoutUrl: string;
 
@@ -48,7 +48,7 @@ return c.redirect(requested.origin === new URL(c.req.url).origin ? requested : '
 `c.redirect()` sends the location you provide without adding the request query. From `/sign-in?redirectTo=/notes`, `c.redirect('/notes')` goes to `/notes`. Configured [`routing.redirects`](../../guide/edge/redirects.md) merge query parameters instead.
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 
 export const GET = defineHandler((c) => {
   const locale = c.req.header('accept-language')?.startsWith('de') ? 'de' : 'en';
@@ -77,7 +77,7 @@ interface CloudContext {
 Context methods for inspecting rewrite state. `c.originalUrl()` returns the pre-rewrite URL as a `URL` object, or `null` on the first, non-rewritten hop. `c.isRewritten()` returns `true` on any re-dispatched context and `false` on the original. Use them for both static and middleware rewrites.
 
 ```ts
-import { defineMiddleware } from '@buildwf/bwf';
+import { defineMiddleware } from '@builtbyfriends/bwf';
 
 export default defineMiddleware(async (c, next) => {
   if (!c.isRewritten()) {
@@ -100,7 +100,7 @@ interface CloudContext {
 ## `RewriteDestination` {#rewritedestination}
 
 ```ts
-import type { RewriteDestination } from '@buildwf/bwf/routes';
+import type { RewriteDestination } from '@builtbyfriends/bwf/routes';
 ```
 
 Suggests known route patterns in your editor while also accepting dynamic strings. Used as:
@@ -108,4 +108,4 @@ Suggests known route patterns in your editor while also accepting dynamic string
 - The parameter type of [`c.rewrite()`](#c-rewrite-destination), unless `routing.typedRoutes` is on.
 - The type of `destination` entries in `routing.rewrites` and `routing.fallbacks` in [`bwf.config.ts`](../config.md#routing).
 
-Like [`RouteMap`](./types.md#routemap), `RewriteDestination` lives in the virtual `@buildwf/bwf/routes` module and is refreshed whenever routes change.
+Like [`RouteMap`](./types.md#routemap), `RewriteDestination` lives in the virtual `@builtbyfriends/bwf/routes` module and is refreshed whenever routes change.

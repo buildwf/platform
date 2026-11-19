@@ -845,7 +845,7 @@ export class PlatformClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-eeao-surface': 'cli',
+        'x-realtime-surface': 'cli',
         ...this.authHeaders,
       },
       body: input === undefined ? '' : JSON.stringify(input),

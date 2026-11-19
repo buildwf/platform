@@ -3,7 +3,7 @@ import {
   cloudflareCommandDiagnostic,
   stabilizeCloudflareVersionTriggers,
   type CloudflareCommandResult,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { formatUrl } from './output.ts';
 
 // Cloudflare refuses a Worker with an Analytics Engine binding (code 10089)

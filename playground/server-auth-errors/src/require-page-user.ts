@@ -1,5 +1,5 @@
-import type { CloudContext } from '@buildwf/bwf';
-import { getUser } from '@buildwf/bwf/auth';
+import type { CloudContext } from '@builtbyfriends/bwf';
+import { getUser } from '@builtbyfriends/bwf/auth';
 import { HTTPException } from 'hono/http-exception';
 
 export function requirePageUser(c: CloudContext, status: 302 | 303 = 302) {

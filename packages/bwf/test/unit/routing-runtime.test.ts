@@ -1,4 +1,4 @@
-import { routeUrl } from '@buildwf/bwf/routes';
+import { routeUrl } from '@builtbyfriends/bwf/routes';
 import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { _validateEnvOnce, defineEnv, env } from '../../src/runtime/env-public.ts';
@@ -25,7 +25,7 @@ import {
 const context = { waitUntil() {}, passThroughOnException() {}, props: {} };
 const wrap = <T>(_env: RuntimeEnvironment, callback: () => T): T => callback();
 
-declare module '@buildwf/bwf/routes' {
+declare module '@builtbyfriends/bwf/routes' {
   interface RoutePathMap {
     '/typed-rewrite/:id': 'id';
   }

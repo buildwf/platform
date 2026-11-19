@@ -18,7 +18,7 @@ Once `hono` is installed in your app, you can use built-in middleware, helpers, 
 Use Hono's built-in middleware in your global middleware files or per-route:
 
 ```ts
-import { defineMiddleware } from '@buildwf/bwf';
+import { defineMiddleware } from '@builtbyfriends/bwf';
 // middleware/01.cors.ts
 import { cors } from 'hono/cors';
 
@@ -26,7 +26,7 @@ export default defineMiddleware(cors({ origin: 'https://example.com' }));
 ```
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 // routes/api/products.ts (per-route cache)
 import { cache } from 'hono/cache';
 import { listProducts } from '../../lib/products';
@@ -42,7 +42,7 @@ export const GET = defineHandler(
 :::
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 // routes/api/webhooks/stripe.ts (per-route usage)
 import { bearerAuth } from 'hono/bearer-auth';
 
@@ -57,7 +57,7 @@ export const POST = defineHandler(bearerAuth({ token: 'webhook-secret' }), async
 Hono's context helpers are available on `c` in every handler:
 
 ```ts
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 // routes/api/download.ts
 import { stream } from 'hono/streaming';
 
@@ -71,7 +71,7 @@ export const GET = defineHandler((c) => {
 
 ```ts
 // routes/api/data.ts
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 
 export const GET = defineHandler((c) => {
   c.header('X-Custom', 'value');
@@ -85,7 +85,7 @@ export const GET = defineHandler((c) => {
 Any `hono/*` or `@hono/*` package works. Install the package in your app, then use it directly:
 
 ```ts
-import { defineMiddleware } from '@buildwf/bwf';
+import { defineMiddleware } from '@builtbyfriends/bwf';
 // middleware/01.rate-limit.ts
 import { rateLimiter } from 'hono-rate-limiter';
 
@@ -110,8 +110,8 @@ For the full list of built-in middleware, see the [Hono documentation](https://h
 Return `c.redirect()` from a handler to redirect. From a shared helper, throw an `HTTPException` with the redirect response in `res`. This works in handlers and middleware:
 
 ```ts
-import type { CloudContext } from '@buildwf/bwf';
-import { getUser } from '@buildwf/bwf/auth';
+import type { CloudContext } from '@builtbyfriends/bwf';
+import { getUser } from '@builtbyfriends/bwf/auth';
 // lib/require-page-user.ts
 import { HTTPException } from 'hono/http-exception';
 

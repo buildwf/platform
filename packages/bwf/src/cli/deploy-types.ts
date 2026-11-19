@@ -4,7 +4,7 @@ import {
   assertCloudflareDurableObjectLifecycleSupported,
   type CloudflareCommandResult,
   type CloudflareOperation,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { type BwfConfig } from '../config.ts';
 import { runMySqlMigrations } from '../migrations/runner-mysql.ts';
 import { runPgMigrations } from '../migrations/runner-pg.ts';

@@ -117,12 +117,12 @@ afterEach(() => {
 describe('managed `bwf deploy` never runs the native Cloudflare email step', () => {
   it('reaches the full-deploy branch on an email-using project without touching the email module', async () => {
     // `dist/ssr` stands in for a built worker so `skipBuild` gets past the output check without
-    // running Vite; the path then runs config, inference (which sees the `@buildwf/bwf/email` import),
+    // running Vite; the path then runs config, inference (which sees the `@builtbyfriends/bwf/email` import),
     // the migration gates, and asset collection before its first upload call, `preflight`.
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'myapp' }),
       'bwf.json': JSON.stringify({ email: { from: 'noreply@mail.acme.com' } }),
-      'routes/index.ts': `import { sendEmail } from '@buildwf/bwf/email';\nexport const GET = () => sendEmail({});`,
+      'routes/index.ts': `import { sendEmail } from '@builtbyfriends/bwf/email';\nexport const GET = () => sendEmail({});`,
       'email/support+[ticket].ts': `export default async () => {};`,
       'wrangler.jsonc': JSON.stringify({ name: 'myapp', account_id: 'acc123' }),
       'dist/ssr/index.js': 'export default {};',

@@ -19,7 +19,7 @@ type Worker = {
 };
 
 const header = `import { z } from 'zod';
-import { procedure, session } from '@buildwf/bwf/procedure';
+import { procedure, session } from '@builtbyfriends/bwf/procedure';
 const r = { reason: 'Not part of this test' };
 `;
 
@@ -110,7 +110,7 @@ async function buildWorker(name: string, sources: Record<string, string>): Promi
     logLevel: 'silent',
     resolve: {
       alias: [
-        { find: '@buildwf/bwf/procedure', replacement: procedureModule },
+        { find: '@builtbyfriends/bwf/procedure', replacement: procedureModule },
         { find: /^zod$/, replacement: fileURLToPath(import.meta.resolve('zod')) },
       ],
     },

@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { CloudEnv } from '@buildwf/bwf/handler';
+import type { CloudEnv } from '@builtbyfriends/bwf/handler';
 import { Hono } from 'hono';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { prepareKitchenSinkPlatformFixture } from '../../../../scripts/kitchen-sink-platform-fixture.ts';
@@ -14,15 +14,15 @@ const mocks = vi.hoisted(() => ({
   aiRun: vi.fn(),
   aiStream: vi.fn(),
 }));
-vi.mock('@buildwf/bwf', async () => import('@buildwf/bwf/handler'));
-vi.mock('@buildwf/bwf/env', () => ({ env: mocks.env }));
-vi.mock('@buildwf/bwf/email', () => ({ sendEmail: mocks.sendEmail }));
-vi.mock('@buildwf/bwf/kv', () => ({ kv: { get: mocks.kvGet } }));
-vi.mock('@buildwf/bwf/queues', () => ({
+vi.mock('@builtbyfriends/bwf', async () => import('@builtbyfriends/bwf/handler'));
+vi.mock('@builtbyfriends/bwf/env', () => ({ env: mocks.env }));
+vi.mock('@builtbyfriends/bwf/email', () => ({ sendEmail: mocks.sendEmail }));
+vi.mock('@builtbyfriends/bwf/kv', () => ({ kv: { get: mocks.kvGet } }));
+vi.mock('@builtbyfriends/bwf/queues', () => ({
   queues: { 'acceptance-queue': { send: mocks.queueSend } },
 }));
-vi.mock('@buildwf/bwf/ai', () => ({ ai: { run: mocks.aiRun, stream: mocks.aiStream } }));
-vi.mock('@buildwf/bwf/sandbox', () => ({
+vi.mock('@builtbyfriends/bwf/ai', () => ({ ai: { run: mocks.aiRun, stream: mocks.aiStream } }));
+vi.mock('@builtbyfriends/bwf/sandbox', () => ({
   getSandbox: mocks.getSandbox,
   SandboxLimitError: class extends Error {},
 }));

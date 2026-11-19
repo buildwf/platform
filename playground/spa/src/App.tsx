@@ -1,4 +1,4 @@
-import { fetch } from '@buildwf/bwf/client';
+import { fetch } from '@builtbyfriends/bwf/client';
 import { useState, useEffect } from 'react';
 
 export default function App() {

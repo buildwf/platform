@@ -1,5 +1,5 @@
 import { stripVTControlCharacters } from 'node:util';
-import { isPlatformAccessEmailDomain, type PlatformInstallationManifest } from '@buildwf/platform';
+import { isPlatformAccessEmailDomain, type PlatformInstallationManifest } from '@builtbyfriends/platform';
 import { confirm, log, multiselect, password, select, text } from '@voidzero-dev/vite-plus-prompts';
 import { cfAccessHeaders } from '../shared/cf-access.ts';
 import { note, pc } from './output.ts';

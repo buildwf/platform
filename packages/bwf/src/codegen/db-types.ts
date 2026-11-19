@@ -10,17 +10,17 @@ export const DRIZZLE_TYPES = 'AnyColumn, SQL, SQLWrapper, BatchItem';
 const DIALECT_DB_TYPES = {
   sqlite: {
     type: 'DrizzleD1Database',
-    from: '@buildwf/bwf/_db',
+    from: '@builtbyfriends/bwf/_db',
     arg: 'd1: D1Database, options?: { session?: D1SessionConstraint }',
   },
   postgresql: {
     type: 'NodePgDatabase',
-    from: '@buildwf/bwf/_db-pg',
+    from: '@builtbyfriends/bwf/_db-pg',
     arg: 'connectionString: string',
   },
   mysql: {
     type: 'MySql2Database',
-    from: '@buildwf/bwf/_db-mysql',
+    from: '@builtbyfriends/bwf/_db-mysql',
     arg: 'connectionString: string',
   },
 } as const;
@@ -29,10 +29,10 @@ const DIALECT_DB_TYPES = {
  * Generate `.bwf/db.d.ts` with Drizzle types referencing the user's schema.
  *
  * This is a proper module file (not `declare module`) whose types override
- * the base `@buildwf/bwf/db` package via a tsconfig `paths` redirect:
- *   "@buildwf/bwf/db": ["./.bwf/db.d.ts"]
+ * the base `@builtbyfriends/bwf/db` package via a tsconfig `paths` redirect:
+ *   "@builtbyfriends/bwf/db": ["./.bwf/db.d.ts"]
  *
- * Imports reference `@buildwf/bwf/_db` (internal subpath pointing at the same
+ * Imports reference `@builtbyfriends/bwf/_db` (internal subpath pointing at the same
  * base module) to avoid circular resolution through the paths redirect.
  */
 export function generateDbDts(
@@ -50,8 +50,8 @@ export function generateDbDts(
     ...(schema ? ['import type * as schema from "@schema";', 'type Schema = typeof schema;'] : []),
     `export declare const db: ${type}<${schemaType}>;`,
     `export declare function createDb(${arg}): ${type}<${schemaType}>;`,
-    `export { ${DRIZZLE_OPERATORS} } from "@buildwf/bwf/_db";`,
-    `export type { ${DRIZZLE_TYPES} } from "@buildwf/bwf/_db";`,
+    `export { ${DRIZZLE_OPERATORS} } from "@builtbyfriends/bwf/_db";`,
+    `export type { ${DRIZZLE_TYPES} } from "@builtbyfriends/bwf/_db";`,
     `export type { ${type} } from "${from}";`,
     '',
   ];

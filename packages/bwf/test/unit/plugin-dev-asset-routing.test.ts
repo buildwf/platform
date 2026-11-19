@@ -122,8 +122,8 @@ function createBindingProjectRoot(): string {
   writeFileSync(
     join(root, 'routes/api/bindings.ts'),
     `
-import { db } from "@buildwf/bwf/db";
-import { storage } from "@buildwf/bwf/storage";
+import { db } from "@builtbyfriends/bwf/db";
+import { storage } from "@builtbyfriends/bwf/storage";
 
 export async function GET() {
   await db.select();
@@ -140,7 +140,7 @@ function createAiProjectRoot(platform: 'cloudflare' | 'nosam'): string {
   mkdirSync(join(root, 'routes/api'), { recursive: true });
   writeFileSync(
     join(root, 'routes/api/ai.ts'),
-    'import { ai } from "@buildwf/bwf/ai"; export const GET = () => ai.run("model", {});',
+    'import { ai } from "@builtbyfriends/bwf/ai"; export const GET = () => ai.run("model", {});',
   );
   mkdirSync(join(root, '.bwf'), { recursive: true });
   writeFileSync(
@@ -253,11 +253,11 @@ describe('bwfPlugin dev asset routing', () => {
   it('converts void CommonJS dependencies only in environments that run in workerd', async () => {
     const workerdOptimizer = {
       optimizeDeps: {
-        exclude: ['@buildwf/bwf', 'better-auth'],
-        include: ['@buildwf/bwf > email-validator'],
+        exclude: ['@builtbyfriends/bwf', 'better-auth'],
+        include: ['@builtbyfriends/bwf > email-validator'],
       },
     };
-    const nodeOptimizer = { optimizeDeps: { exclude: ['@buildwf/bwf'] } };
+    const nodeOptimizer = { optimizeDeps: { exclude: ['@builtbyfriends/bwf'] } };
     const cases = [
       [createApiOnlyProjectRoot, 'nosam_worker', workerd, workerdOptimizer],
       // Default mode never runs Vite's own ssr environment.
@@ -279,10 +279,10 @@ describe('bwfPlugin dev asset routing', () => {
 
   it('prebundles the bwf/db driver wherever workerd runs it', async () => {
     const cases = [
-      [createApiOnlyProjectRoot, 'mysql', workerd, ['@buildwf/bwf > mysql2']],
-      [createApiOnlyProjectRoot, 'pg', workerd, ['@buildwf/bwf > pg']],
-      [createAstroProjectRoot, 'mysql', workerd, ['@buildwf/bwf > mysql2']],
-      [createAstroProjectRoot, 'pg', workerd, ['@buildwf/bwf > pg']],
+      [createApiOnlyProjectRoot, 'mysql', workerd, ['@builtbyfriends/bwf > mysql2']],
+      [createApiOnlyProjectRoot, 'pg', workerd, ['@builtbyfriends/bwf > pg']],
+      [createAstroProjectRoot, 'mysql', workerd, ['@builtbyfriends/bwf > mysql2']],
+      [createAstroProjectRoot, 'pg', workerd, ['@builtbyfriends/bwf > pg']],
       [createFrameworkOwnedRuntimeProjectRoot, 'mysql', node, undefined],
       [createNodeProjectRoot, 'pg', {}, undefined],
     ] as const;
@@ -294,10 +294,10 @@ describe('bwfPlugin dev asset routing', () => {
       ).resolves.toEqual({
         optimizeDeps: drivers
           ? {
-              exclude: ['@buildwf/bwf', 'better-auth'],
-              include: ['@buildwf/bwf > email-validator', ...drivers],
+              exclude: ['@builtbyfriends/bwf', 'better-auth'],
+              include: ['@builtbyfriends/bwf > email-validator', ...drivers],
             }
-          : { exclude: ['@buildwf/bwf'] },
+          : { exclude: ['@builtbyfriends/bwf'] },
       });
     }
   });

@@ -141,7 +141,7 @@ export function drizzle(config) {
     return createDatabase(client);
   }
   if (typeof connection !== "object" || connection === null) {
-    throw new Error("@buildwf/bwf/db must let drizzle build the pg pool from a connection object");
+    throw new Error("@builtbyfriends/bwf/db must let drizzle build the pg pool from a connection object");
   }
   state.pools.push({ dialect: "postgresql", options: connection, drizzleConfig });
   return createDatabase(createPool("postgresql", connection));
@@ -166,7 +166,7 @@ export function drizzle(config) {
     return createDatabase(typeof client.promise === "function" ? client.promise() : client);
   }
   if (typeof connection !== "object" || connection === null) {
-    throw new Error("@buildwf/bwf/db must let drizzle build the mysql2 pool from a connection object");
+    throw new Error("@builtbyfriends/bwf/db must let drizzle build the mysql2 pool from a connection object");
   }
   state.pools.push({ dialect: "mysql", options: connection, drizzleConfig });
   return createDatabase(createPool("mysql", connection));
@@ -424,10 +424,10 @@ describe('drizzlePlugin db typing generation', () => {
     drizzlePlugin(root, false, 'sqlite');
 
     const dts = readFileSync(join(root, '.bwf', 'db.d.ts'), 'utf8');
-    expect(dts).toContain('import type { DrizzleD1Database } from "@buildwf/bwf/_db";');
+    expect(dts).toContain('import type { DrizzleD1Database } from "@builtbyfriends/bwf/_db";');
     expect(dts).toContain('options?: { session?: D1SessionConstraint }');
     expect(dts).toContain('): DrizzleD1Database<Schema>;');
-    expect(dts).not.toContain('@buildwf/bwf/_db-pg');
+    expect(dts).not.toContain('@builtbyfriends/bwf/_db-pg');
   });
 
   it('keeps postgres-only types off the shared db runtime entry', () => {
@@ -436,10 +436,10 @@ describe('drizzlePlugin db typing generation', () => {
     drizzlePlugin(root, false, 'postgresql');
 
     const dts = readFileSync(join(root, '.bwf', 'db.d.ts'), 'utf8');
-    expect(dts).toContain('import type { NodePgDatabase } from "@buildwf/bwf/_db-pg";');
-    expect(dts).toContain('export type { NodePgDatabase } from "@buildwf/bwf/_db-pg";');
+    expect(dts).toContain('import type { NodePgDatabase } from "@builtbyfriends/bwf/_db-pg";');
+    expect(dts).toContain('export type { NodePgDatabase } from "@builtbyfriends/bwf/_db-pg";');
     expect(dts).toContain(
-      `export { sql, eq, ne, gt, gte, lt, lte, and, or, not, desc, asc, like, ilike, notLike, inArray, notInArray, isNull, isNotNull, between, notBetween, exists, notExists, count, sum, avg, min, max } from "@buildwf/bwf/_db";`,
+      `export { sql, eq, ne, gt, gte, lt, lte, and, or, not, desc, asc, like, ilike, notLike, inArray, notInArray, isNull, isNotNull, between, notBetween, exists, notExists, count, sum, avg, min, max } from "@builtbyfriends/bwf/_db";`,
     );
   });
 
@@ -452,7 +452,7 @@ describe('drizzlePlugin db typing generation', () => {
 
       const dts = readFileSync(join(root, '.bwf', 'db.d.ts'), 'utf8');
       expect(dts).toContain(
-        'export type { AnyColumn, SQL, SQLWrapper, BatchItem } from "@buildwf/bwf/_db";',
+        'export type { AnyColumn, SQL, SQLWrapper, BatchItem } from "@builtbyfriends/bwf/_db";',
       );
     },
   );
@@ -463,8 +463,8 @@ describe('drizzlePlugin db typing generation', () => {
     drizzlePlugin(root, false, 'mysql');
 
     const dts = readFileSync(join(root, '.bwf', 'db.d.ts'), 'utf8');
-    expect(dts).toContain('import type { MySql2Database } from "@buildwf/bwf/_db-mysql";');
-    expect(dts).toContain('export type { MySql2Database } from "@buildwf/bwf/_db-mysql";');
+    expect(dts).toContain('import type { MySql2Database } from "@builtbyfriends/bwf/_db-mysql";');
+    expect(dts).toContain('export type { MySql2Database } from "@builtbyfriends/bwf/_db-mysql";');
   });
 
   it.each(['postgresql', 'mysql'] as const)(
@@ -772,7 +772,7 @@ export const requestPoolOptions = (env) =>
     const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
     const resolved = resolveId.call(
       { environment: { name: 'ssr' } },
-      '@buildwf/bwf/db',
+      '@builtbyfriends/bwf/db',
       schemaPath,
       {
         isEntry: false,
@@ -816,7 +816,7 @@ export const requestPoolOptions = (env) =>
       options: { isEntry: boolean },
     ) => string | undefined;
     const resolve = (importer: string) =>
-      resolveId.call({ environment: { name: 'ssr' } }, '@buildwf/bwf/db', importer, {
+      resolveId.call({ environment: { name: 'ssr' } }, '@builtbyfriends/bwf/db', importer, {
         isEntry: false,
       });
 
@@ -837,7 +837,7 @@ export const requestPoolOptions = (env) =>
     const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
     const resolved = resolveId.call(
       { environment: { name: 'ssr' } },
-      '@buildwf/bwf/db',
+      '@builtbyfriends/bwf/db',
       undefined,
       {
         isEntry: false,
@@ -851,7 +851,7 @@ export const requestPoolOptions = (env) =>
     expect(dts).not.toContain('@schema');
 
     const tsconfig = JSON.parse(readFileSync(join(root, '.bwf', 'tsconfig.json'), 'utf8'));
-    expect(tsconfig.compilerOptions.paths['@buildwf/bwf/db']).toEqual(['./db.d.ts']);
+    expect(tsconfig.compilerOptions.paths['@builtbyfriends/bwf/db']).toEqual(['./db.d.ts']);
     expect(tsconfig.compilerOptions.paths['@schema']).toBeUndefined();
 
     const code = load.call({}, '\0virtual:nosam-db');
@@ -871,7 +871,7 @@ export const requestPoolOptions = (env) =>
     ) => string | undefined;
 
     expect(
-      resolveId.call({ environment: { name: 'ssr' } }, '@buildwf/bwf/db', undefined, {
+      resolveId.call({ environment: { name: 'ssr' } }, '@builtbyfriends/bwf/db', undefined, {
         isEntry: false,
       }),
     ).toBe('\0virtual:nosam-db');
@@ -893,7 +893,7 @@ export const requestPoolOptions = (env) =>
     const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
     const resolved = resolveId.call(
       { environment: { name: 'ssr' } },
-      '@buildwf/bwf/db',
+      '@builtbyfriends/bwf/db',
       undefined,
       {
         isEntry: false,
@@ -913,7 +913,7 @@ export const requestPoolOptions = (env) =>
     drizzlePlugin(root, false, 'sqlite', { redirectDbTypePaths: false });
 
     const tsconfig = JSON.parse(readFileSync(join(root, '.bwf', 'tsconfig.json'), 'utf8'));
-    expect(tsconfig.compilerOptions.paths['@buildwf/bwf/db']).toBeUndefined();
+    expect(tsconfig.compilerOptions.paths['@builtbyfriends/bwf/db']).toBeUndefined();
     expect(tsconfig.compilerOptions.paths['@schema']).toEqual(['../db/schema.ts']);
   });
 

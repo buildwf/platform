@@ -2,7 +2,7 @@ import {
   createPlatformDeploymentManifest,
   createPlatformInstallationManifest,
   recordInstallationStep,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import {
   ensurePlatformAccessHealthChecks,

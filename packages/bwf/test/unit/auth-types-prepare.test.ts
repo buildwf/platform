@@ -34,7 +34,7 @@ describe('auth types prepare lifecycle', () => {
     writeFileSync(join(root, 'tsconfig.json'), '{ "extends": "./.bwf/tsconfig.json" }');
     writeFileSync(
       join(root, 'auth.ts'),
-      'import type { BwfAuthConfig } from "@buildwf/bwf/auth";\nexport default {} satisfies BwfAuthConfig;\n',
+      'import type { BwfAuthConfig } from "@builtbyfriends/bwf/auth";\nexport default {} satisfies BwfAuthConfig;\n',
     );
 
     expect(runPrepare(root).written).toContain('.bwf/auth.d.ts');

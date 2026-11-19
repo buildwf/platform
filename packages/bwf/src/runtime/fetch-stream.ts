@@ -4,7 +4,7 @@ import { asUsageLimit, limitFromResponse } from './limits.ts';
 import { interpolateRouteParams } from './route-url.ts';
 export { FetchError as StreamError };
 
-import type { RouteMap } from '@buildwf/bwf/routes';
+import type { RouteMap } from '@builtbyfriends/bwf/routes';
 import type { BodyOption, MethodsOf, ParamsOption, QueryOption } from './fetch.ts';
 type InputOf<P extends keyof RouteMap, M extends MethodsOf<P>> = RouteMap[P][M] extends {
   input: infer I;
@@ -28,7 +28,7 @@ type StreamOptions<P extends keyof RouteMap, M extends MethodsOf<P>> = BodyOptio
  * and plain text SSE (`data: some text`).
  *
  * ```ts
- * import { fetchStream } from "@buildwf/bwf/client";
+ * import { fetchStream } from "@builtbyfriends/bwf/client";
  *
  * for await (const chunk of fetchStream("/api/ai/chat", {
  *   method: "POST",

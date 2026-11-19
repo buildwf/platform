@@ -10,7 +10,7 @@ import {
   stageCloudflareStaticAssets,
   writeCloudflareStaticDeployConfig,
   assertExistingCloudflareConfig,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { dirname, join, relative } from 'pathslash';
 import { edgeRulesNeedWorker, BWF_INTERNAL_WORKER_FIRST } from '../asset-routing.ts';
 import { convertHeadersConfig, type RoutingConfig, type BwfConfig } from '../config.ts';
@@ -279,7 +279,7 @@ export async function runCloudflareStaticDeploy(
   writeFileSync(
     entryPath,
     renderCloudflareStaticEntry({
-      runtimeImport: '@buildwf/bwf/edge',
+      runtimeImport: '@builtbyfriends/bwf/edge',
       ...edgeRouting.entry,
       versionMetadataBinding,
     }),

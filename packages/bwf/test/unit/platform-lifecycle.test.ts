@@ -2,7 +2,7 @@ import {
   createPlatformDeploymentManifest,
   createPlatformInstallationManifest,
   recordInstallationResource,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 import { resolvePlatformInstallDatabaseUrl } from '../../src/cli/platform-lifecycle.ts';
 

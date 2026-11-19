@@ -1,4 +1,4 @@
-import { isR2LocationHint, type R2LocationHint } from '@buildwf/deploy-core';
+import { isR2LocationHint, type R2LocationHint } from '@builtbyfriends/deploy-core';
 import type { PlatformApplication } from './application.ts';
 import { PLATFORM_LOGIN_KINDS, type PlatformLoginKind } from './authentication.ts';
 import { assertRecord, requiredString } from './validate.ts';

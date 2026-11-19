@@ -2,7 +2,7 @@
 
 import { Button } from '@astryxdesign/core/Button';
 import { Heading } from '@astryxdesign/core/Text';
-import type { PlatformLifecycleOperation } from '@buildwf/platform';
+import type { PlatformLifecycleOperation } from '@builtbyfriends/platform';
 import { Activity, Check, Clock, Minus, Pause, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { PlatformStatusSnapshot } from '../../platform-status.ts';

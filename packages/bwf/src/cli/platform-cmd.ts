@@ -1,4 +1,4 @@
-import type { PlatformDiscoveryDocument, PlatformInstallationManifest } from '@buildwf/platform';
+import type { PlatformDiscoveryDocument, PlatformInstallationManifest } from '@builtbyfriends/platform';
 import { isCancel, log, select, text } from '@voidzero-dev/vite-plus-prompts';
 import { cfAccessHeaders } from '../shared/cf-access.ts';
 import { ensurePlatformAccessToken, isCloudflareAccessChallenge } from './cf-access.ts';

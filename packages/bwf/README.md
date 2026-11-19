@@ -15,7 +15,7 @@ The SDK's features are optional and composable. Start with a plain React SPA and
 Use Node.js 24.22+ or 26.12+. In an empty directory, run:
 
 ```sh
-npm install -D @buildwf/bwf
+npm install -D @builtbyfriends/bwf
 npx bwf init
 npm run dev
 ```
@@ -32,7 +32,7 @@ To deploy to a team platform, run `npx bwf connect <url>` first, then use the sa
 
 ## Documentation
 
-Read the bwf documentation online or use the Markdown guides and references in `node_modules/@buildwf/bwf/docs/`, included with the `bwf` package.
+Read the bwf documentation online or use the Markdown guides and references in `node_modules/@builtbyfriends/bwf/docs/`, included with the `bwf` package.
 
 `bwf init` adds a minimal `AGENTS.md` in new projects and asks before changing instructions in existing projects. It also links bundled skills for detected coding agents.
 
@@ -42,7 +42,7 @@ Read the bwf documentation online or use the Markdown guides and references in `
 - API and CLI reference
 - Coding agents
 
-Applications that publish through a platform OAuth client can prepare a built app without credentials using `@buildwf/bwf/deploy`, then request user approval.
+Applications that publish through a platform OAuth client can prepare a built app without credentials using `@builtbyfriends/bwf/deploy`, then request user approval.
 
 ## License
 

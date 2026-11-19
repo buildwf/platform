@@ -1,4 +1,4 @@
-import { platformProjectHostname, readPlatformApplication } from '@buildwf/platform';
+import { platformProjectHostname, readPlatformApplication } from '@builtbyfriends/platform';
 import type { ApiEnv } from '../env.ts';
 import type { Project } from '../types.ts';
 import { isCfAssetPlainText } from './migrations.ts';

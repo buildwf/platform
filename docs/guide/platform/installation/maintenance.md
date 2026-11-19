@@ -103,7 +103,7 @@ Repair recreates missing infrastructure that the installer owns. It does not res
 
 Upgrade the platform before your team updates its CLI. Install the new CLI on the administrator's machine, run the upgrade below, then have the team update.
 
-For apps using `@buildwf/bwf/sandbox`, add **Account → Containers → Edit** and **Account → Cloudchamber → Edit** to the runtime token. Edit its permissions in Cloudflare, or supply a replacement with `NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN`. See [Cloudflare API Tokens](/guide/platform/installation/credentials#runtime-token-permissions).
+For apps using `@builtbyfriends/bwf/sandbox`, add **Account → Containers → Edit** and **Account → Cloudchamber → Edit** to the runtime token. Edit its permissions in Cloudflare, or supply a replacement with `NOSAM_PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN`. See [Cloudflare API Tokens](/guide/platform/installation/credentials#runtime-token-permissions).
 
 Use the installed CLI's packaged runtime to upgrade:
 

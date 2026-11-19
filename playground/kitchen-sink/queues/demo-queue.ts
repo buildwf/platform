@@ -1,4 +1,4 @@
-import { defineQueue } from '@buildwf/bwf';
+import { defineQueue } from '@builtbyfriends/bwf';
 
 export const maxBatchTimeout = 1;
 

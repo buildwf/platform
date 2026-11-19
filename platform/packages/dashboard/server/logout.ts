@@ -1,4 +1,4 @@
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 import { deleteCookie } from 'hono/cookie';
 
 export const loader = defineHandler((context) => {

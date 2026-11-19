@@ -15,14 +15,14 @@ bwf configures [Better Auth](https://www.better-auth.com/) for your app, includi
 
 ### 1. Enable auth
 
-Import `auth` from `@buildwf/bwf/client` to enable email/password auth automatically. Use [configuration](#config) to add social providers.
+Import `auth` from `@builtbyfriends/bwf/client` to enable email/password auth automatically. Use [configuration](#config) to add social providers.
 
 ### 2. Sign up and sign in
 
-Use the preconfigured auth client from `@buildwf/bwf/client`:
+Use the preconfigured auth client from `@builtbyfriends/bwf/client`:
 
 ```tsx
-import { auth } from '@buildwf/bwf/client';
+import { auth } from '@builtbyfriends/bwf/client';
 
 // sign up
 await auth.signUp.email({
@@ -44,8 +44,8 @@ Call `requireAuth` in a route handler or action to get the signed-in user or rej
 
 ```ts
 // routes/api/profile.ts
-import { defineHandler } from '@buildwf/bwf';
-import { requireAuth } from '@buildwf/bwf/auth';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { requireAuth } from '@builtbyfriends/bwf/auth';
 
 export const GET = defineHandler((c) => {
   const user = requireAuth(c);
@@ -57,8 +57,8 @@ Pass `throwRedirect` to send unauthenticated visitors to your login page instead
 
 ```ts
 // routes/account/export.ts
-import { defineHandler } from '@buildwf/bwf';
-import { requireAuth } from '@buildwf/bwf/auth';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { requireAuth } from '@builtbyfriends/bwf/auth';
 
 export const GET = defineHandler((c) => {
   const user = requireAuth(c, {
@@ -82,8 +82,8 @@ await auth.signOut();
 
 Auth turns on automatically when you:
 
-- import anything from `@buildwf/bwf/auth`
-- import `auth` from `@buildwf/bwf/client`
+- import anything from `@builtbyfriends/bwf/auth`
+- import `auth` from `@builtbyfriends/bwf/client`
 - add `auth` to `bwf.config.ts`
 - add a root-level `auth.ts` file
 
@@ -110,14 +110,14 @@ For example, `github` uses:
 
 The `auth` client uses [Better Auth's client API](https://www.better-auth.com/docs/concepts/client) at `/api/auth`. bwf selects the client for your framework automatically.
 
-For a custom client, import `createAuthClient` from `@buildwf/bwf/client`.
+For a custom client, import `createAuthClient` from `@builtbyfriends/bwf/client`.
 
 ## Server Usage
 
-`@buildwf/bwf/auth` provides the server-side helpers:
+`@builtbyfriends/bwf/auth` provides the server-side helpers:
 
 ```ts
-import { getSession, getUser, requireAuth } from '@buildwf/bwf/auth';
+import { getSession, getUser, requireAuth } from '@builtbyfriends/bwf/auth';
 ```
 
 - `getUser()` returns the current `AuthUser | null`
@@ -128,7 +128,7 @@ import { getSession, getUser, requireAuth } from '@buildwf/bwf/auth';
 
 Cookies set by `getAuth(c).api` calls are sent with the response, so the browser picks up changes such as a renamed user or a sign-out on its next request. An endpoint that signs someone in, like `signUpEmail`, signs the current browser in as that user; to create accounts for other people, use the admin plugin's `createUser`. `getUser()` and `getSession()` still return the user from the start of the request, so redirect after an action that changes the signed-in user to render the new data.
 
-Import `AuthUser` and `AuthSession` from `@buildwf/bwf/auth` for type annotations. They include the fields your Better Auth plugins and `user.additionalFields` add, such as `role` from `admin()`. See their fields in the [API reference](../reference/api/auth.md#authuser).
+Import `AuthUser` and `AuthSession` from `@builtbyfriends/bwf/auth` for type annotations. They include the fields your Better Auth plugins and `user.additionalFields` add, such as `role` from `admin()`. See their fields in the [API reference](../reference/api/auth.md#authuser).
 
 ## Querying Authentication Tables
 
@@ -152,7 +152,7 @@ You can now query users with Drizzle:
 
 ```ts
 import { userTable } from '@auth-schema';
-import { db, desc } from '@buildwf/bwf/db';
+import { db, desc } from '@builtbyfriends/bwf/db';
 
 export function listUsers() {
   return db.select().from(userTable).orderBy(desc(userTable.createdAt));
@@ -163,7 +163,7 @@ To associate a post with its author, reference `userTable.id`:
 
 ```ts
 import { userTable } from '@auth-schema';
-import { sqliteTable, text } from '@buildwf/bwf/schema-d1';
+import { sqliteTable, text } from '@builtbyfriends/bwf/schema-d1';
 
 export const postTable = sqliteTable('post', {
   id: text('id').primaryKey(),
@@ -173,7 +173,7 @@ export const postTable = sqliteTable('post', {
 });
 ```
 
-This example uses D1 and the default text IDs. For PostgreSQL or MySQL, use `@buildwf/bwf/schema-pg` or `@buildwf/bwf/schema-mysql`. With `advanced.database.generateId: 'serial'`, use an integer foreign key.
+This example uses D1 and the default text IDs. For PostgreSQL or MySQL, use `@builtbyfriends/bwf/schema-pg` or `@builtbyfriends/bwf/schema-mysql`. With `advanced.database.generateId: 'serial'`, use an integer foreign key.
 
 bwf regenerates `.bwf/better-auth-schema.ts`. Configure authentication in `auth.ts` rather than editing the generated file.
 
@@ -201,7 +201,7 @@ All requests from one IP share one count. Two common setups reach the limits:
 Don't read the client IP from `x-forwarded-for` instead: any client can send that header. Give the trusted caller a secret header, and skip the limits only for requests that carry it:
 
 ```ts
-import { defineAuth } from '@buildwf/bwf/auth';
+import { defineAuth } from '@builtbyfriends/bwf/auth';
 
 export default defineAuth(({ defaults, env }) => ({
   ...defaults,
@@ -228,7 +228,7 @@ Your app no longer limits requests that carry the key, so:
 For advanced configuration, create `auth.ts` at the project root and export `defineAuth(...)`:
 
 ```ts
-import { defineAuth } from '@buildwf/bwf/auth';
+import { defineAuth } from '@builtbyfriends/bwf/auth';
 
 export default defineAuth(({ defaults }) => ({
   ...defaults,

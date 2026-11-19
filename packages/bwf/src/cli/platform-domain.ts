@@ -6,7 +6,7 @@ import {
   PLATFORM_REMOTE_INSTALLATION_MANIFEST_KEY,
   type PlatformApplication,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { confirm, isCancel, text } from '@voidzero-dev/vite-plus-prompts';
 import { cfAccessHeaders } from '../shared/cf-access.ts';
 import { printSuccess, note } from './output.ts';

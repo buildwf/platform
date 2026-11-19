@@ -8,7 +8,7 @@ import { ProxyR2Bucket } from './r2.ts';
  * Called from the generated worker entry point when `__NOSAM_REMOTE` is set.
  *
  * @deprecated Internal to bwf. The generated worker calls this in remote mode.
- * `@buildwf/bwf/remote` is not a supported import. Removed in the next major version.
+ * `@builtbyfriends/bwf/remote` is not a supported import. Removed in the next major version.
  */
 export function createRemoteEnv(
   env: Record<string, unknown>,

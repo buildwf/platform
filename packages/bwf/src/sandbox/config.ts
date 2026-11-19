@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
-import { isSandboxRegistryImage } from '@buildwf/deploy-core';
-import type { DurableObjectMigrationStep } from '@buildwf/deploy-core';
+import { isSandboxRegistryImage } from '@builtbyfriends/deploy-core';
+import type { DurableObjectMigrationStep } from '@builtbyfriends/deploy-core';
 import { isAbsolute, join } from 'pathslash';
 import type { BwfConfig } from '../config.ts';
 import { deriveDurableResourceIdentity } from '../durable/scan.ts';
@@ -58,7 +58,7 @@ export function isSandboxEnabled(config: BwfConfig): boolean {
 
 function getDefaultSandboxImage(): string {
   return fileURLToPath(
-    new URL('../../sandbox.Dockerfile', import.meta.resolve('@buildwf/bwf/sandbox')),
+    new URL('../../sandbox.Dockerfile', import.meta.resolve('@builtbyfriends/bwf/sandbox')),
   );
 }
 

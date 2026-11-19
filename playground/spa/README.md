@@ -29,8 +29,8 @@ crons/
 
 - **Named method exports** — route files export `GET`, `POST`, etc. as separate handlers
 - **Input validation** — `defineHandler.withValidator()` with valibot schemas for body and params
-- **Typed fetch client** — `fetch` from `@buildwf/bwf/client` with full type inference from route definitions
-- **Typed DB queries** — Drizzle ORM via `db` from `@buildwf/bwf/db` with schema defined in `db/schema.ts`
+- **Typed fetch client** — `fetch` from `@builtbyfriends/bwf/client` with full type inference from route definitions
+- **Typed DB queries** — Drizzle ORM via `db` from `@builtbyfriends/bwf/db` with schema defined in `db/schema.ts`
 - **KV storage** — `c.env.KV` read/write in a route, plus the cron writing a heartbeat key
 - **Middleware** — `defineMiddleware` for cross-cutting concerns (request logging)
 - **Cron jobs** — `defineScheduled` with cron expression syntax (`"0 * * * *"`)

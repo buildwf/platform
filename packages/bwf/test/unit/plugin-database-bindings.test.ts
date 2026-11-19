@@ -26,7 +26,7 @@ function project(framework = false): string {
   mkdirSync(join(root, framework ? 'src/routes' : 'routes/api'), { recursive: true });
   writeFileSync(
     join(root, route),
-    "import { db } from '@buildwf/bwf/db'; export const GET = () => db;",
+    "import { db } from '@builtbyfriends/bwf/db'; export const GET = () => db;",
   );
   return root;
 }

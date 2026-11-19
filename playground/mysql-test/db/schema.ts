@@ -1,4 +1,4 @@
-import { int, mysqlTable, varchar } from '@buildwf/bwf/schema-mysql';
+import { int, mysqlTable, varchar } from '@builtbyfriends/bwf/schema-mysql';
 
 export const users = mysqlTable('users', {
   id: int('id').primaryKey().autoincrement(),

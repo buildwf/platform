@@ -4,7 +4,7 @@ import {
   parsePlatformAppAccessSetup,
   parsePlatformDeploymentManifest,
   PLATFORM_APP_ACCESS_TURN_OFF_PROOF_PREFIX,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import {
   initializeInstalledAppAccess,

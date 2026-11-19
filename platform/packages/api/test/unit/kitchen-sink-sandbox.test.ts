@@ -1,13 +1,13 @@
 import { join } from 'node:path';
-import type { CloudEnv } from '@buildwf/bwf/handler';
-import { UsageLimit } from '@buildwf/bwf/limits';
+import type { CloudEnv } from '@builtbyfriends/bwf/handler';
+import { UsageLimit } from '@builtbyfriends/bwf/limits';
 import { Hono } from 'hono';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { kitchenSinkSourceFixture } from './kitchen-sink-source-fixture.ts';
 
 const mocks = vi.hoisted(() => ({ getSandbox: vi.fn() }));
-vi.mock('@buildwf/bwf', async () => import('@buildwf/bwf/handler'));
-vi.mock('@buildwf/bwf/sandbox', () => ({
+vi.mock('@builtbyfriends/bwf', async () => import('@builtbyfriends/bwf/handler'));
+vi.mock('@builtbyfriends/bwf/sandbox', () => ({
   getSandbox: mocks.getSandbox,
   SandboxLimitError: class extends Error {},
 }));

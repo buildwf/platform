@@ -1,7 +1,7 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createDefaultPlanCatalog, PLAN_LIMITS } from '@buildwf/platform/plans';
+import { createDefaultPlanCatalog, PLAN_LIMITS } from '@builtbyfriends/platform/plans';
 import { confirm, outro, select, text } from '@voidzero-dev/vite-plus-prompts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { pc } from '../../src/cli/output.ts';

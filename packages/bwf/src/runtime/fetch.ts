@@ -3,7 +3,7 @@ import { FetchError } from './fetch-error.ts';
 import { interpolateRouteParams } from './route-url.ts';
 export { FetchError };
 
-import type { RouteMap } from '@buildwf/bwf/routes';
+import type { RouteMap } from '@builtbyfriends/bwf/routes';
 export type MethodsOf<P extends keyof RouteMap> = keyof RouteMap[P] & string;
 type DefaultMethod<P extends keyof RouteMap> = 'GET' extends MethodsOf<P> ? 'GET' : MethodsOf<P>;
 
@@ -70,7 +70,7 @@ const browserFetch = createRouteFetch((...args) => globalThis.fetch(...args));
  * `signal`, `baseURL`, `retry` and `timeout`, with full route type safety.
  *
  * ```ts
- * import { fetch } from "@buildwf/bwf/client";
+ * import { fetch } from "@builtbyfriends/bwf/client";
  *
  * const users = await fetch("/api/users"); // typed!
  * const user = await fetch("/api/users/[id]", { params: { id: "1" } });

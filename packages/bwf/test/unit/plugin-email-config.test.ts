@@ -47,7 +47,7 @@ function createProjectRoot(
     writeFileSync(
       join(root, 'routes/api/notify.ts'),
       `
-import { sendEmail } from "@buildwf/bwf/email";
+import { sendEmail } from "@builtbyfriends/bwf/email";
 
 export async function POST() {
   await sendEmail({ to: "a@example.com", subject: "hi", text: "hi" });
@@ -56,7 +56,7 @@ export async function POST() {
 `,
     );
   } else {
-    // An app that never imports `@buildwf/bwf/email` and drives Cloudflare's email
+    // An app that never imports `@builtbyfriends/bwf/email` and drives Cloudflare's email
     // API through its own binding, so `needsEmail` is inferred false.
     writeFileSync(
       join(root, 'routes/api/notify.ts'),

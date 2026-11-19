@@ -19,7 +19,7 @@ export type InferredBindings = {
 
 // SEND_EMAIL is intentionally absent from inferred bindings: bwf owns that binding
 // (managed sends go through __NOSAM_PROXY/email/send; native Cloudflare deploys
-// add SEND_EMAIL themselves), so the `@buildwf/bwf/email` import (below) is the
+// add SEND_EMAIL themselves), so the `@builtbyfriends/bwf/email` import (below) is the
 // sole driver of `needsEmail`.
 // Comments, bracket access and destructuring can separate env from a binding name.
 // Unicode/hex/octal escapes and string line continuations can also spell these names.
@@ -63,31 +63,31 @@ export function inferBindingsFromSource(code: string, filename: string): Inferre
       hasClientModule = true;
     }
     switch (source) {
-      case '@buildwf/bwf/db':
+      case '@builtbyfriends/bwf/db':
         result.needsD1 = true;
         break;
-      case '@buildwf/bwf/kv':
+      case '@builtbyfriends/bwf/kv':
         result.needsKV = true;
         break;
-      case '@buildwf/bwf/storage':
+      case '@builtbyfriends/bwf/storage':
         result.needsR2 = true;
         break;
-      case '@buildwf/bwf/auth':
+      case '@builtbyfriends/bwf/auth':
         result.needsAuth = true;
         break;
-      case '@buildwf/bwf/queues':
+      case '@builtbyfriends/bwf/queues':
         result.needsQueues = true;
         break;
-      case '@buildwf/bwf/ai':
+      case '@builtbyfriends/bwf/ai':
         result.needsAI = true;
         break;
-      case '@buildwf/bwf/sandbox':
+      case '@builtbyfriends/bwf/sandbox':
         result.needsSandbox = true;
         break;
-      case '@buildwf/bwf/email':
+      case '@builtbyfriends/bwf/email':
         result.needsEmail = true;
         break;
-      case '@buildwf/bwf/live':
+      case '@builtbyfriends/bwf/live':
         result.needsLive = true;
         break;
     }

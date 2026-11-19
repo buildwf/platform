@@ -1,5 +1,5 @@
-import type { ErrorsOf, InputOf, OutputOf } from '@eeao/core';
-import { createClient, RpcError } from '@eeao/http/client';
+import type { ErrorsOf, InputOf, OutputOf } from '@builtbyfriends/realtime';
+import { createClient, RpcError } from '@builtbyfriends/realtime-http/client';
 
 export { RpcError };
 
@@ -17,7 +17,7 @@ export interface ProcedureMap {}
  */
 export type ModuleProcedures<Module, Prefix extends string> = {
   [
-    Key in keyof Module & string as Module[Key] extends { '~eeao': 'procedure' }
+    Key in keyof Module & string as Module[Key] extends { '~realtime': 'procedure' }
       ? Key extends 'default'
         ? Prefix
         : Prefix extends ''

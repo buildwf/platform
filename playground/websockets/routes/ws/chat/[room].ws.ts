@@ -1,4 +1,4 @@
-import { defineRoom } from '@buildwf/bwf/ws';
+import { defineRoom } from '@builtbyfriends/bwf/ws';
 import * as v from 'valibot';
 
 const ChatClientMessage = v.variant('type', [

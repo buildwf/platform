@@ -1,6 +1,6 @@
-import { defineHandler } from '@buildwf/bwf';
-import { env } from '@buildwf/bwf/env';
-import { queues } from '@buildwf/bwf/queues';
+import { defineHandler } from '@builtbyfriends/bwf';
+import { env } from '@builtbyfriends/bwf/env';
+import { queues } from '@builtbyfriends/bwf/queues';
 import { queueCases, queueResultKey, validQueueRun } from '../../../lib/queue-acceptance.ts';
 
 export const POST = defineHandler(async (c) => {

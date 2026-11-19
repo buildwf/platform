@@ -44,8 +44,8 @@ it('preserves tuples and JSON omissions in generated typed fetch responses', () 
         allowImportingTsExtensions: true,
         paths: {
           bwf: [join(bwfDist, 'index.d.mts')],
-          '@buildwf/bwf/client': [join(bwfDist, 'runtime/client.d.mts')],
-          '@buildwf/bwf/routes': [join(root, '.bwf/routes.d.ts')],
+          '@builtbyfriends/bwf/client': [join(bwfDist, 'runtime/client.d.mts')],
+          '@builtbyfriends/bwf/routes': [join(root, '.bwf/routes.d.ts')],
           zod: [
             join(
               dirname(createRequire(import.meta.url).resolve('zod/package.json')),
@@ -58,7 +58,7 @@ it('preserves tuples and JSON omissions in generated typed fetch responses', () 
     }),
     '.bwf/routes.d.ts': dts,
     'routes/api/serialization.ts': `
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 import { z } from 'zod';
 
 const names = z.array(z.string()).brand<'Names'>().parse(['Alice']);
@@ -119,7 +119,7 @@ export const POST = defineHandler.withValidator({ body })((_c, { body }) => ({
 }));
 `,
     'check.ts': `
-import { fetch } from '@buildwf/bwf/client';
+import { fetch } from '@builtbyfriends/bwf/client';
 
 type Equal<X, Y> =
   (<T>() => T extends X ? 1 : 2) extends (<T>() => T extends Y ? 1 : 2) ? true : false;

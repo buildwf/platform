@@ -6,7 +6,7 @@ description: Build bwf apps and use the bwf CLI by loading the relevant bundled 
 # bwf
 
 Read only the guides needed for the user's task. Prefer the app's installed
-documentation at `node_modules/@buildwf/bwf/docs/` so it matches the app's bwf version.
+documentation at `node_modules/@builtbyfriends/bwf/docs/` so it matches the app's bwf version.
 All `docs/` paths below are relative to that package's root. When using this
 skill globally without a local bwf installation, follow the skill's symlink to
 its real directory and use `../../docs/` in the same bwf package. If the skill
@@ -18,7 +18,7 @@ deployment target. Use bwf commands for application and platform
 workflows. Mention Wrangler only when the user needs to recognize a literal
 configuration file or environment variable.
 
-Use `bwf` and `@buildwf/*` in imports, examples, and package manifests. Follow the
+Use `bwf` and `@builtbyfriends/*` in imports, examples, and package manifests. Follow the
 project's existing deployment destination. bwf apps are React single-page apps with an
 optional backend in `routes/`; there is no server rendering. Deploying to a bwf
 platform requires an explicit `bwf connect <url>` first; never infer a platform
@@ -85,7 +85,7 @@ Use `bwf deploy --skip-migrations` when database migrations run separately; it s
 - Before moving deployed Durable State, native Durable Object, or WebSocket definitions, read their
   guides and use `bwf info` to preserve resource names and instance keys.
 - Declare application environment keys in `env.ts` and access them through
-  `@buildwf/bwf/env`; follow `docs/guide/env-vars.md` for local and production values.
+  `@builtbyfriends/bwf/env`; follow `docs/guide/env-vars.md` for local and production values.
 - For platform setup, follow the pages linked from
   `docs/guide/self-hosted-platform.md`. Use `bwf platform list` to find the
   installation slug for maintenance. For recovery, use its documented resume
@@ -97,4 +97,4 @@ If the user invokes this skill without a task, inspect the app's local structure
 configuration, and saved deployment destination, give a brief status, and ask
 what they want to work on.
 
-Await AI and Sandbox operations normally. Usage limits reject with `UsageLimit` from `@buildwf/bwf/limits`; bwf routes automatically return HTTP 429. Optionally catch with `instanceof UsageLimit` for a fallback or custom response. See `docs/guide/ai.md` and `docs/guide/sandboxes.md`.
+Await AI and Sandbox operations normally. Usage limits reject with `UsageLimit` from `@builtbyfriends/bwf/limits`; bwf routes automatically return HTTP 429. Optionally catch with `instanceof UsageLimit` for a fallback or custom response. See `docs/guide/ai.md` and `docs/guide/sandboxes.md`.

@@ -2,12 +2,12 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
-import { encodeCloudflareVersionMessage } from '@buildwf/deploy-cloudflare';
+import { encodeCloudflareVersionMessage } from '@builtbyfriends/deploy-cloudflare';
 import {
   createPlatformDeploymentManifest,
   recordInstallationResource,
   transitionInstallation,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { log, note, outro } from '@voidzero-dev/vite-plus-prompts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { pc } from '../../src/cli/output.ts';

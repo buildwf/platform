@@ -28,4 +28,4 @@ export {
   type PlanAiLoggingPublish,
   type PlanAiLoggingSettings,
   type PublishedAiLoggingMode,
-} from '@buildwf/platform/ai-logging';
+} from '@builtbyfriends/platform/ai-logging';

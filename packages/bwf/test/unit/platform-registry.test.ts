@@ -5,7 +5,7 @@ import {
   createPlatformDeploymentManifest,
   createPlatformInstallationManifest,
   setInstallationEndpoints,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test';
 import {
   acquirePlatformLifecycleLock,

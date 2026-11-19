@@ -1,4 +1,4 @@
-import type { PlatformDiscoveryDocument } from '@buildwf/platform';
+import type { PlatformDiscoveryDocument } from '@builtbyfriends/platform';
 import { isCancel, log, select } from '@voidzero-dev/vite-plus-prompts';
 import { readPlatformToken } from './auth.ts';
 import { isExpiredTokenError, PlatformClient } from './client.ts';

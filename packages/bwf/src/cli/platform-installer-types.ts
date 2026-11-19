@@ -1,16 +1,16 @@
-import { type CloudflareTriggerConfig } from '@buildwf/deploy-cloudflare';
+import { type CloudflareTriggerConfig } from '@builtbyfriends/deploy-cloudflare';
 import {
   createPlatformDeploymentManifest,
   type PlatformInstallationManifest,
   type PlatformLifecycleOperation,
   type PlatformAccessProtection,
   type PlatformLoginKind,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import type {
   PlatformRuntime,
   PlatformRuntimeDatabaseManifest,
   PlatformRuntimeMigration,
-} from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform/installer';
 import type { ensurePlatformAccessHealthChecks } from './platform-access-health.ts';
 import type { verifyInstalledPlatformAccessProtection } from './platform-access-preflight.ts';
 import type {

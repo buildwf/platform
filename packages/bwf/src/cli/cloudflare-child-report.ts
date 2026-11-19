@@ -2,7 +2,7 @@ import {
   cloudflareCommandDiagnostic,
   type CloudflareCommandResult,
   type CloudflareOperation,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { redactMessage } from '../shared/env-mask.ts';
 import { WRANGLER_AUTH_CREDENTIAL_ENV_VARS } from '../shared/untrusted-env.ts';
 import type { CfCommand } from './cf-version-api.ts';

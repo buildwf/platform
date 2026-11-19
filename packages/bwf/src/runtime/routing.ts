@@ -1,12 +1,12 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { RouteDestination, RouteUrlInput } from '@buildwf/bwf/routes';
+import type { RouteDestination, RouteUrlInput } from '@builtbyfriends/bwf/routes';
 import {
   compilePattern,
   matchPattern,
   matchPatternCaptures,
   mergeQueryIntoLocation,
   substituteParams,
-} from '@buildwf/edge';
+} from '@builtbyfriends/edge';
 import type { Context, Hono, MiddlewareHandler, NotFoundHandler } from 'hono';
 import type { TypedResponse } from 'hono';
 import type { RedirectStatusCode } from 'hono/utils/http-status';

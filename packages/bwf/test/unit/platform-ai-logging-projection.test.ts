@@ -1,11 +1,11 @@
 import {
   AI_LOGGING_CLEARED_TTL_SECONDS,
   AI_LOGGING_ORPHAN_GRACE_MS,
-} from '@buildwf/platform/ai-logging';
+} from '@builtbyfriends/platform/ai-logging';
 import {
   getPlatformRuntimeDirectory,
   readPlatformRuntimeManifest,
-} from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform/installer';
 import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import {

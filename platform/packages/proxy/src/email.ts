@@ -185,7 +185,7 @@ export function sanitizeForLog(value: string, maxLen = 200): string {
 
 /**
  * Cap the caller-supplied log correlation id. The framework sends
- * `req_<base36 time><16 hex>` (`newId('req')` in `@buildwf/bwf/email`), but a
+ * `req_<base36 time><16 hex>` (`newId('req')` in `@builtbyfriends/bwf/email`), but a
  * hand-built tenant worker can send any string the request body carries,
  * and the only consumer is the `[email-log]` line — one per delivery, so up
  * to `MAX_RECIPIENTS` copies of it per request — in the shared proxy log

@@ -1,5 +1,5 @@
-import { tokenizeSql } from '@buildwf/deploy-core';
-import type { ProjectZeroTrustRouting } from '@buildwf/edge';
+import { tokenizeSql } from '@builtbyfriends/deploy-core';
+import type { ProjectZeroTrustRouting } from '@builtbyfriends/edge';
 import { sql as drizzleSql } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import {

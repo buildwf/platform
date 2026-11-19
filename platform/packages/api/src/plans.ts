@@ -5,7 +5,7 @@ import {
   type PlanLimits,
   type PlatformPlanCatalog,
   type PlatformPlanDefinition,
-} from '@buildwf/platform/plans';
+} from '@builtbyfriends/platform/plans';
 import { count, sql } from 'drizzle-orm';
 import type { DbOrTx } from './db.ts';
 import { OperatorError } from './operator/common.ts';

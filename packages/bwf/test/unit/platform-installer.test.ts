@@ -4,8 +4,8 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { CloudflareOperation } from '@buildwf/deploy-cloudflare';
-import { encodeCloudflareVersionMessage } from '@buildwf/deploy-cloudflare';
+import type { CloudflareOperation } from '@builtbyfriends/deploy-cloudflare';
+import { encodeCloudflareVersionMessage } from '@builtbyfriends/deploy-cloudflare';
 import {
   createApplicationRoutes,
   createPlatformDeploymentManifest,
@@ -19,14 +19,14 @@ import {
   recordInstallationStep,
   setInstallationDesiredState,
   transitionInstallation,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import {
   getPlatformRuntimeDirectory,
   platformDatabaseSchemaDigest,
   readPlatformRuntimeManifest,
   resolvePlatformRuntime,
   type PlatformRuntimeDatabaseManifest,
-} from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform/installer';
 import { toSlash } from 'pathslash';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { AiLoggingProjectionKv } from '../../src/cli/platform-ai-logging-projection.ts';

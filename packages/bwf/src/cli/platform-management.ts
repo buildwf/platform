@@ -11,7 +11,7 @@ import {
   type InstallationResource,
   type InstallationResourceKind,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { confirm, isCancel, log, outro, select } from '@voidzero-dev/vite-plus-prompts';
 import { ensurePlatformAccessToken } from './cf-access.ts';
 import { printSuccess, formatUrl, note, pc } from './output.ts';

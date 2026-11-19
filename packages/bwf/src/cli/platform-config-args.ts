@@ -1,4 +1,4 @@
-import { PLATFORM_LOGIN_KINDS, parsePlatformLoginId } from '@buildwf/platform';
+import { PLATFORM_LOGIN_KINDS, parsePlatformLoginId } from '@builtbyfriends/platform';
 
 const PLATFORM_AUTH_ACTIONS = [
   'list',

@@ -15,7 +15,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderCloudflareStaticEntry } from '@buildwf/deploy-cloudflare';
+import { renderCloudflareStaticEntry } from '@builtbyfriends/deploy-cloudflare';
 import {
   getWorkerAssetsDir,
   getWorkerBundleDir,
@@ -844,10 +844,10 @@ it('bundles a generated static Worker and staged assets into prebuilt cf output'
   const root = mkdtempSync(join(dirname(fileURLToPath(import.meta.url)), '.tmp-cf-static-'));
   roots.push(root);
   writeFileSync(join(root, 'package.json'), '{"name":"static-app","type":"module"}');
-  mkdirSync(join(root, 'node_modules', '@buildwf'), { recursive: true });
+  mkdirSync(join(root, 'node_modules', '@builtbyfriends'), { recursive: true });
   symlinkSync(
     fileURLToPath(new URL('../../', import.meta.url)),
-    join(root, 'node_modules/@buildwf/bwf'),
+    join(root, 'node_modules/@builtbyfriends/bwf'),
     process.platform === 'win32' ? 'junction' : 'dir',
   );
   const generated = join(root, '.bwf', 'deploy', 'cloudflare');
@@ -857,7 +857,7 @@ it('bundles a generated static Worker and staged assets into prebuilt cf output'
   writeFileSync(
     join(generated, 'static-edge.mjs'),
     renderCloudflareStaticEntry({
-      runtimeImport: '@buildwf/bwf/edge',
+      runtimeImport: '@builtbyfriends/bwf/edge',
       headerRules: [],
       redirectRules: [],
       fallbackRules: [],

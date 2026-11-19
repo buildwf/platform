@@ -1,4 +1,4 @@
-import { PLATFORM_HEALTH_HOSTNAME_LABEL } from '@buildwf/platform';
+import { PLATFORM_HEALTH_HOSTNAME_LABEL } from '@builtbyfriends/platform';
 import { EMAIL_RESERVED_SLUGS } from './reserved-slugs.ts';
 
 /**

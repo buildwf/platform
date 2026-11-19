@@ -133,7 +133,7 @@ export function generateRouteTypes(
   lines.push('  P extends readonly [] ? Record<string, never> : { [K in P[number]]: string };');
   lines.push('');
 
-  lines.push('declare module "@buildwf/bwf/routes" {');
+  lines.push('declare module "@builtbyfriends/bwf/routes" {');
   lines.push('  export interface RouteMap {}');
   lines.push('  export interface WebSocketRouteMap {}');
   lines.push('  export interface PageActionMap {}');

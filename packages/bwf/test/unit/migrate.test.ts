@@ -97,7 +97,7 @@ describe('bwf migrate build output ignores', () => {
 describe('migrateLegacyBwfConfig', () => {
   it('preserves config values and keeps the original bytes in a backup', () => {
     const original =
-      '{\n  "$schema": "./node_modules/@buildwf/bwf/schema.json",\n  "routing": { "typedRoutes": true },\n  "worker": { "compatibility_date": "2026-02-24" }\n}\n';
+      '{\n  "$schema": "./node_modules/@builtbyfriends/bwf/schema.json",\n  "routing": { "typedRoutes": true },\n  "worker": { "compatibility_date": "2026-02-24" }\n}\n';
     setup(original);
 
     expect(migrateLegacyBwfConfig(root)).toBe(true);

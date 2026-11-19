@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import {
   type PlatformInstallationManifest,
   parsePlatformAuthenticationSetup,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import {
   checkpointPlatformAccessResources,
   isPlatformAuthenticationPreparationKey,

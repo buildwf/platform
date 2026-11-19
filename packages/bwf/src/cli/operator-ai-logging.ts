@@ -1,4 +1,4 @@
-import { AI_LOGGING_SETTLE_MS } from '@buildwf/platform/ai-logging';
+import { AI_LOGGING_SETTLE_MS } from '@builtbyfriends/platform/ai-logging';
 import { cfAccessHeaders } from '../shared/cf-access.ts';
 import { ensurePlatformAccessToken } from './cf-access.ts';
 import { OperatorClientError } from './operator-client.ts';

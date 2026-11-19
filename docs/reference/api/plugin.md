@@ -10,7 +10,7 @@ outline: deep
 Named export from `"nosam"`. Returns an array of Vite plugins that set up file-based routing, migration support, and the Cloudflare Workers runtime. Application-level configuration is read from [`bwf.config.ts`](../config.md); the optional `options` object controls Vite/Cloudflare plugin behavior.
 
 ```ts
-import { bwfPlugin } from '@buildwf/bwf';
+import { bwfPlugin } from '@builtbyfriends/bwf';
 
 export default defineConfig({
   plugins: [bwfPlugin()],
@@ -26,10 +26,10 @@ export default defineConfig({
 
 ### `defineConfig(config)` {#defineconfig-config}
 
-Import from `@buildwf/bwf/config` in the root `bwf.config.ts`. It returns the config with editor completion and TypeScript checking. bwf validates the result when loading it, including values computed at runtime.
+Import from `@builtbyfriends/bwf/config` in the root `bwf.config.ts`. It returns the config with editor completion and TypeScript checking. bwf validates the result when loading it, including values computed at runtime.
 
 ```ts
-import { defineConfig } from '@buildwf/bwf/config';
+import { defineConfig } from '@builtbyfriends/bwf/config';
 
 export default defineConfig({
   cloudflare: { name: 'my-app' },

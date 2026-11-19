@@ -1,4 +1,4 @@
-import { readWranglerTopLevelString } from '@buildwf/deploy-cloudflare';
+import { readWranglerTopLevelString } from '@builtbyfriends/deploy-cloudflare';
 import { join } from 'pathslash';
 import { scanWranglerDotenvKeys } from '../shared/dotenv.ts';
 import { CLOUDFLARE_DEPLOY_BUILD_ENV } from '../shared/env.ts';

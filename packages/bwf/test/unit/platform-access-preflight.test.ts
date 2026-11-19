@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import {
   createPlatformDeploymentManifest,
   createPlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { verifyInstalledPlatformAccessProtection } from '../../src/cli/platform-access-preflight.ts';
 import {

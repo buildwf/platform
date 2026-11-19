@@ -11,8 +11,8 @@ import {
   resolveAiLogging,
   type AiLoggingPlanCatalog,
   type PlanAiLoggingSettings,
-} from '@buildwf/platform/ai-logging';
-import { createDefaultPlanCatalog, parsePlatformPlanCatalog } from '@buildwf/platform/plans';
+} from '@builtbyfriends/platform/ai-logging';
+import { createDefaultPlanCatalog, parsePlatformPlanCatalog } from '@builtbyfriends/platform/plans';
 import type {
   CloudflareKvBulkEntry,
   CloudflareKvKey,

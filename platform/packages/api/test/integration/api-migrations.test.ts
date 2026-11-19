@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { canonicalJson } from '@buildwf/deploy-core';
+import { canonicalJson } from '@builtbyfriends/deploy-core';
 import { eq } from 'drizzle-orm';
 import {
   describe,
@@ -1537,7 +1537,7 @@ describe('POST /projects/:id/migrations/apply', () => {
 
   it('blocks destructive SQL whose pragma is part of a longer line comment', async () => {
     // A line comment that mentions the pragma but is not standalone — e.g.
-    //   -- TODO: maybe add @buildwf/bwf:allow-destructive here?
+    //   -- TODO: maybe add @builtbyfriends/bwf:allow-destructive here?
     // — must NOT authorize. Only a line comment whose trimmed content is
     // exactly `-- nosam:allow-destructive` counts.
     const user = await createTestUser(env.db);
@@ -1555,7 +1555,7 @@ describe('POST /projects/:id/migrations/apply', () => {
             {
               name: '001_drop.sql',
               sql:
-                '-- TODO: maybe add -- @buildwf/bwf:allow-destructive here?\n' + 'DROP TABLE users',
+                '-- TODO: maybe add -- @builtbyfriends/bwf:allow-destructive here?\n' + 'DROP TABLE users',
             },
           ],
         }),

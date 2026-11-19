@@ -5,7 +5,7 @@ import { formatStreamDeployError } from '../../src/cli/deploy-errors.ts';
 const OUTDATED_BODY = JSON.stringify({
   error: 'cli_outdated',
   message:
-    'Your bwf CLI is too old: it sent a multipart deploy body, which is no longer supported. Upgrade with: npm i -g @buildwf/bwf@latest (minimum version 0.7.0).',
+    'Your bwf CLI is too old: it sent a multipart deploy body, which is no longer supported. Upgrade with: npm i -g @builtbyfriends/bwf@latest (minimum version 0.7.0).',
   minVersion: '0.7.0',
 });
 
@@ -14,7 +14,7 @@ describe('PlatformApiError + cli_outdated', () => {
     const err = new PlatformApiError('Deploy failed', 426, OUTDATED_BODY);
     expect(err.message).not.toContain('426');
     expect(err.message).not.toContain('{');
-    expect(err.message).toContain('npm i -g @buildwf/bwf@latest');
+    expect(err.message).toContain('npm i -g @builtbyfriends/bwf@latest');
     expect(err.message).toContain('Upgrade with');
     expect(err.code).toBe('cli_outdated');
     expect(err.status).toBe(426);
@@ -52,13 +52,13 @@ describe('formatStreamDeployError + cli_outdated', () => {
     const err = new PlatformApiError('Deploy failed', 426, OUTDATED_BODY);
     const formatted = formatStreamDeployError(err, null, null);
     expect(formatted.message).not.toContain('Deploy failed (HTTP 426)');
-    expect(formatted.message).toContain('npm i -g @buildwf/bwf@latest');
+    expect(formatted.message).toContain('npm i -g @builtbyfriends/bwf@latest');
   });
 
   it('appends deployment id and log path when supplied', () => {
     const err = new PlatformApiError('Deploy failed', 426, OUTDATED_BODY);
     const formatted = formatStreamDeployError(err, 'dep_abc', '/tmp/log.txt');
-    expect(formatted.message).toContain('npm i -g @buildwf/bwf@latest');
+    expect(formatted.message).toContain('npm i -g @builtbyfriends/bwf@latest');
     expect(formatted.message).toContain('Deployment: dep_abc');
     expect(formatted.message).toContain('Detailed log: /tmp/log.txt');
   });

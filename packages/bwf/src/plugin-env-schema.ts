@@ -329,7 +329,7 @@ export function envSchemaPlugin(root: string, options: EnvSchemaPluginOptions = 
       const legacyFiles = findLegacyEnvFiles(root);
       if (legacyFiles.length > 0) {
         throw new Error(
-          `@buildwf/bwf/env supports one local file: .env. Remove ${legacyFiles.join(', ')} and follow the env migration guide.${legacyEnvExampleHint(legacyFiles)}`,
+          `@builtbyfriends/bwf/env supports one local file: .env. Remove ${legacyFiles.join(', ')} and follow the env migration guide.${legacyEnvExampleHint(legacyFiles)}`,
         );
       }
       // Every mode (serve, build, preview), with or without env.ts. Only the

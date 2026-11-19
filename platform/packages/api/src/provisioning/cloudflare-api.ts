@@ -1,4 +1,4 @@
-import type { R2LocationHint } from '@buildwf/deploy-core';
+import type { R2LocationHint } from '@builtbyfriends/deploy-core';
 
 export const CF_API_BASE = 'https://api.cloudflare.com/client/v4/accounts';
 const CF_ZONE_API_BASE = 'https://api.cloudflare.com/client/v4/zones';

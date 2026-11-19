@@ -12,7 +12,7 @@ import type { BwfAuthConfig } from '../runtime/auth.ts';
 import type { AstNode, AstProgram } from '../shared/ast.ts';
 
 function isBwfAuthConfigSource(code: string, filename: string): boolean {
-  if (!code.includes('@buildwf/bwf/auth')) {
+  if (!code.includes('@builtbyfriends/bwf/auth')) {
     return false;
   }
   let program: AstProgram;
@@ -29,7 +29,7 @@ function isBwfAuthConfigSource(code: string, filename: string): boolean {
     ) {
       return false;
     }
-    return (node.source as { value?: unknown } | undefined)?.value === '@buildwf/bwf/auth';
+    return (node.source as { value?: unknown } | undefined)?.value === '@builtbyfriends/bwf/auth';
   });
 }
 

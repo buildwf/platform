@@ -8,7 +8,7 @@
     "noUnusedLocals": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["@buildwf/bwf/env"],
+    "types": ["@builtbyfriends/bwf/env"],
     "allowImportingTsExtensions": true
   },
   "include": ["routes", "db"]

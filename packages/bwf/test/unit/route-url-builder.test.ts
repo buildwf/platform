@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { routeUrl } from '../../src/routes-stub.ts';
 import { toUrlString } from '../../src/runtime/route-url.ts';
 
-declare module '@buildwf/bwf/routes' {
+declare module '@builtbyfriends/bwf/routes' {
   interface RoutePathMap {
     '/': never;
     '/route-util': never;

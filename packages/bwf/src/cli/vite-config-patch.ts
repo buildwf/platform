@@ -104,7 +104,7 @@ export function patchViteConfigWithBwfPlugin(filePath: string, code: string): st
 
   const imports = program.body?.filter((node) => node.type === 'ImportDeclaration') ?? [];
   const importedName = imports
-    .filter((node) => node.source?.value === '@buildwf/bwf')
+    .filter((node) => node.source?.value === '@builtbyfriends/bwf')
     .flatMap((node) => node.specifiers ?? [])
     .find((node) => node.type === 'ImportSpecifier' && node.imported?.name === 'bwfPlugin')
     ?.local?.name;
@@ -168,7 +168,7 @@ export function patchViteConfigWithBwfPlugin(filePath: string, code: string): st
           ? code.indexOf('\n') + 1
           : 0;
     const prefix = insertAt > 0 && code[insertAt - 1] !== '\n' ? '\n' : '';
-    ms.appendLeft(insertAt, `${prefix}import { bwfPlugin } from "@buildwf/bwf";\n`);
+    ms.appendLeft(insertAt, `${prefix}import { bwfPlugin } from "@builtbyfriends/bwf";\n`);
   }
   return ms.toString();
 }

@@ -140,8 +140,8 @@ export function createWranglerCompatPersistPlugin(
 // bwf/db leaves its driver import to drizzle, so these nested prebundles serve it.
 const DATABASE_DRIVER_DEPS: Record<DatabaseDialect, Array<string>> = {
   sqlite: [],
-  postgresql: ['@buildwf/bwf > pg'],
-  mysql: ['@buildwf/bwf > mysql2'],
+  postgresql: ['@builtbyfriends/bwf > pg'],
+  mysql: ['@builtbyfriends/bwf > mysql2'],
 };
 
 const NODE_BUILTIN = new RegExp(`^(?:node:)?(?:${builtinModules.join('|')})$`);
@@ -189,7 +189,7 @@ export function createServerRuntimeOptimizerPlugin(
       // worker. Node runtimes load CommonJS themselves, and an include there turns on SSR
       // prebundling nobody asked for.
       if (!environment.resolve?.conditions?.includes('workerd')) {
-        return { optimizeDeps: { exclude: ['@buildwf/bwf'] } };
+        return { optimizeDeps: { exclude: ['@builtbyfriends/bwf'] } };
       }
       return {
         optimizeDeps: {
@@ -197,10 +197,10 @@ export function createServerRuntimeOptimizerPlugin(
           // import of `better-auth/api` while this excluded package loads `better-auth` from
           // source gives the dev worker two copies, so `getOAuthState()` misses the state the
           // runtime set. A production build already bundles one copy.
-          exclude: ['@buildwf/bwf', 'better-auth'],
+          exclude: ['@builtbyfriends/bwf', 'better-auth'],
           // Excluding void also skips converting its CommonJS dependencies, which workerd cannot
           // evaluate: an installed bwf/email fails with "exports is not defined".
-          include: ['@buildwf/bwf > email-validator', ...DATABASE_DRIVER_DEPS[dialect]],
+          include: ['@builtbyfriends/bwf > email-validator', ...DATABASE_DRIVER_DEPS[dialect]],
         },
       };
     },

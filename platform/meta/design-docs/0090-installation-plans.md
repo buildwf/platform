@@ -77,7 +77,7 @@ built-in IDs. Preserve usage totals during this preparation.
 
 ## Implementation and verification
 
-The validated contract lives in `@buildwf/platform/plans`. The API resolves the saved
+The validated contract lives in `@builtbyfriends/platform/plans`. The API resolves the saved
 catalog from platform settings, while the operator API reuses administrator
 sessions and audit events. The CLI previews each change, applies its exact
 revision, and continues bounded account updates until completion or a retryable

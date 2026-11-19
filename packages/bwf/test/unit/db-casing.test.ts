@@ -88,7 +88,7 @@ function loadSource(root: string, dialect: Dialect, casing?: DatabaseCasing): st
   return load.call({}, '\0virtual:nosam-db');
 }
 
-/** Load the app's generated `@buildwf/bwf/db` with drizzle's real drivers. */
+/** Load the app's generated `@builtbyfriends/bwf/db` with drizzle's real drivers. */
 async function loadDb(root: string, dialect: Dialect, casing?: DatabaseCasing) {
   const code = loadSource(root, dialect, casing);
   expect(code).toContain(builtEnv);
@@ -104,7 +104,7 @@ async function loadDb(root: string, dialect: Dialect, casing?: DatabaseCasing) {
 
 const ADA = { id: 1, firstName: 'Ada', createdAt: 1815 };
 
-describe('@buildwf/bwf/db with database.casing', () => {
+describe('@builtbyfriends/bwf/db with database.casing', () => {
   it('queries snake_case columns on D1', async () => {
     const root = createRoot('sqlite');
     const { db, createDb, users } = await loadDb(root, 'sqlite', 'snake_case');
@@ -213,7 +213,7 @@ describe('@buildwf/bwf/db with database.casing', () => {
     writeFileSync(
       join(root, 'db', 'auth.ts'),
       generateBwfAuthDrizzleSchema({ dialect: 'sqlite', providers: ['email'] }).replace(
-        '"@buildwf/bwf/schema-d1"',
+        '"@builtbyfriends/bwf/schema-d1"',
         JSON.stringify(import.meta.resolve(CORES.sqlite)),
       ),
     );
@@ -260,7 +260,7 @@ describe('@buildwf/bwf/db with database.casing', () => {
     roots.push(root);
     const plugin = bwfDbBundlerPlugin(root, { config: { database: { casing: 'snake_case' } } });
     const resolveId = plugin.resolveId as (id: string, importer?: string) => Promise<unknown>;
-    return expect(resolveId.call({}, '@buildwf/bwf/db')).resolves.toBe('\0virtual:nosam-db');
+    return expect(resolveId.call({}, '@builtbyfriends/bwf/db')).resolves.toBe('\0virtual:nosam-db');
   });
 
   it('keeps db.d.ts in bwf prepare for casing without a schema', async () => {

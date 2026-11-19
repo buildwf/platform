@@ -2,7 +2,7 @@
 
 import { Button } from '@astryxdesign/core/Button';
 import { Selector } from '@astryxdesign/core/Selector';
-import { isRecord } from '@buildwf/deploy-core';
+import { isRecord } from '@builtbyfriends/deploy-core';
 import { useCallback, useEffect, useState } from 'react';
 import { useFateClient, useView, type ViewRef } from 'react-fate';
 import {

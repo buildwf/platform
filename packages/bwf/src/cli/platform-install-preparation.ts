@@ -5,8 +5,8 @@ import {
   transitionInstallation,
   type PlatformDeploymentManifest,
   parsePlatformAuthenticationSetup,
-} from '@buildwf/platform';
-import type { PlatformRuntimeManifest } from '@buildwf/platform/installer';
+} from '@builtbyfriends/platform';
+import type { PlatformRuntimeManifest } from '@builtbyfriends/platform/installer';
 import { ensurePlatformAccessHealthChecks } from './platform-access-health.ts';
 import { verifyInstalledPlatformAccessProtection } from './platform-access-preflight.ts';
 import {

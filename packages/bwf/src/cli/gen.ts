@@ -307,8 +307,8 @@ function generateIndexRoute(
   const importLine = getImportLine(validator);
   const imports = [
     importLine,
-    'import { defineHandler } from "@buildwf/bwf";',
-    'import { db } from "@buildwf/bwf/db";',
+    'import { defineHandler } from "@builtbyfriends/bwf";',
+    'import { db } from "@builtbyfriends/bwf/db";',
     `import { ${name} } from "@schema";`,
   ]
     .filter(Boolean)
@@ -318,8 +318,8 @@ function generateIndexRoute(
 
   if (columns.length === 0 || validator === 'none') {
     const values = columns.length > 0 ? `{ ${insertFields} }` : 'body';
-    return `import { defineHandler } from "@buildwf/bwf";
-import { db } from "@buildwf/bwf/db";
+    return `import { defineHandler } from "@builtbyfriends/bwf";
+import { db } from "@builtbyfriends/bwf/db";
 import { ${name} } from "@schema";
 
 export const GET = defineHandler(async () => {
@@ -352,8 +352,8 @@ export const POST = defineHandler.withValidator({
 
 function generateIdRoute(name: string, validator: Validator): string {
   if (validator === 'none') {
-    return `import { defineHandler } from "@buildwf/bwf";
-import { db, eq } from "@buildwf/bwf/db";
+    return `import { defineHandler } from "@builtbyfriends/bwf";
+import { db, eq } from "@builtbyfriends/bwf/db";
 import { ${name} } from "@schema";
 
 export const GET = defineHandler(async (c) => {
@@ -372,8 +372,8 @@ export const GET = defineHandler(async (c) => {
   const paramsSchema = getParamsSchema(validator);
 
   return `${importLine}
-import { defineHandler } from "@buildwf/bwf";
-import { db, eq } from "@buildwf/bwf/db";
+import { defineHandler } from "@builtbyfriends/bwf";
+import { db, eq } from "@builtbyfriends/bwf/db";
 import { ${name} } from "@schema";
 
 export const GET = defineHandler.withValidator({
@@ -409,7 +409,7 @@ async function runModel(root: string, name: string, columns: Array<ColumnSpec>):
   let content: string;
   if (dialect === 'postgresql') {
     content = [
-      `import { pgTable, ${columnImports} } from "@buildwf/bwf/schema-pg";`,
+      `import { pgTable, ${columnImports} } from "@builtbyfriends/bwf/schema-pg";`,
       '',
       `export const ${name} = pgTable("${name}", {`,
       `  id: serial("id").primaryKey(),`,
@@ -421,7 +421,7 @@ async function runModel(root: string, name: string, columns: Array<ColumnSpec>):
     ].join('\n');
   } else if (dialect === 'mysql') {
     content = [
-      `import { mysqlTable, ${columnImports} } from "@buildwf/bwf/schema-mysql";`,
+      `import { mysqlTable, ${columnImports} } from "@builtbyfriends/bwf/schema-mysql";`,
       '',
       `export const ${name} = mysqlTable("${name}", {`,
       `  id: int("id").autoincrement().primaryKey(),`,
@@ -433,8 +433,8 @@ async function runModel(root: string, name: string, columns: Array<ColumnSpec>):
     ].join('\n');
   } else {
     content = [
-      `import { sqliteTable, ${columnImports} } from "@buildwf/bwf/schema-d1";`,
-      `import { sql } from "@buildwf/bwf/db";`,
+      `import { sqliteTable, ${columnImports} } from "@builtbyfriends/bwf/schema-d1";`,
+      `import { sql } from "@builtbyfriends/bwf/db";`,
       '',
       `export const ${name} = sqliteTable("${name}", {`,
       `  id: integer("id").primaryKey({ autoIncrement: true }),`,
@@ -578,7 +578,7 @@ function runMigration(root: string, name: string): void {
         cwd: root,
         stdio: 'pipe',
         encoding: 'utf-8',
-        // Yarn PnP projects need the PnP loader to resolve `@buildwf/bwf/schema-*`.
+        // Yarn PnP projects need the PnP loader to resolve `@builtbyfriends/bwf/schema-*`.
         env: buildDrizzleKitSpawnEnv(root),
       },
     );
@@ -628,7 +628,7 @@ function runRoute(root: string, routePath: string, methods: Array<string>): void
     })
     .join('\n\n');
 
-  const content = `import { defineHandler } from "@buildwf/bwf";
+  const content = `import { defineHandler } from "@builtbyfriends/bwf";
 
 ${exports}
 `;
@@ -643,7 +643,7 @@ function runMiddleware(root: string, name: string): void {
 
   const num = getNextMiddlewareNumber(middlewareDir);
   const filePath = join(middlewareDir, `${num}.${name}.ts`);
-  const content = `import { defineMiddleware } from "@buildwf/bwf";
+  const content = `import { defineMiddleware } from "@builtbyfriends/bwf";
 
 export default defineMiddleware(async (c, next) => {
   // TODO: implement ${name} middleware
@@ -657,7 +657,7 @@ export default defineMiddleware(async (c, next) => {
 
 function runCron(root: string, name: string): void {
   const filePath = join(readProjectPaths(root).cronsDir, name + '.ts');
-  const content = `import { defineScheduled } from "@buildwf/bwf";
+  const content = `import { defineScheduled } from "@builtbyfriends/bwf";
 
 export const cron = "* * * * *";
 
@@ -672,7 +672,7 @@ export default defineScheduled(async (controller, env) => {
 
 function runQueue(root: string, name: string): void {
   const filePath = join(readProjectPaths(root).queuesDir, name + '.ts');
-  const content = `import { defineQueue } from "@buildwf/bwf";
+  const content = `import { defineQueue } from "@builtbyfriends/bwf";
 
 type Message = {};
 
@@ -723,7 +723,7 @@ export const ${exportName} = procedure()
   } else {
     writeFileSync(
       filePath,
-      `import { procedure, signedIn } from "@buildwf/bwf/procedure";\n\n${body}`,
+      `import { procedure, signedIn } from "@builtbyfriends/bwf/procedure";\n\n${body}`,
     );
     log.step(`Created ${filePath}`);
   }

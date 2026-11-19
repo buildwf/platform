@@ -11,7 +11,7 @@ export const GENERATED_MARKERS: ReadonlyArray<string> = [
 ];
 
 export function renderBwfConfig(config: BwfConfig, marker: string = GENERATED_MARKERS[0]): string {
-  return `${marker}\nimport { defineConfig } from '@buildwf/bwf/config';\n\nexport default defineConfig(${JSON.stringify(config, null, 2)});\n`;
+  return `${marker}\nimport { defineConfig } from '@builtbyfriends/bwf/config';\n\nexport default defineConfig(${JSON.stringify(config, null, 2)});\n`;
 }
 
 type StaticNode = {
@@ -96,7 +96,7 @@ function isGeneratedStaticConfig(source: string): boolean {
   return (
     program.body?.length === 2 &&
     importDeclaration?.type === 'ImportDeclaration' &&
-    importDeclaration.source?.value === '@buildwf/bwf/config' &&
+    importDeclaration.source?.value === '@builtbyfriends/bwf/config' &&
     importDeclaration.specifiers?.length === 1 &&
     importDeclaration.specifiers[0]?.imported?.name === 'defineConfig' &&
     importDeclaration.specifiers[0]?.local?.name === 'defineConfig' &&

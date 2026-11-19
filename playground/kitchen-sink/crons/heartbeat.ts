@@ -1,4 +1,4 @@
-import { defineScheduled } from '@buildwf/bwf';
+import { defineScheduled } from '@builtbyfriends/bwf';
 
 export const cron = '* * * * *';
 

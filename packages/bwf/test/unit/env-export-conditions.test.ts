@@ -31,7 +31,7 @@ if (!envExport) {
   throw new Error('Expected `./env` entry in bwf/package.json exports');
 }
 
-describe('@buildwf/bwf/env export map', () => {
+describe('@builtbyfriends/bwf/env export map', () => {
   it('resolves to the server variant under Cloudflare workerd conditions', () => {
     const resolved = resolveConditional(
       envExport,

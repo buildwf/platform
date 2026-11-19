@@ -3,7 +3,7 @@ import {
   validateSandboxOptions,
   type SandboxOptions,
   type SandboxInstance,
-} from '@buildwf/bwf/_sandbox-container';
+} from '@builtbyfriends/bwf/_sandbox-container';
 import { RpcTarget, WorkerEntrypoint } from 'cloudflare:workers';
 import { getSandboxShim } from './sandbox-shim.ts';
 

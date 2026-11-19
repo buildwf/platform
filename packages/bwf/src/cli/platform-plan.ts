@@ -17,7 +17,7 @@ import {
   type PlatformAppAccess,
   type PlatformDeploymentManifest,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { pc } from './output.ts';
 import {
   PlatformCloudflareApiError,

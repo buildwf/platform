@@ -3,7 +3,7 @@ import {
   encodeCloudflareVersionMessage,
   parseRootWranglerConfig,
   readCloudflareTriggerConfig,
-} from '@buildwf/deploy-cloudflare';
+} from '@builtbyfriends/deploy-cloudflare';
 import { readVersionMetadataBinding } from '../shared/version-metadata.ts';
 import { createActiveSecretPinner } from './cf-version-runner.ts';
 import {

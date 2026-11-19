@@ -20,7 +20,7 @@ export const PLACEHOLDER_DB_URL: Record<DrizzleDialect, string> = {
  * resolves them against its working directory, and `bwf db` always runs it
  * with `cwd` set to the project root, so the config file itself may live
  * anywhere (see `outDir`). It carries `database.casing` from the project's
- * config, which `@buildwf/bwf/db` also passes to drizzle.
+ * config, which `@builtbyfriends/bwf/db` also passes to drizzle.
  *
  * @param options.outDir Directory for the config file. When set, the file is
  *   written readable by the owner only.

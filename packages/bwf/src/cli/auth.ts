@@ -6,7 +6,7 @@ import {
   browserPageLead,
   browserPageStatus,
   renderBrowserPage,
-} from '@buildwf/platform/browser-page';
+} from '@builtbyfriends/platform/browser-page';
 import { join } from 'pathslash';
 import { cfAccessHeaders } from '../shared/cf-access.ts';
 import { ensurePlatformAccessToken } from './cf-access.ts';

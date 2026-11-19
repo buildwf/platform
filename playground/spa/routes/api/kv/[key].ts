@@ -1,4 +1,4 @@
-import { defineHandler } from '@buildwf/bwf';
+import { defineHandler } from '@builtbyfriends/bwf';
 import * as v from 'valibot';
 
 // PUT /api/kv/:key — store the raw request body in KV under an e2e-namespaced key.

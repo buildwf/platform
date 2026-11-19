@@ -1,7 +1,7 @@
 import {
   platformAuthenticationRecoveryMessage,
   type PlatformAuthenticationRecovery,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { eq, sql } from 'drizzle-orm';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { chromium } from 'playwright';

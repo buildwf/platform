@@ -48,7 +48,7 @@ If you add API routes to a static site generator, tell bwf whether to deploy the
 To deploy both, set `appType` to `"nosam"` and build the static site before the bwf app:
 
 ```ts
-import { defineConfig } from '@buildwf/bwf/config';
+import { defineConfig } from '@builtbyfriends/bwf/config';
 
 export default defineConfig({
   inference: {
@@ -59,7 +59,7 @@ export default defineConfig({
 ```
 
 ```ts
-import { bwfPlugin } from '@buildwf/bwf';
+import { bwfPlugin } from '@builtbyfriends/bwf';
 // vite.config.ts
 import { defineConfig } from 'vite';
 

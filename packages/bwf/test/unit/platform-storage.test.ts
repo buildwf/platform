@@ -1,4 +1,4 @@
-import { createPlatformDeploymentManifest } from '@buildwf/platform';
+import { createPlatformDeploymentManifest } from '@builtbyfriends/platform';
 import { expect, it } from 'vite-plus/test';
 import { assertPlatformStorageSupported } from '../../src/cli/platform-storage.ts';
 

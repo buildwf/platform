@@ -5,7 +5,7 @@ import {
   recordInstallationResource,
   PLATFORM_APPLICATION_KEY,
   type PlatformInstallationManifest,
-} from '@buildwf/platform';
+} from '@builtbyfriends/platform';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { PlatformCloudflareClient } from '../../src/cli/platform-cloudflare.ts';
 import {
