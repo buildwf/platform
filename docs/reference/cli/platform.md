@@ -5,7 +5,7 @@ outline: deep
 
 # Platform Management {#platform-management}
 
-Nosam-managed projects deploy to an explicitly selected platform. Join one with [`bwf connect`](./auth.md#connect). Connections are stored per API origin, and credentials are scoped to that origin.
+Platform-managed projects deploy to an explicitly selected platform. Join one with [`bwf connect`](./auth.md#connect). Connections are stored per API origin, and credentials are scoped to that origin.
 
 ## Connection commands {#connection-commands}
 

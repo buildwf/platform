@@ -6,7 +6,7 @@ outline: deep
 # Authentication
 
 ::: warning ⚠️ bwf Apps Only
-Nosam-managed auth requires a bwf app with a backend. For a static SPA without `routes/`, use Better Auth directly.
+Platform-managed auth requires a bwf app with a backend. For a static SPA without `routes/`, use Better Auth directly.
 :::
 
 bwf configures [Better Auth](https://www.better-auth.com/) for your app, including its database connection, API routes, and client. Start with email and password, or add a social login provider.

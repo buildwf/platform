@@ -275,7 +275,7 @@ export async function activeOAuthGrant(
       companyIdentity ?? grant.session.companyIdentity,
     ))
   ) {
-    throw new OAuthError('invalid_token', 'Sign in to Nosam again.', 401);
+    throw new OAuthError('invalid_token', 'Sign in to Platform again.', 401);
   }
   return { grant, user, client };
 }
@@ -335,7 +335,7 @@ async function readActiveOAuthGrant(
       companyIdentity ?? grant.session.companyIdentity,
     )
   ) {
-    throw new OAuthError('invalid_token', 'Sign in to Nosam again.', 401);
+    throw new OAuthError('invalid_token', 'Sign in to Platform again.', 401);
   }
   return { grant, user, client };
 }
@@ -439,7 +439,7 @@ export async function verifyOAuthDeployment(
   if ((await deployArtifactDigest(artifact)) !== approval.data.artifactDigest) {
     throw new OAuthError(
       'invalid_token',
-      'The deployment differs from the artifact approved on Nosam.',
+      'The deployment differs from the artifact approved on Platform.',
       403,
     );
   }

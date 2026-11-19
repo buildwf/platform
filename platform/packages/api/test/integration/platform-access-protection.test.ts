@@ -170,7 +170,7 @@ describe('Access-protected platform requests', () => {
     expect((await request('/', await assertion({ service: true }))).status).toBe(403);
     const response = await request('/', await assertion());
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain('Welcome to Nosam Platform');
+    expect(await response.text()).toContain('Welcome to Platform');
   });
 
   it('keeps maintenance status behind human Access and a matching, revocable administrator session', async () => {
@@ -314,7 +314,7 @@ describe('Access-protected platform requests', () => {
     expect(settings.protection?.teamDomain).toBe(issuer);
     expect((await request('/auth/login')).status).toBe(403);
   });
-  it('requires both the company identity and the matching Nosam session', async () => {
+  it('requires both the company identity and the matching Platform session', async () => {
     expect((await request('/rpc/me.get', undefined, humanToken, {})).status).toBe(403);
     expect((await request('/rpc/me.get', await assertion(), undefined, {})).status).toBe(401);
     expect((await request('/rpc/me.get', await assertion(), humanToken, {})).status).toBe(200);
@@ -385,7 +385,7 @@ describe('Access-protected platform requests', () => {
     expect((await operation('/webhooks/github')).status).toBe(403);
   });
 
-  it('allows narrow machine operations only with the separate Nosam authority', async () => {
+  it('allows narrow machine operations only with the separate Platform authority', async () => {
     const access = await assertion({ service: true });
     expect((await request('/health', access)).status).toBe(403);
     expect(

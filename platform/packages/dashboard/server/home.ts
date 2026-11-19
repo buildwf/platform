@@ -8,7 +8,7 @@ export type Props = Readonly<{
 }>;
 
 export const loader = defineHandler<Props>(async (context) => {
-  let platformName = 'Nosam Cloud';
+  let platformName = 'Platform';
   try {
     const response = await fetchApi(context, '/.well-known/nosam-platform');
     if (response.ok) {

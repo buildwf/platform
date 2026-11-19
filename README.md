@@ -2,7 +2,7 @@
 
 bwf builds and deploys React single-page apps to Cloudflare Workers. An app can have a backend too.
 
-bwf is a fork of [Void](https://void.cloud) by Cloudflare. We forked it for two reasons:
+bwf is a fork of [Void](https://github.com/builtbyfriends/platform) by Cloudflare. We forked it for two reasons:
 
 - We wanted Void's base for the Build platform. We also want to see if the principles and design patterns of UI-SDK work for infrastructure too.
 - Void is very good. If we started again and tried to make our own clean solution, we don't think it'd be better than Void or much different.

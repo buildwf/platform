@@ -69,7 +69,7 @@ export function renderEnvTs(entries: Array<InferredEntry>): string {
     return [
       `import { defineEnv } from '@builtbyfriends/bwf/env';`,
       ``,
-      `// Define your environment variables here. See https://void.cloud/guide/env-vars`,
+      `// Define your environment variables here. See https://github.com/builtbyfriends/platform/blob/main/docs/guide/env-vars.md`,
       `export default defineEnv({});`,
       ``,
     ].join('\n');

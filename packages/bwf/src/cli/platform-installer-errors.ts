@@ -91,7 +91,7 @@ export function assertCleanPlatformWrangler(
         `platform: Cloudflare could not ${operation}: Analytics Engine is not enabled for this account (code 10089). ` +
           `Open ${formatUrl(dashboard)}${accountId ? '' : ', select your account, and open Analytics Engine'}, then select Enable. ` +
           'Analytics Engine is available on Workers Free. After enabling it, use the printed recovery command if one is shown; otherwise retry this command. ' +
-          `If Enable is unavailable, see ${formatUrl('https://void.cloud/guide/platform/installation/prerequisites#if-cloudflare-rejects-analytics-engine')}.`,
+          `If Enable is unavailable, see ${formatUrl('https://github.com/builtbyfriends/platform/blob/main/docs/guide/platform/installation/prerequisites.md#if-cloudflare-rejects-analytics-engine')}.`,
       );
     }
     throw new Error(

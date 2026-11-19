@@ -1,5 +1,8 @@
 import { stripVTControlCharacters } from 'node:util';
-import { isPlatformAccessEmailDomain, type PlatformInstallationManifest } from '@builtbyfriends/platform';
+import {
+  isPlatformAccessEmailDomain,
+  type PlatformInstallationManifest,
+} from '@builtbyfriends/platform';
 import { confirm, log, multiselect, password, select, text } from '@voidzero-dev/vite-plus-prompts';
 import { cfAccessHeaders } from '../shared/cf-access.ts';
 import { note, pc } from './output.ts';
@@ -20,7 +23,7 @@ import { platformPromptAnswer, platformSetupLink } from './platform-setup.ts';
 function accessSetupGuide(): string {
   return platformSetupLink({
     title: 'Setup guide and required permissions',
-    url: 'https://void.cloud/guide/platform/installation/setup#cloudflare-access',
+    url: 'https://github.com/builtbyfriends/platform/blob/main/docs/guide/platform/installation/setup.md#cloudflare-access',
   });
 }
 

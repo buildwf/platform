@@ -61,7 +61,7 @@ describe('dashboard Access token refresh', () => {
     expect(readFileSync(join(root, '.env'), 'utf8')).toBe(contents);
   });
 
-  it('preserves automatic Nosam Cloud staging authentication', () => {
+  it('preserves automatic Platform staging authentication', () => {
     const result = run('API_URL=https://api.staging.void.cloud\n');
     expect(result.status, result.stderr).toBe(0);
     expect(readFileSync(join(root, '.env'), 'utf8')).toContain('CF_ACCESS_TOKEN=');

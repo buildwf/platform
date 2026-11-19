@@ -41,7 +41,7 @@ This removes Cloudflare Access protection for these Workers.
 bwf’s own authentication stays enabled. Keep account-wide Default-Deny on.
 
 For platforms that must remain Access-protected:
-https://void.cloud/guide/platform/installation/maintenance#cloudflare-access`);
+https://github.com/builtbyfriends/platform/blob/main/docs/guide/platform/installation/maintenance.md#cloudflare-access`);
 });
 
 it('does not tell upgrades or repairs to restart installation', () => {

@@ -97,7 +97,7 @@ export async function runConnectCommand(
           label: 'Cloudflare',
           hint: 'Deploy to your own Cloudflare account.',
         },
-        { value: 'nosam', label: 'Nosam', hint: "Deploy to your company's bwf Platform." },
+        { value: 'nosam', label: 'Platform', hint: "Deploy to your company's bwf Platform." },
       ],
     });
     if (isCancel(value)) {

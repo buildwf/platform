@@ -860,7 +860,7 @@ export type CloudflareVersionActivationOptions = {
   publishEmptyCrons?: () => Promise<CloudflareCommandResult>;
   /** Last successfully published traffic state, newer than immutable version annotations. */
   previousTrafficConfig?: CloudflareTrafficConfig;
-  /** Explicitly Nosam-owned queue consumers retained for schema-1 cleanup and failed retries. */
+  /** Explicitly Platform-owned queue consumers retained for schema-1 cleanup and failed retries. */
   queueConsumerCleanup?: ReadonlyArray<string>;
   /**
    * The caller proved that the Worker did not exist before this deploy provisioned its secrets.

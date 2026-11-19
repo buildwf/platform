@@ -138,7 +138,7 @@ test('built CLI configures the logging policy enforced by the actual AI proxy', 
   const { default: proxy } = (await import(/* @vite-ignore */ proxyUrl)) as {
     default: { fetch(request: Request, env: unknown): Promise<Response> };
   };
-  // Hosted Nosam Cloud does not set the uncached auth-database flag.
+  // Hosted Platform does not set the uncached auth-database flag.
   const uncached = env.PLATFORM_AUTH_DATABASE_UNCACHED;
   delete env.PLATFORM_AUTH_DATABASE_UNCACHED;
   onTestFinished(() => {

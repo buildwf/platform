@@ -64,7 +64,7 @@ export async function sendPlatformVerificationEmail(
   const link = `${confirmationOrigin}/email/destinations/confirm?token=${encodeURIComponent(token)}`;
   const subject = `[${project.slug}] wants permission to email you`;
   const text = [
-    `The Nosam project "${project.slug}" wants permission to send email to`,
+    `The Platform project "${project.slug}" wants permission to send email to`,
     `${address}.`,
     '',
     'Open this link and select Confirm:',

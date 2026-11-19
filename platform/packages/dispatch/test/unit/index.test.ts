@@ -3561,7 +3561,7 @@ describe('request type metering for SSR routes with a file extension', () => {
   // An SSR worker answers both the app's routes and the deploy's static files.
   // A route such as `routes/sponsors.svg.ts` has a file extension, so its label
   // comes from the asset manifest or from how the worker answered, never from
-  // the path alone. Nosam SSR deploys run the worker first for every path.
+  // the path alone. Platform SSR deploys run the worker first for every path.
   const routing: RoutingEntry = {
     workerName: 'user-app-dpl_1',
     projectId: 'proj_1',

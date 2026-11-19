@@ -528,7 +528,7 @@ export async function getCustomHostname(
   );
 }
 
-// Re-send the SSL block via PATCH to re-trigger HTTP DCV. Nosam's flow is
+// Re-send the SSL block via PATCH to re-trigger HTTP DCV. Platform's flow is
 // add-domain-first: `bwf domain add` creates the custom hostname with
 // `ssl.method:'http'` BEFORE the user points the CNAME at `cname.void.app`.
 // Per CF's Create Custom Hostname API docs, "If `http` is used and the domain

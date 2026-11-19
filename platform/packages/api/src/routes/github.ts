@@ -68,7 +68,7 @@ const LINK_CODE_TTL_MS = 5 * 60 * 1000;
 
 /**
  * The signed `state` minted by `GET /github/link-url` and verified by the public
- * `GET /github/link-callback`. Deliberately carries NO Nosam user id: the bind is
+ * `GET /github/link-callback`. Deliberately carries NO Platform user id: the bind is
  * deferred to the authenticated `POST /github/link/complete`, keyed on the
  * bearer-token holder (RFC 0074 §"Threat L1"). `purpose` discriminates this
  * state from the install-flow state so the two can never be cross-replayed.
@@ -86,7 +86,7 @@ type LinkState = {
  * redirected to the initiator's localhost. It binds the GitHub identity proven
  * in the callback (`providerId`) to the PKCE challenge the initiator chose, so
  * only the holder of the matching `code_verifier` can complete the link. Still
- * NO Nosam user id — the completing bearer token is the only thing that decides
+ * NO Platform user id — the completing bearer token is the only thing that decides
  * which account the identity binds to.
  */
 type LinkCode = {
@@ -100,7 +100,7 @@ type LinkCode = {
  * The signed `state` for the JOIN flow (org-shared installs), minted by
  * `GET /github/join-url` and verified by the public `GET /github/join-callback`.
  * Structurally mirrors `LinkState` but with `purpose: 'join'` so the two states
- * can never be cross-replayed. Carries NO Nosam user id — the membership bind is
+ * can never be cross-replayed. Carries NO Platform user id — the membership bind is
  * deferred to the authenticated `POST /github/join/complete`, keyed on the
  * bearer-token holder (RFC 0074 §"Threat L1").
  */
@@ -116,8 +116,8 @@ type JoinState = {
  * The stateless, HMAC-signed `join_code` minted by the public join callback and
  * redirected to the initiator's localhost. It carries the NUMERIC installation
  * ids the caller was proven (via `GET /user/installations`) to access AND that
- * Nosam already tracks, plus the caller's GitHub account id and the PKCE
- * challenge. Still NO Nosam user id — the completing bearer token is the only
+ * Platform already tracks, plus the caller's GitHub account id and the PKCE
+ * challenge. Still NO Platform user id — the completing bearer token is the only
  * thing that decides which account the memberships bind to. Inert without the
  * matching `code_verifier` (PKCE), which never appears in any URL.
  */
@@ -142,7 +142,7 @@ type JoinCode = {
  * with `purpose: 'connect'` (so it can never be cross-replayed against link/join)
  * and additionally names the specific `installationId` + `repoFullName` the CLI
  * already knows — the callback re-proves the caller can PERSONALLY reach that repo
- * under their own token. Carries NO Nosam user id — the connection bind is deferred
+ * under their own token. Carries NO Platform user id — the connection bind is deferred
  * to the authenticated connect redemption, keyed on the bearer-token
  * holder (RFC 0074 §"Threat L1").
  */
@@ -162,7 +162,7 @@ type ConnectState = {
  * carries the resolved numeric `repositoryId` (proven LIVE via
  * `verifyUserRepoAccess` under the CONNECTING user's own token) and that user's
  * numeric GitHub account id — both NON-null (the callback refuses to mint a grant
- * when either is null, so a grant always binds to a real identity). Still NO Nosam
+ * when either is null, so a grant always binds to a real identity). Still NO Platform
  * user id — the redeeming bearer token is the only thing that decides which
  * project the connection binds to. Inert without the matching `code_verifier`
  * (PKCE), which never appears in any URL.
@@ -480,7 +480,7 @@ export const githubRoutes = new Hono<ApiEnv>()
   // -------------------------------------------------------------------------
   // RFC 0074 — authenticated GitHub-identity link flow (deferred bind).
   //
-  // A GitHub user authorizing in their browser must end up linked to the Nosam
+  // A GitHub user authorizing in their browser must end up linked to the Platform
   // account that ran the CLI (the bearer-token holder), NOT to a user id baked
   // into the OAuth state. Binding in the public callback to a state-embedded
   // user id would be an account-linking CSRF: an attacker mints a link URL,
@@ -494,7 +494,7 @@ export const githubRoutes = new Hono<ApiEnv>()
 
   // Begin the link flow — return the GitHub App user-authorization URL the CLI
   // opens in the user's browser. The signed state carries the localhost
-  // redirect + PKCE challenge and an expiry, but NO Nosam user id.
+  // redirect + PKCE challenge and an expiry, but NO Platform user id.
   .get('/link-url', authMiddleware, async (context) => {
     if (!isAppUserOAuthConfigured(context.env)) {
       return context.json(APP_USER_OAUTH_NOT_CONFIGURED, 503);
@@ -624,11 +624,11 @@ export const githubRoutes = new Hono<ApiEnv>()
 
   // -------------------------------------------------------------------------
   // Org-shared installs — JOIN flow (deferred bind, cloned from the RFC 0074
-  // link flow above). Lets a Nosam user who is an org co-member gain access to
+  // link flow above). Lets a Platform user who is an org co-member gain access to
   // the installations they can already manage on GitHub, WITHOUT re-owning them
   // and WITHOUT a stored GitHub token. Discovery DX: the caller names nothing —
   // the callback lists every installation their user token can reach, keeps the
-  // subset Nosam already tracks, and the authenticated /join/complete records a
+  // subset Platform already tracks, and the authenticated /join/complete records a
   // TTL-cached membership per install, keyed on the bearer-token holder (Threat
   // L1). Access is re-verified per-repo at connect time; this only caches the
   // org co-membership fact.
@@ -636,7 +636,7 @@ export const githubRoutes = new Hono<ApiEnv>()
 
   // Begin the JOIN flow — return the GitHub App user-authorization URL the CLI
   // opens in the member's browser. The signed state carries the localhost
-  // redirect + PKCE challenge and an expiry, but NO Nosam user id.
+  // redirect + PKCE challenge and an expiry, but NO Platform user id.
   .get('/join-url', authMiddleware, async (context) => {
     if (!isAppUserOAuthConfigured(context.env)) {
       return context.json(APP_USER_OAUTH_NOT_CONFIGURED, 503);
@@ -666,7 +666,7 @@ export const githubRoutes = new Hono<ApiEnv>()
   // Public join callback. GitHub redirects the browser here after the member
   // authorizes. Trust is the signed state minted at /join-url; there is no
   // session. This route NEVER binds a membership — it lists the installations
-  // the caller can access, intersects them with the ones Nosam tracks, and hands
+  // the caller can access, intersects them with the ones Platform tracks, and hands
   // a PKCE-bound `join_code` back to the initiator's localhost.
   .get('/join-callback', async (context) => {
     const verified = await verifyCallbackState<JoinState>(context, 'join');
@@ -707,7 +707,7 @@ export const githubRoutes = new Hono<ApiEnv>()
       return localhostRedirectResponse(redirectUrl.toString());
     }
 
-    // Intersect the accessible installations with the ones Nosam actually tracks
+    // Intersect the accessible installations with the ones Platform actually tracks
     // AND that are Organization accounts. A membership row keys on a numeric
     // installation id (FK-less), so we must only ever mint join codes for installs
     // we know — probe getGitHubInstallation per id and keep the ones that exist. An
@@ -816,7 +816,7 @@ export const githubRoutes = new Hono<ApiEnv>()
       // Monotonic revocation: batch-load the per-install
       // revocation tombstones for the join_code's GITHUB ACCOUNT id (X) — the
       // durable identity carried in the artifact, which `member_removed` always
-      // tombstones from the webhook payload even when no Nosam user existed yet.
+      // tombstones from the webhook payload even when no Platform user existed yet.
       // A join_code minted AT OR BEFORE a revocation (iat <= revoked_at) is a
       // stale artifact a removed member is replaying — its installs are skipped
       // below so membership is never resurrected. Under the install-row lock
@@ -877,7 +877,7 @@ export const githubRoutes = new Hono<ApiEnv>()
   // Begin the CONNECT-AUTHORIZE flow — return the GitHub App user-authorization
   // URL the CLI opens in the member's browser. The signed state names the exact
   // installationId + repoFullName the CLI already knows, plus the localhost
-  // redirect + PKCE challenge and an expiry, but NO Nosam user id.
+  // redirect + PKCE challenge and an expiry, but NO Platform user id.
   .get('/connect-authorize-url', authMiddleware, async (context) => {
     if (!isAppUserOAuthConfigured(context.env)) {
       return context.json(APP_USER_OAUTH_NOT_CONFIGURED, 503);
@@ -1393,7 +1393,7 @@ export const githubProjectRoutes = new Hono<ApiEnv>()
     // tombstone under the row lock. `undefined` on the owner path (no grant).
     let memberGrantIat: number | undefined;
     // The member grant's GITHUB ACCOUNT id (X) — the tombstone key. The
-    // revocation tombstone is keyed on this durable identity, not the Nosam user
+    // revocation tombstone is keyed on this durable identity, not the Platform user
     // id, so a pre-removal grant replay is caught even after the member re-links.
     // `undefined` on the owner path (no grant → the tombstone check is skipped).
     let memberGrantAccountId: string | undefined;

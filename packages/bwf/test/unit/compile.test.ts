@@ -512,7 +512,7 @@ describe('c.rewrite runtime wrapper', () => {
       expect((caught as Error).message).toContain(destination);
       expect((caught as Error).message).toContain('`routing.rewrites` rule in bwf.config.ts');
       expect((caught as Error).message).toContain(
-        'https://void.cloud/guide/edge/rewrites#runtime-rewrites-cannot-reach-static-assets',
+        'https://github.com/builtbyfriends/platform/blob/main/docs/guide/edge/rewrites.md#runtime-rewrites-cannot-reach-static-assets',
       );
     },
   );

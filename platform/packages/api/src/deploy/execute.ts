@@ -325,7 +325,7 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
       {
         event: 'error',
         message:
-          'SQLite migrations require an updated Nosam runtime. Upgrade void, rebuild the app, and deploy again.',
+          'SQLite migrations require an updated Platform runtime. Upgrade void, rebuild the app, and deploy again.',
       },
       400,
     );
@@ -374,7 +374,7 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
       {
         event: 'error',
         message:
-          'Managed Sandboxes require an updated Nosam runtime. Upgrade void, rebuild the app, and deploy again.',
+          'Managed Sandboxes require an updated Platform runtime. Upgrade void, rebuild the app, and deploy again.',
       },
       400,
     );
@@ -407,7 +407,7 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
     return context.json(
       {
         event: 'error',
-        message: 'This Nosam platform does not enable sandbox deployments.',
+        message: 'This Platform does not enable sandbox deployments.',
       },
       501,
     );

@@ -30,11 +30,13 @@ describe('platform onboarding pages', () => {
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     const html = await adminHtml(response);
     expect(html).toContain('<h1 id="nosam-auth-title">Welcome to &lt;Example Platform&gt;</h1>');
-    expect(html).toContain('<title>Welcome · &lt;Example Platform&gt; · Nosam</title>');
+    expect(html).toContain('<title>Welcome · &lt;Example Platform&gt; · Platform</title>');
     expect(html).toContain('npm install -g void');
     expect(html).toContain('bwf connect &#39;api.example.com&#39;');
     expect(html).toContain('href="/admin/"');
-    expect(html).toContain('href="https://void.cloud/guide/quickstart"');
+    expect(html).toContain(
+      'href="https://github.com/builtbyfriends/platform/blob/main/docs/guide/quickstart.md"',
+    );
     expect(html).not.toContain('<Example Platform>');
     expect(html).not.toContain('attacker.example');
     expect(html).not.toContain('alias.example.com');
@@ -74,7 +76,7 @@ describe('platform onboarding pages', () => {
     expect(response.status).toBe(200);
     const html = await adminHtml(response);
     expect(html).toContain('&lt;Example Platform&gt;');
-    expect(html).toContain('<title>Get Started · &lt;Example Platform&gt; · Nosam</title>');
+    expect(html).toContain('<title>Get Started · &lt;Example Platform&gt; · Platform</title>');
     expect(html).not.toContain('<Example Platform>');
     // `escapeHtml` escapes the quotes too; the browser renders them back.
     expect(html).toContain('bwf connect &#39;api.example.com&#39;');
@@ -94,7 +96,7 @@ describe('platform onboarding pages', () => {
       { ...env, PLATFORM_INSTALLATION_ID: 'example-installation' },
     );
     const html = await adminHtml(response);
-    expect(html).toContain('Get Started with Nosam Platform');
+    expect(html).toContain('Get Started with Platform');
     // `escapeHtml` escapes the quotes too; the browser renders them back.
     expect(html).toContain('bwf connect &#39;api.example.com&#39;');
     expect(html).not.toContain('attacker.example');
@@ -112,7 +114,7 @@ describe('platform onboarding pages', () => {
 
     expect(response.status).toBe(200);
     const html = await adminHtml(response);
-    expect(html).toContain('<title>Accept Project Invitation · Nosam Platform</title>');
+    expect(html).toContain('<title>Accept Project Invitation · Platform</title>');
     expect(html).toContain('bwf connect &#39;api.example.com&#39;');
     expect(html).toContain('bwf project team accept pinv_a1b2c3d4e5f6');
     expect(html).toContain('The CLI checks that it is still valid');
@@ -137,7 +139,7 @@ describe('platform onboarding pages', () => {
 
     expect(response.status).toBe(200);
     const html = await adminHtml(response);
-    expect(html).toContain('<title>Get Started · Nosam Platform</title>');
+    expect(html).toContain('<title>Get Started · Platform</title>');
     expect(html).not.toContain('bwf project team accept');
     expect(html).not.toContain('evil.example');
   });
@@ -156,8 +158,8 @@ describe('platform onboarding pages', () => {
       );
       expect(response.status).toBe(200);
       const html = await adminHtml(response);
-      expect(html).toContain('Nosam Platform');
-      expect(html).not.toContain('Nosam Cloud');
+      expect(html).toContain('Platform');
+      expect(html).not.toContain('Platform');
       if (path === '/') {
         expect(html).toContain('bwf connect &#39;api.example.com&#39;');
       }
@@ -169,7 +171,7 @@ describe('platform onboarding pages', () => {
     async (origin) => {
       const response = await app.fetch(new Request(`${origin}/signup-restricted`), env);
       expect(await adminHtml(response)).toContain(
-        'New accounts on Nosam Cloud require administrator approval.',
+        'New accounts on Platform require administrator approval.',
       );
     },
   );

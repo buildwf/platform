@@ -127,7 +127,7 @@ export function getDeploySchemaDriftMessage(root: string): string {
     const dir = `${relative(root, migrationsDir)}/`;
     return [
       `Missing Drizzle metadata in ${dir}.`,
-      'See https://void.cloud/guide/database#hand-written-migrations',
+      'See https://github.com/builtbyfriends/platform/blob/main/docs/guide/database.md#hand-written-migrations',
     ].join('\n');
   }
 

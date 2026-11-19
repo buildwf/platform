@@ -16,7 +16,7 @@ function createPackage(t, overrides = {}, includeLicense = true) {
     version: '0.0.0',
     description: 'A bwf test package.',
     license: 'MIT',
-    homepage: 'https://void.cloud',
+    homepage: 'https://github.com/builtbyfriends/platform',
     bugs: { url: 'https://github.com/voidzero-dev/void/issues' },
     exports: './index.mjs',
     ...overrides,

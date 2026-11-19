@@ -164,7 +164,7 @@ describe('hasDeploySchemaDrift', { timeout: driftTestTimeout }, () => {
 
     const message = getDeploySchemaDriftMessage(root);
     expect(message).toBe(
-      'Missing Drizzle metadata in db/migrations/.\nSee https://void.cloud/guide/database#hand-written-migrations',
+      'Missing Drizzle metadata in db/migrations/.\nSee https://github.com/builtbyfriends/platform/blob/main/docs/guide/database.md#hand-written-migrations',
     );
   });
 

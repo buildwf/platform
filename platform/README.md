@@ -1,7 +1,7 @@
-# Nosam Platform
+# Platform
 
-The Nosam platform runs in your Cloudflare account and lets developers deploy
-applications through the Nosam CLI. This repository contains its control plane,
+The Platform runs in your Cloudflare account and lets developers deploy
+applications through the bwf CLI. This repository contains its control plane,
 routing, proxy, log ingestion, and optional dashboard and build services.
 
 The API, dispatch, proxy, tail, and email gateway Workers are packaged into
@@ -10,7 +10,7 @@ runtime can be installed and upgraded with `bwf platform`. The installer tracks
 resource ownership, applies compatible migrations, and preserves credentials
 across upgrades.
 
-Start with [Self-host a Nosam Platform](../docs/guide/self-hosted-platform.md) to
+Start with [Self-host a Platform](../docs/guide/self-hosted-platform.md) to
 install it, [Platform Administration](../docs/guide/platform-administration.md) to
 operate it, or [Platform Development](../docs/guide/platform-development.md) to
 work on a fork. The dashboard and managed builds are optional source components;
@@ -52,7 +52,7 @@ relative to `platform/` unless they begin with `../`.
 
 The workspace `dev` and `build` scripts in `platform/package.json` apply to the
 dashboard. They do not start the API or install a platform. Deployment scripts
-in that file serve the existing Nosam Cloud deployment; see [operations](#operations).
+in that file serve the existing Platform deployment; see [operations](#operations).
 
 ## Operator CLI
 
@@ -89,13 +89,13 @@ commands. `vp run --filter @nosamcloud/platform health` forwards to
 `bwf platform system health`, using the selected connection and operator login.
 Automation supplies `NOSAM_OPERATOR_TOKEN` and an explicit `BWF_API_URL`.
 
-Nosam Cloud maintains an existing deployment that predates the installer. Its
+Platform maintains an existing deployment that predates the installer. Its
 `platform/package.json` deployment scripts and `platform/deployments/nosam-cloud.json`
-descriptor belong to that deployment. The [Nosam Cloud operations note](./meta/operations.md)
+descriptor belong to that deployment. The [Platform operations note](./meta/operations.md)
 explains its environments and credentials without storing account-specific
 inventories or personal access assignments in the repository.
 
-The hosted deploy/smoke workflows target the existing Nosam Cloud deployment.
+The hosted deploy/smoke workflows target the existing Platform deployment.
 Forks build their own runtime and use `bwf platform install` or
 `bwf platform upgrade --runtime`, as shown in the development guide.
 

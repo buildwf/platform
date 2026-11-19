@@ -24,10 +24,10 @@ Deployed user worker            Proxy                       Downstream
 
 Project requests use these authentication paths:
 
-| Path            | When                | Auth                                                                                                                                                                                               |
-| --------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Service binding | Deployed Nosam apps | Project token (`aiToken`), checked against the project's accept floor; see [Project tokens](#project-tokens); requests use bare hosts (`https://ai-proxy`, `https://proxy`, `https://email-proxy`) |
-| HTTPS           | Local development   | `Authorization: Bearer <api-jwt>`                                                                                                                                                                  |
+| Path            | When                   | Auth                                                                                                                                                                                               |
+| --------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Service binding | Deployed Platform apps | Project token (`aiToken`), checked against the project's accept floor; see [Project tokens](#project-tokens); requests use bare hosts (`https://ai-proxy`, `https://proxy`, `https://email-proxy`) |
+| HTTPS           | Local development      | `Authorization: Bearer <api-jwt>`                                                                                                                                                                  |
 
 Project-scoped POST routes require `projectId` in the JSON body. The public
 `GET /health` route has no project body, and `/email/verify-receipt` checks a

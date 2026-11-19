@@ -151,7 +151,7 @@ app.post('/*', async (context, next) => {
     return context.json(
       {
         error: 'authorization required',
-        message: 'Send a Nosam platform token in the Authorization header.',
+        message: 'Send a Platform token in the Authorization header.',
       },
       401,
     );
@@ -247,7 +247,7 @@ app.post('/ai/*', async (context, next) => {
       {
         error: 'platform capability unavailable',
         capability: 'ai',
-        message: 'This Nosam platform does not enable AI.',
+        message: 'This Platform does not enable AI.',
       },
       501,
     );
@@ -274,7 +274,7 @@ app.post('/email/*', async (context, next) => {
       {
         error: 'platform capability unavailable',
         capability: 'email',
-        message: 'This Nosam platform does not enable email.',
+        message: 'This Platform does not enable email.',
       },
       501,
     );

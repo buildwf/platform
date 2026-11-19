@@ -1,5 +1,8 @@
 import { setTimeout as delay } from 'node:timers/promises';
-import { normalizeApplicationDomain, PLATFORM_HEALTH_HOSTNAME_LABEL } from '@builtbyfriends/platform';
+import {
+  normalizeApplicationDomain,
+  PLATFORM_HEALTH_HOSTNAME_LABEL,
+} from '@builtbyfriends/platform';
 import { cfAccessHeaders } from '../shared/cf-access.ts';
 import { type PlatformHealthCheckContext } from './platform-installer-types.ts';
 
@@ -14,7 +17,7 @@ export class PlatformAccessBlockedError extends Error {
             'The reserved dispatch /health endpoint uses a path-only Access exception and still requires bwf’s private probe token.',
             'Resume to verify the health exceptions and saved installer credentials.',
             ...(context.resumeCommand ? [`Resume: ${context.resumeCommand}`] : []),
-            'https://void.cloud/guide/platform/installation/maintenance#cloudflare-access',
+            'https://github.com/builtbyfriends/platform/blob/main/docs/guide/platform/installation/maintenance.md#cloudflare-access',
           ].join('\n')
         : [
             'platform: Cloudflare Access blocked the platform health checks (Default-Deny, error 1050).',
@@ -35,7 +38,7 @@ export class PlatformAccessBlockedError extends Error {
             'bwf’s own authentication stays enabled. Keep account-wide Default-Deny on.',
             '',
             'For platforms that must remain Access-protected:',
-            'https://void.cloud/guide/platform/installation/maintenance#cloudflare-access',
+            'https://github.com/builtbyfriends/platform/blob/main/docs/guide/platform/installation/maintenance.md#cloudflare-access',
           ].join('\n'),
     );
   }

@@ -754,7 +754,7 @@ describe('project team API', () => {
     const emailEnv = {
       ...env,
       EMAIL: { send } as unknown as SendEmail,
-      EMAIL_FROM: 'Nosam Platform <platform@example.com>',
+      EMAIL_FROM: 'Platform <platform@example.com>',
       AUTH_REDIRECT_URI: 'http://localhost/auth/callback',
       PLATFORM_INSTALLATION_ID: 'test-installation',
     };
@@ -844,7 +844,7 @@ describe('project team API', () => {
       {
         ...env,
         EMAIL: { send } as unknown as SendEmail,
-        EMAIL_FROM: 'Nosam Platform <platform@example.com>',
+        EMAIL_FROM: 'Platform <platform@example.com>',
         AUTH_REDIRECT_URI: 'http://localhost/auth/callback',
         PLATFORM_INSTALLATION_ID: 'test-installation',
       },

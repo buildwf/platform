@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vite-plus/test';
 
 const manifestPath = resolve(import.meta.dirname, '../../../../deployments/nosam-cloud.json');
 
-describe('Nosam Cloud deployment manifest', () => {
+describe('Platform deployment manifest', () => {
   it('captures the public production topology without deployment credentials or resource ids', () => {
     const raw = readFileSync(manifestPath, 'utf8');
     const manifest = parsePlatformDeploymentManifest(JSON.parse(raw));

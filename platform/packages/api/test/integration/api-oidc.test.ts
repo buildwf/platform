@@ -130,7 +130,7 @@ function setCompareSideEffect(fn: (() => Promise<void>) | null): void {
 }
 
 // Controls the mocked `POST /repos/{repo}/check-runs` response for the
-// best-effort "Nosam Build" check-run create at the end of a successful
+// best-effort "Platform Build" check-run create at the end of a successful
 // exchange. Default 200 returns a fixed id so happy-path exchanges persist it; a
 // >=400 status models a create failure (`createCheckRun` returns null) — the
 // exchange must still mint a token and persist NO check_run_id. Reset each test.
@@ -182,7 +182,7 @@ function makeClaims(overrides: Partial<GithubOidcClaims> = {}): GithubOidcClaims
     sha: 'sha-oidc',
     run_id: '987654',
     run_attempt: '1',
-    workflow: 'Deploy to Nosam',
+    workflow: 'Deploy to Platform',
     workflow_ref: scaffoldRef,
     job_workflow_ref: scaffoldRef,
     sub: `repo:${repository}:ref:${ref}`,
@@ -202,7 +202,7 @@ async function exchange(
   options?: { withSecrets?: boolean },
 ): Promise<Response> {
   const withSecrets = options?.withSecrets ?? true;
-  // The route creates+persists the best-effort "Nosam Build" check run
+  // The route creates+persists the best-effort "Platform Build" check run
   // SYNCHRONOUSLY (awaited before the token response), so the check-run POST and
   // persisted `check_run_id` are already durable when `app.fetch` resolves — no
   // `waitUntil` flush needed.
@@ -317,7 +317,7 @@ beforeEach(async () => {
           checkRunSideEffect = null;
           await effect();
         }
-        // The best-effort "Nosam Build" check-run create (end of the exchange).
+        // The best-effort "Platform Build" check-run create (end of the exchange).
         if (checkRunCreateStatus < 200 || checkRunCreateStatus >= 300) {
           return new Response('check-run create failed', { status: checkRunCreateStatus });
         }
@@ -674,10 +674,10 @@ describe('POST /auth/github-oidc', () => {
   });
 
   // The github_actions executor has no BuildManager DO, so the OIDC exchange is
-  // the only place the "Nosam Build" check run can be created. A successful create
+  // the only place the "Platform Build" check run can be created. A successful create
   // must persist the returned id onto the build so the workflow_run completion
   // handler can finalize it.
-  it('creates and persists a "Nosam Build" check run for a github_actions exchange', async () => {
+  it('creates and persists a "Platform Build" check run for a github_actions exchange', async () => {
     const user = await createTestUser(env.db, 'octo-check');
     const project = await createTestProject(env.db, user.id, 'oidc-check');
     await seedActiveInstallation(env.db, '1');
@@ -1196,10 +1196,10 @@ describe('POST /auth/github-oidc', () => {
   // A repeated exchange for the SAME run reuses the in-flight build (above). That
   // reused row already carries the check_run_id its creating exchange persisted,
   // so the check-run create MUST be skipped — otherwise a retry POSTs a SECOND
-  // "Nosam Build" run and overwrites the id, orphaning the first `in_progress`
+  // "Platform Build" run and overwrites the id, orphaning the first `in_progress`
   // forever. Distinct per-call ids make an accidental duplicate visible (both the
   // POST count and the persisted id would change).
-  it('creates the "Nosam Build" check run exactly once across repeated exchanges for the same run', async () => {
+  it('creates the "Platform Build" check run exactly once across repeated exchanges for the same run', async () => {
     const user = await createTestUser(env.db, 'octo-check-dup');
     const project = await createTestProject(env.db, user.id, 'oidc-check-dup');
     await seedActiveInstallation(env.db, '1');

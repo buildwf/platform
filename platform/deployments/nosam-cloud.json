@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "displayName": "Nosam Cloud",
+  "displayName": "Platform",
   "installationSlug": "cloud",
   "application": {
     "baseDomain": "void.app",

@@ -107,7 +107,7 @@ describe('createCheckRun', () => {
 
   function callCreate(installationId: string): Promise<string | null> {
     return createCheckRun(makeEnv(), installationId, REPO, {
-      name: 'Nosam Build',
+      name: 'Platform Build',
       headSha: HEAD_SHA,
       externalId: BUILD_ID,
       detailsUrl: 'https://example.com/build/123',
@@ -147,7 +147,7 @@ describe('createCheckRun', () => {
     expect(postBody!.status).toBe('in_progress');
     expect(postBody!.head_sha).toBe(HEAD_SHA);
     expect(postBody!.external_id).toBe(BUILD_ID);
-    expect(postBody!.name).toBe('Nosam Build');
+    expect(postBody!.name).toBe('Platform Build');
     expect(postBody!.details_url).toBe('https://example.com/build/123');
     expect(postBody!.output).toEqual({ title: 'Building', summary: 'Build in progress' });
     expect(warnSpy).not.toHaveBeenCalled();

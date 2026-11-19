@@ -498,7 +498,7 @@ export function createCronSchedulerMock(): {
 export type SetupEnvOptions = Readonly<{
   /**
    * Set `PLATFORM_AUTH_DATABASE_UNCACHED` (default true, like a self-hosted install).
-   * Hosted Nosam Cloud leaves it unset; suites whose behaviour must not depend on it
+   * Hosted Platform leaves it unset; suites whose behaviour must not depend on it
    * pass false. Keep the default: platform access protection needs the flag.
    */
   authDatabaseUncached?: boolean;

@@ -101,7 +101,7 @@ export function resolveCloudflareOperationArgv(): Array<string> {
   ].find((candidate) => existsSync(candidate));
   if (!entry) {
     throw new Error(
-      `Nosam's bundled Cloudflare tooling is unavailable. Reinstall the project's dependencies from its trusted lockfile, then retry.`,
+      `Platform's bundled Cloudflare tooling is unavailable. Reinstall the project's dependencies from its trusted lockfile, then retry.`,
     );
   }
   return [process.execPath, entry];

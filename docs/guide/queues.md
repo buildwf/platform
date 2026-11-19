@@ -113,7 +113,7 @@ export default defineQueue<Message>(async (batch, env) => {
 
 Export each option directly from the queue file as a whole number, such as `export const maxRetries = 5`. Computed values and re-exports aren't supported; repeat shared settings in each queue file.
 
-Nosam-managed queues do not configure a dead-letter queue. Cloudflare permanently
+Platform-managed queues do not configure a dead-letter queue. Cloudflare permanently
 deletes messages that exhaust their retries without one; see
 [Cloudflare's dead-letter queue guide](https://developers.cloudflare.com/queues/configuration/dead-letter-queues/).
 

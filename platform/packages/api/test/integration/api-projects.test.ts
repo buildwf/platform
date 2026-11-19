@@ -1445,7 +1445,7 @@ describe('POST /projects', () => {
     expect(body).toMatchObject({
       slug: 'warning-app',
       warnings: [
-        'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Nosam retries within an hour. To retry now, a project owner or admin can run `bwf project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.',
+        'Project created, but its Zero Trust protection is not set up yet, so deploys will wait. Platform retries within an hour. To retry now, a project owner or admin can run `bwf project zero-trust reconcile`; if that reports the platform is not ready, ask a platform administrator.',
       ],
     });
     expect(body).not.toHaveProperty('warning');

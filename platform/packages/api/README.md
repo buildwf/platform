@@ -1,6 +1,6 @@
 # @nosamcloud/api
 
-Control-plane API and administrator UI for a Nosam platform.
+Control-plane API and administrator UI for a Platform.
 
 It owns platform auth, projects, deployments, domains, secrets, provisioning, rollback, usage/account enforcement, and Deploy-on-GitHub (GitHub App connect, push-triggered builds, GitHub Actions OIDC). The worker uses Hono plus Drizzle over PostgreSQL via Hyperdrive.
 
@@ -11,7 +11,7 @@ It owns platform auth, projects, deployments, domains, secrets, provisioning, ro
 - **Internal API**: resource resolution and revalidation used by other platform workers
 - **Admin UI**: React pages under `/admin/*`, server-rendered for first load and backed by a private Fate endpoint
 - **Lifecycle status**: `/admin/status` and its GET JSON endpoint project display fields from the installer-owned PostgreSQL checkpoint. Maintenance admits these routes and administrator sign-in through normal Access and admin authentication. Keep the exception narrow, retain existing Sandbox drain operator access, and keep the Fate POST endpoint and administrator writes gated.
-- **Self-hosted owner setup**: dashboard OAuth and normal signup share the first-user transaction and configured GitHub identity check. Dashboard login can create the first owner without a CLI login; it never promotes existing users. Nosam Cloud keeps its existing admin-only login behavior.
+- **Self-hosted owner setup**: dashboard OAuth and normal signup share the first-user transaction and configured GitHub identity check. Dashboard login can create the first owner without a CLI login; it never promotes existing users. Platform keeps its existing admin-only login behavior.
 - **Background work**:
   - `scheduled()` for periodic usage enforcement and rollover checks
   - `queue()` for usage-event ingestion
@@ -65,7 +65,7 @@ src/
     usage.ts
   admin/
     fate/                     # Admin-only Fate schema, data loaders, typed client, and SSR snapshots
-    react/                    # React page components and Nosam page-router entry
+    react/                    # React page components and Platform page-router entry
     routes/                   # Admin page shells, audited form actions, and log polling
     middleware/auth.ts        # Admin cookie auth + same-origin guard on every write
 container/
@@ -82,7 +82,7 @@ drizzle/
 
 ### Public API
 
-- `GET /` — server-rendered welcome page with the platform name, CLI installation and connection instructions, and links to the administrator dashboard and Nosam quickstart.
+- `GET /` — server-rendered welcome page with the platform name, CLI installation and connection instructions, and links to the administrator dashboard and Platform quickstart.
 - `GET /health`
 - `GET /auth/login`
 - `GET /auth/callback`
@@ -278,7 +278,7 @@ Connect a repo through a GitHub App; a `git push` then builds and deploys automa
   - **CF Container** — `BuildScheduler` (global, alarm-driven queue with per-plan concurrency from the installation catalog) atomically claims a build and starts its configured instance size: `BuildManager` (`standard-3` = 2 vCPU / 8 GiB / 16 GB) or `BuildManagerLarge` (`standard-4` = 4 vCPU / 12 GiB / 20 GB). The class is routed by the persisted `builds.instance_type` (`standard-3` / `standard-4`, captured from the effective plan at admission) via `buildManagerNamespace` in `build-namespace.ts`; cancel and reaper paths use the same picker, so they address the same class the build started on. `BuildManagerLarge` extends `BuildManager`, which extends `@cloudflare/containers` `Container`, enforces a timeout alarm, and persists status to Postgres via Hyperdrive.
   - **GitHub Actions** — `bwf init --github` scaffolds a workflow that calls `POST /auth/github-oidc`; the verified job runs `bwf deploy` and reports back via the `workflow_run` webhook.
 - **Build mechanism**: both executors run the real `bwf deploy` CLI with a short-lived, project-scoped deploy token (`aud: "deploy"`, minted by `auth/deploy-token.ts`). There is no artifact-upload endpoint; `routes/deploy.ts` is unchanged. The container agent (`container/build-agent.mjs`) downloads the source tarball, installs deps, and runs `npx bwf deploy --project <slug>` with `BWF_TOKEN` + `BWF_API_URL`.
-- **Check Run**: container builds publish a "Nosam Build" GitHub Check Run (head SHA = the build's `commit_sha`/webhook `after`), created `in_progress` at build start and finalized `success`/`failure`/`cancelled` at every terminal site. Best-effort — a Check Run API error never fails or perturbs a build/deploy. `details_url` is the application URL derived from the configured `SITE_DOMAIN` for the in-progress/success/failure states (omitted on cancel). The helper (`github/check-run.ts`) is executor-agnostic; Actions check-runs are deferred (the native workflow check already covers them) and the helper is ready for a future PR. Configure Checks write permission and the relevant webhook subscriptions when enabling this integration. `builds.check_run_id` has no index (nothing queries by it — deferred).
+- **Check Run**: container builds publish a "Platform Build" GitHub Check Run (head SHA = the build's `commit_sha`/webhook `after`), created `in_progress` at build start and finalized `success`/`failure`/`cancelled` at every terminal site. Best-effort — a Check Run API error never fails or perturbs a build/deploy. `details_url` is the application URL derived from the configured `SITE_DOMAIN` for the in-progress/success/failure states (omitted on cancel). The helper (`github/check-run.ts`) is executor-agnostic; Actions check-runs are deferred (the native workflow check already covers them) and the helper is ready for a future PR. Configure Checks write permission and the relevant webhook subscriptions when enabling this integration. `builds.check_run_id` has no index (nothing queries by it — deferred).
 - **Build logs**: `BuildManager` pulls container stdout/stderr into the DO with a `pollLogs()` loop — a non-starting `getTcpPort().fetch()` against the agent's paged `GET /logs?since=N` (deliberately NOT `containerFetch`, which would auto-resurrect an exited container) on a ~1s cadence, advancing its cursor only after SQLite ingestion and feeding the SQLite `logs` table + WebSocket fan-out. On natural exit, the agent keeps its control server alive with an 8s idle deadline that resets only when the acknowledged cursor advances and a 120s non-resettable absolute cap. After a moving final page, the same pull callback sends one empty follow-up request so `since=<last ingested seq>` acknowledges durable ingestion without waiting another tick. Forced teardown instead single-flights the whole join, fresh bounded pull, liveness recheck, and signal sequence so concurrent callers cannot ingest after the termination marker. The DO also serves a read-only `GET /logs?since=N` -> `{ lines, lastSeq }`. The admin build views (below) consume this; `github_actions` builds have no DO log store and link out to their GitHub Actions run.
 
 ## Email
@@ -491,11 +491,11 @@ both `NOSAM_EMAIL_SENDER_DOMAIN` and `NOSAM_EMAIL_SHARED_ZONE_ID` are configured
 It sets `AUTH_REDIRECT_URI` to the platform's OAuth callback URL, and it sets
 `PLATFORM_DISPLAY_NAME` and `EMAIL_SENDER_DOMAIN`. Platform mail uses the origin
 of `AUTH_REDIRECT_URI` for links and comes from
-`noreply@<EMAIL_SENDER_DOMAIN>`; an installed platform does not default to Nosam
+`noreply@<EMAIL_SENDER_DOMAIN>`; an installed platform does not default to Platform
 Cloud senders or dashboard links. Do not set these values or `EMAIL_FROM` on
 installed Workers in the Cloudflare dashboard. The next lifecycle command stops
-until the operator lets Nosam replace that change; see
-[Platform Workers changed outside Nosam](../../../docs/guide/platform/installation/maintenance.md#workers-changed-outside-nosam).
+until the operator lets Platform replace that change; see
+[Platform Workers changed outside Platform](../../../docs/guide/platform/installation/maintenance.md#workers-changed-outside-nosam).
 
 Administrators manage access with `bwf platform signup` and `bwf platform invitation`. Signup eligibility comes from the installation's own allowlist and bootstrap administrator configuration.
 
@@ -523,4 +523,4 @@ Release modules and encrypted binding metadata are stored under the deployment's
 
 ## Connected apps
 
-Registered confidential OAuth clients use code + S256 PKCE with identity-only grants. Each publish requires Nosam consent for an exact artifact and project, then uses an audience-separated, revocable credential and a durable deployment receipt. Admin registration/disablement lives at `/admin/connected-apps`; user disconnection lives at `/oauth/connections`. See [the design record](../../meta/design-docs/0091-connected-apps.md) and [operator guide](../../../docs/guide/platform/administration/connected-apps.md).
+Registered confidential OAuth clients use code + S256 PKCE with identity-only grants. Each publish requires Platform consent for an exact artifact and project, then uses an audience-separated, revocable credential and a durable deployment receipt. Admin registration/disablement lives at `/admin/connected-apps`; user disconnection lives at `/oauth/connections`. See [the design record](../../meta/design-docs/0091-connected-apps.md) and [operator guide](../../../docs/guide/platform/administration/connected-apps.md).

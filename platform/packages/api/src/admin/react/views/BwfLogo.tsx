@@ -4,7 +4,7 @@ export function BwfLogo() {
   return (
     <svg
       role="img"
-      aria-label="Nosam"
+      aria-label="Platform"
       viewBox="0 0 270 58"
       fill="none"
       className="nosam-admin-logo"

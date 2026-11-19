@@ -225,7 +225,7 @@ export async function updateGitHubConnectionRepoNamesByRepoId(
  * newest by `created_at` wins.
  *
  * GitHub Actions OIDC is independent of the GitHub App lifecycle, so a repo
- * workflow could otherwise keep exchanging OIDC tokens for Nosam deploy tokens
+ * workflow could otherwise keep exchanging OIDC tokens for Platform deploy tokens
  * after the App is suspended/deleted or the repo dropped from the install.
  * Guard against that by INNER JOINing `github_installations` (via the
  * connection's `installation_id`) and requiring `status = 'active'`, plus
@@ -587,7 +587,7 @@ export async function getGitHubInstallationsByAccount(
 // github_installation_members — cached org co-membership (TTL, no stored token)
 //
 // Canonical helper surface for the org-shared GitHub App flow. A row records
-// that a Nosam user was verified as a member of the GitHub account behind a
+// that a Platform user was verified as a member of the GitHub account behind a
 // numeric installation. It is a TTL cache: access is re-verified per-repo, and
 // these helpers only short-circuit the org-membership check while fresh.
 // ---------------------------------------------------------------------------
@@ -680,7 +680,7 @@ export async function deleteGitHubInstallationMembers(
 /**
  * Bulk-remove the cached memberships across `installationIds` whose captured
  * browser proof (`github_account_id`) equals `githubAccountId`, regardless of
- * which Nosam user bears them. member_removed uses this to void the LISTING
+ * which Platform user bears them. member_removed uses this to void the LISTING
  * memberships keyed by a removed GitHub identity X: these rows are TTL cache
  * metadata that NEVER back a `github_connections` row or an installation owner
  * pointer (those are backed by the connecting user's IMMUTABLE oauth GitHub id
@@ -758,7 +758,7 @@ export async function getDbNowMs(db: Db): Promise<number> {
  * `ghm` for members).
  *
  * Keyed by `githubAccountId` — the durable identity the stateless artifacts
- * carry — NOT a Nosam user id (which may not exist when a soon-to-be-removed member
+ * carry — NOT a Platform user id (which may not exist when a soon-to-be-removed member
  * pre-mints artifacts). `member_removed` calls this ONCE with the removed GitHub
  * id, always known from the webhook payload.
  */

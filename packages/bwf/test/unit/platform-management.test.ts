@@ -459,7 +459,7 @@ describe('uninstall with project Zero Trust', () => {
         ]),
     }).catch((reason: unknown) => reason as Error);
     expect(error!.message).toContain(
-      'Refusing to uninstall while Nosam-managed Access applications from project Zero Trust remain',
+      'Refusing to uninstall while Platform-managed Access applications from project Zero Trust remain',
     );
     expect(error!.message).toContain(
       'public exception for proj_skipped: nosam-example-public-proj_skipped (nosam-example-public-proj_skipped-id)',

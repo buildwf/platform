@@ -423,7 +423,7 @@ describe('BuildManager check-run lifecycle — create', () => {
     expect(posts).toHaveLength(1);
     expect(posts[0].url).toMatch(/\/repos\/owner\/repo\/check-runs$/);
     expect(posts[0].body).toMatchObject({
-      name: 'Nosam Build',
+      name: 'Platform Build',
       head_sha: 'sha1234567890',
       external_id: 'b1',
       status: 'in_progress',
@@ -1051,7 +1051,7 @@ describe('BuildManager check-run lifecycle — requeue/create-cancel id reuse', 
   // DO-storage cache was lost), so DO storage holds NO check-run id — but the
   // FIRST run's `setBuildCheckRunId` persisted it to `builds.check_run_id`. The
   // create-gate must reuse that PERSISTED id (the pre-create-recheck `row` carries
-  // it) instead of POSTing a SECOND `Nosam Build` run, which would orphan the first
+  // it) instead of POSTing a SECOND `Platform Build` run, which would orphan the first
   // one `in_progress`. Model the requeue's starting state directly: seed
   // `dbState.checkRunIds` (Postgres has the id) while leaving DO storage empty.
   it('requeue with DO storage empty but builds.check_run_id set → reuses the persisted id, no second POST', async () => {

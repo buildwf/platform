@@ -1,4 +1,7 @@
-import type { PlatformLoginConfiguration, PlatformAuthenticationRecovery } from '@builtbyfriends/platform';
+import type {
+  PlatformLoginConfiguration,
+  PlatformAuthenticationRecovery,
+} from '@builtbyfriends/platform';
 import {
   browserPageIdentity,
   browserPageLead,
@@ -460,7 +463,7 @@ export async function startPlatformLogin(
         context.req.query('code_challenge_method') !== 'S256'
       ) {
         throw new AuthenticationConfigurationError(
-          'CLI login requires PKCE. Update the Nosam CLI and try again.',
+          'CLI login requires PKCE. Update the bwf CLI and try again.',
           'pkce_required',
           400,
         );
@@ -725,7 +728,7 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
           'Link login method',
           browserPageLead(
             'Link this login method?',
-            'Review the identity before linking it to your existing Nosam account.',
+            'Review the identity before linking it to your existing Platform account.',
           ) +
             browserPageIdentity(identity) +
             '<form method="post" action="/auth/link/confirm"><input type="hidden" name="confirm" value="yes"><button class="nosam-auth-button nosam-auth-button-primary" type="submit">Link this identity</button></form>',
@@ -740,7 +743,7 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
         browserPageStatus('success') +
           browserPageLead(
             'Login verified',
-            'Return to Nosam to review the identity and finish configuration.',
+            'Return to Platform to review the identity and finish configuration.',
           ),
       );
     }
@@ -934,7 +937,7 @@ export async function confirmIdentityLink(context: Context<ApiEnv>): Promise<Res
       browserPageStatus('success') +
         browserPageLead(
           'Login method linked',
-          'Your login method is linked. You can close this window and return to Nosam.',
+          'Your login method is linked. You can close this window and return to Platform.',
         ),
     );
   } catch (error) {

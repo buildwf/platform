@@ -14,7 +14,8 @@ import { Layout } from './Layout.tsx';
 import { PageStack } from './PageStack.tsx';
 import { SectionStack } from './SectionStack.tsx';
 
-const EMAIL_SETUP_GUIDE = 'https://void.cloud/guide/platform/installation/credentials#enable-email';
+const EMAIL_SETUP_GUIDE =
+  'https://github.com/builtbyfriends/platform/blob/main/docs/guide/platform/installation/credentials.md#enable-email';
 
 function EmailSettingsHeader() {
   return (

@@ -898,7 +898,7 @@ export type ProvisionedWranglerPatch = {
   queues?: {
     producers?: Array<WranglerQueueProducer>;
     consumers?: Array<WranglerQueueConsumer>;
-    /** Remove only stale entries carrying explicit Nosam-managed provenance. */
+    /** Remove only stale entries carrying explicit Platform-managed provenance. */
     reconcileBwfOwned?: boolean;
   };
   /** Upserts `{ name }` into `send_email[]`; an existing entry's destinations are user-owned. */
@@ -915,7 +915,7 @@ export type ProvisionedWranglerPatch = {
 type ManagedQueueProvenance = {
   producerBindings: Array<string>;
   consumerQueues: Array<string>;
-  /** Nosam-owned consumers removed locally but not yet confirmed removed remotely. */
+  /** Platform-owned consumers removed locally but not yet confirmed removed remotely. */
   pendingConsumerRemovals: Array<string>;
 };
 
@@ -976,7 +976,7 @@ function writeManagedQueueProvenance(text: string, provenance: ManagedQueueProve
 }
 
 /**
- * Nosam-owned consumer queues that may need remote cleanup: current managed consumers (the
+ * Platform-owned consumer queues that may need remote cleanup: current managed consumers (the
  * caller subtracts desired ones) and pending removals, which survive failed deploys.
  */
 export function readWranglerManagedQueueCleanupCandidates(configPath: string): Array<string> {

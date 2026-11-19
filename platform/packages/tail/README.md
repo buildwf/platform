@@ -52,10 +52,10 @@ consumer and its Analytics Engine binding, and `bwf platform upgrade` deploys
 changes from the packaged runtime. Dataset and Worker names belong to that
 installation.
 
-The checked-in Wrangler environments describe the existing Nosam Cloud deployment.
+The checked-in Wrangler environments describe the existing Platform deployment.
 Its dispatch configuration references this Worker through `tail_consumers`, so
 maintainers deploy tail before dispatch. See the
-[Nosam Cloud operations note](../../meta/operations.md) for that deployment and
+[Platform operations note](../../meta/operations.md) for that deployment and
 [Platform Development](../../../docs/guide/platform-development.md) to build your
 own runtime.
 

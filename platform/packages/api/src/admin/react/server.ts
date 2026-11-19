@@ -15,7 +15,7 @@ export async function renderAdminPage(
     fateSnapshot?: Parameters<ReturnType<typeof createAdminFateClient>['hydrate']>[0];
   } = {},
 ): Promise<Response> {
-  const platformName = String(props.platformName ?? 'Nosam');
+  const platformName = String(props.platformName ?? 'Platform');
   const { pathname, search } = new URL(context.req.url);
   const pageObj: PageObject = {
     component,

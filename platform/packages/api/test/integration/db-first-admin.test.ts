@@ -74,7 +74,7 @@ describe('self-hosted first owner bootstrap', () => {
     expect(renamedOwner.role).toBe('admin');
   });
 
-  it('preserves Nosam Cloud user defaults when no installation id is set', async () => {
+  it('preserves Platform user defaults when no installation id is set', async () => {
     const user = await env.db.transaction((tx) =>
       createUserForPlatform(tx, 'github', 'hosted', 'hosted-user', null),
     );

@@ -32,7 +32,7 @@ export function platformSetupFieldHelp(
   const docs = (page: string, section: string, title: string) =>
     platformSetupLink({
       title,
-      url: `https://void.cloud/guide/platform/installation/${page}#${section}`,
+      url: `https://github.com/builtbyfriends/platform/blob/main/docs/guide/platform/installation/${page}.md#${section}`,
     });
   switch (key) {
     case 'databaseUrl':

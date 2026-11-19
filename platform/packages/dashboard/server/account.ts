@@ -29,7 +29,7 @@ export const loader = defineHandler<Props>(async (context) => {
     return {
       user: context.get('dashboardUser'),
       methods: [],
-      platformName: 'Nosam Cloud',
+      platformName: 'Platform',
       error: 'Login methods are unavailable. Try again shortly.',
     };
   }

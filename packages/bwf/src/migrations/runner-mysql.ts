@@ -119,7 +119,7 @@ function mySqlMigrationError(name: string, error: unknown, committed: boolean): 
   if (committed) {
     lines.push(
       `MySQL commits schema changes immediately, so earlier statements in ${name} may already be applied. Undo them, fix the file, then run the command again.`,
-      'See https://void.cloud/guide/database/mysql#failed-migrations',
+      'See https://github.com/builtbyfriends/platform/blob/main/docs/guide/database/mysql.md#failed-migrations',
     );
   }
   return new Error(lines.join('\n'), { cause: error });

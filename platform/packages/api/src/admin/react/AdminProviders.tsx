@@ -60,7 +60,7 @@ export function AdminProviders({ children }: { children: ReactNode }) {
       <FateClient client={fate} key={session}>
         <AdminFateErrorBoundary
           key={shared.adminPageUrl}
-          platformName={shared.platformName ?? 'Nosam Platform'}
+          platformName={shared.platformName ?? 'Platform'}
         >
           {children}
         </AdminFateErrorBoundary>

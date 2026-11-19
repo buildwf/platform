@@ -210,12 +210,12 @@ const companyLinks = {
 
 export default extendConfig(
   defineConfig({
-    title: 'Nosam',
+    title: 'Platform',
     description: 'Build with Vite. Deploy with bwf.',
     cleanUrls: true,
     lastUpdated: true,
     sitemap: {
-      hostname: 'https://void.cloud',
+      hostname: 'https://github.com/builtbyfriends/platform',
     },
     head: [['link', { rel: 'icon', type: 'image/svg+xml', href: '/icon.svg' }]],
     appearance: 'dark',
@@ -233,7 +233,7 @@ export default extendConfig(
       plugins: [
         groupIconVitePlugin(),
         llmstxt({
-          domain: 'https://void.cloud',
+          domain: 'https://github.com/builtbyfriends/platform',
           sidebar: llmsSidebar,
         }),
       ],

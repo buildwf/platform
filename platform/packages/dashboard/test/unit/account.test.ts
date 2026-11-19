@@ -38,7 +38,7 @@ describe('account linking error responses', () => {
     const props = await response.json<{ platformName: string; methods: [] }>();
     expect(props.platformName).toBe('Example Platform');
     expect(platformPageTitle('Login methods', props.platformName)).toBe(
-      'Login methods · Example Platform · Nosam',
+      'Login methods · Example Platform · Platform',
     );
   });
 
