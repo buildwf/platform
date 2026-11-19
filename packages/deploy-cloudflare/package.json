@@ -2,14 +2,14 @@
   "name": "@buildwf/deploy-cloudflare",
   "version": "1.9.1",
   "description": "Cloudflare deployment primitives for bwf runtimes and deployment adapters.",
-  "homepage": "https://github.com/buildwf/fif-spa",
+  "homepage": "https://github.com/buildwf/platform",
   "bugs": {
-    "url": "https://github.com/buildwf/fif-spa/issues"
+    "url": "https://github.com/buildwf/platform/issues"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/buildwf/fif-spa.git",
+    "url": "git+https://github.com/buildwf/platform.git",
     "directory": "packages/deploy-cloudflare"
   },
   "files": [

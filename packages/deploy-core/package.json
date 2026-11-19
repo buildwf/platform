@@ -2,14 +2,14 @@
   "name": "@buildwf/deploy-core",
   "version": "1.9.1",
   "description": "Shared deployment contracts, manifests, and resource plans for bwf.",
-  "homepage": "https://github.com/buildwf/fif-spa",
+  "homepage": "https://github.com/buildwf/platform",
   "bugs": {
-    "url": "https://github.com/buildwf/fif-spa/issues"
+    "url": "https://github.com/buildwf/platform/issues"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/buildwf/fif-spa.git",
+    "url": "git+https://github.com/buildwf/platform.git",
     "directory": "packages/deploy-core"
   },
   "files": [
