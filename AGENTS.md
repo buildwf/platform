@@ -144,4 +144,4 @@ This repository is part of the product. It's what people get for the apps they b
 
 So dedworc uses the product, and the product doesn't use, import or name anything from our own setup. `packages/bwf/test/unit/product-names.test.ts` checks this by failing when a tracked file here contains the app's name. A deliberate mention, such as this section, goes in the test's `allowed` list with a reason.
 
-The full explanation is `docs/scopes.md` in the Build repository (https://github.com/buildwf/build/blob/main/docs/scopes.md). The page for people is https://claude.ai/artifact/B6rVb55NfCuUenLokzrp6c.
+The full explanation is `docs/scopes.md` in the Crowded repository (https://github.com/builtbyfriends/crowded/blob/main/docs/scopes.md). The page for people is https://claude.ai/artifact/B6rVb55NfCuUenLokzrp6c.

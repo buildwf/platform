@@ -2,14 +2,14 @@
   "name": "create-bwf",
   "version": "1.9.1",
   "description": "Create a full-stack bwf app for Cloudflare Workers.",
-  "homepage": "https://github.com/buildwf/platform",
+  "homepage": "https://github.com/builtbyfriends/platform",
   "bugs": {
-    "url": "https://github.com/buildwf/platform/issues"
+    "url": "https://github.com/builtbyfriends/platform/issues"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/buildwf/platform.git",
+    "url": "git+https://github.com/builtbyfriends/platform.git",
     "directory": "packages/create-bwf"
   },
   "bin": {
