@@ -1,5 +1,7 @@
 # bwf
 
+Forked from [Void](https://github.com/voidzero-dev/void) by Cloudflare.
+
 Build and deploy React single-page apps with an optional backend using [Vite](https://vite.dev), running on Cloudflare Workers.
 
 bwf brings together three open-source tools for you and your coding agents:
@@ -55,4 +57,4 @@ Use `vp run dev:docs` to preview the docs. See [TESTING.md](./TESTING.md) for ve
 
 ## License
 
-MIT
+[MIT](./LICENSE). bwf is a fork of [Void](https://github.com/voidzero-dev/void), and the original Cloudflare copyright notice is kept in the license and in [NOTICE](./NOTICE).
