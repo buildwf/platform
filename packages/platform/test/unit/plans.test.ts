@@ -34,7 +34,7 @@ describe('installation plan contract', () => {
       kvStorageBytes: 1024 ** 3,
       aiNeuronsPerMonth: 100_000,
       retainedDeployments: 1,
-      sandboxRuntimeSecondsPerMonth: 1,
+      sandboxRuntimeSecondsPerMonth: 2 * 3600,
       sandboxMaxConcurrentInstances: 1,
       concurrentBuilds: 1,
       buildTimeoutMinutes: 10,
