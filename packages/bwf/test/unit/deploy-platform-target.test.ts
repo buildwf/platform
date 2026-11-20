@@ -53,6 +53,7 @@ const requests: Array<{
   path: string;
   method: string;
   authorization: string | null;
+  projectId?: string;
 }> = [];
 const originalTTY = process.stdin.isTTY;
 
@@ -100,52 +101,68 @@ beforeEach(() => {
         const url = new URL(input instanceof Request ? input.url : input);
         const method = init?.method ?? 'GET';
         const authorization = new Headers(init?.headers).get('Authorization');
-        requests.push({ origin: url.origin, path: url.pathname, method, authorization });
+        const input_ =
+          typeof init?.body === 'string' && init.body
+            ? (JSON.parse(init.body) as { projectId?: string; slug?: string })
+            : {};
+        requests.push({
+          origin: url.origin,
+          path: url.pathname,
+          method,
+          authorization,
+          ...(input_.projectId !== undefined && { projectId: input_.projectId }),
+        });
         expect([originalOrigin, alternateOrigin]).toContain(url.origin);
         const id = url.origin === originalOrigin ? 'project-original' : 'project-alternate';
         const project = { id, slug: 'my-app', role: 'owner' };
-        if (url.pathname === '/projects/choices') {
-          return Response.json([]);
+        if (method === 'POST' && url.pathname === '/rpc/projects.choices') {
+          return Response.json({ data: [] });
         }
-        if (url.pathname === '/projects/resolve') {
-          expect(url.searchParams.get('slug')).toBe('my-app');
-          return Response.json({ project: missing ? null : project });
+        if (method === 'POST' && url.pathname === '/rpc/projects.resolve') {
+          expect(input_.slug).toBe('my-app');
+          return Response.json({ data: { project: missing ? null : project } });
         }
         if (method === 'POST' && url.pathname === '/rpc/projects.create') {
           missing = false;
           return Response.json({ data: project });
         }
-        if (method === 'GET' && url.pathname === `/projects/${id}`) {
-          return Response.json(project);
+        if (method === 'POST' && url.pathname === '/rpc/projects.get' && input_.projectId === id) {
+          return Response.json({ data: project });
         }
-        if (url.pathname === `/projects/${id}/deploy/preflight`) {
+        if (
+          method === 'POST' &&
+          url.pathname === '/rpc/deploy.preflight' &&
+          input_.projectId === id
+        ) {
           if (expirePreflight) {
             expirePreflight = false;
+            // The auth middleware in front of /rpc answers before any procedure runs.
             return Response.json({ error: 'invalid or expired token' }, { status: 401 });
           }
-          return Response.json({ needed: [], total: 1, skipped: 1 });
+          return Response.json({ data: { needed: [], total: 1, skipped: 1 } });
         }
-        if (url.pathname === `/projects/${id}/deploy`) {
-          return new Response(
-            JSON.stringify(
-              failDeploy
-                ? { event: 'error', message: 'deployment refused', step: 'upload' }
-                : {
-                    event: 'done',
-                    deployment: 'deploy-test',
-                    url: 'https://app.example.test',
-                    urls: ['https://app.example.test'],
-                    assets: 1,
-                    workers: 0,
-                  },
-            ) + '\n',
-            {
-              headers: {
-                'Content-Type': 'application/x-ndjson',
-                'x-platform-deployment-id': 'deploy-test',
-              },
+        if (
+          method === 'POST' &&
+          url.pathname === '/rpc/deploy.finalize' &&
+          input_.projectId === id
+        ) {
+          return Response.json({
+            data: {
+              deploymentId: 'deploy-test',
+              events: [
+                failDeploy
+                  ? { event: 'error', message: 'deployment refused', step: 'upload' }
+                  : {
+                      event: 'done',
+                      deployment: 'deploy-test',
+                      url: 'https://app.example.test',
+                      urls: ['https://app.example.test'],
+                      assets: 1,
+                      workers: 0,
+                    },
+              ],
             },
-          );
+          });
         }
         throw new Error(`Unexpected request: ${method} ${url}`);
       }),
@@ -191,7 +208,7 @@ it('deploys to another connected platform without sending the original project I
         origin === alternateOrigin && authorization === 'Bearer alternate-token',
     ),
   ).toBe(true);
-  expect(requests.some(({ path }) => path.includes('project-original'))).toBe(false);
+  expect(requests.some(({ projectId }) => projectId === 'project-original')).toBe(false);
   vi.stubEnv('BWF_API_URL', undefined);
   vi.stubEnv('BWF_TOKEN', undefined);
   expect(getApiUrl(root)).toBe(originalOrigin);
@@ -201,7 +218,8 @@ it('deploys to another connected platform without sending the original project I
   ).toEqual(['my-app → Orange Cloud', 'my-app → Original Cloud']);
   expect(requests.at(-1)).toMatchObject({
     origin: originalOrigin,
-    path: '/projects/project-original/deploy',
+    path: '/rpc/deploy.finalize',
+    projectId: 'project-original',
     authorization: 'Bearer saved-token',
   });
 });
@@ -221,7 +239,10 @@ it.each([false, true])(
         path: '/rpc/projects.create',
       }),
     );
-    expect(requests.at(-1)?.path).toBe('/projects/project-alternate/deploy');
+    expect(requests.at(-1)).toMatchObject({
+      path: '/rpc/deploy.finalize',
+      projectId: 'project-alternate',
+    });
   },
 );
 
@@ -280,7 +301,10 @@ it('reuses a newly established first link when authentication expires during dep
     platformUrl: alternateOrigin,
     projectId: 'project-alternate',
   });
-  expect(requests.at(-1)?.path).toBe('/projects/project-alternate/deploy');
+  expect(requests.at(-1)).toMatchObject({
+    path: '/rpc/deploy.finalize',
+    projectId: 'project-alternate',
+  });
 });
 
 it('requires an explicit project before borrowing a different platform’s linked slug for OIDC', async () => {
