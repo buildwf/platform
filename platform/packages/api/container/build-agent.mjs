@@ -63,6 +63,8 @@ const PORT = 4000;
 // never sets this: production is always `/tmp/build/src` (pinned by the
 // `childSpawnOptions` cwd assertion in build-manager.test.ts).
 const WORK_DIR = process.env.PLATFORM_BUILD_WORK_DIR ?? '/tmp/build/src';
+/** The npm package that ships the `bwf` CLI. */
+const BWF_PACKAGE = '@builtbyfriends/bwf';
 const LOG_FLUSH_MS = 500;
 // Hard timeout on each best-effort DO POST. Without it a hung DO connection would
 // stall the single-flight log flush forever (logging would silently stop for the
@@ -189,7 +191,7 @@ export function childSpawnOptions() {
 }
 
 /**
- * Pinned fallback version used when the repo has no local `platform` to run via npx.
+ * Pinned fallback version used when the repo has no local `bwf` to run via npx.
  * Reads BWF_CLI_VERSION (injected by BuildManager) at call time, falling back
  * to the baked-in default. Never `latest` — a moving dist-tag must not change
  * deploy behavior with no repo diff.
@@ -2005,7 +2007,7 @@ export function resolveSourceBwfCli(root = WORK_DIR) {
   if (manifest.name !== '@builtbyfriends/bwf' || typeof manifest.bin?.bwf !== 'string') {
     return null;
   }
-  const cli = `${packageRoot}/${manifest.bin.platform}`;
+  const cli = `${packageRoot}/${manifest.bin.bwf}`;
   if (!existsSync(cli)) {
     throw new Error(
       'The workspace bwf CLI is not built. Run build:core during dependency installation.',
@@ -2047,7 +2049,7 @@ export async function runBuild(deps = {}) {
   // `node_modules` tree, so the deploy must run THROUGH the package manager
   // (`corepack yarn ...`) to activate the PnP runtime rather than bare npx.
   // `pnpPresent` only selects the RUNNER below — it must NOT be conflated with
-  // "void is locally resolvable": a PnP repo that does not declare `platform` still
+  // "void is locally resolvable": a PnP repo that does not declare `@builtbyfriends/bwf` still
   // needs the `yarn dlx bwf@<ver>` fetch fallback, so the local-platform signal is
   // an actual dependency check, not the mere presence of `.pnp.cjs`.
   //
@@ -2058,21 +2060,20 @@ export async function runBuild(deps = {}) {
   // `hasLocalBwf` and the runner selection both read it lazily (after install),
   // so a reassignable `let` is correct.
   let pnpPresent = false;
-  // Whether the repo DECLARES `platform` as a dependency — the accurate "is void
-  // locally resolvable" signal under PnP, where `node_modules/.bin/platform` never
+  // Whether the repo DECLARES `@builtbyfriends/bwf` as a dependency — the accurate "is bwf
+  // locally resolvable" signal under PnP, where `node_modules/.bin/bwf` never
   // exists. Falls back to `false` on any read/parse error (→ fetch the CLI).
   const repoDeclaresBwf = () => {
     try {
       const pkg = JSON.parse(readFileSync(`${WORK_DIR}/package.json`, 'utf8'));
-      return Boolean(pkg.dependencies?.bwf || pkg.devDependencies?.bwf);
+      return Boolean(pkg.dependencies?.[BWF_PACKAGE] || pkg.devDependencies?.[BWF_PACKAGE]);
     } catch {
       return false;
     }
   };
   const hasLocalBwf =
     deps.hasLocalBwf ??
-    (() =>
-      existsSync(`${WORK_DIR}/node_modules/.bin/platform`) || (pnpPresent && repoDeclaresBwf()));
+    (() => existsSync(`${WORK_DIR}/node_modules/.bin/bwf`) || (pnpPresent && repoDeclaresBwf()));
 
   try {
     // Capture the deploy token into a local, then drop it from the parent's heap
@@ -2212,16 +2213,16 @@ export async function runBuild(deps = {}) {
     } else if (pnpPresent) {
       deployCmd = 'corepack';
       deployArgs = localBwf
-        ? ['yarn', 'platform', 'deploy', '--project', project]
-        : ['yarn', 'dlx', `platform@${fallbackVersion}`, 'deploy', '--project', project];
+        ? ['yarn', 'bwf', 'deploy', '--project', project]
+        : ['yarn', 'dlx', `${BWF_PACKAGE}@${fallbackVersion}`, 'deploy', '--project', project];
       if (!localBwf) {
         agentLog(`PnP repo; falling back to yarn dlx bwf@${fallbackVersion}`);
       }
     } else {
       deployCmd = 'npx';
       deployArgs = localBwf
-        ? ['--yes', 'platform', 'deploy', '--project', project]
-        : ['--yes', `platform@${fallbackVersion}`, 'deploy', '--project', project];
+        ? ['--yes', 'bwf', 'deploy', '--project', project]
+        : ['--yes', `${BWF_PACKAGE}@${fallbackVersion}`, 'deploy', '--project', project];
       if (!localBwf) {
         agentLog(`no local void CLI found; falling back to npx bwf@${fallbackVersion}`);
       }

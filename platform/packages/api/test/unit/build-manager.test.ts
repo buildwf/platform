@@ -6837,7 +6837,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
       const calls = runChild.mock.calls;
       expect(calls[1]?.[1]).toEqual([
         '--yes',
-        'platform',
+        'bwf',
         'connect',
         'https://platform.buildwithfriends.dev',
         '--no-login',
@@ -6913,7 +6913,7 @@ describe('build-agent lifecycle (container must always exit)', () => {
 
   it('falls back to the PINNED void@<version> (never @latest) when the repo has no local void', async () => {
     // BuildManager injects BWF_CLI_VERSION; the agent must spawn that exact
-    // pinned version, never a moving `platform@latest` dist-tag.
+    // pinned version, never a moving `@builtbyfriends/bwf@latest` dist-tag.
     const savedCliVersion = process.env.BWF_CLI_VERSION;
     process.env.BWF_CLI_VERSION = '0.9.1';
     try {
@@ -6935,8 +6935,8 @@ describe('build-agent lifecycle (container must always exit)', () => {
 
       const deploy = [...seen].reverse().find((s) => s.cmd === 'npx');
       expect(deploy).toBeDefined();
-      expect(deploy?.args).toContain('platform@0.9.1');
-      expect(deploy?.args.some((a) => a === 'platform@latest')).toBe(false);
+      expect(deploy?.args).toContain('@builtbyfriends/bwf@0.9.1');
+      expect(deploy?.args.some((a) => a === '@builtbyfriends/bwf@latest')).toBe(false);
     } finally {
       if (savedCliVersion === undefined) {
         delete process.env.BWF_CLI_VERSION;
@@ -7553,7 +7553,7 @@ describe('build-agent install + deploy resolution', () => {
 
     const deploy = seen.find((s) => s.cmd === 'corepack' && s.args.includes('deploy'));
     expect(deploy).toBeDefined();
-    expect(deploy?.args).toEqual(['yarn', 'platform', 'deploy', '--project', 'my-app']);
+    expect(deploy?.args).toEqual(['yarn', 'bwf', 'deploy', '--project', 'my-app']);
     // The deploy did NOT go through bare npx.
     expect(seen.some((s) => s.cmd === 'npx')).toBe(false);
   });
@@ -7568,12 +7568,12 @@ describe('build-agent install + deploy resolution', () => {
 
     const deploy = seen.find((s) => s.cmd === 'corepack' && s.args.includes('deploy'));
     expect(deploy?.args.slice(0, 2)).toEqual(['yarn', 'dlx']);
-    expect(deploy?.args.some((a) => a.startsWith('platform@'))).toBe(true);
+    expect(deploy?.args.some((a) => a.startsWith('@builtbyfriends/bwf@'))).toBe(true);
     expect(seen.some((s) => s.cmd === 'npx')).toBe(false);
   });
 
   // The default `hasLocalBwf` must NOT treat a present `.pnp.cjs` as proof
-  // that `platform` is locally resolvable — under PnP (no `node_modules/.bin/platform`)
+  // that `bwf` is locally resolvable — under PnP (no `node_modules/.bin/bwf`)
   // it checks whether the repo DECLARES `platform`. A PnP repo that declares void →
   // `yarn bwf deploy`; one that does not → the `yarn dlx bwf@<ver>` fetch
   // fallback.
@@ -7582,7 +7582,10 @@ describe('build-agent install + deploy resolution', () => {
     writeFileSync(`${WORK_DIR}/.pnp.cjs`, '');
     writeFileSync(
       `${WORK_DIR}/package.json`,
-      JSON.stringify({ packageManager: 'yarn@4.3.1', dependencies: { platform: '^0.9.0' } }),
+      JSON.stringify({
+        packageManager: 'yarn@4.3.1',
+        dependencies: { '@builtbyfriends/bwf': '^0.9.0' },
+      }),
     );
 
     const seen: Array<{ cmd: string; args: ReadonlyArray<string> }> = [];
@@ -7598,7 +7601,7 @@ describe('build-agent install + deploy resolution', () => {
     expect(code).toBe(0);
 
     const deploy = seen.find((s) => s.cmd === 'corepack' && s.args.includes('deploy'));
-    expect(deploy?.args).toEqual(['yarn', 'platform', 'deploy', '--project', 'my-app']);
+    expect(deploy?.args).toEqual(['yarn', 'bwf', 'deploy', '--project', 'my-app']);
     expect(seen.some((s) => s.cmd === 'npx')).toBe(false);
   });
 
@@ -7622,7 +7625,7 @@ describe('build-agent install + deploy resolution', () => {
 
     const deploy = seen.find((s) => s.cmd === 'corepack' && s.args.includes('deploy'));
     expect(deploy?.args.slice(0, 2)).toEqual(['yarn', 'dlx']);
-    expect(deploy?.args.some((a) => a.startsWith('platform@'))).toBe(true);
+    expect(deploy?.args.some((a) => a.startsWith('@builtbyfriends/bwf@'))).toBe(true);
     expect(seen.some((s) => s.cmd === 'npx')).toBe(false);
   });
 
@@ -7652,7 +7655,7 @@ describe('build-agent install + deploy resolution', () => {
 
     const deploy = seen.find((s) => s.args.includes('deploy'));
     expect(deploy?.cmd).toBe('corepack');
-    expect(deploy?.args).toEqual(['yarn', 'platform', 'deploy', '--project', 'my-app']);
+    expect(deploy?.args).toEqual(['yarn', 'bwf', 'deploy', '--project', 'my-app']);
     expect(seen.some((s) => s.cmd === 'npx')).toBe(false);
   });
 
@@ -7686,7 +7689,7 @@ describe('build-agent install + deploy resolution', () => {
 
     const deploy = seen.find((s) => s.args.includes('deploy'));
     expect(deploy?.cmd).toBe('corepack');
-    expect(deploy?.args).toEqual(['yarn', 'platform', 'deploy', '--project', 'my-app']);
+    expect(deploy?.args).toEqual(['yarn', 'bwf', 'deploy', '--project', 'my-app']);
     expect(seen.some((s) => s.cmd === 'npx')).toBe(false);
   });
 });
