@@ -1,4 +1,4 @@
-import { hmacSignState, hmacVerifyState } from './hmac.ts';
+import { jwtVerify, SignJWT } from 'jose';
 
 export type JwtPayload = Readonly<{
   sub: string;
@@ -36,18 +36,22 @@ export type JwtPayload = Readonly<{
 
 const EXPIRY_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
-const encoder = new TextEncoder();
-const decoder = new TextDecoder();
+// Import each secret's HMAC key once per isolate; the secret doesn't change while it runs.
+const keyCache = new Map<string, Promise<CryptoKey>>();
 
-function base64url(buffer: ArrayBuffer): string {
-  const binary = String.fromCharCode(...new Uint8Array(buffer));
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function base64urlDecode(str: string): Uint8Array {
-  const padded = str.replace(/-/g, '+').replace(/_/g, '/');
-  const binary = atob(padded);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+function hmacKey(secret: string): Promise<CryptoKey> {
+  let key = keyCache.get(secret);
+  if (!key) {
+    key = crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign', 'verify'],
+    );
+    keyCache.set(secret, key);
+  }
+  return key;
 }
 
 export async function signJwt(
@@ -56,52 +60,27 @@ export async function signJwt(
   opts?: { ttlSeconds?: number },
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  const ttlSeconds = opts?.ttlSeconds ?? EXPIRY_SECONDS;
-  const fullPayload: JwtPayload = {
-    ...payload,
-    iat: now,
-    exp: now + ttlSeconds,
-  };
-
-  const header = base64url(
-    encoder.encode(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).buffer as ArrayBuffer,
-  );
-  const body = base64url(encoder.encode(JSON.stringify(fullPayload)).buffer as ArrayBuffer);
-  const signature = await hmacSignState(`${header}.${body}`, secret);
-
-  return `${header}.${body}.${signature}`;
+  // Header first, then the claims with iat and exp last: the same bytes the old signer made.
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+    .setIssuedAt(now)
+    .setExpirationTime(now + (opts?.ttlSeconds ?? EXPIRY_SECONDS))
+    .sign(await hmacKey(secret));
 }
 
+/** The token's claims, or null when its signature, expiry or audience doesn't check out. */
 export async function verifyJwt(
   token: string,
   secret: string,
   expectedAud?: string,
 ): Promise<JwtPayload | null> {
-  const parts = token.split('.');
-  if (parts.length !== 3) {
-    return null;
-  }
-
-  const [header, body, signature] = parts;
-
   try {
-    const valid = await hmacVerifyState(`${header}.${body}`, signature, secret);
-    if (!valid) {
-      return null;
-    }
-
-    const payload = JSON.parse(decoder.decode(base64urlDecode(body))) as JwtPayload;
-
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp <= now) {
-      return null;
-    }
-
-    if (expectedAud && payload.aud !== expectedAud) {
-      return null;
-    }
-
-    return payload;
+    const { payload } = await jwtVerify(token, await hmacKey(secret), {
+      algorithms: ['HS256'],
+      audience: expectedAud || undefined,
+      requiredClaims: ['exp'],
+    });
+    return payload as unknown as JwtPayload;
   } catch {
     return null;
   }
