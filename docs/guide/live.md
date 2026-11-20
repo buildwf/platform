@@ -78,6 +78,8 @@ stream.close();
 
 Subscription IDs are scoped to a connection. Reusing an ID replaces its subscription. After reconnecting, the helper restores active subscriptions and sends their latest `eventId` as `lastEventId`.
 
+`subscribe()` resolves once the server accepts the subscription. When the stream can't open or the server can't be reached, for example during a deploy, the helper tries again with growing waits, starting at `retryDelay` and going up to 30 seconds, and reports each failure to `onError`. It tries at once when the browser comes back online or the page gets focus. A refusal, such as one from `onSubscribe`, rejects with a `LiveStreamError` that carries the server's `code`. On focus or when the network comes back, the helper also checks that the server still knows the connection, and opens the stream again when it doesn't.
+
 With [`routing.typedRoutes`](../reference/config.md#routing-typedroutes), TypeScript checks the URL against your routes. External `http://` and `https://` URLs also work. For a URL you validate at runtime, use `as RouteUrl` from `@builtbyfriends/bwf/routes` to skip the type check.
 
 ## Publish
