@@ -279,7 +279,9 @@ describe('routingPlugin', () => {
 
     expect(existsSync(join(root, '.bwf', 'auth.d.ts'))).toBe(false);
     expect(readTsconfig().files).toEqual(['routes.d.ts', 'db.d.ts']);
-    expect(readTsconfig().compilerOptions?.paths?.['@builtbyfriends/bwf/db']).toEqual(['./db.d.ts']);
+    expect(readTsconfig().compilerOptions?.paths?.['@builtbyfriends/bwf/db']).toEqual([
+      './db.d.ts',
+    ]);
   });
 
   it('resolves explicit framework client subpaths to framework auth clients', async () => {
@@ -293,11 +295,14 @@ describe('routingPlugin', () => {
 
     resolveConfig(plugin, 'serve');
 
-    expect(resolveId.call({ environment: { name: 'client' } }, '@builtbyfriends/bwf/client/react')).toBe(
-      'virtual:platform-client-browser:react',
-    );
     expect(
-      resolveId.call({ environment: { name: 'platform_worker' } }, '@builtbyfriends/bwf/client/react'),
+      resolveId.call({ environment: { name: 'client' } }, '@builtbyfriends/bwf/client/react'),
+    ).toBe('virtual:platform-client-browser:react');
+    expect(
+      resolveId.call(
+        { environment: { name: 'platform_worker' } },
+        '@builtbyfriends/bwf/client/react',
+      ),
     ).toBe('virtual:platform-client-worker:react');
 
     const browserCode = await load('virtual:platform-client-browser:react');
@@ -735,7 +740,7 @@ describe('routingPlugin', () => {
       configFile: false,
       logLevel: 'silent',
       plugins: [createRoutingPlugin(root, { isAuthEnabled: () => true })],
-      optimizeDeps: { noDiscovery: true },
+      optimizeDeps: { noDiscovery: true, exclude: ['better-auth'] },
       server: { middlewareMode: true, ws: false, watch: null, preTransformRequests: false },
     });
     try {
