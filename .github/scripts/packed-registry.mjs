@@ -128,7 +128,7 @@ export async function startPackedRegistry(packages) {
         return;
       }
       if (
-        name === 'platform' ||
+        name === 'bwf' ||
         name.startsWith('bwf/') ||
         name === 'create-bwf' ||
         name.startsWith('create-bwf/') ||
