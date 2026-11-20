@@ -734,6 +734,28 @@ export class PlatformClient {
     }
   }
 
+  /** Platforms that predate the flag ignore the setting and keep replication on. */
+  async requireD1ReadReplicationSupport(): Promise<void> {
+    const response = await this.request(`${this.baseUrl}/capabilities`, {
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!response.ok && response.status !== 404) {
+      await throwPlatformApiError(
+        'Failed to check D1 read replication support',
+        response,
+        'deploy',
+      );
+    }
+    const capabilities = response.ok
+      ? ((await response.json()) as { d1ReadReplication?: unknown })
+      : null;
+    if (capabilities?.d1ReadReplication !== true) {
+      throw new Error(
+        'deploy: This bwf platform cannot apply `database.readReplication` from bwf.config.ts. Ask its administrator to upgrade with `bwf platform upgrade`.',
+      );
+    }
+  }
+
   /** Reads the platform version from public discovery, without credentials. */
   private async probePlatformVersion(): Promise<PlatformVersionProbe> {
     let response: Response;

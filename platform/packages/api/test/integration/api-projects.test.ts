@@ -2452,7 +2452,9 @@ describe('POST /projects/:id/rollback', () => {
         version: 4,
         type: 'platform',
         bindings: {},
-        queues: [{ name: 'emails', bindingName: 'QUEUE_EMAILS', maxBatchSize: 20 }],
+        queues: [
+          { name: 'emails', bindingName: 'QUEUE_EMAILS', maxBatchSize: 20, maxConcurrency: 2 },
+        ],
       }),
     );
     await updateDeploymentStatus(env.db, target.id, 'live');
@@ -2464,7 +2466,9 @@ describe('POST /projects/:id/rollback', () => {
         version: 4,
         type: 'platform',
         bindings: {},
-        queues: [{ name: 'emails', bindingName: 'QUEUE_EMAILS', maxBatchSize: 5 }],
+        queues: [
+          { name: 'emails', bindingName: 'QUEUE_EMAILS', maxBatchSize: 5, maxConcurrency: 1 },
+        ],
       }),
     );
     await updateDeploymentStatus(env.db, current.id, 'live');
@@ -2475,14 +2479,16 @@ describe('POST /projects/:id/rollback', () => {
       consumer_id: 'consumer-1',
       script: 'platform-dispatch',
       type: 'worker',
-      settings: { batch_size: 5, max_retries: 2 },
+      settings: { batch_size: 5, max_retries: 2, max_concurrency: 1 },
     };
-    const newConsumer = { ...oldConsumer, settings: { batch_size: 20 } };
+    const newConsumer = { ...oldConsumer, settings: { batch_size: 20, max_concurrency: 2 } };
     let listCalls = 0;
     const updateBodies: Array<unknown> = [];
     mockCfApi({
       listWorkerBindings: () =>
-        cfSuccess([{ type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: 'queue-proxy-token' }]),
+        cfSuccess([
+          { type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: 'queue-proxy-token' },
+        ]),
       addQueueConsumer: () => cfError('queue already has a consumer', 409),
       listQueueConsumers: () => {
         listCalls++;
@@ -2520,11 +2526,11 @@ describe('POST /projects/:id/rollback', () => {
     expect(res.status).toBe(500);
     expect((await db.getProject(env.db, project.id))?.active_deployment_id).toBe(current.id);
     expect(updateBodies).toHaveLength(2);
-    expect(updateBodies[0]).toMatchObject({ settings: { batch_size: 20 } });
+    expect(updateBodies[0]).toMatchObject({ settings: { batch_size: 20, max_concurrency: 2 } });
     expect(updateBodies[1]).toEqual({
       script_name: 'platform-dispatch',
       type: 'worker',
-      settings: { batch_size: 5, max_retries: 2 },
+      settings: { batch_size: 5, max_retries: 2, max_concurrency: 1 },
     });
   });
 

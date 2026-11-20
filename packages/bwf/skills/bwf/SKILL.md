@@ -44,6 +44,7 @@ Use `bwf deploy --skip-migrations` when database migrations run separately; it s
 | App type detection and mode behavior       | `docs/guide/app-types.md`, `docs/reference/config.md`                                     |
 | Server/API routing and middleware          | `docs/guide/server-routing.md`, `docs/integrations/hono.md`                               |
 | Database and migrations                    | `docs/guide/database.md`, `docs/guide/type-safety.md`                                     |
+| D1 replicas, bookmarks, read-after-write   | `docs/guide/database/d1.md`, `docs/reference/api/database.md`                             |
 | Typed fetch and end-to-end typing          | `docs/guide/typed-fetch.md`, `docs/guide/type-safety.md`                                  |
 | Authentication                             | `docs/guide/auth.md`, `docs/reference/api/auth.md`, `docs/guide/env-vars.md`              |
 | Cloudflare runtime bindings and config     | `docs/integrations/cloudflare.md`, `docs/reference/config.md`, `docs/guide/env-vars.md`   |

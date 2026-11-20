@@ -11,7 +11,7 @@ const DIALECT_DB_TYPES = {
   sqlite: {
     type: 'DrizzleD1Database',
     from: '@builtbyfriends/bwf/_db',
-    arg: 'd1: D1Database, options?: { session?: D1SessionConstraint }',
+    arg: 'd1: D1Database, options?: { session?: DbSessionStart }',
   },
   postgresql: {
     type: 'NodePgDatabase',
@@ -50,6 +50,14 @@ export function generateDbDts(
     ...(schema ? ['import type * as schema from "@schema";', 'type Schema = typeof schema;'] : []),
     `export declare const db: ${type}<${schemaType}>;`,
     `export declare function createDb(${arg}): ${type}<${schemaType}>;`,
+    ...(dialect === 'sqlite'
+      ? [
+          'import type { DbSessionStart } from "@builtbyfriends/bwf/_db";',
+          'export type { DbSessionStart } from "@builtbyfriends/bwf/_db";',
+          'export declare function setSession(start: DbSessionStart): void;',
+          `export declare function getBookmark<TSchema extends Record<string, unknown>>(client?: ${type}<TSchema>): D1SessionBookmark | null;`,
+        ]
+      : []),
     `export { ${DRIZZLE_OPERATORS} } from "@builtbyfriends/bwf/_db";`,
     `export type { ${DRIZZLE_TYPES} } from "@builtbyfriends/bwf/_db";`,
     `export type { ${type} } from "${from}";`,

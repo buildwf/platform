@@ -2,11 +2,9 @@ import { sql as drizzleSql } from 'drizzle-orm';
 import { type Context } from 'hono';
 import { type AssetManifestEntry } from '../assets.ts';
 import { deleteDispatchScript } from '../cf-api.ts';
-import { uploadPool } from '../concurrency.ts';
 import { clearCronScheduler, syncCronScheduler } from '../cron-scheduler-client.ts';
 import {
   getProject,
-  updateDeploymentStatus,
   beginDeploymentCutover,
   getDomainsByProjectId,
   markDeploymentRetained,
@@ -193,6 +191,7 @@ export async function publishWorkerDeployment(input: {
               max_wait_time_ms: q.maxBatchTimeout * 1000,
             }),
             ...(q.maxRetries != null && { max_retries: q.maxRetries }),
+            ...(q.maxConcurrency != null && { max_concurrency: q.maxConcurrency }),
             ...(q.retryDelay != null && { retry_delay: q.retryDelay }),
           },
         );

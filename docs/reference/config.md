@@ -150,10 +150,11 @@ Use an object to also set how Drizzle names columns declared without a name:
 }
 ```
 
-| Key       | Values                                  | Description                                                                                                                                                                                |
-| --------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `dialect` | `"sqlite"` (default), `"pg"`, `"mysql"` | Database backend. `"sqlite"` is D1                                                                                                                                                         |
-| `casing`  | `"snake_case"`, `"camelCase"`           | [Drizzle casing](https://orm.drizzle.team/docs/sql-schema-declaration#camel-and-snake-casing) for `@builtbyfriends/bwf/db` queries and `bwf db` commands. Omit to use each key as its column name |
+| Key               | Values                                  | Description                                                                                                                                                                                       |
+| ----------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dialect`         | `"sqlite"` (default), `"pg"`, `"mysql"` | Database backend. `"sqlite"` is D1                                                                                                                                                                |
+| `casing`          | `"snake_case"`, `"camelCase"`           | [Drizzle casing](https://orm.drizzle.team/docs/sql-schema-declaration#camel-and-snake-casing) for `@builtbyfriends/bwf/db` queries and `bwf db` commands. Omit to use each key as its column name |
+| `readReplication` | `boolean` (optional)                    | D1 only. Turn [read replication](../guide/database/d1.md#read-replication) on (`true`) or off (`false`) at deploy. Leave it out to keep the current setting; new databases start with it off      |
 
 When using an external database:
 
@@ -221,13 +222,13 @@ Enable and configure Cloudflare Sandboxes. Importing from `@builtbyfriends/bwf/s
 | `durableObject`     | `string` | None                        |
 | `binding`           | `string` | `SANDBOX`                   |
 | `className`         | `string` | `SandboxV1`                 |
-| `containerName`     | `string` | `platform-sandbox-v1`           |
+| `containerName`     | `string` | `platform-sandbox-v1`       |
 | `image`             | `string` | Packaged Node.js Dockerfile |
 | `imageBuildContext` | `string` | Directory of `image`        |
 | `platformImage`     | `string` | `cloudflare/debian-trixie`  |
 | `instanceType`      | `string` | `lite`                      |
 
-Supported sizes are `lite` and `standard-1` through `standard-4`. Native deploys build Dockerfiles with Docker; registry images must be digest-pinned references from the Cloudflare managed registry. Custom images must include the matching Sandbox SDK helper. For a local Dockerfile, supply `platformImage` when deploying to a managed platform. See [Sandboxes](../guide/sandboxes.md) for image setup and runtime examples.
+Supported sizes are `lite`, `basic`, and `standard-1` through `standard-4`. Native deploys build Dockerfiles with Docker; registry images must be digest-pinned references from the Cloudflare managed registry. Custom images must include the matching Sandbox SDK helper. For a local Dockerfile, supply `platformImage` when deploying to a managed platform. See [Sandboxes](../guide/sandboxes.md) for image setup and runtime examples.
 
 Set `durableObject` to a file name in `durable-objects/` (for example `"bot"`) to attach the container image to that class instead of bwf's `SandboxV1`. The class must use `this.ctx.container`; its binding and class come from the file, so `binding` and `className` must be omitted. It needs a native Cloudflare deploy: managed platforms run containers in their own controller, so use `getSandbox` from `@builtbyfriends/bwf/sandbox` there.
 

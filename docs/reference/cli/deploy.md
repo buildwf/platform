@@ -28,18 +28,18 @@ For an existing bwf Worker, `bwf deploy` can link the Worker and migrate its roo
 
 For Drizzle projects, deploy performs a read-only schema drift check. If a new migration would be generated, deploy stops and tells you to run `bwf db generate`, review the migration, commit it yourself, and rerun `bwf deploy`.
 
-| Flag                            | Purpose                                                                                                                                                              |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--platform <cloudflare\|void>` | Override the platform stored in `.bwf/project.json`                                                                                                                  |
-| `--project <name>`              | Target a specific bwf project by slug; not supported with `--platform cloudflare`                                                                                    |
-| `--dir <path>`                  | Deploy a pre-built static directory (skips build)                                                                                                                    |
-| `--spa`                         | Use SPA mode instead of SSG for static deploys                                                                                                                       |
-| `--skip-build`                  | Skip the build step; on Cloudflare this is supported for static/SPA/SSG deploys only                                                                                 |
-| `--skip-migrations`             | Deploy without applying application or authentication SQL migrations; supported on Cloudflare and bwf platforms                                                      |
-| `--require-email`               | Fail when email cannot be set up instead of deploying without it; requires `--platform cloudflare`                                                                   |
-| `--provision`                   | Run resource provisioning again even when every resource exists, for example to enable D1 read replication on an existing database; requires `--platform cloudflare` |
-| `--atomic`                      | Publish an existing Durable Object Worker directly; readiness is checked after traffic changes                                                                       |
-| `--debug`                       | Mirror the structured deploy log to stderr (also written to `~/.bwf/logs/`)                                                                                          |
+| Flag                            | Purpose                                                                                                         |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `--platform <cloudflare\|void>` | Override the platform stored in `.bwf/project.json`                                                             |
+| `--project <name>`              | Target a specific bwf project by slug; not supported with `--platform cloudflare`                               |
+| `--dir <path>`                  | Deploy a pre-built static directory (skips build)                                                               |
+| `--spa`                         | Use SPA mode instead of SSG for static deploys                                                                  |
+| `--skip-build`                  | Skip the build step; on Cloudflare this is supported for static/SPA/SSG deploys only                            |
+| `--skip-migrations`             | Deploy without applying application or authentication SQL migrations; supported on Cloudflare and bwf platforms |
+| `--require-email`               | Fail when email cannot be set up instead of deploying without it; requires `--platform cloudflare`              |
+| `--provision`                   | Run resource provisioning again even when every resource exists; requires `--platform cloudflare`               |
+| `--atomic`                      | Publish an existing Durable Object Worker directly; readiness is checked after traffic changes                  |
+| `--debug`                       | Mirror the structured deploy log to stderr (also written to `~/.bwf/logs/`)                                     |
 
 `--atomic` applies to one deployment. For an existing Durable Object Worker that consistently cannot stage, set `deploy: { cloudflare: { mode: 'atomic' } }` in `bwf.config.ts` so plain `bwf deploy` uses atomic publication. The default is `staged`.
 

@@ -439,6 +439,22 @@ describe('readConfig', () => {
     cleanup();
   });
 
+  it('reads sandbox basic instanceType', () => {
+    setup(
+      JSON.stringify({
+        sandbox: {
+          image: './Dockerfile.sandbox',
+          instanceType: 'basic',
+        },
+      }),
+    );
+    expect(readConfig(tmpDir).sandbox).toEqual({
+      image: './Dockerfile.sandbox',
+      instanceType: 'basic',
+    });
+    cleanup();
+  });
+
   it('throws on invalid sandbox config', () => {
     setup(JSON.stringify({ sandbox: { instanceType: 'huge' } }));
     expect(() => readConfig(tmpDir)).toThrow('"sandbox.instanceType"');
@@ -1403,6 +1419,9 @@ describe('database config', () => {
     [{ casing: 'snake_case' }, 'sqlite', 'snake_case'],
     [{ dialect: 'pg' }, 'postgresql', undefined],
     [{}, 'sqlite', undefined],
+    [{ readReplication: true }, 'sqlite', undefined],
+    [{ readReplication: false }, 'sqlite', undefined],
+    [{ dialect: 'sqlite', readReplication: true }, 'sqlite', undefined],
   ])('accepts the object form %j', (database, dialect, casing) => {
     setup(JSON.stringify({ database }));
     const config = readConfig(tmpDir);
@@ -1420,9 +1439,13 @@ describe('database config', () => {
     [{ dialect: 'postgresql' }, '"database.dialect" in bwf.json must be "sqlite", "pg" or "mysql"'],
     [{ casing: 'snake' }, '"database.casing" in bwf.json must be "snake_case" or "camelCase"'],
     [{ casing: 'preserve' }, '"database.casing" in bwf.json must be "snake_case" or "camelCase"'],
+    [{ readReplication: 'true' }, '"database.readReplication" in bwf.json must be a boolean'],
+    [{ readReplication: null }, '"database.readReplication" in bwf.json must be a boolean'],
+    [{ dialect: 'pg', readReplication: true }, 'only supported for D1 (sqlite)'],
+    [{ dialect: 'mysql', readReplication: false }, 'only supported for D1 (sqlite)'],
     [
       { dialect: 'pg', url: 'x' },
-      "Unknown key 'database.url' in bwf.json. Valid: dialect, casing.",
+      "Unknown key 'database.url' in bwf.json. Valid: dialect, casing, readReplication.",
     ],
   ])('rejects %j', (database, message) => {
     setup(JSON.stringify({ database }));
@@ -1445,7 +1468,11 @@ describe('database config', () => {
     const schema = JSON.parse(readFileSync(join(import.meta.dirname, '../../schema.json'), 'utf8'));
     const [shorthand, object] = schema.properties.database.oneOf;
     expect(shorthand.enum).toEqual(['pg', 'mysql']);
-    expect(Object.keys(object.properties)).toEqual(['dialect', 'casing']);
+    expect(Object.keys(object.properties)).toEqual(['dialect', 'casing', 'readReplication']);
+    expect(object.properties.readReplication).toMatchObject({ type: 'boolean' });
+    expect(object.properties.readReplication).not.toHaveProperty('default');
+    expect(object.if).toEqual({ required: ['readReplication'] });
+    expect(object.then).toEqual({ properties: { dialect: { const: 'sqlite' } } });
     expect(object.properties.dialect.enum).toEqual(['sqlite', 'pg', 'mysql']);
     expect(object.properties.casing.enum).toEqual(['snake_case', 'camelCase']);
     expect(object.additionalProperties).toBe(false);

@@ -23,6 +23,7 @@ export type QueueMeta = {
   bindingName: string;
   maxBatchSize?: number;
   maxBatchTimeout?: number;
+  maxConcurrency?: number;
   maxRetries?: number;
   retryDelay?: number;
 };
@@ -246,6 +247,8 @@ export type DurableObjectManifestMeta = {
 
 export type DeployManifest = {
   version: number;
+  /** D1 provisioning preferences. Omitted preserves existing replication; false disables it. */
+  database?: { readReplication?: boolean };
   /** R2 creation preferences. Requires manifest version 5. */
   storage?: StorageConfig;
   assetManifestVersion?: 1 | 2;

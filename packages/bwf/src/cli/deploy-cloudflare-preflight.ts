@@ -550,6 +550,7 @@ export async function preflightCloudflareWorker(input: {
     options.provision ||
     initiallyMissing.length > 0 ||
     d1NeedsConfigReconciliation ||
+    (!existingWorker && desired.d1?.readReplication !== undefined) ||
     absentQueues.length > 0
   ) {
     await provisionAndVerify();
