@@ -69,11 +69,16 @@ export type PlatformInstallationSecrets = Readonly<{
         | 'GITHUB_CLIENT_ID'
         | 'GITHUB_CLIENT_SECRET'
         | 'R2_ACCESS_KEY_ID'
-        | 'R2_SECRET_ACCESS_KEY',
+        | 'R2_SECRET_ACCESS_KEY'
+        | PlatformBillingSecretName,
         string
       >
     >
   >;
+  /** Billing values saved with `bwf platform config billing`. bwf sets them on the API Worker. */
+  billing?: Readonly<Partial<Record<PlatformBillingSecretName, string>>>;
+  /** True while saved billing values still wait for a run that updates the API Worker. */
+  billingPending?: boolean;
   /** Encrypted recovery intent; applied only while its Worker cutover is authoritative. */
   pendingWorkerSecretUpdateIntent?: PlatformWorkerSecretUpdateIntent;
 }>;
@@ -87,7 +92,29 @@ export const PLATFORM_WORKER_SECRET_UPDATE_NAMES = [
   'R2_SECRET_ACCESS_KEY',
 ] as const;
 
-export type PlatformWorkerSecretUpdateName = (typeof PLATFORM_WORKER_SECRET_UPDATE_NAMES)[number];
+/**
+ * Billing values for the API Worker. They are optional: bwf sets them only
+ * after `bwf platform config billing` saved them, and a complete credential
+ * replacement does not need them.
+ */
+export const PLATFORM_BILLING_SECRET_NAMES = [
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+  'STRIPE_PRICE_SOLO',
+  'STRIPE_PRICE_PRO',
+  'STRIPE_LIVE_ENABLED',
+] as const;
+
+export type PlatformBillingSecretName = (typeof PLATFORM_BILLING_SECRET_NAMES)[number];
+
+/** The names that an update can set on the API Worker. */
+export const PLATFORM_API_WORKER_SECRET_UPDATE_NAMES: ReadonlyArray<
+  (typeof PLATFORM_WORKER_SECRET_UPDATE_NAMES)[number] | PlatformBillingSecretName
+> = [...PLATFORM_WORKER_SECRET_UPDATE_NAMES, ...PLATFORM_BILLING_SECRET_NAMES];
+
+export type PlatformWorkerSecretUpdateName =
+  | (typeof PLATFORM_WORKER_SECRET_UPDATE_NAMES)[number]
+  | PlatformBillingSecretName;
 
 export type PlatformWorkerSecretUpdates = Partial<Record<PlatformWorkerSecretUpdateName, string>>;
 

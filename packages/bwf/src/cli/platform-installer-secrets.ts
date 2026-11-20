@@ -8,11 +8,13 @@ import {
   isPlatformAuthenticationPreparationKey,
 } from './platform-access-setup.ts';
 import {
+  PLATFORM_BILLING_SECRET_NAMES,
+  type PlatformBillingSecretName,
   type PlatformInstallationSecrets,
   type PlatformWorkerKey,
   type PlatformWorkerSecretUpdateIntent,
   type PlatformWorkerSecretUpdateName,
-  PLATFORM_WORKER_SECRET_UPDATE_NAMES,
+  PLATFORM_API_WORKER_SECRET_UPDATE_NAMES,
   type PlatformWorkerSecretUpdates,
 } from './platform-installer-types.ts';
 import { type PlatformInstallPlan } from './platform-plan.ts';
@@ -160,7 +162,13 @@ export function createPlatformInstallationSecrets(input: {
     const value = configured(input[key], key);
     return optional ? value : required(value, requiredName);
   };
+  // `bwf platform config billing` saves billing values with billingPending.
+  // The next run sends them to the API Worker, and its checkpoint keeps the
+  // values without the marker. Later runs keep the live secrets.
+  const billing = parsePlatformBillingSecrets(checkpoint.billingJson);
+  const billingUpdates = checkpoint.billingPending === 'true' ? billing : {};
   const explicitWorkerSecretUpdates = withoutEmptySecrets({
+    ...billingUpdates,
     CF_API_TOKEN: input.cloudflareApiToken,
     ...(emailSigningSecretUpdateAuthorized ? { EMAIL_SIGNING_SECRET: emailSigningSecret } : {}),
     GITHUB_CLIENT_ID: input.githubClientId,
@@ -181,6 +189,11 @@ export function createPlatformInstallationSecrets(input: {
       ? { externalHyperdriveJson: checkpoint.externalHyperdriveJson }
       : {}),
     ...(modernAuthentication ? { authenticationSetupJson, authSetupToken, authBootstrapCode } : {}),
+    ...(Object.keys(billing).length > 0 ? { billing } : {}),
+    // A run that does not update existing Workers leaves the change for the next one.
+    ...(checkpoint.billingPending === 'true' && !input.updateExistingWorkers
+      ? { billingPending: true }
+      : {}),
     ...(checkpoint.accessProvisioningJson
       ? { accessProvisioningJson: checkpoint.accessProvisioningJson }
       : {}),
@@ -222,11 +235,7 @@ export function createPlatformInstallationSecrets(input: {
     projectSecretActiveKeyVersion: projectSecretKeyring.activeVersion,
     projectSecretKey: projectSecretKeyring.v1Key,
     projectSecretKeysJson: projectSecretKeyring.keysJson,
-    r2AccessKeyId: resolve(
-      'r2AccessKeyId',
-      'PLATFORM_R2_ACCESS_KEY_ID',
-      existingInstallation,
-    ),
+    r2AccessKeyId: resolve('r2AccessKeyId', 'PLATFORM_R2_ACCESS_KEY_ID', existingInstallation),
     r2SecretAccessKey: resolve(
       'r2SecretAccessKey',
       'PLATFORM_R2_SECRET_ACCESS_KEY',
@@ -391,6 +400,11 @@ export function secretCheckpoint(
     ...(secrets.accessCredentialsJson
       ? { accessCredentialsJson: secrets.accessCredentialsJson }
       : {}),
+    // Once a run sends a billing change, workerSecretUpdatesJson carries it.
+    ...(secrets.billing && Object.keys(secrets.billing).length > 0
+      ? { billingJson: JSON.stringify(secrets.billing) }
+      : {}),
+    ...(secrets.billingPending ? { billingPending: 'true' } : {}),
     bootstrapGitHubId: secrets.bootstrapGitHubId,
     bootstrapGitHubLogin: secrets.bootstrapGitHubLogin,
     cloudflareApiToken: secrets.cloudflareApiToken,
@@ -447,7 +461,7 @@ function parseWorkerSecretUpdateIntent(
   const updates: Partial<Record<PlatformWorkerSecretUpdateName, string>> = {};
   for (const [name, entry] of Object.entries(parsed.updates)) {
     if (
-      !PLATFORM_WORKER_SECRET_UPDATE_NAMES.includes(name as PlatformWorkerSecretUpdateName) ||
+      !PLATFORM_API_WORKER_SECRET_UPDATE_NAMES.includes(name as PlatformWorkerSecretUpdateName) ||
       typeof entry !== 'string' ||
       entry === ''
     ) {
@@ -473,7 +487,7 @@ export function sanitizeWorkerSecretUpdates(
   return Object.fromEntries(
     Object.entries(updates ?? {}).filter(
       ([name, value]) =>
-        PLATFORM_WORKER_SECRET_UPDATE_NAMES.includes(name as PlatformWorkerSecretUpdateName) &&
+        PLATFORM_API_WORKER_SECRET_UPDATE_NAMES.includes(name as PlatformWorkerSecretUpdateName) &&
         typeof value === 'string' &&
         value !== '',
     ),
@@ -498,6 +512,7 @@ export function apiWorkerSecrets(
   zoneId: string,
 ): Record<string, string> {
   return withoutEmptySecrets({
+    ...secrets.billing,
     CF_ACCOUNT_ID: accountId,
     CF_API_TOKEN: secrets.cloudflareApiToken,
     CF_ZONE_ID: zoneId,
@@ -544,7 +559,7 @@ export function platformWorkerSecretPayload(
   }
   const allowed: ReadonlyArray<string> =
     worker === 'api'
-      ? PLATFORM_WORKER_SECRET_UPDATE_NAMES
+      ? PLATFORM_API_WORKER_SECRET_UPDATE_NAMES
       : worker === 'proxy'
         ? ['CF_API_TOKEN', 'EMAIL_SIGNING_SECRET']
         : ['EMAIL_SIGNING_SECRET'];
@@ -700,4 +715,89 @@ export function createPlatformHealthProbeToken(ownershipNonce: string): string {
     .update('void-platform-health-probe:v1\0')
     .update(ownershipNonce)
     .digest('base64url');
+}
+
+/** Read the billing values saved in the encrypted recovery data. */
+export function parsePlatformBillingSecrets(
+  value: string | undefined,
+): Partial<Record<PlatformBillingSecretName, string>> {
+  if (!value) {
+    return {};
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new Error('platform: The saved billing values must be valid JSON.');
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('platform: The saved billing values are invalid.');
+  }
+  const billing: Partial<Record<PlatformBillingSecretName, string>> = {};
+  for (const [name, entry] of Object.entries(parsed)) {
+    if (
+      !PLATFORM_BILLING_SECRET_NAMES.includes(name as PlatformBillingSecretName) ||
+      typeof entry !== 'string'
+    ) {
+      throw new Error('platform: The saved billing values are invalid.');
+    }
+    if (entry !== '') {
+      billing[name as PlatformBillingSecretName] = entry;
+    }
+  }
+  return billing;
+}
+
+/**
+ * Read billing values from environment variables and from `NAME=value` lines
+ * on stdin. A stdin line wins over the environment. Values never come from
+ * command arguments, so they stay out of shell history and process lists.
+ */
+export function readPlatformBillingInput(
+  env: Readonly<Record<string, string | undefined>>,
+  stdin: string | null,
+): Partial<Record<PlatformBillingSecretName, string>> {
+  const billing: Partial<Record<PlatformBillingSecretName, string>> = {};
+  for (const name of PLATFORM_BILLING_SECRET_NAMES) {
+    const value = env[name]?.trim();
+    if (value) {
+      billing[name] = value;
+    }
+  }
+  for (const [index, raw] of (stdin ?? '').split(/\r?\n/).entries()) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) {
+      continue;
+    }
+    const match = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
+    // Name the line, not its text: the text can hold a secret.
+    if (!match) {
+      throw new Error(`platform: Line ${index + 1} of stdin is not NAME=value.`);
+    }
+    const name = match[1] as PlatformBillingSecretName;
+    if (!PLATFORM_BILLING_SECRET_NAMES.includes(name)) {
+      throw new Error(
+        `platform: ${match[1]} is not a billing value. Use ${PLATFORM_BILLING_SECRET_NAMES.join(', ')}.`,
+      );
+    }
+    const value = match[2]!.replace(/^(['"])(.*)\1$/, '$2');
+    if (value) {
+      billing[name] = value;
+    }
+  }
+  if (billing.STRIPE_SECRET_KEY && !/^(sk|rk)_(test|live)_/.test(billing.STRIPE_SECRET_KEY)) {
+    throw new Error('platform: STRIPE_SECRET_KEY must be a Stripe secret or restricted key.');
+  }
+  if (billing.STRIPE_WEBHOOK_SECRET && !billing.STRIPE_WEBHOOK_SECRET.startsWith('whsec_')) {
+    throw new Error('platform: STRIPE_WEBHOOK_SECRET must start with whsec_.');
+  }
+  for (const name of ['STRIPE_PRICE_SOLO', 'STRIPE_PRICE_PRO'] as const) {
+    if (billing[name] && !billing[name].startsWith('price_')) {
+      throw new Error(`platform: ${name} must be a Stripe price ID (price_...).`);
+    }
+  }
+  if (billing.STRIPE_LIVE_ENABLED && !['true', 'false'].includes(billing.STRIPE_LIVE_ENABLED)) {
+    throw new Error('platform: STRIPE_LIVE_ENABLED must be true or false.');
+  }
+  return billing;
 }

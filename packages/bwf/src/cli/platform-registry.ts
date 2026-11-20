@@ -70,7 +70,9 @@ export function platformRegistryDirectory(): string {
   if (fromEnvironment) {
     return fromEnvironment;
   }
-  const candidates = ['.bwf', '.platform', '.void'].map((name) => join(homedir(), name, 'platforms'));
+  const candidates = ['.bwf', '.platform', '.void'].map((name) =>
+    join(homedir(), name, 'platforms'),
+  );
   return (
     candidates.find((directory) => existsSync(join(directory, 'registry.json'))) ?? candidates[0]!
   );
@@ -601,6 +603,38 @@ export function latestPlatformWorkerCutoverGeneration(
       return match ? [Number(match[1])] : [];
     }),
   );
+}
+
+/**
+ * Add values to the encrypted recovery data of an installation, and to its
+ * pending data when a run left some. The next run reads them from either.
+ */
+export function saveInstallationRecoveryValues(
+  manifest: PlatformInstallationManifest,
+  values: Record<string, string>,
+  directory: string = platformRegistryDirectory(),
+): void {
+  const manifestPath = installationManifestPath(manifest.account.id, manifest.id, directory);
+  const pending = readPendingInstallationSecrets(manifest, directory);
+  const recovery = readRecoveryMaterial(manifest, 'recovery', directory);
+  if (pending) {
+    writeEncryptedRecoveryMaterial(
+      manifest,
+      'pending',
+      manifestPath.replace(/\.json$/, '.secrets.enc'),
+      { ...pending, ...values },
+      directory,
+    );
+  }
+  if (recovery || !pending) {
+    writeEncryptedRecoveryMaterial(
+      manifest,
+      'recovery',
+      manifestPath.replace(/\.json$/, '.recovery.enc'),
+      { ...recovery, ...values },
+      directory,
+    );
+  }
 }
 
 export function removeInstallationRecoverySecrets(

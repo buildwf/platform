@@ -27,6 +27,19 @@ For `add` and `set`, `--file` reads a JSON object with optional `name`, `limits`
 
 An apply checks the preview's revision and rejects concurrent changes. Lower quotas can restrict accounts already above them; usage history and billing periods are preserved. The CLI continues account updates and AI logging publishing until complete, then prints how many projects received the AI logging default and when new requests are expected to follow it. If an update fails or stops making progress, the configuration remains saved and the command exits unsuccessfully. Run `sync --yes` to continue before editing plans again. Inspect `show` and operator events after an uncertain request outcome.
 
+## Billing values {#billing-values}
+
+`bwf platform config billing` saves the platform's Stripe values with the other installation secrets on this machine. The next `bwf platform upgrade` or `repair` sets them on the API Worker as secrets, and later upgrades keep them. The command reads values from environment variables, or from `NAME=value` lines on standard input with `--stdin`. It doesn't take values as arguments and prints only their names.
+
+```sh
+STRIPE_SECRET_KEY=... STRIPE_WEBHOOK_SECRET=... bwf platform config billing
+printf 'STRIPE_PRICE_SOLO=price_...\nSTRIPE_PRICE_PRO=price_...\n' | bwf platform config billing --stdin
+bwf platform config billing show
+bwf platform upgrade --yes
+```
+
+The names are `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_SOLO`, `STRIPE_PRICE_PRO`, and `STRIPE_LIVE_ENABLED` (`true` to allow a live key). A save keeps values you saved before. Use `--installation <id>` when this machine has several installations.
+
 ## Authentication configuration {#authentication-configuration}
 
 `bwf platform config auth` opens interactive configuration. These commands use

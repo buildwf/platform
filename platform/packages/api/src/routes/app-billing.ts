@@ -6,6 +6,7 @@ import {
   PAID_PLANS,
   createCheckoutSession,
   createPortalSession,
+  subscriptionRenewsAt,
   type PaidPlan,
 } from '../billing/stripe.ts';
 import type { ApiEnv } from '../env.ts';
@@ -62,6 +63,7 @@ async function standing(context: BillingContext, person: string) {
     aiWithinCap,
     sandboxWithinCap,
     subscribed: Boolean(row?.stripe_subscription_id),
+    subscriptionId: row?.stripe_subscription_id ?? null,
   };
 }
 
@@ -90,7 +92,13 @@ export const appBillingRoutes = new Hono<ApiEnv>()
     if (!isPersonId(body?.person)) {
       return context.json({ error: 'bad_person' }, 400);
     }
-    return context.json({ data: await standing(context, body.person) });
+    const { subscriptionId, ...now } = await standing(context, body.person);
+    // A paid plan renews on its own Stripe date, not on the first of the month when the meters
+    // reset. If Stripe can't be reached, the answer leaves renewsAt out instead of failing.
+    const renewsAt = subscriptionId
+      ? await subscriptionRenewsAt(context.env, subscriptionId).catch(() => null)
+      : null;
+    return context.json({ data: { ...now, ...(renewsAt ? { renewsAt } : {}) } });
   })
   .post('/usage.record', async (context) => {
     const body = await context.req.json().catch(() => null);

@@ -299,6 +299,10 @@ const HELP_TREE: HelpTree = {
         command: 'config plans [command]',
         description: 'Manage plans, account limits, and the default plan',
       },
+      {
+        command: 'config billing [set|show]',
+        description: 'Save the Stripe values that upgrades set on the API Worker',
+      },
       { command: 'list', description: 'List installed and connected platforms' },
       { command: 'use [id]', description: 'Select the default bwf platform' },
       { command: 'status [id]', description: 'Inspect a platform and its health' },
@@ -325,8 +329,28 @@ const HELP_TREE: HelpTree = {
       ...operatorHelpTree(),
       config: {
         summary: 'Configure platform settings.',
-        usage: ['bwf platform config <auth|plans> [command] [options]'],
+        usage: ['bwf platform config <auth|plans|billing> [command] [options]'],
         children: {
+          billing: {
+            summary:
+              'Save Stripe values with the installation secrets on this machine. The next upgrade or repair sets them on the API Worker.',
+            usage: ['bwf platform config billing [set|show] [--installation <id>] [--stdin]'],
+            commands: [
+              {
+                command: 'set',
+                description:
+                  'Save STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_SOLO, STRIPE_PRICE_PRO, or STRIPE_LIVE_ENABLED from the environment',
+              },
+              { command: 'show', description: 'Show which values are saved, without the values' },
+            ],
+            options: [
+              { command: '--installation <id>', description: 'Select the local installation' },
+              {
+                command: '--stdin',
+                description: 'Also read NAME=value lines from standard input',
+              },
+            ],
+          },
           plans: {
             summary: 'Manage plans and limits. Without a command, opens interactive configuration.',
             usage: [

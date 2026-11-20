@@ -14,7 +14,10 @@ import {
   type InstallationResourceKind,
   type PlatformInstallationManifest,
 } from '@builtbyfriends/platform';
-import { getPlatformRuntimeDirectory, resolvePlatformRuntime } from '@builtbyfriends/platform/installer';
+import {
+  getPlatformRuntimeDirectory,
+  resolvePlatformRuntime,
+} from '@builtbyfriends/platform/installer';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 vi.mock('@voidzero-dev/vite-plus-prompts', async (importOriginal) => {
@@ -199,9 +202,9 @@ describe('Worker change source', () => {
         result: { default_environment: { script: { last_deployed_from: 'dash' } } },
       }),
     );
-    await expect(reader.client.getWorkerLastDeployedFrom('account', 'platform-a-api')).resolves.toBe(
-      'dash',
-    );
+    await expect(
+      reader.client.getWorkerLastDeployedFrom('account', 'platform-a-api'),
+    ).resolves.toBe('dash');
     expect(reader.paths).toEqual(['/client/v4/accounts/account/workers/services/platform-a-api']);
   });
 
@@ -209,9 +212,9 @@ describe('Worker change source', () => {
     const reader = client(() =>
       Response.json({ success: true, result: { default_environment: { script: {} } } }),
     );
-    await expect(reader.client.getWorkerLastDeployedFrom('account', 'platform-a-api')).resolves.toBe(
-      null,
-    );
+    await expect(
+      reader.client.getWorkerLastDeployedFrom('account', 'platform-a-api'),
+    ).resolves.toBe(null);
   });
 
   it('returns null for a Worker that does not exist', async () => {
@@ -225,9 +228,9 @@ describe('Worker change source', () => {
         { status: 404 },
       ),
     );
-    await expect(reader.client.getWorkerLastDeployedFrom('account', 'platform-a-api')).resolves.toBe(
-      null,
-    );
+    await expect(
+      reader.client.getWorkerLastDeployedFrom('account', 'platform-a-api'),
+    ).resolves.toBe(null);
   });
 
   it('reports other failed reads', async () => {
@@ -731,7 +734,8 @@ describe('platform Workers changed outside bwf', () => {
           `${names.apiWorker}: has an active version without a bwf deployment record`,
           '',
           'This command replaces the configuration of these Workers with the bwf configuration.',
-          'It removes values that bwf does not set, for example an EMAIL_FROM that you added.',
+          'It keeps their secrets and the billing values (bwf platform config billing).',
+          'It removes other plain-text variables that bwf does not set, for example an EMAIL_FROM that you added.',
           'It resets values that bwf sets, for example AUTH_REDIRECT_URI.',
         ].join('\n'),
       );

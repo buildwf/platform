@@ -5,7 +5,12 @@ import {
   type PlatformAppAccess,
 } from '@builtbyfriends/platform';
 import { operatorGroups, parseOperatorArgs, type OperatorArgs } from './operator-args.ts';
-import { parsePlatformConfigArgs, type PlatformConfigArgs } from './platform-config-args.ts';
+import {
+  parsePlatformBillingArgs,
+  parsePlatformConfigArgs,
+  type PlatformBillingArgs,
+  type PlatformConfigArgs,
+} from './platform-config-args.ts';
 import { parsePlatformPlansArgs, type PlatformPlansArgs } from './platform-plans-args.ts';
 import { parsePlatformStorageLocation, type PlatformStorageLocation } from './platform-storage.ts';
 import type { SubcommandDef } from './subcommand-prompt.ts';
@@ -13,8 +18,8 @@ import type { SubcommandDef } from './subcommand-prompt.ts';
 export const platformSubcommands: Array<SubcommandDef> = [
   {
     name: 'config',
-    hint: 'Authentication, plans, and limits',
-    description: 'Configure login methods, protection, plans, or limits',
+    hint: 'Authentication, plans, limits, and billing',
+    description: 'Configure login methods, protection, plans, limits, or billing',
   },
   ...operatorGroups.map((name) => ({
     name,
@@ -57,6 +62,7 @@ export const platformSubcommands: Array<SubcommandDef> = [
 export type PlatformArgs =
   | PlatformConfigArgs
   | PlatformPlansArgs
+  | PlatformBillingArgs
   | { subcommand: 'config'; configGroup: ''; plan: false; yes: false }
   | OperatorArgs
   | { subcommand: 'list' }
@@ -274,7 +280,11 @@ export function parsePlatformArgs(args: Array<string>): PlatformArgs {
     if (rest.length === 0) {
       return { subcommand: 'config', configGroup: '', plan: false, yes: false };
     }
-    return rest[0] === 'plans' ? parsePlatformPlansArgs(rest) : parsePlatformConfigArgs(rest);
+    return rest[0] === 'plans'
+      ? parsePlatformPlansArgs(rest)
+      : rest[0] === 'billing'
+        ? parsePlatformBillingArgs(rest)
+        : parsePlatformConfigArgs(rest);
   }
 
   if (subcommand === 'domain') {

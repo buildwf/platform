@@ -1,4 +1,7 @@
-import type { PlatformDiscoveryDocument, PlatformInstallationManifest } from '@builtbyfriends/platform';
+import type {
+  PlatformDiscoveryDocument,
+  PlatformInstallationManifest,
+} from '@builtbyfriends/platform';
 import { isCancel, log, select, text } from '@voidzero-dev/vite-plus-prompts';
 import { cfAccessHeaders } from '../shared/cf-access.ts';
 import { ensurePlatformAccessToken, isCloudflareAccessChallenge } from './cf-access.ts';
@@ -133,7 +136,7 @@ export async function runPlatformCommand(_root: string, args: PlatformArgs): Pro
       if (args.configGroup === '') {
         if (!process.stdin.isTTY) {
           throw new Error(
-            'platform: Choose bwf platform config auth or bwf platform config plans.',
+            'platform: Choose bwf platform config auth, bwf platform config plans, or bwf platform config billing.',
           );
         }
         const group = await select({
@@ -141,6 +144,7 @@ export async function runPlatformCommand(_root: string, args: PlatformArgs): Pro
           options: [
             { value: 'auth', label: 'Authentication and protection' },
             { value: 'plans', label: 'Plans and limits' },
+            { value: 'billing', label: 'Billing values for the API Worker' },
           ],
         });
         if (isCancel(group)) {
@@ -148,6 +152,11 @@ export async function runPlatformCommand(_root: string, args: PlatformArgs): Pro
         }
         const { parsePlatformArgs } = await import('./platform-args.ts');
         return runPlatformCommand(_root, parsePlatformArgs(['config', group]));
+      }
+      if (args.configGroup === 'billing') {
+        const { runPlatformBillingConfig } = await import('./platform-billing-config.ts');
+        await runPlatformBillingConfig(args);
+        return;
       }
       const { runPlatformPlansConfig } = await import('./platform-plans-config.ts');
       await runPlatformPlansConfig(args);

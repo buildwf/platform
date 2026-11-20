@@ -97,6 +97,33 @@ export async function createPortalSession(
   return body.url;
 }
 
+/**
+ * When a subscription renews: the end of its current billing period, as an ISO string, or null
+ * when Stripe doesn't give one. Newer Stripe API versions keep the period on the subscription's
+ * items and older ones on the subscription, so this reads both.
+ */
+export async function subscriptionRenewsAt(
+  env: StripeEnv,
+  subscriptionId: string,
+  fetcher: typeof fetch = fetch,
+): Promise<string | null> {
+  const response = await fetcher(
+    `https://api.stripe.com/v1/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    { headers: { authorization: `Bearer ${stripeSecretKey(env)}` } },
+  );
+  const body = (await response.json().catch(() => null)) as {
+    current_period_end?: unknown;
+    items?: { data?: Array<{ current_period_end?: unknown }> };
+  } | null;
+  if (!response.ok || !body) {
+    throw new BillingUnavailableError('Stripe refused the request.');
+  }
+  const end = body.items?.data?.[0]?.current_period_end ?? body.current_period_end;
+  return typeof end === 'number' && Number.isFinite(end) && end > 0
+    ? new Date(end * 1000).toISOString()
+    : null;
+}
+
 async function stripePost(
   env: StripeEnv,
   path: string,
