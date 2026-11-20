@@ -433,7 +433,11 @@ describe('typed HTTP execution', () => {
 function worker(overrides: Partial<Parameters<typeof createWorkerFetch>[0]> = {}) {
   const app = new Hono<{ Bindings: RuntimeEnvironment }>();
   app.get('/app', (c) =>
-    c.json({ public: c.env.PUBLIC, hidden: c.env.__PLATFORM_PROXY_TOKEN, keys: Object.keys(c.env) }),
+    c.json({
+      public: c.env.PUBLIC,
+      hidden: c.env.__PLATFORM_PROXY_TOKEN,
+      keys: Object.keys(c.env),
+    }),
   );
   return createWorkerFetch({
     app,

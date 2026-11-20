@@ -88,7 +88,11 @@ export default defineConfig({
         // skips even when the CI job injects them. `untrackedEnv` forwards them without folding them
         // into the task's cache fingerprint (credentials must not bust the cache).
         cache: {
-          untrackedEnv: ['PLATFORM_E2E_CF_TOKEN', 'PLATFORM_E2E_CF_ACCOUNT_ID', 'PLATFORM_E2E_NAMESPACE'],
+          untrackedEnv: [
+            'PLATFORM_E2E_CF_TOKEN',
+            'PLATFORM_E2E_CF_ACCOUNT_ID',
+            'PLATFORM_E2E_NAMESPACE',
+          ],
         },
       },
     },

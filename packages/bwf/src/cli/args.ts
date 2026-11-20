@@ -75,7 +75,11 @@ export function parseDeployArgs(
 
   const platformValue =
     typeof parsed.values.platform === 'string' ? parsed.values.platform : undefined;
-  if (platformValue !== undefined && platformValue !== 'cloudflare' && platformValue !== 'platform') {
+  if (
+    platformValue !== undefined &&
+    platformValue !== 'cloudflare' &&
+    platformValue !== 'platform'
+  ) {
     throw new Error("deploy: --platform must be 'cloudflare' or 'platform'.");
   }
   const platform = platformValue;

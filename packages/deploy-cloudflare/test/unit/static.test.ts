@@ -134,7 +134,10 @@ describe('Cloudflare static deployment', () => {
 
     writeCloudflareStaticDeployConfig({
       ...input,
-      assetConfig: { not_found_handling: '404-page', run_worker_first: ['/__platform', '/__platform/*'] },
+      assetConfig: {
+        not_found_handling: '404-page',
+        run_worker_first: ['/__platform', '/__platform/*'],
+      },
     });
     expect(parseRootWranglerConfig(configPath).assets).toMatchObject({
       run_worker_first: ['/__platform', '/__platform/*'],

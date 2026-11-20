@@ -198,9 +198,7 @@ describe('guided installation app access', () => {
   });
   it('does not silently retain installer credentials in headless mode', async () => {
     const { input } = fixture();
-    await expect(prepareInstallationAppAccess(input)).rejects.toThrow(
-      'PLATFORM_APP_ACCESS_TOKEN',
-    );
+    await expect(prepareInstallationAppAccess(input)).rejects.toThrow('PLATFORM_APP_ACCESS_TOKEN');
     expect(input.checkpoint.appAccessToken).toBeUndefined();
   });
   it('selects hosting-account equivalents instead of reusing foreign-account policy IDs', async () => {
@@ -258,9 +256,7 @@ describe('guided installation app access', () => {
         { status: 403 },
       ),
     );
-    await expect(prepareInstallationAppAccess(input)).rejects.toThrow(
-      'PLATFORM_APP_ACCESS_TOKEN',
-    );
+    await expect(prepareInstallationAppAccess(input)).rejects.toThrow('PLATFORM_APP_ACCESS_TOKEN');
   });
   it('prepares managed public rules under Default-Deny without asking for company policies', async () => {
     tty(true);

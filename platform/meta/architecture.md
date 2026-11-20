@@ -16,7 +16,7 @@ The framework, CLI, and platform share one workspace:
 
 | Directory                                            | Responsibility                                                  |
 | ---------------------------------------------------- | --------------------------------------------------------------- |
-| `packages/bwf`                                       | Vite plugin, application runtime, and `platform` CLI               |
+| `packages/bwf`                                       | Vite plugin, application runtime, and `platform` CLI            |
 | `packages/platform`                                  | Installation contracts and packaged core Worker bundles         |
 | `packages/deploy-core`, `packages/deploy-cloudflare` | Deployment contracts and Cloudflare upload primitives           |
 | `packages/edge`, `packages/isr`                      | Shared routing and ISR behavior                                 |

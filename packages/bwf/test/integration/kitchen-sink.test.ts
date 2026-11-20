@@ -464,7 +464,10 @@ function preparePreviewWranglerConfig(pg: string): string {
   // v2 preview reads the native artifact, while the CLI still uses the validated dist build.
   const nativePath = getWorkerConfigPath(pg);
   const native = JSON.parse(readFileSync(nativePath, 'utf8'));
-  native.env.BETTER_AUTH_SECRET = { type: 'text', value: 'platform-preview-test-secret-1234567890' };
+  native.env.BETTER_AUTH_SECRET = {
+    type: 'text',
+    value: 'platform-preview-test-secret-1234567890',
+  };
   delete native.env.AI;
   writeFileSync(nativePath, JSON.stringify(native));
   return databaseId;

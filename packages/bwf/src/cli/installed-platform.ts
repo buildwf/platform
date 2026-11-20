@@ -13,7 +13,9 @@ export function assertInstalledBwfMatchesCli(root: string): void {
   const declaresBwf = ['dependencies', 'devDependencies', 'optionalDependencies'].some((key) => {
     const dependencies = project[key];
     return (
-      typeof dependencies === 'object' && dependencies !== null && '@builtbyfriends/bwf' in dependencies
+      typeof dependencies === 'object' &&
+      dependencies !== null &&
+      '@builtbyfriends/bwf' in dependencies
     );
   });
   if (!declaresBwf) {

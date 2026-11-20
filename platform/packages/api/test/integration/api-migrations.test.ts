@@ -1555,7 +1555,8 @@ describe('POST /projects/:id/migrations/apply', () => {
             {
               name: '001_drop.sql',
               sql:
-                '-- TODO: maybe add -- @builtbyfriends/bwf:allow-destructive here?\n' + 'DROP TABLE users',
+                '-- TODO: maybe add -- @builtbyfriends/bwf:allow-destructive here?\n' +
+                'DROP TABLE users',
             },
           ],
         }),

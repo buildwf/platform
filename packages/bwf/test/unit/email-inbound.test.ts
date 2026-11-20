@@ -2666,7 +2666,11 @@ describe('end-to-end: envelope → handler → action queue', () => {
     });
     const actions = await dispatchToHandler(makeEnvelope(), handler);
     expect(actions).toEqual([
-      { type: 'forward', to: 'archive@example.com', headers: { 'X-Forwarded-By': 'platform-test' } },
+      {
+        type: 'forward',
+        to: 'archive@example.com',
+        headers: { 'X-Forwarded-By': 'platform-test' },
+      },
     ]);
   });
 

@@ -360,7 +360,10 @@ describe('platform Cloudflare client', () => {
     const client = new PlatformCloudflareClient('token', {
       fetcher: async (_input, init) => {
         payload = JSON.parse(String(init?.body));
-        return Response.json({ success: true, result: { id: 'hyperdrive-id', name: 'platform-db' } });
+        return Response.json({
+          success: true,
+          result: { id: 'hyperdrive-id', name: 'platform-db' },
+        });
       },
     });
 
@@ -1051,7 +1054,12 @@ describe('platform Cloudflare client', () => {
       },
     });
 
-    await client.putR2Object('account', 'bucket/name', '__platform/platform/ownership/v1', 'marker');
+    await client.putR2Object(
+      'account',
+      'bucket/name',
+      '__platform/platform/ownership/v1',
+      'marker',
+    );
     await expect(
       client.getR2Object('account', 'bucket/name', '__platform/platform/ownership/v1'),
     ).resolves.toBe('marker');
@@ -1241,9 +1249,9 @@ describe('platform Cloudflare client', () => {
       { id: 'c3', script: null },
     ]);
     await client.deleteQueueConsumer('account', 'queue-id', 'c1');
-    await expect(client.listDispatchNamespaceScripts('account', 'platform-users')).resolves.toEqual([
-      'app-one',
-    ]);
+    await expect(client.listDispatchNamespaceScripts('account', 'platform-users')).resolves.toEqual(
+      ['app-one'],
+    );
     await client.deleteDispatchNamespaceScript('account', 'platform-users', 'app-one');
     await expect(client.getAccessResource('account', 'application', 'app-id')).resolves.toEqual({
       id: 'app-id',
@@ -1284,7 +1292,9 @@ describe('platform Cloudflare client', () => {
             result: {
               services: {
                 outgoing: [{ name: 'PLATFORM_PROXY', service: 'platform-team-proxy' }],
-                incoming: [{ name: 'API', service: 'platform-team-proxy', environment: 'production' }],
+                incoming: [
+                  { name: 'API', service: 'platform-team-proxy', environment: 'production' },
+                ],
               },
               domains: [],
               durable_objects: [
@@ -1392,7 +1402,11 @@ describe('platform Cloudflare client', () => {
     });
 
     const rules = await client.listEmailRoutingRules('zone');
-    expect(rules[0]).toEqual({ id: 'r1', enabled: true, workerName: 'platform-team-email-gateway' });
+    expect(rules[0]).toEqual({
+      id: 'r1',
+      enabled: true,
+      workerName: 'platform-team-email-gateway',
+    });
     expect(rules.at(-1)).toEqual({ id: 'r2', enabled: false, workerName: null });
     expect(rules.some((rule) => rule.id === 'all')).toBe(false);
     await expect(client.getEmailRoutingCatchAll('zone')).resolves.toEqual({
@@ -1677,7 +1691,11 @@ describe('platform Cloudflare client', () => {
         if (init?.method === 'POST') {
           return Response.json({
             success: true,
-            result: { id: 'managed-id', pattern: 'apps.example.com/*', script: 'platform-dispatch' },
+            result: {
+              id: 'managed-id',
+              pattern: 'apps.example.com/*',
+              script: 'platform-dispatch',
+            },
           });
         }
         return Response.json({

@@ -2150,7 +2150,9 @@ describe('platform installer', () => {
     ];
     const config = { migrations, name: 'platform-api' };
 
-    expect(withoutCompletedPlatformWorkerMigrations(config, 'v4')).toEqual({ name: 'platform-api' });
+    expect(withoutCompletedPlatformWorkerMigrations(config, 'v4')).toEqual({
+      name: 'platform-api',
+    });
     expect(withoutCompletedPlatformWorkerMigrations(config, 'v3')).toBe(config);
     expect(withoutCompletedPlatformWorkerMigrations(config, null)).toBe(config);
     expect(config.migrations).toBe(migrations);
@@ -2467,9 +2469,9 @@ describe('platform installer', () => {
       'https://void-platform-health.apps.example.com/health',
       'https://email.example.com/health',
     ]);
-    expect(
-      requests.every((entry) => entry.headers.get('X-Platform-Probe') === 'probe-token'),
-    ).toBe(true);
+    expect(requests.every((entry) => entry.headers.get('X-Platform-Probe') === 'probe-token')).toBe(
+      true,
+    );
     expect(requests.every((entry) => !entry.headers.has('X-Health-Check'))).toBe(true);
     expect(requests.every((entry) => entry.redirect === 'manual')).toBe(true);
   });
@@ -2978,9 +2980,7 @@ describe('platform installer', () => {
     await expect(
       verifyPlatformSandboxDrain('https://api.example.com', 'probe-token', fetcher),
     ).resolves.toBe(true);
-    expect(headers.every((value) => value.get('X-Platform-Probe') === 'probe-token')).toBe(
-      true,
-    );
+    expect(headers.every((value) => value.get('X-Platform-Probe') === 'probe-token')).toBe(true);
 
     await expect(
       verifyPlatformSandboxDrain('https://api.example.com', 'probe-token', (async () =>

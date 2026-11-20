@@ -321,7 +321,8 @@ export function bwfPlugin(options?: {
       bindings = application.bindings;
       authEnabled = application.authEnabled;
       // Re-resolve for the real environment.
-      managedCloudflareBuild = command === 'build' && Boolean(process.env.PLATFORM_DEPLOY_PROJECT_ID);
+      managedCloudflareBuild =
+        command === 'build' && Boolean(process.env.PLATFORM_DEPLOY_PROJECT_ID);
       assetRoutingPublicDir =
         userConfig.publicDir === false
           ? null

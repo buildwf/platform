@@ -7,7 +7,8 @@ export function createClientStubsPlugin(): Plugin {
     '@builtbyfriends/bwf/kv': 'export const kv = {}; export const createKV = () => ({});',
     '@builtbyfriends/bwf/ai': 'export const ai = {};',
     '@builtbyfriends/bwf/queues': 'export const queues = {};',
-    '@builtbyfriends/bwf/storage': 'export const storage = {}; export const createStorage = () => ({});',
+    '@builtbyfriends/bwf/storage':
+      'export const storage = {}; export const createStorage = () => ({});',
     // Client stub must mirror the real runtime/sandbox.ts surface so any
     // client-side `instanceof` check for either runtime error doesn't crash with a
     // TypeError, and async `await getSandbox(...)` callers don't silently

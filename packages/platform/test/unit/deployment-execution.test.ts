@@ -74,7 +74,10 @@ describe('durable platform deployment Queue', () => {
         },
       ]),
     });
-    expect(configured.api.vars).toHaveProperty('DEPLOYMENTS_QUEUE_NAME', 'platform-team-deployments');
+    expect(configured.api.vars).toHaveProperty(
+      'DEPLOYMENTS_QUEUE_NAME',
+      'platform-team-deployments',
+    );
     expect(configured.api.triggers).toEqual({ crons: ['0 * * * *', '*/2 * * * *'] });
     for (const [key, config] of Object.entries(configured)) {
       if (key !== 'api') {

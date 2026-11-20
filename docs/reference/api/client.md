@@ -77,7 +77,7 @@ try {
 
 The typed client is built on [ofetch](https://github.com/unjs/ofetch) with a typed route layer on top. Key differences from native `fetch`:
 
-| Behavior               | Native `fetch`                                       | `@builtbyfriends/bwf/client` `fetch`                                                                                          |
+| Behavior               | Native `fetch`                                       | `@builtbyfriends/bwf/client` `fetch`                                                                                   |
 | ---------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | **Return type**        | `Promise<Response>`, so you call `.json()` yourself  | `Promise<T>`, which auto-parses JSON and returns the typed result directly (`undefined` for `204`)                     |
 | **Error handling**     | Resolves on any HTTP status; you check `response.ok` | Throws `FetchError` on non-2xx responses                                                                               |

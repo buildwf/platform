@@ -327,7 +327,8 @@ it.each([false, true])(
     const apiBaseUrl = await listen(
       createServer((request, response) => {
         const path = request.url!.split('?')[0]!;
-        const upload = request.method === 'POST' && path.endsWith('/scripts/platform-test/versions');
+        const upload =
+          request.method === 'POST' && path.endsWith('/scripts/platform-test/versions');
         request.resume();
         response.writeHead(upload && rejected ? 400 : 200, {
           'Content-Type': 'application/json',
@@ -461,10 +462,16 @@ it.each([
         expect(traffic).toEqual([{ version_id: next, percentage: 100 }]);
         events.push('settings');
         result = row.body;
-      } else if (row.method === 'POST' && path.endsWith('/workers/workers/platform-test/versions')) {
+      } else if (
+        row.method === 'POST' &&
+        path.endsWith('/workers/workers/platform-test/versions')
+      ) {
         uploaded = true;
         events.push('upload');
-        result = { id: next, urls: [`https://${next.slice(0, 8)}-platform-test.example.workers.dev`] };
+        result = {
+          id: next,
+          urls: [`https://${next.slice(0, 8)}-platform-test.example.workers.dev`],
+        };
       } else if (row.method === 'GET' && path.endsWith('/deployments')) {
         events.push('owner');
         result = { deployments: [{ versions: traffic }] };

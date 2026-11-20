@@ -732,9 +732,7 @@ describe('platform credential onboarding', () => {
     );
     expect(mocks.open).toHaveBeenCalledWith(expect.stringContaining('name=Test+Management'));
     const secrets = readPendingInstallationSecrets(listInstallationManifests()[0]!);
-    expect(secrets?.cloudflareApiToken).toBe(
-      environment.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN,
-    );
+    expect(secrets?.cloudflareApiToken).toBe(environment.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN);
     expect(secrets?.managementApiToken).toBe('management-secret');
     expect(mocks.install.mock.calls[0]![1].managementApiToken).toBe('management-secret');
     const savedFiles = readdirSync(directory, { recursive: true }).filter(
@@ -759,8 +757,7 @@ describe('platform credential onboarding', () => {
         managementApiToken: 'saved-management-secret',
       });
       // An explicit runtime token would replace the saved one.
-      const { PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN: _runtime, ...resumeEnvironment } =
-        environment;
+      const { PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN: _runtime, ...resumeEnvironment } = environment;
       for (const [key, value] of Object.entries(resumeEnvironment)) {
         vi.stubEnv(key, value);
       }
@@ -1222,7 +1219,9 @@ describe('platform credential onboarding', () => {
     expect(success).toHaveBeenCalledWith(
       'Test is installed at https://platform-test-setup-api.account.workers.dev/admin.',
     );
-    expect(info).toHaveBeenCalledWith('API URL: https://platform-test-setup-api.account.workers.dev');
+    expect(info).toHaveBeenCalledWith(
+      'API URL: https://platform-test-setup-api.account.workers.dev',
+    );
     // Spinner cancellation must not swallow the CLI's cancellation signal.
     const emit = vi.spyOn(process, 'emit').mockReturnValueOnce(true);
     mocks.spinner.mock.calls[0]![0].onCancel();
@@ -1254,8 +1253,7 @@ describe('platform credential onboarding', () => {
 
   it('names the database variable while a refused database can still be replaced', async () => {
     const info = vi.spyOn(log, 'info').mockImplementation(() => {});
-    const hint =
-      'To use another PostgreSQL database, set PLATFORM_DATABASE_URL to its URL first.';
+    const hint = 'To use another PostgreSQL database, set PLATFORM_DATABASE_URL to its URL first.';
     const refused =
       'platform: This PostgreSQL database is already claimed by bwf platform installation old-team.';
     mocks.install.mockImplementationOnce(async (_plan, _secrets, manifest) => {
@@ -1311,9 +1309,9 @@ describe('platform credential onboarding', () => {
       ),
     ).rejects.toThrow('Worker upload failed');
     expect(info.mock.calls.some(([message]) => message.startsWith('Continue with:'))).toBe(true);
-    expect(
-      info.mock.calls.some(([message]) => message.includes('PLATFORM_DATABASE_URL')),
-    ).toBe(false);
+    expect(info.mock.calls.some(([message]) => message.includes('PLATFORM_DATABASE_URL'))).toBe(
+      false,
+    );
   });
 
   it('keeps the database hint out of failures after this run claims the database', async () => {
@@ -1328,9 +1326,9 @@ describe('platform credential onboarding', () => {
       'App access token rejected',
     );
     expect(info.mock.calls.some(([message]) => message.startsWith('Continue with:'))).toBe(true);
-    expect(
-      info.mock.calls.some(([message]) => message.includes('PLATFORM_DATABASE_URL')),
-    ).toBe(false);
+    expect(info.mock.calls.some(([message]) => message.includes('PLATFORM_DATABASE_URL'))).toBe(
+      false,
+    );
   });
 
   it.each(['bwf', 'bwf-dev'])(

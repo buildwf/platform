@@ -13,18 +13,21 @@ describe('internal binding filtering (real implementation)', () => {
     __PROJECT_ID: 'proj_123',
   };
 
-  it.each(['__PLATFORM_PROXY_TOKEN', '__PROJECT_ID'])('hides %s from every env accessor', (name) => {
-    withRuntimeEnv(testEnv, () => {
-      const env = getRuntimeEnv();
-      expect(env[name]).toBeUndefined();
-      expect(name in env).toBe(false);
-      expect(Object.keys(env)).not.toContain(name);
-      expect(getRuntimeBinding(name)).toBeUndefined();
-      expect(() => requireRuntimeBinding(name)).toThrow(
-        `env: Missing Cloudflare binding '${name}'`,
-      );
-    });
-  });
+  it.each(['__PLATFORM_PROXY_TOKEN', '__PROJECT_ID'])(
+    'hides %s from every env accessor',
+    (name) => {
+      withRuntimeEnv(testEnv, () => {
+        const env = getRuntimeEnv();
+        expect(env[name]).toBeUndefined();
+        expect(name in env).toBe(false);
+        expect(Object.keys(env)).not.toContain(name);
+        expect(getRuntimeBinding(name)).toBeUndefined();
+        expect(() => requireRuntimeBinding(name)).toThrow(
+          `env: Missing Cloudflare binding '${name}'`,
+        );
+      });
+    },
+  );
 
   it('keeps user bindings visible', () => {
     withRuntimeEnv(testEnv, () => {

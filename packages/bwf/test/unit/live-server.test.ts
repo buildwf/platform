@@ -563,7 +563,10 @@ describe('live Durable Object runtime', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       const response = await stream.connect(
-        liveContext(harness.env, 'https://platform.live/live?connectionId=connection-connect-error'),
+        liveContext(
+          harness.env,
+          'https://platform.live/live?connectionId=connection-connect-error',
+        ),
       );
       const text = await response.text();
 

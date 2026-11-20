@@ -208,7 +208,12 @@ describe('SPA asset routing policy', () => {
 
     const assetConfig = readBuiltAssetConfig();
     expect(assetConfig.not_found_handling).toBe('single-page-application');
-    expect(assetConfig.run_worker_first).toEqual(['/api', '/api/*', '/__platform', '/__platform/*']);
+    expect(assetConfig.run_worker_first).toEqual([
+      '/api',
+      '/api/*',
+      '/__platform',
+      '/__platform/*',
+    ]);
     expectNoGeneratedAssetHeaders();
   });
 
@@ -225,7 +230,10 @@ describe('SPA asset routing policy', () => {
         '/platform-native-header-regression.txt': ['X-Platform-Native-Rule: applied'],
       },
       redirects: {
-        '/platform-native-redirect-regression.txt': { to: '/redirect-target', status: 302 as const },
+        '/platform-native-redirect-regression.txt': {
+          to: '/redirect-target',
+          status: 302 as const,
+        },
       },
     };
     writeFileSync(bwfConfig, renderBwfConfig({ ...config, routing }));

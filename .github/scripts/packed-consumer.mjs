@@ -140,7 +140,8 @@ writeFileSync(
 environment.npm_config_registry = registry.origin;
 environment.NPM_CONFIG_REGISTRY = registry.origin;
 environment.PNPM_CONFIG_REGISTRY = registry.origin;
-const version = packages.find((pkg) => pkg.manifest.name === '@builtbyfriends/bwf').manifest.version;
+const version = packages.find((pkg) => pkg.manifest.name === '@builtbyfriends/bwf').manifest
+  .version;
 const managers = process.env.BWF_PACKED_PM ? [process.env.BWF_PACKED_PM] : ['npm', 'pnpm'];
 assert(managers.every((manager) => ['npm', 'pnpm'].includes(manager)));
 const frameworks = ['react'];
@@ -180,7 +181,9 @@ try {
         const agentInstructions = readFileSync(join(fixture, 'AGENTS.md'), 'utf8');
         assert.equal(agentInstructions.match(/^- /gm)?.length, 2);
         assert(agentInstructions.includes('node_modules/@builtbyfriends/bwf/docs/'));
-        assert(existsSync(join(fixture, 'node_modules/@builtbyfriends/bwf/docs/guide/quickstart.md')));
+        assert(
+          existsSync(join(fixture, 'node_modules/@builtbyfriends/bwf/docs/guide/quickstart.md')),
+        );
         assert(
           existsSync(join(fixture, '.git')),
           'Init should initialize the accepted Git repository',
@@ -255,8 +258,9 @@ try {
           assert(installedVite.version.startsWith('8.'), 'The consumer must use public Vite 8');
         }
         assert.equal(
-          JSON.parse(readFileSync(join(fixture, 'node_modules/@builtbyfriends/bwf/package.json'), 'utf8'))
-            .version,
+          JSON.parse(
+            readFileSync(join(fixture, 'node_modules/@builtbyfriends/bwf/package.json'), 'utf8'),
+          ).version,
           version,
         );
         await run(process.execPath, [cli, 'prepare'], fixture);

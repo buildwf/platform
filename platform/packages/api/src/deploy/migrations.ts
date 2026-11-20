@@ -177,10 +177,13 @@ async function reconcileStableAppMigration(
   attemptId: string,
 ): Promise<UserWorkerMigrationResult> {
   const response = await userWorker.fetch(
-    new Request(`https://internal/__platform/migrate/app/attempt/${encodeURIComponent(attemptId)}`, {
-      headers: { 'x-platform-internal': token },
-      signal: AbortSignal.timeout(30_000),
-    }),
+    new Request(
+      `https://internal/__platform/migrate/app/attempt/${encodeURIComponent(attemptId)}`,
+      {
+        headers: { 'x-platform-internal': token },
+        signal: AbortSignal.timeout(30_000),
+      },
+    ),
   );
   const text = await response.text();
   try {

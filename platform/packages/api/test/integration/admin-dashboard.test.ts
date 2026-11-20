@@ -820,9 +820,8 @@ const configuringZeroTrust = {
 };
 
 function pageSnapshot(html: string): string {
-  const match = /<script type="application\/json" id="platform-admin-page">([\s\S]*?)<\/script>/.exec(
-    html,
-  );
+  const match =
+    /<script type="application\/json" id="platform-admin-page">([\s\S]*?)<\/script>/.exec(html);
   expect(match).not.toBeNull();
   const page = JSON.parse(match![1]!) as { shared: { adminFateSnapshot?: unknown } };
   expect(page.shared.adminFateSnapshot).toBeDefined();

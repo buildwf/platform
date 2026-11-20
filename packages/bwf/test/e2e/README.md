@@ -18,8 +18,8 @@ in the ignored fixture directory printed by the test. The tracked playground is 
 The suite skips unless both credential variables are set. Credentialed runs also require an explicit,
 stable namespace reserved for this suite in the selected test account.
 
-| Environment variable      | Purpose                                                                                         |
-| ------------------------- | ----------------------------------------------------------------------------------------------- |
+| Environment variable         | Purpose                                                                                         |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- |
 | `PLATFORM_E2E_CF_TOKEN`      | Cloudflare API token with Workers Scripts: Edit, D1: Edit, and Workers KV Storage: Edit.        |
 | `PLATFORM_E2E_CF_ACCOUNT_ID` | Test account ID.                                                                                |
 | `PLATFORM_E2E_NAMESPACE`     | Short lowercase account-local namespace, such as a team or operator name. Reuse it across runs. |

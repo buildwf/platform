@@ -6843,7 +6843,9 @@ describe('build-agent lifecycle (container must always exit)', () => {
         '--no-login',
       ]);
       expect(calls[1]?.[2]?.env?.BWF_TOKEN).toBeUndefined();
-      expect(calls[1]?.[2]?.env?.PLATFORM_ACCESS_ORIGIN).toBe('https://platform.buildwithfriends.dev');
+      expect(calls[1]?.[2]?.env?.PLATFORM_ACCESS_ORIGIN).toBe(
+        'https://platform.buildwithfriends.dev',
+      );
       expect(calls.some(([, args]) => args.includes('deploy'))).toBe(connectExit === 0);
     },
   );

@@ -138,7 +138,12 @@ describe('sendEmail (SEND_EMAIL binding)', () => {
       },
     };
     const result = await withRuntimeEnv(
-      { SEND_EMAIL: binding, __PLATFORM_PROXY: proxy, __PLATFORM_PROXY_TOKEN: 't', __PROJECT_ID: 'p' },
+      {
+        SEND_EMAIL: binding,
+        __PLATFORM_PROXY: proxy,
+        __PLATFORM_PROXY_TOKEN: 't',
+        __PROJECT_ID: 'p',
+      },
       () => sendEmail({ from: 'a@mail.acme.com', to: 'b@example.com', subject: 's', text: 't' }),
     );
     expect(result.ok).toBe(true);

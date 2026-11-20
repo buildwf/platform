@@ -128,7 +128,9 @@ describe('bwf prepare (subprocess)', () => {
     expect(parsedTsconfig.compilerOptions?.paths?.['@builtbyfriends/bwf/routes']).toEqual([
       './routes.d.ts',
     ]);
-    expect(parsedTsconfig.compilerOptions?.paths?.['@builtbyfriends/bwf/db']).toEqual(['./db.d.ts']);
+    expect(parsedTsconfig.compilerOptions?.paths?.['@builtbyfriends/bwf/db']).toEqual([
+      './db.d.ts',
+    ]);
   });
 
   it('still prepares tsconfig when no generated source inputs exist', () => {

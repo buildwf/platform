@@ -85,7 +85,9 @@ describe('buildBwfManifest migration-binding consistency', () => {
       className: 'PlatformLiveStreamDurableObject_abcd1234',
       storage: 'sqlite',
       classes: ['PlatformLiveStreamDurableObject_abcd1234'],
-      migrations: [{ tag: 'live-v1', newSqliteClasses: ['PlatformLiveStreamDurableObject_abcd1234'] }],
+      migrations: [
+        { tag: 'live-v1', newSqliteClasses: ['PlatformLiveStreamDurableObject_abcd1234'] },
+      ],
     });
   });
 
@@ -140,7 +142,10 @@ describe('createMigrationHandler with missing D1 binding', () => {
   }
 
   it('returns error when env.DB is undefined', async () => {
-    const handler = createMigrationHandler({ __PLATFORM_PROXY_TOKEN: proxyToken }, sampleMigrations);
+    const handler = createMigrationHandler(
+      { __PLATFORM_PROXY_TOKEN: proxyToken },
+      sampleMigrations,
+    );
 
     const response = await handler(makeRequest());
     const body = (await response.json()) as MigrationResponse;
@@ -166,7 +171,10 @@ describe('createMigrationHandler with missing D1 binding', () => {
   });
 
   it('rejects requests with wrong proxy token', async () => {
-    const handler = createMigrationHandler({ __PLATFORM_PROXY_TOKEN: proxyToken }, sampleMigrations);
+    const handler = createMigrationHandler(
+      { __PLATFORM_PROXY_TOKEN: proxyToken },
+      sampleMigrations,
+    );
 
     const badRequest = new Request('https://example.com/__platform/migrate', {
       method: 'POST',
@@ -181,7 +189,10 @@ describe('createMigrationHandler with missing D1 binding', () => {
   });
 
   it('rejects requests with no proxy token', async () => {
-    const handler = createMigrationHandler({ __PLATFORM_PROXY_TOKEN: proxyToken }, sampleMigrations);
+    const handler = createMigrationHandler(
+      { __PLATFORM_PROXY_TOKEN: proxyToken },
+      sampleMigrations,
+    );
 
     const noAuthRequest = new Request('https://example.com/__platform/migrate', {
       method: 'POST',

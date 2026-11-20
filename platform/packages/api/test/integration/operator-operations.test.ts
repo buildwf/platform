@@ -1543,7 +1543,11 @@ describe('proxy token rotation', () => {
         cf.seedHostScript({
           scriptName,
           bindings: [
-            { type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: await tok(project.id, gen) },
+            {
+              type: 'plain_text',
+              name: '__PLATFORM_PROXY_TOKEN',
+              text: await tok(project.id, gen),
+            },
             { type: 'secret_text', name: 'API_KEY' },
           ],
         });
@@ -1570,7 +1574,8 @@ describe('proxy token rotation', () => {
   }
 
   const scriptToken = (cf: MockCfApiHandle, script: string) =>
-    cf.state.hostScripts.get(script)?.bindings.find((b) => b.name === '__PLATFORM_PROXY_TOKEN')?.text;
+    cf.state.hostScripts.get(script)?.bindings.find((b) => b.name === '__PLATFORM_PROXY_TOKEN')
+      ?.text;
 
   /** Moves every rotation wait an hour back and makes the jobs due. */
   async function endWaits() {

@@ -2071,7 +2071,8 @@ export async function runBuild(deps = {}) {
   };
   const hasLocalBwf =
     deps.hasLocalBwf ??
-    (() => existsSync(`${WORK_DIR}/node_modules/.bin/platform`) || (pnpPresent && repoDeclaresBwf()));
+    (() =>
+      existsSync(`${WORK_DIR}/node_modules/.bin/platform`) || (pnpPresent && repoDeclaresBwf()));
 
   try {
     // Capture the deploy token into a local, then drop it from the parent's heap

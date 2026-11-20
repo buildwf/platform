@@ -46,7 +46,9 @@ describe('Durable Object migration planning', () => {
   });
 
   it('grandfathers a configured class whose legacy migration history is unavailable', () => {
-    expect(appendSqliteClassMigration([], ['LegacyRoom'], 'platform-ws-v1', ['LegacyRoom'])).toEqual({
+    expect(
+      appendSqliteClassMigration([], ['LegacyRoom'], 'platform-ws-v1', ['LegacyRoom']),
+    ).toEqual({
       migrations: [],
       added: false,
     });

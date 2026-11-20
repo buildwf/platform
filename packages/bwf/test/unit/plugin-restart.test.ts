@@ -220,7 +220,10 @@ describe('restartPlugin middlewares', () => {
   it('restarts from the toast navigation without Fetch Metadata', () => {
     vi.useFakeTimers();
     const { dispatch, restart, token } = createFakeViteServer();
-    const page = dispatch('GET', `/__platform/restarting?return=%2F&t=${encodeURIComponent(token)}`);
+    const page = dispatch(
+      'GET',
+      `/__platform/restarting?return=%2F&t=${encodeURIComponent(token)}`,
+    );
     const res = dispatch('POST', '/__platform/restart', {
       origin: 'http://localhost:5173',
       'x-platform-restart': pageTokenOf(page.body),
@@ -269,7 +272,9 @@ describe('restartPlugin middlewares', () => {
     'refuses GET /__platform/restarting with Sec-Fetch-Site: %s',
     (site) => {
       const { dispatch } = createFakeViteServer();
-      const res = dispatch('GET', '/__platform/restarting?return=%2Ffoo', { 'sec-fetch-site': site });
+      const res = dispatch('GET', '/__platform/restarting?return=%2Ffoo', {
+        'sec-fetch-site': site,
+      });
       expect(res.status).toBe(403);
       expect(res.headers['Content-Type']).toBe('text/plain');
       expect(res.body).not.toContain('var target=');
@@ -309,7 +314,10 @@ describe('restartPlugin middlewares', () => {
   ])('rejects a POST /__platform/restart with %s', (_label, headers) => {
     vi.useFakeTimers();
     const { dispatch, restart, token } = createFakeViteServer();
-    const res = dispatch('POST', '/__platform/restart', { ...headers, 'x-platform-restart': token });
+    const res = dispatch('POST', '/__platform/restart', {
+      ...headers,
+      'x-platform-restart': token,
+    });
     expect(res.status).toBe(403);
     vi.runAllTimers();
     expect(restart).not.toHaveBeenCalled();
@@ -326,7 +334,10 @@ describe('restartPlugin middlewares', () => {
   ])('accepts a POST /__platform/restart with the token and %s', (_label, headers) => {
     vi.useFakeTimers();
     const { dispatch, restart, token } = createFakeViteServer();
-    const res = dispatch('POST', '/__platform/restart', { ...headers, 'x-platform-restart': token });
+    const res = dispatch('POST', '/__platform/restart', {
+      ...headers,
+      'x-platform-restart': token,
+    });
     expect(res.status).toBe(200);
     expect(dispatch('GET', '/__platform/ping').status).toBe(503);
     vi.runAllTimers();

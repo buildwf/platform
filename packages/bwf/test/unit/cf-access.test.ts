@@ -238,7 +238,11 @@ describe('origin-scoped self-hosted Access login', () => {
       'token',
       '-app=https://api.example.com',
     ]);
-    expect(keyring.write).toHaveBeenCalledWith('dev.platform.cli.access', expect.any(String), token);
+    expect(keyring.write).toHaveBeenCalledWith(
+      'dev.platform.cli.access',
+      expect.any(String),
+      token,
+    );
     expect(cfAccessHeaders(process.env, 'https://api.example.com')).toEqual({
       'cf-access-token': token,
     });
@@ -269,7 +273,11 @@ describe('origin-scoped self-hosted Access login', () => {
     expect(cfAccessHeaders(process.env, 'https://api.example.com')).toEqual({
       'cf-access-token': fresh,
     });
-    expect(keyring.write).toHaveBeenCalledWith('dev.platform.cli.access', expect.any(String), fresh);
+    expect(keyring.write).toHaveBeenCalledWith(
+      'dev.platform.cli.access',
+      expect.any(String),
+      fresh,
+    );
   });
 
   it('does not treat arbitrary redirects as company authentication challenges', async () => {
