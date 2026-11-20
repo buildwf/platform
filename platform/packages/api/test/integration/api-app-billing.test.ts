@@ -27,6 +27,7 @@ type Answer = {
   caps: { aiNeuronsPerMonth: number };
   aiNeuronsUsed: number;
   used: { aiNeurons: number };
+  billingPeriodStart: string;
   url: string;
 };
 const dataOf = async (response: Response | Promise<Response>) =>
@@ -131,7 +132,12 @@ describe('app billing', () => {
   });
 
   it('moves a person to the plan they bought and back when the subscription ends', async () => {
+    // Bought on Nov 19: it renews on Dec 19, not on the first of the month.
+    const periodEnd = Date.UTC(2026, 11, 19, 12) / 1000;
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      if (String(input) === 'https://api.stripe.com/v1/subscriptions/sub_1') {
+        return Response.json({ id: 'sub_1', items: { data: [{ current_period_end: periodEnd }] } });
+      }
       if (String(input).startsWith('https://api.stripe.com/')) {
         return Response.json({ url: 'https://stripe.example/session' });
       }
@@ -158,7 +164,14 @@ describe('app billing', () => {
       ).status,
     ).toBe(200);
     const bought = await dataOf(call('/usage.status', { person: 'p1' }));
-    expect(bought).toMatchObject({ plan: 'solo', subscribed: true });
+    expect(bought).toMatchObject({
+      plan: 'solo',
+      subscribed: true,
+      renewsAt: '2026-12-19T12:00:00.000Z',
+    });
+    expect(bought).not.toHaveProperty('subscriptionId');
+    // The usage counters still reset on the first of the month.
+    expect(bought.billingPeriodStart).toMatch(/^\d{4}-\d{2}-01T00:00:00\.000Z$/);
     const portal = await call('/billing.portal', {
       person: 'p1',
       returnUrl: 'https://example.com/plan',
@@ -166,11 +179,17 @@ describe('app billing', () => {
     expect((await dataOf(portal)).url).toBe('https://stripe.example/session');
     fetchSpy.mockRestore();
 
+    // When Stripe can't be reached, the answer still comes back, without a renewal date.
+    const offline = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.error());
+    const unreachable = await dataOf(call('/usage.status', { person: 'p1' }));
+    expect(unreachable).toMatchObject({ plan: 'solo', subscribed: true });
+    expect(unreachable).not.toHaveProperty('renewsAt');
+    offline.mockRestore();
+
     await webhook({ type: 'customer.subscription.deleted', data: { object: { metadata } } });
-    expect(await dataOf(call('/usage.status', { person: 'p1' }))).toMatchObject({
-      plan: 'free',
-      subscribed: false,
-    });
+    const ended = await dataOf(call('/usage.status', { person: 'p1' }));
+    expect(ended).toMatchObject({ plan: 'free', subscribed: false });
+    expect(ended).not.toHaveProperty('renewsAt');
   });
 
   it('refuses an unsigned webhook', async () => {
