@@ -19,6 +19,7 @@
     "@stylexjs/stylex": "catalog:",
     "hono": "catalog:platform",
     "lucide-react": "catalog:",
+    "oauth4webapi": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   },

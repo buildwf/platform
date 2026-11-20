@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { setCookie, getCookie, deleteCookie } from 'hono/cookie';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import { handleAdminOAuthCallback, isAdminOAuthState } from '../admin/routes/login.ts';
 import { AuthenticationConfigurationError, readAuthSettings } from '../auth/configuration.ts';
 import { getGitHubAuthorizeUrl, exchangeCodeForToken, getGitHubUser } from '../auth/github.ts';
@@ -17,11 +18,7 @@ import {
   createLoginTestLaunch,
   confirmIdentityLink,
 } from '../auth/login.ts';
-import {
-  CLI_CODE_CHALLENGE_METHOD,
-  createCodeChallenge,
-  isValidCodeVerifier,
-} from '../auth/pkce.ts';
+import { CLI_CODE_CHALLENGE_METHOD, isValidCodeVerifier } from '../auth/pkce.ts';
 import { updateUserRevokingInheritedDestinations } from '../auth/profile.ts';
 import {
   isAllowedRedirect,
@@ -591,7 +588,7 @@ app.post('/cli/token', async (context) => {
     return context.json({ error: 'code, state, and code_verifier are required' }, 400);
   }
 
-  const codeChallenge = await createCodeChallenge(body.code_verifier);
+  const codeChallenge = await calculatePKCECodeChallenge(body.code_verifier);
   const db = context.get('db');
   const jwt = await consumeCliAuthCode(
     db,

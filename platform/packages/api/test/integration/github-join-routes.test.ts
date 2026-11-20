@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import {
   afterAll,
   afterEach,
@@ -11,7 +12,6 @@ import {
   vi,
 } from 'vite-plus/test';
 import { hmacSignState } from '../../src/auth/hmac.ts';
-import { createCodeChallenge } from '../../src/auth/pkce.ts';
 import type { Db } from '../../src/db.ts';
 import * as dbModule from '../../src/db.ts';
 import {
@@ -273,7 +273,7 @@ async function countAllMemberRows(db: Db): Promise<number> {
 describe('GET /github/join-url', () => {
   it('returns a signed join url with purpose:join, the challenge, future exp, and no userId', async () => {
     const user = await createTestUser(env.db);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'http://localhost:9999/callback';
 
     const res = await app.fetch(
@@ -302,7 +302,7 @@ describe('GET /github/join-url', () => {
 
   it('rejects a non-localhost redirect', async () => {
     const user = await createTestUser(env.db);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'https://evil.example.com/callback';
 
     const res = await app.fetch(
@@ -318,7 +318,7 @@ describe('GET /github/join-url', () => {
 
   it('fails closed (503, github_oauth_not_configured) when App user OAuth is unset', async () => {
     const user = await createTestUser(env.db);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'http://localhost:9999/callback';
 
     // No GITHUB_APP_CLIENT_ID/SECRET on env.
@@ -348,7 +348,7 @@ describe('GET /github/join-url', () => {
 describe('GET /github/join-callback', () => {
   it('redirects to localhost with a join_code and binds NOTHING', async () => {
     await seedInstall({ installationId: '700' });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
 
     const { res, body, joinCode, target } = await runJoinCallback({
       redirect: 'http://localhost:9999/callback',
@@ -379,7 +379,7 @@ describe('GET /github/join-callback', () => {
   // first; the spied value is what the artifact carries.
   it('stamps the join_code iat via getDbNowMs BEFORE the GitHub proof', async () => {
     await seedInstall({ installationId: '700' });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
 
     const callOrder: Array<string> = [];
     const SENTINEL_IAT = 1_700_000_000_000;
@@ -435,7 +435,7 @@ describe('GET /github/join-callback', () => {
   it('sends a matching redirect_uri on the token exchange', async () => {
     await seedInstall({ installationId: '700' });
     const { tokenExchangeBody } = mockUserJoin({ installationIds: ['700'], accountId: '5551234' });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintJoinState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -456,7 +456,7 @@ describe('GET /github/join-callback', () => {
 
   it('rejects a forged/altered state (bad signature)', async () => {
     mockUserJoin({ installationIds: ['700'], accountId: '5551234' });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintJoinState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -481,7 +481,7 @@ describe('GET /github/join-callback', () => {
 
   it('rejects an expired state', async () => {
     mockUserJoin({ installationIds: ['700'], accountId: '5551234' });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintJoinState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -500,7 +500,7 @@ describe('GET /github/join-callback', () => {
 
   it('rejects a link-purpose state (cross-flow replay)', async () => {
     mockUserJoin({ installationIds: ['700'], accountId: '5551234' });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     // A validly-signed state whose purpose is 'link' must not drive the join
     // callback — the purpose discriminator blocks cross-flow replay.
     const state = await mintJoinState({
@@ -521,7 +521,7 @@ describe('GET /github/join-callback', () => {
   });
 
   it('returns 400 (not 500) for a malformed, non-base64url state signature', async () => {
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const encoded = btoa(
       JSON.stringify({
         redirect: 'http://localhost:9999/callback',
@@ -546,7 +546,7 @@ describe('GET /github/join-callback', () => {
     // acceptCode:false → the token exchange fails → the accessible set is empty →
     // nothing to join, so the error bounces to the CLI's localhost.
     mockUserJoin({ installationIds: ['700'], accountId: '5551234', acceptCode: false });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintJoinState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -572,7 +572,7 @@ describe('GET /github/join-callback', () => {
   });
 
   it('bounces the GitHub denial (no code, error param) to the CLI localhost', async () => {
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintJoinState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -605,7 +605,7 @@ describe('GET /github/join-callback', () => {
     await seedInstall({ installationId: '700', accountType: 'Organization' });
     await seedInstall({ installationId: '701', accountType: 'User' });
 
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const { joinCode } = await runJoinCallback({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -627,7 +627,7 @@ describe('POST /github/join/complete', () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
     await seedInstall({ installationId: '700' });
 
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const { joinCode } = await runJoinCallback({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -658,7 +658,7 @@ describe('POST /github/join/complete', () => {
     const completer = await createTestUser(env.db, 'completer', 'google', 'google-completer');
     await seedInstall({ installationId: '700' });
 
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const { joinCode } = await runJoinCallback({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -687,7 +687,7 @@ describe('POST /github/join/complete', () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
     await seedInstall({ installationId: '700' });
 
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
 
     const first = await runJoinCallback({
       redirect: 'http://localhost:9999/callback',
@@ -731,7 +731,7 @@ describe('POST /github/join/complete', () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
     await seedInstall({ installationId: '700' });
 
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const { joinCode } = await runJoinCallback({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -755,7 +755,7 @@ describe('POST /github/join/complete', () => {
   it('rejects an expired join_code', async () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
     await seedInstall({ installationId: '700' });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     // Mint an already-expired join_code directly with the same signer scheme.
     const encoded = btoa(
       JSON.stringify({
@@ -790,7 +790,7 @@ describe('POST /github/join/complete', () => {
     await seedInstall({ installationId: '700' });
     await seedInstall({ installationId: '800' });
 
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const { joinCode } = await runJoinCallback({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -828,7 +828,7 @@ describe('POST /github/join/complete', () => {
     });
     expect(await getGitHubInstallationsByUser(env.db, installer.id)).toHaveLength(0);
 
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const { joinCode } = await runJoinCallback({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -884,7 +884,7 @@ describe('POST /github/join/complete', () => {
     // Before joining, the joiner sees nothing.
     expect(await getGitHubInstallationsByUser(env.db, joiner.id)).toHaveLength(0);
 
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const { joinCode } = await runJoinCallback({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -915,7 +915,7 @@ describe('POST /github/join/complete', () => {
     // The member was removed AFTER minting the join_code: record the tombstone
     // now (revoked_at = now()), and forge a join_code stamped a minute in the past.
     await recordInstallationRevocations(env.db, ['700'], JOIN_ACCOUNT_ID);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const staleJoinCode = await mintJoinCode({
       installationIds: ['700'],
       codeChallenge: challenge,
@@ -945,7 +945,7 @@ describe('POST /github/join/complete', () => {
     // Revoke first, then the member is re-added and re-joins: the fresh join_code
     // is stamped in the future relative to the tombstone.
     await recordInstallationRevocations(env.db, ['700'], JOIN_ACCOUNT_ID);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const freshJoinCode = await mintJoinCode({
       installationIds: ['700'],
       codeChallenge: challenge,
@@ -972,7 +972,7 @@ describe('POST /github/join/complete', () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
     await seedInstall({ installationId: '700' });
 
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const encoded = btoa(
       JSON.stringify({
         purpose: 'join',
@@ -1004,7 +1004,7 @@ describe('POST /github/join/complete', () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
     await seedInstall({ installationId: '700' });
 
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const encoded = btoa(
       JSON.stringify({
         purpose: 'join',
@@ -1046,7 +1046,7 @@ describe('POST /github/join/complete', () => {
     // 700 was revoked AFTER the join_code was minted (stale → skip); 701 has no
     // tombstone (fresh → create). One join_code covers both installs.
     await recordInstallationRevocations(env.db, ['700'], JOIN_ACCOUNT_ID);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const joinCode = await mintJoinCode({
       installationIds: ['700', '701'],
       codeChallenge: challenge,

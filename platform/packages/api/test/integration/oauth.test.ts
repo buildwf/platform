@@ -1,5 +1,6 @@
 import { createDeployArtifact } from '@builtbyfriends/deploy-core';
 import { eq, isNull } from 'drizzle-orm';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import {
   beforeAll,
   beforeEach,
@@ -21,7 +22,6 @@ import {
   setOAuthPreviewPermission,
   purgeExpiredOAuthRequests,
 } from '../../src/auth/oauth.ts';
-import { createCodeChallenge } from '../../src/auth/pkce.ts';
 import { createHumanSession, revokeConnectionSessions } from '../../src/auth/sessions.ts';
 import { processDeploymentBatch } from '../../src/deployment-execution.ts';
 import type { ApiEnv } from '../../src/env.ts';
@@ -84,7 +84,7 @@ async function authorize(extra: Record<string, string> = {}) {
     response_type: 'code',
     scope: 'profile',
     state,
-    code_challenge: await createCodeChallenge(verifier),
+    code_challenge: await calculatePKCECodeChallenge(verifier),
     code_challenge_method: 'S256',
     ...extra,
   });
@@ -170,7 +170,7 @@ async function publishApproval(profile: string, slug: string, prepared = artifac
     body: JSON.stringify({
       redirect_uri: redirect,
       state,
-      code_challenge: await createCodeChallenge(verifier),
+      code_challenge: await calculatePKCECodeChallenge(verifier),
       code_challenge_method: 'S256',
       slug,
       checkpoint: 'checkpoint-123',
@@ -487,9 +487,9 @@ describe('registered OAuth applications', () => {
       },
     } as Fetcher;
     const serve = '/oauth/preview-serve/' + preview.project_id;
-    expect((await request(serve, { headers: { 'X-Platform-Preview-URL': preview.url } })).status).toBe(
-      401,
-    );
+    expect(
+      (await request(serve, { headers: { 'X-Platform-Preview-URL': preview.url } })).status,
+    ).toBe(401);
     const opened = await request(serve, { headers: { 'X-Platform-Preview-URL': url } });
     expect(opened.status).toBe(303);
     expect(opened.headers.get('Location')).toBe(preview.url + '/');
@@ -529,7 +529,10 @@ describe('registered OAuth applications', () => {
     expect(
       (
         await request(serve, {
-          headers: { Cookie: cookie, 'X-Platform-Preview-URL': 'https://other-preview.example.com/' },
+          headers: {
+            Cookie: cookie,
+            'X-Platform-Preview-URL': 'https://other-preview.example.com/',
+          },
         })
       ).status,
     ).toBe(404);
@@ -850,7 +853,7 @@ describe('registered OAuth applications', () => {
       response_type: 'code',
       scope: 'profile',
       state,
-      code_challenge: await createCodeChallenge(verifier),
+      code_challenge: await calculatePKCECodeChallenge(verifier),
       code_challenge_method: 'S256',
     });
     const started = await request('/oauth/authorize?' + params);
@@ -1129,7 +1132,9 @@ describe('registered OAuth applications', () => {
     await env.db.update(oauthGrants).set({ expires_at: longAgo });
     const connections = async () =>
       (
-        await request('/oauth/connections', { headers: { Cookie: 'platform_oauth_user=' + user.jwt } })
+        await request('/oauth/connections', {
+          headers: { Cookie: 'platform_oauth_user=' + user.jwt },
+        })
       ).text();
     const [grant] = await env.db.select().from(oauthGrants);
     expect(await connections()).toContain(grant!.id);

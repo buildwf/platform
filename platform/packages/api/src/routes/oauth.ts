@@ -9,6 +9,7 @@ import { and, eq, gt, isNull, desc, or } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import { readAuthSettings, readEnabledLoginConnections } from '../auth/configuration.ts';
 import { signJwt, verifyJwt } from '../auth/jwt.ts';
 import type { OAuthRequestData, OAuthSession, OAuthScope } from '../auth/oauth-types.ts';
@@ -20,7 +21,7 @@ import {
   oauthBearer,
   OAuthError,
 } from '../auth/oauth.ts';
-import { createCodeChallenge, isValidCodeVerifier } from '../auth/pkce.ts';
+import { isValidCodeVerifier } from '../auth/pkce.ts';
 import { hashLoginProof, randomLoginProof } from '../auth/proofs.ts';
 import { validateHumanSession } from '../auth/sessions.ts';
 import { platformBrowserPage, platformBrowserError } from '../browser-page.ts';
@@ -359,7 +360,7 @@ app.get('/login', async (context) => {
   const target = new URL('/auth/login', origin(context));
   target.searchParams.set('redirect', callback.href);
   target.searchParams.set('provider', context.req.query('provider') ?? '');
-  target.searchParams.set('code_challenge', await createCodeChallenge(verifier));
+  target.searchParams.set('code_challenge', await calculatePKCECodeChallenge(verifier));
   target.searchParams.set('code_challenge_method', 'S256');
   if (isDevBypass(context.env) && context.req.query('provider') === 'local') {
     const { users } = await import('../schema.ts');
@@ -387,7 +388,7 @@ app.get('/login/callback', async (context) => {
     context.get('db'),
     context.req.query('code')!,
     request.id,
-    await createCodeChallenge(request.data.loginVerifier),
+    await calculatePKCECodeChallenge(request.data.loginVerifier),
     'S256',
   );
   const payload = token ? await verifyJwt(token, context.env.JWT_SECRET, 'api') : null;
@@ -713,7 +714,7 @@ app.post('/token', async (context) => {
       'An authorization code, redirect URI, and PKCE verifier are required.',
     );
   }
-  const challenge = await createCodeChallenge(form.code_verifier);
+  const challenge = await calculatePKCECodeChallenge(form.code_verifier);
   const accessToken = randomLoginProof();
   return context.get('db').transaction(async (tx) => {
     await activeOAuthClient(tx, client.id, true);

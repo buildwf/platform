@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import { chromium } from 'playwright';
 import {
   afterAll,
@@ -15,7 +16,6 @@ import {
   importLegacyAuthentication,
   stageLoginConfiguration,
 } from '../../src/auth/configuration.ts';
-import { createCodeChallenge } from '../../src/auth/pkce.ts';
 import { createHumanSession } from '../../src/auth/sessions.ts';
 import { app } from '../../src/index.ts';
 import {
@@ -124,7 +124,7 @@ beforeEach(async () => {
       if (url === `${issuer}/token`) {
         callbackCount++;
         const body = options?.body as URLSearchParams;
-        expect(await createCodeChallenge(body.get('code_verifier')!)).toBe(
+        expect(await calculatePKCECodeChallenge(body.get('code_verifier')!)).toBe(
           authorization.searchParams.get('code_challenge'),
         );
         expect(body.get('redirect_uri')).toBe(`${origin}/auth/callback`);
@@ -159,7 +159,7 @@ async function start(provider = 'company') {
   const url = new URL('/auth/login', origin);
   url.searchParams.set('provider', provider);
   url.searchParams.set('redirect', 'http://localhost:3456/callback?state=cli-state');
-  url.searchParams.set('code_challenge', await createCodeChallenge(verifier));
+  url.searchParams.set('code_challenge', await calculatePKCECodeChallenge(verifier));
   url.searchParams.set('code_challenge_method', 'S256');
   const response = await app.fetch(new Request(url), env);
   expect(response.status).toBe(302);
@@ -875,9 +875,7 @@ describe('configured platform login routes', () => {
 
   it('does not consume a legitimate flow when another browser sends its state', async () => {
     const flow = await start();
-    expect(
-      (await callback({ ...flow, cookie: 'platform_auth=another-browser' })).status,
-    ).toBe(400);
+    expect((await callback({ ...flow, cookie: 'platform_auth=another-browser' })).status).toBe(400);
     expect(await env.db.select().from(platformAuthAttempts)).toHaveLength(1);
     expect((await callback(flow)).status).toBe(302);
   });

@@ -4,6 +4,7 @@ import {
 } from '@builtbyfriends/platform';
 import { eq, sql } from 'drizzle-orm';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import { chromium } from 'playwright';
 import {
   afterAll,
@@ -24,7 +25,6 @@ import { readPlatformAdministratorSetupConnection } from '../../../../../package
 import { AUTH_SETUP_PROOF_PREFIX, initializeAuthentication } from '../../src/auth/bootstrap.ts';
 import { hmacSignState } from '../../src/auth/hmac.ts';
 import { signJwt } from '../../src/auth/jwt.ts';
-import { createCodeChallenge } from '../../src/auth/pkce.ts';
 import { hashLoginProof, randomLoginProof } from '../../src/auth/proofs.ts';
 import { app } from '../../src/index.ts';
 import {
@@ -97,7 +97,7 @@ beforeEach(async () => {
       if (url === `${issuer}/token`) {
         const body = options?.body as URLSearchParams;
         expect(body.get('client_secret')).toBe('oidc-bootstrap-secret');
-        expect(await createCodeChallenge(body.get('code_verifier')!)).toBe(
+        expect(await calculatePKCECodeChallenge(body.get('code_verifier')!)).toBe(
           authorization.searchParams.get('code_challenge'),
         );
         const idToken = await new SignJWT({

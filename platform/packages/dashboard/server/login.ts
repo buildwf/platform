@@ -1,8 +1,8 @@
 import { defineHandler } from '@builtbyfriends/bwf';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
+import { calculatePKCECodeChallenge, generateRandomCodeVerifier } from 'oauth4webapi';
 import { fetchApi, getPublicApiUrl } from '../lib/api.ts';
 import { isLocalDashboardHost } from '../lib/origin.ts';
-import { createPkceChallenge, createPkceVerifier } from '../lib/pkce.ts';
 import { discoveryDisplayName } from '../lib/platform-title.ts';
 
 export type Props = Readonly<{
@@ -40,9 +40,9 @@ export const loader = defineHandler<Props>(async (context) => {
   callback.searchParams.set('login_nonce', nonce);
   let pkceChallenge: string | undefined;
   if (isLocal) {
-    const verifier = createPkceVerifier();
+    const verifier = generateRandomCodeVerifier();
     const state = crypto.randomUUID();
-    pkceChallenge = await createPkceChallenge(verifier);
+    pkceChallenge = await calculatePKCECodeChallenge(verifier);
     callback.searchParams.set('state', state);
     setCookie(context, 'platform_auth_pkce', `${state}:${verifier}`, {
       httpOnly: true,

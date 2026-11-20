@@ -1,8 +1,8 @@
 import { createDeployArtifact } from '@builtbyfriends/deploy-core';
 import { eq } from 'drizzle-orm';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import { beforeAll, afterAll, beforeEach, describe, it, expect } from 'vite-plus/test';
 import { registerOAuthClient, setOAuthPreviewPermission } from '../../src/auth/oauth.ts';
-import { createCodeChallenge } from '../../src/auth/pkce.ts';
 import rawApp from '../../src/index.ts';
 import { APP_PERSON_GRANT } from '../../src/routes/oauth-app-person.ts';
 import { oauthGrants, oauthRequests, projects, users } from '../../src/schema.ts';
@@ -134,7 +134,7 @@ describe('app-person grant', () => {
       const response = await call('publish.request', access_token, {
         redirect_uri: redirect,
         state: 's'.repeat(32),
-        code_challenge: await createCodeChallenge('v'.repeat(64)),
+        code_challenge: await calculatePKCECodeChallenge('v'.repeat(64)),
         code_challenge_method: 'S256',
         slug: 'my-app',
         checkpoint: 'checkpoint-1',

@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import {
   afterAll,
   afterEach,
@@ -13,7 +14,6 @@ import {
 import { importLegacyAuthentication } from '../../src/auth/configuration.ts';
 import { hmacSignState } from '../../src/auth/hmac.ts';
 import { signJwt } from '../../src/auth/jwt.ts';
-import { createCodeChallenge } from '../../src/auth/pkce.ts';
 import { createHumanSession } from '../../src/auth/sessions.ts';
 import { emailReceipts } from '../../src/email/admission-schema.ts';
 import { createGitHubWebhookIngressProof } from '../../src/github/webhook-ingress-auth.ts';
@@ -487,7 +487,7 @@ describe('Access-protected platform requests', () => {
     const params = new URLSearchParams({
       provider: 'github',
       redirect: 'http://localhost:3456/callback?state=cli',
-      code_challenge: await createCodeChallenge(verifier),
+      code_challenge: await calculatePKCECodeChallenge(verifier),
       code_challenge_method: 'S256',
     });
     const start = await request(`/auth/login?${params}`, access);
