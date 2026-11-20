@@ -3,8 +3,9 @@ import type { Context } from 'hono';
 import type { OAuthScope, OAuthSession } from '../auth/oauth-types.ts';
 import { activeOAuthClient, authenticateOAuthClient, OAuthError } from '../auth/oauth.ts';
 import { hashLoginProof, randomLoginProof } from '../auth/proofs.ts';
-import { createUser, type Db } from '../db.ts';
+import { createUser, getProject, type Db } from '../db.ts';
 import type { ApiEnv } from '../env.ts';
+import { projectUrl } from '../project-url.ts';
 import { oauthGrants, oauthRequests, users } from '../schema.ts';
 import { isAdminSuspended } from '../suspension.ts';
 
@@ -202,7 +203,12 @@ export async function appPersonToken(
         })
         .where(eq(oauthRequests.id, request.id))
         .returning();
-      return approval.token(context.env, approved!, user.id);
+      const credential = await approval.token(context.env, approved!, user.id);
+      const project = await getProject(tx as Db, data.projectId);
+      // Where the app will answer once this deploy is live, so the application can show it.
+      return project && context.env.PLATFORM_APPLICATION
+        ? { ...credential, url: projectUrl(project, context.env) }
+        : credential;
     }
     return {
       access_token: accessToken,

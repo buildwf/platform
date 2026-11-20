@@ -156,6 +156,8 @@ describe('app-person grant', () => {
       approval_id: string;
     };
     expect(credential.scope).toBe('deploy:approve');
+    // Without an installed application there is no hostname to give.
+    expect(credential).not.toHaveProperty('url');
     expect(credential.approval_id).toBe(id);
     const [project] = await env.db
       .select()
