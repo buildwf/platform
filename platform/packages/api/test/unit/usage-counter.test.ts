@@ -242,11 +242,15 @@ describe('evaluateSandboxRuntimeLimit', () => {
     ).toBe(true);
   });
 
-  it('rejects any non-trivial sandbox use on the free tier (effectively disabled)', () => {
-    // free.sandboxRuntimeSecondsPerMonth is 1, so anything >= 1 total seconds
-    // is rejected by isWithinLimit.
+  it('works for the free plan (2h limit)', () => {
     expect(
       evaluateSandboxRuntimeLimit(makeState({ totalSandboxSeconds: 0, plan: 'free' }), 1),
+    ).toBe(false);
+    expect(
+      evaluateSandboxRuntimeLimit(
+        makeState({ totalSandboxSeconds: 2 * 3600 - 1, plan: 'free' }),
+        1,
+      ),
     ).toBe(true);
   });
 });
