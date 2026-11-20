@@ -24,9 +24,12 @@ const full = suite === 'full';
 const toolchain = process.env.BWF_PACKED_TOOLCHAIN ?? 'vite';
 assert(['vite', 'vite-plus'].includes(toolchain), 'BWF_PACKED_TOOLCHAIN must be vite or vite-plus');
 const useVitePlus = toolchain === 'vite-plus';
-const vitePlusVersion = JSON.parse(
+const vitePlusManifest = JSON.parse(
   readFileSync(join(root, 'node_modules/vite-plus/package.json'), 'utf8'),
-).version;
+);
+const vitePlusVersion = vitePlusManifest.version;
+// vite-plus pins its own core and refuses any other, so init must write that alias.
+const vitePlusCore = vitePlusManifest.dependencies.vite;
 const work = mkdtempSync(join(tmpdir(), 'platform-packed-consumer-'));
 const archiveDir = join(work, 'archives');
 mkdirSync(archiveDir);
@@ -236,8 +239,8 @@ try {
           );
           assert.equal(
             manifest.devDependencies.vite,
-            `npm:@voidzero-dev/vite-plus-core@^${vitePlusVersion}`,
-            'Vite+ init must use the matching core alias',
+            vitePlusCore,
+            'Vite+ init must use the core the tested Vite+ release pins',
           );
           const installedVitePlus = JSON.parse(
             readFileSync(join(fixture, 'node_modules/vite-plus/package.json'), 'utf8'),

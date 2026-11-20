@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { installProjectDependencies } from '../../src/cli/init.ts';
+import { SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES } from '../../src/cli/template.ts';
 
 let root: string;
 let bin: string;
@@ -81,7 +82,13 @@ describe('init dependency installation (real subprocesses)', () => {
     expect(calls()).toEqual([
       {
         command: 'npx',
-        args: ['--yes', '--package=vite-plus@^1.6.0', 'vp', 'install', '--no-frozen-lockfile'],
+        args: [
+          '--yes',
+          `--package=vite-plus@${SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES['vite-plus']}`,
+          'vp',
+          'install',
+          '--no-frozen-lockfile',
+        ],
         cwd: root,
       },
     ]);
