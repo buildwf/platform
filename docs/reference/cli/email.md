@@ -128,7 +128,7 @@ Disable the domain assignment and record cleanup. Zone resources used by another
 bwf email status --platform cloudflare
 ```
 
-Check the domain configured in `email.from`: permissions, DNS, routing, sending, handler addresses, and the email binding. Exits unsuccessfully when setup is incomplete. Workers Free setup can be ready with sending limited to verified destinations; run `bwf email setup --platform cloudflare` after upgrading to Workers Paid.
+Check the domain configured in `email.from`: permissions, sending, and the email binding, plus routing and handler addresses when the app has `email/` handlers. Exits unsuccessfully when setup is incomplete or cannot be verified. Sending-only apps need an onboarded sending domain. Apps with inbound handlers can be ready on Workers Free with sending limited to verified destinations; run `bwf email setup --platform cloudflare` after upgrading to Workers Paid.
 
 `bwf email status` reads only your own Cloudflare account, so `--platform cloudflare` is required. On the bwf platform, use `bwf email usage` and `bwf email destinations`.
 
@@ -140,6 +140,6 @@ bwf email setup --platform cloudflare
 
 Set up email before deploying from CI. Requires `email.from` in `bwf.config.ts`, an interactive terminal, and Cloudflare email permissions.
 
-bwf shows the planned DNS, routing, plus-addressing, and sending changes and asks before applying them. Commit `bwf.lock.json`, then run `bwf deploy --platform cloudflare --require-email` in CI.
+bwf shows the planned changes and asks before applying them. Apps without `email/` handlers configure sending only; routing and plus addressing are left alone. Commit `bwf.lock.json`, then run `bwf deploy --platform cloudflare --require-email` in CI.
 
 On Workers Free, inbound mail and sends to verified recipients remain available. Run this command again after upgrading to Workers Paid to enable arbitrary recipients. See [Email setup](../../guide/email/domains.md#your-own-cloudflare-account).
