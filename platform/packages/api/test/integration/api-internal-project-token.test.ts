@@ -162,7 +162,7 @@ describe('per-project token checks', () => {
     await createResource(env.db, project.id, 'kv', 'cf-kv-id', 'CACHE');
     await env.ROUTING.put(project.slug, JSON.stringify({ version: deployment.id }));
     mockCfApi();
-    const token = await hmacSignState(project.id, JWT_SECRET);
+    await hmacSignState(project.id, JWT_SECRET);
     const proxyAuth = async (route: ProxyInternalRoute) => ({
       'x-platform-proxy-internal': await deriveProxyInternalAuth(JWT_SECRET, route, project.id),
     });
@@ -293,7 +293,9 @@ describe('proxy credential on the metadata routes', () => {
       const response = await internalRequest(
         route,
         project.id,
-        { 'x-platform-proxy-internal': await deriveProxyInternalAuth(JWT_SECRET, route, project.id) },
+        {
+          'x-platform-proxy-internal': await deriveProxyInternalAuth(JWT_SECRET, route, project.id),
+        },
         bodies[route],
       );
       expect(response.status).toBe(200);
@@ -369,7 +371,9 @@ describe('proxy credential on the metadata routes', () => {
       const response = await internalRequest(
         route,
         project.id,
-        { 'x-platform-proxy-internal': await deriveProxyInternalAuth(JWT_SECRET, other, project.id) },
+        {
+          'x-platform-proxy-internal': await deriveProxyInternalAuth(JWT_SECRET, other, project.id),
+        },
         bodies[route],
       );
       expect(response.status).toBe(403);

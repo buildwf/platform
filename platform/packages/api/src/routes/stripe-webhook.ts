@@ -27,7 +27,9 @@ const isPaidPlan = (value: unknown): value is PaidPlan =>
  */
 export const stripeWebhookRoutes = new Hono<ApiEnv>().post('/', async (context) => {
   const secret = context.env.STRIPE_WEBHOOK_SECRET;
-  if (!secret) return context.json({ error: 'billing not configured' }, 503);
+  if (!secret) {
+    return context.json({ error: 'billing not configured' }, 503);
+  }
   const body = await context.req.text();
   if (
     !(await verifyStripeSignature(body, context.req.header('stripe-signature') ?? null, secret))
@@ -69,7 +71,9 @@ export const stripeWebhookRoutes = new Hono<ApiEnv>().post('/', async (context) 
   }
 
   const userId = metadata.userId;
-  if (!userId) return context.json({ ok: true, ignored: true });
+  if (!userId) {
+    return context.json({ ok: true, ignored: true });
+  }
 
   if (event.type === 'checkout.session.completed' && isPaidPlan(metadata.plan)) {
     await changeOperatorUserPlan(context, userId, metadata.plan);

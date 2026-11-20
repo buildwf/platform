@@ -8,10 +8,10 @@ import {
 // Per-run attempt cap: at most this many distinct failed deliveries are
 // redelivered on one scheduled pass, so a large backlog is drained gradually
 // without hammering GitHub's redeliver API from a single tick.
-export const MAX_WEBHOOK_REDELIVERIES_PER_RUN = 50;
+const MAX_WEBHOOK_REDELIVERIES_PER_RUN = 50;
 
 // Cap on the number of `status=failure` delivery-log pages the scan follows.
-export const MAX_WEBHOOK_DELIVERY_PAGES = 5;
+const MAX_WEBHOOK_DELIVERY_PAGES = 5;
 
 /**
  * Catch-up job for missed GitHub webhooks (design-doc 0074, layer 1). Lists

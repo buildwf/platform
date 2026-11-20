@@ -15,7 +15,7 @@ import { scanMiddlewareSync, scanRoutePatternsSync } from './router/scan.ts';
 import { scanWebSocketRoutesSync } from './router/websocket.ts';
 import { isSandboxEnabled } from './sandbox/config.ts';
 
-export type ApplicationReasons = {
+type ApplicationReasons = {
   database: Array<string>;
   kv: Array<string>;
   r2: Array<string>;

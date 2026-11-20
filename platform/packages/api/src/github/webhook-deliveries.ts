@@ -89,7 +89,7 @@ function logFailure(
  * `<https://api.github.com/...&cursor=X>; rel="next", <...>; rel="last"`; the
  * next URL already carries the opaque `&cursor=…` so we just follow it verbatim.
  */
-export function parseNextCursorUrl(linkHeader: string | null): string | null {
+function parseNextCursorUrl(linkHeader: string | null): string | null {
   if (!linkHeader) {
     return null;
   }

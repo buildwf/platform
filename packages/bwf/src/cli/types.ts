@@ -11,7 +11,6 @@ export type {
   DeployUploadPayload,
   DeployWorkerInput,
   DeployWorkerModule,
-  DeployWorkerUploadRequest,
   DeployWorkerUploadResponse,
   HeaderRule,
   LiveManifestMeta,

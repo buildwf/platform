@@ -17,7 +17,7 @@ import {
   type PlatformEnv,
 } from './platform-workers.ts';
 
-export function requireHostedPlatform(env: ApiEnv['Bindings']) {
+function requireHostedPlatform(env: ApiEnv['Bindings']) {
   if (env.PLATFORM_INSTALLATION_ID) {
     throw new OperatorError(
       501,

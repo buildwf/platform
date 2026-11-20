@@ -1,6 +1,6 @@
 import { FetchError as OFetchError } from 'ofetch';
 
-export type FetchResponse<T = unknown> = Response & {
+type FetchResponse<T = unknown> = Response & {
   _data?: T;
 };
 

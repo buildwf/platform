@@ -11,7 +11,7 @@ import {
 } from '../router/websocket.ts';
 import type { InfoArgs } from './info-args.ts';
 
-export type PersistentResourceInfo = {
+type PersistentResourceInfo = {
   file: string;
   definition: 'defineDurableState' | 'defineRoom' | 'defineWebSocket';
   name: string;
@@ -21,7 +21,7 @@ export type PersistentResourceInfo = {
   route?: string;
 };
 
-export type RecordedResourceInfo = {
+type RecordedResourceInfo = {
   className: string;
   bindingName: string;
   name?: string;

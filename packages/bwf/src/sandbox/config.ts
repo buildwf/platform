@@ -5,7 +5,7 @@ import { isAbsolute, join } from 'pathslash';
 import type { BwfConfig } from '../config.ts';
 import { deriveDurableResourceIdentity } from '../durable/scan.ts';
 
-export const DEFAULT_SANDBOX_BINDING = 'SANDBOX';
+const DEFAULT_SANDBOX_BINDING = 'SANDBOX';
 export const DEFAULT_SANDBOX_CLASS_NAME = 'SandboxV1';
 const DEFAULT_SANDBOX_CONTAINER_NAME = 'platform-sandbox-v1';
 export const SANDBOX_MIGRATION_TAG = 'void-sandbox-v2';

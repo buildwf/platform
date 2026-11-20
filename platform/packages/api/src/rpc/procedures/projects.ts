@@ -54,7 +54,9 @@ export const create = procedure('projects.create')
         input.slug,
       );
     } catch (error) {
-      if (error instanceof ProjectCreateError) return fail(error.code, error.message);
+      if (error instanceof ProjectCreateError) {
+        return fail(error.code, error.message);
+      }
       throw error;
     }
   });

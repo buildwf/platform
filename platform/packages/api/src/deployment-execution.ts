@@ -10,15 +10,11 @@ import { deploymentOperations, projectDeployCredentials, projects, users } from 
 import { isAdminSuspended } from './suspension.ts';
 import type { DeployEvent, DeployManifest } from './types.ts';
 import { listR2Objects, r2WorkerModule, type WorkerModule } from './worker-upload.ts';
-export type {
-  DeploymentInput,
-  DeploymentOperation,
-  DeploymentProgress,
-} from './deployment-operation-types.ts';
+export type { DeploymentInput, DeploymentOperation } from './deployment-operation-types.ts';
 
 // Queue invocations have a 15-minute wall-clock limit. Recovery starts after
 // that invocation is gone, and never repeats its provider writes or SQL.
-export const DEPLOYMENT_INVOCATION_MS = 15 * 60 * 1000;
+const DEPLOYMENT_INVOCATION_MS = 15 * 60 * 1000;
 export const DEPLOYMENT_EXECUTION_LEASE_MS = 18 * 60 * 1000;
 // Worker uploads of a run (the application, then each custom Durable Object
 // host) end this long before the invocation does. Each host upload also leaves
@@ -27,7 +23,7 @@ export const DEPLOYMENT_EXECUTION_LEASE_MS = 18 * 60 * 1000;
 // routing, queues and cron, and an undo slower than the move it reverts. The
 // other 10 minutes cover the 8-minute application upload budget and the steps
 // before it.
-export const DEPLOYMENT_COMPENSATION_RESERVE_MS = 5 * 60 * 1000;
+const DEPLOYMENT_COMPENSATION_RESERVE_MS = 5 * 60 * 1000;
 const MAX_PROGRESS_EVENTS = 1000;
 
 export async function installationDeploymentAdmissionClosed(
@@ -168,10 +164,7 @@ async function writeDeploymentInputReceipt(
   // prepared input, including no-op redeploys and later failures, not a live
   // publication. Keep the parent prefix unchanged for cleanup and recovery.
   const kind = appType === 'spa' ? 'spa' : moduleCount > 0 ? 'worker' : 'static';
-  await r2.put(
-    `${prefix}receipt-platform-${kind}`,
-    JSON.stringify({ createdAt: Date.now() }),
-  );
+  await r2.put(`${prefix}receipt-platform-${kind}`, JSON.stringify({ createdAt: Date.now() }));
 }
 
 export async function prepareDeploymentInput(

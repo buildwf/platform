@@ -124,7 +124,7 @@ export function isPlatformTailWorker(
   );
 }
 
-export function purgeResourcesResumeCommand(manifest: PlatformInstallationManifest): string {
+function purgeResourcesResumeCommand(manifest: PlatformInstallationManifest): string {
   return `bwf platform uninstall ${manifest.id} --purge-resources`;
 }
 

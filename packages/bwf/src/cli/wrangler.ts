@@ -849,13 +849,13 @@ export function ensureWranglerNodejsAlsFlag(root: string): boolean {
 }
 
 /** A Wrangler `queues.producers[]` entry. */
-export type WranglerQueueProducer = {
+type WranglerQueueProducer = {
   queue: string;
   binding: string;
 };
 
 /** A Wrangler `queues.consumers[]` entry, as bwf's queue scanner emits it. */
-export type WranglerQueueConsumer = {
+type WranglerQueueConsumer = {
   queue: string;
   max_batch_size?: number;
   max_batch_timeout?: number;

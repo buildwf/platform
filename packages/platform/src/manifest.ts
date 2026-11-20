@@ -196,7 +196,7 @@ export function platformDashboardUrl(deployment: PlatformDeploymentManifest): st
  * An upgrade that fills in a resource the old manifest didn't record keeps
  * that prefix, so it finds the resource the old release made.
  */
-export function legacyResourcePrefix(
+function legacyResourcePrefix(
   resources: Readonly<Record<string, unknown>> | undefined,
 ): 'void' | undefined {
   return Object.values(resources ?? {}).some(

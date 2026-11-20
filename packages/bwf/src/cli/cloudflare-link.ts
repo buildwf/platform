@@ -68,7 +68,7 @@ export function readCloudflareLink(root: string): CloudflareLink | null {
   );
 }
 
-export function saveCloudflareLink(root: string, link: CloudflareLink): void {
+function saveCloudflareLink(root: string, link: CloudflareLink): void {
   mkdirSync(join(root, '.bwf'), { recursive: true });
   writeFileSync(join(root, LINK_FILE), `${JSON.stringify(link)}\n`, { mode: 0o600 });
   writeDeploymentPlatform(root, 'cloudflare');

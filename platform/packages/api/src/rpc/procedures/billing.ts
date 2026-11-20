@@ -27,7 +27,9 @@ export const checkout = procedure('billing.checkout')
       });
       return { url };
     } catch (error) {
-      if (error instanceof BillingUnavailableError) return fail('BILLING_UNAVAILABLE');
+      if (error instanceof BillingUnavailableError) {
+        return fail('BILLING_UNAVAILABLE');
+      }
       throw error;
     }
   });

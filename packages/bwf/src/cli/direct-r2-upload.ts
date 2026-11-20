@@ -5,7 +5,7 @@ import type { CliLogger } from './log-file.ts';
  * fan out unboundedly into the user's outbound bandwidth — empirically the
  * sweet spot for typical asset bundles on residential connections.
  */
-export const R2_PUT_CONCURRENCY = 10;
+const R2_PUT_CONCURRENCY = 10;
 
 /**
  * Maximum retry attempts for a single R2 PUT before giving up. Matched to

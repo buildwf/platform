@@ -32,7 +32,7 @@ export class OAuthError extends Error {
     super(message);
   }
 }
-export function validRedirectUri(value: unknown, local = false): value is string {
+function validRedirectUri(value: unknown, local = false): value is string {
   if (typeof value !== 'string' || value.length > 2048) {
     return false;
   }
@@ -209,7 +209,7 @@ export async function authenticateOAuthClient(db: Db, authorization?: string) {
  * Whether a grant was made for a trusted application's own person (the app-person grant), which
  * has no Platform login session behind it. It belongs to the user the application vouched for.
  */
-export function appPersonGrant(grant: typeof oauthGrants.$inferSelect): boolean {
+function appPersonGrant(grant: typeof oauthGrants.$inferSelect): boolean {
   return (
     grant.session.appPerson === true && !grant.session.sid && grant.session.sub === grant.user_id
   );

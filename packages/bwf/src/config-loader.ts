@@ -4,7 +4,7 @@ import { createJiti } from 'jiti';
 import { join } from 'pathslash';
 import { aliasHint } from './host/alias-hint.ts';
 
-export const LEGACY_CONFIG_FILE = 'bwf.json';
+const LEGACY_CONFIG_FILE = 'bwf.json';
 export const TYPED_CONFIG_FILE = 'bwf.config.ts';
 
 export type LoadedBwfConfig = { source: string; value: unknown };

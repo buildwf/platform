@@ -76,7 +76,7 @@ export type CloudflareKvBulkEntry = Readonly<{
   expiration_ttl?: number;
 }>;
 /** Largest number of pairs or keys one KV bulk request accepts. */
-export const KV_BULK_LIMIT = 10_000;
+const KV_BULK_LIMIT = 10_000;
 export type CloudflareNamedResource = Readonly<{
   /** When Cloudflare created it, where the API reports that. */
   createdAt?: string;

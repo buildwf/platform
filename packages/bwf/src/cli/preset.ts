@@ -9,7 +9,7 @@ import {
 } from '../shared/package-json.ts';
 
 /** Build output conventions for a known SSG (static site generator). */
-export type SsgPreset = {
+type SsgPreset = {
   /** Package name to detect in package.json dependencies. */
   dep: string;
   /** Default build command (binary name — localBin resolves the full path). */
@@ -26,7 +26,7 @@ export type SsgPreset = {
  * Known output conventions for SSGs.
  * Keyed by the SSG name — detection iterates in insertion order.
  */
-export const SSG_PRESETS: Record<string, SsgPreset> = {
+const SSG_PRESETS: Record<string, SsgPreset> = {
   vitepress: {
     dep: 'vitepress',
     buildCommand: 'vitepress build',

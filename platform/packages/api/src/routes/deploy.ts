@@ -1,36 +1,15 @@
 import { sql as drizzleSql } from 'drizzle-orm';
 import { Hono } from 'hono';
-import { findMissingR2Assets, persistedR2AssetSizes } from '../asset-inventory.ts';
-import { activeOAuthApproval, OAuthError } from '../auth/oauth.ts';
-import { uploadPool } from '../concurrency.ts';
-import { getProject, getUser, getDeployment, updateDeploymentStatus, type Db } from '../db.ts';
+import { getUser, getDeployment, updateDeploymentStatus, type Db } from '../db.ts';
 import { handleManifestOnlyDeploy } from '../deploy/execute.ts';
-import { requireActiveDeployAccess } from '../deploy/recovery.ts';
-import {
-  HEX_32_REGEX,
-  MAX_UPLOAD_URLS_BATCH,
-  moduleContentType,
-  workerUploadModulesProblem,
-  type UploadUrlsRequestAsset,
-  type WorkerUploadModule,
-} from '../deploy/shared.ts';
 import {
   appendDeploymentEvent,
   assertDeploymentExecutionAuthority,
-  deploymentEventPage,
   deploymentInputModule,
-  deploymentInputPrefix,
-  getDeploymentOperation,
   type DeploymentOperation,
 } from '../deployment-execution.ts';
 import type { ApiEnv } from '../env.ts';
-import { checkCliVersionOrRespond } from '../middleware/cli-version.ts';
-import { createDeployLogger, type DeployLogger } from '../observability/logger.ts';
-import { ProjectAccessDeniedError, projectAccessErrorBody } from '../project-access.ts';
-import { ProjectRequiresNormalizationError, requireNormalizedProject } from '../project-state.ts';
-import { presignAssetPut } from '../r2-presign.ts';
 import { listR2Objects, type WorkerModule } from '../worker-upload.ts';
-import { requireProjectRouteCapability } from './project-access.ts';
 
 export { MAX_ROUTING_RULES, validateManifestShape } from '@builtbyfriends/deploy-core';
 

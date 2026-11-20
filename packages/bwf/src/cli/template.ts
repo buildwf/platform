@@ -21,7 +21,7 @@ export type ScaffoldFramework = 'react';
 export type ScaffoldStarterMode = 'sqlite' | 'postgresql' | 'mysql' | 'spa';
 export type ScaffoldToolchain = 'vite-plus' | 'vite';
 
-export const SCAFFOLD_BASE_DEPENDENCIES = {
+const SCAFFOLD_BASE_DEPENDENCIES = {
   hono: '^4.11.9',
 } as const;
 

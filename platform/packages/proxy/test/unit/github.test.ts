@@ -16,7 +16,9 @@ async function signAiToken(projectId: string): Promise<string> {
   );
   const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(projectId)));
   let binary = '';
-  for (const byte of sig) binary += String.fromCharCode(byte);
+  for (const byte of sig) {
+    binary += String.fromCharCode(byte);
+  }
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 

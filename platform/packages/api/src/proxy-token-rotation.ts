@@ -125,7 +125,7 @@ export async function issueProjectProxyToken(
 // PATCH, until the step commits and Cloudflare stops serving the Worker's old
 // version, a call can get a 403 that is not retried.
 
-export type ProxyTokenRotationPhase = 'requested' | 'patch' | 'revoke' | 'settle';
+type ProxyTokenRotationPhase = 'requested' | 'patch' | 'revoke' | 'settle';
 
 export type ProxyTokenRotationEnv = Pick<
   ApiEnv['Bindings'],

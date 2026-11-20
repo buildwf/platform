@@ -40,11 +40,11 @@ import { setTestDb, clearTestDb } from './setup.ts';
 
 export const JWT_SECRET = 'test-jwt-secret';
 export const EMAIL_SIGNING_SECRET = 'test-email-signing-secret-independent';
-export const CF_API_TOKEN = 'test-cf-token';
+const CF_API_TOKEN = 'test-cf-token';
 export const CF_ACCOUNT_ID = 'test-account-id';
-export const CF_ZONE_ID = 'test-zone-id';
-export const PROJECT_SECRET_ACTIVE_KEY_VERSION = '1';
-export const PROJECT_SECRET_KEYS_JSON = JSON.stringify({
+const CF_ZONE_ID = 'test-zone-id';
+const PROJECT_SECRET_ACTIVE_KEY_VERSION = '1';
+const PROJECT_SECRET_KEYS_JSON = JSON.stringify({
   [PROJECT_SECRET_ACTIVE_KEY_VERSION]: Buffer.from('0123456789abcdef0123456789abcdef').toString(
     'base64',
   ),
@@ -882,7 +882,7 @@ export function cfError(message: string, status = 400, code = 1000): Response {
 // The state container is fresh per `mockCfApi()` call.
 // ---------------------------------------------------------------------------
 
-export type SandboxMockHostScript = {
+type SandboxMockHostScript = {
   /** wrangler-style migration_tag — present once `migrations` has been applied. */
   migration_tag?: string;
   /** className -> namespace_id (stable per-script-per-class). */
@@ -900,7 +900,7 @@ export type SandboxMockHostScript = {
   metadata: Record<string, unknown>;
 };
 
-export type SandboxMockContainerApp = {
+type SandboxMockContainerApp = {
   id: string;
   name: string;
   scheduling_policy?: string;
@@ -909,7 +909,7 @@ export type SandboxMockContainerApp = {
   durable_objects: { namespace_id: string };
 };
 
-export type SandboxMockState = {
+type SandboxMockState = {
   /** scriptName -> recorded dispatch namespace script state. */
   hostScripts: Map<string, SandboxMockHostScript>;
   /** appId -> recorded container application state. */

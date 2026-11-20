@@ -46,14 +46,18 @@ type Refusal = { code: keyof typeof ADMISSION_ERRORS; message?: string };
 /** The fast gates every deploy procedure shares, before any work or lock. */
 async function admit(caller: Caller, request: Request): Promise<Refusal | null> {
   const { project } = grantedAccess(caller);
-  if (project.status === 'deleting') return { code: 'PROJECT_DELETING' };
+  if (project.status === 'deleting') {
+    return { code: 'PROJECT_DELETING' };
+  }
   // After authz and the deleting check: a stale CLI on a missing, foreign or deleting project
   // should see that more specific answer, not an upgrade notice.
   const outdated = cliVersionProblem(
     request.headers.get('content-type'),
     request.headers.get('x-platform-cli-version'),
   );
-  if (outdated) return { code: 'CLI_OUTDATED', message: outdated.message };
+  if (outdated) {
+    return { code: 'CLI_OUTDATED', message: outdated.message };
+  }
   try {
     await requireNormalizedProject(caller.db, project);
   } catch (error) {
@@ -80,19 +84,27 @@ async function presignUnderProjectLock(
       await tx.execute(sql`SELECT id FROM projects WHERE id = ${projectId} FOR SHARE`);
       // A teardown may have committed between the unlocked admission and this lock.
       const locked = await getProject(tx, projectId);
-      if (!locked || locked.status === 'deleting') throw new ProjectDeleting();
+      if (!locked || locked.status === 'deleting') {
+        throw new ProjectDeleting();
+      }
       await requireActiveDeployAccess(tx, projectId, caller.user.id);
       await requireNormalizedProject(tx, locked);
       // Derived signing keys are identical within this request; release them with the batch.
       await presign(tx, new Map());
     });
   } catch (error) {
-    if (error instanceof OAuthError) return { code: 'APPROVAL_REFUSED', message: error.message };
-    if (error instanceof ProjectAccessDeniedError) return { code: 'ACCESS_DENIED' };
+    if (error instanceof OAuthError) {
+      return { code: 'APPROVAL_REFUSED', message: error.message };
+    }
+    if (error instanceof ProjectAccessDeniedError) {
+      return { code: 'ACCESS_DENIED' };
+    }
     if (error instanceof ProjectRequiresNormalizationError) {
       return { code: 'PROJECT_NEEDS_NORMALIZATION', message: error.message };
     }
-    if (error instanceof ProjectDeleting) return { code: 'PROJECT_DELETING' };
+    if (error instanceof ProjectDeleting) {
+      return { code: 'PROJECT_DELETING' };
+    }
     throw error;
   }
   return null;
@@ -118,7 +130,9 @@ export const preflight = procedure('deploy.preflight')
   .cli({ command: 'deploy preflight', description: 'List the assets a deploy still has to upload' })
   .handler(async ({ env, ctx, input, fail, request }) => {
     const refused = await admit(ctx, request);
-    if (refused) return fail(refused.code, refused.message);
+    if (refused) {
+      return fail(refused.code, refused.message);
+    }
     const { project } = grantedAccess(ctx);
     const manifest = input.assetManifest as Record<string, { hash: string; size: number }>;
     const total = Object.keys(manifest).length;
@@ -134,7 +148,9 @@ export const preflight = procedure('deploy.preflight')
           Number.isSafeInteger(entry.size) &&
           entry.size >= 0,
       );
-    if (!valid) return { needed: Object.keys(manifest), total, skipped: 0 };
+    if (!valid) {
+      return { needed: Object.keys(manifest), total, skipped: 0 };
+    }
     const active = project.active_deployment_id
       ? await getDeployment(ctx.db, project.active_deployment_id)
       : null;
@@ -166,7 +182,9 @@ export const uploadUrls = procedure('deploy.uploadUrls')
   .cli({ command: 'deploy upload-urls', description: 'Presign R2 uploads for deploy assets' })
   .handler(async ({ env, ctx, input, fail, request }) => {
     const refused = await admit(ctx, request);
-    if (refused) return fail(refused.code, refused.message);
+    if (refused) {
+      return fail(refused.code, refused.message);
+    }
     const { project } = grantedAccess(ctx);
     const { approval: approvalId, expiresAt } = ctx.credential;
     const logger = createDeployLogger({
@@ -217,7 +235,9 @@ export const uploadUrls = procedure('deploy.uploadUrls')
         );
       });
     });
-    if (failed) return fail(failed.code, failed.message);
+    if (failed) {
+      return fail(failed.code, failed.message);
+    }
     logger.info('upload_urls', 'response', { assetCount: input.assets.length });
     return { urls };
   });
@@ -244,7 +264,9 @@ export const workerUploadUrls = procedure('deploy.workerUploadUrls')
   })
   .handler(async ({ env, ctx, input, fail, request }) => {
     const refused = await admit(ctx, request);
-    if (refused) return fail(refused.code, refused.message);
+    if (refused) {
+      return fail(refused.code, refused.message);
+    }
     const problem = workerUploadModulesProblem(input.modules, 'modules');
     if (problem) {
       return fail(problem.error ? 'WORKER_TOO_LARGE' : 'INVALID_MODULES', problem.message);
@@ -274,6 +296,8 @@ export const workerUploadUrls = procedure('deploy.workerUploadUrls')
         );
       });
     });
-    if (failed) return fail(failed.code, failed.message);
+    if (failed) {
+      return fail(failed.code, failed.message);
+    }
     return { id, urls };
   });

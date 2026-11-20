@@ -160,7 +160,7 @@ export type RunWrangler = (
 ) => RunWranglerResult | Promise<RunWranglerResult>;
 
 /** A Cloudflare Hyperdrive config as returned by the account-list existence check. */
-export interface HyperdriveConfig {
+interface HyperdriveConfig {
   id: string;
   name: string;
 }
@@ -169,7 +169,7 @@ export interface HyperdriveConfig {
  * Lists the account's Hyperdrive configs. There is no machine-readable Hyperdrive list
  * command, so the default uses the REST API. It always receives the pinned account and base.
  */
-export type ListHyperdriveConfigs = (ctx: {
+type ListHyperdriveConfigs = (ctx: {
   accountId: string;
   apiBaseUrl: string;
   /** Aborts at the overall lister deadline; the caller also races the call against it. */
@@ -177,7 +177,7 @@ export type ListHyperdriveConfigs = (ctx: {
 }) => Promise<Array<HyperdriveConfig>>;
 
 /** Per-resource outcome, so the orchestrator can log what happened. */
-export interface ProvisionOutcome {
+interface ProvisionOutcome {
   kind: 'd1' | 'kv' | 'r2' | 'hyperdrive' | 'queue';
   /** Binding name (absent for queue resources, which are not bindings here). */
   binding?: string;
@@ -238,7 +238,7 @@ export function isRealD1Id(value: unknown): value is string {
   return typeof value === 'string' && value !== D1_ID_PLACEHOLDER && D1_ID_RE.test(value);
 }
 /** A real (non-placeholder) KV namespace `id`. */
-export function isRealKvId(value: unknown): value is string {
+function isRealKvId(value: unknown): value is string {
   return typeof value === 'string' && value !== KV_ID_PLACEHOLDER && HEX32_ID_RE.test(value);
 }
 /** A Hyperdrive config `id` that is a real 32-hex string (no placeholder exists). */
@@ -568,7 +568,7 @@ export class WranglerQuarantineError extends Error {
 }
 
 /** Quarantine owner metadata: the child's pid (its process-group id on POSIX) and a reason. */
-export interface QuarantineInfo {
+interface QuarantineInfo {
   pid?: number;
   reason: string;
 }
@@ -613,7 +613,7 @@ function acquireProcessProvisionSlot(): () => void {
 let activeProvisionQuarantineHook: ((info: QuarantineInfo) => void) | undefined;
 
 /** True when `error` is a quarantine failure whose provision lock must stay retained. */
-export function isQuarantineError(error: unknown): error is WranglerQuarantineError {
+function isQuarantineError(error: unknown): error is WranglerQuarantineError {
   return (
     error instanceof WranglerQuarantineError ||
     (error as { quarantine?: boolean } | null)?.quarantine === true

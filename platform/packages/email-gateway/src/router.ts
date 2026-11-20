@@ -111,10 +111,10 @@ export const MAX_INBOUND_BYTES = 10 * 1024 * 1024;
 
 /** Bound distinct header names before building the envelope object. */
 export const MAX_INBOUND_HEADERS = 1024;
-export const MAX_INBOUND_HEADER_BYTES = 128 * 1024;
+const MAX_INBOUND_HEADER_BYTES = 128 * 1024;
 
 /** Limit handler rejection text exposed to remote MTAs and logs. */
-export const MAX_REJECT_REASON_LENGTH = 1000;
+const MAX_REJECT_REASON_LENGTH = 1000;
 
 /** Bound tenant action validation work per inbound delivery. */
 const MAX_ACTIONS = 100;
@@ -123,8 +123,8 @@ const MAX_ACTIONS = 100;
 const MAX_ACTION_ADDRESS_LENGTH = 320;
 
 /** Bound forward header construction. */
-export const MAX_FORWARD_HEADERS = 32;
-export const MAX_FORWARD_HEADER_LENGTH = 1024;
+const MAX_FORWARD_HEADERS = 32;
+const MAX_FORWARD_HEADER_LENGTH = 1024;
 
 /** Limit one reply MIME payload. */
 const MAX_REPLY_BYTES = 5 * 1024 * 1024;
@@ -155,7 +155,7 @@ class InboundHeadersTooLargeError extends Error {
 }
 
 /** Use the same address validator as the framework after a length guard. */
-export function isValidEmailAddress(s: unknown): s is string {
+function isValidEmailAddress(s: unknown): s is string {
   return typeof s === 'string' && s.length <= MAX_ACTION_ADDRESS_LENGTH && isValidEmailSyntax(s);
 }
 

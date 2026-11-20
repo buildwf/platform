@@ -1,4 +1,7 @@
-import { deriveProxyInternalAuth, PROXY_INTERNAL_AUTH_HEADER } from '@platform-service/api/proxy-token';
+import {
+  deriveProxyInternalAuth,
+  PROXY_INTERNAL_AUTH_HEADER,
+} from '@platform-service/api/proxy-token';
 import { Hono } from 'hono';
 import { asRecord, asString } from './body.ts';
 import type { ProxyEnv } from './types.ts';
@@ -15,7 +18,7 @@ const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
 const github = new Hono<ProxyEnv>();
 
 /** `/repos/owner/name/...` → `owner/name`, or null for any other path. */
-export function repositoryOf(path: string): string | null {
+function repositoryOf(path: string): string | null {
   const match = /^\/repos\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:\/|$)/.exec(path);
   return match ? `${match[1]}/${match[2]}`.toLowerCase() : null;
 }
@@ -61,7 +64,7 @@ github.post('/request', async (context) => {
   if (!res.ok) {
     return context.json({ error: 'credential unavailable' }, 502);
   }
-  const credential = await res.json<{ token: string; repositories: string[] }>();
+  const credential = await res.json<{ token: string; repositories: Array<string> }>();
   if (!credential.repositories.some((name) => name.toLowerCase() === repository)) {
     return context.json({ error: `credential does not cover ${repository}` }, 403);
   }

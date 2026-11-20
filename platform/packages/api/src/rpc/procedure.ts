@@ -7,7 +7,7 @@ import type { User } from '../types.ts';
  * What the bearer token allows beyond its user. A full `api` token has no scope; the others
  * name the one project they were minted for, and `canOnProject` refuses any other.
  */
-export type Credential = Readonly<{
+type Credential = Readonly<{
   audience: NonNullable<ApiEnv['Variables']['tokenAudience']>;
   /** The only project this credential may touch. */
   project?: string;
@@ -39,10 +39,10 @@ export function rememberCaller(request: Request, caller: Caller): void {
 
 const builders = createProcedures<ApiEnv['Bindings']>();
 export const procedure: typeof builders.procedure = builders.procedure;
-export const profile: typeof builders.profile = builders.profile;
+const profile: typeof builders.profile = builders.profile;
 
 /** The user `authMiddleware` authenticated: session, API token, deploy token or Access. */
-export const signedIn: AuthProvider<Caller, ApiEnv['Bindings']> = {
+const signedIn: AuthProvider<Caller, ApiEnv['Bindings']> = {
   name: 'platform-auth',
   resolve: (request) => callers.get(request),
   actorId: (caller) => caller.user.id,

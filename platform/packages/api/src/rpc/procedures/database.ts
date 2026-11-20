@@ -77,7 +77,9 @@ async function createOrAdoptHyperdrive(
     );
     return { id: hd.id, created: true };
   } catch (error) {
-    if (!isAlreadyExistsError(error)) throw error;
+    if (!isAlreadyExistsError(error)) {
+      throw error;
+    }
   }
   const hd = await getHyperdriveByName(env.CF_ACCOUNT_ID, env.CF_API_TOKEN, resourceName);
   await updateHyperdrive(
@@ -146,7 +148,9 @@ export const provision = procedure('database.provision')
   .handler(async ({ env, ctx, input, fail }) => {
     const { projectId, connectionString } = input;
     // Fast rejection; the transaction below rechecks status and capability under the lock.
-    if (grantedAccess(ctx).project.status === 'deleting') return fail('PROJECT_DELETING');
+    if (grantedAccess(ctx).project.status === 'deleting') {
+      return fail('PROJECT_DELETING');
+    }
     if ((await getProjectResources(ctx.db, projectId)).some((r) => r.type === 'hyperdrive')) {
       return fail('ALREADY_PROVISIONED');
     }
@@ -159,7 +163,9 @@ export const provision = procedure('database.provision')
     try {
       outcome = await ctx.db.transaction(async (tx): Promise<Outcome | Failure> => {
         const refused = await lockedProject(ctx, projectId, tx);
-        if (refused) return refused;
+        if (refused) {
+          return refused;
+        }
         // Re-read after the lock: membership changes, teardown and a competing provision all
         // serialize on this project row.
         if ((await getProjectResources(tx, projectId)).some((r) => r.type === 'hyperdrive')) {
@@ -171,7 +177,9 @@ export const provision = procedure('database.provision')
           createdByUs = hd.created;
         } catch (error) {
           const failure = provisioningFailure(error);
-          if (failure) return failure;
+          if (failure) {
+            return failure;
+          }
           throw error;
         }
         try {
@@ -194,7 +202,9 @@ export const provision = procedure('database.provision')
       if (createdByUs && hyperdriveId) {
         await deleteHyperdrive(env.CF_ACCOUNT_ID, env.CF_API_TOKEN, hyperdriveId).catch(() => {});
       }
-      if (error instanceof DatabaseUrlPersistenceError) return fail('PERSISTENCE_FAILED');
+      if (error instanceof DatabaseUrlPersistenceError) {
+        return fail('PERSISTENCE_FAILED');
+      }
       throw error;
     }
     return 'code' in outcome
@@ -212,7 +222,9 @@ export const setUrl = procedure('database.setUrl')
   .cli({ command: 'db set-url', description: 'Update the external database connection string' })
   .handler(async ({ env, ctx, input, fail }) => {
     const { projectId, connectionString } = input;
-    if (grantedAccess(ctx).project.status === 'deleting') return fail('PROJECT_DELETING');
+    if (grantedAccess(ctx).project.status === 'deleting') {
+      return fail('PROJECT_DELETING');
+    }
     const encrypted = await encryptProjectSecret(env, projectId, 'database-url', connectionString);
     const resourceName = hyperdriveResourceName(projectId);
     let createdHyperdriveId: string | undefined;
@@ -220,7 +232,9 @@ export const setUrl = procedure('database.setUrl')
     try {
       outcome = await ctx.db.transaction(async (tx): Promise<Outcome | Failure> => {
         const refused = await lockedProject(ctx, projectId, tx);
-        if (refused) return refused;
+        if (refused) {
+          return refused;
+        }
         // Resolve the resource only after taking the lock: a downgrade or removal is then
         // authoritative before any live Hyperdrive update is sent to Cloudflare.
         const existing = (await getProjectResources(tx, projectId)).find(
@@ -237,7 +251,9 @@ export const setUrl = procedure('database.setUrl')
             );
           } catch (error) {
             const failure = provisioningFailure(error);
-            if (failure) return failure;
+            if (failure) {
+              return failure;
+            }
             throw error;
           }
         } else {
@@ -245,10 +261,14 @@ export const setUrl = procedure('database.setUrl')
           try {
             const hd = await createOrAdoptHyperdrive(env, resourceName, connectionString);
             hyperdriveId = hd.id;
-            if (hd.created) createdHyperdriveId = hd.id;
+            if (hd.created) {
+              createdHyperdriveId = hd.id;
+            }
           } catch (error) {
             const failure = provisioningFailure(error);
-            if (failure) return failure;
+            if (failure) {
+              return failure;
+            }
             throw error;
           }
           try {
@@ -278,7 +298,9 @@ export const setUrl = procedure('database.setUrl')
           () => {},
         );
       }
-      if (error instanceof DatabaseUrlPersistenceError) return fail('PERSISTENCE_FAILED');
+      if (error instanceof DatabaseUrlPersistenceError) {
+        return fail('PERSISTENCE_FAILED');
+      }
       throw error;
     }
     return 'code' in outcome
@@ -297,7 +319,9 @@ export const getUrl = procedure('database.getUrl')
   .cli({ command: 'db url', description: 'Show the stored database connection string' })
   .handler(async ({ env, ctx, input, fail }) => {
     const row = await getProjectDatabaseUrl(ctx.db, input.projectId);
-    if (!row) return fail('NOT_STORED');
+    if (!row) {
+      return fail('NOT_STORED');
+    }
     const url = await decryptProjectSecret(env, input.projectId, {
       name: 'database-url',
       ciphertext: row.ciphertext,

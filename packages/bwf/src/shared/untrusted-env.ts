@@ -17,7 +17,7 @@ export const WRANGLER_AUTH_CREDENTIAL_ENV_VARS = [
 ] as const;
 
 /** Credentials owned by the deploy orchestrator, never by project code. */
-export const UNTRUSTED_PROJECT_CODE_ENV_VARS: ReadonlyArray<string> = [
+const UNTRUSTED_PROJECT_CODE_ENV_VARS: ReadonlyArray<string> = [
   ...WRANGLER_AUTH_CREDENTIAL_ENV_VARS,
   'CF_ACCESS_CLIENT_ID',
   'CF_ACCESS_CLIENT_SECRET',
@@ -30,10 +30,7 @@ export const UNTRUSTED_PROJECT_CODE_ENV_VARS: ReadonlyArray<string> = [
   'ACTIONS_ID_TOKEN_REQUEST_TOKEN',
 ];
 
-export function scrubEnvironmentVariables(
-  env: NodeJS.ProcessEnv,
-  names: ReadonlyArray<string>,
-): void {
+function scrubEnvironmentVariables(env: NodeJS.ProcessEnv, names: ReadonlyArray<string>): void {
   const blocked = new Set(names.map((name) => name.toLowerCase()));
   for (const key of Object.keys(env)) {
     if (blocked.has(key.toLowerCase())) {

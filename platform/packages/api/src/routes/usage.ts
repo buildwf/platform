@@ -672,7 +672,6 @@ async function queryProjectAiUsage(
 
 export {
   getRequestsDataset,
-  queryProjectUsage,
   queryBatchProjectUsageWindows,
   queryTopProjectTraffic,
   queryProjectRequestOverview,

@@ -1332,5 +1332,3 @@ export {
   recordWorkerTrafficState,
   stablePublicEndpointState,
 } from './platform-installer-cutover.ts';
-
-export { inspectNewPlatformWorker } from './platform-installer-inspection.ts';

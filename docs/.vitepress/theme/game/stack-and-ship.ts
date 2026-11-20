@@ -1,6 +1,6 @@
 import { frameworks } from './frameworks.ts';
 
-export type Axis = 'x' | 'z';
+type Axis = 'x' | 'z';
 
 export interface Tile {
   x: number;

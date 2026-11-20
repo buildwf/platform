@@ -58,7 +58,7 @@ function assertPlanRolloutComplete(context: Context<ApiEnv>): void {
   }
 }
 
-export function initialPlanDefault(context: Context<ApiEnv>): BuiltinPlanId {
+function initialPlanDefault(context: Context<ApiEnv>): BuiltinPlanId {
   return initialPlanDefaultFor(context.env);
 }
 
@@ -148,7 +148,7 @@ function loweredLimitKeys(
 }
 
 /** Build and validate a proposed catalog before either preview or database writes. */
-export function proposePlanCatalog(
+function proposePlanCatalog(
   catalog: PlatformPlanCatalog,
   action: PlanCatalogAction,
   id: string | undefined,
