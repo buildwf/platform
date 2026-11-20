@@ -10,7 +10,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "hono": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "valibot": "^1.5.0"
