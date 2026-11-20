@@ -321,7 +321,8 @@ export function bwfPlugin(options?: {
       bindings = application.bindings;
       authEnabled = application.authEnabled;
       // Re-resolve for the real environment.
-      managedCloudflareBuild = command === 'build' && Boolean(process.env.PLATFORM_DEPLOY_PROJECT_ID);
+      managedCloudflareBuild =
+        command === 'build' && Boolean(process.env.PLATFORM_DEPLOY_PROJECT_ID);
       assetRoutingPublicDir =
         userConfig.publicDir === false
           ? null
@@ -617,6 +618,7 @@ export function bwfPlugin(options?: {
     remoteMode,
     // Merged with `public/_redirects` and `_headers`; managed builds omit them (dispatch owns them).
     routing: config.routing,
+    procedureTypes: config.procedureTypes,
     bindingNames,
     get hasSandbox() {
       return bindings.needsSandbox && !isSandboxAttached(sandboxConfig);

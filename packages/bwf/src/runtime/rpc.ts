@@ -27,14 +27,30 @@ export type ModuleProcedures<Module, Prefix extends string> = {
   ]: Module[Key];
 };
 
+/**
+ * A procedure described by its types alone. `bwf prepare` writes these into the file named by
+ * `procedureTypes` in the config, for a web workspace that doesn't contain `procedures/`.
+ * Generated code uses this; apps don't.
+ */
+export interface WireProcedure<Input, Output, Errors extends string = never> {
+  readonly '~wire': { input: Input; output: Output; errors: Errors };
+}
+
+type InputOfAny<Procedure> =
+  Procedure extends WireProcedure<infer Input, unknown, string> ? Input : InputOf<Procedure>;
+type OutputOfAny<Procedure> =
+  Procedure extends WireProcedure<unknown, infer Output, string> ? Output : OutputOf<Procedure>;
+type ErrorsOfAny<Procedure> =
+  Procedure extends WireProcedure<unknown, unknown, infer Errors> ? Errors : ErrorsOf<Procedure>;
+
 /** One procedure as a function: pass its input, get its output, or a thrown `RpcError`. */
 export type RpcCall<Procedure> =
-  undefined extends InputOf<Procedure>
-    ? (input?: InputOf<Procedure>) => Promise<OutputOf<Procedure>>
-    : (input: InputOf<Procedure>) => Promise<OutputOf<Procedure>>;
+  undefined extends InputOfAny<Procedure>
+    ? (input?: InputOfAny<Procedure>) => Promise<OutputOfAny<Procedure>>
+    : (input: InputOfAny<Procedure>) => Promise<OutputOfAny<Procedure>>;
 
 /** The error codes a procedure declares, for narrowing a caught `RpcError`. */
-export type RpcErrorCode<Procedure> = ErrorsOf<Procedure>;
+export type RpcErrorCode<Procedure> = ErrorsOfAny<Procedure>;
 
 type Nest<Name extends string, Leaf> = Name extends `${infer Head}.${infer Rest}`
   ? { [Key in Head]: Nest<Rest, Leaf> }
