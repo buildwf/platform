@@ -2048,52 +2048,78 @@ export function withLegacyDeploy<
       }
       return Response.json({ error: code?.toLowerCase(), message }, { status: res.status });
     }
-    let events = body.data.events;
-    if (!events && body.data.deploymentId) {
-      // The Queue owns the deployment: read its events the way the CLI does.
-      events = [];
-      for (let since = 0; ;) {
-        const page = await fetchApp(
-          new Request('http://localhost/rpc/deployments.events', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              projectId: match[1],
-              deploymentId: body.data.deploymentId,
-              since,
-            }),
-          }),
-          ...rest,
-        );
-        if (!page.ok) {
-          const failure = (await page.json()) as { error?: { message?: string } | string };
-          events.push({
-            event: 'error',
-            message: typeof failure.error === 'string' ? failure.error : failure.error?.message,
-          });
-          break;
-        }
-        const { data } = (await page.json()) as {
-          data: {
-            events: Array<{ seq: number; event: object }>;
-            lastSeq: number;
-            terminal: boolean;
-          };
-        };
-        events.push(...data.events.map((item) => ({ ...item.event, seq: item.seq })));
-        if (data.terminal) {
-          break;
-        }
-        since = data.lastSeq;
-        await new Promise((resolve) => setTimeout(resolve, 20));
-      }
+    const deploymentId = body.data.deploymentId;
+    const responseHeaders = {
+      'content-type': 'application/x-ndjson',
+      ...(deploymentId ? { 'x-platform-deployment-id': deploymentId } : {}),
+    };
+    if (!body.data.events && deploymentId) {
+      // The Queue owns the deployment: read its events the way the CLI does,
+      // but only as the caller reads the body. A caller that cancels the body
+      // stops reading, like an observer that disconnects from the old route.
+      let since = 0;
+      let canceled = false;
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          for (;;) {
+            const page = await fetchApp(
+              new Request('http://localhost/rpc/deployments.events', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ projectId: match[1], deploymentId, since }),
+              }),
+              ...rest,
+            );
+            if (canceled) {
+              await page.body?.cancel();
+              return;
+            }
+            if (!page.ok) {
+              const failure = (await page.json()) as { error?: { message?: string } | string };
+              const message =
+                typeof failure.error === 'string' ? failure.error : failure.error?.message;
+              controller.enqueue(
+                encoder.encode(`${JSON.stringify({ event: 'error', message })}\n`),
+              );
+              controller.close();
+              return;
+            }
+            const { data } = (await page.json()) as {
+              data: {
+                events: Array<{ seq: number; event: object }>;
+                lastSeq: number;
+                terminal: boolean;
+              };
+            };
+            for (const item of data.events) {
+              controller.enqueue(
+                encoder.encode(`${JSON.stringify({ ...item.event, seq: item.seq })}\n`),
+              );
+            }
+            since = data.lastSeq;
+            if (data.terminal) {
+              controller.close();
+              return;
+            }
+            if (data.events.length) {
+              return;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 20));
+            if (canceled) {
+              return;
+            }
+          }
+        },
+        cancel() {
+          canceled = true;
+        },
+      });
+      return new Response(stream, { status: 200, headers: responseHeaders });
     }
-    return new Response((events ?? []).map((e) => `${JSON.stringify(e)}\n`).join(''), {
+    return new Response((body.data.events ?? []).map((e) => `${JSON.stringify(e)}\n`).join(''), {
       status: 200,
-      headers: {
-        'content-type': 'application/x-ndjson',
-        ...(body.data.deploymentId ? { 'x-platform-deployment-id': body.data.deploymentId } : {}),
-      },
+      headers: responseHeaders,
     });
   };
   return Object.assign(Object.create(app), {
