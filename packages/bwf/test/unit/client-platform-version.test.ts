@@ -73,6 +73,37 @@ describe('minimum platform version', () => {
     },
   );
 
+  it.each([true, false, undefined])(
+    'requires explicit platform support before applying D1 read replication (advertised: %s)',
+    async (d1ReadReplication) => {
+      fetchMock.mockImplementation(async (input: string) => {
+        if (isPlatformDiscoveryRequest(input)) {
+          return platformDiscoveryResponse(input, 'hosted');
+        }
+        return Response.json({ skipMigrations: true, d1ReadReplication });
+      });
+      const result = client().requireD1ReadReplicationSupport();
+      if (d1ReadReplication === true) {
+        await expect(result).resolves.toBeUndefined();
+      } else {
+        await expect(result).rejects.toThrow('cannot apply `database.readReplication`');
+      }
+      expect(requestedPaths()).toEqual(['/.well-known/platform', '/capabilities']);
+    },
+  );
+
+  it('treats a platform without a capabilities route as lacking D1 read replication', async () => {
+    fetchMock.mockImplementation(async (input: string) => {
+      if (isPlatformDiscoveryRequest(input)) {
+        return platformDiscoveryResponse(input, 'hosted');
+      }
+      return Response.json({ error: 'not found' }, { status: 404 });
+    });
+    await expect(client().requireD1ReadReplicationSupport()).rejects.toThrow(
+      'Ask its administrator to upgrade with `bwf platform upgrade`.',
+    );
+  });
+
   it.each(['1.9.0', '1.9.1', '2.0.0', 'hosted'])(
     'accepts a platform reporting %s',
     async (version) => {
@@ -121,9 +152,7 @@ describe('minimum platform version', () => {
     serve('1.9.0');
     await Promise.all([client().listProjectChoices(), client().listProjects()]);
     await client().listProjectChoices();
-    expect(requestedPaths().filter((path) => path === '/.well-known/platform')).toHaveLength(
-      1,
-    );
+    expect(requestedPaths().filter((path) => path === '/.well-known/platform')).toHaveLength(1);
     expect(requestedPaths()).toHaveLength(4);
 
     const other = `https://other-${sequence}.example.test`;
@@ -187,11 +216,7 @@ describe('minimum platform version', () => {
       serve(answer);
       await expect(client().listProjectChoices()).resolves.toEqual([]);
       await expect(client().listProjects()).resolves.toEqual([]);
-      expect(requestedPaths()).toEqual([
-        '/.well-known/platform',
-        '/projects/choices',
-        '/projects',
-      ]);
+      expect(requestedPaths()).toEqual(['/.well-known/platform', '/projects/choices', '/projects']);
     },
   );
 
