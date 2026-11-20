@@ -39,7 +39,7 @@
     "@nkzw/fate": "catalog:",
     "@stylexjs/stylex": "catalog:",
     "@xterm/headless": "^6.0.0",
-    "agents": "^0.33.0",
+    "agents": "^0.34.0",
     "arktype": "catalog:",
     "aws4fetch": "^1.0.20",
     "blake3-jit": "^1.1.1",

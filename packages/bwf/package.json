@@ -320,7 +320,7 @@
     "@cloudflare/workers-utils": "catalog:",
     "@modelcontextprotocol/server": "^2.4.0",
     "@napi-rs/keyring": "catalog:",
-    "agents": "^0.33.0",
+    "agents": "^0.34.0",
     "better-auth": "catalog:",
     "better-sqlite3": "^13.2.0",
     "blake3-jit": "^1.1.1",
