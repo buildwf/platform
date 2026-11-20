@@ -366,6 +366,8 @@ export type PlatformWorkerDeploymentOptions = Readonly<{
   acquireUploadSlot?: () => Promise<(failure?: unknown) => void>;
   onReadyForActivation?: () => Promise<void>;
   waitForPriorWorker?: () => Promise<void>;
+  /** Waits between rereads of the deployment list after activation. Tests shorten them. */
+  deploymentSettleDelaysMs?: ReadonlyArray<number>;
   inspectNewWorker: () => Promise<'missing' | 'owned'>;
   onStaged: (
     previousVersionId: string | null,

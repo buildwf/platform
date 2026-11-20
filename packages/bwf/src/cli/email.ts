@@ -2,7 +2,10 @@ import { execSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
-import { parseRootWranglerConfig, readWranglerTopLevelString } from '@builtbyfriends/deploy-cloudflare';
+import {
+  parseRootWranglerConfig,
+  readWranglerTopLevelString,
+} from '@builtbyfriends/deploy-cloudflare';
 import { confirm, isCancel, log, password } from '@voidzero-dev/vite-plus-prompts';
 import { join } from 'pathslash';
 import { readConfig } from '../config.ts';
@@ -1202,9 +1205,15 @@ async function runEmailCloudflareCommandInConfig(
       pendingLabel: '(no rule yet)',
     }),
   );
-  // Inbound must be complete, as `--require-email` checks the same `inboundReady`. A sending
-  // row left pending (Workers Free) is not a failure: the written binding records it.
-  if (!out.inboundReady) {
+  // Match deploy's capability checks. Apps receiving mail can retain their Workers Free
+  // setup when sending onboarding fails; sending-only apps must verify sending itself.
+  if (!out.ready && pre.usage.handlers.length === 0) {
+    log.warn(
+      `Email Sending is not configured on ${pre.domain}. Check the sending status above, then retry \`bwf email setup --platform cloudflare\`.`,
+    );
+    return exit(1);
+  }
+  if (!out.ready) {
     const missing = !out.routingReady
       ? `Email Routing on ${pre.domain} is not ready`
       : !out.subaddressingReady
