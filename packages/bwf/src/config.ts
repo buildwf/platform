@@ -6,7 +6,11 @@ import {
   type AssetConfig,
   type StorageConfig,
 } from '@builtbyfriends/deploy-core';
-import { PLATFORM_AUTH_PROVIDERS, isBwfAuthProvider, type BwfAuthProvider } from './auth/providers.ts';
+import {
+  PLATFORM_AUTH_PROVIDERS,
+  isBwfAuthProvider,
+  type BwfAuthProvider,
+} from './auth/providers.ts';
 import type { DevRedirectRule, HeaderRule } from './cli/types.ts';
 import { loadBwfConfig } from './config-loader.ts';
 import { validateSourceDir } from './project-paths.ts';
@@ -215,6 +219,7 @@ const VALID_DATABASE_CASINGS = new Set(['snake_case', 'camelCase']);
 const MAX_WORKER_CPU_MS = 300000;
 const VALID_SANDBOX_INSTANCE_TYPES = new Set<SandboxInstanceType>([
   'lite',
+  'basic',
   'standard-1',
   'standard-2',
   'standard-3',

@@ -439,6 +439,22 @@ describe('readConfig', () => {
     cleanup();
   });
 
+  it('reads sandbox basic instanceType', () => {
+    setup(
+      JSON.stringify({
+        sandbox: {
+          image: './Dockerfile.sandbox',
+          instanceType: 'basic',
+        },
+      }),
+    );
+    expect(readConfig(tmpDir).sandbox).toEqual({
+      image: './Dockerfile.sandbox',
+      instanceType: 'basic',
+    });
+    cleanup();
+  });
+
   it('throws on invalid sandbox config', () => {
     setup(JSON.stringify({ sandbox: { instanceType: 'huge' } }));
     expect(() => readConfig(tmpDir)).toThrow('"sandbox.instanceType"');
