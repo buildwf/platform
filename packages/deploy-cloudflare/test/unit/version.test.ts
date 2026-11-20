@@ -327,7 +327,10 @@ function voidZeroBindingPlaceholder(): Record<string, unknown> {
   return {
     ...bwfSecretDraftVersion(),
     number: 1,
-    annotations: { 'workers/message': 'platform:secret-draft', 'workers/triggered_by': 'deployment' },
+    annotations: {
+      'workers/message': 'platform:secret-draft',
+      'workers/triggered_by': 'deployment',
+    },
     bindings: [],
     env: {},
   };
@@ -1234,9 +1237,19 @@ describe('Cloudflare version activation', () => {
     expect(commands.filter((command) => command === 'deployments status')).toHaveLength(4);
   });
 
-  it.each(['recovers', 'unavailable', 'concurrent', 'uploader-changed'] as const)(
-    'bounds retries of an unavailable post-upload version list (%s)',
-    async (outcome) => {
+  it.each([
+    { firstRead: 'unavailable', outcome: 'recovers' },
+    { firstRead: 'unavailable', outcome: 'exhausted' },
+    { firstRead: 'unavailable', outcome: 'concurrent' },
+    { firstRead: 'unavailable', outcome: 'uploader-changed' },
+    { firstRead: 'stale', outcome: 'recovers' },
+    { firstRead: 'stale', outcome: 'exhausted' },
+    { firstRead: 'stale', outcome: 'concurrent' },
+    { firstRead: 'stale', outcome: 'uploader-changed' },
+    { firstRead: 'different', outcome: 'concurrent' },
+  ] as const)(
+    'bounds retries of a $firstRead post-upload version list ($outcome)',
+    async ({ firstRead, outcome }) => {
       const base = runner();
       let uploaded = false;
       let reads = 0;
@@ -1247,8 +1260,13 @@ describe('Cloudflare version activation', () => {
         }
         if (args[0] === 'versions' && args[1] === 'list' && uploaded) {
           reads++;
-          if (reads === 1 || outcome === 'unavailable') {
-            return { status: 1, stdout: '', stderr: 'Version list temporarily unavailable' };
+          if (reads === 1 || outcome === 'exhausted') {
+            if (firstRead === 'unavailable') {
+              return { status: 1, stdout: '', stderr: 'Version list temporarily unavailable' };
+            }
+            if (firstRead === 'stale') {
+              return ok(JSON.stringify([{ id: CURRENT, number: 1 }]));
+            }
           }
           if (outcome === 'concurrent') {
             return ok(
@@ -1282,15 +1300,23 @@ describe('Cloudflare version activation', () => {
           : {
               ok: false,
               reason:
-                outcome === 'unavailable'
+                outcome === 'exhausted'
                   ? 'inheritance-source-unavailable'
                   : outcome === 'concurrent'
                     ? 'inheritance-source-changed'
                     : 'uploader-changed',
             },
       );
-      expect(reads).toBe(outcome === 'unavailable' ? 3 : outcome === 'uploader-changed' ? 1 : 2);
-      expect(sleep.mock.calls).toEqual(outcome === 'unavailable' ? [[250], [500]] : [[250]]);
+      expect(reads).toBe(
+        outcome === 'exhausted'
+          ? 3
+          : outcome === 'uploader-changed' || firstRead === 'different'
+            ? 1
+            : 2,
+      );
+      expect(sleep.mock.calls).toEqual(
+        outcome === 'exhausted' ? [[250], [500]] : firstRead === 'different' ? [] : [[250]],
+      );
       expect(runWrangler.mock.calls.filter(([args]) => args[1] === 'upload')).toHaveLength(1);
       expect(runWrangler.mock.calls.some(([args]) => args[1] === 'deploy')).toBe(
         outcome === 'recovers',
@@ -2173,7 +2199,9 @@ describe('Cloudflare version activation', () => {
       ),
     ).toBe('developer-platform-experience');
     expect(
-      extractWorkersDevSubdomain('https://platform-ready-abc-my-worker.my-team.fed.workers.dev/path'),
+      extractWorkersDevSubdomain(
+        'https://platform-ready-abc-my-worker.my-team.fed.workers.dev/path',
+      ),
     ).toBe('my-team.fed');
     expect(extractWorkersDevSubdomain('https://example.com')).toBeUndefined();
     expect(extractWorkersDevSubdomain('https://worker.my-team.other.workers.dev')).toBeUndefined();
@@ -4155,7 +4183,8 @@ describe('Cloudflare version activation', () => {
     });
 
     it('sends Access headers when a denied preview alias falls back to the opted-in custom route', async () => {
-      const alias = 'https://platform-ready-abc-private-app.developer-platform-experience.workers.dev';
+      const alias =
+        'https://platform-ready-abc-private-app.developer-platform-experience.workers.dev';
       const runWrangler = runner({
         upload: ok(`Worker Version ID: ${NEXT}\nVersion Preview Alias URL: ${alias}`),
       });
