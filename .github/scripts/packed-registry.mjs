@@ -33,7 +33,7 @@ export function inspectPackage(tarball) {
       'docs/guide/quickstart.md',
       'docs/reference/cli.md',
       'skills/bwf/SKILL.md',
-      'skills/migrate-vite-cloudflare-to-platform/SKILL.md',
+      'skills/migrate-vite-cloudflare-to-bwf/SKILL.md',
       'AGENTS_TEMPLATE.md',
     ]) {
       assert(files.has(`package/${file}`), `bwf: missing bundled ${file}`);
