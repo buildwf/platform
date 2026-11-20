@@ -103,7 +103,13 @@ export const platformAccessProtection: MiddlewareHandler<ApiEnv> = async (contex
       // This route also requires its own installation-specific setup HMAC, never a health token.
       return next();
     }
-    if (path === '/projects' || path.startsWith('/projects/')) {
+    // Scoped deploy credentials call procedures (`POST /rpc/<name>`) since the
+    // deploy routes moved there; the REST project paths stay for older callers.
+    if (
+      path === '/projects' ||
+      path.startsWith('/projects/') ||
+      (method === 'POST' && /^\/rpc\/[A-Za-z0-9.]+$/.test(path))
+    ) {
       const authorization = context.req.header('Authorization');
       const payload = authorization?.startsWith('Bearer ')
         ? await verifyJwt(authorization.slice(7), context.env.JWT_SECRET)
