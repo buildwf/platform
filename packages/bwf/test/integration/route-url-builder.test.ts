@@ -68,7 +68,7 @@ const unknown: Href = '/unknown';
 const unchecked: Href = dynamic;
 // @ts-expect-error relative paths are rejected
 const relative: Href = '../about';
-// @ts-expect-error protocol-relative URLs are rejected when no root dynamic route matches them
+// @ts-expect-error protocol-relative URLs are rejected
 const protocolRelative: Href = '//example.com/about';
 // @ts-expect-error empty strings are rejected
 const empty: Href = '';
@@ -255,7 +255,7 @@ defineMiddleware(async c => c.redirect(destination));
     mkdirSync(dirname(join(root, path)), { recursive: true });
     writeFileSync(join(root, path), content);
   }
-  mkdirSync(join(root, 'node_modules'));
+  mkdirSync(join(root, 'node_modules/@builtbyfriends'), { recursive: true });
   symlinkSync(packageRoot, join(root, 'node_modules/@builtbyfriends/bwf'), 'junction');
   symlinkSync(join(packageRoot, 'node_modules/hono'), join(root, 'node_modules/hono'), 'junction');
   const { scan } = await analyzeApplication(root, {
@@ -376,23 +376,42 @@ connect('/chat/[room]', { params: { room: 'lobby' } }).on('message', (message) =
     },
   );
 
-  it('lets a root dynamic route match any single-segment URL with routing.typedRoutes', async () => {
+  it.each([
+    { file: '[slug]', pattern: '/[slug]', legacy: '/:slug', param: 'slug' },
+    { file: '[...slug]', pattern: '/[...slug]', legacy: '/:slug{.+}', param: 'slug' },
+    { file: '[...]', pattern: '/[...]', legacy: '/*', param: '*' },
+  ])('keeps raw URL checks with a root $file route', async ({ file, pattern, legacy, param }) => {
     const root = await createFixture({
       typedRoutes: true,
       extraFiles: {
-        'routes/[slug].ts':
+        [`routes/${file}.ts`]:
           "import { defineHandler } from '@builtbyfriends/bwf/handler'; export const GET = defineHandler(() => ({ ok: true }));",
-        // Template literal types cannot exclude empty or slash-leading segments.
-        'check-root-dynamic.ts': `import type { RouteUrl } from '@builtbyfriends/bwf/routes';
-const loose: Array<RouteUrl> = ['/anything', '/users/', '//example.com'];
-void loose;
+        'check-root-dynamic.ts': `import { routeUrl, type Href, type RoutePath, type RouteUrl } from '@builtbyfriends/bwf/routes';
+const path: RoutePath = ${JSON.stringify(pattern)};
+const url: RouteUrl = routeUrl(path, { params: { ${JSON.stringify(param)}: 'dashboard' } });
+const alias: Href = routeUrl(${JSON.stringify(legacy)}, { params: { ${JSON.stringify(param)}: 'dashboard' } });
+const text: string = url;
+const known: Href[] = ['/about', '/users/42', '/files/docs/start', '/wild/a/b', url, alias];
+// @ts-expect-error root dynamic routes do not admit misspelled static URLs
+const typo: Href = '/abuot';
+// @ts-expect-error root dynamic routes require explicit URL construction
+const dynamic: RouteUrl = '/dashboard';
+// @ts-expect-error root dynamic routes do not admit protocol-relative URLs
+const external: Href = '//example.com';
+// @ts-expect-error query strings do not bypass route checks
+const query: RouteUrl = '/dashboard?tab=activity';
+// @ts-expect-error params remain required for root dynamic routes
+routeUrl(${JSON.stringify(pattern)});
+void [known, text, typo, dynamic, external, query];
 `,
       },
     });
-    expect(typecheck(root, 'generated', ['check-root-dynamic.ts'])).toEqual({
-      output: '',
-      status: 0,
-    });
+    for (const declarations of ['generated', 'package'] as const) {
+      expect(typecheck(root, declarations, ['check-typed.ts', 'check-root-dynamic.ts'])).toEqual({
+        output: '',
+        status: 0,
+      });
+    }
   });
 
   it('checks URL strings through the package types alone with routing.typedRoutes', () => {
@@ -400,7 +419,7 @@ void loose;
     // package's own copy without a generated .bwf/routes.d.ts.
     const root = mkdtempSync(join(tmpdir(), 'platform-route-stub-'));
     roots.push(root);
-    mkdirSync(join(root, 'node_modules'));
+    mkdirSync(join(root, 'node_modules/@builtbyfriends'), { recursive: true });
     symlinkSync(packageRoot, join(root, 'node_modules/@builtbyfriends/bwf'), 'junction');
     writeFileSync(join(root, 'package.json'), '{"type":"module"}');
     writeFileSync(

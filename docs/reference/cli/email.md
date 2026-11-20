@@ -142,4 +142,4 @@ Set up email before deploying from CI. Requires `email.from` in `bwf.config.ts`,
 
 bwf shows the planned changes and asks before applying them. Apps without `email/` handlers configure sending only; routing and plus addressing are left alone. Commit `bwf.lock.json`, then run `bwf deploy --platform cloudflare --require-email` in CI.
 
-On Workers Free, inbound mail and sends to verified recipients remain available. Run this command again after upgrading to Workers Paid to enable arbitrary recipients. See [Email setup](../../guide/email/domains.md#your-own-cloudflare-account).
+On Workers Free, apps with `email/` handlers keep inbound mail and sends to verified recipients. Sending-only apps need Email Sending, which requires Workers Paid. Run this command again after upgrading to Workers Paid to enable arbitrary recipients. See [Email setup](../../guide/email/domains.md#your-own-cloudflare-account).

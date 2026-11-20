@@ -38,6 +38,7 @@ const mockNote = vi.fn();
 const mockOutro = vi.fn();
 const mockLogWarn = vi.fn();
 const mockLogInfo = vi.fn();
+const mockLogStep = vi.fn();
 const mockGetToken = vi.fn();
 const mockGetApiUrl = vi.fn();
 const mockRunLogin = vi.fn();
@@ -215,6 +216,87 @@ describe('init scaffold arguments', () => {
   });
 });
 
+describe('init question order', () => {
+  const DEPLOY_PROMPT = 'Where should this project deploy?';
+  const answers: Record<string, unknown> = {
+    'Choose a scaffold toolchain:': 'vite',
+    'Choose a starter:': 'spa',
+    'Choose a database setup for this project:': 'none',
+    [DEPLOY_PROMPT]: 'none',
+  };
+
+  it('asks where a new starter deploys before writing its files', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'void-init-order-'));
+    let entriesAtDeployPrompt: Array<string> | undefined;
+    try {
+      mockSelect.mockImplementation((options: { message: string }) => {
+        if (options.message === DEPLOY_PROMPT) {
+          entriesAtDeployPrompt = readdirSync(root);
+        }
+        return answers[options.message];
+      });
+
+      await runInitCommand(root);
+
+      expect(entriesAtDeployPrompt).toEqual([]);
+      expect(existsSync(join(root, 'src', 'App.tsx'))).toBe(true);
+      expect(readDeploymentPlatform(root)).toBe('none');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('leaves the folder empty when the deployment question is cancelled', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'void-init-order-cancel-'));
+    const exit = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('Cancelled');
+    });
+    try {
+      mockSelect.mockImplementation((options: { message: string }) =>
+        options.message === DEPLOY_PROMPT ? Symbol.for('cancel') : answers[options.message],
+      );
+
+      await expect(runInitCommand(root)).rejects.toThrow('Cancelled');
+
+      expect(exit).toHaveBeenCalledWith(0);
+      expect(readdirSync(root)).toEqual([]);
+    } finally {
+      exit.mockRestore();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ['an empty folder', 'Empty project detected. Creating a React starter.', false],
+    ['an existing app', 'Existing project detected. Configuring bwf.', true],
+  ])('says what it does in %s before asking about Git', async (_name, message, existing) => {
+    const root = mkdtempSync(join(tmpdir(), 'void-init-order-git-'));
+    // Outside CI, init asks whether to initialize Git.
+    delete process.env.CI;
+    try {
+      if (existing) {
+        writeExistingViteApp(root, { bwf: '^0.0.1' });
+      }
+      mockSelect.mockImplementation((options: { message: string }) => answers[options.message]);
+      mockConfirm.mockResolvedValue(false);
+
+      await runInitCommand(root);
+
+      const infoIndex = mockLogInfo.mock.calls.findIndex(([text]) => text === message);
+      const gitIndex = mockConfirm.mock.calls.findIndex(
+        ([options]) => options?.message === 'Initialize a git repository?',
+      );
+      expect(infoIndex).not.toBe(-1);
+      expect(gitIndex).not.toBe(-1);
+      expect(mockLogInfo.mock.invocationCallOrder[infoIndex]).toBeLessThan(
+        mockConfirm.mock.invocationCallOrder[gitIndex]!,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('GitHub Actions deployment workflows', () => {
   it('requires a selected URL for a bwf deployment workflow', () => {
     expect(() => getWorkflowYaml('/project', 'npm', 'my-app', 'platform')).toThrow('bwf connect');
@@ -328,7 +410,7 @@ vi.mock('@voidzero-dev/vite-plus-prompts', () => ({
     warn: (...args: Array<unknown>) => mockLogWarn(...args),
     error: vi.fn(),
     info: (...args: Array<unknown>) => mockLogInfo(...args),
-    step: vi.fn(),
+    step: (...args: Array<unknown>) => mockLogStep(...args),
   },
   confirm: (...args: Array<unknown>) => mockConfirm(...args),
   select: (...args: Array<unknown>) => mockSelect(...args),
@@ -635,6 +717,7 @@ afterEach(() => {
   mockOutro.mockReset();
   mockLogWarn.mockReset();
   mockLogInfo.mockReset();
+  mockLogStep.mockReset();
   mockGetToken.mockReset();
   mockGetApiUrl.mockReset();
   mockRunLogin.mockReset();
@@ -1452,6 +1535,11 @@ describe('isScaffoldableEmptyProject', () => {
       expect(tsconfig.compilerOptions.jsx).toBe('react-jsx');
       expect(tsconfig.include).toContain('src');
       expect(tsconfig.include).toContain('db');
+
+      expect(mockLogInfo).toHaveBeenCalledWith('Empty project detected. Creating a React starter.');
+      // The starter prompt already showed the database, and the starter has its own routes.
+      expect(mockLogInfo).not.toHaveBeenCalledWith('Using default D1 (SQLite) configuration');
+      expect(mockLogInfo).not.toHaveBeenCalledWith(expect.stringContaining('skipping demo'));
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -1622,6 +1710,8 @@ describe('isScaffoldableEmptyProject', () => {
 
   it('offers to scaffold in a subfolder from a non-project parent directory', async () => {
     const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
+    // The user's shell stays in the parent directory.
+    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
     try {
       mkdirSync(join(root, 'existing-project'));
       mockSelect
@@ -1660,7 +1750,11 @@ describe('isScaffoldableEmptyProject', () => {
       expect(folderPrompt.validate('')).toBe('That folder already exists.');
       expect(folderPrompt.validate('another-app')).toBeUndefined();
       expectVpInstall(toSlash(appRoot));
+      expect(String(mockOutro.mock.calls.at(-1)?.[0])).toContain(
+        'Run `cd my-new-app && vp dev` to start developing.',
+      );
     } finally {
+      cwd.mockRestore();
       rmSync(root, { recursive: true, force: true });
     }
   });
@@ -2780,7 +2874,10 @@ export default config;
         'github',
         expect.any(Function),
       );
-      expect(mockSaveToken).toHaveBeenCalledWith('token_123', 'https://platform.buildwithfriends.dev');
+      expect(mockSaveToken).toHaveBeenCalledWith(
+        'token_123',
+        'https://platform.buildwithfriends.dev',
+      );
       expect(mockListProjects).toHaveBeenCalledOnce();
       expect(mockCreateProject).toHaveBeenCalledWith('my-live-app');
       expect(JSON.parse(readFileSync(join(root, '.bwf', 'project.json'), 'utf-8'))).toEqual({
