@@ -70,7 +70,7 @@ afterEach(() => {
 });
 
 describe('bwf prepare (subprocess)', () => {
-  it('generates custom binding types and removes them when switching targets', () => {
+  it('generates custom binding types and removes them when the bindings are gone', () => {
     const root = createProject();
     const config = {
       cloudflare: {
@@ -87,7 +87,8 @@ describe('bwf prepare (subprocess)', () => {
     expect(JSON.parse(readFileSync(join(root, '.bwf/tsconfig.json'), 'utf8')).files).toContain(
       'bindings.d.ts',
     );
-    writeFileSync(join(root, 'bwf.json'), JSON.stringify({ ...config, target: 'node' }));
+    // The Cloudflare target is the only one, so remove the binding to drop its types.
+    writeFileSync(join(root, 'bwf.json'), JSON.stringify({}));
     const second = runBwf(root, ['prepare']);
     expect(second.status, second.stderr).toBe(0);
     expect(existsSync(join(root, '.bwf/bindings.d.ts'))).toBe(false);
