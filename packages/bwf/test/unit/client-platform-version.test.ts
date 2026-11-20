@@ -41,7 +41,7 @@ function serve(platformVersion: string | (() => Response | Promise<Response>)): 
         ? platformDiscoveryResponse(input, platformVersion)
         : platformVersion();
     }
-    return Response.json([]);
+    return Response.json({ data: [] });
   });
 }
 
@@ -109,7 +109,7 @@ describe('minimum platform version', () => {
     async (version) => {
       serve(version);
       await expect(client().listProjectChoices()).resolves.toEqual([]);
-      expect(requestedPaths()).toEqual(['/.well-known/platform', '/projects/choices']);
+      expect(requestedPaths()).toEqual(['/.well-known/platform', '/rpc/projects.choices']);
     },
   );
 
@@ -163,7 +163,7 @@ describe('minimum platform version', () => {
   it('does not check when login opts out', async () => {
     serve('0.22.0');
     await expect(client({ checkPlatformVersion: false }).listProjectChoices()).resolves.toEqual([]);
-    expect(requestedPaths()).toEqual(['/projects/choices']);
+    expect(requestedPaths()).toEqual(['/rpc/projects.choices']);
   });
 
   it('refuses a too-old platform once and keeps the answer for later requests', async () => {
@@ -216,7 +216,11 @@ describe('minimum platform version', () => {
       serve(answer);
       await expect(client().listProjectChoices()).resolves.toEqual([]);
       await expect(client().listProjects()).resolves.toEqual([]);
-      expect(requestedPaths()).toEqual(['/.well-known/platform', '/projects/choices', '/projects']);
+      expect(requestedPaths()).toEqual([
+        '/.well-known/platform',
+        '/rpc/projects.choices',
+        '/rpc/projects.list',
+      ]);
     },
   );
 
@@ -244,7 +248,7 @@ describe('direct Worker upload discovery', () => {
     serveFeatures({ directWorkerUpload: true });
     await client().listProjectChoices();
     await expect(client().supportsDirectWorkerUpload()).resolves.toBe(true);
-    expect(requestedPaths()).toEqual(['/.well-known/platform', '/projects/choices']);
+    expect(requestedPaths()).toEqual(['/.well-known/platform', '/rpc/projects.choices']);
   });
 
   it.each([
@@ -275,9 +279,9 @@ describe('direct Worker upload discovery', () => {
     await client().listProjects();
     expect(requestedPaths()).toEqual([
       '/.well-known/platform',
-      '/projects/choices',
+      '/rpc/projects.choices',
       '/.well-known/platform',
-      '/projects',
+      '/rpc/projects.list',
     ]);
   });
 
@@ -287,7 +291,7 @@ describe('direct Worker upload discovery', () => {
     await expect(client().supportsDirectWorkerUpload()).resolves.toBe(false);
     expect(requestedPaths()).toEqual([
       '/.well-known/platform',
-      '/projects/choices',
+      '/rpc/projects.choices',
       '/.well-known/platform',
     ]);
   });
@@ -296,6 +300,6 @@ describe('direct Worker upload discovery', () => {
     serveFeatures({});
     await client().listProjectChoices();
     await expect(client().supportsDirectWorkerUpload()).resolves.toBe(false);
-    expect(requestedPaths()).toEqual(['/.well-known/platform', '/projects/choices']);
+    expect(requestedPaths()).toEqual(['/.well-known/platform', '/rpc/projects.choices']);
   });
 });
