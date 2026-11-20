@@ -1931,7 +1931,7 @@ describe('platform credential onboarding', () => {
     );
     const draft = listInstallationManifests()[0]!;
     expect(draft.deployment.installationSlug).toBe('platform-e2e');
-    expect(draft.deployment.resources.apiWorker).toBe('platform-e2e-api');
+    expect(draft.deployment.resources.apiWorker).toBe('platform-platform-e2e-api');
     expect(draft.deployment.resources).toEqual(preview.deployment.resources);
     expect(isPlatformSetupDraft(draft)).toBe(true);
     const callback = `https://${draft.deployment.resources.apiWorker}.platform-e2e-test.workers.dev/auth/callback`;
