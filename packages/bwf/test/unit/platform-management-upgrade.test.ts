@@ -15,7 +15,10 @@ import {
   transitionInstallation,
   type PlatformInstallationManifest,
 } from '@builtbyfriends/platform';
-import { getPlatformRuntimeDirectory, resolvePlatformRuntime } from '@builtbyfriends/platform/installer';
+import {
+  getPlatformRuntimeDirectory,
+  resolvePlatformRuntime,
+} from '@builtbyfriends/platform/installer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { printSuccess } from '../../src/cli/output.ts';
 
@@ -1568,6 +1571,42 @@ describe('installed platform upgrade', () => {
         'replaceOutsideChanges',
       );
       expect(state.cfRunner).not.toHaveBeenCalled();
+    });
+
+    it('keeps billing values that the API Worker has as plain-text variables', async () => {
+      withApiWorker();
+      const original = state.request.getMockImplementation()!;
+      state.request.mockImplementation(async (path: string) => {
+        const answer = await original(path);
+        return path.endsWith(`/versions/${activeVersion}`)
+          ? {
+              ...(answer as object),
+              resources: {
+                bindings: [
+                  { name: 'STRIPE_PRICE_SOLO', type: 'plain_text', text: 'price_solo' },
+                  { name: 'STRIPE_SECRET_KEY', type: 'secret_text' },
+                ],
+              },
+            }
+          : answer;
+      });
+
+      await upgrade();
+
+      expect(installPlatform).toHaveBeenCalledOnce();
+      // The secret is inherited; the plain-text value is saved and sent again as a secret.
+      const checkpoint = state.createSecrets.mock.calls.at(-1)![0].checkpoint;
+      expect(checkpoint.billingPending).toBe('true');
+      expect(JSON.parse(checkpoint.billingJson)).toEqual({ STRIPE_PRICE_SOLO: 'price_solo' });
+      expect(vi.mocked(installPlatform).mock.calls[0]![1]).toBe(
+        state.createSecrets.mock.results.at(-1)!.value,
+      );
+      // The review and the billing check share one read of the version.
+      expect(
+        state.request.mock.calls.filter(([path]) =>
+          String(path).endsWith(`/versions/${activeVersion}`),
+        ),
+      ).toHaveLength(1);
     });
 
     it('warns in a plan and changes nothing', async () => {

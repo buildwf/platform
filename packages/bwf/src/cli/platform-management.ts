@@ -41,9 +41,11 @@ import {
 import {
   findPlatformWorkerOutsideChanges,
   formatPlatformWorkerOutsideChanges,
+  readPlatformApiWorkerBillingVariables,
   reviewPlatformWorkerOutsideChanges,
   uploadPlatformWorkerOutsideChanges,
 } from './platform-installer-outside-changes.ts';
+import { parsePlatformBillingSecrets } from './platform-installer-secrets.ts';
 import {
   acquirePlatformDatabaseLifecycleLock,
   createPlatformHealthProbeToken,
@@ -600,28 +602,29 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
       process.env.PLATFORM_ADMIN_GITHUB_ID ||
       recovery?.bootstrapGitHubId ||
       (bootstrapGitHubLogin ? await resolveBootstrapGitHubId(bootstrapGitHubLogin) : '');
-    const secrets = createPlatformInstallationSecrets({
-      bootstrapGitHubId,
-      bootstrapGitHubLogin,
-      cloudflareApiToken: process.env.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN || '',
-      checkpoint: recovery,
-      databaseUrl,
-      emailEnabled: plan.deployment.capabilities.email,
-      emailSigningSecret: process.env.PLATFORM_EMAIL_SIGNING_SECRET || '',
-      existingEmailEnabled: manifest.deployment.capabilities.email,
-      existingInstallation: true,
-      updateExistingWorkers: true,
-      githubClientId: process.env.PLATFORM_GITHUB_CLIENT_ID || '',
-      githubClientSecret: process.env.PLATFORM_GITHUB_CLIENT_SECRET || '',
-      jwtSecret: process.env.PLATFORM_JWT_SECRET || '',
-      projectSecretKey: process.env.PLATFORM_PROJECT_SECRET_KEY || '',
-      projectSecretKeysJson: process.env.PLATFORM_PROJECT_SECRET_KEYS_JSON || '',
-      projectSecretActiveKeyVersion:
-        process.env.PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION || '',
-      r2AccessKeyId: process.env.PLATFORM_R2_ACCESS_KEY_ID || '',
-      r2SecretAccessKey: process.env.PLATFORM_R2_SECRET_ACCESS_KEY || '',
-      ...replacedLogin,
-    });
+    const secretsFor = (checkpoint: typeof recovery) =>
+      createPlatformInstallationSecrets({
+        bootstrapGitHubId,
+        bootstrapGitHubLogin,
+        cloudflareApiToken: process.env.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN || '',
+        checkpoint,
+        databaseUrl,
+        emailEnabled: plan.deployment.capabilities.email,
+        emailSigningSecret: process.env.PLATFORM_EMAIL_SIGNING_SECRET || '',
+        existingEmailEnabled: manifest.deployment.capabilities.email,
+        existingInstallation: true,
+        updateExistingWorkers: true,
+        githubClientId: process.env.PLATFORM_GITHUB_CLIENT_ID || '',
+        githubClientSecret: process.env.PLATFORM_GITHUB_CLIENT_SECRET || '',
+        jwtSecret: process.env.PLATFORM_JWT_SECRET || '',
+        projectSecretKey: process.env.PLATFORM_PROJECT_SECRET_KEY || '',
+        projectSecretKeysJson: process.env.PLATFORM_PROJECT_SECRET_KEYS_JSON || '',
+        projectSecretActiveKeyVersion: process.env.PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION || '',
+        r2AccessKeyId: process.env.PLATFORM_R2_ACCESS_KEY_ID || '',
+        r2SecretAccessKey: process.env.PLATFORM_R2_SECRET_ACCESS_KEY || '',
+        ...replacedLogin,
+      });
+    let secrets = secretsFor(recovery);
     const runtimeTokenToPreflight = resolvePlatformRuntimeTokenToPreflight(plan, secrets, {
       enablingCustomDomains:
         plan.deployment.capabilities.customDomains &&
@@ -672,8 +675,26 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
     // changed outside bwf, and the upgrade refuses an active version without
     // bwf's record of its triggers. Both happen after traffic pauses. Find
     // them first.
+    // The review and the billing read below share their Cloudflare reads.
+    const reads = new Map<string, Promise<unknown>>();
+    const readOnce = {
+      getWorkerLastDeployedFrom: (accountId: string, workerName: string) =>
+        client.getWorkerLastDeployedFrom(accountId, workerName),
+      request: <T>(path: string): Promise<T> => {
+        if (!reads.has(path)) {
+          reads.set(
+            path,
+            client.request<unknown>(path).catch((error: unknown) => {
+              reads.delete(path);
+              throw error;
+            }),
+          );
+        }
+        return reads.get(path) as Promise<T>;
+      },
+    };
     const outsideChanges = await reviewPlatformWorkerOutsideChanges({
-      client,
+      client: readOnce,
       plan,
       runtime: runtime!,
       installation: {
@@ -684,6 +705,23 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
       command: platformLifecycleResumeCommand({ ...args, yes: false }, manifest.id),
       accepted: 'acceptOutsideChanges' in args && args.acceptOutsideChanges === true,
     });
+    // The new API Worker version keeps secrets but drops plain-text variables
+    // that bwf does not set. Keep billing values set that way outside bwf as
+    // saved values, and set them again as secrets.
+    const savedBilling = parsePlatformBillingSecrets(recovery?.billingJson);
+    const liveBilling = Object.entries(
+      await readPlatformApiWorkerBillingVariables(readOnce, plan),
+    ).filter(([name, value]) => savedBilling[name as keyof typeof savedBilling] !== value);
+    if (liveBilling.length > 0) {
+      log.info(
+        `Keeping ${liveBilling.map(([name]) => name).join(', ')} from the API Worker. bwf saves the values with the platform secrets and sets them as secrets.`,
+      );
+      secrets = secretsFor({
+        ...recovery,
+        billingJson: JSON.stringify({ ...savedBilling, ...Object.fromEntries(liveBilling) }),
+        billingPending: 'true',
+      });
+    }
     markPhase('outside changes');
     progress = createPlatformProgress();
     progress.start(

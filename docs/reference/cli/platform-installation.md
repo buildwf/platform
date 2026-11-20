@@ -104,13 +104,15 @@ Use these commands to recover, update, pause, or remove an installation:
 
 ```sh
 bwf platform discover [--account <id>] [--installation <id-or-name>]
-bwf platform upgrade [id] [--runtime <path>] [--dashboard-url <origin>] [--custom-domains] [--runtime-logs <full|minimal>] [--storage-location <hint|automatic>] [--plan] [--yes]
+bwf platform upgrade [id] [--runtime <path>] [--dashboard-url <origin>] [--custom-domains] [--accept-outside-changes] [--runtime-logs <full|minimal>] [--storage-location <hint|automatic>] [--plan] [--yes]
 bwf platform rollback [id] --runtime <earlier-path> [--from-runtime <current-path>] [--plan] [--yes]
-bwf platform repair [id] [--runtime <path>] [--dashboard-url <origin>] [--custom-domains] [--auth-config <path>] [--plan] [--yes]
+bwf platform repair [id] [--runtime <path>] [--dashboard-url <origin>] [--custom-domains] [--accept-outside-changes] [--auth-config <path>] [--plan] [--yes]
 bwf platform disable [id] [--plan] [--yes]
 bwf platform enable [id] [--runtime <path>] [--plan] [--yes]
 bwf platform uninstall [id] [--plan] [--purge-data | --purge-resources] [--yes]
 ```
+
+When a platform Worker was changed in the Cloudflare dashboard or API, `upgrade` and `repair` ask for approval in a terminal. Without a terminal they stop and list the Workers. After a person has reviewed the list, add `--accept-outside-changes` to replace the changes from a script. Worker secrets stay in place. Plain-text variables that bwf doesn't set are removed, except Stripe billing values, which bwf saves and sets again as secrets. To give the platform its Stripe values, see [Billing values](./platform-config.md#billing-values).
 
 `discover --installation` limits recovery and endpoint verification to one installation in a shared Cloudflare account.
 

@@ -16,9 +16,11 @@ import {
   readActivePlatformWorkerDeployment,
 } from './platform-installer-inspection.ts';
 import { runPlatformWranglerAtApiBase } from './platform-installer-process.ts';
-import type {
-  PlatformDatabaseLifecycleLock,
-  PlatformWorkerKey,
+import {
+  PLATFORM_BILLING_SECRET_NAMES,
+  type PlatformBillingSecretName,
+  type PlatformDatabaseLifecycleLock,
+  type PlatformWorkerKey,
 } from './platform-installer-types.ts';
 import {
   platformWorkerResourceKey,
@@ -228,6 +230,58 @@ export async function findPlatformWorkerOutsideChanges(
   return changes.filter((change) => change !== null);
 }
 
+/**
+ * The billing values that the active API Worker has as plain-text variables,
+ * for example after someone set them in the Cloudflare dashboard or API. A
+ * new version keeps secrets but drops variables that bwf does not set, so the
+ * caller saves these and sets them again as secrets. Secrets need nothing:
+ * the new version inherits them.
+ */
+export async function readPlatformApiWorkerBillingVariables(
+  client: Pick<PlatformCloudflareClient, 'request'>,
+  plan: PlatformInstallPlan,
+): Promise<Partial<Record<PlatformBillingSecretName, string>>> {
+  const action = plan.actions.find((entry) => entry.key === platformWorkerResourceKey('api'));
+  if (action?.kind !== 'worker' || action.action === 'create') {
+    return {};
+  }
+  const script = `/accounts/${encodeURIComponent(plan.account.id)}/workers/scripts/${encodeURIComponent(action.name)}`;
+  const deployments = await readPlatformWorker(action.name, () =>
+    client.request<unknown>(`${script}/deployments`).catch((error: unknown) => {
+      if (error instanceof PlatformCloudflareApiError && error.status === 404) {
+        return null;
+      }
+      throw error;
+    }),
+  );
+  // The outside-change review reports a missing, split or malformed deployment.
+  const active = readActivePlatformWorkerDeployment(deployments);
+  if (active.kind !== 'active') {
+    return {};
+  }
+  const version = await readPlatformWorker(action.name, () =>
+    client.request<unknown>(`${script}/versions/${encodeURIComponent(active.versionId)}`),
+  );
+  const resources =
+    version && typeof version === 'object'
+      ? (version as { resources?: { bindings?: unknown } }).resources
+      : undefined;
+  const bindings = Array.isArray(resources?.bindings) ? resources.bindings : [];
+  const values: Partial<Record<PlatformBillingSecretName, string>> = {};
+  for (const binding of bindings as Array<Record<string, unknown>>) {
+    const name = binding?.name as PlatformBillingSecretName;
+    if (
+      PLATFORM_BILLING_SECRET_NAMES.includes(name) &&
+      binding.type === 'plain_text' &&
+      typeof binding.text === 'string' &&
+      binding.text !== ''
+    ) {
+      values[name] = binding.text;
+    }
+  }
+  return values;
+}
+
 function listPlatformWorkerOutsideChanges(
   changes: ReadonlyArray<PlatformWorkerOutsideChange>,
 ): string {
@@ -282,7 +336,7 @@ export async function reviewPlatformWorkerOutsideChanges(
         listPlatformWorkerOutsideChanges(changes),
         '',
         'You passed --accept-outside-changes, so this command replaces the configuration of these Workers with the bwf configuration.',
-        'It removes values that bwf does not set and resets values that bwf sets.',
+        'It keeps their secrets and the billing values. It removes other plain-text variables that bwf does not set and resets values that bwf sets.',
       ].join('\n'),
     );
     return changes;
@@ -294,6 +348,7 @@ export async function reviewPlatformWorkerOutsideChanges(
         NO_WORKER_CHANGED,
         'This command replaces their configuration with the bwf configuration. It can ask for your approval only in a terminal.',
         `Run this command once in a terminal to review them:\n${input.command}`,
+        'If a person already approved these changes, run it again with --accept-outside-changes.',
       ].join('\n'),
     );
   }
@@ -302,7 +357,8 @@ export async function reviewPlatformWorkerOutsideChanges(
       listPlatformWorkerOutsideChanges(changes),
       '',
       'This command replaces the configuration of these Workers with the bwf configuration.',
-      'It removes values that bwf does not set, for example an EMAIL_FROM that you added.',
+      'It keeps their secrets and the billing values (bwf platform config billing).',
+      'It removes other plain-text variables that bwf does not set, for example an EMAIL_FROM that you added.',
       'It resets values that bwf sets, for example AUTH_REDIRECT_URI.',
       ...(changes.some(needsReviewUpload)
         ? [
