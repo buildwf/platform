@@ -160,7 +160,8 @@ function installPlatformMocks(opts?: {
         ...reqInit,
         body: JSON.stringify(body),
       });
-      const events = (await legacy.text())
+      const text: string = await (legacy as Response).text();
+      const events = text
         .split('\n')
         .filter(Boolean)
         .map((line) => JSON.parse(line) as { deploymentId?: string; deployment?: string });
