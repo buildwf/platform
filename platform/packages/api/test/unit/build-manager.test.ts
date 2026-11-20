@@ -6275,11 +6275,11 @@ describe('build-agent sanitizeChildEnv (env scrub)', () => {
     // The scrub list is exactly these secrets.
     expect([...SCRUBBED_ENV_VARS].sort()).toEqual([
       'AGENT_TOKEN',
+      'BWF_TOKEN',
       'CF_ACCESS_CLIENT_ID',
       'CF_ACCESS_CLIENT_SECRET',
       'DO_LOG_URL',
       'PLATFORM_ACCESS_CREDENTIALS',
-      'BWF_TOKEN',
       'SOURCE_TOKEN',
     ]);
   });
