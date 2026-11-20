@@ -1,6 +1,9 @@
 import { sql } from 'drizzle-orm';
+import { Hono } from 'hono';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
-import rawApp from '../../src/index.ts';
+import { getUser } from '../../src/db.ts';
+import { handleManifestOnlyDeploy } from '../../src/deploy/execute.ts';
+import type { ApiEnv } from '../../src/env.ts';
 import { deployments } from '../../src/schema.ts';
 import {
   clearTables,
@@ -10,10 +13,7 @@ import {
   setupEnv,
   teardownEnv,
   type TestEnv,
-  withLegacyDeploy,
 } from './helpers.ts';
-
-const app = withLegacyDeploy(rawApp);
 import { setGetProjectOverride } from './setup.ts';
 
 // A JSON deploy keeps running after its response is returned until the NDJSON
@@ -22,6 +22,10 @@ import { setGetProjectOverride } from './setup.ts';
 // the deployment row, while clearTables deletes deployments before projects:
 // opposite orders, so the two transactions deadlock. PGlite has one connection,
 // so only a real PostgreSQL database can show this.
+//
+// deploy.finalize reads the inline stream to the end before it answers, so it
+// can't leave one unread. The test calls the admission handler the procedure
+// wraps, the way a caller that stops at the status would.
 const postgres = it.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL));
 const HASH = (n: number) => n.toString(16).padStart(32, '0');
 
@@ -81,10 +85,18 @@ describe('fixture cleanup after an unread deploy stream', () => {
       return original(...argsList);
     });
 
-    const res = await app.fetch(
-      new Request(`http://localhost/projects/${project.id}/deploy`, {
+    const actor = await getUser(env.db, user.id);
+    const deployApp = new Hono<ApiEnv>()
+      .use('*', async (context, next) => {
+        context.set('db', env.db);
+        context.set('user', actor!);
+        await next();
+      })
+      .post('/:id/deploy', handleManifestOnlyDeploy);
+    const res = await deployApp.fetch(
+      new Request(`http://localhost/${project.id}/deploy`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${user.jwt}`, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           manifest: {
             version: 3,
