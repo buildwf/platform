@@ -50,22 +50,24 @@ describe('runProjectsCommand', () => {
     process.env.BWF_API_URL = 'https://api.example.test';
 
     const fetchMock = vi.fn(async () =>
-      Response.json([
-        {
-          id: 'proj_1',
-          user_id: 'user_1',
-          slug: 'star-tracker',
-          role: 'owner',
-          created_at: '2026-02-15T00:00:00.000Z',
-        },
-        {
-          id: 'proj_2',
-          user_id: 'user_1',
-          slug: 'todo-app',
-          role: 'collaborator',
-          created_at: '2026-02-15T00:00:00.000Z',
-        },
-      ]),
+      Response.json({
+        data: [
+          {
+            id: 'proj_1',
+            user_id: 'user_1',
+            slug: 'star-tracker',
+            role: 'owner',
+            created_at: '2026-02-15T00:00:00.000Z',
+          },
+          {
+            id: 'proj_2',
+            user_id: 'user_1',
+            slug: 'todo-app',
+            role: 'collaborator',
+            created_at: '2026-02-15T00:00:00.000Z',
+          },
+        ],
+      }),
     );
     vi.stubGlobal('fetch', fetchMock);
 
@@ -75,8 +77,12 @@ describe('runProjectsCommand', () => {
     const out = capture.output();
     capture.restore();
 
-    expect(fetchMock).toHaveBeenCalledWith('https://api.example.test/projects', {
+    expect(fetchMock).toHaveBeenCalledWith('https://api.example.test/rpc/projects.list', {
+      method: 'POST',
+      body: '',
       headers: {
+        'Content-Type': 'application/json',
+        'x-realtime-surface': 'cli',
         Authorization: 'Bearer test-token',
         'X-Platform-CLI-Version': expect.stringMatching(/^\d+\.\d+\.\d+/) as unknown as string,
       },
@@ -98,7 +104,7 @@ describe('runProjectsCommand', () => {
 
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => Response.json([])),
+      vi.fn(async () => Response.json({ data: [] })),
     );
 
     const capture = captureOutput();
