@@ -115,15 +115,17 @@ describe('project Zero Trust command', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        Response.json([
-          {
-            id: 'project_2',
-            user_id: 'owner_1',
-            slug: 'selected-app',
-            type: 'worker',
-            created_at: '2026-09-22T00:00:00Z',
-          },
-        ]),
+        Response.json({
+          data: [
+            {
+              id: 'project_2',
+              user_id: 'owner_1',
+              slug: 'selected-app',
+              type: 'worker',
+              created_at: '2026-09-22T00:00:00Z',
+            },
+          ],
+        }),
       )
       .mockResolvedValueOnce(
         Response.json({
@@ -148,7 +150,7 @@ describe('project Zero Trust command', () => {
     });
 
     expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
-      'https://api.example.test/projects',
+      'https://api.example.test/rpc/projects.list',
       'https://api.example.test/projects/project_2/zero-trust',
     ]);
     expect(output.join('')).toContain('Desired: not initialized');
