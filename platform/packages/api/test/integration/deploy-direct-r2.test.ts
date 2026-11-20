@@ -650,7 +650,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     // assets count + url
     const doneEvt = done as unknown as { url: string; assets: number };
     expect(doneEvt.assets).toBe(2);
-    expect(doneEvt.url).toBe('https://jm-static-ok.void.app');
+    expect(doneEvt.url).toBe('https://jm-static-ok.buildwf.dev');
 
     // DB row reaches `live`
     const [dpl] = await env.db

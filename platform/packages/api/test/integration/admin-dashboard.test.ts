@@ -654,7 +654,7 @@ describe('auth middleware', () => {
     const namedEnv = { ...env, PLATFORM_DISPLAY_NAME: '<Example Platform>' };
     const login = await app.fetch(new Request('http://localhost/admin/login'), namedEnv);
     expect(await adminHtml(login)).toContain(
-      '<title>Admin Login · &lt;Example Platform&gt; · Platform</title>',
+      '<title>Admin Login · &lt;Example Platform&gt;</title>',
     );
 
     const admin = await createTestUser(env.db, 'named-admin', 'github', undefined, 'free', 'admin');
@@ -667,7 +667,7 @@ describe('auth middleware', () => {
       );
       expect(response.status).toBe(200);
       expect(await adminHtml(response)).toContain(
-        `<title>${path === '/admin/' ? 'Dashboard' : 'Users'} · &lt;Example Platform&gt; · Platform</title>`,
+        `<title>${path === '/admin/' ? 'Dashboard' : 'Users'} · &lt;Example Platform&gt;</title>`,
       );
     }
   });
@@ -2483,7 +2483,7 @@ describe('GET /admin/projects', () => {
     const html = await adminHtml(res);
     expect(html).toContain('my-proj');
     const projectLink = visibleMarkup(html).match(
-      /<a\b[^>]*href="https:\/\/my-proj\.bwf\.app"[^>]*>[\s\S]*?<\/a>/,
+      /<a\b[^>]*href="https:\/\/my-proj\.buildwf\.dev"[^>]*>[\s\S]*?<\/a>/,
     )?.[0];
     expect(projectLink).toBeDefined();
     expect(projectLink).toContain('target="_blank"');

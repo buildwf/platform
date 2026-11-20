@@ -264,7 +264,7 @@ test('reports a committed live deployment after a lost result without deleting i
       event: 'done',
       deployment: live.id,
       url: 'https://recovered.example.com',
-      urls: ['https://recovered.example.com', `https://${project.slug}.void.app`],
+      urls: ['https://recovered.example.com', `https://${project.slug}.buildwf.dev`],
       assets: 1,
       workers: 0,
     },
