@@ -4422,7 +4422,7 @@ describe('platform installer', () => {
             if (key === PLATFORM_DISABLED_KEY) {
               lifecycleEvents.push(`put:${key}`);
             }
-            if (key === '__platform/platform/installation/v1') {
+            if (key === '__void/platform/installation/v1') {
               captured.remoteManifest = value;
             }
           },
@@ -5378,7 +5378,7 @@ describe('platform installer', () => {
     ]);
     expect(migrations).toBe(0);
     expect(new Set(upgradeKvWrites)).toEqual(
-      new Set(['__platform/platform/installation/v1', PLATFORM_DISABLED_KEY]),
+      new Set(['__void/platform/installation/v1', PLATFORM_DISABLED_KEY]),
     );
     expect(upgraded.manifest.status).toBe('installed');
     expect(upgraded.manifest.platformVersion).toBe(readPlatformRuntimeManifest().platformVersion);
@@ -6358,7 +6358,7 @@ describe('platform installer', () => {
     expect(enabledUpgrade.manifest.desiredState).toBe('enabled');
     expect(enabledUpgrade.manifest.deployment.authentication.configurable).toBe(true);
     expect(enabledHealthChecks).toBe(2);
-    expect(deletedKvValues).toContain('__platform/platform/disabled/v1');
+    expect(deletedKvValues).toContain('__void/platform/disabled/v1');
     expect(enabledConfigs).toHaveLength(10);
     for (const config of enabledConfigs.slice(0, 5)) {
       expect((config.vars as Record<string, unknown>).PLATFORM_TRAFFIC_STATE).not.toBe('enabled');
