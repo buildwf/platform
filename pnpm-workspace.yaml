@@ -12,6 +12,7 @@ allowBuilds:
   '@parcel/watcher': false
   '@prisma/engines': false
   better-sqlite3: false
+  core-js-pure: false
   esbuild: true
   lmdb: false
   msgpackr-extract: false
@@ -21,42 +22,42 @@ allowBuilds:
   workerd: true
 
 catalog:
-  '@cloudflare/workers-types': ^5.20261117.1
-  '@cloudflare/workers-utils': ^0.54.1
+  '@cloudflare/workers-types': ^5.20261120.1
+  '@cloudflare/workers-utils': ^0.55.0
   '@types/node': ^26.6.6
-  '@voidzero-dev/vite-plus-prompts': 1.6.0
+  '@voidzero-dev/vite-plus-prompts': 1.7.0
   typescript: 7.0.2
   '@voidzero-dev/vitepress-theme': ^5.0.7
   pathslash: ^0.1.0
-  vite: npm:@voidzero-dev/vite-plus-core@1.6.0
-  vite-plus: 1.6.0
-  wrangler: ^4.163.0
-  cf: 1.0.0-rc.0
+  vite: npm:@voidzero-dev/vite-plus-core@8.3.8000
+  vite-plus: 1.7.0
+  wrangler: ^4.166.0
+  cf: 1.0.0-rc.2
   oauth4webapi: ^3.8.8
-  '@astryxdesign/core': 0.7.13
-  '@astryxdesign/theme-neutral': 0.7.13
-  '@stylexjs/stylex': 0.19.1
+  '@astryxdesign/core': 0.7.16
+  '@astryxdesign/theme-neutral': 0.7.16
+  '@stylexjs/stylex': 0.19.2
   # Exact: the Vite plugin, cf, the config schema and the output reader move together.
   # A newer one of these can write or expect output the others can't read.
-  '@cloudflare/build-output-utils': 1.0.0-rc.0
-  '@cloudflare/codemods': ^0.8.0
-  '@cloudflare/config': 1.0.0-rc.0
-  '@cloudflare/vite-plugin': 2.0.0-rc.0
-  '@cloudflare/workers-auth': ^0.18.3
-  '@nkzw/fate': 2.0.1
+  '@cloudflare/build-output-utils': 1.0.0-rc.2
+  '@cloudflare/codemods': ^0.8.2
+  '@cloudflare/config': 1.0.0-rc.2
+  '@cloudflare/vite-plugin': 2.0.0-rc.2
+  '@cloudflare/workers-auth': ^0.18.5
+  '@nkzw/fate': 2.2.5
   '@vitejs/plugin-react': ^6.3.0
   magic-string: ^1.4.5
   # Keep Miniflare aligned with the Vite plugin, Wrangler, and cf.
-  miniflare: 5.20261116.0-beta
-  playwright: ^1.65.0
+  miniflare: 5.20261118.0-beta
+  playwright: ^1.65.1
   postal-mime: ^4.2.1
-  react-fate: 2.0.1
+  react-fate: 2.2.5
   reka-ui: 2.11.0
-  rolldown: ^1.3.1
+  rolldown: ^1.3.3
   shiki: ^4.6.0
-  '@electric-sql/pglite': 0.5.16
-  better-auth: ^1.7.20
-  lucide-react: 1.71.0
+  '@electric-sql/pglite': 0.5.17
+  better-auth: ^1.7.26
+  lucide-react: 1.76.0
   react: ^19.3.1
   react-dom: ^19.3.1
   vitepress-plugin-group-icons: ^1.8.2
@@ -64,14 +65,14 @@ catalog:
   '@cloudflare/sandbox': ^1.0.3
   '@napi-rs/keyring': ^2.1.2
   '@iconify/vue': 5.0.5
-  arktype: ^2.2.9
-  cron-parser: 5.10.4
-  hono: ^4.13.18
-  ignore: ^7.0.14
-  jose: 6.2.17
+  arktype: ^2.2.10
+  cron-parser: 5.10.6
+  hono: ^4.13.19
+  ignore: ^7.0.16
+  jose: 6.2.18
   mime: ^4.1.2
   smol-toml: ^1.9.1
-  minimatch: ^11.0.7
+  minimatch: ^11.0.9
   vue: ^3.5.45
   ci-info: ^4.5.0
   '@types/react-dom': ^19.3.0
@@ -79,9 +80,9 @@ catalog:
 
 catalogs:
   platform:
-    '@cloudflare/workers-types': ^5.20261117.1
-    hono: 4.13.18
-    wrangler: ^4.163.0
+    '@cloudflare/workers-types': ^5.20261120.1
+    hono: 4.13.19
+    wrangler: ^4.166.0
 
 overrides:
   # Keep Vite+'s pinned Vitest internals on the same patch as the runner.
@@ -100,19 +101,5 @@ peerDependencyRules:
     tailwindcss: '*'
     vite: '*'
 
-minimumReleaseAgeExclude:
-  - '@cloudflare/*'
-  - '@nkzw/*'
-  - '@builtbyfriends/*'
-  - '@voidzero-dev/*'
-  - 'miniflare'
-  - 'workerd'
-  - 'wrangler'
-  - cf
-  - hono
-  - react-fate
-  - void
-  - platform-fate
-  - mysql2@3.24.6
-  - vite-plus@1.3.0 || 1.6.0
-  - vitepress-plugin-group-icons@1.8.2
+# No release-age hold: take new versions as soon as they are published.
+minimumReleaseAge: 0

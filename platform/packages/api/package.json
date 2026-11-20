@@ -42,7 +42,7 @@
     "agents": "^0.33.0",
     "arktype": "catalog:",
     "aws4fetch": "^1.0.20",
-    "blake3-jit": "^1.1.0",
+    "blake3-jit": "^1.1.1",
     "cron-parser": "catalog:",
     "drizzle-orm": "^0.45.4",
     "hono": "catalog:platform",

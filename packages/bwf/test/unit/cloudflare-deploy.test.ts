@@ -1198,9 +1198,25 @@ describe('existing Cloudflare site handoff', () => {
     const stdout = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY');
     Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: interactive });
     Object.defineProperty(process.stdout, 'isTTY', { configurable: true, value: interactive });
+    // A real TTY stdin has setRawMode, and the Vite+ 1.7 spinner calls it once it sees a TTY.
+    const rawMode = Object.getOwnPropertyDescriptor(process.stdin, 'setRawMode');
+    if (
+      interactive &&
+      typeof (process.stdin as { setRawMode?: unknown }).setRawMode !== 'function'
+    ) {
+      Object.defineProperty(process.stdin, 'setRawMode', {
+        configurable: true,
+        value: () => process.stdin,
+      });
+    }
     try {
       return await action();
     } finally {
+      if (rawMode) {
+        Object.defineProperty(process.stdin, 'setRawMode', rawMode);
+      } else {
+        Reflect.deleteProperty(process.stdin, 'setRawMode');
+      }
       for (const [stream, descriptor] of [
         [process.stdin, stdin],
         [process.stdout, stdout],
