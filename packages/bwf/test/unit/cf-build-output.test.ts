@@ -84,14 +84,51 @@ function expectCfDryRun(directory: string, command = ['workers', 'versions', 'cr
   return dryRun;
 }
 
+it('requires a rebuild of old native artifacts without changing their files', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'platform-cf-old-output-'));
+  roots.push(root);
+  const output = join(root, '.cloudflare/output/v0');
+  const worker = join(output, 'workers/default');
+  mkdirSync(join(worker, 'bundle'), { recursive: true });
+  const files = {
+    [join(output, 'config.json')]: JSON.stringify({
+      accountId: 'account-id',
+      buildContext: { isPreview: false, mode: 'production' },
+    }),
+    [join(worker, 'worker.config.json')]: JSON.stringify({
+      name: 'old-worker',
+      compatibilityDate: '2026-10-12',
+      manifest: {
+        type: 'complete',
+        mainModule: 'index.js',
+        modules: { 'index.js': { type: 'esm' } },
+      },
+    }),
+    [join(worker, 'bundle/index.js')]: 'export default { fetch() { return new Response("old") } };',
+  };
+  for (const [path, content] of Object.entries(files)) {
+    writeFileSync(path, content);
+  }
+  // Dispose even if a regression unexpectedly accepts the old artifact.
+  await expect(
+    prepareCfBuildOutput(root).then(async (prepared) => {
+      await prepared?.dispose();
+    }),
+  ).rejects.toThrow(/rebuild/i);
+  for (const [path, content] of Object.entries(files)) {
+    expect(readFileSync(path, 'utf8')).toBe(content);
+  }
+});
+
 async function nativeBuild() {
   const root = mkdtempSync(join(tmpdir(), 'platform-native-cf-output-'));
   roots.push(root);
-  await writeRootConfig(
+  await writeRootConfig({
     root,
-    { accountId: 'account-id', complianceRegion: 'public' },
-    { isPreview: false, mode: 'staging' },
-  );
+    settings: { accountId: 'account-id', complianceRegion: 'public' },
+    buildContext: { isPreview: false, mode: 'staging' },
+    producer: { name: 'test-builder', version: '1.0.0' },
+  });
   const bundle = getWorkerBundleDir(root);
   mkdirSync(join(bundle, 'assets'), { recursive: true });
   writeFileSync(
@@ -123,6 +160,22 @@ async function nativeBuild() {
   writeFileSync(join(getWorkerAssetsDir(root), 'index.html'), '<h1>native</h1>');
   return root;
 }
+
+it('prepares native artifacts whose build context omits the optional mode', async () => {
+  const root = await nativeBuild();
+  const path = getRootConfigPath(root);
+  const config = JSON.parse(readFileSync(path, 'utf8'));
+  delete config.buildContext.mode;
+  const original = JSON.stringify(config);
+  writeFileSync(path, original);
+  await withPrepared(prepareCfBuildOutput(root), async (prepared) => {
+    expect((await readBuildOutput(prepared.directory)).rootConfig.buildContext).toEqual({
+      isPreview: false,
+      mode: 'production',
+    });
+  });
+  expect(readFileSync(path, 'utf8')).toBe(original);
+});
 
 it.each(['native', 'legacy'])(
   'keeps %s package context outside uploaded modules and preserves installed dependencies on disposal',
@@ -212,8 +265,8 @@ it(
     await withPrepared(prepareCfBuildOutput(root), async (prepared) => {
       const result = await readBuildOutput(prepared.directory);
       expect(result.rootConfig).toMatchObject({
-        accountId: 'account-id',
-        complianceRegion: 'public',
+        settings: { accountId: 'account-id', complianceRegion: 'public' },
+        producer: { name: 'test-builder', version: '1.0.0' },
         buildContext: { mode: 'staging', isPreview: false },
       });
       expect(result.workers.default.config.manifest).toMatchObject({
@@ -348,7 +401,11 @@ it('names the expected inputs when a directory holds no Worker build', async () 
 });
 
 it('returns only the public fields of the prepared output', async () => {
-  const output = worker({ name: 'platform-test', compatibility_date: '2026-09-29', main: 'index.js' });
+  const output = worker({
+    name: 'platform-test',
+    compatibility_date: '2026-09-29',
+    main: 'index.js',
+  });
   await withPrepared(prepareCfBuildOutput(output), async (prepared) => {
     expect(Object.keys(prepared).sort()).toEqual(['directory', 'dispose']);
   });
@@ -416,7 +473,7 @@ it.each([undefined, 'account-id'])(
     const authored = readFileSync(join(output, 'wrangler.json'), 'utf8');
     const disposed = await withPrepared(prepareCfBuildOutput(output), async (prepared) => {
       const built = await readBuildOutput(prepared.directory);
-      expect(built.rootConfig.accountId).toBe(accountId);
+      expect(built.rootConfig.settings?.accountId).toBe(accountId);
       expect(built.rootConfig.buildContext).toEqual({ isPreview: false, mode: 'production' });
       expect(built.workers.default.config.manifest?.mainModule).toBe('index.js');
       expect(readFileSync(join(output, 'wrangler.json'), 'utf8')).toBe(authored);
@@ -436,7 +493,7 @@ it('records an explicit build mode and matching target account', async () => {
     prepareCfBuildOutput(output, { accountId: 'account-id', mode: 'staging' }),
     async (prepared) => {
       const built = await readBuildOutput(prepared.directory);
-      expect(built.rootConfig.accountId).toBe('account-id');
+      expect(built.rootConfig.settings?.accountId).toBe('account-id');
       expect(built.rootConfig.buildContext).toEqual({ isPreview: false, mode: 'staging' });
     },
   );
@@ -528,11 +585,9 @@ export default { fetch() {
           );
           expect(moduleName).toBeDefined();
           expect(manifest.modules[moduleName!]).toEqual({ type });
-          expect(
-            readFileSync(
-              join(prepared.directory, '.cloudflare/output/v0/workers/default/bundle', moduleName!),
-            ),
-          ).toEqual(readFileSync(join(output, moduleName!)));
+          expect(readFileSync(join(getWorkerBundleDir(prepared.directory), moduleName!))).toEqual(
+            readFileSync(join(output, moduleName!)),
+          );
         }
         expect(manifest.modules['.vite/manifest.json']).toBeUndefined();
         expect(Object.keys(manifest.modules).some((name) => name.endsWith('.css'))).toBe(false);
@@ -565,7 +620,7 @@ it(
       prepareCfBuildOutput(output, { accountId: 'account-id' }),
       async (prepared) => {
         const built = await readBuildOutput(prepared.directory);
-        expect(built.rootConfig.accountId).toBe('account-id');
+        expect(built.rootConfig.settings?.accountId).toBe('account-id');
         expect(built.workers.default.config.env?.CACHE).toEqual({
           type: 'kv',
           id: 'namespace-id',
@@ -633,7 +688,11 @@ it('reports a missing built entry', async () => {
 });
 
 it('preserves binary font modules in a deployable Worker bundle', async () => {
-  const output = worker({ name: 'platform-test', compatibility_date: '2026-09-29', main: 'index.js' });
+  const output = worker({
+    name: 'platform-test',
+    compatibility_date: '2026-09-29',
+    main: 'index.js',
+  });
   mkdirSync(join(output, 'assets'));
   writeFileSync(
     join(output, 'index.js'),
@@ -653,7 +712,11 @@ it('preserves binary font modules in a deployable Worker bundle', async () => {
 });
 
 it('names the file when a plugin emits an unsupported module', async () => {
-  const output = worker({ name: 'platform-test', compatibility_date: '2026-09-29', main: 'index.js' });
+  const output = worker({
+    name: 'platform-test',
+    compatibility_date: '2026-09-29',
+    main: 'index.js',
+  });
   writeFileSync(join(output, 'plugin.unknown'), 'unexpected');
   await expect(prepareCfBuildOutput(output, { accountId: 'account-id' })).rejects.toThrow(
     'unsupported module "plugin.unknown"',
@@ -796,11 +859,7 @@ it('copies an internal symlinked Worker module into the prebuilt artifact', asyn
     async (prepared) => {
       const built = await readBuildOutput(prepared.directory);
       expect(built.workers.default.config.manifest?.modules['chunk.js']).toEqual({ type: 'esm' });
-      expect(
-        existsSync(
-          join(prepared.directory, '.cloudflare/output/v0/workers/default/bundle/chunk.js'),
-        ),
-      ).toBe(true);
+      expect(existsSync(join(getWorkerBundleDir(prepared.directory), 'chunk.js'))).toBe(true);
     },
   );
 });
