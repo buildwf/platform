@@ -54,6 +54,7 @@ import {
   readPlatformWorkerVersionSnapshot,
   readPlatformWorkerOwnershipMarker,
   classifyPlatformWorkerDeploymentLineage,
+  readSettledPlatformWorkerDeployments,
   PlatformWorkerOwnershipError,
   samePlatformWorkerTraffic,
 } from './platform-installer-inspection.ts';
@@ -827,11 +828,13 @@ export async function deployPlatformWorker(
       );
       assertCleanPlatformWrangler(activated, `activate ${workerName}`, accountId);
     }
-    const deploymentsAfterActivation = await readPlatformWorkerDeployments(
+    // Cloudflare can list the previous deployment for a while after activation.
+    const deploymentsAfterActivation = await readSettledPlatformWorkerDeployments(
       configPath,
       accountId,
       workerName,
       readRunner,
+      (deployments) => (deployments[0]?.id ?? null) === previousDeploymentId,
     );
     const lineage = classifyPlatformWorkerDeploymentLineage(
       deploymentsAfterActivation,
@@ -1275,11 +1278,13 @@ export async function restorePlatformWorkerDeployment(input: {
     `restore deployment ${input.restoration.id}`,
     input.accountId,
   );
-  const after = await readPlatformWorkerDeployments(
+  // Cloudflare can list the replaced deployment for a while after the restore.
+  const after = await readSettledPlatformWorkerDeployments(
     input.configPath,
     input.accountId,
     input.workerName,
     input.runner,
+    (deployments) => deployments[0]?.id === input.expectedActiveDeploymentId,
   );
   if (
     !samePlatformWorkerTraffic(after[0], input.restoration) ||

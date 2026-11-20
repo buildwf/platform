@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from 'node:timers/promises';
 import {
   parseCloudflareVersionMessage,
   readCloudflareVersionMigrationTag,
@@ -181,6 +182,37 @@ export async function readPlatformWorkerDeployments(
     })
     .sort((left, right) => right.createdAt - left.createdAt || left.index - right.index)
     .map(({ id, versions }) => ({ id, versions }));
+}
+
+/**
+ * Cloudflare's deployment list can lag a write by a minute or more. These waits
+ * (about 90 seconds in all) give it time to show a deployment the run just made.
+ */
+export const PLATFORM_DEPLOYMENT_SETTLE_DELAYS_MS: ReadonlyArray<number> = [
+  250, 500, 1000, 2000, 4000, 8000, 15_000, 30_000, 30_000,
+];
+
+/**
+ * Read the deployment list again while it still looks stale: `stale` says when
+ * the newest entry is the one the run just replaced. Returns the last read.
+ */
+export async function readSettledPlatformWorkerDeployments(
+  configPath: string,
+  accountId: string,
+  workerName: string,
+  runner: typeof runPlatformWrangler,
+  stale: (deployments: ReadonlyArray<PlatformWorkerDeployment>) => boolean,
+  delays: ReadonlyArray<number> = PLATFORM_DEPLOYMENT_SETTLE_DELAYS_MS,
+): Promise<ReadonlyArray<PlatformWorkerDeployment>> {
+  let deployments = await readPlatformWorkerDeployments(configPath, accountId, workerName, runner);
+  for (const wait of delays) {
+    if (!stale(deployments)) {
+      break;
+    }
+    await sleep(wait);
+    deployments = await readPlatformWorkerDeployments(configPath, accountId, workerName, runner);
+  }
+  return deployments;
 }
 
 export function samePlatformWorkerTraffic(
