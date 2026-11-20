@@ -316,7 +316,8 @@ export async function reviewPlatformWorkerOutsideChanges(
     command: string;
     /**
      * The operator already agreed to replace the changes (`--accept-outside-changes`). Without a
-     * terminal, the run prints the list and goes on instead of stopping.
+     * terminal, the run prints the list and goes on instead of stopping. Left out by a command
+     * that has no such flag (`platform install --resume`), so its message doesn't suggest one.
      */
     accepted?: boolean;
   }>,
@@ -348,7 +349,11 @@ export async function reviewPlatformWorkerOutsideChanges(
         NO_WORKER_CHANGED,
         'This command replaces their configuration with the bwf configuration. It can ask for your approval only in a terminal.',
         `Run this command once in a terminal to review them:\n${input.command}`,
-        'If a person already approved these changes, run it again with --accept-outside-changes.',
+        ...(input.accepted === undefined
+          ? []
+          : [
+              'If a person already approved these changes, run it again with --accept-outside-changes.',
+            ]),
       ].join('\n'),
     );
   }

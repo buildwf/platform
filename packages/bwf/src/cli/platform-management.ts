@@ -703,7 +703,10 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
       },
       interactive: process.stdin.isTTY === true && process.stdout.isTTY === true && !args.yes,
       command: platformLifecycleResumeCommand({ ...args, yes: false }, manifest.id),
-      accepted: 'acceptOutsideChanges' in args && args.acceptOutsideChanges === true,
+      // Only upgrade and repair take --accept-outside-changes.
+      ...((args.subcommand === 'upgrade' || args.subcommand === 'repair') && {
+        accepted: 'acceptOutsideChanges' in args && args.acceptOutsideChanges === true,
+      }),
     });
     // The new API Worker version keeps secrets but drops plain-text variables
     // that bwf does not set. Keep billing values set that way outside bwf as
