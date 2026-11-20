@@ -45,15 +45,15 @@ This provides binding and Workers runtime types. For custom bindings in `bwf.con
 
 ### Available bindings
 
-| Binding          | Resource        | Use in your app                           |
-| ---------------- | --------------- | ----------------------------------------- |
+| Binding          | Resource        | Use in your app                                  |
+| ---------------- | --------------- | ------------------------------------------------ |
 | `DB`             | D1              | `c.env.DB` or `@builtbyfriends/bwf/db`           |
 | `KV`             | KV              | `c.env.KV` or `@builtbyfriends/bwf/kv`           |
 | `STORAGE`        | R2              | `c.env.STORAGE` or `@builtbyfriends/bwf/storage` |
 | `AI`             | Workers AI      | `c.env.AI` or `@builtbyfriends/bwf/ai`           |
-| `ASSETS`         | Static assets   | `c.env.ASSETS.fetch(request)`             |
+| `ASSETS`         | Static assets   | `c.env.ASSETS.fetch(request)`                    |
 | `QUEUE_*`        | Queues          | `defineQueue()` or `@builtbyfriends/bwf/queues`  |
-| Filename-derived | Durable Objects | A module in `durable-objects/`            |
+| Filename-derived | Durable Objects | A module in `durable-objects/`                   |
 
 Use [binding configuration](../reference/resource-inference.md#explicit-binding-overrides) when you need to enable, disable, or rename an inferred binding.
 
@@ -139,7 +139,7 @@ Set these CI secrets and variables as needed:
 | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | When Cloudflare Access protects the readiness URL.                                                                                                                                        |
 | `CF_ACCESS_READINESS_ORIGIN`                     | When Access protects a route or Custom Domain and `workers_dev` is `false`. See [Cloudflare Access](#cloudflare-access).                                                                  |
 
-For email, run `bwf email setup --platform cloudflare` locally, commit `bwf.lock.json`, and pass `--require-email` in CI. The token also needs Email Routing Edit and Email Sending Edit.
+For email, run `bwf email setup --platform cloudflare` locally, commit `bwf.lock.json`, and pass `--require-email` in CI. The token also needs Zone Read and Email Sending Edit, plus Email Routing Edit for apps with `email/` handlers.
 
 #### Cloudflare Access
 
@@ -204,7 +204,7 @@ bwf deploys bwf apps (a React SPA with an optional backend), static SPAs, static
 - `--skip-build` works for existing static output. Worker apps require a fresh build.
 - Named Cloudflare environments aren't supported. Use a separate bwf project config for each target.
 - Sandbox requires Workers Paid and Docker. See [Sandbox requirements](../guide/sandboxes.md#deployment) for plan and token permissions.
-- Email to arbitrary recipients requires Workers Paid; verified recipients and inbound mail work on Workers Free. See [Email](../guide/email/domains.md#your-own-cloudflare-account).
+- Email to arbitrary recipients, and all sending from apps without `email/` handlers, requires Workers Paid. Apps with handlers keep inbound mail and verified recipients on Workers Free. See [Email](../guide/email/domains.md#your-own-cloudflare-account).
 
 Commit Durable Object migration history in `bwf.lock.json`. Do not delete or reorder deployed steps.
 

@@ -52,6 +52,7 @@ import {
   quoteSqlString,
 } from './db-export-sequences.ts';
 import { formatTimestamp } from './gen.ts';
+import { Buffer } from './node-buffer.ts';
 import { printSuccess, dim, formatCount, formatUrl, getErrorMessage, pc } from './output.ts';
 import { readDeploymentPlatform, readProjectConfig } from './project.ts';
 import { drizzleKitBin } from './yarn-pnp.ts';
@@ -199,7 +200,7 @@ export async function runDbCommand(root: string, args: DbArgs): Promise<void> {
   } else if (args.action === 'seed') {
     await runSeed(root, args.file, dialect, args.yes);
   } else if (args.action === 'execute') {
-    await runExecute(root, args.command, args.file, dialect, args.remote);
+    await runExecute(root, args.command, args.file, dialect, args.remote, args.yes);
   } else if (args.action === 'migrate') {
     await runMigrate(root, dialect, args.remote);
   } else if (args.action === 'studio') {
@@ -915,10 +916,14 @@ async function executeExternalRemoteSql(
 
 /**
  * Prompt the user to confirm a destructive remote query when running in a TTY.
- * Returns true if execution should proceed, false if it was cancelled.
+ * `always` asks even for read-only SQL, and `yes` (`--yes`) never asks. Returns true if
+ * execution should proceed, false if it was cancelled.
  */
-async function confirmDestructiveRemote(sql: string): Promise<boolean> {
-  if (isSafeStatement(sql)) {
+async function confirmDestructiveRemote(
+  sql: string,
+  { always = false, yes = false }: { always?: boolean; yes?: boolean } = {},
+): Promise<boolean> {
+  if (yes || (!always && isSafeStatement(sql))) {
     return true;
   }
   if (!process.stdin.isTTY) {
@@ -933,19 +938,33 @@ async function confirmDestructiveRemote(sql: string): Promise<boolean> {
   return true;
 }
 
+// D1's maximum SQL statement length. A direct D1 `--file` of this size or smaller cannot hit
+// that limit on the query API, which prints rows; a larger dump runs as a D1 import (up to 5 GB).
+const D1_MAX_SQL_STATEMENT_BYTES = 100_000;
+
 async function runExecute(
   root: string,
   command: string | undefined,
   file: string | undefined,
   dialect: DatabaseDialect,
   remote?: boolean,
+  yes?: boolean,
 ): Promise<void> {
   if (remote) {
     const directCloudflare = readDeploymentPlatform(root) === 'cloudflare';
     const sql = file ? readFileSync(resolve(root, file), 'utf-8') : command!;
 
     if (directCloudflare) {
-      const shouldProceed = await confirmDestructiveRemote(sql);
+      const bulkImport =
+        dialect === 'sqlite' &&
+        file !== undefined &&
+        Buffer.byteLength(sql) > D1_MAX_SQL_STATEMENT_BYTES;
+      if (bulkImport) {
+        log.warn(
+          `${file} is larger than 100 KB, so bwf runs it as a D1 import. The database cannot serve queries until the import finishes, and query rows are not printed.`,
+        );
+      }
+      const shouldProceed = await confirmDestructiveRemote(sql, { always: bulkImport, yes });
       if (!shouldProceed) {
         log.info('Cancelled.');
         process.exit(0);
@@ -954,7 +973,7 @@ async function runExecute(
         const { executeCloudflareD1Sql, importCloudflareD1Sql, resolveCloudflareD1Context } =
           await import('./cloudflare-operations.ts');
         const context = resolveCloudflareD1Context(root, configuredD1Binding(root));
-        if (file) {
+        if (bulkImport) {
           await importCloudflareD1Sql(context, sql);
         } else {
           const rows = await executeCloudflareD1Sql(context, sql);
@@ -988,7 +1007,7 @@ async function runExecute(
       process.exit(1);
     }
 
-    const shouldProceed = await confirmDestructiveRemote(sql);
+    const shouldProceed = await confirmDestructiveRemote(sql, { yes });
     if (!shouldProceed) {
       log.info('Cancelled.');
       process.exit(0);
