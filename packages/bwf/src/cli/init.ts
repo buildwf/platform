@@ -33,6 +33,7 @@ import { connectCloudflare } from './cloudflare-connect.ts';
 import { maybeSetupDeployProject } from './deploy-setup.ts';
 import { maybeScaffoldEnvTs } from './env-scaffold.ts';
 import { initialCommitCommand, setupGit } from './init-git.ts';
+import { commandInProject } from './init-shell.ts';
 import { configureVitePlusScaffold } from './init-vite-plus.ts';
 import { migrateLegacyBwfConfig } from './migrate.ts';
 import { formatUrl, note, printSuccess } from './output.ts';
@@ -1361,19 +1362,27 @@ function writeDatabaseDialect(root: string, config: BwfConfig, dialect: Database
   writeBwfProjectConfig(root, next);
 }
 
+/** `quiet` is for a new starter, whose prompt already showed the database. */
+type DatabaseDialectOptions = { quiet?: boolean };
+
 function clearConfiguredDatabase(
   root: string,
   messages: { unchanged: string; updated: string },
+  options: DatabaseDialectOptions,
 ): void {
   const config = readConfig(root);
 
   if (getDatabaseDialect(config) === 'sqlite') {
-    log.info(messages.unchanged);
+    if (!options.quiet) {
+      log.info(messages.unchanged);
+    }
     return;
   }
 
   writeDatabaseDialect(root, config, 'sqlite');
-  log.step(messages.updated);
+  if (!options.quiet) {
+    log.step(messages.updated);
+  }
 }
 
 /** Remove `database` entirely: its casing alone still makes bwf serve `@builtbyfriends/bwf/db`. */
@@ -1389,35 +1398,51 @@ function removeDatabaseConfig(root: string): void {
   log.step('Removed database config from bwf.config.ts');
 }
 
-function applyDatabaseDialect(root: string, dialect: DatabaseDialect): void {
+function applyDatabaseDialect(
+  root: string,
+  dialect: DatabaseDialect,
+  options: DatabaseDialectOptions = {},
+): void {
   const config = readConfig(root);
 
   if (dialect === 'postgresql') {
     if (getDatabaseDialect(config) === 'postgresql') {
-      log.info('PostgreSQL already configured in bwf.config.ts');
+      if (!options.quiet) {
+        log.info('PostgreSQL already configured in bwf.config.ts');
+      }
       return;
     }
 
     writeDatabaseDialect(root, config, 'postgresql');
-    log.step('Configured PostgreSQL in bwf.config.ts');
+    if (!options.quiet) {
+      log.step('Configured PostgreSQL in bwf.config.ts');
+    }
     return;
   }
 
   if (dialect === 'mysql') {
     if (getDatabaseDialect(config) === 'mysql') {
-      log.info('MySQL already configured in bwf.config.ts');
+      if (!options.quiet) {
+        log.info('MySQL already configured in bwf.config.ts');
+      }
       return;
     }
 
     writeDatabaseDialect(root, config, 'mysql');
-    log.step('Configured MySQL in bwf.config.ts');
+    if (!options.quiet) {
+      log.step('Configured MySQL in bwf.config.ts');
+    }
     return;
   }
 
-  clearConfiguredDatabase(root, {
-    unchanged: 'Using default D1 (SQLite) configuration',
-    updated: 'Updated bwf.config.ts to use the default D1 (SQLite) configuration',
-  });
+  clearConfiguredDatabase(
+    root,
+    {
+      unchanged: 'Using default D1 (SQLite) configuration',
+      updated: 'Updated bwf.config.ts to use the default D1 (SQLite) configuration',
+    },
+    options,
+  );
 }
 
 function detectDatabaseSetup(root: string): DatabaseSetupChoice {
@@ -2233,7 +2258,7 @@ function scaffoldSpaApp(
 
   ensureGitignore(root);
   if (starterMode !== 'spa') {
-    applyDatabaseDialect(root, starterMode);
+    applyDatabaseDialect(root, starterMode, { quiet: true });
   }
 
   if (starterMode === 'postgresql') {
@@ -2599,7 +2624,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
   let workspaceSubpackageSkip = false;
 
   if (!targeted && isScaffoldableEmptyProject(root)) {
-    log.info('Empty project detected. Scaffolding a React starter...');
+    log.info('Empty project detected. Creating a React starter.');
     const scaffoldToolchain = await promptScaffoldToolchain(initArgs?.toolchain);
     if (detectedFramework) {
       log.info(`Detected ${SCAFFOLD_FRAMEWORKS[detectedFramework].label} in package.json`);
@@ -2711,10 +2736,11 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
     log.info('Bundled bwf docs: node_modules/@builtbyfriends/bwf/docs/');
   }
 
-  // Demo code only in the full flow.
-  if (!targeted) {
+  // Demo code only in the full flow, and not for a new starter, which already
+  // has its own routes.
+  if (!targeted && !didScaffoldStarter) {
     const existingDemoFiles = Object.values(demoFiles(root)).filter((file) => existsSync(file));
-    if (didScaffoldStarter || state.hasRoutes || state.hasMigrations) {
+    if (state.hasRoutes || state.hasMigrations) {
       log.info('Project already has routes or migrations, skipping demo');
     } else if (hasDrizzleSchema(root)) {
       log.info('Project already has a database schema, skipping demo');
@@ -2858,6 +2884,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
       printSuccess('Project initialized. Run your workspace install to finish setup.');
     }
   } else {
-    printSuccess(`Project initialized. Run \`${getDevCommand(root)}\` to start developing.`);
+    const devCommand = commandInProject(root, getDevCommand(root));
+    printSuccess(`Project initialized. Run \`${devCommand}\` to start developing.`);
   }
 }

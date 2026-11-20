@@ -38,6 +38,7 @@ const mockNote = vi.fn();
 const mockOutro = vi.fn();
 const mockLogWarn = vi.fn();
 const mockLogInfo = vi.fn();
+const mockLogStep = vi.fn();
 const mockGetToken = vi.fn();
 const mockGetApiUrl = vi.fn();
 const mockRunLogin = vi.fn();
@@ -328,7 +329,7 @@ vi.mock('@voidzero-dev/vite-plus-prompts', () => ({
     warn: (...args: Array<unknown>) => mockLogWarn(...args),
     error: vi.fn(),
     info: (...args: Array<unknown>) => mockLogInfo(...args),
-    step: vi.fn(),
+    step: (...args: Array<unknown>) => mockLogStep(...args),
   },
   confirm: (...args: Array<unknown>) => mockConfirm(...args),
   select: (...args: Array<unknown>) => mockSelect(...args),
@@ -635,6 +636,7 @@ afterEach(() => {
   mockOutro.mockReset();
   mockLogWarn.mockReset();
   mockLogInfo.mockReset();
+  mockLogStep.mockReset();
   mockGetToken.mockReset();
   mockGetApiUrl.mockReset();
   mockRunLogin.mockReset();
@@ -1452,6 +1454,11 @@ describe('isScaffoldableEmptyProject', () => {
       expect(tsconfig.compilerOptions.jsx).toBe('react-jsx');
       expect(tsconfig.include).toContain('src');
       expect(tsconfig.include).toContain('db');
+
+      expect(mockLogInfo).toHaveBeenCalledWith('Empty project detected. Creating a React starter.');
+      // The starter prompt already showed the database, and the starter has its own routes.
+      expect(mockLogInfo).not.toHaveBeenCalledWith('Using default D1 (SQLite) configuration');
+      expect(mockLogInfo).not.toHaveBeenCalledWith(expect.stringContaining('skipping demo'));
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -1622,6 +1629,8 @@ describe('isScaffoldableEmptyProject', () => {
 
   it('offers to scaffold in a subfolder from a non-project parent directory', async () => {
     const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
+    // The user's shell stays in the parent directory.
+    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
     try {
       mkdirSync(join(root, 'existing-project'));
       mockSelect
@@ -1660,7 +1669,11 @@ describe('isScaffoldableEmptyProject', () => {
       expect(folderPrompt.validate('')).toBe('That folder already exists.');
       expect(folderPrompt.validate('another-app')).toBeUndefined();
       expectVpInstall(toSlash(appRoot));
+      expect(String(mockOutro.mock.calls.at(-1)?.[0])).toContain(
+        'Run `cd my-new-app && vp dev` to start developing.',
+      );
     } finally {
+      cwd.mockRestore();
       rmSync(root, { recursive: true, force: true });
     }
   });
@@ -2780,7 +2793,10 @@ export default config;
         'github',
         expect.any(Function),
       );
-      expect(mockSaveToken).toHaveBeenCalledWith('token_123', 'https://platform.buildwithfriends.dev');
+      expect(mockSaveToken).toHaveBeenCalledWith(
+        'token_123',
+        'https://platform.buildwithfriends.dev',
+      );
       expect(mockListProjects).toHaveBeenCalledOnce();
       expect(mockCreateProject).toHaveBeenCalledWith('my-live-app');
       expect(JSON.parse(readFileSync(join(root, '.bwf', 'project.json'), 'utf-8'))).toEqual({
