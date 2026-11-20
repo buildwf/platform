@@ -20,7 +20,7 @@ export default defineConfig({
     },
     migrations: [
       {
-        tag: 'void-ws-v1',
+        tag: 'platform-ws-v1',
         new_sqlite_classes: ['WsChatRoomWs', 'WsNotificationsWs'],
       },
     ],
