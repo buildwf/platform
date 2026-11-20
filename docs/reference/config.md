@@ -150,10 +150,11 @@ Use an object to also set how Drizzle names columns declared without a name:
 }
 ```
 
-| Key       | Values                                  | Description                                                                                                                                                                                       |
-| --------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dialect` | `"sqlite"` (default), `"pg"`, `"mysql"` | Database backend. `"sqlite"` is D1                                                                                                                                                                |
-| `casing`  | `"snake_case"`, `"camelCase"`           | [Drizzle casing](https://orm.drizzle.team/docs/sql-schema-declaration#camel-and-snake-casing) for `@builtbyfriends/bwf/db` queries and `bwf db` commands. Omit to use each key as its column name |
+| Key               | Values                                  | Description                                                                                                                                                                                       |
+| ----------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dialect`         | `"sqlite"` (default), `"pg"`, `"mysql"` | Database backend. `"sqlite"` is D1                                                                                                                                                                |
+| `casing`          | `"snake_case"`, `"camelCase"`           | [Drizzle casing](https://orm.drizzle.team/docs/sql-schema-declaration#camel-and-snake-casing) for `@builtbyfriends/bwf/db` queries and `bwf db` commands. Omit to use each key as its column name |
+| `readReplication` | `boolean` (optional)                    | D1 only. Turn [read replication](../guide/database/d1.md#read-replication) on (`true`) or off (`false`) at deploy. Leave it out to keep the current setting; new databases start with it off      |
 
 When using an external database:
 
