@@ -2047,6 +2047,9 @@ describe('UsageCounter ownership changes', () => {
 });
 
 describe('UsageCounter operation ordering and persistence', () => {
+  // Free sandbox use already at its monthly limit, so the next recorded second suspends.
+  const freeSandboxLimit = getPlanLimits('free').sandboxRuntimeSecondsPerMonth;
+
   beforeEach(() => {
     vi.mocked(queryProjectAiUsage).mockReset().mockResolvedValue({ neurons: 0 });
   });
@@ -2056,7 +2059,10 @@ describe('UsageCounter operation ordering and persistence', () => {
       .mockResolvedValue({ id: 'u1', plan: 'pro' } as never)
       .mockResolvedValueOnce({ id: 'u1', plan: 'free' } as never);
     const from = Date.now() - 60_000;
-    const { counter, kv, storage } = makeCounter({ plan: 'free' });
+    const { counter, kv, storage } = makeCounter({
+      plan: 'free',
+      totalSandboxSeconds: freeSandboxLimit,
+    });
     const writing = deferred();
     const resume = deferred();
     const realPut = kv.put;
@@ -2082,7 +2088,7 @@ describe('UsageCounter operation ordering and persistence', () => {
     await Promise.all([first, initialize, second]);
     expect(storage.data.get('state')).toMatchObject({
       totalRequests: 8,
-      totalSandboxSeconds: 3,
+      totalSandboxSeconds: freeSandboxLimit + 3,
       plan: 'pro',
       projectSlugs: { p1: 's1', p2: 's2' },
     });
@@ -2129,7 +2135,7 @@ describe('UsageCounter operation ordering and persistence', () => {
       suspending.resolve();
       await resume.promise;
     });
-    const { counter, kv } = makeCounter({ plan: 'free' });
+    const { counter, kv } = makeCounter({ plan: 'free', totalSandboxSeconds: freeSandboxLimit });
     kv.put = async () => {
       throw new Error('KV unavailable');
     };
