@@ -18,6 +18,55 @@ function makeDirectAi(
 }
 
 describe('runtime ai', () => {
+  it.each(['direct', 'http', 'service'] as const)(
+    'cancels provider response streams on the %s transport without serializing the signal',
+    async (transport) => {
+      vi.resetModules();
+      const { envContext } = await import('../../src/runtime/env-raw.ts');
+      const { ai } = await import('../../src/runtime/ai.ts');
+      const controller = new AbortController();
+      const request = vi.fn(
+        async (_url: string, init: RequestInit) =>
+          new Response(
+            new ReadableStream({
+              start(stream) {
+                init.signal?.addEventListener('abort', () => stream.error(init.signal!.reason));
+              },
+            }),
+          ),
+      );
+      vi.stubGlobal('fetch', request);
+      const env =
+        transport === 'direct'
+          ? { AI: makeDirectAi().AI, __PLATFORM_AI_GATEWAY: 'gateway' }
+          : transport === 'service'
+            ? {
+                __PLATFORM_PROXY: { fetch: request },
+                __PROJECT_ID: 'project',
+                __PLATFORM_PROXY_TOKEN: 'token',
+              }
+            : {
+                __PLATFORM_TOKEN: 'token',
+                __PLATFORM_PROJECT_ID: 'project',
+                __PLATFORM_PROXY_URL: 'https://proxy.test',
+              };
+      await envContext.run({ ...env, OPENAI_API_KEY: 'synthetic-provider-key' }, async () => {
+        const response = await ai.provider('openai').fetch('/chat/completions', {
+          body: { messages: [] },
+          signal: controller.signal,
+        });
+        const init = request.mock.calls[0]![1];
+        expect(init.signal).toBe(controller.signal);
+        const payload = JSON.parse(init.body as string);
+        expect(payload).not.toHaveProperty('signal');
+        expect(payload.options).toBeUndefined();
+        const reading = response.text();
+        controller.abort(new Error('provider request cancelled'));
+        await expect(reading).rejects.toThrow('provider request cancelled');
+      });
+    },
+  );
+
   it.each(['http', 'service'] as const)(
     'keeps cancellation on the %s transport instead of serializing it as a binding option',
     async (transport) => {
@@ -76,9 +125,12 @@ describe('runtime ai', () => {
     const { ai } = await import('../../src/runtime/ai.ts');
     const request = vi.fn();
     vi.stubGlobal('fetch', request);
-    await envContext.run({ __PLATFORM_TOKEN: 'token', __PLATFORM_PROJECT_ID: 'project' }, async () => {
-      await expect(ai.run('@cf/meta/llama', {})).rejects.toThrow('No connected platform proxy');
-    });
+    await envContext.run(
+      { __PLATFORM_TOKEN: 'token', __PLATFORM_PROJECT_ID: 'project' },
+      async () => {
+        await expect(ai.run('@cf/meta/llama', {})).rejects.toThrow('No connected platform proxy');
+      },
+    );
     expect(request).not.toHaveBeenCalled();
   });
   afterEach(() => {
