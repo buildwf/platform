@@ -185,8 +185,11 @@ const EMPTY_PROJECT_ALLOWED_ENTRIES = new Set([
 ]);
 
 // better-sqlite3 13 already ships its Node-API binaries; no native build is needed.
+// core-js-pure (from the email dependency mimetext) only prints a message after
+// install, and Vite+'s install stops on a build pnpm has no decision for.
 const PNPM_BUILD_DEFAULTS = [
   ['better-sqlite3', false],
+  ['core-js-pure', false],
   ['esbuild', true],
   ['sharp', true],
   ['workerd', true],

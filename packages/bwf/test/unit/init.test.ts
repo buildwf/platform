@@ -395,7 +395,7 @@ describe('GitHub Actions deployment workflows', () => {
 function expectPnpmAllowBuilds(root: string): void {
   const yaml = readFileSync(join(root, 'pnpm-workspace.yaml'), 'utf-8');
   expect(yaml.match(/^allowBuilds:\n(?: {2}.*\n)*/m)?.[0]).toBe(
-    'allowBuilds:\n  better-sqlite3: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
+    'allowBuilds:\n  better-sqlite3: false\n  core-js-pure: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
   );
   expect(yaml).not.toContain('onlyBuiltDependencies:');
 }
@@ -3612,10 +3612,10 @@ export default config;
           'allowBuilds:\n  "@parcel/watcher": true\n  better-sqlite3: true\nonlyBuiltDependencies:\n  - bcrypt\n',
         ),
       ).toBe(
-        'allowBuilds:\n  "@parcel/watcher": true\n  better-sqlite3: true\n  bcrypt: true\n  esbuild: true\n  sharp: true\n  workerd: true\n',
+        'allowBuilds:\n  "@parcel/watcher": true\n  better-sqlite3: true\n  bcrypt: true\n  core-js-pure: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
       );
       expect(await initWithWorkspaceYaml('onlyBuiltDependencies:\n- bcrypt\n')).toBe(
-        'allowBuilds:\n  bcrypt: true\n  better-sqlite3: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
+        'allowBuilds:\n  bcrypt: true\n  better-sqlite3: false\n  core-js-pure: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
       );
 
       const flow = 'allowBuilds: {"@parcel/watcher": true}\n';

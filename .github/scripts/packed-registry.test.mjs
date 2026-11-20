@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path/posix';
 import { test } from 'node:test';
-import { inspectPackage } from './packed-registry.mjs';
+import { inspectPackage, isReleaseCohortName } from './packed-registry.mjs';
 
 function createPackage(t, overrides = {}, includeLicense = true) {
   const root = mkdtempSync(join(tmpdir(), 'platform-packed-metadata-'));
@@ -61,4 +61,27 @@ test('rejects blank descriptions and invalid package links', (t) => {
 
 test('requires the license file as well as its manifest field', (t) => {
   assert.throws(() => inspectPackage(createPackage(t, {}, false)), /missing packaged LICENSE/);
+});
+
+test("keeps this repository's release names inside the packed cohort", () => {
+  for (const name of [
+    'bwf',
+    'bwf/package.json',
+    'create-bwf',
+    '@builtbyfriends/bwf',
+    '@builtbyfriends/deploy-core',
+    '@builtbyfriends/edge/package.json',
+  ]) {
+    assert.equal(isReleaseCohortName(name), true, name);
+  }
+  for (const name of [
+    '@builtbyfriends/realtime',
+    '@builtbyfriends/realtime-http',
+    '@builtbyfriends/realtime-mcp',
+    'bwf-other',
+    'vite',
+    '@cloudflare/workers-types',
+  ]) {
+    assert.equal(isReleaseCohortName(name), false, name);
+  }
 });

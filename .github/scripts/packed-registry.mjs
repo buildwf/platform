@@ -90,6 +90,29 @@ export function inspectPackage(tarball) {
   };
 }
 
+/**
+ * Names this repository releases, so they must come from the packed cohort.
+ * The @builtbyfriends/realtime packages are released from their own
+ * repository and come from npm like any other dependency. `bwf` is listed
+ * because the unscoped name on npm belongs to someone else: a request for it
+ * means something installs the CLI by its bin name instead of
+ * @builtbyfriends/bwf.
+ */
+export function isReleaseCohortName(name) {
+  const base = name
+    .split('/')
+    .slice(0, name.startsWith('@') ? 2 : 1)
+    .join('/');
+  if (base === 'bwf' || base === 'create-bwf') {
+    return true;
+  }
+  return (
+    base.startsWith('@builtbyfriends/') &&
+    base !== '@builtbyfriends/realtime' &&
+    !base.startsWith('@builtbyfriends/realtime-')
+  );
+}
+
 /** Read-only loopback registry: local release cohort plus public npm dependencies. */
 export async function startPackedRegistry(packages) {
   const byName = new Map(packages.map((pkg) => [pkg.manifest.name, pkg]));
@@ -127,13 +150,7 @@ export async function startPackedRegistry(packages) {
         response.writeHead(200, { 'Content-Type': 'application/json' }).end(body);
         return;
       }
-      if (
-        name === 'bwf' ||
-        name.startsWith('bwf/') ||
-        name === 'create-bwf' ||
-        name.startsWith('create-bwf/') ||
-        name.startsWith('@builtbyfriends/')
-      ) {
+      if (isReleaseCohortName(name)) {
         // Never let missing local versions silently resolve to a registry release.
         response.writeHead(404).end('Package is outside the packed release cohort.');
         return;

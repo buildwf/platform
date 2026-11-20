@@ -148,7 +148,9 @@ const frameworks = ['react'];
 const app = (label) => `import { useEffect, useState } from 'react';
 export default function App() {
   const [count, setCount] = useState(0);
-  useEffect(() => document.getElementById('root')?.setAttribute('data-hydrated', 'true'), []);
+  useEffect(() => {
+    document.getElementById('root')?.setAttribute('data-hydrated', 'true');
+  }, []);
   return <><h1>Packed ${label}</h1><button onClick={() => setCount(count + 1)}>Count {count}</button></>;
 }
 `;

@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
-import { writePnpmBuildPolicy } from '../../src/pm.ts';
+import { pmInstall, writePnpmBuildPolicy } from '../../src/pm.ts';
 
 const temporaryDirectories: Array<string> = [];
 
@@ -20,7 +20,7 @@ describe('create-bwf package manager bootstrap', () => {
     writePnpmBuildPolicy(root, 'pnpm');
 
     expect(readFileSync(join(root, 'pnpm-workspace.yaml'), 'utf-8')).toBe(
-      'allowBuilds:\n  better-sqlite3: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
+      'allowBuilds:\n  better-sqlite3: false\n  core-js-pure: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
     );
   });
 
@@ -33,5 +33,15 @@ describe('create-bwf package manager bootstrap', () => {
 
       expect(existsSync(join(root, 'pnpm-workspace.yaml'))).toBe(false);
     }
+  });
+
+  it('installs with pnpm without stopping to ask about rebuilding node_modules', () => {
+    expect(pmInstall('pnpm')).toEqual([
+      'pnpm',
+      'install',
+      '--no-frozen-lockfile',
+      '--config.confirm-modules-purge=false',
+    ]);
+    expect(pmInstall('npm')).toEqual(['npm', 'install']);
   });
 });
