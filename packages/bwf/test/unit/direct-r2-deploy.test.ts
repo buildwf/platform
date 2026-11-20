@@ -139,6 +139,36 @@ function installPlatformMocks(opts?: {
     const url = typeof input === 'string' ? input : (input as Request).url;
     const reqInit = init ?? {};
     const method = reqInit.method ?? 'GET';
+    // The client calls these as procedures (`POST /rpc/<name>`, answered as `{ data }`).
+    const procedure = /\/rpc\/(deploy\.(?:preflight|uploadUrls|workerUploadUrls))$/.exec(url)?.[1];
+    if (procedure && method === 'POST') {
+      const legacyPath = {
+        'deploy.preflight': '/deploy/preflight',
+        'deploy.uploadUrls': '/deploy/upload-urls',
+        'deploy.workerUploadUrls': '/deploy/worker-upload-urls',
+      }[procedure];
+      const response = await fetchMock(url.replace(/\/rpc\/[^/]+$/, legacyPath!), init);
+      if (!response.ok) {
+        return response;
+      }
+      return Response.json({ data: await response.json() });
+    }
+
+    if (url.endsWith('/rpc/deploy.finalize') && method === 'POST') {
+      const { body } = JSON.parse(reqInit.body as string) as { body: unknown };
+      const legacy = await fetchMock(url.replace(/\/rpc\/[^/]+$/, '/deploy'), {
+        ...reqInit,
+        body: JSON.stringify(body),
+      });
+      const events = (await legacy.text())
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => JSON.parse(line) as { deploymentId?: string; deployment?: string });
+      const deploymentId =
+        events.find((event) => event.deploymentId)?.deploymentId ??
+        events.find((event) => event.deployment)?.deployment;
+      return Response.json({ data: { deploymentId, events } });
+    }
 
     if (url.endsWith('/capabilities') && method === 'GET' && opts?.capabilities) {
       return Response.json(opts.capabilities);
@@ -591,7 +621,7 @@ describe('Worker module uploads', () => {
     await deployWorker(directOrigin, files, ['/index.html']);
 
     const modules = expectedModules();
-    expect(state.workerUploadUrlsCalls).toEqual([{ modules }]);
+    expect(state.workerUploadUrlsCalls).toEqual([{ projectId: expect.any(String), modules }]);
     const workerPuts = state.r2PutCalls.filter(({ url }) => url.includes('/worker/'));
     expect(workerPuts.map(({ url }) => url).sort()).toEqual([
       'https://r2-test/worker/0',
@@ -606,8 +636,8 @@ describe('Worker module uploads', () => {
 
     // A Worker the platform refuses must fail before any asset upload.
     const urls = fetchMock.mock.calls.map(([url]) => String(url));
-    const assetPresign = urls.indexOf(`${directOrigin}/projects/proj_t/deploy/upload-urls`);
-    expect(urls.indexOf(`${directOrigin}/projects/proj_t/deploy/worker-upload-urls`)).toBe(0);
+    const assetPresign = urls.indexOf(`${directOrigin}/rpc/deploy.uploadUrls`);
+    expect(urls.indexOf(`${directOrigin}/rpc/deploy.workerUploadUrls`)).toBe(0);
     expect(assetPresign).toBeGreaterThan(0);
     expect(urls.slice(assetPresign).filter((url) => url.includes('/worker/'))).toEqual([]);
     expect(state.uploadUrlsCalls).toHaveLength(1);
