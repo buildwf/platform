@@ -69,13 +69,13 @@ export const list = procedure('credentials.list')
     idempotent: true,
   })
   .cli({ command: 'credentials list', description: 'List proxy-held credentials' })
-  .handler(async ({ ctx, input }) => [
-    ...(await listProjectCredentials(ctx.db, input.projectId)).map((row) => ({
+  .handler(async ({ ctx, input }) =>
+    (await listProjectCredentials(ctx.db, input.projectId)).map((row) => ({
       provider: row.provider,
       repositories: [...row.repositories],
       updated_at: row.updated_at,
     })),
-  ]);
+  );
 
 export const remove = procedure('credentials.remove')
   .use(member)

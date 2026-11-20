@@ -21,7 +21,7 @@ import { dim, printSuccess, sanitizeTerminalText } from './output.ts';
 import { MINIMAL_RUNTIME_LOGS_NOTE } from './platform-runtime-logs.ts';
 
 const MAX_RUNTIME_FOLLOW_ROWS = 10_000;
-export const BUILD_LOG_DRAIN_TIMEOUT_MS: number = 2 * 60_000;
+const BUILD_LOG_DRAIN_TIMEOUT_MS: number = 2 * 60_000;
 
 function printable(value: unknown): string {
   if (value === null || value === undefined) {
@@ -324,7 +324,7 @@ function runtimeLogFingerprint(row: unknown): string {
   return createHash('sha256').update(JSON.stringify(row)).digest('base64url');
 }
 
-export async function confirmOperatorMutation(
+async function confirmOperatorMutation(
   origin: string,
   preview: Record<string, unknown>,
   args: Pick<OperatorArgs, 'yes' | 'plan' | 'json'>,

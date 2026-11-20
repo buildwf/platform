@@ -21,7 +21,7 @@
 export const REDACTED = '<redacted>';
 
 /** Environment variable that disables redaction when set to `1`. */
-export const UNMASK_ENV_VAR = 'BWF_ENV_UNMASK';
+const UNMASK_ENV_VAR = 'BWF_ENV_UNMASK';
 
 export type MaskOptions = {
   /** When true, the env unmask escape hatch has been honoured. */

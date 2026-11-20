@@ -80,7 +80,7 @@ export async function promptAndCreateProject(
   return config;
 }
 
-export function isRetryableCreateError(error: PlatformApiError): boolean {
+function isRetryableCreateError(error: PlatformApiError): boolean {
   if (error.status === 400 || error.status === 409 || error.status === 422) {
     return true;
   }

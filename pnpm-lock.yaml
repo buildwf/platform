@@ -982,9 +982,6 @@ importers:
       '@platform-service/api':
         specifier: workspace:*
         version: link:../api
-      email-validator:
-        specifier: ^2.0.4
-        version: 2.0.4
       hono:
         specifier: catalog:platform
         version: 4.13.18
@@ -1019,9 +1016,6 @@ importers:
 
   playground/kitchen-sink:
     dependencies:
-      hono:
-        specifier: 'catalog:'
-        version: 4.13.18
       react:
         specifier: 'catalog:'
         version: 19.3.1
@@ -1086,9 +1080,6 @@ importers:
 
   playground/pg-test:
     dependencies:
-      hono:
-        specifier: 'catalog:'
-        version: 4.13.18
       react:
         specifier: 'catalog:'
         version: 19.3.1
@@ -1157,9 +1148,6 @@ importers:
 
   playground/spa:
     dependencies:
-      hono:
-        specifier: 'catalog:'
-        version: 4.13.18
       react:
         specifier: 'catalog:'
         version: 19.3.1
@@ -1194,9 +1182,6 @@ importers:
 
   playground/websockets:
     dependencies:
-      hono:
-        specifier: 'catalog:'
-        version: 4.13.18
       react:
         specifier: 'catalog:'
         version: 19.3.1

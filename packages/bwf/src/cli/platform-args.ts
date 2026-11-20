@@ -133,7 +133,7 @@ export type PlatformArgs =
       yes: boolean;
     };
 
-export type PlatformRuntimeLogsChoice = 'full' | 'minimal';
+type PlatformRuntimeLogsChoice = 'full' | 'minimal';
 
 function parseRuntimeLogs(value: string): PlatformRuntimeLogsChoice {
   if (value !== 'full' && value !== 'minimal') {

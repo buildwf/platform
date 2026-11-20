@@ -153,7 +153,7 @@ export function completeRelayedReceipt(
 }
 
 /** Only generated, transport-irrelevant MIME fields are normalized. Body text stays byte-sensitive. */
-export function canonicalizeBwfMime(raw: Uint8Array): Uint8Array {
+function canonicalizeBwfMime(raw: Uint8Array): Uint8Array {
   if (findCrlfCrlf(raw) === -1) {
     return raw;
   }

@@ -7,7 +7,7 @@ export type RemoteMigration = Readonly<{
   sql: string;
 }>;
 
-export type MigrationFailure = Readonly<{
+type MigrationFailure = Readonly<{
   name: string;
   error: string;
 }>;
@@ -187,7 +187,7 @@ type D1QueryResponse = Readonly<{
   meta?: D1QueryResponseMeta;
 }>;
 
-export const D1_REQUEST_TIMEOUT_MS = 30_000;
+const D1_REQUEST_TIMEOUT_MS = 30_000;
 
 /**
  * Upper bound on a single D1 REST call. Without this, a hung upstream request

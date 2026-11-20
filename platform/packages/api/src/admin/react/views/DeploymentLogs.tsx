@@ -72,7 +72,7 @@ export function takeFreshTailEntries<T extends LogEntry>(
   return fresh;
 }
 
-export const MINIMAL_RUNTIME_LOGS_NOTICE =
+const MINIMAL_RUNTIME_LOGS_NOTICE =
   'Log messages, exception messages and URLs are not recorded on this platform.';
 
 function logMessages(entry: LogEntry) {

@@ -106,7 +106,6 @@ function assertSupportedPlatform(apiUrl: string, probe: PlatformVersionProbe): v
 }
 
 export { parsePlatformErrorBody } from './platform-errors.ts';
-export type { PlatformErrorPayload } from './platform-errors.ts';
 
 /**
  * Detects the `cli_outdated` 426 response shape emitted by the platform's
@@ -256,7 +255,7 @@ export type ProjectDeployCredentialResponse = {
   revokedAt: string | null;
 };
 
-export type ProjectZeroTrustState = {
+type ProjectZeroTrustState = {
   project_id: string;
   desired_protected: boolean;
   effective_protected: boolean;
@@ -380,7 +379,7 @@ export type BuildSummary = {
   completed_at: string | null;
 };
 
-export type BuildLogRow = {
+type BuildLogRow = {
   seq: number;
   line: string;
   stream: 'stdout' | 'stderr';
@@ -405,7 +404,7 @@ export type EmailUsageResponse = {
   suspended: boolean;
 };
 
-export type EmailLogEntry = {
+type EmailLogEntry = {
   timestamp: number;
   direction: 'sent' | 'received';
   operationId: string;
@@ -482,7 +481,7 @@ export type EmailDomainResponse = {
   error?: string | null;
 };
 
-export type EmailReadiness = {
+type EmailReadiness = {
   inbound: {
     status: 'pending' | 'ready' | 'disabled' | 'drifted';
     reason?: string | null;

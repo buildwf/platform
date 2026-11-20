@@ -28,7 +28,7 @@ export type DatabaseDialect = 'sqlite' | 'postgresql' | 'mysql';
 export type DatabaseCasing = 'snake_case' | 'camelCase';
 
 /** Object form of `database`, for options next to the dialect. */
-export type DatabaseConfig = {
+type DatabaseConfig = {
   /** Database backend. Defaults to `"sqlite"` (D1). */
   dialect?: 'sqlite' | 'pg' | 'mysql';
   /** Column naming for keys without an explicit column name, as in Drizzle's `casing` option. */
@@ -38,7 +38,7 @@ export type DatabaseConfig = {
 };
 
 /** Curated Worker fields accepted by the `worker` config field. */
-export type WranglerConfig = {
+type WranglerConfig = {
   compatibility_date?: string;
   compatibility_flags?: Array<string>;
   vars?: Record<string, string>;
@@ -93,12 +93,12 @@ export type InferenceConfig = {
 };
 
 /** Auth configuration — high-level provider selection for Better Auth defaults. */
-export type AuthConfig = {
+type AuthConfig = {
   providers?: Array<BwfAuthProvider>;
 };
 
 /** AI configuration — the Cloudflare AI Gateway used by `ai.provider().fetch()` on self-hosted deploys (Workers AI `ai.run`/`ai.image` use the `env.AI` binding directly). */
-export type AiConfig = {
+type AiConfig = {
   gateway?: string;
 };
 
@@ -108,19 +108,19 @@ export type AiConfig = {
  * and, on `bwf deploy --platform cloudflare`, its host is the domain the CLI
  * sets Email Routing and Email Sending up on.
  */
-export type EmailConfig = {
+type EmailConfig = {
   from?: string;
 };
 
 /** Deployment choices owned by bwf rather than passed to the Worker config. */
-export type DeployConfig = {
+type DeployConfig = {
   cloudflare?: { mode?: 'staged' | 'atomic' };
 };
 
 /** Cloudflare Worker configuration passed through to the native deploy artifact. */
 type CloudflareField<T> = T & Record<string, unknown>;
 
-export type CloudflareConfig = Record<string, unknown> & {
+type CloudflareConfig = Record<string, unknown> & {
   account_id?: string;
   name?: string;
   main?: string;

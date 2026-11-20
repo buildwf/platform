@@ -701,7 +701,7 @@ function recordPublishedTraffic(
  * Trigger deploy omits empty domain sets; this operation must reconcile them
  * explicitly using the same verified browser/API credentials as other commands.
  */
-export async function publishEmptyCloudflareCustomDomainSet(
+async function publishEmptyCloudflareCustomDomainSet(
   context: CloudflareOperationContext,
 ): Promise<void> {
   await run(context, {

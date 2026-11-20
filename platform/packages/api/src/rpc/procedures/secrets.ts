@@ -84,7 +84,9 @@ async function withProjectSecretUpdate<T>(
       }
       throw error;
     }
-    if (access.project.status === 'deleting') return { code: 'PROJECT_DELETING' } as const;
+    if (access.project.status === 'deleting') {
+      return { code: 'PROJECT_DELETING' } as const;
+    }
     const pending = await getActiveDeployment(tx, projectId);
     if (pending) {
       return {
@@ -116,12 +118,20 @@ export const set = procedure('secrets.set')
   .cli({ command: 'secrets set', description: 'Set a secret' })
   .handler(async ({ env, ctx, input, fail }) => {
     const { projectId, name, value } = input;
-    if (!secretName.test(name)) return fail('INVALID_NAME');
-    if (name.length > MAX_SECRET_NAME_LENGTH) return fail('NAME_TOO_LONG');
+    if (!secretName.test(name)) {
+      return fail('INVALID_NAME');
+    }
+    if (name.length > MAX_SECRET_NAME_LENGTH) {
+      return fail('NAME_TOO_LONG');
+    }
     // Reject before we encrypt and persist: the deploy pipeline rejects the same set, but only at
     // the next deploy. Delete stays unguarded so a row stored before this guard can be cleaned up.
-    if (isReservedBindingName(name)) return fail('RESERVED_NAME');
-    if (value.length === 0) return fail('VALUE_REQUIRED');
+    if (isReservedBindingName(name)) {
+      return fail('RESERVED_NAME');
+    }
+    if (value.length === 0) {
+      return fail('VALUE_REQUIRED');
+    }
     if (new TextEncoder().encode(value).byteLength > MAX_SECRET_VALUE_BYTES) {
       return fail('VALUE_TOO_LARGE');
     }
@@ -166,7 +176,9 @@ export const remove = procedure('secrets.delete')
   .cli({ command: 'secrets delete', description: 'Delete a secret' })
   .handler(async ({ env, ctx, input, fail }) => {
     const { projectId, name } = input;
-    if (!secretName.test(name)) return fail('INVALID_NAME');
+    if (!secretName.test(name)) {
+      return fail('INVALID_NAME');
+    }
     const result = await withProjectSecretUpdate(ctx, projectId, async (db, { project }) => {
       await deleteProjectSecret(db, projectId, name);
       if (project.active_deployment_id) {

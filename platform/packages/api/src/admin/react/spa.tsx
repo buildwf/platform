@@ -106,7 +106,7 @@ export const Link = forwardRef<
 });
 
 /** Reads the page object the server embedded in the shell. */
-export function readEmbeddedPage(): PageObject {
+function readEmbeddedPage(): PageObject {
   const element = document.getElementById('platform-admin-page');
   return JSON.parse(element?.textContent ?? '{}') as PageObject;
 }

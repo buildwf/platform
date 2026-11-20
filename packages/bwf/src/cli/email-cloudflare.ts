@@ -311,7 +311,7 @@ export interface RoutingSettings {
   tag: string;
 }
 
-export interface RoutingRule {
+interface RoutingRule {
   id: string;
   name: string;
   enabled: boolean;
@@ -470,9 +470,9 @@ function isHardFailure(result: EmailWranglerRunResult): boolean {
 
 // ── Preflight ──────────────────────────────────────────────────────────────────
 
-export type ReadyState = 'ready' | 'pending' | 'unknown';
+type ReadyState = 'ready' | 'pending' | 'unknown';
 
-export interface EmailPreflightBlocker {
+interface EmailPreflightBlocker {
   /** `all` stops the whole email step; `sending` skips only Email Sending onboarding. */
   scope: 'all' | 'sending';
   message: string;
@@ -1355,7 +1355,7 @@ export async function fetchWithSessionBearer(
  * `addresses: null` deletes the key (never `[]`, which deletes every owned rule);
  * `undefined` leaves it untouched.
  */
-export interface EmailWranglerPatch {
+interface EmailWranglerPatch {
   sendEmail?: { name: string };
   addresses?: Array<string> | null;
   vars?: Record<string, string>;

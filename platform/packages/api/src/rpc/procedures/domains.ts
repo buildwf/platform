@@ -59,7 +59,9 @@ type Refusal = { code: keyof typeof ERRORS; message?: string };
 
 /** The refusal for a Cloudflare 4xx a caller can act on, or null for any other failure. */
 function cloudflareRefusal(error: unknown): Refusal | null {
-  if (!(error instanceof CloudflareApiError)) return null;
+  if (!(error instanceof CloudflareApiError)) {
+    return null;
+  }
   const code = (
     {
       400: 'CLOUDFLARE_BAD_REQUEST',
@@ -74,16 +76,24 @@ function cloudflareRefusal(error: unknown): Refusal | null {
 }
 
 function isAdoptablePostCreateOrphan(cfHostname: CustomHostnameInfo): boolean {
-  if (cfHostname.status !== 'pending') return false;
-  if (!cfHostname.ownership_verification && !cfHostname.ownership_verification_http) return false;
-  if (!cfHostname.created_at) return false;
+  if (cfHostname.status !== 'pending') {
+    return false;
+  }
+  if (!cfHostname.ownership_verification && !cfHostname.ownership_verification_http) {
+    return false;
+  }
+  if (!cfHostname.created_at) {
+    return false;
+  }
   const createdAtMs = Date.parse(cfHostname.created_at);
   return Number.isFinite(createdAtMs) && Date.now() - createdAtMs >= ORPHAN_ADOPTION_MIN_AGE_MS;
 }
 
 async function protectedProjectReachedDomainLimit(db: Db, projectId: string): Promise<boolean> {
   const zeroTrust = await getProjectZeroTrustState(db, projectId);
-  if (!zeroTrust?.desired_protected) return false;
+  if (!zeroTrust?.desired_protected) {
+    return false;
+  }
   return (
     (await getDomainsByProjectId(db, projectId)).length >= MAX_ZERO_TRUST_CUSTOM_DOMAINS_PER_PROJECT
   );
@@ -124,7 +134,9 @@ export const add = procedure('domains.add')
   .cli({ command: 'domains add', description: 'Add a custom domain' })
   .handler(async ({ env, ctx, input, fail }) => {
     const unavailable = capabilityRefusal(env);
-    if (unavailable) return fail(unavailable.code);
+    if (unavailable) {
+      return fail(unavailable.code);
+    }
     const { projectId, hostname } = input;
     if (!/^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/.test(hostname)) {
       return fail('HOSTNAME_INVALID');
@@ -133,8 +145,12 @@ export const add = procedure('domains.add')
     if (hostname.endsWith(`.${siteDomain}`)) {
       return fail('HOSTNAME_RESERVED', `cannot use ${siteDomain} subdomains`);
     }
-    if (await getDomainByHostname(ctx.db, hostname)) return fail('HOSTNAME_IN_USE');
-    if (await protectedProjectReachedDomainLimit(ctx.db, projectId)) return fail('DOMAIN_LIMIT');
+    if (await getDomainByHostname(ctx.db, hostname)) {
+      return fail('HOSTNAME_IN_USE');
+    }
+    if (await protectedProjectReachedDomainLimit(ctx.db, projectId)) {
+      return fail('DOMAIN_LIMIT');
+    }
 
     // The duplicate-hostname case can be a Cloudflare object left behind after an earlier
     // post-create DB failure. Only adopt still-pending objects with an outstanding ownership
@@ -148,7 +164,9 @@ export const add = procedure('domains.add')
       createdCfHostname = cfHostname;
     } catch (error) {
       if (error instanceof CloudflareApiError && error.status === 409) {
-        if (await getDomainByHostname(ctx.db, hostname)) return fail('HOSTNAME_IN_USE');
+        if (await getDomainByHostname(ctx.db, hostname)) {
+          return fail('HOSTNAME_IN_USE');
+        }
         let orphaned: CustomHostnameInfo | null;
         try {
           orphaned = await getCustomHostnameByHostname(env.CF_ZONE_ID, env.CF_API_TOKEN, hostname);
@@ -165,13 +183,17 @@ export const add = procedure('domains.add')
         }
       } else {
         const refusal = cloudflareRefusal(error);
-        if (refusal) return fail(refusal.code, refusal.message);
+        if (refusal) {
+          return fail(refusal.code, refusal.message);
+        }
         throw error;
       }
     }
 
     const rollbackCreatedHostname = async (): Promise<void> => {
-      if (!createdCfHostname) return;
+      if (!createdCfHostname) {
+        return;
+      }
       const persisted = await getDomainByHostnameOrCfHostnameId(
         ctx.db,
         hostname,
@@ -194,9 +216,13 @@ export const add = procedure('domains.add')
       result = await ctx.db.transaction(async (tx) => {
         await tx.execute(sql`SELECT id FROM projects WHERE id = ${projectId} FOR UPDATE`);
         const refused = await lockedAccess(tx, ctx, projectId, 'settings');
-        if (refused) return refused;
+        if (refused) {
+          return refused;
+        }
         // Recheck after waiting for the lock: a prior request may have committed meanwhile.
-        if (await getDomainByHostname(tx, hostname)) return { code: 'HOSTNAME_IN_USE' } as const;
+        if (await getDomainByHostname(tx, hostname)) {
+          return { code: 'HOSTNAME_IN_USE' } as const;
+        }
         if (await protectedProjectReachedDomainLimit(tx, projectId)) {
           return { code: 'DOMAIN_LIMIT' } as const;
         }
@@ -254,7 +280,9 @@ export const list = procedure('domains.list')
   .mcp({ description: 'List a project’s custom domains', effect: 'read', idempotent: true })
   .cli({ command: 'domains list', description: 'List custom domains' })
   .handler(async ({ env, ctx, input, fail }) => {
-    if (capabilityRefusal(env)) return fail('CAPABILITY_UNAVAILABLE');
+    if (capabilityRefusal(env)) {
+      return fail('CAPABILITY_UNAVAILABLE');
+    }
     return [...(await getDomainsByProjectId(ctx.db, input.projectId))];
   });
 
@@ -274,10 +302,14 @@ export const status = procedure('domains.status')
   })
   .cli({ command: 'domains status', description: 'Show a custom domain’s live status' })
   .handler(async ({ env, ctx, input, fail }) => {
-    if (capabilityRefusal(env)) return fail('CAPABILITY_UNAVAILABLE');
+    if (capabilityRefusal(env)) {
+      return fail('CAPABILITY_UNAVAILABLE');
+    }
     const { project } = grantedAccess(ctx);
     const found = await getDomain(ctx.db, input.domainId);
-    if (!found || found.project_id !== input.projectId) return fail('DOMAIN_NOT_FOUND');
+    if (!found || found.project_id !== input.projectId) {
+      return fail('DOMAIN_NOT_FOUND');
+    }
     const { cf, activated, awaitingDeployment } = await tryActivateDomain(
       env,
       ctx.db,
@@ -306,10 +338,14 @@ export const remove = procedure('domains.remove')
   .mcp({ description: 'Remove a custom domain from a project', effect: 'destructive' })
   .cli({ command: 'domains remove', description: 'Remove a custom domain' })
   .handler(async ({ env, ctx, input, fail }) => {
-    if (capabilityRefusal(env)) return fail('CAPABILITY_UNAVAILABLE');
+    if (capabilityRefusal(env)) {
+      return fail('CAPABILITY_UNAVAILABLE');
+    }
     const { projectId } = input;
     const found = await getDomain(ctx.db, input.domainId);
-    if (!found || found.project_id !== projectId) return fail('DOMAIN_NOT_FOUND');
+    if (!found || found.project_id !== projectId) {
+      return fail('DOMAIN_NOT_FOUND');
+    }
     const warnings: Array<string> = [];
     const describe = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -347,7 +383,9 @@ export const remove = procedure('domains.remove')
       await deleteDomain(tx, found.id);
       return null;
     });
-    if (refused) return fail(refused.code, 'message' in refused ? refused.message : undefined);
+    if (refused) {
+      return fail(refused.code, 'message' in refused ? refused.message : undefined);
+    }
     await reconcileProjectZeroTrustDomains(env, ctx.db, projectId).catch((error) =>
       warnings.push(`Failed to reconcile Zero Trust custom-domain protection: ${describe(error)}`),
     );

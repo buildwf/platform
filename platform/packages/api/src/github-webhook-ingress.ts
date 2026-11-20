@@ -111,7 +111,3 @@ export async function githubWebhookIngressFetch(
     },
   });
 }
-
-export default {
-  fetch: githubWebhookIngressFetch,
-} satisfies ExportedHandler<GitHubWebhookIngressEnv>;

@@ -5,7 +5,7 @@ import { writeFileIfChanged } from './write-if-changed.ts';
 export const DRIZZLE_OPERATORS =
   'sql, eq, ne, gt, gte, lt, lte, and, or, not, desc, asc, like, ilike, notLike, inArray, notInArray, isNull, isNotNull, between, notBetween, exists, notExists, count, sum, avg, min, max';
 
-export const DRIZZLE_TYPES = 'AnyColumn, SQL, SQLWrapper, BatchItem';
+const DRIZZLE_TYPES = 'AnyColumn, SQL, SQLWrapper, BatchItem';
 
 const DIALECT_DB_TYPES = {
   sqlite: {

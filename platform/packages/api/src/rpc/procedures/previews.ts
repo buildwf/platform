@@ -21,7 +21,9 @@ type Code = keyof typeof PREVIEW_ERRORS;
 
 /** Maps the OAuth layer's errors onto the procedure's declared refusals. */
 export function previewRefusal(error: unknown): { code: Code; message: string } | null {
-  if (!(error instanceof OAuthError)) return null;
+  if (!(error instanceof OAuthError)) {
+    return null;
+  }
   const code: Code =
     error.status === 404
       ? 'NOT_FOUND'
@@ -57,7 +59,9 @@ export const create = appProcedure('previews.create')
       return await createPreview(await permitted(ctx), input);
     } catch (error) {
       const refusal = previewRefusal(error);
-      if (refusal) return fail(refusal.code, refusal.message);
+      if (refusal) {
+        return fail(refusal.code, refusal.message);
+      }
       throw error;
     }
   });
@@ -80,7 +84,9 @@ export const deploy = appProcedure('previews.deploy')
       );
     } catch (error) {
       const refusal = previewRefusal(error);
-      if (refusal) return fail(refusal.code, refusal.message);
+      if (refusal) {
+        return fail(refusal.code, refusal.message);
+      }
       throw error;
     }
   });
@@ -100,7 +106,9 @@ export const launch = appProcedure('previews.launch')
       return await launchPreview(await permitted(ctx), input.project_id);
     } catch (error) {
       const refusal = previewRefusal(error);
-      if (refusal) return fail(refusal.code, refusal.message);
+      if (refusal) {
+        return fail(refusal.code, refusal.message);
+      }
       throw error;
     }
   });

@@ -32,7 +32,7 @@ export type ReadAhead = Readonly<{ modules: number; bytes: number }>;
  * size between them. The PUT holds one of the 6 connections a Worker may have
  * waiting for headers, so 4 storage reads leave one free for other I/O.
  */
-export const WORKER_UPLOAD_READ_AHEAD: ReadAhead = { modules: 4, bytes: 8 * 1024 * 1024 };
+const WORKER_UPLOAD_READ_AHEAD: ReadAhead = { modules: 4, bytes: 8 * 1024 * 1024 };
 
 /** An upload attempt is cut after this long without sending a body byte. */
 export const WORKER_UPLOAD_IDLE_MS = 60_000;

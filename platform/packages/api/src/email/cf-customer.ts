@@ -21,11 +21,7 @@ type CfCustomerResult<T> = Readonly<{
  * cfFetch with a customer credential: same envelope handling and typed error,
  * but FormData bodies keep their multipart Content-Type.
  */
-export async function cfCustomerFetch<T>(
-  url: string,
-  credential: string,
-  init?: RequestInit,
-): Promise<T> {
+async function cfCustomerFetch<T>(url: string, credential: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     ...init,
     signal: init?.signal ?? AbortSignal.timeout(15_000),
@@ -47,7 +43,7 @@ export async function cfCustomerFetch<T>(
   return json.result;
 }
 
-export type CfTokenVerification = Readonly<{
+type CfTokenVerification = Readonly<{
   id: string;
   status: string;
   expires_on?: string | null;
@@ -59,7 +55,7 @@ export type CfCustomerZone = Readonly<{
   account: Readonly<{ id: string }>;
 }>;
 
-export type RelayScriptUpload = Readonly<{
+type RelayScriptUpload = Readonly<{
   /** Module-syntax worker source (RELAY_SOURCE). */
   source: string;
   compatibilityDate: string;
@@ -69,7 +65,7 @@ export type RelayScriptUpload = Readonly<{
   ingressName: string;
 }>;
 
-export type CfCatchAllRule = Readonly<{
+type CfCatchAllRule = Readonly<{
   enabled: boolean;
   /** The worker name a 'worker' action points at; null for any other action shape. */
   workerName: string | null;
@@ -119,13 +115,13 @@ function parseRoutingRule(value: unknown): CfEmailRoutingRule {
 }
 
 /** One entry of the sending-subdomain list; name + enabled are required on the wire. */
-export type CfSendingSubdomain = Readonly<{
+type CfSendingSubdomain = Readonly<{
   name: string;
   enabled: boolean;
 }>;
 
 /** A DNS conflict that Email Sending onboarding reports for a name, from the read-only preview. */
-export type CfSendingIssue = Readonly<{
+type CfSendingIssue = Readonly<{
   code: string;
   /** The DNS name of the conflicting record, when Cloudflare reports one. */
   name: string | null;

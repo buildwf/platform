@@ -237,7 +237,7 @@ export const TERMINAL_WRITE_TIMEOUT_MS = 5000;
 // worst case (a write that never lands) polls until the hourly stale reaper flips the
 // row — capped by that, not by this. Nothing waits on the result, so a slow
 // convergence costs a late check-run PATCH and nothing else.
-export const RECONCILE_RETRY_SECONDS = 300;
+const RECONCILE_RETRY_SECONDS = 300;
 
 /**
  * Reject with `reason` if `work` has not settled within `ms`.
@@ -247,7 +247,7 @@ export const RECONCILE_RETRY_SECONDS = 300;
  * late rejection resolves into a no-op `reject()` on an already-settled promise
  * rather than an unhandled rejection.
  */
-export function withDeadline<T>(work: Promise<T>, ms: number, reason: string): Promise<T> {
+function withDeadline<T>(work: Promise<T>, ms: number, reason: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(reason)), ms);
     work.then(

@@ -73,7 +73,6 @@ import {
   type MockCfApiHandle,
   type TestEnv,
   rpcRequest,
-  rpcData,
   withLegacyDeploy,
 } from './helpers.ts';
 

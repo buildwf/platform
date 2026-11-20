@@ -17,13 +17,13 @@ import {
 import { wrapAnsi } from 'fast-wrap-ansi';
 import { pc } from './output.ts';
 
-export type FlagDef = {
+type FlagDef = {
   name: string; // e.g. "--output" (include dashes)
   description: string;
   arg?: string; // e.g. "<path>" — flag takes a value
 };
 
-export type FollowUpDef =
+type FollowUpDef =
   | {
       type: 'multi-select';
       flag: string;

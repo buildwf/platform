@@ -42,7 +42,7 @@ export type AiLoggingTrigger =
   | 'transfer'
   | 'sweep';
 
-export type AiLoggingResolution = PlanAiLogging &
+type AiLoggingResolution = PlanAiLogging &
   Readonly<{
     /** The saved project value; `inherit` when there is no override row. */
     mode: AiLoggingMode;
@@ -125,7 +125,7 @@ export function lockAiLoggingProjectStatement(projectId: string): SQL {
  * override (Rule 1). The row is already locked by this transaction, so this never
  * waits and its snapshot is taken after the lock was granted.
  */
-export function lockedAiLoggingInputsStatement(projectId: string): SQL {
+function lockedAiLoggingInputsStatement(projectId: string): SQL {
   return sql`UPDATE "projects" AS p SET "id" = p."id"
     FROM "users" AS u
     LEFT JOIN "project_ai_logging" AS o ON o."project_id" = ${projectId}

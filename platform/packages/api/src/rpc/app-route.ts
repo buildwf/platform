@@ -8,7 +8,7 @@ import * as previews from './procedures/previews.ts';
 import * as publish from './procedures/publish.ts';
 
 /** Procedures for OAuth-connected applications such as a bot platform's workspaces. */
-export const appRegistry = defineRegistry([
+const appRegistry = defineRegistry([
   previews.create,
   previews.deploy,
   previews.launch,

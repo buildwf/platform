@@ -6,11 +6,11 @@ import type { CloudContext } from './handler.ts';
 type Middleware = (c: CloudContext, next: () => Promise<void>) => unknown;
 type Leaf = (c: CloudContext) => unknown;
 
-export type HandlerComposition = { middlewares: Array<Middleware>; leaf: Leaf };
+type HandlerComposition = { middlewares: Array<Middleware>; leaf: Leaf };
 
 const compositionKey = '__platformHandlerComposition';
 
-export function getHandlerComposition(handler: unknown): HandlerComposition | undefined {
+function getHandlerComposition(handler: unknown): HandlerComposition | undefined {
   return (handler as { [compositionKey]?: HandlerComposition } | undefined)?.[compositionKey];
 }
 

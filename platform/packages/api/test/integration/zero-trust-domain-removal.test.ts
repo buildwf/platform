@@ -26,7 +26,6 @@ import {
   teardownEnv,
   type TestEnv,
   rpcRequest,
-  rpcData,
   rpcError,
 } from './helpers.ts';
 

@@ -25,7 +25,9 @@ function filesThatNameTheApp(): Array<string> {
       .filter(Boolean);
   } catch (error) {
     // git grep exits with 1 when nothing matches.
-    if ((error as { status?: number }).status === 1) return [];
+    if ((error as { status?: number }).status === 1) {
+      return [];
+    }
     throw error;
   }
 }

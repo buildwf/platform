@@ -11,7 +11,6 @@ import {
   createTestUser,
   createTestProject,
   type TestEnv,
-  rpcData,
   rpcRequest,
   withLegacyDeploy,
 } from './helpers.ts';
@@ -32,13 +31,6 @@ afterAll(async () => {
 beforeEach(async () => {
   await clearTables(env.db);
 });
-
-type OutdatedBody = {
-  error: string;
-  message: string;
-  minVersion: string;
-  clientVersion?: string;
-};
 
 /**
  * Confirms `checkCliVersionOrRespond` rejects stale CLIs at every deploy

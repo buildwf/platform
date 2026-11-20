@@ -72,7 +72,9 @@ async function lockOwnedProject(
     .where(eq(projects.id, projectId))
     .for('update')
     .limit(1);
-  if (!project) return null;
+  if (!project) {
+    return null;
+  }
   return project.user_id === userId ? project : 'forbidden';
 }
 
@@ -108,9 +110,13 @@ export const create = procedure('tokens.create')
   .cli({ command: 'token create', description: 'Create a project deploy token' })
   .handler(async ({ env, ctx, input, fail }) => {
     const name = validName(input.name);
-    if (name === null) return fail('INVALID_NAME');
+    if (name === null) {
+      return fail('INVALID_NAME');
+    }
     const days = validExpiryDays(input.expiresInDays);
-    if (days === null) return fail('INVALID_EXPIRY');
+    if (days === null) {
+      return fail('INVALID_EXPIRY');
+    }
     const id = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
     const token = await signProjectCredentialToken(
@@ -125,8 +131,12 @@ export const create = procedure('tokens.create')
     );
     const row = await ctx.db.transaction(async (tx) => {
       const project = await lockOwnedProject(tx, input.projectId, ctx.user.id);
-      if (typeof project === 'string' || !project) return project;
-      if (project.status === 'deleting') return 'project-deleting' as const;
+      if (typeof project === 'string' || !project) {
+        return project;
+      }
+      if (project.status === 'deleting') {
+        return 'project-deleting' as const;
+      }
       const [created] = await tx
         .insert(projectDeployCredentials)
         .values({
@@ -139,9 +149,15 @@ export const create = procedure('tokens.create')
         .returning();
       return created!;
     });
-    if (row === 'forbidden') return fail('OWNER_ONLY');
-    if (row === 'project-deleting') return fail('PROJECT_DELETING');
-    if (!row) return fail('PROJECT_NOT_FOUND');
+    if (row === 'forbidden') {
+      return fail('OWNER_ONLY');
+    }
+    if (row === 'project-deleting') {
+      return fail('PROJECT_DELETING');
+    }
+    if (!row) {
+      return fail('PROJECT_NOT_FOUND');
+    }
     return { ...publicCredential(row), token };
   });
 
@@ -155,7 +171,9 @@ export const renew = procedure('tokens.renew')
   .cli({ command: 'token renew', description: 'Replace a deploy token with a fresh one' })
   .handler(async ({ env, ctx, input, fail }) => {
     const days = validExpiryDays(input.expiresInDays);
-    if (days === null) return fail('INVALID_EXPIRY');
+    if (days === null) {
+      return fail('INVALID_EXPIRY');
+    }
     const replacementId = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
     const token = await signProjectCredentialToken(
@@ -170,9 +188,15 @@ export const renew = procedure('tokens.renew')
     );
     const result = await ctx.db.transaction(async (tx) => {
       const project = await lockOwnedProject(tx, input.projectId, ctx.user.id);
-      if (project === 'forbidden') return project;
-      if (!project) return 'project-not-found' as const;
-      if (project.status === 'deleting') return 'project-deleting' as const;
+      if (project === 'forbidden') {
+        return project;
+      }
+      if (!project) {
+        return 'project-not-found' as const;
+      }
+      if (project.status === 'deleting') {
+        return 'project-deleting' as const;
+      }
       const [current] = await tx
         .select()
         .from(projectDeployCredentials)
@@ -184,7 +208,9 @@ export const renew = procedure('tokens.renew')
           ),
         )
         .for('update');
-      if (!current) return null;
+      if (!current) {
+        return null;
+      }
       await tx
         .update(projectDeployCredentials)
         .set({ revoked_at: new Date().toISOString() })
@@ -201,10 +227,18 @@ export const renew = procedure('tokens.renew')
         .returning();
       return replacement!;
     });
-    if (result === 'project-not-found') return fail('PROJECT_NOT_FOUND');
-    if (result === 'forbidden') return fail('OWNER_ONLY');
-    if (result === 'project-deleting') return fail('PROJECT_DELETING');
-    if (!result) return fail('CREDENTIAL_NOT_FOUND');
+    if (result === 'project-not-found') {
+      return fail('PROJECT_NOT_FOUND');
+    }
+    if (result === 'forbidden') {
+      return fail('OWNER_ONLY');
+    }
+    if (result === 'project-deleting') {
+      return fail('PROJECT_DELETING');
+    }
+    if (!result) {
+      return fail('CREDENTIAL_NOT_FOUND');
+    }
     return { ...publicCredential(result), token };
   });
 
@@ -219,8 +253,12 @@ export const revoke = procedure('tokens.revoke')
   .handler(async ({ ctx, input, fail }) => {
     const row = await ctx.db.transaction(async (tx) => {
       const project = await lockOwnedProject(tx, input.projectId, ctx.user.id);
-      if (typeof project === 'string') return project;
-      if (!project) return 'project-not-found' as const;
+      if (typeof project === 'string') {
+        return project;
+      }
+      if (!project) {
+        return 'project-not-found' as const;
+      }
       const [revoked] = await tx
         .update(projectDeployCredentials)
         .set({ revoked_at: new Date().toISOString() })
@@ -234,8 +272,14 @@ export const revoke = procedure('tokens.revoke')
         .returning();
       return revoked ?? null;
     });
-    if (row === 'project-not-found') return fail('PROJECT_NOT_FOUND');
-    if (row === 'forbidden') return fail('OWNER_ONLY');
-    if (!row) return fail('CREDENTIAL_NOT_FOUND');
+    if (row === 'project-not-found') {
+      return fail('PROJECT_NOT_FOUND');
+    }
+    if (row === 'forbidden') {
+      return fail('OWNER_ONLY');
+    }
+    if (!row) {
+      return fail('CREDENTIAL_NOT_FOUND');
+    }
     return { ok: true, id: row.id } as const;
   });

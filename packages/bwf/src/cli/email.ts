@@ -364,7 +364,7 @@ function clearClipboard(): void {
   }
 }
 
-export type CfTokenVerification = 'active' | 'inactive' | 'unknown';
+type CfTokenVerification = 'active' | 'inactive' | 'unknown';
 
 /**
  * Local active check. 'unknown' means the check could not run (network or CF error); the

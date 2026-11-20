@@ -43,7 +43,7 @@ export type AstImportDeclaration = AstNode & {
   specifiers?: Array<AstNode>;
 };
 
-export type AstVariableDeclarator = AstNode & {
+type AstVariableDeclarator = AstNode & {
   id?: AstNode;
   init?: AstNode;
 };
@@ -59,7 +59,7 @@ export type AstFunctionDeclaration = AstNode & {
   id?: AstNode;
 };
 
-export type AstExportSpecifier = AstNode & {
+type AstExportSpecifier = AstNode & {
   exported?: AstNode;
   local?: AstNode;
   /** "type" for `export { type X }`, "value" (or undefined) otherwise. */
@@ -80,11 +80,6 @@ export type AstExportAllDeclaration = AstNode & {
   exported?: AstNode | null;
   /** "type" for `export type * from`, "value" (or undefined) otherwise. */
   exportKind?: string;
-};
-
-export type AstExportDefaultDeclaration = AstNode & {
-  type: 'ExportDefaultDeclaration';
-  declaration?: AstNode;
 };
 
 export type AstCallExpression = AstNode & {

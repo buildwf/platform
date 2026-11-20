@@ -24,7 +24,6 @@ import type {
   ProjectInvitation,
   ProjectInvitationStatus,
   ProjectMember,
-  ProjectMemberRole,
   User,
 } from '../../types.ts';
 import { canOnProject, grantedAccess } from '../access.ts';
@@ -103,7 +102,9 @@ type ErrorCode = keyof typeof ERRORS;
 
 /** The procedure error code for a failed team mutation, or rethrows what is not one. */
 function mutationCode(error: unknown): ErrorCode {
-  if (!(error instanceof ProjectTeamMutationError)) throw error;
+  if (!(error instanceof ProjectTeamMutationError)) {
+    throw error;
+  }
   return (
     error.reason === 'forbidden'
       ? 'MEMBERSHIP_FORBIDDEN'
@@ -162,7 +163,9 @@ export async function deliverInvitation(
   target: User,
   projectSlug: string,
 ): Promise<{ status: 'sent' | 'not_configured' | 'rate_limited' | 'failed' }> {
-  if (!env.EMAIL || !target.email) return { status: 'not_configured' };
+  if (!env.EMAIL || !target.email) {
+    return { status: 'not_configured' };
+  }
   try {
     if (!(await consumeInvitationEmailDelivery(env.ROUTING, invitation.project_id))) {
       return { status: 'rate_limited' };
@@ -414,7 +417,9 @@ export const leave = procedure('team.leave')
   .noMcp({ reason: 'Leaving a project is the member’s own decision' })
   .cli({ command: 'team leave', description: 'Leave a project' })
   .handler(async ({ env, ctx, input, fail }) => {
-    if (grantedAccess(ctx).role === 'owner') return fail('OWNER_CANNOT_LEAVE');
+    if (grantedAccess(ctx).role === 'owner') {
+      return fail('OWNER_CANNOT_LEAVE');
+    }
     try {
       const { cancelledBuilds } = await removeProjectMember(ctx.db, {
         projectId: input.projectId,
@@ -469,7 +474,9 @@ export const myInvitations = procedure('team.myInvitations')
     return {
       invitations: invitations.flatMap((invitation) => {
         const project = projectsById.get(invitation.project_id);
-        if (!project) return [];
+        if (!project) {
+          return [];
+        }
         const owner = usersById.get(project.user_id);
         const inviter = usersById.get(invitation.invited_by_user_id);
         return [
@@ -509,8 +516,12 @@ export const respond = procedure('team.respond')
         actorUserId: ctx.user.id,
         response: input.response,
       });
-      if (input.response === 'decline') return {};
-      if (!result.member) throw new Error('accepted project invitation has no membership');
+      if (input.response === 'decline') {
+        return {};
+      }
+      if (!result.member) {
+        throw new Error('accepted project invitation has no membership');
+      }
       return { member: memberJson(result.member, ctx.user) };
     } catch (error) {
       return fail(mutationCode(error));

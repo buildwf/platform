@@ -5,12 +5,7 @@ import { LOG_ROW_GROUP_BY, runtimeLogsField } from '../observability/log-rows.ts
 import { deployments, projects } from '../schema.ts';
 import { OperatorError } from './common.ts';
 
-export const CANCELABLE_DEPLOYMENT_STATUSES = new Set([
-  'pending',
-  'uploading',
-  'migrating',
-  'canceling',
-]);
+const CANCELABLE_DEPLOYMENT_STATUSES = new Set(['pending', 'uploading', 'migrating', 'canceling']);
 const DEPLOYMENT_STATUSES = new Set([
   ...CANCELABLE_DEPLOYMENT_STATUSES,
   'cutover',

@@ -896,4 +896,4 @@ export async function getInstallationRevocationsForAccount(
   return result;
 }
 
-export { installationCoversRepoInTx, installationCoversRepo } from './github-authority.ts';
+export { installationCoversRepo } from './github-authority.ts';

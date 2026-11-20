@@ -68,7 +68,7 @@ export function sanitizeReturnPath(value: string | null | undefined): string {
 }
 
 /** Header the restarting page sends the per-server restart token in. */
-export const RESTART_TOKEN_HEADER = 'x-platform-restart';
+const RESTART_TOKEN_HEADER = 'x-platform-restart';
 
 /**
  * `token` is the `t` query value the toast navigated with. The page sends it
@@ -107,7 +107,7 @@ export function isRestartTokenValid(
  * `Origin` is the fallback for browsers that do not send it. Clients that send
  * neither (curl, scripts) are not browsers acting for another site.
  */
-export function isSameOriginRequest(req: IncomingMessage): boolean {
+function isSameOriginRequest(req: IncomingMessage): boolean {
   const site = req.headers['sec-fetch-site'];
   if (site !== undefined) {
     return site === 'same-origin';
@@ -125,7 +125,7 @@ export function isSameOriginRequest(req: IncomingMessage): boolean {
 }
 
 /** Whether a browser navigated here from the dev origin itself or from the address bar. */
-export function isSameOriginNavigation(req: IncomingMessage): boolean {
+function isSameOriginNavigation(req: IncomingMessage): boolean {
   const site = req.headers['sec-fetch-site'];
   return site === undefined || site === 'same-origin' || site === 'none';
 }

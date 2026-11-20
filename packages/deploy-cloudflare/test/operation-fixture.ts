@@ -79,7 +79,7 @@ export function operationFixture<
   return runner;
 }
 
-export function operationFixtureResult(result: CloudflareCommandResult): CloudflareCommandResult {
+function operationFixtureResult(result: CloudflareCommandResult): CloudflareCommandResult {
   let data = result.data;
   if (data === undefined) {
     try {
@@ -144,7 +144,7 @@ export function operationFixtureResult(result: CloudflareCommandResult): Cloudfl
   };
 }
 
-export function operationFixtureArgs(operation: CloudflareOperation): Array<string> {
+function operationFixtureArgs(operation: CloudflareOperation): Array<string> {
   const config = operation.configPath ? ['-c', operation.configPath] : [];
   const target = [
     ...config,

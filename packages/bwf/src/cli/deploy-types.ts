@@ -184,7 +184,7 @@ export type CloudflareAuthSecretFailureReason =
   | 'verification-failed';
 
 /** A column the emitted auth schema requires, with the constraints that carry correctness. */
-export type RequiredAuthColumn = {
+type RequiredAuthColumn = {
   column: string;
   /** The emitted field is `unique: true` — a duplicate row here is a duplicate auth identity. */
   unique: boolean;

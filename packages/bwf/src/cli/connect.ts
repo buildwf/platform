@@ -39,7 +39,7 @@ async function selectBwfPlatform(interactive: boolean): Promise<string> {
   return value === 'new' ? promptPlatformUrl() : value;
 }
 
-export async function authenticateConnection(
+async function authenticateConnection(
   root: string,
   discovery: PlatformDiscoveryDocument,
   interactive: boolean,

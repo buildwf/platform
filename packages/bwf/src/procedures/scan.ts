@@ -12,7 +12,7 @@ export type ProcedureFile = {
   prefix: string;
 };
 
-export function procedurePrefix(filePath: string): string {
+function procedurePrefix(filePath: string): string {
   const segments = filePath.replace(/\.[^.]+$/, '').split('/');
   if (segments.at(-1) === 'index') {
     segments.pop();

@@ -17,7 +17,7 @@ export const PROJECT_CREDENTIAL_MAX_DAYS = 90;
  * timeout can't mint an unbounded-life token. */
 export const DEPLOY_TOKEN_HARD_MAX_MINUTES = 60;
 /** Margin so the token outlives the build's own timeout. */
-export const DEPLOY_TOKEN_MARGIN_SECONDS = 5 * 60;
+const DEPLOY_TOKEN_MARGIN_SECONDS = 5 * 60;
 
 /** TTL (seconds) for a deploy token that must cover a full build whose wall-clock
  * limit is `timeoutMinutes` (0 = unlimited → capped at the hard max), plus margin. */

@@ -33,7 +33,7 @@ export const MAX_WORKER_FILE_BYTES = 32 * 1024 * 1024;
 // counting every module except source maps. Cloudflare limits source maps
 // separately and enforces that limit itself.
 // https://developers.cloudflare.com/workers/platform/limits/#worker-size
-export const CLOUDFLARE_WORKER_SIZE_LIMIT_BYTES = 64 * 1024 * 1024;
+const CLOUDFLARE_WORKER_SIZE_LIMIT_BYTES = 64 * 1024 * 1024;
 
 // A finalize accepts direct Worker uploads at most this old. The stale-input
 // sweep (`dispatchPendingDeployments`) removes unclaimed inputs after 24 hours,

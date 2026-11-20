@@ -15,10 +15,10 @@ export function rememberAppCaller(request: Request, caller: AppCaller): void {
 
 const builders = createProcedures<ApiEnv['Bindings']>();
 export const appProcedure: typeof builders.procedure = builders.procedure;
-export const appProfile: typeof builders.profile = builders.profile;
+const appProfile: typeof builders.profile = builders.profile;
 
 /** The user and grant behind a connected application's bearer token. */
-export const oauthApp: AuthProvider<AppCaller, ApiEnv['Bindings']> = {
+const oauthApp: AuthProvider<AppCaller, ApiEnv['Bindings']> = {
   name: 'oauth-app',
   resolve: (request) => callers.get(request),
   actorId: (caller) => caller.user.id,
