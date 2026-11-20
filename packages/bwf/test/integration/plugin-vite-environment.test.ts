@@ -137,7 +137,7 @@ describe('bwfPlugin Vite environments', () => {
       expect.arrayContaining(['@builtbyfriends/bwf > email-validator', '@builtbyfriends/bwf > pg']),
     );
     expect(config.environments.platform_worker.optimizeDeps.exclude).toEqual(
-      expect.arrayContaining(['platform', 'better-auth']),
+      expect.arrayContaining(['@builtbyfriends/bwf', 'better-auth']),
     );
     expect(config.environments.ssr.optimizeDeps.include).toEqual([]);
     expect(config.environments.ssr.optimizeDeps.exclude ?? []).not.toContain('better-auth');

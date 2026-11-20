@@ -21,8 +21,8 @@ allowBuilds:
   workerd: true
 
 catalog:
-  '@cloudflare/workers-types': ^5.20261110.1
-  '@cloudflare/workers-utils': ^0.53.1
+  '@cloudflare/workers-types': ^5.20261117.1
+  '@cloudflare/workers-utils': ^0.54.1
   '@types/node': ^26.6.6
   '@voidzero-dev/vite-plus-prompts': 1.6.0
   typescript: 7.0.2
@@ -30,23 +30,24 @@ catalog:
   pathslash: ^0.1.0
   vite: npm:@voidzero-dev/vite-plus-core@1.6.0
   vite-plus: 1.6.0
-  wrangler: ^4.160.1
-  cf: ^1.0.0-beta.30
+  wrangler: ^4.163.0
+  cf: 1.0.0-rc.0
   oauth4webapi: ^3.8.8
   '@astryxdesign/core': 0.7.13
   '@astryxdesign/theme-neutral': 0.7.13
   '@stylexjs/stylex': 0.19.1
-  # Exact: a range lets apps pick up the 2.0 release candidates, which write build output 0.9 can't read.
-  '@cloudflare/build-output-utils': 0.9.13
-  '@cloudflare/codemods': ^0.7.7
-  '@cloudflare/config': ^0.32.0
-  '@cloudflare/vite-plugin': 2.0.0-beta.v.15
-  '@cloudflare/workers-auth': ^0.18.1
+  # Exact: the Vite plugin, cf, the config schema and the output reader move together.
+  # A newer one of these can write or expect output the others can't read.
+  '@cloudflare/build-output-utils': 1.0.0-rc.0
+  '@cloudflare/codemods': ^0.8.0
+  '@cloudflare/config': 1.0.0-rc.0
+  '@cloudflare/vite-plugin': 2.0.0-rc.0
+  '@cloudflare/workers-auth': ^0.18.3
   '@nkzw/fate': 2.0.1
   '@vitejs/plugin-react': ^6.3.0
   magic-string: ^1.4.5
   # Keep Miniflare aligned with the Vite plugin, Wrangler, and cf.
-  miniflare: ^5.20261110.1-beta
+  miniflare: 5.20261116.0-beta
   playwright: ^1.65.0
   postal-mime: ^4.2.1
   react-fate: 2.0.1
@@ -78,9 +79,9 @@ catalog:
 
 catalogs:
   platform:
-    '@cloudflare/workers-types': ^5.20261110.1
+    '@cloudflare/workers-types': ^5.20261117.1
     hono: 4.13.18
-    wrangler: ^4.160.1
+    wrangler: ^4.163.0
 
 overrides:
   # Keep Vite+'s pinned Vitest internals on the same patch as the runner.

@@ -11,7 +11,11 @@ import {
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { getWorkerAssetsDir, readBuildOutput } from '@cloudflare/build-output-utils';
+import {
+  getRootConfigPath,
+  getWorkerAssetsDir,
+  readBuildOutput,
+} from '@cloudflare/build-output-utils';
 import {
   createBuilder,
   createServer,
@@ -174,7 +178,7 @@ describe('Cloudflare v2 compatibility', () => {
     } finally {
       await artifact?.dispose();
     }
-    const metadataPath = join(root, '.cloudflare/output/v0/platform-containers.json');
+    const metadataPath = join(dirname(getRootConfigPath(root)), 'platform-containers.json');
     writeFileSync(metadataPath, JSON.stringify({ workerDirectory: '../outside' }));
     await expect(prepareCfBuildOutput(root)).rejects.toThrow('Invalid bwf Container');
     // Two real Vite builds take about four seconds, near the default timeout.
@@ -401,6 +405,11 @@ export default {
 
   it('builds native output and the existing dist layout, then previews the native artifact', async () => {
     const root = project();
+    // Upgrading a checkout must replace v0 instead of leaving two versions that
+    // the RC CLI refuses to publish.
+    const oldOutput = join(root, '.cloudflare/output/v0');
+    mkdirSync(oldOutput, { recursive: true });
+    writeFileSync(join(oldOutput, 'config.json'), '{}');
     writeFileSync(
       join(root, 'worker.js'),
       "export default { fetch: (_request, env) => new Response(env.PREVIEW_VALUE ?? 'built-worker') };",
@@ -426,7 +435,8 @@ export default {
     });
     await builder.buildApp();
     const output = await readBuildOutput(root);
-    expect(output.rootConfig.accountId).toBe('account-id');
+    expect(existsSync(oldOutput)).toBe(false);
+    expect(output.rootConfig.settings?.accountId).toBe('account-id');
     expect(existsSync(join(root, 'cloudflare.config.ts'))).toBe(false);
     expect(output.workers.default.config.manifest?.mainModule).toBe('index.js');
     expect(existsSync(join(root, 'dist/ssr/index.js'))).toBe(true);

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { isRecord } from '@builtbyfriends/deploy-core';
 import type { MigrationFollowUp } from '@cloudflare/codemods';
-import { InputConfigSchema } from '@cloudflare/config';
+import { CloudflareConfigSchema } from '@cloudflare/config';
 import { dirname, join } from 'pathslash';
 
 type JsonObject = Record<string, unknown>;
@@ -23,9 +23,40 @@ function empty(value: unknown): boolean {
   );
 }
 
+function normalizeQueueConcurrency(raw: JsonObject): JsonObject {
+  const queues = record(raw.queues);
+  if (!Array.isArray(queues?.consumers)) {
+    return { ...raw };
+  }
+  return {
+    ...raw,
+    queues: {
+      ...queues,
+      consumers: queues.consumers.map((value) => {
+        const consumer = record(value);
+        // Wrangler's null and cf's omitted limit both mean automatic concurrency.
+        if (consumer?.max_concurrency !== null) {
+          return value;
+        }
+        const { max_concurrency: _automatic, ...rest } = consumer;
+        return rest;
+      }),
+    },
+  };
+}
+
 /** Remove build-only fields and settings translated into cf's typed config below. */
 function migrationInput(raw: JsonObject): JsonObject {
-  const result = { ...raw };
+  const result = normalizeQueueConcurrency(raw);
+  const environments = record(result.env);
+  if (environments) {
+    result.env = Object.fromEntries(
+      Object.entries(environments).map(([name, value]) => [
+        name,
+        record(value) ? normalizeQueueConcurrency(value as JsonObject) : value,
+      ]),
+    );
+  }
   if (
     !empty(result.rules) &&
     !isDeepStrictEqual(result.rules, [{ type: 'ESModule', globs: ['**/*.js', '**/*.mjs'] }])
@@ -374,7 +405,7 @@ const config = parsed.data;
 process.stdout.write(JSON.stringify({ config, followUps: migration.followUps }));
 `;
 
-type MigratedConfig = ReturnType<typeof InputConfigSchema.parse>;
+type MigratedConfig = ReturnType<typeof CloudflareConfigSchema.parse>;
 
 // Vite resolves its config several times for one build or dev server, and each
 // resolution asks for the same translation. The result depends only on the
@@ -487,7 +518,7 @@ function migrateWranglerConfig(raw: JsonObject, mode: string): MigratedConfig {
     if (Object.keys(exports).length > 0) {
       worker.exports = exports;
     }
-    return InputConfigSchema.parse(result);
+    return CloudflareConfigSchema.parse(result);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
