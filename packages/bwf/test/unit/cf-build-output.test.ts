@@ -79,6 +79,8 @@ function expectCfDryRun(directory: string, command = ['workers', 'versions', 'cr
   const dryRun = spawnSync(process.execPath, [cf, ...command, '--prebuilt', '--dry-run'], {
     cwd: directory,
     encoding: 'utf8',
+    // As bwf runs cf. Otherwise each call reports to Cloudflare and waits for the answer.
+    env: { ...process.env, CF_SEND_TELEMETRY: 'false' },
   });
   expect(dryRun.status, `${dryRun.stdout}\n${dryRun.stderr}`).toBe(0);
   return dryRun;
