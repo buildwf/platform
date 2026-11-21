@@ -77,8 +77,13 @@ function projectConfigEntryPath(start: string): string | undefined {
 /** Evaluate a TypeScript config without requiring bwf to be installed in the target project. */
 export function loadTypedBwfConfigFile(path: string): unknown {
   const configEntry = configEntryPath(path);
+  // Transpiling costs about 50ms the first time in a process and a few more on each later load,
+  // and one build or dev start loads the config more than ten times. The cache holds only the
+  // transpiled source, keyed by the content of each file, so every load still evaluates the
+  // config. It lives in the project's own node_modules, never in a shared temporary directory.
+  const nodeModules = join(dirname(path), 'node_modules');
   const jiti = createJiti(import.meta.url, {
-    fsCache: false,
+    fsCache: existsSync(nodeModules) ? join(nodeModules, '.cache', 'bwf', 'config') : false,
     moduleCache: false,
     interopDefault: false,
     alias: { '@builtbyfriends/bwf/config': configEntry },
