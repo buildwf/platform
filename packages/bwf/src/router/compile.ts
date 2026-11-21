@@ -34,10 +34,6 @@ export type CompileOptions = {
     name: string;
     version: string;
   };
-  /** Absolute path to the hono module entry */
-  honoPath: string;
-  /** Absolute path to `hono/route` from the same Hono copy as `honoPath` */
-  honoRoutePath: string;
   /** Absolute path to the bwf/_env module */
   runtimeEnvPath: string;
   /** Absolute path to the project's `email/` directory; enables `__emailHandler`. */
@@ -149,9 +145,8 @@ export function compileRouteTable(
   const managedDispatch = options.dev !== true && options.managedDispatch === true;
 
   lines.push(`import { AsyncLocalStorage } from "node:async_hooks";`);
-  lines.push(`import { Hono } from ${JSON.stringify(options.honoPath)};`);
   lines.push(
-    `import { createRoutingRuntime as __createRoutingRuntime, createHttpRouteHandler as __createHttpRouteHandler, createModuleLoader as __createModuleLoader, createAssetNotFound as __createAssetNotFound } from ${JSON.stringify(ROUTING_RUNTIME_PATH)};`,
+    `import { Hono, createRoutingRuntime as __createRoutingRuntime, createHttpRouteHandler as __createHttpRouteHandler, createModuleLoader as __createModuleLoader, createAssetNotFound as __createAssetNotFound } from ${JSON.stringify(ROUTING_RUNTIME_PATH)};`,
   );
   lines.push(`import { withRuntimeEnv } from ${JSON.stringify(options.runtimeEnvPath)};`);
 

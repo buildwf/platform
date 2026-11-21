@@ -124,10 +124,17 @@ function isRemovedHere(path: string): boolean {
   return false;
 }
 
-function classify(files: Array<string>): string {
+// Used by status only: a file upstream changed but this fork doesn't have was most likely removed
+// here on purpose, along with the feature it belongs to.
+function isGoneHere(path: string, added: Set<string>): boolean {
+  return isRemovedHere(path) || (!added.has(path) && !existsSync(path));
+}
+
+function classify(files: Array<string>, added: Set<string>): string {
   const mapped = files.map(renamePath);
-  if (mapped.every(isRemovedHere)) {
-    return 'skip: only touches code the fork removed';
+  const gone = (file: string) => isGoneHere(file, added);
+  if (mapped.every(gone)) {
+    return "skip: only touches code this fork doesn't have";
   }
   const isTooling = (file: string) =>
     /(^|\/)(test|tests|__tests__|fixtures)\//.test(file) ||
@@ -135,7 +142,7 @@ function classify(files: Array<string>): string {
     /^(\.github|scripts)\//.test(file) ||
     /^(TESTING\.md|vite\.config\.ts)$/.test(file) ||
     /(^|\/)(vite|vitest)\.config\.[cm]?ts$/.test(file);
-  if (mapped.every((file) => isRemovedHere(file) || isTooling(file))) {
+  if (mapped.every((file) => gone(file) || isTooling(file))) {
     return 'tooling: tests or CI only';
   }
   return 'review';
@@ -150,14 +157,21 @@ function status(): void {
   console.log(`Last synced: ${base}. New upstream commits: ${shas.length}.`);
   for (const sha of shas) {
     const subject = git(['log', '-1', '--format=%s', sha]).trim();
-    const files = git(['diff-tree', '--no-commit-id', '--name-only', '-r', sha])
+    const changes = git(['diff-tree', '--no-commit-id', '--name-status', '-r', sha])
       .split('\n')
-      .filter(Boolean);
-    console.log(`\n${sha.slice(0, 9)}  ${subject}\n  ${classify(files)} (${files.length} files)`);
+      .filter(Boolean)
+      .map((line) => line.split('\t'));
+    const files = changes.map((change) => change.at(-1)!);
+    const added = new Set(
+      changes.filter(([code]) => code === 'A').map((change) => renamePath(change.at(-1)!)),
+    );
+    console.log(
+      `\n${sha.slice(0, 9)}  ${subject}\n  ${classify(files, added)} (${files.length} files)`,
+    );
     for (const file of files.slice(0, 12)) {
       const mapped = renamePath(file);
-      const note = isRemovedHere(mapped)
-        ? '  [removed here]'
+      const note = isGoneHere(mapped, added)
+        ? '  [not in this fork]'
         : mapped === file
           ? ''
           : `  -> ${mapped}`;

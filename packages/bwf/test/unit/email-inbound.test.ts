@@ -282,8 +282,6 @@ describe('parseEmail', () => {
 });
 
 const COMPILE_OPTIONS = {
-  honoPath: 'hono',
-  honoRoutePath: 'hono/route',
   runtimeEnvPath: '@builtbyfriends/bwf/_env',
   projectRoot: '/project',
   homeDir: '/home/test',

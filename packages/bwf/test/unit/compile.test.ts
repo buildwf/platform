@@ -20,9 +20,6 @@ import {
 } from '../../src/runtime/routing.ts';
 
 const testOptions = {
-  honoPath: '/resolved/hono/index.mjs',
-  honoRoutePath: '/resolved/hono/route.mjs',
-
   runtimeEnvPath: '/resolved/platform/runtime/env.mjs',
   projectRoot: '/project',
   homeDir: '/Users/test',
