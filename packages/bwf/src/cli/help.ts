@@ -186,7 +186,7 @@ const HELP_TREE: HelpTree = {
       {
         command: '--provision',
         description:
-          'Run resource provisioning again, for example to enable D1 read replication (with --platform cloudflare)',
+          'Run resource provisioning again even when every resource exists (with --platform cloudflare)',
       },
       {
         command: '--atomic',
@@ -299,6 +299,10 @@ const HELP_TREE: HelpTree = {
         command: 'config plans [command]',
         description: 'Manage plans, account limits, and the default plan',
       },
+      {
+        command: 'config billing [set|show]',
+        description: 'Save the Stripe values that upgrades set on the API Worker',
+      },
       { command: 'list', description: 'List installed and connected platforms' },
       { command: 'use [id]', description: 'Select the default bwf platform' },
       { command: 'status [id]', description: 'Inspect a platform and its health' },
@@ -325,8 +329,28 @@ const HELP_TREE: HelpTree = {
       ...operatorHelpTree(),
       config: {
         summary: 'Configure platform settings.',
-        usage: ['bwf platform config <auth|plans> [command] [options]'],
+        usage: ['bwf platform config <auth|plans|billing> [command] [options]'],
         children: {
+          billing: {
+            summary:
+              'Save Stripe values with the installation secrets on this machine. The next upgrade or repair sets them on the API Worker.',
+            usage: ['bwf platform config billing [set|show] [--installation <id>] [--stdin]'],
+            commands: [
+              {
+                command: 'set',
+                description:
+                  'Save STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_SOLO, STRIPE_PRICE_PRO, or STRIPE_LIVE_ENABLED from the environment',
+              },
+              { command: 'show', description: 'Show which values are saved, without the values' },
+            ],
+            options: [
+              { command: '--installation <id>', description: 'Select the local installation' },
+              {
+                command: '--stdin',
+                description: 'Also read NAME=value lines from standard input',
+              },
+            ],
+          },
           plans: {
             summary: 'Manage plans and limits. Without a command, opens interactive configuration.',
             usage: [
@@ -1024,7 +1048,7 @@ const HELP_TREE: HelpTree = {
       },
       setup: {
         summary:
-          'Set email up on your own Cloudflare account: enable Email Routing, onboard Email Sending, and record send_email + addresses in the Cloudflare config managed by bwf. Asks once before changing the account.',
+          'Set up Email Sending on your own Cloudflare account, plus Email Routing when the app has email/ handlers. Save the binding, sender, and handler addresses in the Cloudflare config managed by bwf. Asks once before changing the account.',
         usage: ['bwf email setup --platform cloudflare'],
         options: [
           {
@@ -1284,6 +1308,7 @@ const HELP_TREE: HelpTree = {
             description:
               'Run against the deployed database (D1 via proxy; PostgreSQL via direct connection)',
           },
+          { command: '--yes', description: 'Skip the confirmation prompt for --remote' },
         ],
         examples: [
           { command: 'bwf db execute "select * from users"', description: 'Run inline SQL' },

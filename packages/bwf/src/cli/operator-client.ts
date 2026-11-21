@@ -2,8 +2,8 @@ import { cfAccessHeaders } from '../shared/cf-access.ts';
 import { ensurePlatformAccessToken } from './cf-access.ts';
 import { normalizePlatformApiUrl } from './platform-registry.ts';
 
-export const OPERATOR_READ_TIMEOUT_MS: number = 30_000;
-export const OPERATOR_MUTATION_TIMEOUT_MS: number = 5 * 60_000;
+const OPERATOR_READ_TIMEOUT_MS: number = 30_000;
+const OPERATOR_MUTATION_TIMEOUT_MS: number = 5 * 60_000;
 export const OPERATOR_MAX_TIMEOUT_MS: number = 60 * 60_000;
 
 export class OperatorClientError extends Error {

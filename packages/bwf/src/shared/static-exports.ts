@@ -67,7 +67,7 @@ const VALUE_DECLARATIONS = new Set([
 ]);
 
 /** Read how a parsed module exports `names` without evaluating user code. Type-only exports are skipped. */
-export function staticExports(program: AstProgram, names: ReadonlySet<string>): StaticExports {
+function staticExports(program: AstProgram, names: ReadonlySet<string>): StaticExports {
   const result: StaticExports = {
     initializers: new Map(),
     unreadable: new Set(),

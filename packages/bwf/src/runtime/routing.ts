@@ -17,6 +17,10 @@ import { toUrlString } from './route-url.ts';
 import { ASSET_EXTENSIONS } from './routing-assets.ts';
 import { createAssetCachePolicy, intentionalNotFoundRequests } from './routing-worker.ts';
 import { isUnchangedStaticAsset, markStaticAsset } from './static-asset-marker.ts';
+// Generated routes take Hono from here. Importing it by file path instead gives a dev Worker a
+// second copy beside the one this runtime imports, loaded as one request for each Hono file.
+export { Hono } from 'hono';
+export { matchedRoutes } from 'hono/route';
 
 export type RoutingRule = {
   source: string;

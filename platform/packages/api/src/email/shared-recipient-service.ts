@@ -301,7 +301,7 @@ async function sharedRoute(db: Db, env: Bindings) {
   return { route: row.email_domain_routes, connection };
 }
 
-export function isOwnedSharedRecipientRule(
+function isOwnedSharedRecipientRule(
   rule: CfEmailRoutingRule,
   row: Pick<Recipient, 'rule_id' | 'rule_name' | 'recipient'>,
   worker: string,

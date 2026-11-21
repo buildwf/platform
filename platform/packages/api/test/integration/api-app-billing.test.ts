@@ -6,6 +6,7 @@ import {
   teardownEnv,
   clearTables,
   createMockExecutionContext,
+  rpcData,
   withLegacyDeploy,
   type TestEnv,
 } from './helpers.ts';
@@ -21,6 +22,17 @@ let env: TestEnv & {
 let registration: Awaited<ReturnType<typeof registerOAuthClient>>;
 
 const basic = () => 'Basic ' + btoa(registration.client.id + ':' + registration.clientSecret);
+// The fields of the usage and billing answers these tests read.
+type Answer = {
+  caps: { aiNeuronsPerMonth: number };
+  aiNeuronsUsed: number;
+  used: { aiNeurons: number };
+  billingPeriodStart: string;
+  url: string;
+};
+const dataOf = async (response: Response | Promise<Response>) =>
+  rpcData<Answer>(await (await response).json());
+
 async function call(path: string, body: unknown, authorization = basic()) {
   return app.fetch(
     new Request(origin + '/app-billing' + path, {
@@ -79,29 +91,19 @@ describe('app billing', () => {
   });
 
   it('starts a person on the default plan, counts their use once per id, and flags the cap for them alone', async () => {
-    const first = ((await (await call('/usage.status', { person: 'p1' })).json()) as any).data;
+    const first = await dataOf(call('/usage.status', { person: 'p1' }));
     expect(first).toMatchObject({ plan: 'free', withinCaps: true, used: { aiNeurons: 0 } });
 
     const cap = first.caps.aiNeuronsPerMonth as number;
-    const hit = (
-      (await (
-        await call('/usage.record', { person: 'p1', id: 'e1', aiNeurons: cap })
-      ).json()) as any
-    ).data;
+    const hit = await dataOf(call('/usage.record', { person: 'p1', id: 'e1', aiNeurons: cap }));
     expect(hit).toMatchObject({ aiNeuronsUsed: cap, withinCaps: false });
 
     // The same report sent again isn't counted twice, and another person is untouched.
-    const again = (
-      (await (
-        await call('/usage.record', { person: 'p1', id: 'e1', aiNeurons: cap })
-      ).json()) as any
-    ).data;
+    const again = await dataOf(call('/usage.record', { person: 'p1', id: 'e1', aiNeurons: cap }));
     expect(again.aiNeuronsUsed).toBe(cap);
-    const other = ((await (await call('/usage.status', { person: 'p2' })).json()) as any).data;
+    const other = await dataOf(call('/usage.status', { person: 'p2' }));
     expect(other).toMatchObject({ withinCaps: true, aiWithinCap: true, used: { aiNeurons: 0 } });
-    expect(
-      ((await (await call('/usage.status', { person: 'p1' })).json()) as any).data,
-    ).toMatchObject({
+    expect(await dataOf(call('/usage.status', { person: 'p1' }))).toMatchObject({
       aiWithinCap: false,
       sandboxWithinCap: true,
     });
@@ -116,8 +118,7 @@ describe('app billing', () => {
       scopes: ['profile'],
     });
     const asOther = 'Basic ' + btoa(second.client.id + ':' + second.clientSecret);
-    const seen = ((await (await call('/usage.status', { person: 'p1' }, asOther)).json()) as any)
-      .data;
+    const seen = await dataOf(call('/usage.status', { person: 'p1' }, asOther));
     expect(seen.used.aiNeurons).toBe(0);
   });
 
@@ -131,7 +132,12 @@ describe('app billing', () => {
   });
 
   it('moves a person to the plan they bought and back when the subscription ends', async () => {
+    // Bought on Nov 19: it renews on Dec 19, not on the first of the month.
+    const periodEnd = Date.UTC(2026, 11, 19, 12) / 1000;
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      if (String(input) === 'https://api.stripe.com/v1/subscriptions/sub_1') {
+        return Response.json({ id: 'sub_1', items: { data: [{ current_period_end: periodEnd }] } });
+      }
       if (String(input).startsWith('https://api.stripe.com/')) {
         return Response.json({ url: 'https://stripe.example/session' });
       }
@@ -142,7 +148,7 @@ describe('app billing', () => {
       plan: 'solo',
       returnUrl: 'https://example.com/plan',
     });
-    expect(((await checkout.json()) as any).data.url).toBe('https://stripe.example/session');
+    expect((await dataOf(checkout)).url).toBe('https://stripe.example/session');
     expect(
       (await call('/billing.portal', { person: 'p1', returnUrl: 'https://example.com/plan' }))
         .status,
@@ -157,22 +163,33 @@ describe('app billing', () => {
         })
       ).status,
     ).toBe(200);
-    const bought = ((await (await call('/usage.status', { person: 'p1' })).json()) as any).data;
-    expect(bought).toMatchObject({ plan: 'solo', subscribed: true });
+    const bought = await dataOf(call('/usage.status', { person: 'p1' }));
+    expect(bought).toMatchObject({
+      plan: 'solo',
+      subscribed: true,
+      renewsAt: '2026-12-19T12:00:00.000Z',
+    });
+    expect(bought).not.toHaveProperty('subscriptionId');
+    // The usage counters still reset on the first of the month.
+    expect(bought.billingPeriodStart).toMatch(/^\d{4}-\d{2}-01T00:00:00\.000Z$/);
     const portal = await call('/billing.portal', {
       person: 'p1',
       returnUrl: 'https://example.com/plan',
     });
-    expect(((await portal.json()) as any).data.url).toBe('https://stripe.example/session');
+    expect((await dataOf(portal)).url).toBe('https://stripe.example/session');
     fetchSpy.mockRestore();
 
+    // When Stripe can't be reached, the answer still comes back, without a renewal date.
+    const offline = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.error());
+    const unreachable = await dataOf(call('/usage.status', { person: 'p1' }));
+    expect(unreachable).toMatchObject({ plan: 'solo', subscribed: true });
+    expect(unreachable).not.toHaveProperty('renewsAt');
+    offline.mockRestore();
+
     await webhook({ type: 'customer.subscription.deleted', data: { object: { metadata } } });
-    expect(
-      ((await (await call('/usage.status', { person: 'p1' })).json()) as any).data,
-    ).toMatchObject({
-      plan: 'free',
-      subscribed: false,
-    });
+    const ended = await dataOf(call('/usage.status', { person: 'p1' }));
+    expect(ended).toMatchObject({ plan: 'free', subscribed: false });
+    expect(ended).not.toHaveProperty('renewsAt');
   });
 
   it('refuses an unsigned webhook', async () => {

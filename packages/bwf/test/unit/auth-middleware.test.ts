@@ -308,7 +308,11 @@ describe('runBwfAuthMiddleware Better Auth plugins', () => {
 
     expect((await app.request('/', undefined, env)).status).toBe(200);
 
-    expect(pluginsOf(0).map((plugin) => plugin.id)).toEqual(['first', 'second', 'platform-cookies']);
+    expect(pluginsOf(0).map((plugin) => plugin.id)).toEqual([
+      'first',
+      'second',
+      'platform-cookies',
+    ]);
     expect(pluginsOf(0)[0]).toBe(plugins[0]);
     expect(plugins.map((plugin) => plugin.id)).toEqual(['first', 'second']);
   });

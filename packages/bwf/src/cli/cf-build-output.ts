@@ -25,7 +25,7 @@ import {
   writeRootConfig,
   writeWorkerConfig,
 } from '@cloudflare/build-output-utils';
-import { type ModuleType, OutputContainerSchema } from '@cloudflare/config';
+import { type ModuleType, BuildOutputContainerConfigSchema } from '@cloudflare/config';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'pathslash';
 import type { Plugin } from 'vite';
 import { migrateBuiltWranglerConfig, record } from './cf-config-migrate.ts';
@@ -156,14 +156,20 @@ export async function prepareCfBuildOutput(
   projectRoot: string = workerDirectory,
 ): Promise<CfBuildOutput | null> {
   const source = resolve(workerDirectory);
-  if (existsSync(getRootConfigPath(source))) {
+  const hasNativeOutput = existsSync(getRootConfigPath(source));
+  // Ask the version-aware reader before falling back to a Wrangler build. Old
+  // native artifacts need a rebuild, even if a dist/ssr copy is still present.
+  if (!hasNativeOutput && existsSync(join(source, '.cloudflare/output'))) {
+    await readBuildOutput(source);
+  }
+  if (hasNativeOutput) {
     const deferredContainers = join(dirname(getRootConfigPath(source)), 'platform-containers.json');
     if (existsSync(deferredContainers)) {
       const built = await readBuildOutput(source);
       if (
         (accountId !== undefined &&
-          built.rootConfig.accountId !== undefined &&
-          accountId !== built.rootConfig.accountId) ||
+          built.rootConfig.settings?.accountId !== undefined &&
+          accountId !== built.rootConfig.settings?.accountId) ||
         (mode !== undefined && mode !== built.rootConfig.buildContext.mode)
       ) {
         return null;
@@ -228,7 +234,7 @@ export async function prepareCfBuildOutput(
   }
   if (!existsSync(join(source, 'wrangler.json'))) {
     throw new Error(
-      `No Cloudflare Worker build found in ${source}. Pass the project root that contains .cloudflare/output/v0, or the Worker output directory that contains wrangler.json.`,
+      `No Cloudflare Worker build found in ${source}. Rebuild the app and pass the project root that contains .cloudflare/output, or the Worker output directory that contains wrangler.json.`,
     );
   }
   const raw = record(JSON.parse(readFileSync(join(source, 'wrangler.json'), 'utf8')));
@@ -276,11 +282,11 @@ export async function prepareCfBuildOutput(
     mkdirSync(bundle, { recursive: true });
     const modules = copyBundle(source, bundle);
     const configuredAccountId = accountId ?? raw.account_id;
-    await writeRootConfig(
-      directory,
-      typeof configuredAccountId === 'string' ? { accountId: configuredAccountId } : {},
-      { isPreview: false, mode: mode ?? 'production' },
-    );
+    await writeRootConfig({
+      root: directory,
+      settings: typeof configuredAccountId === 'string' ? { accountId: configuredAccountId } : {},
+      buildContext: { isPreview: false, mode: mode ?? 'production' },
+    });
     await writeWorkerConfig({
       root: directory,
       config: config.worker,
@@ -306,7 +312,7 @@ export async function prepareCfBuildOutput(
       }
       await writeContainerConfig({
         root: directory,
-        config: OutputContainerSchema.parse(builtContainer),
+        config: BuildOutputContainerConfigSchema.parse(builtContainer),
         directoryName: normalizeDirectoryName(container.name),
       });
     }
@@ -343,8 +349,8 @@ async function prepareNativeBuildOutput(
   const built = await readBuildOutput(source);
   if (
     (accountId !== undefined &&
-      built.rootConfig.accountId !== undefined &&
-      accountId !== built.rootConfig.accountId) ||
+      built.rootConfig.settings?.accountId !== undefined &&
+      accountId !== built.rootConfig.settings?.accountId) ||
     (mode !== undefined && mode !== built.rootConfig.buildContext.mode)
   ) {
     return null;
@@ -355,14 +361,18 @@ async function prepareNativeBuildOutput(
   };
   try {
     stagePackageContext(directory, projectRoot);
-    await writeRootConfig(
-      directory,
-      {
-        accountId: accountId ?? built.rootConfig.accountId,
-        complianceRegion: built.rootConfig.complianceRegion,
+    await writeRootConfig({
+      root: directory,
+      settings: {
+        accountId: accountId ?? built.rootConfig.settings?.accountId,
+        complianceRegion: built.rootConfig.settings?.complianceRegion,
       },
-      { ...built.rootConfig.buildContext, mode: built.rootConfig.buildContext.mode },
-    );
+      buildContext: {
+        ...built.rootConfig.buildContext,
+        mode: built.rootConfig.buildContext.mode ?? 'production',
+      },
+      producer: built.rootConfig.producer,
+    });
     for (const [name, worker] of Object.entries(built.workers)) {
       if (
         worker.bundleDir &&

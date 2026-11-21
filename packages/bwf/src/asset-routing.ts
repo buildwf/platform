@@ -26,7 +26,7 @@ export type AssetRoutingPolicy = {
   workerSpaFallback: boolean;
 };
 
-export function isApiRoutePattern(pattern: string): boolean {
+function isApiRoutePattern(pattern: string): boolean {
   return pattern === '/api' || pattern.startsWith('/api/');
 }
 

@@ -26,7 +26,11 @@ function project(installedVersion?: string | 'linked'): void {
     mkdirSync(join(packageRoot, 'dist'), { recursive: true });
     writeFileSync(
       join(packageRoot, 'package.json'),
-      JSON.stringify({ name: '@builtbyfriends/bwf', version: installedVersion, main: './dist/index.mjs' }),
+      JSON.stringify({
+        name: '@builtbyfriends/bwf',
+        version: installedVersion,
+        main: './dist/index.mjs',
+      }),
     );
     writeFileSync(join(packageRoot, 'dist', 'index.mjs'), 'export default {};\n');
   }

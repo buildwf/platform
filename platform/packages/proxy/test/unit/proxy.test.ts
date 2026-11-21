@@ -675,7 +675,9 @@ describe('proxy worker', () => {
       expect(res.status).toBe(401);
       expect(await res.json()).toEqual({
         error: 'invalid or expired token',
-        message: expect.stringMatching(/Sign in.*restart the build/),
+        message: expect.stringMatching(
+          /invalid or expired\. Sign in to the connected platform again/,
+        ),
       });
     });
 

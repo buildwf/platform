@@ -21,7 +21,9 @@ export class BillingUnavailableError extends Error {}
  */
 export function stripeSecretKey(env: StripeEnv): string {
   const key = env.STRIPE_SECRET_KEY;
-  if (!key) throw new BillingUnavailableError('Billing is not set up.');
+  if (!key) {
+    throw new BillingUnavailableError('Billing is not set up.');
+  }
   if (
     !key.startsWith('sk_test_') &&
     !key.startsWith('rk_test_') &&
@@ -32,9 +34,11 @@ export function stripeSecretKey(env: StripeEnv): string {
   return key;
 }
 
-export function priceFor(env: StripeEnv, plan: PaidPlan): string {
+function priceFor(env: StripeEnv, plan: PaidPlan): string {
   const price = env[PAID_PLANS[plan]];
-  if (!price) throw new BillingUnavailableError(`No Stripe price is set for the ${plan} plan.`);
+  if (!price) {
+    throw new BillingUnavailableError(`No Stripe price is set for the ${plan} plan.`);
+  }
   return price;
 }
 
@@ -65,9 +69,13 @@ export async function createCheckoutSession(
     form.set(`metadata[${key}]`, value);
     form.set(`subscription_data[metadata][${key}]`, value);
   }
-  if (input.email) form.set('customer_email', input.email);
+  if (input.email) {
+    form.set('customer_email', input.email);
+  }
   const body = await stripePost(env, 'checkout/sessions', form, fetcher);
-  if (!body.url) throw new BillingUnavailableError('Stripe refused the checkout.');
+  if (!body.url) {
+    throw new BillingUnavailableError('Stripe refused the checkout.');
+  }
   return body.url;
 }
 
@@ -83,8 +91,37 @@ export async function createPortalSession(
     new URLSearchParams({ customer: input.customerId, return_url: input.returnUrl }),
     fetcher,
   );
-  if (!body.url) throw new BillingUnavailableError('Stripe refused the portal link.');
+  if (!body.url) {
+    throw new BillingUnavailableError('Stripe refused the portal link.');
+  }
   return body.url;
+}
+
+/**
+ * When a subscription renews: the end of its current billing period, as an ISO string, or null
+ * when Stripe doesn't give one. Newer Stripe API versions keep the period on the subscription's
+ * items and older ones on the subscription, so this reads both.
+ */
+export async function subscriptionRenewsAt(
+  env: StripeEnv,
+  subscriptionId: string,
+  fetcher: typeof fetch = fetch,
+): Promise<string | null> {
+  const response = await fetcher(
+    `https://api.stripe.com/v1/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    { headers: { authorization: `Bearer ${stripeSecretKey(env)}` } },
+  );
+  const body = (await response.json().catch(() => null)) as {
+    current_period_end?: unknown;
+    items?: { data?: Array<{ current_period_end?: unknown }> };
+  } | null;
+  if (!response.ok || !body) {
+    throw new BillingUnavailableError('Stripe refused the request.');
+  }
+  const end = body.items?.data?.[0]?.current_period_end ?? body.current_period_end;
+  return typeof end === 'number' && Number.isFinite(end) && end > 0
+    ? new Date(end * 1000).toISOString()
+    : null;
 }
 
 async function stripePost(
@@ -102,7 +139,9 @@ async function stripePost(
     body: form,
   });
   const body = (await response.json().catch(() => null)) as { url?: string } | null;
-  if (!response.ok || !body) throw new BillingUnavailableError('Stripe refused the request.');
+  if (!response.ok || !body) {
+    throw new BillingUnavailableError('Stripe refused the request.');
+  }
   return body;
 }
 
@@ -112,9 +151,13 @@ const hex = (bytes: ArrayBuffer) =>
   Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, '0')).join('');
 
 function sameText(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
+  if (a.length !== b.length) {
+    return false;
+  }
   let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
   return diff === 0;
 }
 
@@ -125,12 +168,18 @@ export async function verifyStripeSignature(
   secret: string,
   now = Date.now(),
 ): Promise<boolean> {
-  if (!header) return false;
+  if (!header) {
+    return false;
+  }
   const parts = header.split(',').map((p) => p.trim().split('='));
   const timestamp = parts.find(([k]) => k === 't')?.[1];
   const signatures = parts.filter(([k]) => k === 'v1').map(([, v]) => v ?? '');
-  if (!timestamp || !/^\d+$/.test(timestamp) || signatures.length === 0) return false;
-  if (Math.abs(now / 1000 - Number(timestamp)) > TOLERANCE_SECONDS) return false;
+  if (!timestamp || !/^\d+$/.test(timestamp) || signatures.length === 0) {
+    return false;
+  }
+  if (Math.abs(now / 1000 - Number(timestamp)) > TOLERANCE_SECONDS) {
+    return false;
+  }
   const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(secret),

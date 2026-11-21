@@ -1,7 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { build } from 'vite';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
@@ -97,8 +96,6 @@ export { get as "GET", post as "POST", DELETE as "helper" };
         join(directory, 'crons'),
         join(directory, 'queues'),
         {
-          honoPath: fileURLToPath(import.meta.resolve('hono')),
-          honoRoutePath: fileURLToPath(import.meta.resolve('hono/route')),
           runtimeEnvPath: source('env.ts'),
           projectRoot: directory,
           homeDir: tmpdir(),
@@ -230,8 +227,10 @@ export { get as "GET", post as "POST", DELETE as "helper" };
     const missing = await runtime.dispatchFetch('https://app.test/unknown');
     expect(missing.status).toBe(404);
     expect(missing.headers.get('X-Platform-No-Match')).toBe('1');
-    expect(await (await runtime.dispatchFetch('https://app.test/__platform/ready')).json()).toEqual({
-      ready: true,
-    });
+    expect(await (await runtime.dispatchFetch('https://app.test/__platform/ready')).json()).toEqual(
+      {
+        ready: true,
+      },
+    );
   });
 });

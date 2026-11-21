@@ -11,7 +11,7 @@ import { parseDotenvFile } from './dotenv.ts';
 export const LOCAL_ENV_FILE = '.env';
 
 /** The fixed browser-exposure convention supported by `@builtbyfriends/bwf/env`. */
-export const CLIENT_ENV_PREFIX = 'VITE_';
+const CLIENT_ENV_PREFIX = 'VITE_';
 
 export function isClientEnvKey(key: string): boolean {
   return key.startsWith(CLIENT_ENV_PREFIX);
@@ -104,7 +104,7 @@ export function resolveRemoteMode(configRemote: boolean | undefined): boolean {
  * and writes it over `vars`, so dropping keys from `vars` cannot keep them
  * out. `envSchemaPlugin` and `bwf env check` reject them instead.
  */
-export const RESERVED_ENV_PREFIX = '__PLATFORM_';
+const RESERVED_ENV_PREFIX = '__PLATFORM_';
 
 /** Names in `keys` that use the reserved `__PLATFORM_` prefix, in input order. */
 export function findReservedEnvKeys(keys: Iterable<string>): Array<string> {
@@ -122,58 +122,4 @@ export function reservedEnvKeysMessage(source: '.env' | 'env.ts', keys: Array<st
     'bwf sets these itself; remove them. To trigger crons or queues locally, use the ' +
     'x-platform-dev-trigger header printed at dev start.'
   );
-}
-
-/**
- * Internal env keys reserved for bwf runtime use. These are how the Vite
- * plugin and deploy pipeline pass credential/runtime state to workerd. None
- * of them should ever originate from user-authored `.env` files, shell env,
- * or CI config. `.env` and `env.ts` are rejected up front (see
- * `RESERVED_ENV_PREFIX`); prerender still strips these from its inputs.
- *
- * Caller: `prerender.ts` buildPrerenderBindings (CF prerender subprocess bindings).
- */
-export const INTERNAL_ENV_KEYS = [
-  '__PLATFORM_ACCESS_CREDENTIALS',
-  '__PLATFORM_TOKEN',
-  '__PLATFORM_PROJECT_ID',
-  '__PLATFORM_REMOTE',
-  '__PLATFORM_STAGING',
-  '__PLATFORM_PROXY_URL',
-  '__PLATFORM_PROXY_TOKEN',
-] as const;
-
-const INTERNAL_ENV_KEY_SET: ReadonlySet<string> = new Set(INTERNAL_ENV_KEYS);
-
-export type StripInternalEnvKeysResult<T> = {
-  sanitized: T;
-  stripped: Array<string>;
-};
-
-/**
- * Remove any internal bwf env keys from a user-supplied env record. Returns
- * the sanitized record plus the list of keys that were stripped so callers
- * (which live in non-leaf modules) can emit a warning via `bwfWarn`.
- *
- * This module is a leaf — it must not import from `../log` or any non-leaf
- * module, otherwise the prerender subprocess's worker bundle acquires
- * unwanted transitive dependencies. That's why warnings are the caller's
- * responsibility.
- */
-export function stripInternalEnvKeys<T extends Record<string, unknown>>(
-  input: T | undefined,
-): StripInternalEnvKeysResult<T> {
-  if (!input) {
-    return { sanitized: {} as T, stripped: [] };
-  }
-  const sanitized: Record<string, unknown> = {};
-  const stripped: Array<string> = [];
-  for (const [key, value] of Object.entries(input)) {
-    if (INTERNAL_ENV_KEY_SET.has(key)) {
-      stripped.push(key);
-      continue;
-    }
-    sanitized[key] = value;
-  }
-  return { sanitized: sanitized as T, stripped };
 }

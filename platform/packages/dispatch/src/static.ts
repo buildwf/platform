@@ -4,5 +4,4 @@ export {
   resolveStaticPath,
   safeDecodePathname,
   type AssetConfig,
-  type ResolvedAsset,
 } from '@builtbyfriends/edge';

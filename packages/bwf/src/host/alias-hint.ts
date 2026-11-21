@@ -8,7 +8,7 @@
  */
 
 /** Returns the failed specifier from a Node or jiti module-resolution error, or `null`. */
-export function extractFailedSpecifier(err: unknown): string | null {
+function extractFailedSpecifier(err: unknown): string | null {
   if (!(err instanceof Error)) {
     return null;
   }
@@ -29,7 +29,7 @@ export function extractFailedSpecifier(err: unknown): string | null {
 }
 
 /** A specifier is alias-shaped if it isn't relative, absolute, a node: URL, or a valid bare package name. */
-export function looksLikeAlias(specifier: string): boolean {
+function looksLikeAlias(specifier: string): boolean {
   if (
     specifier.startsWith('./') ||
     specifier.startsWith('../') ||

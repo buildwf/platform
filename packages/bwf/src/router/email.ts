@@ -34,7 +34,7 @@ const EMAIL_EXTENSIONS = ['ts', 'mts', 'js', 'mjs'];
 /** Token identifies a single segment of the local-part pattern (before/after the `+`). */
 type Segment = { kind: 'literal'; value: string } | { kind: 'param'; name: string };
 
-export type EmailPatternKind = 'static' | 'static-tag' | 'dynamic' | 'dynamic-tag';
+type EmailPatternKind = 'static' | 'static-tag' | 'dynamic' | 'dynamic-tag';
 
 export interface CompiledEmailPattern {
   kind: EmailPatternKind;
@@ -44,7 +44,7 @@ export interface CompiledEmailPattern {
   paramNames: Array<string>;
 }
 
-export interface EmailHandlerDefinition {
+interface EmailHandlerDefinition {
   /** Original basename without extension, e.g. "support" or "support+[ticket]". */
   address: string;
   /** Path relative to the email directory, e.g. "support.ts". */

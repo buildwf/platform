@@ -117,7 +117,7 @@ describe('platform human session revocation', () => {
       env.JWT_SECRET,
     );
     await revokeConnectionSessions(env.db, 'github');
-    expect((await request('/projects', deploy)).status).toBe(200);
+    expect((await request('/rpc/projects.list', deploy, {})).status).toBe(200);
     expect((await request('/rpc/me.get', deploy, {})).status).toBe(403);
     expect((await request('/operator/v1/session', deploy, {})).status).toBe(401);
   });

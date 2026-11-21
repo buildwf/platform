@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import {
   afterAll,
   afterEach,
@@ -11,7 +12,6 @@ import {
   vi,
 } from 'vite-plus/test';
 import { hmacSignState } from '../../src/auth/hmac.ts';
-import { createCodeChallenge } from '../../src/auth/pkce.ts';
 import type { Db } from '../../src/db.ts';
 import {
   createOAuthAccount,
@@ -198,7 +198,7 @@ async function countOAuthRows(db: Db, providerId: string): Promise<number> {
 describe('GET /github/link-url', () => {
   it('returns a signed link url with purpose:link, the challenge, future exp, and no userId', async () => {
     const user = await createTestUser(env.db);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'http://localhost:9999/callback';
 
     const res = await app.fetch(
@@ -227,7 +227,7 @@ describe('GET /github/link-url', () => {
 
   it('rejects a non-localhost redirect', async () => {
     const user = await createTestUser(env.db);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'https://evil.example.com/callback';
 
     const res = await app.fetch(
@@ -243,7 +243,7 @@ describe('GET /github/link-url', () => {
 
   it('fails closed (non-2xx, configured-error code) when App user OAuth is unset', async () => {
     const user = await createTestUser(env.db);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'http://localhost:9999/callback';
 
     // No GITHUB_APP_CLIENT_ID/SECRET on env.
@@ -272,7 +272,7 @@ describe('GET /github/link-url', () => {
 
 describe('GET /github/link-callback', () => {
   it('redirects to localhost with a link_code and binds NOTHING', async () => {
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const providerId = '900000001';
     const { res, body, linkCode, target } = await runCallback({
       redirect: 'http://localhost:9999/callback',
@@ -297,7 +297,7 @@ describe('GET /github/link-callback', () => {
 
   it('rejects a forged/altered state (bad signature)', async () => {
     mockUserOAuth({ providerId: '900000002' });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -325,7 +325,7 @@ describe('GET /github/link-callback', () => {
 
   it('rejects an expired state', async () => {
     mockUserOAuth({ providerId: '900000003' });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -344,7 +344,7 @@ describe('GET /github/link-callback', () => {
 
   it('bounces github_oauth_failed to the CLI localhost when the code exchange fails', async () => {
     mockUserOAuth({ providerId: '900000004', acceptCode: false });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -372,7 +372,7 @@ describe('GET /github/link-callback', () => {
   });
 
   it('bounces the GitHub denial (no code, error param) to the CLI localhost', async () => {
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -400,7 +400,7 @@ describe('GET /github/link-callback', () => {
 
   it('sends a matching redirect_uri on the token exchange', async () => {
     const { tokenExchangeBody } = mockUserOAuth({ providerId: '900000040' });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -419,7 +419,7 @@ describe('GET /github/link-callback', () => {
   });
 
   it('returns 400 (not 500) for a malformed, non-base64url state signature', async () => {
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const encoded = btoa(
       JSON.stringify({
         redirect: 'http://localhost:9999/callback',
@@ -445,7 +445,7 @@ describe('GET /github/link-callback', () => {
 describe('POST /github/link/complete', () => {
   it('binds the identity to the authed caller and returns linked', async () => {
     const userA = await createTestUser(env.db, 'alice', 'google', 'google-alice');
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const providerId = '900000010';
     const { linkCode } = await runCallback({
       redirect: 'http://localhost:9999/callback',
@@ -472,7 +472,7 @@ describe('POST /github/link/complete', () => {
 
   it('is idempotent for the same caller (already_linked, still one row)', async () => {
     const userA = await createTestUser(env.db, 'alice', 'google', 'google-alice');
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const providerId = '900000011';
 
     const first = await runCallback({
@@ -510,7 +510,7 @@ describe('POST /github/link/complete', () => {
 
   it('rejects a PKCE mismatch with invalid_verifier and binds nothing', async () => {
     const userA = await createTestUser(env.db, 'alice', 'google', 'google-alice');
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const providerId = '900000012';
     const { linkCode } = await runCallback({
       redirect: 'http://localhost:9999/callback',
@@ -533,7 +533,7 @@ describe('POST /github/link/complete', () => {
 
   it('rejects an expired link_code', async () => {
     const userA = await createTestUser(env.db, 'alice', 'google', 'google-alice');
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const providerId = '900000013';
     // Mint an already-expired link_code directly with the same signer scheme.
     const encoded = btoa(
@@ -562,7 +562,7 @@ describe('POST /github/link/complete', () => {
   it('returns 409 when the provider id is already linked to another user', async () => {
     const userB = await createTestUser(env.db, 'bob', 'github', '900000014');
     const userA = await createTestUser(env.db, 'alice', 'google', 'google-alice');
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     // B already owns this github provider id (seeded by createTestUser above).
     const providerId = '900000014';
 
@@ -599,7 +599,7 @@ describe('POST /github/link/complete', () => {
 
     // The flow runs to a link_code (the victim's GitHub id P authorized in a
     // callback). There is NO user id anywhere in state/link_code.
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const providerId = '900000015';
     const { linkCode } = await runCallback({
       redirect: 'http://localhost:9999/callback',
@@ -635,7 +635,7 @@ describe('POST /github/link/complete', () => {
     const userA = await createTestUser(env.db, 'alice', 'google', 'google-alice');
     await createOAuthAccount(env.db, userA.id, 'github', '900000020');
 
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const providerId = '900000021'; // a DIFFERENT github id
 
     const { linkCode } = await runCallback({
@@ -663,7 +663,7 @@ describe('POST /github/link/complete', () => {
   // should then see/connect that installation.
   it('backfills pre-existing unowned installations to the completing user on link', async () => {
     const userA = await createTestUser(env.db, 'alice', 'google', 'google-alice');
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const providerId = '900000030';
 
     // An installation created BEFORE Alice linked — user_id is null and

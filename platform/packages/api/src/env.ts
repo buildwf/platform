@@ -90,6 +90,12 @@ export type ApiEnv = Env & {
     GOOGLE_CLIENT_SECRET: string;
     /** Installation-only capability; never shared with health probes or tenant Workers. */
     PLATFORM_AUTH_SETUP_TOKEN?: string;
+    /**
+     * Connected-app client ids, comma separated, that may act for their own people with the
+     * app-person grant (routes/oauth-app-person.ts): an app that is the front door to this
+     * Platform, so its people don't sign in here. Unset means none.
+     */
+    PLATFORM_APP_PERSON_CLIENTS?: string;
     /** Installer attestation after verifying the dedicated Hyperdrive cache is disabled. */
     PLATFORM_AUTH_DATABASE_UNCACHED?: string;
     AUTH_REDIRECT_URI?: string;

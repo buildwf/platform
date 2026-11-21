@@ -1,16 +1,16 @@
-export type AiGatewayRequest = Readonly<{
+type AiGatewayRequest = Readonly<{
   provider: string;
   endpoint: string;
   headers: Record<string, string>;
   query: unknown;
 }>;
 
-export type AiGateway = Readonly<{
+type AiGateway = Readonly<{
   getUrl(provider?: string): string | Promise<string>;
   run(request: AiGatewayRequest): Promise<Response>;
 }>;
 
-export type AiBinding = Readonly<{
+type AiBinding = Readonly<{
   run(
     model: string,
     inputs?: unknown,
@@ -30,7 +30,7 @@ export type ProxyBody = Record<string, unknown>;
  * older workerd builds returned nothing. Both are handled at runtime — the
  * proxy reads `result?.messageId` optionally and falls back to `""`.
  */
-export type SendEmailBinding = Readonly<{
+type SendEmailBinding = Readonly<{
   send(message: unknown): Promise<{ messageId?: string } | void>;
 }>;
 export type Env = Readonly<{

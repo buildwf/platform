@@ -433,7 +433,10 @@ async function ingress(request: Request, env: Env, ctx: ExecutionContext): Promi
       });
     }
     if (claim.state !== 'claimed') {
-      return new Response(null, { status: 503, headers: { 'x-platform-email-receipt': receiptId } });
+      return new Response(null, {
+        status: 503,
+        headers: { 'x-platform-email-receipt': receiptId },
+      });
     }
     const result = await routeRelayed(env, ctx, {
       stub,

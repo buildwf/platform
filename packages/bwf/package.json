@@ -1,6 +1,6 @@
 {
   "name": "@builtbyfriends/bwf",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "description": "Full-stack framework and deployment CLI for Cloudflare Workers, powered by Vite.",
   "homepage": "https://github.com/builtbyfriends/platform",
   "bugs": {
@@ -28,6 +28,7 @@
   "type": "module",
   "imports": {
     "#self/_env": "./dist/runtime/env.mjs",
+    "#self/runtime/db-session": "./dist/runtime/db-session.mjs",
     "#self/email": "./dist/runtime/email.mjs",
     "#self/env": "./dist/runtime/env-public.mjs",
     "#self/client": "./dist/runtime/client.mjs",
@@ -141,6 +142,11 @@
       "types": "./dist/runtime/ws.d.mts",
       "import": "./dist/runtime/ws.mjs",
       "require": "./dist/runtime/ws.mjs"
+    },
+    "./ws/server": {
+      "types": "./dist/runtime/ws-room.d.mts",
+      "import": "./dist/runtime/ws-room.mjs",
+      "require": "./dist/runtime/ws-room.mjs"
     },
     "./db": {
       "types": "./dist/runtime/db.d.mts",
@@ -305,7 +311,6 @@
     "@builtbyfriends/realtime-http": "^0.1.0",
     "@builtbyfriends/realtime-mcp": "^0.1.0",
     "@cloudflare/build-output-utils": "catalog:",
-    "@cloudflare/codemods": "catalog:",
     "@cloudflare/config": "catalog:",
     "@cloudflare/sandbox": "catalog:",
     "@cloudflare/vite-plugin": "catalog:",
@@ -314,10 +319,10 @@
     "@cloudflare/workers-utils": "catalog:",
     "@modelcontextprotocol/server": "^2.4.0",
     "@napi-rs/keyring": "catalog:",
-    "agents": "^0.33.0",
+    "agents": "^0.34.0",
     "better-auth": "catalog:",
-    "better-sqlite3": "^13.0.3",
-    "blake3-jit": "^1.1.0",
+    "better-sqlite3": "^13.2.0",
+    "blake3-jit": "^1.1.1",
     "cf": "catalog:",
     "drizzle-arktype": "^0.1.3",
     "drizzle-kit": "^0.31.11",
@@ -341,23 +346,27 @@
     "yaml": "^2.9.1"
   },
   "devDependencies": {
+    "@cloudflare/codemods": "catalog:",
     "@electric-sql/pglite": "catalog:",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "catalog:",
     "@types/pg": "^8.23.1",
     "@types/proper-lockfile": "^4.1.4",
     "@types/react": "^19.2.0",
+    "@types/react-dom": "catalog:",
     "@voidzero-dev/vite-plus-prompts": "catalog:",
     "arktype": "catalog:",
     "ci-info": "catalog:",
     "estree-walker": "^3.0.3",
     "fast-wrap-ansi": "^0.2.2",
+    "happy-dom": "catalog:",
     "magic-string": "catalog:",
     "ofetch": "2.0.0-alpha.3",
     "pathslash": "catalog:",
     "pglite-server": "0.1.5",
     "picocolors": "^1.1.1",
     "react": "catalog:",
+    "react-dom": "catalog:",
     "tinyglobby": "^0.2.17",
     "typescript": "catalog:",
     "valibot": "^1.5.0",

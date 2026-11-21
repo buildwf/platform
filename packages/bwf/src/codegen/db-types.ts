@@ -5,13 +5,13 @@ import { writeFileIfChanged } from './write-if-changed.ts';
 export const DRIZZLE_OPERATORS =
   'sql, eq, ne, gt, gte, lt, lte, and, or, not, desc, asc, like, ilike, notLike, inArray, notInArray, isNull, isNotNull, between, notBetween, exists, notExists, count, sum, avg, min, max';
 
-export const DRIZZLE_TYPES = 'AnyColumn, SQL, SQLWrapper, BatchItem';
+const DRIZZLE_TYPES = 'AnyColumn, SQL, SQLWrapper, BatchItem';
 
 const DIALECT_DB_TYPES = {
   sqlite: {
     type: 'DrizzleD1Database',
     from: '@builtbyfriends/bwf/_db',
-    arg: 'd1: D1Database, options?: { session?: D1SessionConstraint }',
+    arg: 'd1: D1Database, options?: { session?: DbSessionStart }',
   },
   postgresql: {
     type: 'NodePgDatabase',
@@ -50,6 +50,14 @@ export function generateDbDts(
     ...(schema ? ['import type * as schema from "@schema";', 'type Schema = typeof schema;'] : []),
     `export declare const db: ${type}<${schemaType}>;`,
     `export declare function createDb(${arg}): ${type}<${schemaType}>;`,
+    ...(dialect === 'sqlite'
+      ? [
+          'import type { DbSessionStart } from "@builtbyfriends/bwf/_db";',
+          'export type { DbSessionStart } from "@builtbyfriends/bwf/_db";',
+          'export declare function setSession(start: DbSessionStart): void;',
+          `export declare function getBookmark<TSchema extends Record<string, unknown>>(client?: ${type}<TSchema>): D1SessionBookmark | null;`,
+        ]
+      : []),
     `export { ${DRIZZLE_OPERATORS} } from "@builtbyfriends/bwf/_db";`,
     `export type { ${DRIZZLE_TYPES} } from "@builtbyfriends/bwf/_db";`,
     `export type { ${type} } from "${from}";`,

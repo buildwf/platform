@@ -422,6 +422,225 @@ describe('connectLiveStream', () => {
     await vi.advanceTimersByTimeAsync(25);
     expect(MockEventSource.instances).toHaveLength(2);
   });
+
+  describe('recovery', () => {
+    let wakeTarget: EventTarget;
+    beforeEach(() => {
+      vi.useFakeTimers();
+      wakeTarget = new EventTarget();
+      vi.stubGlobal('addEventListener', wakeTarget.addEventListener.bind(wakeTarget));
+      vi.stubGlobal('removeEventListener', wakeTarget.removeEventListener.bind(wakeTarget));
+    });
+
+    it('tries a subscribe again with growing waits when the stream fails to open', async () => {
+      const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => ackAll(init));
+      const onError = vi.fn();
+      const live = openLive(fetchMock, { retryDelay: 100, onError });
+      let settled = false;
+      const pending = live.subscribe({ id: 'post-card', topic: 'post:12' }).then((stop) => {
+        settled = true;
+        return stop;
+      });
+
+      await flushMicrotasks();
+      MockEventSource.instances[0]!.emit('error', new Event('error'));
+      await flushMicrotasks();
+      expect(MockEventSource.instances[0]!.closed).toBe(true);
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'live: stream failed to open.' }),
+      );
+
+      await vi.advanceTimersByTimeAsync(100);
+      expect(MockEventSource.instances).toHaveLength(2);
+      MockEventSource.instances[1]!.emit('error', new Event('error'));
+      await flushMicrotasks();
+
+      // The second wait is twice the first.
+      await vi.advanceTimersByTimeAsync(100);
+      expect(MockEventSource.instances).toHaveLength(2);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(MockEventSource.instances).toHaveLength(3);
+      expect(settled).toBe(false);
+
+      MockEventSource.instances[2]!.emit('open', new Event('open'));
+      await expect(pending).resolves.toEqual(expect.any(Function));
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(String(fetchMock.mock.calls[0]![1]?.body)).toContain('"id":"post-card"');
+    });
+
+    it('tries a subscribe again at once when the network comes back or the page gets focus', async () => {
+      const fetchMock = vi
+        .fn(async (_url: string, init?: RequestInit) => ackAll(init))
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      const live = openLive(fetchMock, { retryDelay: 60_000 });
+      const pending = live.subscribe({ id: 'post-card', topic: 'post:12' });
+      await emitOpen();
+      await flushMicrotasks(10);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      wakeTarget.dispatchEvent(new Event('online'));
+      await flushMicrotasks(10);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      wakeTarget.dispatchEvent(new Event('focus'));
+      await expect(pending).resolves.toEqual(expect.any(Function));
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('tries a subscribe again when the server fails, and stops at a refusal', async () => {
+      const replies = [
+        () => new Response('<html>Bad gateway</html>', { status: 502 }),
+        () =>
+          Response.json(
+            { accepted: false, error: { code: 'FORBIDDEN', message: 'Forbidden' } },
+            { status: 403 },
+          ),
+      ];
+      const fetchMock = vi.fn(async () => replies.shift()!());
+      const live = openLive(fetchMock, { retryDelay: 10 });
+      const pending = live.subscribe({ id: 'post-card', topic: 'post:12' });
+      const rejected = expect(pending).rejects.toMatchObject({
+        name: 'LiveStreamError',
+        message: 'Forbidden',
+        code: 'FORBIDDEN',
+        status: 403,
+      });
+      await emitOpen();
+      await vi.advanceTimersByTimeAsync(10);
+      await rejected;
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('reopens a stream the server no longer knows and subscribes again', async () => {
+      let known = true;
+      const fetchMock = vi.fn(async (_url: string, init?: RequestInit) =>
+        known
+          ? ackAll(init)
+          : Response.json(
+              {
+                accepted: false,
+                error: { code: 'CONNECTION_NOT_FOUND', message: 'live: connection is not open.' },
+              },
+              { status: 404 },
+            ),
+      );
+      const live = openLive(fetchMock, { retryDelay: 10 });
+      const first = live.subscribe({ id: 'post-card', topic: 'post:12', lastEventId: 'v1' });
+      const firstSource = await emitOpen();
+      await first;
+      firstSource.emit(
+        'message',
+        JSON.stringify({ subscriptionId: 'post-card', topic: 'post:12', eventId: 'v2', data: {} }),
+      );
+
+      // A deploy restarted the server, and the stream still looks open here.
+      known = false;
+      const second = live.subscribe({ id: 'comments', topic: 'comment:2323' });
+      await flushMicrotasks(10);
+      expect(firstSource.closed).toBe(true);
+      const secondSource = MockEventSource.instances[1]!;
+      expect(secondSource.url).toBe(firstSource.url);
+
+      known = true;
+      secondSource.emit('open', new Event('open'));
+      await flushMicrotasks(10);
+      await vi.advanceTimersByTimeAsync(10);
+      await expect(second).resolves.toEqual(expect.any(Function));
+      const bodies = fetchMock.mock.calls.slice(2).map(([, init]) => String(init?.body));
+      expect(
+        bodies.some(
+          (body) => body.includes('"id":"post-card"') && body.includes('"lastEventId":"v2"'),
+        ),
+      ).toBe(true);
+      expect(bodies.some((body) => body.includes('"id":"comments"'))).toBe(true);
+    });
+
+    it('checks the connection on focus and reopens it when the server lost it', async () => {
+      let known = true;
+      const fetchMock = vi.fn(async (_url: string, init?: RequestInit) =>
+        known
+          ? ackAll(init)
+          : Response.json(
+              {
+                accepted: false,
+                error: { code: 'CONNECTION_NOT_FOUND', message: 'live: connection is not open.' },
+              },
+              { status: 404 },
+            ),
+      );
+      const live = openLive(fetchMock);
+      const first = live.subscribe({ id: 'post-card', topic: 'post:12' });
+      const firstSource = await emitOpen();
+      await first;
+
+      known = false;
+      wakeTarget.dispatchEvent(new Event('focus'));
+      await flushMicrotasks(10);
+      const probe = controlBody(fetchMock.mock.calls[1]![1]);
+      expect(probe.operations).toEqual([
+        { kind: 'unsubscribe', id: expect.stringContaining('bwf-probe:') },
+      ]);
+      expect(firstSource.closed).toBe(true);
+
+      known = true;
+      MockEventSource.instances[1]!.emit('open', new Event('open'));
+      await flushMicrotasks(10);
+      expect(String(fetchMock.mock.calls.at(-1)?.[1]?.body)).toContain('"id":"post-card"');
+    });
+
+    it('does not check a connection that has no subscriptions', async () => {
+      const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => ackAll(init));
+      const live = openLive(fetchMock);
+      const stop = live.subscribe({ id: 'post-card', topic: 'post:12' });
+      await emitOpen();
+      await (
+        await stop
+      )();
+      wakeTarget.dispatchEvent(new Event('focus'));
+      await flushMicrotasks(10);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('rejects a subscribe waiting to be tried again when the stream closes', async () => {
+      const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => ackAll(init));
+      const live = openLive(fetchMock, { retryDelay: 60_000 });
+      const pending = live.subscribe({ id: 'post-card', topic: 'post:12' });
+      const rejected = expect(pending).rejects.toThrow('live: stream is closed.');
+      await flushMicrotasks();
+      MockEventSource.instances[0]!.emit('error', new Event('error'));
+      await flushMicrotasks();
+
+      live.close();
+      await rejected;
+      wakeTarget.dispatchEvent(new Event('online'));
+      await flushMicrotasks(10);
+      expect(MockEventSource.instances).toHaveLength(1);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('waits longer between reconnects while the stream keeps failing', async () => {
+      const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => ackAll(init));
+      const live = openLive(fetchMock, { retryDelay: 25 });
+      const first = live.subscribe({ id: 'post-card', topic: 'post:12' });
+      const firstSource = await emitOpen();
+      await first;
+      firstSource.emit('error', new Event('error'));
+
+      await vi.advanceTimersByTimeAsync(25);
+      expect(MockEventSource.instances).toHaveLength(2);
+      MockEventSource.instances[1]!.emit('error', new Event('error'));
+      await vi.advanceTimersByTimeAsync(25);
+      expect(MockEventSource.instances).toHaveLength(2);
+      await vi.advanceTimersByTimeAsync(25);
+      expect(MockEventSource.instances).toHaveLength(3);
+
+      // Focus doesn't wait for the timer.
+      MockEventSource.instances[2]!.emit('error', new Event('error'));
+      wakeTarget.dispatchEvent(new Event('focus'));
+      expect(MockEventSource.instances).toHaveLength(4);
+    });
+  });
 });
 
 type ControlBody = {

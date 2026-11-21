@@ -69,7 +69,7 @@ type ManifestTarget = Readonly<{
   className: string;
 }>;
 
-export type SandboxDrainBlocker = Readonly<{
+type SandboxDrainBlocker = Readonly<{
   kind:
     | 'active_deployment'
     | 'invalid_manifest'

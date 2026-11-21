@@ -26,6 +26,7 @@ import {
 } from '../../src/cli/init.ts';
 import { savePlatformConnection } from '../../src/cli/platform-registry.ts';
 import { readDeploymentPlatform } from '../../src/cli/project.ts';
+import { SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES } from '../../src/cli/template.ts';
 import { LATEST_KNOWN_COMPAT_DATE } from '../../src/cli/wrangler.ts';
 import { buildDrizzleKitSpawnEnv } from '../../src/cli/yarn-pnp.ts';
 import { readConfig } from '../../src/config.ts';
@@ -38,6 +39,7 @@ const mockNote = vi.fn();
 const mockOutro = vi.fn();
 const mockLogWarn = vi.fn();
 const mockLogInfo = vi.fn();
+const mockLogStep = vi.fn();
 const mockGetToken = vi.fn();
 const mockGetApiUrl = vi.fn();
 const mockRunLogin = vi.fn();
@@ -215,6 +217,87 @@ describe('init scaffold arguments', () => {
   });
 });
 
+describe('init question order', () => {
+  const DEPLOY_PROMPT = 'Where should this project deploy?';
+  const answers: Record<string, unknown> = {
+    'Choose a scaffold toolchain:': 'vite',
+    'Choose a starter:': 'spa',
+    'Choose a database setup for this project:': 'none',
+    [DEPLOY_PROMPT]: 'none',
+  };
+
+  it('asks where a new starter deploys before writing its files', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'void-init-order-'));
+    let entriesAtDeployPrompt: Array<string> | undefined;
+    try {
+      mockSelect.mockImplementation((options: { message: string }) => {
+        if (options.message === DEPLOY_PROMPT) {
+          entriesAtDeployPrompt = readdirSync(root);
+        }
+        return answers[options.message];
+      });
+
+      await runInitCommand(root);
+
+      expect(entriesAtDeployPrompt).toEqual([]);
+      expect(existsSync(join(root, 'src', 'App.tsx'))).toBe(true);
+      expect(readDeploymentPlatform(root)).toBe('none');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('leaves the folder empty when the deployment question is cancelled', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'void-init-order-cancel-'));
+    const exit = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('Cancelled');
+    });
+    try {
+      mockSelect.mockImplementation((options: { message: string }) =>
+        options.message === DEPLOY_PROMPT ? Symbol.for('cancel') : answers[options.message],
+      );
+
+      await expect(runInitCommand(root)).rejects.toThrow('Cancelled');
+
+      expect(exit).toHaveBeenCalledWith(0);
+      expect(readdirSync(root)).toEqual([]);
+    } finally {
+      exit.mockRestore();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ['an empty folder', 'Empty project detected. Creating a React starter.', false],
+    ['an existing app', 'Existing project detected. Configuring bwf.', true],
+  ])('says what it does in %s before asking about Git', async (_name, message, existing) => {
+    const root = mkdtempSync(join(tmpdir(), 'void-init-order-git-'));
+    // Outside CI, init asks whether to initialize Git.
+    delete process.env.CI;
+    try {
+      if (existing) {
+        writeExistingViteApp(root, { bwf: '^0.0.1' });
+      }
+      mockSelect.mockImplementation((options: { message: string }) => answers[options.message]);
+      mockConfirm.mockResolvedValue(false);
+
+      await runInitCommand(root);
+
+      const infoIndex = mockLogInfo.mock.calls.findIndex(([text]) => text === message);
+      const gitIndex = mockConfirm.mock.calls.findIndex(
+        ([options]) => options?.message === 'Initialize a git repository?',
+      );
+      expect(infoIndex).not.toBe(-1);
+      expect(gitIndex).not.toBe(-1);
+      expect(mockLogInfo.mock.invocationCallOrder[infoIndex]).toBeLessThan(
+        mockConfirm.mock.invocationCallOrder[gitIndex]!,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('GitHub Actions deployment workflows', () => {
   it('requires a selected URL for a bwf deployment workflow', () => {
     expect(() => getWorkflowYaml('/project', 'npm', 'my-app', 'platform')).toThrow('bwf connect');
@@ -313,7 +396,7 @@ describe('GitHub Actions deployment workflows', () => {
 function expectPnpmAllowBuilds(root: string): void {
   const yaml = readFileSync(join(root, 'pnpm-workspace.yaml'), 'utf-8');
   expect(yaml.match(/^allowBuilds:\n(?: {2}.*\n)*/m)?.[0]).toBe(
-    'allowBuilds:\n  better-sqlite3: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
+    'allowBuilds:\n  better-sqlite3: false\n  core-js-pure: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
   );
   expect(yaml).not.toContain('onlyBuiltDependencies:');
 }
@@ -328,7 +411,7 @@ vi.mock('@voidzero-dev/vite-plus-prompts', () => ({
     warn: (...args: Array<unknown>) => mockLogWarn(...args),
     error: vi.fn(),
     info: (...args: Array<unknown>) => mockLogInfo(...args),
-    step: vi.fn(),
+    step: (...args: Array<unknown>) => mockLogStep(...args),
   },
   confirm: (...args: Array<unknown>) => mockConfirm(...args),
   select: (...args: Array<unknown>) => mockSelect(...args),
@@ -635,6 +718,7 @@ afterEach(() => {
   mockOutro.mockReset();
   mockLogWarn.mockReset();
   mockLogInfo.mockReset();
+  mockLogStep.mockReset();
   mockGetToken.mockReset();
   mockGetApiUrl.mockReset();
   mockRunLogin.mockReset();
@@ -1379,8 +1463,10 @@ describe('isScaffoldableEmptyProject', () => {
       expect(pkg.dependencies.react).toBeDefined();
       expect(pkg.dependencies['react-dom']).toBeDefined();
       expect(pkg.dependencies.hono).toBeDefined();
-      expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
+      expect(pkg.devDependencies.vite).toBe(SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES.vite);
+      expect(pkg.devDependencies['vite-plus']).toBe(
+        SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES['vite-plus'],
+      );
       expect(pkg.devDependencies['@builtbyfriends/bwf']).toBeDefined();
       expect(pkg.devDependencies.typescript).toBeDefined();
       expect(pkg.devDependencies['@vitejs/plugin-react']).toBeDefined();
@@ -1452,6 +1538,11 @@ describe('isScaffoldableEmptyProject', () => {
       expect(tsconfig.compilerOptions.jsx).toBe('react-jsx');
       expect(tsconfig.include).toContain('src');
       expect(tsconfig.include).toContain('db');
+
+      expect(mockLogInfo).toHaveBeenCalledWith('Empty project detected. Creating a React starter.');
+      // The starter prompt already showed the database, and the starter has its own routes.
+      expect(mockLogInfo).not.toHaveBeenCalledWith('Using default D1 (SQLite) configuration');
+      expect(mockLogInfo).not.toHaveBeenCalledWith(expect.stringContaining('skipping demo'));
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -1471,8 +1562,10 @@ describe('isScaffoldableEmptyProject', () => {
       expect(pkg.dependencies.hono).toBeDefined();
       expect(pkg.devDependencies['@builtbyfriends/bwf']).toBeDefined();
       expect(pkg.devDependencies['@vitejs/plugin-react']).toBeDefined();
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
-      expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
+      expect(pkg.devDependencies['vite-plus']).toBe(
+        SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES['vite-plus'],
+      );
+      expect(pkg.devDependencies.vite).toBe(SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES.vite);
       expect(pkg.packageManager).toBeUndefined();
       expectPnpmAllowBuilds(root);
       expect(detectProjectState(root).packageManager).toBe('pnpm');
@@ -1527,13 +1620,13 @@ describe('isScaffoldableEmptyProject', () => {
         );
         expect(installerOf(installCalls()[0]!)).toBe('vp');
         const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-        expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
+        expect(pkg.devDependencies.vite).toBe(SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES.vite);
         if (packageManager.startsWith('npm@')) {
           expect(pkg.overrides.vite).toBe('$vite');
         } else if (packageManager.startsWith('bun@')) {
-          expect(pkg.overrides.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
+          expect(pkg.overrides.vite).toBe(SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES.vite);
         } else if (packageManager.startsWith('yarn@')) {
-          expect(pkg.resolutions.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
+          expect(pkg.resolutions.vite).toBe(SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES.vite);
         }
       } finally {
         rmSync(root, { recursive: true, force: true });
@@ -1605,7 +1698,9 @@ describe('isScaffoldableEmptyProject', () => {
 
       const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
       expect(pkg.scripts.dev).toBe('vp dev');
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
+      expect(pkg.devDependencies['vite-plus']).toBe(
+        SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES['vite-plus'],
+      );
       expect(pkg.devDependencies['@builtbyfriends/bwf']).toBe('^0.8.9');
       expect(readFileSync(join(root, 'vite.config.ts'), 'utf-8')).toContain(
         'plugins: [react(), bwfPlugin()]',
@@ -1622,6 +1717,8 @@ describe('isScaffoldableEmptyProject', () => {
 
   it('offers to scaffold in a subfolder from a non-project parent directory', async () => {
     const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
+    // The user's shell stays in the parent directory.
+    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
     try {
       mkdirSync(join(root, 'existing-project'));
       mockSelect
@@ -1638,7 +1735,9 @@ describe('isScaffoldableEmptyProject', () => {
 
       const appRoot = join(root, 'my-new-app');
       const pkg = JSON.parse(readFileSync(join(appRoot, 'package.json'), 'utf-8'));
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
+      expect(pkg.devDependencies['vite-plus']).toBe(
+        SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES['vite-plus'],
+      );
       expect(pkg.scripts.dev).toBe('vp dev');
       expect(readFileSync(join(appRoot, 'src', 'App.tsx'), 'utf-8')).toContain('Welcome to bwf');
 
@@ -1660,7 +1759,11 @@ describe('isScaffoldableEmptyProject', () => {
       expect(folderPrompt.validate('')).toBe('That folder already exists.');
       expect(folderPrompt.validate('another-app')).toBeUndefined();
       expectVpInstall(toSlash(appRoot));
+      expect(String(mockOutro.mock.calls.at(-1)?.[0])).toContain(
+        'Run `cd my-new-app && vp dev` to start developing.',
+      );
     } finally {
+      cwd.mockRestore();
       rmSync(root, { recursive: true, force: true });
     }
   });
@@ -2616,8 +2719,10 @@ export default config;
 
       const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
       expect(pkg.scripts.dev).toBe('vp dev');
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
-      expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
+      expect(pkg.devDependencies['vite-plus']).toBe(
+        SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES['vite-plus'],
+      );
+      expect(pkg.devDependencies.vite).toBe(SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES.vite);
       expect(pkg.devDependencies['@builtbyfriends/bwf']).toBe('^0.2.3');
       expectPnpmAllowBuilds(root);
 
@@ -2780,7 +2885,10 @@ export default config;
         'github',
         expect.any(Function),
       );
-      expect(mockSaveToken).toHaveBeenCalledWith('token_123', 'https://platform.buildwithfriends.dev');
+      expect(mockSaveToken).toHaveBeenCalledWith(
+        'token_123',
+        'https://platform.buildwithfriends.dev',
+      );
       expect(mockListProjects).toHaveBeenCalledOnce();
       expect(mockCreateProject).toHaveBeenCalledWith('my-live-app');
       expect(JSON.parse(readFileSync(join(root, '.bwf', 'project.json'), 'utf-8'))).toEqual({
@@ -3515,10 +3623,10 @@ export default config;
           'allowBuilds:\n  "@parcel/watcher": true\n  better-sqlite3: true\nonlyBuiltDependencies:\n  - bcrypt\n',
         ),
       ).toBe(
-        'allowBuilds:\n  "@parcel/watcher": true\n  better-sqlite3: true\n  bcrypt: true\n  esbuild: true\n  sharp: true\n  workerd: true\n',
+        'allowBuilds:\n  "@parcel/watcher": true\n  better-sqlite3: true\n  bcrypt: true\n  core-js-pure: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
       );
       expect(await initWithWorkspaceYaml('onlyBuiltDependencies:\n- bcrypt\n')).toBe(
-        'allowBuilds:\n  bcrypt: true\n  better-sqlite3: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
+        'allowBuilds:\n  bcrypt: true\n  better-sqlite3: false\n  core-js-pure: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
       );
 
       const flow = 'allowBuilds: {"@parcel/watcher": true}\n';

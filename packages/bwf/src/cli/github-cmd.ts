@@ -290,7 +290,7 @@ export async function runGithubLink(client: PlatformClient): Promise<void> {
  * Join the caller to their organization's shared GitHub App installations and
  * return how many were joined. Errors are left to the caller.
  */
-export async function performGithubJoin(client: PlatformClient): Promise<number> {
+async function performGithubJoin(client: PlatformClient): Promise<number> {
   const verifier = createCodeVerifier();
   const challenge = createCodeChallenge(verifier);
   const state = randomBytes(32).toString('hex');
@@ -893,7 +893,7 @@ export async function runGithubUpdate(
 }
 
 /** `bwf github status [project]`: print the project's GitHub connection. */
-export async function runStatus(
+async function runStatus(
   root: string,
   client: PlatformClient,
   args: Extract<GithubArgs, { subcommand: 'status' }>,

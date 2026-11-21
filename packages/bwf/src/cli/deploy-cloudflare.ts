@@ -157,7 +157,4 @@ export async function runCloudflareDeploy(
   printDeploySuccess();
 }
 
-export {
-  discoverRootWranglerConfig,
-  formatCloudflareActivationError,
-} from './deploy-cloudflare-helpers.ts';
+export { discoverRootWranglerConfig } from './deploy-cloudflare-helpers.ts';

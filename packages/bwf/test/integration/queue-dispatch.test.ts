@@ -88,8 +88,6 @@ describe('generated queue dispatch', () => {
     writeFileSync(
       routeTablePath,
       compileRouteTable(scan, temporary, temporary, temporary, queuesDir, {
-        honoPath: import.meta.resolve('hono'),
-        honoRoutePath: import.meta.resolve('hono/route'),
         runtimeEnvPath,
         projectRoot: temporary,
         homeDir: temporary,

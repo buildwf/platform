@@ -244,7 +244,9 @@ describe('generateRouteTypes', () => {
       '    "/café/[id]": "/caf%C3%A9/[id]";',
       '    "/café/:id": "/caf%C3%A9/:id";',
     ]);
-    expect(dts).toContain('type RoutePathUrl = RoutePatternUrl<RoutePath | EncodedRoutePath>;');
+    expect(dts).toContain(
+      'type RoutePathUrl = RoutePatternUrl<CheckedRoutePath<RoutePath | EncodedRoutePath>>;',
+    );
   });
 
   it('turns on typed route URLs only when routing.typedRoutes is set', () => {
@@ -301,6 +303,34 @@ describe('generateRouteTypes', () => {
     expect(dts).toContain('client:');
     expect(dts).toContain('server:');
     expect(dts).toContain('params: RouteParams<["room"]>');
+    expect(dts).toContain(
+      'actions: NonNullable<(typeof import("../routes/chat/[room].ws.ts"))["default"]["actions"]>;',
+    );
+  });
+
+  it('omits actions for socket routes', () => {
+    const scan = makeScan({
+      websockets: [
+        {
+          pattern: '/feed',
+          methods: [],
+          params: [],
+          catchAll: false,
+          env: null,
+          filePath: 'feed.ws.ts',
+          className: 'FeedWs',
+          bindingName: 'FeedWs',
+          mode: 'socket',
+          hasAuthGate: false,
+        },
+      ],
+    });
+
+    const { dts } = generateRouteTypes(scan, '/project/routes', '/project/.void');
+    const websocketMap = dts.split('  interface WebSocketRouteMap {')[1]!.split('\n  }\n}')[0]!;
+
+    expect(websocketMap).toContain('params: RouteParams<[]>');
+    expect(websocketMap).not.toContain('actions:');
   });
 
   it('emits one WebSocket route key for colliding route files', () => {
@@ -338,6 +368,7 @@ describe('generateRouteTypes', () => {
     expect(websocketMap).toContain('chat/[room].prod.ws.ts');
     expect(websocketMap).toMatch(/client: .*dev\.ws\.ts.* & .*prod\.ws\.ts/);
     expect(websocketMap).toMatch(/server: .*dev\.ws\.ts.* \| .*prod\.ws\.ts/);
+    expect(websocketMap).toMatch(/actions: .*dev\.ws\.ts.* \| .*prod\.ws\.ts/);
   });
 
   it('generates URL patterns for API and WebSocket routes', () => {

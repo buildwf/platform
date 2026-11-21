@@ -92,14 +92,18 @@ async function measure() {
       `Incomplete cohort: missing ${manifest.name}.`,
     );
   }
-  const version = packages.find((pkg) => pkg.manifest.name === '@builtbyfriends/bwf')?.manifest.version;
+  const version = packages.find((pkg) => pkg.manifest.name === '@builtbyfriends/bwf')?.manifest
+    .version;
   assert(version, 'Captured cohort must include void.');
   assert(
     packages.some((pkg) => pkg.manifest.name === '@builtbyfriends/platform'),
     'Captured cohort must include @builtbyfriends/platform.',
   );
   for (const pkg of packages) {
-    if (pkg.manifest.name === '@builtbyfriends/bwf' || pkg.manifest.name.startsWith('@builtbyfriends/')) {
+    if (
+      pkg.manifest.name === '@builtbyfriends/bwf' ||
+      pkg.manifest.name.startsWith('@builtbyfriends/')
+    ) {
       assert.equal(
         pkg.manifest.version,
         version,
@@ -121,7 +125,9 @@ async function measure() {
     const environment = { ...process.env };
     for (const key of Object.keys(environment)) {
       if (
-        /^(PLATFORM_|VP_|CLOUDFLARE_|CF_|WRANGLER_|NPM_TOKEN$|NODE_AUTH_TOKEN$|npm_config_)/i.test(key)
+        /^(PLATFORM_|VP_|CLOUDFLARE_|CF_|WRANGLER_|NPM_TOKEN$|NODE_AUTH_TOKEN$|npm_config_)/i.test(
+          key,
+        )
       ) {
         delete environment[key];
       }

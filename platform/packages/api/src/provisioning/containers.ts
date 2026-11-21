@@ -100,7 +100,7 @@ export async function findDurableObjectNamespaceId(
   return match.namespace_id;
 }
 
-export async function deleteContainerApplication(
+async function deleteContainerApplication(
   accountId: string,
   apiToken: string,
   applicationId: string,

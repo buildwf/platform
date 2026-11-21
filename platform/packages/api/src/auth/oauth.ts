@@ -32,7 +32,7 @@ export class OAuthError extends Error {
     super(message);
   }
 }
-export function validRedirectUri(value: unknown, local = false): value is string {
+function validRedirectUri(value: unknown, local = false): value is string {
   if (typeof value !== 'string' || value.length > 2048) {
     return false;
   }
@@ -205,6 +205,15 @@ export async function authenticateOAuthClient(db: Db, authorization?: string) {
   }
   return client;
 }
+/**
+ * Whether a grant was made for a trusted application's own person (the app-person grant), which
+ * has no Platform login session behind it. It belongs to the user the application vouched for.
+ */
+function appPersonGrant(grant: typeof oauthGrants.$inferSelect): boolean {
+  return (
+    grant.session.appPerson === true && !grant.session.sid && grant.session.sub === grant.user_id
+  );
+}
 export async function activeOAuthGrant(
   db: DbOrTx,
   id: string,
@@ -269,11 +278,12 @@ export async function activeOAuthGrant(
     !user ||
     isAdminSuspended(user.suspended_reason) ||
     grant.session.exp <= Date.now() / 1000 ||
-    !(await validateHumanSession(
-      db as Db,
-      grant.session,
-      companyIdentity ?? grant.session.companyIdentity,
-    ))
+    (!appPersonGrant(grant) &&
+      !(await validateHumanSession(
+        db as Db,
+        grant.session,
+        companyIdentity ?? grant.session.companyIdentity,
+      )))
   ) {
     throw new OAuthError('invalid_token', 'Sign in to Platform again.', 401);
   }
@@ -326,14 +336,15 @@ async function readActiveOAuthGrant(
   if (
     isAdminSuspended(user.suspended_reason) ||
     grant.session.exp <= Date.now() / 1000 ||
-    !validHumanSessionSnapshot(
-      grant.session,
-      row.settings,
-      row.humanSession && row.connection
-        ? { session: row.humanSession, connection: row.connection, user }
-        : null,
-      companyIdentity ?? grant.session.companyIdentity,
-    )
+    (!appPersonGrant(grant) &&
+      !validHumanSessionSnapshot(
+        grant.session,
+        row.settings,
+        row.humanSession && row.connection
+          ? { session: row.humanSession, connection: row.connection, user }
+          : null,
+        companyIdentity ?? grant.session.companyIdentity,
+      ))
   ) {
     throw new OAuthError('invalid_token', 'Sign in to Platform again.', 401);
   }

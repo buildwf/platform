@@ -28,7 +28,7 @@ const EMAIL_SEND_FINALIZATION_MARGIN_MS = 5_000;
  * framework enforces the same cap client-side; this is the proxy-side belt to
  * the framework's suspenders.
  */
-export const MAX_MIME_BYTES = 5 * 1024 * 1024;
+const MAX_MIME_BYTES = 5 * 1024 * 1024;
 const MAX_CUSTOM_HEADER_BYTES = 16 * 1024;
 const BUILTIN_MIME_HEADERS = new Set([
   'from',
@@ -919,7 +919,7 @@ app.post('/send', async (context) => {
  * exactly one required list: `delivered` and `queued` are accepted;
  * `permanent_bounces` and `suppressed_recipients` are permanent failures.
  */
-export interface SendRawResult {
+interface SendRawResult {
   delivered?: unknown;
   message_id?: unknown;
   permanent_bounces?: unknown;

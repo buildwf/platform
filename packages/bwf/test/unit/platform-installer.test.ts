@@ -2150,7 +2150,9 @@ describe('platform installer', () => {
     ];
     const config = { migrations, name: 'platform-api' };
 
-    expect(withoutCompletedPlatformWorkerMigrations(config, 'v4')).toEqual({ name: 'platform-api' });
+    expect(withoutCompletedPlatformWorkerMigrations(config, 'v4')).toEqual({
+      name: 'platform-api',
+    });
     expect(withoutCompletedPlatformWorkerMigrations(config, 'v3')).toBe(config);
     expect(withoutCompletedPlatformWorkerMigrations(config, null)).toBe(config);
     expect(config.migrations).toBe(migrations);
@@ -2467,9 +2469,9 @@ describe('platform installer', () => {
       'https://void-platform-health.apps.example.com/health',
       'https://email.example.com/health',
     ]);
-    expect(
-      requests.every((entry) => entry.headers.get('X-Platform-Probe') === 'probe-token'),
-    ).toBe(true);
+    expect(requests.every((entry) => entry.headers.get('X-Platform-Probe') === 'probe-token')).toBe(
+      true,
+    );
     expect(requests.every((entry) => !entry.headers.has('X-Health-Check'))).toBe(true);
     expect(requests.every((entry) => entry.redirect === 'manual')).toBe(true);
   });
@@ -2978,9 +2980,7 @@ describe('platform installer', () => {
     await expect(
       verifyPlatformSandboxDrain('https://api.example.com', 'probe-token', fetcher),
     ).resolves.toBe(true);
-    expect(headers.every((value) => value.get('X-Platform-Probe') === 'probe-token')).toBe(
-      true,
-    );
+    expect(headers.every((value) => value.get('X-Platform-Probe') === 'probe-token')).toBe(true);
 
     await expect(
       verifyPlatformSandboxDrain('https://api.example.com', 'probe-token', (async () =>
@@ -4422,7 +4422,7 @@ describe('platform installer', () => {
             if (key === PLATFORM_DISABLED_KEY) {
               lifecycleEvents.push(`put:${key}`);
             }
-            if (key === '__platform/platform/installation/v1') {
+            if (key === '__void/platform/installation/v1') {
               captured.remoteManifest = value;
             }
           },
@@ -5378,7 +5378,7 @@ describe('platform installer', () => {
     ]);
     expect(migrations).toBe(0);
     expect(new Set(upgradeKvWrites)).toEqual(
-      new Set(['__platform/platform/installation/v1', PLATFORM_DISABLED_KEY]),
+      new Set(['__void/platform/installation/v1', PLATFORM_DISABLED_KEY]),
     );
     expect(upgraded.manifest.status).toBe('installed');
     expect(upgraded.manifest.platformVersion).toBe(readPlatformRuntimeManifest().platformVersion);
@@ -6358,7 +6358,7 @@ describe('platform installer', () => {
     expect(enabledUpgrade.manifest.desiredState).toBe('enabled');
     expect(enabledUpgrade.manifest.deployment.authentication.configurable).toBe(true);
     expect(enabledHealthChecks).toBe(2);
-    expect(deletedKvValues).toContain('__platform/platform/disabled/v1');
+    expect(deletedKvValues).toContain('__void/platform/disabled/v1');
     expect(enabledConfigs).toHaveLength(10);
     for (const config of enabledConfigs.slice(0, 5)) {
       expect((config.vars as Record<string, unknown>).PLATFORM_TRAFFIC_STATE).not.toBe('enabled');

@@ -9,7 +9,7 @@ export type WorkerVersion = Readonly<{
   };
 }>;
 
-export type DeploymentVersionEntry = Readonly<{
+type DeploymentVersionEntry = Readonly<{
   version_id: string;
   percentage: number;
 }>;

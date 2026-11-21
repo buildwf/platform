@@ -1,12 +1,9 @@
 import { and, asc, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import { hmacSignState, hmacVerifyState } from '../auth/hmac.ts';
-import {
-  CLI_CODE_CHALLENGE_METHOD,
-  createCodeChallenge,
-  isValidCodeVerifier,
-} from '../auth/pkce.ts';
+import { CLI_CODE_CHALLENGE_METHOD, isValidCodeVerifier } from '../auth/pkce.ts';
 import { isLocalhostRedirect } from '../auth/redirects.ts';
 import { capabilityMiddleware } from '../capabilities.ts';
 import { DEFAULT_DASHBOARD_URL, MEMBERSHIP_TTL_SECONDS } from '../constants.ts';
@@ -591,7 +588,7 @@ export const githubRoutes = new Hono<ApiEnv>()
     if (
       linkCode.codeChallengeMethod !== CLI_CODE_CHALLENGE_METHOD ||
       !isValidCodeVerifier(body.code_verifier) ||
-      (await createCodeChallenge(body.code_verifier)) !== linkCode.codeChallenge
+      (await calculatePKCECodeChallenge(body.code_verifier)) !== linkCode.codeChallenge
     ) {
       return context.json({ error: 'invalid_verifier' }, 400);
     }
@@ -792,7 +789,7 @@ export const githubRoutes = new Hono<ApiEnv>()
     if (
       joinCode.codeChallengeMethod !== CLI_CODE_CHALLENGE_METHOD ||
       !isValidCodeVerifier(body.code_verifier) ||
-      (await createCodeChallenge(body.code_verifier)) !== joinCode.codeChallenge
+      (await calculatePKCECodeChallenge(body.code_verifier)) !== joinCode.codeChallenge
     ) {
       return context.json({ error: 'invalid_verifier' }, 400);
     }
@@ -1446,7 +1443,7 @@ export const githubProjectRoutes = new Hono<ApiEnv>()
       if (
         grant.codeChallengeMethod !== CLI_CODE_CHALLENGE_METHOD ||
         !isValidCodeVerifier(body.codeVerifier) ||
-        (await createCodeChallenge(body.codeVerifier)) !== grant.codeChallenge
+        (await calculatePKCECodeChallenge(body.codeVerifier)) !== grant.codeChallenge
       ) {
         return context.json({ error: 'invalid connect grant' }, 403);
       }

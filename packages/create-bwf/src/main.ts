@@ -55,7 +55,9 @@ async function main() {
     private: true,
     type: 'module',
     devDependencies: {
-      bwf: bwfVersion,
+      // The CLI is published under the @builtbyfriends scope. The unscoped
+      // `bwf` package on npm is someone else's; only the bin is named `bwf`.
+      '@builtbyfriends/bwf': bwfVersion,
     },
   };
 
@@ -69,7 +71,7 @@ async function main() {
   await run(pmInstall(pm), targetDir);
 
   p.log.step('Scaffolding starter...');
-  await run([...pmExec(pm), 'platform', 'init', ...createArgs.initArgs], targetDir);
+  await run([...pmExec(pm), 'bwf', 'init', ...createArgs.initArgs], targetDir);
 
   p.log.step('Installing starter dependencies...');
   await run(pmInstall(pm), targetDir);

@@ -110,11 +110,13 @@ describe('runListCommand', () => {
       'fetch',
       vi.fn(async () =>
         Response.json({
-          deployments: [
-            deployment('dep-platform', { type: 'platform' }),
-            deployment('dep-spa', { type: 'spa' }),
-          ],
-          activeDeploymentId: 'dep-platform',
+          data: {
+            deployments: [
+              deployment('dep-platform', { type: 'platform' }),
+              deployment('dep-spa', { type: 'spa' }),
+            ],
+            activeDeploymentId: 'dep-platform',
+          },
         }),
       ),
     );
@@ -163,7 +165,7 @@ describe('runListCommand', () => {
     const run = async (warnings?: Array<string>) => {
       vi.stubGlobal(
         'fetch',
-        vi.fn(async () => Response.json(body(warnings))),
+        vi.fn(async () => Response.json({ data: body(warnings) })),
       );
       const capture = captureOutput();
       const runListCommand = await importRunListCommand();

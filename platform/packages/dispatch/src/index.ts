@@ -1,4 +1,8 @@
-import { matchLiteralPattern, redirectToHttps, type ProjectZeroTrustRouting } from '@builtbyfriends/edge';
+import {
+  matchLiteralPattern,
+  redirectToHttps,
+  type ProjectZeroTrustRouting,
+} from '@builtbyfriends/edge';
 import {
   PLATFORM_HEALTH_HOSTNAME_LABEL,
   platformHealthHostname,
@@ -182,7 +186,10 @@ async function applyWorkerFallbackRules(opts: {
   if (opts.response.status !== 404 || !opts.routing.fallbackRules?.length) {
     return unchanged;
   }
-  if (opts.routing.type === 'platform' && opts.response.headers.get('X-Platform-No-Match') !== '1') {
+  if (
+    opts.routing.type === 'platform' &&
+    opts.response.headers.get('X-Platform-No-Match') !== '1'
+  ) {
     return unchanged;
   }
 

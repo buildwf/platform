@@ -25,7 +25,7 @@ import {
 import { projectMailboxNames } from './mailbox.ts';
 import { getEmailRecipientPolicy } from './settings.ts';
 
-export type EmailActionState =
+type EmailActionState =
   | 'rejected'
   | 'reserved'
   | 'attempt_started'
@@ -33,7 +33,7 @@ export type EmailActionState =
   | 'failed'
   | 'outcome_unknown'
   | 'cancelled';
-export type EmailActionKind = 'direct' | 'forward' | 'reply';
+type EmailActionKind = 'direct' | 'forward' | 'reply';
 export type EmailActionRecipient = {
   recipient: string;
   state: EmailActionState;
@@ -174,7 +174,7 @@ async function lockEmailPolicyForAdmission(tx: Tx): Promise<void> {
   await tx.execute(sql`select pg_advisory_xact_lock_shared(hashtext('email-admission:policy'))`);
 }
 
-export async function withProjectEmailControlLock<T>(
+async function withProjectEmailControlLock<T>(
   db: Db,
   projectId: string,
   fn: (tx: Tx) => Promise<T>,

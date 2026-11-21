@@ -6,10 +6,10 @@ Platform's existing environments predate the installer. Their resources are mana
 
 ## Environments
 
-| Environment | API                                  | Dashboard                         | App domains          |
-| ----------- | ------------------------------------ | --------------------------------- | -------------------- |
+| Environment | API                                     | Dashboard                         | App domains          |
+| ----------- | --------------------------------------- | --------------------------------- | -------------------- |
 | Production  | `https://platform.buildwithfriends.dev` | `https://dash.void.cloud`         | `*.void.app`         |
-| Staging     | `https://api.staging.void.cloud`     | `https://dash.staging.void.cloud` | `*.staging.void.app` |
+| Staging     | `https://api.staging.void.cloud`        | `https://dash.staging.void.cloud` | `*.staging.void.app` |
 
 Each environment has a separate PostgreSQL database, Hyperdrive configuration, dispatch namespace, KV namespaces, R2 buckets, usage queue, and Analytics Engine datasets. Read the corresponding `env.production` or `env.staging` sections in each package's Wrangler configuration for the current resource bindings. Keep credentials and access assignments in the deployment owner's secret manager and identity provider.
 

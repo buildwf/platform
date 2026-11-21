@@ -160,6 +160,15 @@ export function generateRouteTypes(
     '  type RouteUrlSegment<S extends string> = S extends `:${string}` | `[${string}]` | "*" ? string : S;',
   );
   lines.push(
+    '  type CheckedRoutePath<P extends string> = P extends `/${infer Segment}/${infer Rest}`',
+  );
+  lines.push('    ? Rest extends ""');
+  lines.push('      ? string extends RouteUrlSegment<Segment> ? never : P');
+  lines.push('      : P');
+  lines.push('    : P extends `/${infer Segment}`');
+  lines.push('      ? string extends RouteUrlSegment<Segment> ? never : P');
+  lines.push('      : P;');
+  lines.push(
     '  type RouteSegmentsUrl<P extends string> = P extends `${infer Segment}/${infer Rest}`',
   );
   lines.push('    ? `${RouteUrlSegment<Segment>}/${RouteSegmentsUrl<Rest>}`');
@@ -174,10 +183,13 @@ export function generateRouteTypes(
   );
   lines.push('    : RouteSegmentsUrl<P>;');
   lines.push('  type EncodedRoutePath = EncodedRoutePathMap[keyof EncodedRoutePathMap] & string;');
-  lines.push('  type RoutePathUrl = RoutePatternUrl<RoutePath | EncodedRoutePath>;');
+  lines.push(
+    '  type RoutePathUrl = RoutePatternUrl<CheckedRoutePath<RoutePath | EncodedRoutePath>>;',
+  );
+  lines.push('  type BuiltRouteUrl = string & { readonly __platformRouteUrl: true };');
   lines.push('  type TypedRoutes = RouteTypesConfig extends { typedRoutes: true } ? true : false;');
   lines.push('  export type RouteUrl = TypedRoutes extends true');
-  lines.push('    ? RoutePathUrl | `${RoutePathUrl}${"?" | "#"}${string}`');
+  lines.push('    ? BuiltRouteUrl | RoutePathUrl | `${RoutePathUrl}${"?" | "#"}${string}`');
   lines.push('    : string;');
   lines.push('  export type Href = TypedRoutes extends true');
   lines.push(
@@ -314,6 +326,14 @@ export function generateRouteTypes(
     lines.push(
       `      server: ${imports.map((source) => `ExtractOutput<${source}["server"]>`).join(' | ')};`,
     );
+    const roomSources = sources.filter((route) => route.mode === 'room');
+    if (roomSources.length > 0) {
+      const actions = roomSources.map((route) => {
+        const importPath = relative(outDir, `${routesDir}/${route.filePath}`);
+        return `NonNullable<(typeof import(${JSON.stringify(importPath)}))["default"]["actions"]>`;
+      });
+      lines.push(`      actions: ${actions.join(' | ')};`);
+    }
     lines.push('    };');
     legacyRouteAlias(lines, 'WebSocketRouteMap', pattern);
   }

@@ -45,7 +45,7 @@ export class ConcurrentDeployError extends Error {
 // FOR UPDATE lock teardown uses, serializing the two flows.
 export const PROJECT_DELETING_ERROR_MESSAGE = 'project deletion in progress';
 
-export async function assertProjectNotDeleting(db: Db, projectId: string): Promise<void> {
+async function assertProjectNotDeleting(db: Db, projectId: string): Promise<void> {
   const project = await getProject(db, projectId);
   // Fail closed: a missing project row is treated the same as `status='deleting'`.
   // After teardown flips status='deleting' and `deleteProjectCascade` removes the

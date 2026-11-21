@@ -43,6 +43,32 @@ await rpc.contacts.update({ id, name });
 
 Inputs, outputs and the error codes of a failed call are typed from the procedure. A failed call throws an `RpcError` with a `code` such as `UNAUTHENTICATED` or `INVALID_INPUT`. `useCall` tracks loading state, errors and refetch, and nothing else: wrap `rpc` in a cache if you need one.
 
+### Waiting, refetching and paging
+
+Pass options as a third argument to `useCall`. `enabled: false` makes no request yet, for example while the input is still loading, and reports `loading: false`. `refetchOn` is a value that changes when the data may be stale, such as a counter a live stream bumps. Each change calls the procedure again and keeps the current data on screen.
+
+```tsx
+const { data } = useCall(
+  rpc.contacts.get,
+  { id },
+  { enabled: id !== undefined, refetchOn: version },
+);
+```
+
+For a procedure that takes `{ cursor, numItems }` and answers `{ page, isDone, continueCursor }`, use `useCallPages`:
+
+```tsx
+import { useCallPages } from '@builtbyfriends/bwf/rpc/react';
+
+const { results, loadMore, canLoadMore, loading } = useCallPages(
+  rpc.inbox.list,
+  { folder },
+  { pageSize: 20 },
+);
+```
+
+`loadMore` adds the next page. `refetch`, or a `refetchOn` change, asks again for every loaded page from its own start cursor. Rows that slide between pages show once, matched by their `id` or `_id`, or by `getKey`.
+
 Types come from `.bwf/procedures.d.ts`, which `bwf dev`, `bwf build` and `bwf prepare` keep current. It imports only types, so no server code reaches the browser.
 
 To call procedures from another origin or a script, create a client with `createRpc({ baseUrl, token })` from `@builtbyfriends/bwf/rpc`.

@@ -80,8 +80,7 @@ export async function verifyInstalledPlatformAccessProtection(input: {
       'platform: Read-only Access and Worker origin verification is required before maintaining protection.',
     );
   }
-  const token =
-    process.env.PLATFORM_ACCESS_SETUP_TOKEN || input.checkpoint.accessManagementToken;
+  const token = process.env.PLATFORM_ACCESS_SETUP_TOKEN || input.checkpoint.accessManagementToken;
   const management = token
     ? new PlatformCloudflareClient(token, { apiBase: input.client.apiBaseUrl })
     : { request: input.client.request.bind(input.client) };

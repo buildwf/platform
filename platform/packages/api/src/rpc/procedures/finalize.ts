@@ -33,9 +33,15 @@ function codeFor(status: number, body: { deployment?: unknown; error?: unknown }
     case 403:
       return 'DEPLOY_REFUSED';
     case 409:
-      if (typeof body.deployment === 'string') return 'DEPLOY_IN_PROGRESS';
-      if (body.error === 'project_requires_normalization') return 'PROJECT_NEEDS_NORMALIZATION';
-      if (body.error === 'zero trust not ready') return 'ZERO_TRUST_NOT_READY';
+      if (typeof body.deployment === 'string') {
+        return 'DEPLOY_IN_PROGRESS';
+      }
+      if (body.error === 'project_requires_normalization') {
+        return 'PROJECT_NEEDS_NORMALIZATION';
+      }
+      if (body.error === 'zero trust not ready') {
+        return 'ZERO_TRUST_NOT_READY';
+      }
       return 'DEPLOY_CONFLICT';
     case 410:
       return 'PROJECT_DELETING';
@@ -85,13 +91,24 @@ export const finalize = procedure('deploy.finalize')
         context.set('db', ctx.db);
         context.set('user', ctx.user);
         context.set('tokenAudience', ctx.credential.audience);
-        if (ctx.credential.project) context.set('deployScope', ctx.credential.project);
-        if (ctx.credential.build) context.set('deployBuild', ctx.credential.build);
-        if (ctx.credential.credentialId)
+        if (ctx.credential.project) {
+          context.set('deployScope', ctx.credential.project);
+        }
+        if (ctx.credential.build) {
+          context.set('deployBuild', ctx.credential.build);
+        }
+        if (ctx.credential.credentialId) {
           context.set('deployCredential', ctx.credential.credentialId);
-        if (ctx.credential.approval) context.set('oauthApproval', ctx.credential.approval);
-        if (ctx.credential.expiresAt) context.set('deployTokenExpiresAt', ctx.credential.expiresAt);
-        if (ctx.companyIdentity) context.set('companyIdentity', ctx.companyIdentity);
+        }
+        if (ctx.credential.approval) {
+          context.set('oauthApproval', ctx.credential.approval);
+        }
+        if (ctx.credential.expiresAt) {
+          context.set('deployTokenExpiresAt', ctx.credential.expiresAt);
+        }
+        if (ctx.companyIdentity) {
+          context.set('companyIdentity', ctx.companyIdentity);
+        }
         await next();
       })
       .post('/:id/deploy', handleManifestOnlyDeploy);
@@ -120,7 +137,9 @@ export const finalize = procedure('deploy.finalize')
         // Not a JSON refusal: report the status below.
       }
       const code = codeFor(response.status, body);
-      if (!code) throw new Error(`deploy admission failed with HTTP ${response.status}: ${text}`);
+      if (!code) {
+        throw new Error(`deploy admission failed with HTTP ${response.status}: ${text}`);
+      }
       const detail =
         typeof body.message === 'string'
           ? body.message

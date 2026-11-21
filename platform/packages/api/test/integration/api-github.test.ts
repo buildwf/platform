@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import {
   afterAll,
   afterEach,
@@ -12,7 +13,6 @@ import {
 } from 'vite-plus/test';
 import { signDeployToken } from '../../src/auth/deploy-token.ts';
 import { hmacSignState } from '../../src/auth/hmac.ts';
-import { createCodeChallenge } from '../../src/auth/pkce.ts';
 import type { Db } from '../../src/db.ts';
 import {
   createGitHubConnection,
@@ -238,7 +238,8 @@ async function mintConnectGrant(
       repoFullName: overrides.repoFullName ?? 'org/app',
       repositoryId: overrides.repositoryId ?? 4242,
       githubAccountId: overrides.githubAccountId ?? '5551234',
-      codeChallenge: overrides.codeChallenge ?? (await createCodeChallenge(CONNECT_VERIFIER)),
+      codeChallenge:
+        overrides.codeChallenge ?? (await calculatePKCECodeChallenge(CONNECT_VERIFIER)),
       codeChallengeMethod: overrides.codeChallengeMethod ?? 'S256',
       // `iat` = the moment GitHub access was proven (the connect-authorize
       // callback). The connect gate rejects a grant whose iat <= the revocation
@@ -1866,7 +1867,7 @@ describe('POST /projects/:id/github — non-owner member connect grant', () => {
     // The attacker pre-mints BOTH artifacts while still in the org (iat = T0). No
     // Platform user/membership/oauth yet — purely stateless HMAC artifacts.
     const T0 = Date.now() - 60_000;
-    const challenge = await createCodeChallenge(CONNECT_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CONNECT_VERIFIER);
     const joinEncoded = btoa(
       JSON.stringify({
         purpose: 'join',
@@ -1963,7 +1964,7 @@ describe('POST /projects/:id/github — non-owner member connect grant', () => {
         repoFullName: 'org/app',
         repositoryId: 4242,
         githubAccountId: '5551234',
-        codeChallenge: await createCodeChallenge(CONNECT_VERIFIER),
+        codeChallenge: await calculatePKCECodeChallenge(CONNECT_VERIFIER),
         codeChallengeMethod: 'S256',
         // NO `iat` field.
         exp: Date.now() + 5 * 60 * 1000,
@@ -2071,7 +2072,7 @@ describe('POST /projects/:id/github — non-owner member connect grant', () => {
         purpose: 'join',
         installationIds: [INSTALL],
         githubAccountId: 'gh-caller-7100',
-        codeChallenge: await createCodeChallenge(CONNECT_VERIFIER),
+        codeChallenge: await calculatePKCECodeChallenge(CONNECT_VERIFIER),
         codeChallengeMethod: 'S256',
         iat: Date.now(),
         exp: Date.now() + 5 * 60 * 1000,

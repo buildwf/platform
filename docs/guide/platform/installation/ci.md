@@ -11,9 +11,9 @@ For your first installation, follow the [interactive setup](/guide/platform/inst
 
 Inject the following values from protected CI secrets. Do not commit them in a workflow or a plaintext secrets file.
 
-| Environment variable                          | Value from the interactive setup                                                            |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`                        | Management API token                                                                        |
+| Environment variable                    | Value from the interactive setup                                                            |
+| --------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`                  | Management API token                                                                        |
 | `PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN` | Runtime API token                                                                           |
 | `PLATFORM_DATABASE_URL`                 | Dedicated PostgreSQL URL                                                                    |
 | `PLATFORM_HYPERDRIVE_ID`                | Existing externally managed Hyperdrive ID, when applicable                                  |
@@ -26,8 +26,8 @@ Inject the following values from protected CI secrets. Do not commit them in a w
 | `PLATFORM_EMAIL_SIGNING_SECRET`         | Dedicated email signing secret when email is enabled                                        |
 | `PLATFORM_PROJECT_SECRET_KEY`           | Original base64-encoded project-encryption key                                              |
 | `PLATFORM_RECOVERY_KEY`                 | Base64-encoded 32-byte key for local encrypted recovery state when no keychain is available |
-| `PLATFORM_EMAIL_SENDER_DOMAIN`                   | Optional shared mail domain; requires `PLATFORM_EMAIL_SHARED_ZONE_ID`                          |
-| `PLATFORM_EMAIL_SHARED_ZONE_ID`                  | Cloudflare zone ID for that mail domain; requires `PLATFORM_EMAIL_SENDER_DOMAIN`               |
+| `PLATFORM_EMAIL_SENDER_DOMAIN`          | Optional shared mail domain; requires `PLATFORM_EMAIL_SHARED_ZONE_ID`                       |
+| `PLATFORM_EMAIL_SHARED_ZONE_ID`         | Cloudflare zone ID for that mail domain; requires `PLATFORM_EMAIL_SENDER_DOMAIN`            |
 
 For the default GitHub-only login, also set `PLATFORM_GITHUB_CLIENT_ID`,
 `PLATFORM_GITHUB_CLIENT_SECRET`, and `PLATFORM_ADMIN_GITHUB_LOGIN`.

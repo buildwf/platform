@@ -7,7 +7,10 @@ export default function LoginPage({ methods, platformName, unavailable, devLogin
       <style>{browserPageStyles}</style>
       <div className="platform-auth-container">
         <div className="platform-auth-brand">
-          <span className="platform-auth-logo" dangerouslySetInnerHTML={{ __html: browserPageLogo }} />
+          <span
+            className="platform-auth-logo"
+            dangerouslySetInnerHTML={{ __html: browserPageLogo }}
+          />
           <span className="platform-auth-divider" aria-hidden="true" />
           <span>{platformName}</span>
         </div>
@@ -21,7 +24,9 @@ export default function LoginPage({ methods, platformName, unavailable, devLogin
               <a
                 key={method.id}
                 className={
-                  index === 0 ? 'platform-auth-button platform-auth-button-primary' : 'platform-auth-button'
+                  index === 0
+                    ? 'platform-auth-button platform-auth-button-primary'
+                    : 'platform-auth-button'
                 }
                 href={method.url}
               >

@@ -513,7 +513,7 @@ describe('project Zero Trust reconciliation', () => {
     await configurePlatformZeroTrust(bindings, env.db, PROTECTED_CONFIGURATION);
     expect((await readZeroTrustConfigurationStrict(env.db))!.healthApplication).toBeNull();
     expect([...cloudflare.applications.values()].map((application) => application.domain)).toEqual([
-      'platform-123456abcdef-*.test-account.workers.dev',
+      'void-123456abcdef-*.test-account.workers.dev',
     ]);
   });
 

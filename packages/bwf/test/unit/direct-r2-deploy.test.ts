@@ -125,6 +125,7 @@ function installPlatformMocks(opts?: {
   r2PutBehavior?: (url: string) => Response | Promise<Response>;
   workerUploadUrls?: () => Response;
   finalizeEvents?: Array<unknown>;
+  capabilities?: Record<string, unknown>;
 }): MockState {
   const state: MockState = {
     preflightCalls: [],
@@ -138,6 +139,41 @@ function installPlatformMocks(opts?: {
     const url = typeof input === 'string' ? input : (input as Request).url;
     const reqInit = init ?? {};
     const method = reqInit.method ?? 'GET';
+    // The client calls these as procedures (`POST /rpc/<name>`, answered as `{ data }`).
+    const procedure = /\/rpc\/(deploy\.(?:preflight|uploadUrls|workerUploadUrls))$/.exec(url)?.[1];
+    if (procedure && method === 'POST') {
+      const legacyPath = {
+        'deploy.preflight': '/deploy/preflight',
+        'deploy.uploadUrls': '/deploy/upload-urls',
+        'deploy.workerUploadUrls': '/deploy/worker-upload-urls',
+      }[procedure];
+      const response = await fetchMock(url.replace(/\/rpc\/[^/]+$/, legacyPath!), init);
+      if (!response.ok) {
+        return response;
+      }
+      return Response.json({ data: await response.json() });
+    }
+
+    if (url.endsWith('/rpc/deploy.finalize') && method === 'POST') {
+      const { body } = JSON.parse(reqInit.body as string) as { body: unknown };
+      const legacy = await fetchMock(url.replace(/\/rpc\/[^/]+$/, '/deploy'), {
+        ...reqInit,
+        body: JSON.stringify(body),
+      });
+      const text: string = await (legacy as Response).text();
+      const events = text
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => JSON.parse(line) as { deploymentId?: string; deployment?: string });
+      const deploymentId =
+        events.find((event) => event.deploymentId)?.deploymentId ??
+        events.find((event) => event.deployment)?.deployment;
+      return Response.json({ data: { deploymentId, events } });
+    }
+
+    if (url.endsWith('/capabilities') && method === 'GET' && opts?.capabilities) {
+      return Response.json(opts.capabilities);
+    }
 
     if (url.endsWith('/deploy/preflight') && method === 'POST') {
       state.preflightCalls.push(JSON.parse(reqInit.body as string));
@@ -586,7 +622,7 @@ describe('Worker module uploads', () => {
     await deployWorker(directOrigin, files, ['/index.html']);
 
     const modules = expectedModules();
-    expect(state.workerUploadUrlsCalls).toEqual([{ modules }]);
+    expect(state.workerUploadUrlsCalls).toEqual([{ projectId: expect.any(String), modules }]);
     const workerPuts = state.r2PutCalls.filter(({ url }) => url.includes('/worker/'));
     expect(workerPuts.map(({ url }) => url).sort()).toEqual([
       'https://r2-test/worker/0',
@@ -601,8 +637,8 @@ describe('Worker module uploads', () => {
 
     // A Worker the platform refuses must fail before any asset upload.
     const urls = fetchMock.mock.calls.map(([url]) => String(url));
-    const assetPresign = urls.indexOf(`${directOrigin}/projects/proj_t/deploy/upload-urls`);
-    expect(urls.indexOf(`${directOrigin}/projects/proj_t/deploy/worker-upload-urls`)).toBe(0);
+    const assetPresign = urls.indexOf(`${directOrigin}/rpc/deploy.uploadUrls`);
+    expect(urls.indexOf(`${directOrigin}/rpc/deploy.workerUploadUrls`)).toBe(0);
     expect(assetPresign).toBeGreaterThan(0);
     expect(urls.slice(assetPresign).filter((url) => url.includes('/worker/'))).toEqual([]);
     expect(state.uploadUrlsCalls).toHaveLength(1);
@@ -646,6 +682,79 @@ describe('Worker module uploads', () => {
     expect(state.uploadUrlsCalls).toHaveLength(0);
     expect(state.r2PutCalls).toHaveLength(0);
     expect(state.finalizeCalls).toHaveLength(0);
+  });
+});
+
+describe('D1 read replication', () => {
+  const manifest: DeployManifest = {
+    version: 3,
+    assetManifestVersion: 2,
+    bindings: { d1: ['DB'] },
+    type: 'platform',
+    ssr: true,
+    workerMain: 'index.js',
+  };
+
+  async function deployWith(origin: string, deployManifest: DeployManifest): Promise<void> {
+    const { assetManifest, assetFiles } = await collectAndHashAssets(assetsDir);
+    await streamDirectR2Deploy({
+      client: new PlatformClient('test-token', { apiUrl: origin }),
+      projectId: 'proj_t',
+      manifest: deployManifest,
+      assetManifest,
+      assetFiles,
+      needed: ['/index.html'],
+      preflightUsed: false,
+      spinner: noopSpinner as unknown as SpinnerResult,
+    });
+  }
+
+  function requestedPaths(): Array<string> {
+    return fetchMock.mock.calls.map(([url]) => new URL(String(url)).pathname);
+  }
+
+  it.each([true, false])(
+    'stops before any upload when the platform cannot apply readReplication: %s',
+    async (readReplication) => {
+      // What a 1.10.0 platform advertises: it ignores the setting.
+      const state = installPlatformMocks({ capabilities: { skipMigrations: true } });
+
+      await expect(
+        deployWith(`https://api-rr-old-${readReplication}.test`, {
+          ...manifest,
+          database: { readReplication },
+        }),
+      ).rejects.toThrow(
+        'This bwf platform cannot apply `database.readReplication` from bwf.config.ts. Ask its administrator to upgrade with `bwf platform upgrade`.',
+      );
+
+      expect(requestedPaths()).toEqual(['/capabilities']);
+      expect(state.uploadUrlsCalls).toHaveLength(0);
+      expect(state.r2PutCalls).toHaveLength(0);
+      expect(state.finalizeCalls).toHaveLength(0);
+    },
+  );
+
+  it('sends the setting when the platform advertises support', async () => {
+    const state = installPlatformMocks({ capabilities: { d1ReadReplication: true } });
+
+    await deployWith('https://api-rr-new.test', {
+      ...manifest,
+      database: { readReplication: false },
+    });
+
+    expect(requestedPaths()[0]).toBe('/capabilities');
+    const body = JSON.parse(state.finalizeCalls[0].init.body as string);
+    expect(body.manifest.database).toEqual({ readReplication: false });
+  });
+
+  it('does not ask for capabilities when the app leaves the setting out', async () => {
+    const state = installPlatformMocks();
+
+    await deployWith('https://api-rr-unset.test', manifest);
+
+    expect(requestedPaths()).not.toContain('/capabilities');
+    expect(state.finalizeCalls).toHaveLength(1);
   });
 });
 

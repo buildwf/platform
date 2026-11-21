@@ -30,7 +30,7 @@ describe('platform onboarding pages', () => {
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     const html = await adminHtml(response);
     expect(html).toContain('<h1 id="platform-auth-title">Welcome to &lt;Example Platform&gt;</h1>');
-    expect(html).toContain('<title>Welcome · &lt;Example Platform&gt; · Platform</title>');
+    expect(html).toContain('<title>Welcome · &lt;Example Platform&gt;</title>');
     expect(html).toContain('npm install -g void');
     expect(html).toContain('bwf connect &#39;api.example.com&#39;');
     expect(html).toContain('href="/admin/"');
@@ -76,7 +76,7 @@ describe('platform onboarding pages', () => {
     expect(response.status).toBe(200);
     const html = await adminHtml(response);
     expect(html).toContain('&lt;Example Platform&gt;');
-    expect(html).toContain('<title>Get Started · &lt;Example Platform&gt; · Platform</title>');
+    expect(html).toContain('<title>Get Started · &lt;Example Platform&gt;</title>');
     expect(html).not.toContain('<Example Platform>');
     // `escapeHtml` escapes the quotes too; the browser renders them back.
     expect(html).toContain('bwf connect &#39;api.example.com&#39;');
@@ -158,8 +158,10 @@ describe('platform onboarding pages', () => {
       );
       expect(response.status).toBe(200);
       const html = await adminHtml(response);
+      // The hosted and the generic name are both "Platform" now, so check
+      // that the forwarded hosted origin doesn't reach the page instead.
       expect(html).toContain('Platform');
-      expect(html).not.toContain('Platform');
+      expect(html).not.toContain('platform.buildwithfriends.dev');
       if (path === '/') {
         expect(html).toContain('bwf connect &#39;api.example.com&#39;');
       }

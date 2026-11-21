@@ -478,7 +478,9 @@ describe('platform installation planning', () => {
       ]) {
         await expect(
           createPlatformInstallPlan(client(), { ...input, ...emailSettings }, existing),
-        ).rejects.toThrow('PLATFORM_EMAIL_SENDER_DOMAIN and PLATFORM_EMAIL_SHARED_ZONE_ID together');
+        ).rejects.toThrow(
+          'PLATFORM_EMAIL_SENDER_DOMAIN and PLATFORM_EMAIL_SHARED_ZONE_ID together',
+        );
       }
     },
   );
@@ -1067,7 +1069,11 @@ describe('platform installation planning', () => {
         title.endsWith('-routing') ? [{ id: 'someone-else', name: title }] : [],
     },
     { listWorkerNames: async () => ['platform-example-api'] },
-    { listR2Buckets: async () => [{ id: 'platform-example-assets', name: 'platform-example-assets' }] },
+    {
+      listR2Buckets: async () => [
+        { id: 'platform-example-assets', name: 'platform-example-assets' },
+      ],
+    },
     { listQueues: async (_account: string, name: string) => [{ id: 'other-queue', name }] },
   ])('refuses existing account resources instead of allocating another name', async (inventory) => {
     await expect(createPlatformInstallPlan(client(inventory), input, null)).rejects.toThrow(
@@ -1309,7 +1315,11 @@ describe('platform installation planning', () => {
         client({
           findZone: async () => activeZone,
           listWorkerDomains: async () => [
-            { hostname: 'ai.example.app', id: 'custom-domain', service: 'platform-example-dispatch' },
+            {
+              hostname: 'ai.example.app',
+              id: 'custom-domain',
+              service: 'platform-example-dispatch',
+            },
           ],
         }),
         input,

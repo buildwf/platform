@@ -21,4 +21,10 @@ export type OAuthRequestData = {
 export type OAuthSession = Pick<JwtPayload, 'sub' | 'aud' | 'sid' | 'exp'> & {
   // Attested by Platform's Access middleware during consent, never by the client.
   companyIdentity?: CompanyIdentity;
+  /**
+   * Set on a grant that a trusted application asked for on behalf of one of its own people
+   * (the app-person grant in routes/oauth.ts). There is no Platform login session behind it:
+   * the application is the person's sign-in, so the human-session check does not apply.
+   */
+  appPerson?: true;
 };

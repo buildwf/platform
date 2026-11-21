@@ -282,8 +282,6 @@ describe('parseEmail', () => {
 });
 
 const COMPILE_OPTIONS = {
-  honoPath: 'hono',
-  honoRoutePath: 'hono/route',
   runtimeEnvPath: '@builtbyfriends/bwf/_env',
   projectRoot: '/project',
   homeDir: '/home/test',
@@ -2666,7 +2664,11 @@ describe('end-to-end: envelope → handler → action queue', () => {
     });
     const actions = await dispatchToHandler(makeEnvelope(), handler);
     expect(actions).toEqual([
-      { type: 'forward', to: 'archive@example.com', headers: { 'X-Forwarded-By': 'platform-test' } },
+      {
+        type: 'forward',
+        to: 'archive@example.com',
+        headers: { 'X-Forwarded-By': 'platform-test' },
+      },
     ]);
   });
 

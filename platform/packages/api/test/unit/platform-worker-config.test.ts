@@ -1,4 +1,7 @@
-import { createPlatformDeploymentManifest, createPlatformWorkerConfigs } from '@builtbyfriends/platform';
+import {
+  createPlatformDeploymentManifest,
+  createPlatformWorkerConfigs,
+} from '@builtbyfriends/platform';
 import { describe, expect, it } from 'vite-plus/test';
 
 describe('platform Worker configuration', () => {

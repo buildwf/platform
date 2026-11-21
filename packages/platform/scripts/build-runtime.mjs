@@ -75,7 +75,9 @@ try {
         main: entrypoint,
         alias: {
           ...sourceAliases,
-          ...(name === 'api' ? { 'platform:sandbox-controller-source': controller.modulePath } : {}),
+          ...(name === 'api'
+            ? { 'platform:sandbox-controller-source': controller.modulePath }
+            : {}),
         },
         compatibility_date: '2026-02-24',
         compatibility_flags:

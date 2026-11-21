@@ -10,7 +10,7 @@ export type PlatformAccessActor =
   | (CompanyIdentity & Readonly<{ kind: 'human'; email: string }>)
   | Readonly<{ kind: 'service'; issuer: string; serviceId: string }>;
 
-export class PlatformAccessError extends Error {
+class PlatformAccessError extends Error {
   constructor() {
     super('A valid Cloudflare Access identity for this platform origin is required.');
     this.name = 'PlatformAccessError';

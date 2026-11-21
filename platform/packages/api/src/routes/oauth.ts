@@ -9,6 +9,7 @@ import { and, eq, gt, isNull, desc, or } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import { readAuthSettings, readEnabledLoginConnections } from '../auth/configuration.ts';
 import { signJwt, verifyJwt } from '../auth/jwt.ts';
 import type { OAuthRequestData, OAuthSession, OAuthScope } from '../auth/oauth-types.ts';
@@ -20,7 +21,7 @@ import {
   oauthBearer,
   OAuthError,
 } from '../auth/oauth.ts';
-import { createCodeChallenge, isValidCodeVerifier } from '../auth/pkce.ts';
+import { isValidCodeVerifier } from '../auth/pkce.ts';
 import { hashLoginProof, randomLoginProof } from '../auth/proofs.ts';
 import { validateHumanSession } from '../auth/sessions.ts';
 import { platformBrowserPage, platformBrowserError } from '../browser-page.ts';
@@ -30,6 +31,7 @@ import { isDevBypass, type ApiEnv } from '../env.ts';
 import { MAX_SLUG_LENGTH } from '../project-names.ts';
 import { oauthClients, oauthGrants, oauthRefreshTokens, oauthRequests } from '../schema.ts';
 import { isAdminSuspended } from '../suspension.ts';
+import { APP_PERSON_GRANT, appPersonToken } from './oauth-app-person.ts';
 import previews from './previews.ts';
 import { createProjectForUser, ProjectCreateError, scheduleAfterResponse } from './projects.ts';
 
@@ -49,7 +51,7 @@ export function oauthMetadata(context: Context<ApiEnv>) {
     revocation_endpoint: issuer + '/oauth/revoke',
     userinfo_endpoint: issuer + '/oauth/userinfo',
     response_types_supported: ['code'],
-    grant_types_supported: ['authorization_code', 'refresh_token'],
+    grant_types_supported: ['authorization_code', 'refresh_token', APP_PERSON_GRANT],
     scopes_supported: ['profile', 'deploy:approve', 'preview:deploy'],
     token_endpoint_auth_methods_supported: ['client_secret_basic'],
     revocation_endpoint_auth_methods_supported: ['client_secret_basic'],
@@ -358,7 +360,7 @@ app.get('/login', async (context) => {
   const target = new URL('/auth/login', origin(context));
   target.searchParams.set('redirect', callback.href);
   target.searchParams.set('provider', context.req.query('provider') ?? '');
-  target.searchParams.set('code_challenge', await createCodeChallenge(verifier));
+  target.searchParams.set('code_challenge', await calculatePKCECodeChallenge(verifier));
   target.searchParams.set('code_challenge_method', 'S256');
   if (isDevBypass(context.env) && context.req.query('provider') === 'local') {
     const { users } = await import('../schema.ts');
@@ -386,7 +388,7 @@ app.get('/login/callback', async (context) => {
     context.get('db'),
     context.req.query('code')!,
     request.id,
-    await createCodeChallenge(request.data.loginVerifier),
+    await calculatePKCECodeChallenge(request.data.loginVerifier),
     'S256',
   );
   const payload = token ? await verifyJwt(token, context.env.JWT_SECRET, 'api') : null;
@@ -410,6 +412,72 @@ app.get('/login/callback', async (context) => {
     .where(eq(oauthRequests.id, request.id));
   return context.redirect('/oauth/authorize?request=' + request.id);
 });
+
+/**
+ * The project an approved publish deploys to: the person's own project with that name, made when
+ * it doesn't exist yet. The browser approval and an application's approval both use it.
+ */
+async function publishProject(
+  context: Context<ApiEnv>,
+  tx: Db,
+  slug: string,
+  user: ApiEnv['Variables']['user'],
+): Promise<string> {
+  let project = await getProjectBySlug(tx, slug);
+  if (
+    project &&
+    (project.user_id !== user.id || project.status !== 'active' || project.preview_client_id)
+  ) {
+    throw new OAuthError('access_denied', 'You must own the selected project.', 403);
+  }
+  if (!project) {
+    try {
+      project = (await createProjectForUser(
+        {
+          env: context.env,
+          db: tx,
+          user,
+          schedule: (work) => scheduleAfterResponse(context, work),
+        },
+        slug,
+      )) as NonNullable<typeof project>;
+    } catch (error) {
+      if (error instanceof ProjectCreateError) {
+        throw new OAuthError('invalid_request', error.message);
+      }
+      throw error;
+    }
+  }
+  return project.id;
+}
+
+/** The one-build deploy credential that an approved publish request turns into. */
+async function publishToken(
+  env: ApiEnv['Bindings'],
+  request: typeof oauthRequests.$inferSelect,
+  userId: string,
+) {
+  const expiresIn = Math.max(1, Math.floor((Date.parse(request.expires_at) - Date.now()) / 1000));
+  const token = await signJwt(
+    {
+      sub: userId,
+      login: '',
+      aud: 'oauth-deploy',
+      project: request.data.projectId,
+      oauthApproval: request.id,
+    },
+    env.JWT_SECRET,
+    { ttlSeconds: expiresIn },
+  );
+  return {
+    access_token: token,
+    token_type: 'Bearer',
+    expires_in: expiresIn,
+    scope: 'deploy:approve',
+    project_id: request.data.projectId,
+    approval_id: request.id,
+  };
+}
 
 app.post('/approve', async (context) => {
   requireBrowserOrigin(context);
@@ -467,34 +535,10 @@ app.post('/approve', async (context) => {
     }
     let data = locked.data;
     if (data.kind === 'deployment') {
-      let project = await getProjectBySlug(tx, data.slug!);
-      if (
-        project &&
-        (project.user_id !== session.sub ||
-          project.status !== 'active' ||
-          project.preview_client_id)
-      ) {
-        throw new OAuthError('access_denied', 'You must own the selected project.', 403);
-      }
-      if (!project) {
-        try {
-          project = (await createProjectForUser(
-            {
-              env: context.env,
-              db: tx as Db,
-              user: context.get('user'),
-              schedule: (work) => scheduleAfterResponse(context, work),
-            },
-            data.slug!,
-          )) as NonNullable<typeof project>;
-        } catch (error) {
-          if (error instanceof ProjectCreateError) {
-            throw new OAuthError('invalid_request', error.message);
-          }
-          throw error;
-        }
-      }
-      data = { ...data, projectId: project.id };
+      data = {
+        ...data,
+        projectId: await publishProject(context, tx as Db, data.slug!, context.get('user')),
+      };
     } else {
       const grantId = crypto.randomUUID();
       await tx.insert(oauthGrants).values({
@@ -654,6 +698,11 @@ app.post('/token', async (context) => {
   if (form.grant_type === 'refresh_token') {
     return refreshAccessToken(context, client.id, form);
   }
+  if (form.grant_type === APP_PERSON_GRANT) {
+    return context.json(
+      await appPersonToken(context, client, form, { project: publishProject, token: publishToken }),
+    );
+  }
   if (
     form.grant_type !== 'authorization_code' ||
     typeof form.code !== 'string' ||
@@ -665,7 +714,7 @@ app.post('/token', async (context) => {
       'An authorization code, redirect URI, and PKCE verifier are required.',
     );
   }
-  const challenge = await createCodeChallenge(form.code_verifier);
+  const challenge = await calculatePKCECodeChallenge(form.code_verifier);
   const accessToken = randomLoginProof();
   return context.get('db').transaction(async (tx) => {
     await activeOAuthClient(tx, client.id, true);
@@ -707,27 +756,7 @@ app.post('/token', async (context) => {
       .set({ consumed_at: new Date().toISOString() })
       .where(eq(oauthRequests.id, request.id));
     if (request.data.kind === 'deployment') {
-      const token = await signJwt(
-        {
-          sub: grant.user_id,
-          login: '',
-          aud: 'oauth-deploy',
-          project: request.data.projectId,
-          oauthApproval: request.id,
-        },
-        context.env.JWT_SECRET,
-        {
-          ttlSeconds: Math.max(1, Math.floor((Date.parse(request.expires_at) - Date.now()) / 1000)),
-        },
-      );
-      return context.json({
-        access_token: token,
-        token_type: 'Bearer',
-        expires_in: Math.floor((Date.parse(request.expires_at) - Date.now()) / 1000),
-        scope: 'deploy:approve',
-        project_id: request.data.projectId,
-        approval_id: request.id,
-      });
+      return context.json(await publishToken(context.env, request, grant.user_id));
     }
     await tx
       .update(oauthGrants)

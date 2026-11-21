@@ -124,95 +124,98 @@ function drizzle(config) {
   return { db: module.db, users, state, request, endPools };
 }
 
-describe.each(['postgresql', 'mysql'] as const)('@builtbyfriends/bwf/db %s across requests', (dialect) => {
-  let url: string;
-  let pglite: PGlite | undefined;
-  let pgServer: ReturnType<typeof createServer> | undefined;
-  let mysqlServer: FakeMySqlServer | undefined;
+describe.each(['postgresql', 'mysql'] as const)(
+  '@builtbyfriends/bwf/db %s across requests',
+  (dialect) => {
+    let url: string;
+    let pglite: PGlite | undefined;
+    let pgServer: ReturnType<typeof createServer> | undefined;
+    let mysqlServer: FakeMySqlServer | undefined;
 
-  beforeAll(
-    async () => {
-      if (dialect === 'postgresql') {
-        pglite = new PGlite();
-        // Cold WASM startup can exceed 10s on Windows CI. Pay that cost in this hook,
-        // with its own budget; query and test deadlines stay unchanged.
-        await pglite.waitReady;
-        await pglite.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);');
-        await pglite.exec("INSERT INTO users VALUES (1, 'Ada'), (2, 'Linus');");
-        pgServer = createServer(pglite);
-        pgServer.listen(0, '127.0.0.1');
-        await once(pgServer, 'listening');
-        url = `postgresql://postgres@127.0.0.1:${(pgServer.address() as AddressInfo).port}/postgres`;
-      } else {
-        mysqlServer = await startFakeMySqlServer(USERS);
-        url = `mysql://void@127.0.0.1:${mysqlServer.port}/app`;
+    beforeAll(
+      async () => {
+        if (dialect === 'postgresql') {
+          pglite = new PGlite();
+          // Cold WASM startup can exceed 10s on Windows CI. Pay that cost in this hook,
+          // with its own budget; query and test deadlines stay unchanged.
+          await pglite.waitReady;
+          await pglite.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);');
+          await pglite.exec("INSERT INTO users VALUES (1, 'Ada'), (2, 'Linus');");
+          pgServer = createServer(pglite);
+          pgServer.listen(0, '127.0.0.1');
+          await once(pgServer, 'listening');
+          url = `postgresql://postgres@127.0.0.1:${(pgServer.address() as AddressInfo).port}/postgres`;
+        } else {
+          mysqlServer = await startFakeMySqlServer(USERS);
+          url = `mysql://void@127.0.0.1:${mysqlServer.port}/app`;
+        }
+      },
+      process.platform === 'win32' ? 30_000 : undefined,
+    );
+
+    afterAll(async () => {
+      if (pgServer) {
+        pgServer.close();
+        await once(pgServer, 'close');
       }
-    },
-    process.platform === 'win32' ? 30_000 : undefined,
-  );
-
-  afterAll(async () => {
-    if (pgServer) {
-      pgServer.close();
-      await once(pgServer, 'close');
-    }
-    await pglite?.close();
-    await mysqlServer?.close();
-  });
-
-  it('runs a query built or prepared in one request on the pool of a later request', async () => {
-    const { db, users, state, request } = await loadDb(dialect, url);
-
-    // Module-level queries: built once, run by every request.
-    const { built, prepared, relational } = await request(async () => {
-      const built = db.select().from(users);
-      const prepared = db.select().from(users).prepare('platform_users');
-      const relational = db.query.users.findMany();
-      expect(await built).toEqual(USERS);
-      return { built, prepared, relational };
+      await pglite?.close();
+      await mysqlServer?.close();
     });
-    const later = await request(async () => ({
-      built: await built,
-      prepared: await prepared.execute(),
-      relational: await relational,
-    }));
 
-    expect(later).toEqual({ built: USERS, prepared: USERS, relational: USERS });
-    expect(state.pools).toHaveLength(2);
-  });
+    it('runs a query built or prepared in one request on the pool of a later request', async () => {
+      const { db, users, state, request } = await loadDb(dialect, url);
 
-  it('runs a transaction on one connection of the request pool', async () => {
-    const { db, users, state, request } = await loadDb(dialect, url);
+      // Module-level queries: built once, run by every request.
+      const { built, prepared, relational } = await request(async () => {
+        const built = db.select().from(users);
+        const prepared = db.select().from(users).prepare('platform_users');
+        const relational = db.query.users.findMany();
+        expect(await built).toEqual(USERS);
+        return { built, prepared, relational };
+      });
+      const later = await request(async () => ({
+        built: await built,
+        prepared: await prepared.execute(),
+        relational: await relational,
+      }));
 
-    const rows = await request(() => db.transaction(async (tx) => tx.select().from(users)));
+      expect(later).toEqual({ built: USERS, prepared: USERS, relational: USERS });
+      expect(state.pools).toHaveLength(2);
+    });
 
-    expect(rows).toEqual(USERS);
-    // One checkout holds the connection for the whole transaction; drizzle only does that for
-    // a pool, so a stand-in client must still look like one.
-    expect(state.checkouts).toBe(1);
-  });
+    it('runs a transaction on one connection of the request pool', async () => {
+      const { db, users, state, request } = await loadDb(dialect, url);
 
-  it('builds one pool for a transaction outside a request scope', async () => {
-    const { db, users, state, endPools } = await loadDb(dialect, url);
-    // A framework entry that bwf does not wrap runs without its request scope.
-    const previousEnv = (globalThis as Record<string, unknown>).__env__;
-    (globalThis as Record<string, unknown>).__env__ = { DATABASE_URL: url };
-    try {
-      await db.transaction(async (tx) => tx.select().from(users));
-      const before = state.pools.length;
-
-      const rows = await db.transaction(async (tx) => tx.select().from(users));
+      const rows = await request(() => db.transaction(async (tx) => tx.select().from(users)));
 
       expect(rows).toEqual(USERS);
-      // Each use builds a pool here, so drizzle's pool checks must not build more.
-      expect(state.pools.length - before).toBe(1);
-    } finally {
-      if (previousEnv === undefined) {
-        delete (globalThis as Record<string, unknown>).__env__;
-      } else {
-        (globalThis as Record<string, unknown>).__env__ = previousEnv;
+      // One checkout holds the connection for the whole transaction; drizzle only does that for
+      // a pool, so a stand-in client must still look like one.
+      expect(state.checkouts).toBe(1);
+    });
+
+    it('builds one pool for a transaction outside a request scope', async () => {
+      const { db, users, state, endPools } = await loadDb(dialect, url);
+      // A framework entry that bwf does not wrap runs without its request scope.
+      const previousEnv = (globalThis as Record<string, unknown>).__env__;
+      (globalThis as Record<string, unknown>).__env__ = { DATABASE_URL: url };
+      try {
+        await db.transaction(async (tx) => tx.select().from(users));
+        const before = state.pools.length;
+
+        const rows = await db.transaction(async (tx) => tx.select().from(users));
+
+        expect(rows).toEqual(USERS);
+        // Each use builds a pool here, so drizzle's pool checks must not build more.
+        expect(state.pools.length - before).toBe(1);
+      } finally {
+        if (previousEnv === undefined) {
+          delete (globalThis as Record<string, unknown>).__env__;
+        } else {
+          (globalThis as Record<string, unknown>).__env__ = previousEnv;
+        }
+        await endPools();
       }
-      await endPools();
-    }
-  });
-});
+    });
+  },
+);

@@ -158,7 +158,9 @@ describe('validateProdEnv — deploy-time schema enforcement', () => {
         '.env defines names reserved for bwf: __PLATFORM_PROXY_TOKEN, __PLATFORM_EMAIL_FROM.',
       );
       expect((error as Error).message).toContain('bwf sets these itself');
-      expect((error as Error).message).toContain('x-platform-dev-trigger header printed at dev start');
+      expect((error as Error).message).toContain(
+        'x-platform-dev-trigger header printed at dev start',
+      );
     }
   });
 

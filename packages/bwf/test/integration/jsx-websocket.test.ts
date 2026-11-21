@@ -31,7 +31,8 @@ describe.each(
     playground = createIsolatedPlayground(repository, 'playground/websockets');
     const root = playground.root;
     for (const directory of ['routes', 'pages', 'middleware']) {
-      rmSync(join(root, directory), { recursive: true });
+      // The SPA playground has no pages or middleware directory.
+      rmSync(join(root, directory), { recursive: true, force: true });
     }
     writeFileSync(join(root, 'bwf.config.ts'), 'export default {};');
     writeFileSync(
@@ -76,8 +77,6 @@ export default ${helper}({
         join(root, 'crons'),
         join(root, 'queues'),
         {
-          honoPath: import.meta.resolve('hono'),
-          honoRoutePath: import.meta.resolve('hono/route'),
           runtimeEnvPath,
           webSocketRuntimePath: join(repository, 'packages/bwf/src/runtime/ws-server.ts'),
           projectRoot: root,

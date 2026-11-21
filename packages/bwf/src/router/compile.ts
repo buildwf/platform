@@ -34,10 +34,6 @@ export type CompileOptions = {
     name: string;
     version: string;
   };
-  /** Absolute path to the hono module entry */
-  honoPath: string;
-  /** Absolute path to `hono/route` from the same Hono copy as `honoPath` */
-  honoRoutePath: string;
   /** Absolute path to the bwf/_env module */
   runtimeEnvPath: string;
   /** Absolute path to the project's `email/` directory; enables `__emailHandler`. */
@@ -149,9 +145,8 @@ export function compileRouteTable(
   const managedDispatch = options.dev !== true && options.managedDispatch === true;
 
   lines.push(`import { AsyncLocalStorage } from "node:async_hooks";`);
-  lines.push(`import { Hono } from ${JSON.stringify(options.honoPath)};`);
   lines.push(
-    `import { createRoutingRuntime as __createRoutingRuntime, createHttpRouteHandler as __createHttpRouteHandler, createModuleLoader as __createModuleLoader, createAssetNotFound as __createAssetNotFound } from ${JSON.stringify(ROUTING_RUNTIME_PATH)};`,
+    `import { Hono, createRoutingRuntime as __createRoutingRuntime, createHttpRouteHandler as __createHttpRouteHandler, createModuleLoader as __createModuleLoader, createAssetNotFound as __createAssetNotFound } from ${JSON.stringify(ROUTING_RUNTIME_PATH)};`,
   );
   lines.push(`import { withRuntimeEnv } from ${JSON.stringify(options.runtimeEnvPath)};`);
 
@@ -176,7 +171,7 @@ export function compileRouteTable(
     options.webSocketRuntimePath
   ) {
     lines.push(
-      `import { createWebSocketDurableObject as __createWebSocketDurableObject, createWebSocketTombstoneDurableObject as __createWebSocketTombstoneDurableObject, forwardWebSocketRequest as __forwardWebSocketRequest } from ${JSON.stringify(options.webSocketRuntimePath)};`,
+      `import { createWebSocketDurableObject as __createWebSocketDurableObject, createWebSocketTombstoneDurableObject as __createWebSocketTombstoneDurableObject, forwardWebSocketRequest as __forwardWebSocketRequest, __registerWebSocketRoutes } from ${JSON.stringify(options.webSocketRuntimePath)};`,
     );
   }
   if (options.hasLive && options.liveRuntimePath) {
@@ -267,7 +262,9 @@ export function compileRouteTable(
       lines.push('app.use("*", __routingRuntime.headerMiddleware(__headerRules, "auth-error"));');
     }
     lines.push('app.use(async (c, next) => {');
-    lines.push('  return runBwfAuthMiddleware(c, next, __platformAuthOptions, __platformAuthDatabase);');
+    lines.push(
+      '  return runBwfAuthMiddleware(c, next, __platformAuthOptions, __platformAuthDatabase);',
+    );
     lines.push('});');
     lines.push('');
   }
@@ -365,6 +362,7 @@ export function compileRouteTable(
             params: route.params,
             className: route.className,
             bindingName: route.bindingName,
+            mode: route.mode,
             ...(route.name !== undefined && { name: route.name }),
           },
         )}, ${auth ? '__platformAuthOptions' : 'undefined'}, ${auth ? '__resolveBwfAuthState' : 'undefined'});`,
@@ -378,6 +376,7 @@ export function compileRouteTable(
           params: route.params,
           className: route.className,
           bindingName: route.bindingName,
+          mode: route.mode,
           ...(route.name !== undefined && { name: route.name }),
         })),
       )};`,
@@ -386,6 +385,10 @@ export function compileRouteTable(
   }
   for (let i = 0; i < webSockets.length; i++) {
     lines.push(`__platformWebSocketRoutes[${i}].key = websocket${i}.key;`);
+  }
+  if (webSockets.length > 0 && options.webSocketRuntimePath) {
+    // Register after `key` is attached so getRoom() shares the client's addressing.
+    lines.push('__registerWebSocketRoutes(__platformWebSocketRoutes);');
   }
   for (const className of options.webSocketTombstones ?? []) {
     lines.push(
@@ -725,7 +728,9 @@ export function compileRouteTable(
     lines.push('    return __platformCreateMigrationRequestHandler(false, true)(request);');
     lines.push('  }');
     if (auth) {
-      lines.push('  if (request.method === "POST" && url.pathname === "/__platform/migrate/auth") {');
+      lines.push(
+        '  if (request.method === "POST" && url.pathname === "/__platform/migrate/auth") {',
+      );
       lines.push('    return __platformCreateMigrationRequestHandler(true, true)(request);');
       lines.push('  }');
     }

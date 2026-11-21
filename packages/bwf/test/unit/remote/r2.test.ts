@@ -202,7 +202,10 @@ describe('ProxyR2Bucket', () => {
   describe('put()', () => {
     it('rejects malformed conditions before calling R2', async () => {
       const put = vi.fn();
-      const handler = createBindingHandler({ __PLATFORM_PROXY_TOKEN: 'internal', STORAGE: { put } });
+      const handler = createBindingHandler({
+        __PLATFORM_PROXY_TOKEN: 'internal',
+        STORAGE: { put },
+      });
       const response = await handler.request('/r2/put-conditional', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-platform-internal': 'internal' },
@@ -221,7 +224,10 @@ describe('ProxyR2Bucket', () => {
       'preserves %s conditions and a rejected write through the binding handler',
       async (kind) => {
         const put = vi.fn(async () => null);
-        const handler = createBindingHandler({ __PLATFORM_PROXY_TOKEN: 'internal', STORAGE: { put } });
+        const handler = createBindingHandler({
+          __PLATFORM_PROXY_TOKEN: 'internal',
+          STORAGE: { put },
+        });
         const requests: Array<string> = [];
         globalThis.fetch = vi.fn(async (input, init) => {
           const path = new URL(String(input)).pathname;

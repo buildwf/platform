@@ -8,7 +8,7 @@ import { emailProjectControls } from './admission-schema.ts';
 import { emailCacheOutbox } from './connection-schema.ts';
 import { isValidEmailDomain, MAX_DOMAIN_LENGTH, normalizeEmailDomain } from './domain-name.ts';
 
-export type EmailRecipientPolicyMode = 'verified' | 'domains' | 'any';
+type EmailRecipientPolicyMode = 'verified' | 'domains' | 'any';
 export type EmailRecipientPolicy = Readonly<{
   mode: EmailRecipientPolicyMode;
   domains: ReadonlyArray<string>;
@@ -18,7 +18,7 @@ export type EmailDomainManagement = 'self-serve' | 'admin';
 export const EMAIL_RECIPIENT_POLICY_SETTING = 'email.recipientPolicy';
 export const EMAIL_DOMAIN_MANAGEMENT_SETTING = 'email.domains';
 export const EMAIL_RECIPIENT_POLICY_MIRROR_KEY = 'email-recipient-policy';
-export const DEFAULT_EMAIL_RECIPIENT_POLICY: EmailRecipientPolicy = {
+const DEFAULT_EMAIL_RECIPIENT_POLICY: EmailRecipientPolicy = {
   mode: 'verified',
   domains: [],
 };

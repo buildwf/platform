@@ -1225,7 +1225,7 @@ describe('POST /email/send — sender domain is configuration, never a baked-in 
   it('trims and lowercases the configured domain before pinning the regex', async () => {
     const sender = createSender();
     const env = createMockEnv(happyPathKv(), {
-      EMAIL_SENDER_DOMAIN: `  MAIL.VOID.CLOUD  `,
+      EMAIL_SENDER_DOMAIN: `  MAIL.BUILDWF.DEV  `,
       SEND_EMAIL: sender.binding,
     });
     const res = await postSend(env, await sendBody({ from: `acme@${PROD_DOMAIN}` }));

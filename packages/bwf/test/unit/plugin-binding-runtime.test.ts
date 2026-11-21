@@ -13,9 +13,14 @@ describe('bindingRuntimePlugin', () => {
     ) => string | undefined;
     const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
 
-    const kvId = resolveId.call({ environment: { name: 'ssr' } }, '@builtbyfriends/bwf/kv', undefined, {
-      isEntry: false,
-    });
+    const kvId = resolveId.call(
+      { environment: { name: 'ssr' } },
+      '@builtbyfriends/bwf/kv',
+      undefined,
+      {
+        isEntry: false,
+      },
+    );
     expect(kvId).toBe('\0virtual:platform-kv');
     expect(
       resolveId.call({ environment: { name: 'client' } }, '@builtbyfriends/bwf/kv', undefined, {

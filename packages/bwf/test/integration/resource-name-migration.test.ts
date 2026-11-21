@@ -159,8 +159,6 @@ export default defineRoom({
           join(directory, 'crons'),
           join(directory, 'queues'),
           {
-            honoPath: import.meta.resolve('hono'),
-            honoRoutePath: import.meta.resolve('hono/route'),
             runtimeEnvPath: runtimePath('env.ts'),
             webSocketRuntimePath: runtimePath('ws-server.ts'),
             projectRoot: directory,
@@ -291,12 +289,12 @@ export default defineRoom({
       mkdirSync(join(directory, 'routes', 'api'), { recursive: true });
       mkdirSync(join(directory, 'routes', 'rooms'), { recursive: true });
       const nodeModules = join(directory, 'node_modules');
-      mkdirSync(nodeModules);
+      mkdirSync(join(nodeModules, '@builtbyfriends'), { recursive: true });
       // Link each package to its real directory so pnpm's relative workspace
       // links do not depend on the temporary app's ancestors on Windows.
       for (const [name, source] of [
         ['vite-plus', join(repository, 'node_modules/vite-plus')],
-        ['platform', join(repository, 'packages/bwf')],
+        ['@builtbyfriends/bwf', join(repository, 'packages/bwf')],
       ]) {
         symlinkSync(
           realpathSync(source),

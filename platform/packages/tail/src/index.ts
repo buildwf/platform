@@ -25,7 +25,9 @@ export function parseScriptName(
 ): { projectKey: string; deployId: string } | null {
   if (scriptName.startsWith('void-do-') || scriptName.startsWith('platform-do-')) {
     const project = scriptTags?.find((tag) => /^platform-project:user-[a-z0-9-]+$/.test(tag));
-    const deployment = scriptTags?.find((tag) => /^platform-deployment:dpl_[a-zA-Z0-9_]+$/.test(tag));
+    const deployment = scriptTags?.find((tag) =>
+      /^platform-deployment:dpl_[a-zA-Z0-9_]+$/.test(tag),
+    );
     return project && deployment
       ? {
           projectKey: project.slice('platform-project:'.length),

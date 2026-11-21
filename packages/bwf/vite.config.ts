@@ -26,6 +26,7 @@ function injectWorkersTypesReferencePlugin() {
         // Patch declaration entrypoints whose source uses Cloudflare globals.
         const targets = new Set([
           'runtime/handler.d.mts',
+          'runtime/db.d.mts',
           'runtime/env-public.d.mts',
           'runtime/sandbox.d.mts',
           'runtime/sandbox-container.d.mts',
@@ -87,6 +88,7 @@ export default defineConfig({
       'src/runtime/auth.ts',
       'src/runtime/auth-client.ts',
       'src/runtime/ws.ts',
+      'src/runtime/ws-room.ts',
       'src/runtime/auth-client-react.ts',
       'src/runtime/better-auth.ts',
       'src/runtime/better-auth-pg.ts',
@@ -95,6 +97,7 @@ export default defineConfig({
       'src/runtime/env-public.ts',
       'src/runtime/env-public-client.ts',
       'src/runtime/db.ts',
+      'src/runtime/db-session.ts',
       'src/runtime/db-pg.ts',
       'src/runtime/db-mysql.ts',
       'src/runtime/durable.ts',
@@ -179,6 +182,8 @@ export default defineConfig({
         // Dependency-free; bundled so the CLI interactivity gate (`isWranglerNonInteractiveOrCI`)
         // adds no runtime dependency.
         'ci-info',
+        // Only vite-plus/package.json, for the versions `bwf init` scaffolds.
+        'vite-plus',
       ],
     },
   },

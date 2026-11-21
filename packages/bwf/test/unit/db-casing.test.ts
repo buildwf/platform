@@ -260,7 +260,9 @@ describe('@builtbyfriends/bwf/db with database.casing', () => {
     roots.push(root);
     const plugin = bwfDbBundlerPlugin(root, { config: { database: { casing: 'snake_case' } } });
     const resolveId = plugin.resolveId as (id: string, importer?: string) => Promise<unknown>;
-    return expect(resolveId.call({}, '@builtbyfriends/bwf/db')).resolves.toBe('\0virtual:platform-db');
+    return expect(resolveId.call({}, '@builtbyfriends/bwf/db')).resolves.toBe(
+      '\0virtual:platform-db',
+    );
   });
 
   it('keeps db.d.ts in bwf prepare for casing without a schema', async () => {

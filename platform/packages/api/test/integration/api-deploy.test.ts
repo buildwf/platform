@@ -790,7 +790,7 @@ describe('POST /projects/:id/deploy', () => {
     const events = await readAllEvents(res);
     const done = requireEvent<DoneEvent>(events, 'done');
     expect(done.deployment).toMatch(/^dpl_/);
-    expect(done.url).toBe('https://minimal-app.void.app');
+    expect(done.url).toBe('https://minimal-app.buildwf.dev');
 
     // Verify deployment is marked live in DB
     const [dpl] = await env.db
@@ -1551,6 +1551,11 @@ describe('POST /projects/:id/deploy', () => {
     expect(await response.json()).toMatchObject({ skipMigrations: true });
   });
 
+  it('advertises D1 read replication support', async () => {
+    const response = await app.fetch(new Request('https://api.test/capabilities'), env);
+    expect(await response.json()).toMatchObject({ d1ReadReplication: true });
+  });
+
   it('runs migrations via worker after upload (v3 flow)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'migrate-app');
@@ -1640,7 +1645,7 @@ describe('POST /projects/:id/deploy', () => {
     const done = requireEvent<DoneEvent>(events, 'done');
     expect(done.url).toBe('https://deploy.example.com');
     expect(done.urls).toContain('https://deploy.example.com');
-    expect(done.urls).toContain('https://domain-deploy.void.app');
+    expect(done.urls).toContain('https://domain-deploy.buildwf.dev');
 
     // Verify domain KV routing was written
     const domainRouting = await env.ROUTING.get('domain:deploy.example.com', 'json');
@@ -1994,43 +1999,53 @@ describe('POST /projects/:id/deploy', () => {
     );
   });
 
-  it('provisions queue and adds consumer on deploy with queues manifest', async () => {
-    const user = await createTestUser(env.db);
-    const project = await createTestProject(env.db, user.id, 'queue-app');
-    const fetchMock = mockCfApi();
+  it.each([undefined, 2])(
+    'provisions queue and adds consumer (maxConcurrency: %s)',
+    async (maxConcurrency) => {
+      const user = await createTestUser(env.db);
+      const project = await createTestProject(env.db, user.id, 'queue-app');
+      const fetchMock = mockCfApi();
 
-    const res = await app.fetch(
-      await buildDeployRequest(env, project.id, user.jwt, {
-        manifest: {
-          version: 3,
-          bindings: {},
-          queues: [{ name: 'emails', bindingName: 'QUEUE_EMAILS' }],
-        },
-      }),
-      env,
-    );
-    expect(res.status).toBe(200);
-    await res.text();
+      const res = await app.fetch(
+        await buildDeployRequest(env, project.id, user.jwt, {
+          manifest: {
+            version: 3,
+            bindings: {},
+            queues: [{ name: 'emails', bindingName: 'QUEUE_EMAILS', maxConcurrency }],
+          },
+        }),
+        env,
+      );
+      expect(res.status).toBe(200);
+      await res.text();
 
-    // Verify queue resource was created in DB with queue_id (UUID), not queue_name
-    const [resource] = await env.db
-      .select({ cf_id: resources.cf_id, binding_name: resources.binding_name })
-      .from(resources)
-      .where(eq(resources.project_id, project.id));
-    expect(resource).toBeDefined();
-    expect(resource!.cf_id).toBe('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
-    expect(resource!.binding_name).toBe('emails');
+      // Verify queue resource was created in DB with queue_id (UUID), not queue_name
+      const [resource] = await env.db
+        .select({ cf_id: resources.cf_id, binding_name: resources.binding_name })
+        .from(resources)
+        .where(eq(resources.project_id, project.id));
+      expect(resource).toBeDefined();
+      expect(resource!.cf_id).toBe('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+      expect(resource!.binding_name).toBe('emails');
 
-    // Verify addQueueConsumer was called with queue_id (UUID), not queue_name
-    const consumerCall = fetchMock.mock.calls.find((call: Array<unknown>) => {
-      const url = typeof call[0] === 'string' ? call[0] : String(call[0]);
-      return url.includes('/queues/') && url.includes('/consumers');
-    });
-    expect(consumerCall).toBeDefined();
-    const consumerUrl =
-      typeof consumerCall![0] === 'string' ? consumerCall![0] : String(consumerCall![0]);
-    expect(consumerUrl).toContain('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
-  });
+      // Verify addQueueConsumer was called with queue_id (UUID), not queue_name
+      const consumerCall = fetchMock.mock.calls.find((call: Array<unknown>) => {
+        const url = typeof call[0] === 'string' ? call[0] : String(call[0]);
+        return (
+          url.includes('/queues/') &&
+          url.includes('/consumers') &&
+          (call[1] as RequestInit | undefined)?.method === 'POST'
+        );
+      });
+      expect(consumerCall).toBeDefined();
+      const consumerUrl =
+        typeof consumerCall![0] === 'string' ? consumerCall![0] : String(consumerCall![0]);
+      expect(consumerUrl).toContain('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+      expect(JSON.parse(String(consumerCall![1]?.body)).settings).toEqual(
+        maxConcurrency === undefined ? {} : { max_concurrency: maxConcurrency },
+      );
+    },
+  );
 
   it('includes queue producer binding in worker upload metadata', async () => {
     const user = await createTestUser(env.db);
@@ -4664,7 +4679,7 @@ describe('POST /projects/:id/deploy (static)', () => {
     const events = await readAllEvents(res);
     const done = requireEvent<DoneEvent>(events, 'done');
     expect(done.deployment).toMatch(/^dpl_/);
-    expect(done.url).toBe('https://spa-site.void.app');
+    expect(done.url).toBe('https://spa-site.buildwf.dev');
     expect(done.assets).toBe(2);
     expect(done.workers).toBe(0);
   });

@@ -1,6 +1,1 @@
-export {
-  applyRoutingRules,
-  mergeQueryIntoLocation,
-  type RedirectRule,
-  type RoutingRuleResult,
-} from '@builtbyfriends/edge';
+export { applyRoutingRules, mergeQueryIntoLocation, type RedirectRule } from '@builtbyfriends/edge';

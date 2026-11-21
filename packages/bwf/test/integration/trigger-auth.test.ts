@@ -46,8 +46,6 @@ async function buildWorker(name: string, dev: boolean): Promise<Worker> {
   writeFileSync(
     routeTablePath,
     compileRouteTable(scan, dir, dir, cronsDir, queuesDir, {
-      honoPath: import.meta.resolve('hono'),
-      honoRoutePath: import.meta.resolve('hono/route'),
       runtimeEnvPath,
       projectRoot: dir,
       homeDir: dir,
@@ -155,10 +153,12 @@ describe('generated trigger auth', () => {
         (await prod.fetch(trigger(kind, { 'x-platform-internal': PROXY_TOKEN }), withToken)).status,
       ).toBe(200);
       expect(
-        (await prod.fetch(trigger(kind, { 'x-platform-dev-trigger': DEV_TOKEN }), withToken)).status,
+        (await prod.fetch(trigger(kind, { 'x-platform-dev-trigger': DEV_TOKEN }), withToken))
+          .status,
       ).toBe(401);
       expect(
-        (await prod.fetch(trigger(kind, { 'x-platform-internal': prod.buildKey }), withToken)).status,
+        (await prod.fetch(trigger(kind, { 'x-platform-internal': prod.buildKey }), withToken))
+          .status,
       ).toBe(401);
 
       expect(
@@ -186,9 +186,9 @@ describe('generated trigger auth', () => {
       expect(
         (await dev.fetch(trigger(kind, { 'x-platform-internal': dev.buildKey }), {})).status,
       ).toBe(401);
-      expect((await dev.fetch(trigger(kind, { 'x-platform-dev-trigger': 'wrong' }), {})).status).toBe(
-        401,
-      );
+      expect(
+        (await dev.fetch(trigger(kind, { 'x-platform-dev-trigger': 'wrong' }), {})).status,
+      ).toBe(401);
     },
   );
 });

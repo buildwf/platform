@@ -51,17 +51,17 @@ describe('public package release policy', () => {
   });
 
   it('keeps numeric prereleases distinct from stable release retries', () => {
-    expect(() => releasePolicy('v0.21.0-1', [{ name: '@builtbyfriends/bwf', version: '0.21.0' }])).toThrow(
-      'Retry tags use +retry.N',
-    );
+    expect(() =>
+      releasePolicy('v0.21.0-1', [{ name: '@builtbyfriends/bwf', version: '0.21.0' }]),
+    ).toThrow('Retry tags use +retry.N');
   });
 
   it.each(['0.21.1', '0.21.0+retry.1'])(
     'requires retry tags to match the plain package version (%s)',
     (version) => {
-      expect(() => releasePolicy('v0.21.0+retry.1', [{ name: '@builtbyfriends/bwf', version }])).toThrow(
-        'does not match release',
-      );
+      expect(() =>
+        releasePolicy('v0.21.0+retry.1', [{ name: '@builtbyfriends/bwf', version }]),
+      ).toThrow('does not match release');
     },
   );
 
@@ -75,9 +75,9 @@ describe('public package release policy', () => {
   });
 
   it.each(['v0.1.0', 'v3.0.1'])('rejects the unavailable version %s', (tag) => {
-    expect(() => releasePolicy(tag, [{ name: '@builtbyfriends/bwf', version: tag.slice(1) }])).toThrow(
-      'cannot be reused',
-    );
+    expect(() =>
+      releasePolicy(tag, [{ name: '@builtbyfriends/bwf', version: tag.slice(1) }]),
+    ).toThrow('cannot be reused');
   });
 
   it.each(['v0.1.0+retry.1', 'v3.0.1+retry.2'])(

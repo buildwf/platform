@@ -4,6 +4,7 @@ import {
 } from '@builtbyfriends/platform';
 import { eq, sql } from 'drizzle-orm';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import { chromium } from 'playwright';
 import {
   afterAll,
@@ -24,7 +25,6 @@ import { readPlatformAdministratorSetupConnection } from '../../../../../package
 import { AUTH_SETUP_PROOF_PREFIX, initializeAuthentication } from '../../src/auth/bootstrap.ts';
 import { hmacSignState } from '../../src/auth/hmac.ts';
 import { signJwt } from '../../src/auth/jwt.ts';
-import { createCodeChallenge } from '../../src/auth/pkce.ts';
 import { hashLoginProof, randomLoginProof } from '../../src/auth/proofs.ts';
 import { app } from '../../src/index.ts';
 import {
@@ -97,7 +97,7 @@ beforeEach(async () => {
       if (url === `${issuer}/token`) {
         const body = options?.body as URLSearchParams;
         expect(body.get('client_secret')).toBe('oidc-bootstrap-secret');
-        expect(await createCodeChallenge(body.get('code_verifier')!)).toBe(
+        expect(await calculatePKCECodeChallenge(body.get('code_verifier')!)).toBe(
           authorization.searchParams.get('code_challenge'),
         );
         const idToken = await new SignJWT({
@@ -485,7 +485,8 @@ describe('provider-independent first administrator setup', () => {
     expect(
       (
         await app.fetch(
-          new Request(`${origin}/projects`, {
+          new Request(`${origin}/rpc/projects.list`, {
+            method: 'POST',
             headers: { Authorization: `Bearer ${scopedDeployToken}` },
           }),
           bindings(),
@@ -815,7 +816,7 @@ describe('provider-independent first administrator setup', () => {
       PLATFORM_DISPLAY_NAME: '<Example Platform>',
     });
     expect(await adminHtml(setupPage)).toContain(
-      '<title>Set up administrator · &lt;Example Platform&gt; · Platform</title>',
+      '<title>Set up administrator · &lt;Example Platform&gt;</title>',
     );
     expect((await form('/auth/bootstrap', { code: randomLoginProof() })).status).toBe(403);
     expect(

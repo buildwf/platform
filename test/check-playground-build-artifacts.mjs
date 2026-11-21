@@ -2,29 +2,30 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 
 // Run after build:all, so integration shards do not rebuild these playgrounds.
-const artifacts = {
-  analog: ['dist/analog/server/index.mjs', 'dist/analog/public'],
-  astro: ['dist/server/entry.mjs'],
-  nuxt: ['.output/server/index.mjs', '.output/public'],
-  'react-router': ['build/server/index.js', 'build/client'],
-  sveltekit: ['.svelte-kit/cloudflare/_worker.js'],
-  'tanstack-start': ['dist/server/index.js', 'dist/client'],
-  'vinext-app': ['dist/server/index.js', 'dist/client'],
-  'vinext-pages': ['dist/ssr/index.js', 'dist/client'],
-};
+// Each React SPA playground builds a Worker in dist/ssr and its client in dist/client.
+const playgrounds = ['spa', 'websockets', 'kitchen-sink'];
 
 function artifactUrl(playground, path) {
   return new URL(`../playground/${playground}/${path}`, import.meta.url);
 }
 
-for (const [playground, paths] of Object.entries(artifacts)) {
-  for (const path of paths) {
-    assert.ok(existsSync(artifactUrl(playground, path)), `${playground}/${path} was not built`);
-  }
+function readConfig(playground) {
+  return JSON.parse(readFileSync(artifactUrl(playground, 'dist/ssr/wrangler.json'), 'utf8'));
 }
 
-function checkBindings(playground, configPath, { cron } = {}) {
-  const config = JSON.parse(readFileSync(artifactUrl(playground, configPath), 'utf8'));
+for (const playground of playgrounds) {
+  for (const path of ['dist/ssr/index.js', 'dist/ssr/wrangler.json', 'dist/client/index.html']) {
+    assert.ok(existsSync(artifactUrl(playground, path)), `${playground}/${path} was not built`);
+  }
+  assert.equal(
+    readConfig(playground).assets?.directory,
+    '../client',
+    `${playground} has the wrong asset directory`,
+  );
+}
+
+function checkBindings(playground, { cron, durableObjects = [] } = {}) {
+  const config = readConfig(playground);
   assert.ok(
     config.d1_databases?.some((binding) => binding.binding === 'DB'),
     `${playground} is missing the inferred DB binding`,
@@ -33,19 +34,22 @@ function checkBindings(playground, configPath, { cron } = {}) {
     config.kv_namespaces?.some((binding) => binding.binding === 'KV'),
     `${playground} is missing the inferred KV binding`,
   );
-  assert.equal(
-    config.assets?.directory,
-    '../client',
-    `${playground} has the wrong asset directory`,
-  );
   if (cron) {
     assert.deepEqual(config.triggers?.crons, [cron], `${playground} has the wrong cron schedule`);
   }
+  checkDurableObjects(playground, durableObjects);
 }
 
-checkBindings('react-router', 'build/server/wrangler.json');
-checkBindings('tanstack-start', 'dist/server/wrangler.json', { cron: '0 * * * *' });
-checkBindings('vinext-app', 'dist/server/wrangler.json');
-checkBindings('vinext-pages', 'dist/ssr/wrangler.json');
+function checkDurableObjects(playground, names) {
+  const bound =
+    readConfig(playground).durable_objects?.bindings?.map((binding) => binding.name) ?? [];
+  for (const name of names) {
+    assert.ok(bound.includes(name), `${playground} is missing the inferred ${name} Durable Object`);
+  }
+}
 
-console.log('Verified metaframework build artifacts and inferred bindings.');
+checkBindings('spa', { cron: '0 * * * *' });
+checkBindings('kitchen-sink', { cron: '* * * * *', durableObjects: ['SANDBOX'] });
+checkDurableObjects('websockets', ['WsChatRoomWs', 'WsNotificationsWs']);
+
+console.log('Verified SPA playground build artifacts and inferred bindings.');

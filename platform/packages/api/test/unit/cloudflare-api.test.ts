@@ -4,7 +4,7 @@ import {
   cfFetch,
   createD1Database,
   createR2Bucket,
-  enableD1ReadReplication,
+  setD1ReadReplication,
   createHyperdrive,
   ensureHyperdriveCachingDisabled,
   getDispatchWorkerProxyToken,
@@ -133,35 +133,48 @@ describe('Cloudflare API deadlines', () => {
 describe('createD1Database', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('enables automatic read replication when creating a database', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(cfSuccess({ uuid: 'db-uuid', name: 'app-db' }));
-    vi.stubGlobal('fetch', fetchMock);
+  it.each([undefined, false, true])(
+    'creates a database with readReplication %s',
+    async (readReplication) => {
+      const fetchMock = vi.fn().mockResolvedValue(cfSuccess({ uuid: 'db-uuid', name: 'app-db' }));
+      vi.stubGlobal('fetch', fetchMock);
 
-    await createD1Database(ACCOUNT, TOKEN, 'app-db');
+      await createD1Database(ACCOUNT, TOKEN, 'app-db', { readReplication });
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/d1/database`,
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ name: 'app-db', read_replication: { mode: 'auto' } }),
-      }),
-    );
-  });
+      expect(fetchMock).toHaveBeenCalledWith(
+        `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/d1/database`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            name: 'app-db',
+            ...(readReplication !== undefined && {
+              read_replication: { mode: readReplication ? 'auto' : 'disabled' },
+            }),
+          }),
+        }),
+      );
+    },
+  );
 
-  it('enables read replication on an existing database', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(cfSuccess({}));
-    vi.stubGlobal('fetch', fetchMock);
+  it.each([true, false])(
+    'sets read replication to %s on an existing database',
+    async (readReplication) => {
+      const fetchMock = vi.fn().mockResolvedValue(cfSuccess({}));
+      vi.stubGlobal('fetch', fetchMock);
 
-    await enableD1ReadReplication(ACCOUNT, TOKEN, 'db-uuid');
+      await setD1ReadReplication(ACCOUNT, TOKEN, 'db-uuid', readReplication);
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/d1/database/db-uuid`,
-      expect.objectContaining({
-        method: 'PUT',
-        body: JSON.stringify({ read_replication: { mode: 'auto' } }),
-      }),
-    );
-  });
+      expect(fetchMock).toHaveBeenCalledWith(
+        `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/d1/database/db-uuid`,
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({
+            read_replication: { mode: readReplication ? 'auto' : 'disabled' },
+          }),
+        }),
+      );
+    },
+  );
 });
 
 describe('addQueueConsumer', () => {
@@ -492,7 +505,12 @@ describe('getDispatchWorkerProxyToken', () => {
       ]),
     );
 
-    const result = await getDispatchWorkerProxyToken(ACCOUNT, TOKEN, 'platform-users', 'user-a-dpl_1');
+    const result = await getDispatchWorkerProxyToken(
+      ACCOUNT,
+      TOKEN,
+      'platform-users',
+      'user-a-dpl_1',
+    );
 
     expect(result).toEqual({ kind: 'found', token: 'baked-token-value' });
     const call = fetchMock.mock.calls[0];
@@ -506,7 +524,12 @@ describe('getDispatchWorkerProxyToken', () => {
       cfSuccess([{ type: 'plain_text', name: '__PROJECT_ID', text: 'proj_a' }]),
     );
 
-    const result = await getDispatchWorkerProxyToken(ACCOUNT, TOKEN, 'platform-users', 'user-a-dpl_1');
+    const result = await getDispatchWorkerProxyToken(
+      ACCOUNT,
+      TOKEN,
+      'platform-users',
+      'user-a-dpl_1',
+    );
 
     expect(result).toEqual({ kind: 'missing' });
   });
@@ -514,7 +537,12 @@ describe('getDispatchWorkerProxyToken', () => {
   it('returns {kind:"error"} with the underlying Error on CF API failure (rate limit / auth / network)', async () => {
     fetchMock.mockResolvedValueOnce(cfError('rate limited'));
 
-    const result = await getDispatchWorkerProxyToken(ACCOUNT, TOKEN, 'platform-users', 'user-missing');
+    const result = await getDispatchWorkerProxyToken(
+      ACCOUNT,
+      TOKEN,
+      'platform-users',
+      'user-missing',
+    );
 
     expect(result.kind).toBe('error');
     if (result.kind === 'error') {

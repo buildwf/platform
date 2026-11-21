@@ -14,7 +14,7 @@ const DEFAULT_DEPENDENCY_FIELDS: ReadonlyArray<PackageDependencyField> = [
   'devDependencies',
 ];
 
-export function isPackageJson(value: unknown): value is PackageJson {
+function isPackageJson(value: unknown): value is PackageJson {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 

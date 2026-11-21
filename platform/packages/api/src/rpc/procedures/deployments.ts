@@ -58,9 +58,13 @@ export const events = procedure('deployments.events')
   .authz({
     policy: 'project-read-own-receipt',
     check: async (caller, input) => {
-      if (!(await canRead(caller, input))) return false;
+      if (!(await canRead(caller, input))) {
+        return false;
+      }
       const { approval } = caller.credential;
-      if (!approval) return true;
+      if (!approval) {
+        return true;
+      }
       const operation = await getDeploymentOperation(caller.db, input.deploymentId);
       return operation?.project_id === input.projectId && operation.idempotency_key === approval;
     },
@@ -82,6 +86,8 @@ export const events = procedure('deployments.events')
   })
   .handler(async ({ ctx, input, fail }) => {
     const operation = await getDeploymentOperation(ctx.db, input.deploymentId);
-    if (!operation || operation.project_id !== input.projectId) return fail('NOT_FOUND');
+    if (!operation || operation.project_id !== input.projectId) {
+      return fail('NOT_FOUND');
+    }
     return deploymentEventPage(operation, input.since ?? 0);
   });

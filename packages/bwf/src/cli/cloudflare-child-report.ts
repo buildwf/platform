@@ -96,7 +96,7 @@ export function scrubCloudflareResult<T extends CloudflareCommandResult>(
 }
 
 /** Scrub a runner rejection in place, so fields callers check on the Error survive. */
-export function scrubCloudflareError(error: unknown, redactor: CredentialRedactor): Error {
+function scrubCloudflareError(error: unknown, redactor: CredentialRedactor): Error {
   if (!(error instanceof Error)) {
     return new Error(redactor.redact(String(error)));
   }

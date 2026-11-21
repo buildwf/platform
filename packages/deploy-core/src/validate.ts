@@ -154,6 +154,19 @@ export function validateManifestShape(manifest: unknown): string | null {
     return 'invalid manifest shape: bindings must be an object';
   }
   const bindings = manifest.bindings;
+  if (manifest.database !== undefined) {
+    if (
+      !isRecord(manifest.database) ||
+      Object.keys(manifest.database).some((key) => key !== 'readReplication') ||
+      (manifest.database.readReplication !== undefined &&
+        typeof manifest.database.readReplication !== 'boolean')
+    ) {
+      return 'invalid manifest shape: database.readReplication must be a boolean';
+    }
+    if (!Array.isArray(bindings.d1) || bindings.d1.length === 0) {
+      return 'invalid manifest shape: database requires a D1 binding';
+    }
+  }
   for (const key of ['d1', 'kv', 'r2', 'hyperdrive'] as const) {
     const bindingValue = bindings[key];
     if (bindingValue === undefined) {
@@ -174,6 +187,15 @@ export function validateManifestShape(manifest: unknown): string | null {
       }
       if (typeof queue.name !== 'string' || typeof queue.bindingName !== 'string') {
         return 'invalid manifest shape: queues entries must have string name and bindingName';
+      }
+      if (
+        queue.maxConcurrency !== undefined &&
+        (typeof queue.maxConcurrency !== 'number' ||
+          !Number.isInteger(queue.maxConcurrency) ||
+          queue.maxConcurrency < 1 ||
+          queue.maxConcurrency > 250)
+      ) {
+        return 'invalid manifest shape: queues entry maxConcurrency must be an integer between 1 and 250';
       }
       for (const tuning of [
         'maxBatchSize',

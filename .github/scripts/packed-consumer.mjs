@@ -24,9 +24,12 @@ const full = suite === 'full';
 const toolchain = process.env.BWF_PACKED_TOOLCHAIN ?? 'vite';
 assert(['vite', 'vite-plus'].includes(toolchain), 'BWF_PACKED_TOOLCHAIN must be vite or vite-plus');
 const useVitePlus = toolchain === 'vite-plus';
-const vitePlusVersion = JSON.parse(
+const vitePlusManifest = JSON.parse(
   readFileSync(join(root, 'node_modules/vite-plus/package.json'), 'utf8'),
-).version;
+);
+const vitePlusVersion = vitePlusManifest.version;
+// vite-plus pins its own core and refuses any other, so init must write that alias.
+const vitePlusCore = vitePlusManifest.dependencies.vite;
 const work = mkdtempSync(join(tmpdir(), 'platform-packed-consumer-'));
 const archiveDir = join(work, 'archives');
 mkdirSync(archiveDir);
@@ -140,14 +143,17 @@ writeFileSync(
 environment.npm_config_registry = registry.origin;
 environment.NPM_CONFIG_REGISTRY = registry.origin;
 environment.PNPM_CONFIG_REGISTRY = registry.origin;
-const version = packages.find((pkg) => pkg.manifest.name === '@builtbyfriends/bwf').manifest.version;
+const version = packages.find((pkg) => pkg.manifest.name === '@builtbyfriends/bwf').manifest
+  .version;
 const managers = process.env.BWF_PACKED_PM ? [process.env.BWF_PACKED_PM] : ['npm', 'pnpm'];
 assert(managers.every((manager) => ['npm', 'pnpm'].includes(manager)));
 const frameworks = ['react'];
 const app = (label) => `import { useEffect, useState } from 'react';
 export default function App() {
   const [count, setCount] = useState(0);
-  useEffect(() => document.getElementById('root')?.setAttribute('data-hydrated', 'true'), []);
+  useEffect(() => {
+    document.getElementById('root')?.setAttribute('data-hydrated', 'true');
+  }, []);
   return <><h1>Packed ${label}</h1><button onClick={() => setCount(count + 1)}>Count {count}</button></>;
 }
 `;
@@ -180,7 +186,9 @@ try {
         const agentInstructions = readFileSync(join(fixture, 'AGENTS.md'), 'utf8');
         assert.equal(agentInstructions.match(/^- /gm)?.length, 2);
         assert(agentInstructions.includes('node_modules/@builtbyfriends/bwf/docs/'));
-        assert(existsSync(join(fixture, 'node_modules/@builtbyfriends/bwf/docs/guide/quickstart.md')));
+        assert(
+          existsSync(join(fixture, 'node_modules/@builtbyfriends/bwf/docs/guide/quickstart.md')),
+        );
         assert(
           existsSync(join(fixture, '.git')),
           'Init should initialize the accepted Git repository',
@@ -231,8 +239,8 @@ try {
           );
           assert.equal(
             manifest.devDependencies.vite,
-            `npm:@voidzero-dev/vite-plus-core@^${vitePlusVersion}`,
-            'Vite+ init must use the matching core alias',
+            vitePlusCore,
+            'Vite+ init must use the core the tested Vite+ release pins',
           );
           const installedVitePlus = JSON.parse(
             readFileSync(join(fixture, 'node_modules/vite-plus/package.json'), 'utf8'),
@@ -255,8 +263,9 @@ try {
           assert(installedVite.version.startsWith('8.'), 'The consumer must use public Vite 8');
         }
         assert.equal(
-          JSON.parse(readFileSync(join(fixture, 'node_modules/@builtbyfriends/bwf/package.json'), 'utf8'))
-            .version,
+          JSON.parse(
+            readFileSync(join(fixture, 'node_modules/@builtbyfriends/bwf/package.json'), 'utf8'),
+          ).version,
           version,
         );
         await run(process.execPath, [cli, 'prepare'], fixture);

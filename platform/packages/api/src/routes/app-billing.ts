@@ -6,6 +6,7 @@ import {
   PAID_PLANS,
   createCheckoutSession,
   createPortalSession,
+  subscriptionRenewsAt,
   type PaidPlan,
 } from '../billing/stripe.ts';
 import type { ApiEnv } from '../env.ts';
@@ -62,6 +63,7 @@ async function standing(context: BillingContext, person: string) {
     aiWithinCap,
     sandboxWithinCap,
     subscribed: Boolean(row?.stripe_subscription_id),
+    subscriptionId: row?.stripe_subscription_id ?? null,
   };
 }
 
@@ -87,8 +89,16 @@ export const appBillingRoutes = new Hono<ApiEnv>()
   })
   .post('/usage.status', async (context) => {
     const body = await context.req.json().catch(() => null);
-    if (!isPersonId(body?.person)) return context.json({ error: 'bad_person' }, 400);
-    return context.json({ data: await standing(context, body.person) });
+    if (!isPersonId(body?.person)) {
+      return context.json({ error: 'bad_person' }, 400);
+    }
+    const { subscriptionId, ...now } = await standing(context, body.person);
+    // A paid plan renews on its own Stripe date, not on the first of the month when the meters
+    // reset. If Stripe can't be reached, the answer leaves renewsAt out instead of failing.
+    const renewsAt = subscriptionId
+      ? await subscriptionRenewsAt(context.env, subscriptionId).catch(() => null)
+      : null;
+    return context.json({ data: { ...now, ...(renewsAt ? { renewsAt } : {}) } });
   })
   .post('/usage.record', async (context) => {
     const body = await context.req.json().catch(() => null);
@@ -100,12 +110,16 @@ export const appBillingRoutes = new Hono<ApiEnv>()
           : -1;
     const neurons = count(body?.aiNeurons);
     const seconds = count(body?.sandboxSeconds);
-    if (!isPersonId(body?.person)) return context.json({ error: 'bad_person' }, 400);
+    if (!isPersonId(body?.person)) {
+      return context.json({ error: 'bad_person' }, 400);
+    }
     const id = body?.id;
     if (id !== undefined && (typeof id !== 'string' || !id || id.length > 200)) {
       return context.json({ error: 'bad_id' }, 400);
     }
-    if (neurons < 0 || seconds < 0) return context.json({ error: 'bad_usage' }, 400);
+    if (neurons < 0 || seconds < 0) {
+      return context.json({ error: 'bad_usage' }, 400);
+    }
     const db = context.get('db');
     const clientId = context.get('billingClient');
     await db.transaction(async (tx) => {
@@ -116,7 +130,9 @@ export const appBillingRoutes = new Hono<ApiEnv>()
           .values({ client_id: clientId, event_id: id })
           .onConflictDoNothing()
           .returning({ id: appUsageEvents.event_id });
-        if (fresh.length === 0) return;
+        if (fresh.length === 0) {
+          return;
+        }
       }
       await tx
         .insert(appUsage)
@@ -146,9 +162,15 @@ export const appBillingRoutes = new Hono<ApiEnv>()
   })
   .post('/billing.checkout', async (context) => {
     const body = await context.req.json().catch(() => null);
-    if (!isPersonId(body?.person)) return context.json({ error: 'bad_person' }, 400);
-    if (!isPaidPlan(body?.plan)) return context.json({ error: 'bad_plan' }, 400);
-    if (!isReturnUrl(body?.returnUrl)) return context.json({ error: 'bad_return_url' }, 400);
+    if (!isPersonId(body?.person)) {
+      return context.json({ error: 'bad_person' }, 400);
+    }
+    if (!isPaidPlan(body?.plan)) {
+      return context.json({ error: 'bad_plan' }, 400);
+    }
+    if (!isReturnUrl(body?.returnUrl)) {
+      return context.json({ error: 'bad_return_url' }, 400);
+    }
     try {
       const url = await createCheckoutSession(context.env, {
         reference: `${context.get('billingClient')}:${body.person}`,
@@ -159,15 +181,20 @@ export const appBillingRoutes = new Hono<ApiEnv>()
       });
       return context.json({ data: { url } });
     } catch (error) {
-      if (error instanceof BillingUnavailableError)
+      if (error instanceof BillingUnavailableError) {
         return context.json({ error: 'billing_unavailable' }, 503);
+      }
       throw error;
     }
   })
   .post('/billing.portal', async (context) => {
     const body = await context.req.json().catch(() => null);
-    if (!isPersonId(body?.person)) return context.json({ error: 'bad_person' }, 400);
-    if (!isReturnUrl(body?.returnUrl)) return context.json({ error: 'bad_return_url' }, 400);
+    if (!isPersonId(body?.person)) {
+      return context.json({ error: 'bad_person' }, 400);
+    }
+    if (!isReturnUrl(body?.returnUrl)) {
+      return context.json({ error: 'bad_return_url' }, 400);
+    }
     const [row] = await context
       .get('db')
       .select()
@@ -178,7 +205,9 @@ export const appBillingRoutes = new Hono<ApiEnv>()
           eq(appPeople.person_id, body.person),
         ),
       );
-    if (!row?.stripe_customer_id) return context.json({ error: 'no_subscription' }, 404);
+    if (!row?.stripe_customer_id) {
+      return context.json({ error: 'no_subscription' }, 404);
+    }
     try {
       const url = await createPortalSession(context.env, {
         customerId: row.stripe_customer_id,
@@ -186,8 +215,9 @@ export const appBillingRoutes = new Hono<ApiEnv>()
       });
       return context.json({ data: { url } });
     } catch (error) {
-      if (error instanceof BillingUnavailableError)
+      if (error instanceof BillingUnavailableError) {
         return context.json({ error: 'billing_unavailable' }, 503);
+      }
       throw error;
     }
   });

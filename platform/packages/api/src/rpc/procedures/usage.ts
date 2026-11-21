@@ -24,7 +24,9 @@ export const account = procedure('usage.account')
     try {
       return await getAccountUsage(env, ctx.db, ctx.user);
     } catch (error) {
-      if (error instanceof UsageUnavailableError) return fail('USAGE_UNAVAILABLE');
+      if (error instanceof UsageUnavailableError) {
+        return fail('USAGE_UNAVAILABLE');
+      }
       throw error;
     }
   });
@@ -47,7 +49,9 @@ export const project = procedure('projects.usage')
     try {
       return await getProjectUsage(env, input.projectId, owner.billing_cycle_start);
     } catch (error) {
-      if (error instanceof UsageUnavailableError) return fail('USAGE_UNAVAILABLE');
+      if (error instanceof UsageUnavailableError) {
+        return fail('USAGE_UNAVAILABLE');
+      }
       throw error;
     }
   });

@@ -11,6 +11,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import {
   encodeCloudflareVersionMessage,
@@ -54,6 +55,8 @@ import {
   readPlatformWorkerVersionSnapshot,
   readPlatformWorkerOwnershipMarker,
   classifyPlatformWorkerDeploymentLineage,
+  readSettledPlatformWorkerDeployments,
+  PLATFORM_DEPLOYMENT_SETTLE_DELAYS_MS,
   PlatformWorkerOwnershipError,
   samePlatformWorkerTraffic,
 } from './platform-installer-inspection.ts';
@@ -827,12 +830,34 @@ export async function deployPlatformWorker(
       );
       assertCleanPlatformWrangler(activated, `activate ${workerName}`, accountId);
     }
-    const deploymentsAfterActivation = await readPlatformWorkerDeployments(
-      configPath,
-      accountId,
-      workerName,
-      readRunner,
-    );
+    const readDeploymentHistory = () =>
+      readPlatformWorkerDeployments(configPath, accountId, workerName, readRunner);
+    let deploymentsAfterActivation = await readDeploymentHistory();
+    // Cloudflare can list the previous deployment for a minute or more after
+    // activation. Only wait while the deployment we replaced is still at the head.
+    for (const wait of options.deploymentSettleDelaysMs ?? PLATFORM_DEPLOYMENT_SETTLE_DELAYS_MS) {
+      if (deploymentsAfterActivation[0]?.id !== previousDeploymentId) {
+        break;
+      }
+      await delay(wait);
+      try {
+        deploymentsAfterActivation = await readDeploymentHistory();
+      } catch (cause) {
+        activatedVersionId = null;
+        throw new PlatformWorkerRecoveryIncompleteError(
+          `platform: could not confirm activation of ${workerName} because rereading its deployment history failed: ${getErrorMessage(cause)}`,
+          { cause },
+        );
+      }
+    }
+    if (deploymentsAfterActivation[0]?.id === previousDeploymentId) {
+      // Neither the new deployment nor a competitor has been confirmed.
+      // Leave the staged cutover for recovery rather than trying to roll it back.
+      activatedVersionId = null;
+      throw new PlatformWorkerRecoveryIncompleteError(
+        `platform: could not confirm activation of ${workerName} because Cloudflare still reports the previous deployment.`,
+      );
+    }
     const lineage = classifyPlatformWorkerDeploymentLineage(
       deploymentsAfterActivation,
       uploadedVersionId,
@@ -1275,11 +1300,13 @@ export async function restorePlatformWorkerDeployment(input: {
     `restore deployment ${input.restoration.id}`,
     input.accountId,
   );
-  const after = await readPlatformWorkerDeployments(
+  // Cloudflare can list the replaced deployment for a while after the restore.
+  const after = await readSettledPlatformWorkerDeployments(
     input.configPath,
     input.accountId,
     input.workerName,
     input.runner,
+    (deployments) => deployments[0]?.id === input.expectedActiveDeploymentId,
   );
   if (
     !samePlatformWorkerTraffic(after[0], input.restoration) ||
@@ -1305,5 +1332,3 @@ export {
   recordWorkerTrafficState,
   stablePublicEndpointState,
 } from './platform-installer-cutover.ts';
-
-export { inspectNewPlatformWorker } from './platform-installer-inspection.ts';

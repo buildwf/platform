@@ -269,8 +269,6 @@ export function routingPlugin(
   }
   const runtimeEmailPath = resolveFile('#self/email');
   const compileOptions: CompileOptions = {
-    honoPath: resolveFile('hono'),
-    honoRoutePath: resolveFile('hono/route'),
     runtimeEnvPath: resolveFile('#self/_env'),
     emailDir,
     projectRoot: root,
@@ -634,6 +632,19 @@ export function routingPlugin(
       // so it never compiles the route table as dev.
       compileOptions.dev = config.command === 'serve' && !previewing;
       compileOptions.assetsDir = config.build.assetsDir;
+      const clientOptimizer = config.environments?.client?.optimizeDeps;
+      if (compileOptions.dev && options.isAuthEnabled() && clientOptimizer) {
+        for (const specifier of ['better-auth/client', 'better-auth/react']) {
+          const excluded = clientOptimizer.exclude?.some(
+            (dependency) => specifier === dependency || specifier.startsWith(`${dependency}/`),
+          );
+          if (!excluded) {
+            // Virtual auth imports are invisible to the initial dependency scan.
+            clientOptimizer.include ??= [];
+            clientOptimizer.include.push(specifier);
+          }
+        }
+      }
       compileOptions.cloudflareQueueNames =
         config.command === 'build' ? readDeployBuildQueueNames() : undefined;
       // Vite resolves `publicDir: false` to ''.

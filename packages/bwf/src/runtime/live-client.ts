@@ -1,5 +1,10 @@
 /// <reference lib="dom" />
-import type { LiveClientEvent, LiveControlOperation, LiveControlResponse } from './live.ts';
+import type {
+  LiveClientEvent,
+  LiveControlErrorCode,
+  LiveControlOperation,
+  LiveControlResponse,
+} from './live.ts';
 import type { RequestUrl } from './route-url.ts';
 
 export type LiveSubscribeOptions<Data = unknown> = {
@@ -41,7 +46,32 @@ type Subscription = {
   topic: string;
   lastEventId?: string;
   onEvent?: (event: LiveClientEvent) => void;
+  /** The server took it. Only these are sent again when the stream reopens. */
+  confirmed?: boolean;
 };
+
+/**
+ * A subscribe or unsubscribe the server didn't take. `code` is the server's error code when it
+ * sent one, and `status` is the HTTP status of the control request.
+ */
+export class LiveStreamError extends Error {
+  constructor(
+    message: string,
+    readonly code?: LiveControlErrorCode,
+    readonly status?: number,
+  ) {
+    super(message);
+    this.name = 'LiveStreamError';
+  }
+}
+
+// Codes that say the connection is gone or the server failed, not that it refused the subscribe.
+const RETRYABLE_CODES: ReadonlySet<LiveControlErrorCode> = new Set([
+  'CONNECTION_NOT_FOUND',
+  'CONNECTION_CLOSED',
+  'INTERNAL_ERROR',
+]);
+const MAX_RETRY_DELAY_MS = 30_000;
 
 type PendingOperation = {
   operation: LiveControlOperation;
@@ -82,9 +112,106 @@ export function connectLiveStream(
   let pendingFlush: Promise<void> | null = null;
   let flushChain: Promise<void> = Promise.resolve();
   let nextSubscriptionVersion = 0;
+  let sourceOpen = false;
+  let reconnectAttempts = 0;
+  // Subscribes waiting to be tried again. Calling one tries it now.
+  const retryWaiters = new Set<() => void>();
+  // An unsubscribe of an id nothing uses: it only asks whether the server still knows this connection.
+  const probeId = `bwf-probe:${connectionId}`;
   const retryDelay = options.retryDelay ?? 1_000;
   if (!Number.isFinite(retryDelay) || retryDelay < 0) {
     throw new Error('live: retryDelay must be a non-negative finite number.');
+  }
+  const wakeTarget = globalThis as {
+    addEventListener?: (type: string, listener: () => void) => void;
+    removeEventListener?: (type: string, listener: () => void) => void;
+  };
+  wakeTarget.addEventListener?.('online', wake);
+  wakeTarget.addEventListener?.('focus', wake);
+
+  function backoff(attempt: number): number {
+    return Math.min(retryDelay * 2 ** attempt, Math.max(retryDelay, MAX_RETRY_DELAY_MS));
+  }
+
+  function wanted(): boolean {
+    return (
+      options.keepOpen === true ||
+      [...subscriptions.values()].some((subscription) => subscription.confirmed)
+    );
+  }
+
+  /**
+   * The network came back or the page got focus: try waiting subscribes and a waiting reconnect
+   * now, and check that the server still knows an open stream.
+   */
+  function wake(): void {
+    if (closed) {
+      return;
+    }
+    for (const retry of retryWaiters) {
+      retry();
+    }
+    reconnectAttempts = 0;
+    if (reconnectTimer != null) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+      resubscribeOnNextOpen = false;
+      void openSource(true).catch((error) => {
+        if (!closed) {
+          reportError(error);
+        }
+      });
+      return;
+    }
+    if (sourceOpen && wanted()) {
+      void enqueue({ kind: 'unsubscribe', id: probeId }).catch(() => {});
+    }
+  }
+
+  function waitForRetry(attempt: number): Promise<void> {
+    return new Promise((resolve) => {
+      const retry = (): void => {
+        clearTimeout(timer);
+        retryWaiters.delete(retry);
+        resolve();
+      };
+      const timer = setTimeout(retry, backoff(attempt));
+      retryWaiters.add(retry);
+    });
+  }
+
+  /** Whether a failed subscribe is worth sending again: the request didn't reach a working server. */
+  function retryable(error: unknown): boolean {
+    if (closed) {
+      return false;
+    }
+    if (error instanceof LiveStreamError) {
+      if (error.code !== undefined) {
+        return RETRYABLE_CODES.has(error.code);
+      }
+      return error.status === undefined || error.status >= 500 || error.status === 429;
+    }
+    // A fetch that never reached the server, or a gateway page in place of JSON.
+    return error instanceof TypeError || error instanceof SyntaxError;
+  }
+
+  /** The server lost this connection (a deploy restarts it), so open the stream again. */
+  function reopen(stale: EventSourceLike): void {
+    if (closed || source !== stale) {
+      return;
+    }
+    stale.close();
+    source = null;
+    openPromise = null;
+    rejectOpen = null;
+    sourceOpen = false;
+    if (wanted()) {
+      void openSource(true).catch((error) => {
+        if (!closed) {
+          reportError(error);
+        }
+      });
+    }
   }
 
   function streamUrl(): string {
@@ -124,6 +251,8 @@ export function connectLiveStream(
         if (source !== current) {
           return;
         }
+        sourceOpen = true;
+        reconnectAttempts = 0;
         if (!opened) {
           opened = true;
           rejectOpen = null;
@@ -148,11 +277,14 @@ export function connectLiveStream(
           source = null;
           openPromise = null;
           rejectOpen = null;
-          reject(new Error('live: stream failed to open.'));
+          reject(new LiveStreamError('live: stream failed to open.'));
           if (resubscribeOnOpen) {
             scheduleReconnectTimer();
           }
           return;
+        }
+        if (source === current) {
+          sourceOpen = false;
         }
         scheduleReconnect(current);
       };
@@ -183,6 +315,7 @@ export function connectLiveStream(
       return;
     }
     resubscribeOnNextOpen = true;
+    // An outage waits longer between tries; an open stream or a wake starts the waits over.
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
       resubscribeOnNextOpen = false;
@@ -194,7 +327,7 @@ export function connectLiveStream(
           reportError(error);
         }
       });
-    }, retryDelay);
+    }, backoff(reconnectAttempts++));
   }
 
   function reportError(error: Event | Error | unknown): void {
@@ -258,15 +391,17 @@ export function connectLiveStream(
     if (pending.length === 0) {
       return;
     }
+    let posted: EventSourceLike | null = null;
     try {
       await ensureOpen();
+      posted = source;
       let operations = pending.map((entry) => entry.operation);
       if (resubscribeWithNextFlush) {
         resubscribeWithNextFlush = false;
         const pendingIds = new Set(operations.map((operation) => operation.id));
         operations = [
           ...[...subscriptions.values()]
-            .filter((subscription) => !pendingIds.has(subscription.id))
+            .filter((subscription) => subscription.confirmed && !pendingIds.has(subscription.id))
             .map(subscribeOperation),
           ...operations,
         ];
@@ -286,7 +421,9 @@ export function connectLiveStream(
       });
       const result = (await response.json()) as LiveControlResponse;
       if (!response.ok || !result.accepted) {
-        throw new Error(result.accepted ? response.statusText : result.error.message);
+        throw result.accepted
+          ? new LiveStreamError(response.statusText, undefined, response.status)
+          : new LiveStreamError(result.error.message, result.error.code, response.status);
       }
       const remaining = [...result.results];
       for (const entry of pending) {
@@ -299,10 +436,17 @@ export function connectLiveStream(
         } else if (item.ok) {
           entry.resolve();
         } else {
-          entry.reject(new Error(item.error.message));
+          entry.reject(new LiveStreamError(item.error.message, item.error.code, response.status));
         }
       }
     } catch (error) {
+      if (
+        posted &&
+        error instanceof LiveStreamError &&
+        (error.code === 'CONNECTION_NOT_FOUND' || error.code === 'CONNECTION_CLOSED')
+      ) {
+        reopen(posted);
+      }
       for (const entry of pending) {
         entry.reject(error);
       }
@@ -310,7 +454,9 @@ export function connectLiveStream(
   }
 
   async function resubscribeAll(): Promise<void> {
-    const activeSubscriptions = [...subscriptions.values()];
+    const activeSubscriptions = [...subscriptions.values()].filter(
+      (subscription) => subscription.confirmed,
+    );
     if (activeSubscriptions.length === 0) {
       return;
     }
@@ -331,6 +477,7 @@ export function connectLiveStream(
       source = null;
       openPromise = null;
       rejectOpen = null;
+      sourceOpen = false;
     }
   }
 
@@ -348,9 +495,7 @@ export function connectLiveStream(
         onEvent: subscribeOptions.onEvent as ((event: LiveClientEvent) => void) | undefined,
       };
       subscriptions.set(subscription.id, subscription);
-      try {
-        await enqueue(subscribeOperation(subscription));
-      } catch (error) {
+      const rollback = (): void => {
         if (subscriptionVersions.get(subscription.id) === version) {
           if (previousSubscription) {
             subscriptions.set(subscription.id, previousSubscription);
@@ -365,7 +510,27 @@ export function connectLiveStream(
           }
         }
         queueMicrotask(closeIfIdle);
-        throw error;
+      };
+      // A subscribe that can't reach a working server (the stream didn't open, the network is down,
+      // a deploy restarted the server) is tried again with growing waits, and at once when the
+      // network comes back or the page gets focus. A refusal ends it.
+      for (let attempt = 0; !subscription.confirmed; attempt++) {
+        try {
+          await enqueue(subscribeOperation(subscription));
+          subscription.confirmed = true;
+        } catch (error) {
+          const current = (): boolean =>
+            !closed && subscriptions.get(subscription.id) === subscription;
+          if (retryable(error) && current()) {
+            reportError(error);
+            await waitForRetry(attempt);
+            if (current()) {
+              continue;
+            }
+          }
+          rollback();
+          throw closed ? new Error('live: stream is closed.') : error;
+        }
       }
       if (closed) {
         throw new Error('live: stream is closed.');
@@ -393,6 +558,12 @@ export function connectLiveStream(
     close() {
       const closeError = new Error('live: stream is closed.');
       closed = true;
+      sourceOpen = false;
+      wakeTarget.removeEventListener?.('online', wake);
+      wakeTarget.removeEventListener?.('focus', wake);
+      for (const retry of retryWaiters) {
+        retry();
+      }
       subscriptions.clear();
       subscriptionVersions.clear();
       if (reconnectTimer != null) {

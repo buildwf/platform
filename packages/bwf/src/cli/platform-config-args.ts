@@ -32,7 +32,9 @@ export type PlatformConfigArgs = Readonly<{
 
 export function parsePlatformConfigArgs(args: ReadonlyArray<string>): PlatformConfigArgs {
   if (args.length && args[0] !== 'auth') {
-    throw new Error('platform: Usage: bwf platform config auth [command] [options].');
+    throw new Error(
+      'platform: Usage: bwf platform config <auth|plans|billing> [command] [options].',
+    );
   }
   const { positional, flags, values } = parseConfigFlags(args, 'auth', [
     'connection',
@@ -115,6 +117,61 @@ export function parsePlatformConfigArgs(args: ReadonlyArray<string>): PlatformCo
     json: flags.has('json'),
     plan: flags.has('plan'),
     yes: flags.has('yes'),
+  };
+}
+
+export type PlatformBillingArgs = Readonly<{
+  subcommand: 'config';
+  configGroup: 'billing';
+  action: 'set' | 'show';
+  installation: string;
+  stdin: boolean;
+  plan: false;
+  yes: false;
+}>;
+
+/**
+ * `bwf platform config billing [set|show] [--installation <id>] [--stdin]`.
+ * Values come from STRIPE_* environment variables or stdin, never from arguments.
+ */
+export function parsePlatformBillingArgs(args: ReadonlyArray<string>): PlatformBillingArgs {
+  let action: 'set' | 'show' | '' = '';
+  let installation = '';
+  let stdin = false;
+  for (let index = 1; index < args.length; index++) {
+    const arg = args[index]!;
+    if (arg === '--stdin' && !stdin) {
+      stdin = true;
+    } else if (arg === '--installation' && !installation) {
+      const value = args[++index];
+      if (!value || value.startsWith('-')) {
+        throw new Error('platform: --installation requires a value.');
+      }
+      installation = value;
+    } else if ((arg === 'set' || arg === 'show') && !action) {
+      action = arg;
+    } else if (/^STRIPE_[A-Z_]*=/.test(arg)) {
+      // Keep the value out of the message: it can be a secret.
+      throw new Error(
+        'platform: Pass billing values through environment variables or --stdin, not as arguments.',
+      );
+    } else {
+      throw new Error(
+        'platform: Usage: bwf platform config billing [set|show] [--installation <id>] [--stdin].',
+      );
+    }
+  }
+  if (action === 'show' && stdin) {
+    throw new Error('platform: --stdin is only valid for set.');
+  }
+  return {
+    subcommand: 'config',
+    configGroup: 'billing',
+    action: action || 'set',
+    installation,
+    stdin,
+    plan: false,
+    yes: false,
   };
 }
 

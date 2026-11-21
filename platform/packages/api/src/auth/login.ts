@@ -11,6 +11,7 @@ import { and, eq, gt } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import { acceptsBrowserHtml, platformBrowserError, platformBrowserPage } from '../browser-page.ts';
 import {
   acceptInvitationByEmail,
@@ -39,7 +40,6 @@ import {
   type AuthenticationActor,
 } from './management.ts';
 import { PlatformOidcProvider, type PlatformOidcIdentity } from './oidc.ts';
-import { createCodeChallenge } from './pkce.ts';
 import { hashLoginProof, randomLoginProof } from './proofs.ts';
 import { validateRecoveryTest } from './recovery.ts';
 import { isAllowedRedirect, isLocalhostRedirect, isAuthorizationRedirect } from './redirects.ts';
@@ -200,7 +200,7 @@ async function authorizationFor(
   }
   const verifier = randomLoginProof();
   const url = new URL(getGitHubAuthorizeUrl(configuration.clientId, redirectUri, state));
-  url.searchParams.set('code_challenge', await createCodeChallenge(verifier));
+  url.searchParams.set('code_challenge', await calculatePKCECodeChallenge(verifier));
   url.searchParams.set('code_challenge_method', 'S256');
   return { url: url.href, verifier };
 }

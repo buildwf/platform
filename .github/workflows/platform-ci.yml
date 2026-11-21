@@ -99,7 +99,7 @@ jobs:
       POSTGRES_USER: platform_ci
       POSTGRES_PASSWORD: platform_ci_pass
       POSTGRES_DB: platform_schema_compat
-      COMPAT_DATABASE_URL: postgresql://void_ci:void_ci_pass@localhost:5432/void_schema_compat
+      COMPAT_DATABASE_URL: postgresql://platform_ci:platform_ci_pass@localhost:5432/platform_schema_compat
       TZ: UTC
     services:
       postgres:
@@ -149,7 +149,7 @@ jobs:
       POSTGRES_USER: platform_ci
       POSTGRES_PASSWORD: platform_ci_pass
       POSTGRES_DB: platform_schema_compat
-      COMPAT_DATABASE_URL: postgresql://void_ci:void_ci_pass@localhost:5432/void_schema_compat
+      COMPAT_DATABASE_URL: postgresql://platform_ci:platform_ci_pass@localhost:5432/platform_schema_compat
       TZ: UTC
     services:
       postgres:

@@ -82,12 +82,16 @@ function installPlatformMocks(role: ProjectRole = 'owner'): Captured {
     const reqInit = init ?? {};
     const method = (reqInit.method ?? 'GET').toUpperCase();
 
-    if (url.endsWith('/projects/resolve?slug=named-layouts-test') && method === 'GET') {
-      return json({ project: null });
+    const rpcInput =
+      typeof reqInit.body === 'string' && reqInit.body ? JSON.parse(reqInit.body) : {};
+    const procedure = method === 'POST' ? /\/rpc\/([\w.]+)$/.exec(url)?.[1] : undefined;
+
+    if (procedure === 'projects.resolve' && rpcInput.slug === 'named-layouts-test') {
+      return json({ data: { project: null } });
     }
     if (
-      (url.endsWith('/projects/proj_named_layouts_test') && method === 'GET') ||
-      (url.endsWith('/rpc/projects.create') && method === 'POST')
+      (procedure === 'projects.get' && rpcInput.projectId === 'proj_named_layouts_test') ||
+      procedure === 'projects.create'
     ) {
       const project = {
         id: 'proj_named_layouts_test',
@@ -99,30 +103,31 @@ function installPlatformMocks(role: ProjectRole = 'owner'): Captured {
         role,
         owner: { id: 'user_owner', login: 'owner' },
       };
-      return json(method === 'POST' ? { data: project } : project);
+      return json({ data: project });
     }
 
-    if (url.endsWith('/deploy/preflight') && method === 'POST') {
-      const body = JSON.parse(reqInit.body as string) as {
-        assetManifest?: Record<string, unknown>;
-      };
-      const total = Object.keys(body.assetManifest ?? {}).length;
-      return json({ needed: [], total, skipped: total });
+    if (procedure === 'deploy.preflight') {
+      const total = Object.keys(rpcInput.assetManifest ?? {}).length;
+      return json({ data: { needed: [], total, skipped: total } });
     }
 
-    if (url.endsWith('/deploy') && method === 'POST') {
-      captured.finalizeBody = JSON.parse(reqInit.body as string);
-      return ndjson([
-        { event: 'start', deploymentId: 'dep_test' },
-        {
-          event: 'done',
-          deployment: 'dep_test',
-          url: 'https://named-layouts.test.void.app',
-          urls: ['https://named-layouts.test.void.app'],
-          assets: 0,
-          workers: 1,
+    if (procedure === 'deploy.finalize') {
+      captured.finalizeBody = rpcInput.body;
+      return json({
+        data: {
+          deploymentId: 'dep_test',
+          events: [
+            {
+              event: 'done',
+              deployment: 'dep_test',
+              url: 'https://named-layouts.test.void.app',
+              urls: ['https://named-layouts.test.void.app'],
+              assets: 0,
+              workers: 1,
+            },
+          ],
         },
-      ]);
+      });
     }
 
     throw new Error(`unexpected fetch in test: ${method} ${url}`);
@@ -135,22 +140,6 @@ function json(payload: unknown): Response {
   return new Response(JSON.stringify(payload), {
     status: 200,
     headers: { 'content-type': 'application/json' },
-  });
-}
-
-function ndjson(events: Array<unknown>): Response {
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      for (const e of events) {
-        controller.enqueue(encoder.encode(`${JSON.stringify(e)}\n`));
-      }
-      controller.close();
-    },
-  });
-  return new Response(stream, {
-    status: 200,
-    headers: { 'content-type': 'application/x-ndjson', 'x-platform-deployment-id': 'dep_test' },
   });
 }
 
@@ -293,12 +282,15 @@ describe('managed deployment manifests (built Worker)', () => {
       await runDeploy(fixture, { projectSlug: 'named-layouts-test', skipBuild: true });
       expect(readFileSync(projectJson, 'utf8')).toBe(saved);
       expect(captured.finalizeBody?.manifest).toBeDefined();
-      const urls = fetchMock.mock.calls.map(([url]) => String(url));
-      expect(urls.every((url) => url.startsWith('https://platform.example.test/'))).toBe(true);
-      expect(urls.some((url) => url.includes('project-on-original-platform'))).toBe(false);
-      expect(urls).toContain(
-        'https://platform.example.test/projects/proj_named_layouts_test/deploy',
-      );
+      const calls = fetchMock.mock.calls.map(([url, init]) => ({
+        url: String(url),
+        body: typeof init?.body === 'string' ? init.body : '',
+      }));
+      expect(calls.every(({ url }) => url.startsWith('https://platform.example.test/'))).toBe(true);
+      // Project IDs travel in the RPC input, so check the bodies for the saved one.
+      expect(calls.some(({ body }) => body.includes('project-on-original-platform'))).toBe(false);
+      const finalize = calls.find(({ url }) => url.endsWith('/rpc/deploy.finalize'));
+      expect(JSON.parse(finalize?.body ?? '{}').projectId).toBe('proj_named_layouts_test');
     } finally {
       writeFileSync(projectJson, original);
     }
@@ -314,7 +306,9 @@ describe('managed deployment manifests (built Worker)', () => {
     );
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    expect(fetchMock.mock.calls[0]?.[0]).toMatch(/\/projects\/proj_named_layouts_test$/);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/rpc\/projects\.get$/);
+    expect(JSON.parse(init.body as string)).toEqual({ projectId: 'proj_named_layouts_test' });
     expect(captured.finalizeBody).toBeNull();
   });
 });

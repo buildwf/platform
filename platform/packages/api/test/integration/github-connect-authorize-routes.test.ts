@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import {
   afterAll,
   afterEach,
@@ -10,7 +11,6 @@ import {
   vi,
 } from 'vite-plus/test';
 import { hmacSignState } from '../../src/auth/hmac.ts';
-import { createCodeChallenge } from '../../src/auth/pkce.ts';
 import type { Db } from '../../src/db.ts';
 import type { ApiEnv } from '../../src/env.ts';
 import { githubRoutes } from '../../src/routes/github.ts';
@@ -211,7 +211,7 @@ async function countAllMemberRows(db: Db): Promise<number> {
 describe('GET /github/connect-authorize-url', () => {
   it('returns a signed connect url with purpose:connect, the named repo, future exp, and no userId', async () => {
     const user = await createTestUser(env.db);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'http://localhost:9999/callback';
 
     const res = await app.fetch(
@@ -245,7 +245,7 @@ describe('GET /github/connect-authorize-url', () => {
 
   it('rejects a non-localhost redirect', async () => {
     const user = await createTestUser(env.db);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'https://evil.example.com/callback';
 
     const res = await app.fetch(
@@ -261,7 +261,7 @@ describe('GET /github/connect-authorize-url', () => {
 
   it('rejects a missing installationId', async () => {
     const user = await createTestUser(env.db);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'http://localhost:9999/callback';
 
     const res = await app.fetch(
@@ -278,7 +278,7 @@ describe('GET /github/connect-authorize-url', () => {
 
   it('rejects a missing repoFullName', async () => {
     const user = await createTestUser(env.db);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'http://localhost:9999/callback';
 
     const res = await app.fetch(
@@ -311,7 +311,7 @@ describe('GET /github/connect-authorize-url', () => {
 
   it('rejects a non-S256 code_challenge_method', async () => {
     const user = await createTestUser(env.db);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'http://localhost:9999/callback';
 
     const res = await app.fetch(
@@ -327,7 +327,7 @@ describe('GET /github/connect-authorize-url', () => {
 
   it('fails closed (503, github_oauth_not_configured) when App user OAuth is unset', async () => {
     const user = await createTestUser(env.db);
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'http://localhost:9999/callback';
 
     // No GITHUB_APP_CLIENT_ID/SECRET on env.
@@ -356,7 +356,7 @@ describe('GET /github/connect-authorize-url', () => {
 
 describe('GET /github/connect-authorize-callback', () => {
   it('mints a connect_grant when the caller can reach the repo, and binds NOTHING', async () => {
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
 
     const { res, body, grant, target } = await runConnectCallback({
       redirect: 'http://localhost:9999/callback',
@@ -396,7 +396,7 @@ describe('GET /github/connect-authorize-callback', () => {
       repositories: [{ full_name: 'acct/app', id: 4242 }],
       accountId: '5551234',
     });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintConnectState({
       redirect: 'http://localhost:9999/callback',
       installationId: '700',
@@ -417,7 +417,7 @@ describe('GET /github/connect-authorize-callback', () => {
   });
 
   it('bounces repo_not_accessible when the caller cannot reach the repo', async () => {
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
 
     const { res, grant, target } = await runConnectCallback({
       redirect: 'http://localhost:9999/callback',
@@ -440,7 +440,7 @@ describe('GET /github/connect-authorize-callback', () => {
   });
 
   it('bounces repo_not_accessible when the installation exposes no repositories', async () => {
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
 
     const { res, grant, target } = await runConnectCallback({
       redirect: 'http://localhost:9999/callback',
@@ -459,7 +459,7 @@ describe('GET /github/connect-authorize-callback', () => {
   });
 
   it('bounces repo_not_accessible when the token exchange fails', async () => {
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
 
     // acceptCode:false → verifyUserRepoAccess returns { null, null } → refuse.
     const { res, grant, target } = await runConnectCallback({
@@ -480,7 +480,7 @@ describe('GET /github/connect-authorize-callback', () => {
   });
 
   it('bounces the GitHub denial (no code, error param) to the CLI localhost', async () => {
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintConnectState({
       redirect: 'http://localhost:9999/callback',
       installationId: '700',
@@ -508,7 +508,7 @@ describe('GET /github/connect-authorize-callback', () => {
 
   it('rejects a forged/altered state (bad signature)', async () => {
     mockUserConnect({ repositories: [{ full_name: 'acct/app', id: 4242 }], accountId: '5551234' });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintConnectState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -533,7 +533,7 @@ describe('GET /github/connect-authorize-callback', () => {
 
   it('rejects an expired state', async () => {
     mockUserConnect({ repositories: [{ full_name: 'acct/app', id: 4242 }], accountId: '5551234' });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintConnectState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -551,7 +551,7 @@ describe('GET /github/connect-authorize-callback', () => {
   });
 
   it('returns 400 (not 500) for a malformed, non-base64url state signature', async () => {
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const encoded = btoa(
       JSON.stringify({
         redirect: 'http://localhost:9999/callback',
@@ -576,7 +576,7 @@ describe('GET /github/connect-authorize-callback', () => {
 
   it('rejects a join-purpose state (cross-flow replay)', async () => {
     mockUserConnect({ repositories: [{ full_name: 'acct/app', id: 4242 }], accountId: '5551234' });
-    const challenge = await createCodeChallenge(CODE_VERIFIER);
+    const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     // A validly-signed state whose purpose is 'join' must not drive the connect
     // callback — the purpose discriminator blocks cross-flow replay.
     const state = await mintConnectState({

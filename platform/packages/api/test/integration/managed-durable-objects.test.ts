@@ -89,7 +89,7 @@ beforeEach(async () => {
     }
     const name = /\/scripts\/([^/?]+)/.exec(url)?.[1];
     if (
-      name?.startsWith('platform-do-') &&
+      name?.startsWith('void-do-') &&
       (url.endsWith('/bindings') || url.endsWith('/settings')) &&
       !provider.state.hostScripts.has(name)
     ) {
@@ -101,10 +101,10 @@ beforeEach(async () => {
         { status: 404 },
       );
     }
-    if (name?.startsWith('platform-do-') && url.endsWith('/settings') && !init?.method) {
+    if (name?.startsWith('void-do-') && url.endsWith('/settings') && !init?.method) {
       return cfSuccess({ bindings: provider.state.hostScripts.get(name)!.bindings });
     }
-    if (stallPublication && init?.method === 'PUT' && name?.startsWith('platform-do-')) {
+    if (stallPublication && init?.method === 'PUT' && name?.startsWith('void-do-')) {
       await new Response(init.body).arrayBuffer();
       stalled = true;
       return new Promise<Response>((_resolve, reject) => {
@@ -128,7 +128,7 @@ beforeEach(async () => {
       // Simulate a write committed by Cloudflare whose acknowledgement is lost.
       if (
         failPublication &&
-        name.startsWith('platform-do-') &&
+        name.startsWith('void-do-') &&
         JSON.stringify(metadata).includes('__PLATFORM_DURABLE_DEPLOYMENT') &&
         JSON.stringify(metadata).includes('dpl_')
       ) {
@@ -137,7 +137,7 @@ beforeEach(async () => {
       }
       return cfSuccess({});
     }
-    if (init?.method === 'DELETE' && name?.startsWith('platform-do-') && response.ok) {
+    if (init?.method === 'DELETE' && name?.startsWith('void-do-') && response.ok) {
       return cfSuccess(null);
     }
     return response;
@@ -529,7 +529,21 @@ describe('managed native Durable Objects', () => {
     expect(workers.map(currentRelease).sort()).toEqual([first.id, second.id].sort());
   });
 
-  it('ends the release uploads of a queued deployment at the run deadline', async () => {
+  it.each([
+    {
+      phase: 'application binding verification',
+      elapsed: 600_000,
+      readsBindings: false,
+      message:
+        'The deployment reached its time limit while verifying application Durable Object bindings.',
+    },
+    {
+      phase: 'Durable Object host upload',
+      elapsed: 570_000,
+      readsBindings: true,
+      message: WORKER_UPLOAD_OUT_OF_TIME,
+    },
+  ])('enforces the queued deadline during $phase', async ({ elapsed, readsBindings, message }) => {
     const first = await deploy();
     const worker = await durableObjectWorkerName(project.id, binding.className);
     const queuedEnv = {
@@ -550,12 +564,13 @@ describe('managed native Durable Objects', () => {
     );
     await response.body?.cancel();
     const id = response.headers.get('x-platform-deployment-id')!;
-    // The application upload ends 9.5 minutes into the run. Too little is left
-    // to move the host and still move it back, so the host is not touched.
+    const candidate = `user-${project.slug}-${id}`;
     const now = Date.now.bind(Date);
     vi.spyOn(Date, 'now').mockImplementation(
-      () => now() + (provider.state.hostScripts.has(`user-${project.slug}-${id}`) ? 570_000 : 0),
+      () => now() + (provider.state.hostScripts.has(candidate) ? elapsed : 0),
     );
+    const fetchMock = vi.fn(globalThis.fetch);
+    vi.stubGlobal('fetch', fetchMock);
     const sent = writes.filter((write) => write.name === worker).length;
 
     await processDeploymentBatch(
@@ -569,8 +584,12 @@ describe('managed native Durable Objects', () => {
     expect((await getDeployment(env.db, id))?.status).toBe('failed');
     expect((await getDeploymentOperation(env.db, id))?.events.at(-1)?.event).toMatchObject({
       event: 'error',
-      message: WORKER_UPLOAD_OUT_OF_TIME,
+      message,
     });
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).endsWith(`/scripts/${candidate}/bindings`)),
+    ).toBe(readsBindings);
+    expect(provider.state.hostScripts.has(candidate)).toBe(false);
     expect(writes.filter((write) => write.name === worker)).toHaveLength(sent);
     expect(currentRelease(worker)).toBe(first.id);
   });
@@ -704,7 +723,7 @@ describe('managed native Durable Objects', () => {
     const plain = await deploy('plain', []);
     expect(plain.id).toBeDefined();
     expect(await getProjectResources(env.db, project.id)).toHaveLength(0);
-    expect(writes.every((write) => !write.name.startsWith('platform-do-'))).toBe(true);
+    expect(writes.every((write) => !write.name.startsWith('void-do-'))).toBe(true);
     expect(provider.mock.calls.every(([input]) => !String(input).includes('/containers/'))).toBe(
       true,
     );

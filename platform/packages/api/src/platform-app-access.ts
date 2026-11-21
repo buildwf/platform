@@ -36,7 +36,7 @@ function sameSelection(current: ZeroTrustConfiguration, setup: PlatformAppAccess
 }
 
 /** One-time installer handoff. Later administrator settings are never reapplied or reset. */
-export async function initializePlatformAppAccess(
+async function initializePlatformAppAccess(
   env: ApiEnv['Bindings'],
   db: Db,
   setup: PlatformAppAccessSetup,

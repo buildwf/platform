@@ -28,15 +28,17 @@ export type DatabaseDialect = 'sqlite' | 'postgresql' | 'mysql';
 export type DatabaseCasing = 'snake_case' | 'camelCase';
 
 /** Object form of `database`, for options next to the dialect. */
-export type DatabaseConfig = {
+type DatabaseConfig = {
   /** Database backend. Defaults to `"sqlite"` (D1). */
   dialect?: 'sqlite' | 'pg' | 'mysql';
   /** Column naming for keys without an explicit column name, as in Drizzle's `casing` option. */
   casing?: DatabaseCasing;
+  /** Enable or disable D1 read replication during deployment. Omit to preserve existing settings. */
+  readReplication?: boolean;
 };
 
 /** Curated Worker fields accepted by the `worker` config field. */
-export type WranglerConfig = {
+type WranglerConfig = {
   compatibility_date?: string;
   compatibility_flags?: Array<string>;
   vars?: Record<string, string>;
@@ -91,12 +93,12 @@ export type InferenceConfig = {
 };
 
 /** Auth configuration — high-level provider selection for Better Auth defaults. */
-export type AuthConfig = {
+type AuthConfig = {
   providers?: Array<BwfAuthProvider>;
 };
 
 /** AI configuration — the Cloudflare AI Gateway used by `ai.provider().fetch()` on self-hosted deploys (Workers AI `ai.run`/`ai.image` use the `env.AI` binding directly). */
-export type AiConfig = {
+type AiConfig = {
   gateway?: string;
 };
 
@@ -106,19 +108,19 @@ export type AiConfig = {
  * and, on `bwf deploy --platform cloudflare`, its host is the domain the CLI
  * sets Email Routing and Email Sending up on.
  */
-export type EmailConfig = {
+type EmailConfig = {
   from?: string;
 };
 
 /** Deployment choices owned by bwf rather than passed to the Worker config. */
-export type DeployConfig = {
+type DeployConfig = {
   cloudflare?: { mode?: 'staged' | 'atomic' };
 };
 
 /** Cloudflare Worker configuration passed through to the native deploy artifact. */
 type CloudflareField<T> = T & Record<string, unknown>;
 
-export type CloudflareConfig = Record<string, unknown> & {
+type CloudflareConfig = Record<string, unknown> & {
   account_id?: string;
   name?: string;
   main?: string;
@@ -224,6 +226,7 @@ const VALID_DATABASE_CASINGS = new Set(['snake_case', 'camelCase']);
 const MAX_WORKER_CPU_MS = 300000;
 const VALID_SANDBOX_INSTANCE_TYPES = new Set<SandboxInstanceType>([
   'lite',
+  'basic',
   'standard-1',
   'standard-2',
   'standard-3',
@@ -839,9 +842,9 @@ function validateConfigObject(obj: unknown): BwfConfig {
     if (isRecord(obj.database)) {
       const databaseCfg = obj.database;
       for (const key of Object.keys(databaseCfg)) {
-        if (key !== 'dialect' && key !== 'casing') {
+        if (key !== 'dialect' && key !== 'casing' && key !== 'readReplication') {
           throw new Error(
-            `config: Unknown key 'database.${key}' in ${CONFIG_FILE}. Valid: dialect, casing.`,
+            `config: Unknown key 'database.${key}' in ${CONFIG_FILE}. Valid: dialect, casing, readReplication.`,
           );
         }
       }
@@ -862,9 +865,21 @@ function validateConfigObject(obj: unknown): BwfConfig {
           `config: "database.casing" in ${CONFIG_FILE} must be "snake_case" or "camelCase".`,
         );
       }
+      if (databaseCfg.readReplication !== undefined) {
+        if (typeof databaseCfg.readReplication !== 'boolean') {
+          throw new Error(
+            `config: "database.readReplication" in ${CONFIG_FILE} must be a boolean.`,
+          );
+        }
+        if (databaseCfg.dialect !== undefined && databaseCfg.dialect !== 'sqlite') {
+          throw new Error(
+            `config: "database.readReplication" in ${CONFIG_FILE} is only supported for D1 (sqlite).`,
+          );
+        }
+      }
     } else if (typeof obj.database !== 'string' || !VALID_DATABASE_VALUES.has(obj.database)) {
       throw new Error(
-        `config: "database" in ${CONFIG_FILE} must be "pg", "mysql" or an object with "dialect" and "casing".`,
+        `config: "database" in ${CONFIG_FILE} must be "pg", "mysql" or an object with "dialect", "casing" and "readReplication".`,
       );
     }
   }

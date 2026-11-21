@@ -126,4 +126,4 @@ Install bwf and run `bwf init` with your package manager as shown [above](#creat
 - [Environment Variables](./env-vars.md): local values and production secrets
 - [Coding Agents](../integrations/agents.md): use bwf's bundled docs and skills
 
-If a manual pnpm install reports blocked build scripts, run `pnpm approve-builds` for `esbuild`, `sharp`, and `workerd`. Set `better-sqlite3: false` in `pnpm-workspace.yaml`'s `allowBuilds`; bwf uses its bundled binaries.
+If a manual pnpm install reports blocked build scripts, run `pnpm approve-builds` for `esbuild`, `sharp`, and `workerd`. Set `better-sqlite3: false` and `core-js-pure: false` in `pnpm-workspace.yaml`'s `allowBuilds`; bwf uses better-sqlite3's bundled binaries, and core-js-pure's script only prints a message.

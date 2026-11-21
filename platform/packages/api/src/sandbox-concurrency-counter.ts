@@ -3,7 +3,7 @@ import type { ApiEnv } from './env.ts';
 import { ensureUsageSigningKey, signUsageEvent } from './usage-auth.ts';
 import type { UsageEvent } from './usage-counter.ts';
 
-export const RECONCILE_INTERVAL_MS = 60_000;
+const RECONCILE_INTERVAL_MS = 60_000;
 
 export type SandboxUsageAttribution = Readonly<{
   projectId: string;

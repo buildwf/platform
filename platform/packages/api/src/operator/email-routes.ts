@@ -85,7 +85,7 @@ function policyEffect(policy: EmailRecipientPolicy): string {
   }
 }
 
-export async function getOperatorEmailPolicy(context: Context<ApiEnv>) {
+async function getOperatorEmailPolicy(context: Context<ApiEnv>) {
   const db = context.get('db');
   const policy = await getEmailRecipientPolicy(db);
   await repairEmailRecipientPolicyMirror(db, context.env.ROUTING);
@@ -124,7 +124,7 @@ export async function setOperatorEmailPolicy(
   return { action, target, policy: target };
 }
 
-export async function getOperatorEmailSettings(context: Context<ApiEnv>) {
+async function getOperatorEmailSettings(context: Context<ApiEnv>) {
   return { domains: { management: await getEmailDomainManagement(context.get('db')) } };
 }
 
@@ -172,7 +172,7 @@ async function resolveProject(db: Db, selector: string) {
   return project;
 }
 
-export async function setOperatorEmailLimit(
+async function setOperatorEmailLimit(
   context: Context<ApiEnv>,
   selector: string,
   input: { monthly?: string; burst?: string },
@@ -641,7 +641,7 @@ async function requireDomainRow(db: Db, raw: string) {
   return { domain, row, project };
 }
 
-export async function listOperatorEmailDomains(context: Context<ApiEnv>, selector?: string) {
+async function listOperatorEmailDomains(context: Context<ApiEnv>, selector?: string) {
   const db = context.get('db');
   const project = selector ? await resolveProject(db, selector) : null;
   const rows = await db
@@ -672,7 +672,7 @@ export async function listOperatorEmailDomains(context: Context<ApiEnv>, selecto
   };
 }
 
-export async function addOperatorEmailDomain(
+async function addOperatorEmailDomain(
   context: Context<ApiEnv>,
   input: { domain: string; project: string; apiToken?: string; outboundOnly?: boolean },
   dryRunRequested = false,
@@ -742,7 +742,7 @@ export async function addOperatorEmailDomain(
   );
 }
 
-export async function getOperatorEmailDomain(context: Context<ApiEnv>, rawDomain: string) {
+async function getOperatorEmailDomain(context: Context<ApiEnv>, rawDomain: string) {
   const { row, project } = await requireDomainRow(context.get('db'), rawDomain);
   const response = await getEmailDomainStatusForProject(context, project, row.domain);
   const body = (await response.json()) as Record<string, unknown>;
@@ -752,7 +752,7 @@ export async function getOperatorEmailDomain(context: Context<ApiEnv>, rawDomain
   return { ...body, project: { id: project.id, slug: project.slug } };
 }
 
-export async function syncOperatorEmailDomain(
+async function syncOperatorEmailDomain(
   context: Context<ApiEnv>,
   rawDomain: string,
   dryRunRequested = false,
@@ -778,7 +778,7 @@ export async function syncOperatorEmailDomain(
   );
 }
 
-export async function removeOperatorEmailDomain(
+async function removeOperatorEmailDomain(
   context: Context<ApiEnv>,
   rawDomain: string,
   dryRunRequested = false,
@@ -827,7 +827,7 @@ export async function removeOperatorEmailDomain(
   );
 }
 
-export async function rotateOperatorEmailIngressSecret(
+async function rotateOperatorEmailIngressSecret(
   context: Context<ApiEnv>,
   rawDomain: string,
   dryRunRequested = false,

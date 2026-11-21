@@ -100,7 +100,10 @@ describe('resolveAssetWorkerBypass', () => {
     ['an assetsDir with a placeholder', { assetsDir: 'a:b' }],
     ['a revalidate * key', { patterns: ['*'] }],
     ['a clashing page pattern', { patterns: ['/:section/:slug'] }],
-    ['bwf internal paths', { assetsDir: '__platform', immutableFiles: ['__platform/a-12345678.js'] }],
+    [
+      'bwf internal paths',
+      { assetsDir: '__platform', immutableFiles: ['__platform/a-12345678.js'] },
+    ],
     [
       'auth paths',
       { authEnabled: true, assetsDir: 'api/auth', immutableFiles: ['api/auth/a-12345678.js'] },

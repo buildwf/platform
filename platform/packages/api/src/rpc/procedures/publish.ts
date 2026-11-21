@@ -36,7 +36,9 @@ export const request = appProcedure('publish.request')
       return await requestPublishApproval(ctx.db, env, ctx.grant, input as PublishRequestBody);
     } catch (error) {
       const refusal = previewRefusal(error);
-      if (refusal) return fail(refusal.code, refusal.message);
+      if (refusal) {
+        return fail(refusal.code, refusal.message);
+      }
       throw error;
     }
   });

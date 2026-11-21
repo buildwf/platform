@@ -1,8 +1,8 @@
 const encoder = new TextEncoder();
 
 export const GITHUB_WEBHOOK_MAX_BODY_BYTES = 25 * 1024 * 1024;
-export const GITHUB_WEBHOOK_INGRESS_MAX_AGE_SECONDS = 5 * 60;
-export const GITHUB_WEBHOOK_INGRESS_FUTURE_SKEW_SECONDS = 30;
+const GITHUB_WEBHOOK_INGRESS_MAX_AGE_SECONDS = 5 * 60;
+const GITHUB_WEBHOOK_INGRESS_FUTURE_SKEW_SECONDS = 30;
 
 export const GITHUB_EVENT_HEADER = 'X-GitHub-Event';
 export const GITHUB_DELIVERY_HEADER = 'X-GitHub-Delivery';

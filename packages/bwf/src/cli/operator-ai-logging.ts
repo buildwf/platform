@@ -6,7 +6,7 @@ import { sanitizeTerminalText } from './output.ts';
 import { readPlatformDiscoveryResponse } from './platform-discovery.ts';
 
 /** The first platform release with per-project AI logging settings. */
-export const AI_LOGGING_PLATFORM_VERSION = '1.8.0';
+const AI_LOGGING_PLATFORM_VERSION = '1.8.0';
 
 type Fields = Record<string, unknown>;
 

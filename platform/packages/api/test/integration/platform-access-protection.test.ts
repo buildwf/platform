@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
+import { calculatePKCECodeChallenge } from 'oauth4webapi';
 import {
   afterAll,
   afterEach,
@@ -13,7 +14,6 @@ import {
 import { importLegacyAuthentication } from '../../src/auth/configuration.ts';
 import { hmacSignState } from '../../src/auth/hmac.ts';
 import { signJwt } from '../../src/auth/jwt.ts';
-import { createCodeChallenge } from '../../src/auth/pkce.ts';
 import { createHumanSession } from '../../src/auth/sessions.ts';
 import { emailReceipts } from '../../src/email/admission-schema.ts';
 import { createGitHubWebhookIngressProof } from '../../src/github/webhook-ingress-auth.ts';
@@ -25,6 +25,7 @@ import {
   createTestBuild,
   createTestProject,
   createTestUser,
+  rpcData,
   setupEnv,
   teardownEnv,
   type TestEnv,
@@ -409,7 +410,7 @@ describe('Access-protected platform requests', () => {
       { sub: user.id, login: user.login, aud: 'deploy', project: project.id, build: build.id },
       env.JWT_SECRET,
     );
-    expect((await request('/projects', access, deploy)).status).toBe(200);
+    expect((await request('/rpc/projects.list', access, deploy, {})).status).toBe(200);
     expect((await request(`/projects/${project.id}/delete`, access, deploy, {})).status).toBe(403);
   });
 
@@ -419,66 +420,79 @@ describe('Access-protected platform requests', () => {
     const project = await createTestProject(env.db, user.id, 'core-ci-project');
     const other = await createTestProject(env.db, user.id, 'other-ci-project');
 
-    const issued = await request(`/projects/${project.id}/tokens`, humanAccess, humanToken, {
+    const issued = await request('/rpc/tokens.create', humanAccess, humanToken, {
+      projectId: project.id,
       name: 'buildkite',
       expiresInDays: 7,
     });
-    expect(issued.status).toBe(201);
-    const credential = await issued.json<{ id: string; token: string; expiresAt: string }>();
+    expect(issued.status).toBe(200);
+    const credential = rpcData<{ id: string; token: string; expiresAt: string }>(
+      await issued.json(),
+    );
     expect(Date.parse(credential.expiresAt)).toBeGreaterThan(Date.now());
 
-    const listed = await request(`/projects/${project.id}/tokens`, humanAccess, humanToken);
-    expect((await listed.json<Array<{ id: string }>>()).map((entry) => entry.id)).toContain(
+    const listed = await request('/rpc/tokens.list', humanAccess, humanToken, {
+      projectId: project.id,
+    });
+    expect(rpcData<Array<{ id: string }>>(await listed.json()).map((entry) => entry.id)).toContain(
       credential.id,
     );
-    const renewed = await request(
-      `/projects/${project.id}/tokens/${credential.id}/renew`,
-      humanAccess,
-      humanToken,
-      { expiresInDays: 8 },
-    );
+    const renewed = await request('/rpc/tokens.renew', humanAccess, humanToken, {
+      projectId: project.id,
+      credentialId: credential.id,
+      expiresInDays: 8,
+    });
     expect(renewed.status).toBe(200);
-    const activeCredential = await renewed.json<{ id: string; token: string }>();
+    const activeCredential = rpcData<{ id: string; token: string }>(await renewed.json());
     expect(activeCredential.id).not.toBe(credential.id);
-    expect((await request('/projects', serviceAccess, credential.token)).status).toBe(401);
+    expect((await request('/rpc/projects.list', serviceAccess, credential.token, {})).status).toBe(
+      401,
+    );
 
-    expect((await request('/projects', serviceAccess, activeCredential.token)).status).toBe(200);
     expect(
-      (await request(`/projects/${other.id}/resources`, serviceAccess, activeCredential.token))
-        .status,
+      (await request('/rpc/projects.list', serviceAccess, activeCredential.token, {})).status,
+    ).toBe(200);
+    expect(
+      (
+        await request('/rpc/projects.resources', serviceAccess, activeCredential.token, {
+          projectId: other.id,
+        })
+      ).status,
     ).toBe(403);
     expect(
-      (await request(`/projects/${project.id}/tokens`, serviceAccess, activeCredential.token))
-        .status,
+      (
+        await request('/rpc/tokens.list', serviceAccess, activeCredential.token, {
+          projectId: project.id,
+        })
+      ).status,
     ).toBe(403);
     expect(
       (await request('/operator/v1/session', serviceAccess, activeCredential.token, {})).status,
     ).toBe(403);
     expect((await request('/rpc/me.get', serviceAccess, humanToken, {})).status).toBe(403);
 
-    const revoked = await app.fetch(
-      new Request(`${origin}/projects/${project.id}/tokens/${activeCredential.id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${humanToken}`,
-          'Cf-Access-Jwt-Assertion': humanAccess,
-        },
-      }),
-      { ...env, PROXY_URL: proxy },
-    );
+    const revoked = await request('/rpc/tokens.revoke', humanAccess, humanToken, {
+      projectId: project.id,
+      credentialId: activeCredential.id,
+    });
     expect(revoked.status).toBe(200);
-    expect((await request('/projects', serviceAccess, activeCredential.token)).status).toBe(401);
+    expect(
+      (await request('/rpc/projects.list', serviceAccess, activeCredential.token, {})).status,
+    ).toBe(401);
 
-    const replacement = await request(`/projects/${project.id}/tokens`, humanAccess, humanToken, {
+    const replacement = await request('/rpc/tokens.create', humanAccess, humanToken, {
+      projectId: project.id,
       name: 'suspension-check',
       expiresInDays: 1,
     });
-    const replacementToken = (await replacement.json<{ token: string }>()).token;
+    const replacementToken = rpcData<{ token: string }>(await replacement.json()).token;
     await env.db
       .update(users)
       .set({ suspended_reason: 'administrator' })
       .where(eq(users.id, user.id));
-    expect((await request('/projects', serviceAccess, replacementToken)).status).toBe(403);
+    expect((await request('/rpc/projects.list', serviceAccess, replacementToken, {})).status).toBe(
+      403,
+    );
   });
 
   it('creates an account automatically after Access approval and independent GitHub login', async () => {
@@ -487,7 +501,7 @@ describe('Access-protected platform requests', () => {
     const params = new URLSearchParams({
       provider: 'github',
       redirect: 'http://localhost:3456/callback?state=cli',
-      code_challenge: await createCodeChallenge(verifier),
+      code_challenge: await calculatePKCECodeChallenge(verifier),
       code_challenge_method: 'S256',
     });
     const start = await request(`/auth/login?${params}`, access);

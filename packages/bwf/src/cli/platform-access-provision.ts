@@ -137,7 +137,7 @@ export class PlatformAccessClient {
 export class PlatformAccessPolicyRejectedError extends Error {}
 
 /** Preserve corporate MFA/device requirements; reject broad policies rather than rewriting them. */
-export async function verifyCompanyAccessPolicies(
+async function verifyCompanyAccessPolicies(
   client: PlatformAccessClient,
   policies: ReadonlyArray<ObjectValue>,
   identityProviderIds: ReadonlyArray<string>,

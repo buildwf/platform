@@ -5,7 +5,10 @@ import {
   readCloudflareTriggerConfig,
   type CloudflareTriggerConfig,
 } from '@builtbyfriends/deploy-cloudflare';
-import { recordInstallationStep, type PlatformInstallationManifest } from '@builtbyfriends/platform';
+import {
+  recordInstallationStep,
+  type PlatformInstallationManifest,
+} from '@builtbyfriends/platform';
 import { join } from 'pathslash';
 import {
   readActivePlatformWorkerSnapshot,

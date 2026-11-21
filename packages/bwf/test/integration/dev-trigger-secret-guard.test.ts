@@ -39,9 +39,6 @@ describe('dev server with the dev-trigger secret guard', () => {
     writeFileSync(join(root, 'index.html'), '<!doctype html><title>app</title>');
     writeFileSync(join(root, '.bwf', 'dev-trigger-token'), TOKEN);
     writeFileSync(join(root, '.bwf', 'routes.d.ts'), 'export {};\n');
-    // Astro writes its background dev server output, startup hint included, here.
-    mkdirSync(join(root, '.astro'), { recursive: true });
-    writeFileSync(join(root, '.astro', 'dev.log'), `x-platform-dev-trigger: ${TOKEN}\n`);
     // Older CLI versions left the database URL of `bwf db push` / `db studio` here.
     writeFileSync(
       join(root, '.bwf', 'drizzle.config.json'),
@@ -72,14 +69,15 @@ describe('dev server with the dev-trigger secret guard', () => {
   };
 
   // One path each for the static, /@fs/ and transform middlewares the guard must precede.
-  it.each(['/.bwf/dev-trigger-token', '/@fs<root>/.bwf/dev-trigger-token', '/.astro/dev.log?raw'])(
-    'does not serve the token at %s',
-    async (path) => {
-      const response = await get(port, path.replace('<root>', fsRoot()));
-      expect(response.status).toBe(404);
-      expect(response.body).not.toContain(TOKEN);
-    },
-  );
+  it.each([
+    '/.bwf/dev-trigger-token',
+    '/@fs<root>/.bwf/dev-trigger-token',
+    '/.bwf/dev-trigger-token?raw',
+  ])('does not serve the token at %s', async (path) => {
+    const response = await get(port, path.replace('<root>', fsRoot()));
+    expect(response.status).toBe(404);
+    expect(response.body).not.toContain(TOKEN);
+  });
 
   it('does not serve a database URL left in .bwf/drizzle.config.json', async () => {
     const response = await get(port, '/.bwf/drizzle.config.json');

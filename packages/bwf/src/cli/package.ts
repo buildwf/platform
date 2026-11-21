@@ -382,12 +382,16 @@ function applyResourceBindings(
   migrationCount: number,
   dialect: 'sqlite' | 'postgresql' | 'mysql',
   bindingNames: PackageOptions['bindingNames'],
+  database: DeployManifest['database'],
 ): void {
   if (needsApplicationDatabase(bindings, migrationCount)) {
     if (dialect !== 'sqlite') {
       manifest.bindings.hyperdrive = ['HYPERDRIVE'];
     } else {
       manifest.bindings.d1 = [bindingNames?.d1 ?? 'DB'];
+      if (database?.readReplication !== undefined) {
+        manifest.database = { readReplication: database.readReplication };
+      }
     }
   }
   if (bindings.needsKV) {
@@ -441,6 +445,7 @@ export function buildBwfManifest(opts: {
   queues?: Array<QueueMeta>;
   assetConfig?: AssetConfig;
   options?: PackageOptions;
+  database?: DeployManifest['database'];
   hashedAssetsPrefix?: string;
   headerRules?: Array<HeaderRule>;
   alwaysUseHttps?: boolean;
@@ -499,6 +504,7 @@ export function buildBwfManifest(opts: {
     migrations?.length ?? 0,
     resolvedDialect,
     options?.bindingNames,
+    opts.database,
   );
   if (bindings.needsSandbox) {
     if (!options?.sandbox) {

@@ -33,6 +33,7 @@ import { connectCloudflare } from './cloudflare-connect.ts';
 import { maybeSetupDeployProject } from './deploy-setup.ts';
 import { maybeScaffoldEnvTs } from './env-scaffold.ts';
 import { initialCommitCommand, setupGit } from './init-git.ts';
+import { commandInProject } from './init-shell.ts';
 import { configureVitePlusScaffold } from './init-vite-plus.ts';
 import { migrateLegacyBwfConfig } from './migrate.ts';
 import { formatUrl, note, printSuccess } from './output.ts';
@@ -184,8 +185,11 @@ const EMPTY_PROJECT_ALLOWED_ENTRIES = new Set([
 ]);
 
 // better-sqlite3 13 already ships its Node-API binaries; no native build is needed.
+// core-js-pure (from the email dependency mimetext) only prints a message after
+// install, and Vite+'s install stops on a build pnpm has no decision for.
 const PNPM_BUILD_DEFAULTS = [
   ['better-sqlite3', false],
+  ['core-js-pure', false],
   ['esbuild', true],
   ['sharp', true],
   ['workerd', true],
@@ -1361,19 +1365,27 @@ function writeDatabaseDialect(root: string, config: BwfConfig, dialect: Database
   writeBwfProjectConfig(root, next);
 }
 
+/** `quiet` is for a new starter, whose prompt already showed the database. */
+type DatabaseDialectOptions = { quiet?: boolean };
+
 function clearConfiguredDatabase(
   root: string,
   messages: { unchanged: string; updated: string },
+  options: DatabaseDialectOptions,
 ): void {
   const config = readConfig(root);
 
   if (getDatabaseDialect(config) === 'sqlite') {
-    log.info(messages.unchanged);
+    if (!options.quiet) {
+      log.info(messages.unchanged);
+    }
     return;
   }
 
   writeDatabaseDialect(root, config, 'sqlite');
-  log.step(messages.updated);
+  if (!options.quiet) {
+    log.step(messages.updated);
+  }
 }
 
 /** Remove `database` entirely: its casing alone still makes bwf serve `@builtbyfriends/bwf/db`. */
@@ -1389,35 +1401,51 @@ function removeDatabaseConfig(root: string): void {
   log.step('Removed database config from bwf.config.ts');
 }
 
-function applyDatabaseDialect(root: string, dialect: DatabaseDialect): void {
+function applyDatabaseDialect(
+  root: string,
+  dialect: DatabaseDialect,
+  options: DatabaseDialectOptions = {},
+): void {
   const config = readConfig(root);
 
   if (dialect === 'postgresql') {
     if (getDatabaseDialect(config) === 'postgresql') {
-      log.info('PostgreSQL already configured in bwf.config.ts');
+      if (!options.quiet) {
+        log.info('PostgreSQL already configured in bwf.config.ts');
+      }
       return;
     }
 
     writeDatabaseDialect(root, config, 'postgresql');
-    log.step('Configured PostgreSQL in bwf.config.ts');
+    if (!options.quiet) {
+      log.step('Configured PostgreSQL in bwf.config.ts');
+    }
     return;
   }
 
   if (dialect === 'mysql') {
     if (getDatabaseDialect(config) === 'mysql') {
-      log.info('MySQL already configured in bwf.config.ts');
+      if (!options.quiet) {
+        log.info('MySQL already configured in bwf.config.ts');
+      }
       return;
     }
 
     writeDatabaseDialect(root, config, 'mysql');
-    log.step('Configured MySQL in bwf.config.ts');
+    if (!options.quiet) {
+      log.step('Configured MySQL in bwf.config.ts');
+    }
     return;
   }
 
-  clearConfiguredDatabase(root, {
-    unchanged: 'Using default D1 (SQLite) configuration',
-    updated: 'Updated bwf.config.ts to use the default D1 (SQLite) configuration',
-  });
+  clearConfiguredDatabase(
+    root,
+    {
+      unchanged: 'Using default D1 (SQLite) configuration',
+      updated: 'Updated bwf.config.ts to use the default D1 (SQLite) configuration',
+    },
+    options,
+  );
 }
 
 function detectDatabaseSetup(root: string): DatabaseSetupChoice {
@@ -1556,12 +1584,12 @@ async function promptDatabaseSetup(root: string): Promise<DatabaseSetupChoice> {
   return choice as DatabaseSetupChoice;
 }
 
-async function promptDeploymentPlatform(
+/** Ask where the project deploys, unless `deploy` answers it. The caller saves the answer. */
+async function askDeploymentPlatform(
   root: string,
   deploy?: DeploymentPlatform,
 ): Promise<DeploymentPlatform> {
   if (deploy) {
-    writeDeploymentPlatform(root, deploy);
     return deploy;
   }
   assertInteractive('deploy', DEPLOYMENT_PLATFORMS);
@@ -1593,9 +1621,7 @@ async function promptDeploymentPlatform(
     process.exit(0);
   }
 
-  const platform = choice as DeploymentPlatform;
-  writeDeploymentPlatform(root, platform);
-  return platform;
+  return choice as DeploymentPlatform;
 }
 
 export async function ensureBwfPlatformConnection(
@@ -2233,7 +2259,7 @@ function scaffoldSpaApp(
 
   ensureGitignore(root);
   if (starterMode !== 'spa') {
-    applyDatabaseDialect(root, starterMode);
+    applyDatabaseDialect(root, starterMode, { quiet: true });
   }
 
   if (starterMode === 'postgresql') {
@@ -2391,7 +2417,6 @@ function ensureExistingProjectViteConfig(root: string): void {
 
 /** Returns whether a dependency was added. */
 function setupExistingProject(root: string): boolean {
-  log.info('Existing project detected. Configuring bwf...');
   const dependencyAdded = ensureExistingProjectPackage(root, {
     plainViteSetup: true,
   });
@@ -2586,6 +2611,14 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
       'init: The --git/--no-git options are not available when adding a package to an existing monorepo.',
     );
   }
+  // Say what init will do before its first question. `.git` is allowed in an
+  // empty project, so detecting before `git init` gives the same result.
+  const scaffoldStarter = !targeted && isScaffoldableEmptyProject(root);
+  if (scaffoldStarter) {
+    log.info('Empty project detected. Creating a React starter.');
+  } else if (!targeted) {
+    log.info('Existing project detected. Configuring bwf.');
+  }
   const gitInitialized =
     !workspaceSubpackage && (!targeted || initArgs?.git !== undefined)
       ? await setupGit(root, initArgs?.git)
@@ -2594,23 +2627,21 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
   const detectedFramework = detectScaffoldFramework(root);
   let scaffoldedFramework: ScaffoldFramework | undefined;
   let scaffoldedStarterMode: Exclude<ScaffoldStarterMode, 'spa'> | undefined;
+  let starterDeploymentPlatform: DeploymentPlatform | undefined;
   let didScaffoldStarter = false;
   let scaffoldAddedDependencies = false;
   let workspaceSubpackageSkip = false;
 
-  if (!targeted && isScaffoldableEmptyProject(root)) {
-    log.info('Empty project detected. Scaffolding a React starter...');
+  if (scaffoldStarter) {
     const scaffoldToolchain = await promptScaffoldToolchain(initArgs?.toolchain);
     if (detectedFramework) {
       log.info(`Detected ${SCAFFOLD_FRAMEWORKS[detectedFramework].label} in package.json`);
     }
     scaffoldedFramework = detectedFramework ?? initArgs?.framework ?? 'react';
     const starterMode = await promptStarterMode(initArgs?.starter);
-    // A partial starter takes the existing-project path on retry, so check
-    // the last required flag before creating its files.
-    if (initArgs?.deploy === undefined) {
-      assertInteractive('deploy', DEPLOYMENT_PLATFORMS);
-    }
+    // A partial starter takes the existing-project path on retry, so ask every
+    // question before creating its files. The deployment choice is saved below.
+    starterDeploymentPlatform = await askDeploymentPlatform(root, initArgs?.deploy);
     const existingPackageJson = readPackageJson(root);
     const hasPackageManager =
       hasLocalLockfile(root) ||
@@ -2711,10 +2742,11 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
     log.info('Bundled bwf docs: node_modules/@builtbyfriends/bwf/docs/');
   }
 
-  // Demo code only in the full flow.
-  if (!targeted) {
+  // Demo code only in the full flow, and not for a new starter, which already
+  // has its own routes.
+  if (!targeted && !didScaffoldStarter) {
     const existingDemoFiles = Object.values(demoFiles(root)).filter((file) => existsSync(file));
-    if (didScaffoldStarter || state.hasRoutes || state.hasMigrations) {
+    if (state.hasRoutes || state.hasMigrations) {
       log.info('Project already has routes or migrations, skipping demo');
     } else if (hasDrizzleSchema(root)) {
       log.info('Project already has a database schema, skipping demo');
@@ -2750,10 +2782,15 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
     }
   }
 
-  // Targeted runs keep the saved deployment preference without prompting.
-  const deploymentPlatform = !targeted
-    ? await promptDeploymentPlatform(root, initArgs?.deploy)
-    : readDeploymentPlatform(root);
+  let deploymentPlatform: DeploymentPlatform | null;
+  if (targeted) {
+    // Targeted runs keep the saved deployment preference without prompting.
+    deploymentPlatform = readDeploymentPlatform(root);
+  } else {
+    deploymentPlatform =
+      starterDeploymentPlatform ?? (await askDeploymentPlatform(root, initArgs?.deploy));
+    writeDeploymentPlatform(root, deploymentPlatform);
+  }
   let bwfPlatformDiscovery: PlatformDiscoveryDocument | null = null;
 
   if (!targeted && deploymentPlatform === 'cloudflare') {
@@ -2858,6 +2895,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
       printSuccess('Project initialized. Run your workspace install to finish setup.');
     }
   } else {
-    printSuccess(`Project initialized. Run \`${getDevCommand(root)}\` to start developing.`);
+    const devCommand = commandInProject(root, getDevCommand(root));
+    printSuccess(`Project initialized. Run \`${devCommand}\` to start developing.`);
   }
 }
