@@ -1,5 +1,5 @@
-// Workerd validates every entry-module export as a handler or Durable Object.
-// Keep source-level helpers on ../index.ts and allowlist only deployable exports here.
+// Decision: Workerd validates each entry-module export as a handler or Durable Object. Keep source-level
+// helpers on ../index.ts and export only deployable classes here.
 export {
   BuildManager,
   BuildManagerLarge,

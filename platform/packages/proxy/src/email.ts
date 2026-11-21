@@ -18,7 +18,7 @@ import {
 import type { Env, ProxyEnv } from './types.ts';
 
 const app = new Hono<ProxyEnv>();
-// The SDK aborts at 60s. Body/auth can precede this handler, and final ledger
+// Decision: The SDK aborts at 60s. Body parsing and auth can run before this handler, and the final ledger
 // writes need time after provider work stops.
 const EMAIL_SEND_DEADLINE_MS = 50_000;
 const EMAIL_SEND_FINALIZATION_MARGIN_MS = 5_000;
@@ -120,7 +120,6 @@ export function readSenderDomain(env: Pick<Env, 'EMAIL_SENDER_DOMAIN'>): string 
   return domain.length > 0 ? domain : null;
 }
 
-/** Regex metacharacters, escaped before a config value is interpolated. */
 const RE_METACHARS_RE = /[.*+?^${}()|[\]\\]/g;
 
 function escapeRegExp(value: string): string {
@@ -279,7 +278,7 @@ const CR = 0x0d;
 const SP = 0x20;
 const HTAB = 0x09;
 const COLON = 0x3a;
-const FROM_NAME = [0x66, 0x72, 0x6f, 0x6d]; // "from"
+const FROM_NAME = [0x66, 0x72, 0x6f, 0x6d];
 
 /**
  * Where the value of the header line `raw[start, end)` begins if the line
@@ -294,7 +293,6 @@ function fromValueStart(raw: Uint8Array, start: number, end: number): number {
     return -1;
   }
   for (let i = 0; i < FROM_NAME.length; i++) {
-    // ASCII case fold: `A`..`Z` → `a`..`z`. Non-letters fold to themselves.
     if ((raw[start + i] | 0x20) !== FROM_NAME[i]) {
       return -1;
     }
@@ -306,7 +304,6 @@ function fromValueStart(raw: Uint8Array, start: number, end: number): number {
   return colon < end && raw[colon] === COLON ? colon + 1 : -1;
 }
 
-/** Operator-readable detail for each way the pin can fail to find a sender. */
 const MIME_FROM_REFUSALS: Record<Extract<MimeFrom, { ok: false }>['reason'], string> = {
   missing: 'the message has no From header',
   multiple: 'the message has more than one From header',
@@ -315,18 +312,16 @@ const MIME_FROM_REFUSALS: Record<Extract<MimeFrom, { ok: false }>['reason'], str
 
 export function readMimeFromAddrSpec(raw: Uint8Array): MimeFrom {
   const n = raw.byteLength;
-  // The `From:` header as offsets into `raw`: its value starts after the
-  // colon and ends where the content of its last line ends. `folded` says
-  // whether a continuation line extended it, `inFrom` whether the line
-  // being visited may.
+  // Decision: The `From:` header as offsets into `raw`: the value starts after the colon and ends where its
+  // last line's content ends. `folded` says a continuation line extended it; `inFrom` says the
+  // current line may.
   let fromCount = 0;
   let valueStart = -1;
   let valueEnd = -1;
   let folded = false;
   let inFrom = false;
-  // The next CR at or after `lineStart`. Searched for lazily, each search
-  // starting past the previous hit, so finding the bare CR that fails the
-  // scan stays linear across a block of CR-less lines.
+  // Decision: The next CR at or after lineStart, found lazily with each search starting past the previous
+  // hit, so finding a bare CR stays linear across a block of CR-less lines.
   let nextCr = raw.indexOf(CR);
   let lineStart = 0;
   while (lineStart < n) {
@@ -337,7 +332,7 @@ export function readMimeFromAddrSpec(raw: Uint8Array): MimeFrom {
       contentEnd--;
     }
     if (contentEnd === lineStart) {
-      break; // empty line: end of the header block
+      break;
     }
     if (nextCr !== -1 && nextCr < lineStart) {
       nextCr = raw.indexOf(CR, lineStart);
@@ -368,11 +363,9 @@ export function readMimeFromAddrSpec(raw: Uint8Array): MimeFrom {
   if (fromCount > 1) {
     return { ok: false, reason: 'multiple' };
   }
-  // Unfold (RFC 5322 §2.2.3): the value is the header's byte range with
-  // its line breaks removed, each continuation keeping its leading WSP.
-  // Every CR still inside the range ends a line — the scan refused any
-  // other — so dropping CR and LF is the whole job, done in place on one
-  // copy of the range. A header that did not fold needs no copy.
+  // Decision: Unfold (RFC 5322 2.2.3): drop the line breaks, keeping each continuation's leading WSP. The
+  // scan refused any other CR, so removing CR and LF in place on one copy is enough. A header that
+  // didn't fold needs no copy.
   let value = raw.subarray(valueStart, valueEnd);
   if (folded) {
     value = raw.slice(valueStart, valueEnd);
@@ -415,7 +408,6 @@ function singleMailboxAddrSpec(value: string): string | null {
     }
     switch (ch) {
       case '"':
-        // A quoted-string belongs to the phrase, which ends at `<`.
         if (lt !== -1) {
           return null;
         }
@@ -458,8 +450,6 @@ function singleMailboxAddrSpec(value: string): string | null {
   if (lt === -1) {
     addrSpec = value.trim();
   } else {
-    // `<` present: it needs its `>`, nothing but WSP may follow, and the
-    // phrase before it must not read as an address of its own.
     if (gt === -1 || value.slice(gt + 1).trim().length !== 0) {
       return null;
     }
@@ -468,9 +458,8 @@ function singleMailboxAddrSpec(value: string): string | null {
     }
     addrSpec = value.slice(lt + 1, gt);
   }
-  // One printable-ASCII token. Rules out an empty `<>`, WSP inside the
-  // brackets, and a code point that only LOOKS like the sender before the
-  // caller lower-cases it for the compare.
+  // Decision: One printable-ASCII token. That rules out an empty `<>`, WSP inside the brackets, and a code
+  // point that only looks like the sender before the caller lowercases it.
   return /^[\x21-\x7e]+$/.test(addrSpec) ? addrSpec : null;
 }
 
@@ -498,8 +487,8 @@ app.post('/send', async (context) => {
 
   const from = asString(body.from);
   const mimeBase64 = asString(body.mimeBase64);
-  // Bounded and sanitized here, once, so `logSend` never interpolates the
-  // raw value; see `MAX_REQUEST_ID_LENGTH`.
+  // Decision: Bounded and sanitized once here, so logSend never interpolates the raw value (see
+  // MAX_REQUEST_ID_LENGTH).
   const requestIdRaw = asString(body.requestId);
   const requestId =
     requestIdRaw === null ? 'unknown' : sanitizeForLog(requestIdRaw, MAX_REQUEST_ID_LENGTH);
@@ -527,10 +516,9 @@ app.post('/send', async (context) => {
     );
   }
 
-  // Bound the list before the normalization loop below allocates per entry.
-  // Answered with the same 413 the MIME size guard uses — the framework
-  // dispatches on `error.code`, not the status, and INVALID_TO is already
-  // its code for an unusable recipient set.
+  // Decision: The list is bounded before the normalization loop allocates per entry. It uses the same 413 as
+  // the MIME size guard: the framework dispatches on `error.code`, and INVALID_TO is its code for an
+  // unusable recipient set.
   if (recipientsRaw.length > MAX_RECIPIENTS) {
     return context.json(
       {
@@ -544,10 +532,8 @@ app.post('/send', async (context) => {
     );
   }
 
-  // Bound the sender before anything copies it — the lowercase, the strict
-  // regex and the refusal that echoes it all sit below. Same 413 as the
-  // recipient bound; INVALID_FROM is the framework's code for an unusable
-  // sender. The address is deliberately not echoed back.
+  // Decision: The sender is bounded before anything copies it (the lowercase, the regex, the refusal that
+  // echoes it). Same 413 as the recipient bound, with INVALID_FROM. The address isn't echoed back.
   if (from.length > MAX_SENDER_LENGTH) {
     return context.json(
       {
@@ -561,7 +547,6 @@ app.post('/send', async (context) => {
     );
   }
 
-  // Fail closed on missing sender configuration before admission.
   const senderDomain = readSenderDomain(context.env);
   if (!senderDomain) {
     return context.json(
@@ -576,16 +561,16 @@ app.post('/send', async (context) => {
     );
   }
 
-  // Recipients must be unique strings; the framework already dedups but we
-  // re-validate so a buggy client cannot create duplicate attempts or logs.
+  // Decision: The framework already dedups recipients, but they're checked again so a buggy client can't
+  // create duplicate attempts or logs.
   const recipients: Array<string> = [];
   const seen = new Set<string>();
   for (const r of recipientsRaw) {
     if (typeof r !== 'string') {
       continue;
     }
-    // Before `.trim().toLowerCase()` — that call is the allocation.
-    // The address is deliberately not echoed back.
+    // Decision: Checked before `.trim().toLowerCase()`, which is the allocation. The address isn't echoed
+    // back.
     if (r.length > MAX_RECIPIENT_LENGTH) {
       return context.json(
         {
@@ -612,11 +597,9 @@ app.post('/send', async (context) => {
     );
   }
 
-  // Pre-decode size guard — base64 expands ~4/3, so a base64 string longer
-  // than `MAX_MIME_BYTES * 4 / 3 + 4` (the +4 absorbs padding rounding)
-  // can't possibly decode to anything within the limit. Reject before
-  // allocating a 75 MB Uint8Array for what we'd reject anyway. Defends
-  // against adversarial OOM via outsized payloads.
+  // Decision: Base64 expands about 4/3, so a string longer than `MAX_MIME_BYTES * 4 / 3 + 4` (+4 for padding)
+  // can't decode within the limit. Rejecting it first avoids allocating a huge Uint8Array for an
+  // oversized payload.
   if (mimeBase64.length > Math.ceil((MAX_MIME_BYTES * 4) / 3) + 4) {
     return context.json(
       {
@@ -639,8 +622,6 @@ app.post('/send', async (context) => {
       400,
     );
   }
-  // Defense-in-depth: the pre-decode check is conservative (uses base64
-  // length), so a small over-by-one slip past it would still trip here.
   if (raw.byteLength > MAX_MIME_BYTES) {
     return context.json(
       {
@@ -663,7 +644,6 @@ app.post('/send', async (context) => {
     );
   }
 
-  // A sender outside the shared platform domain uses the custom-domain path.
   const fromAt = from.indexOf('@');
   const fromDomain = fromAt === -1 ? '' : from.slice(fromAt + 1).toLowerCase();
   if (fromDomain !== '' && fromDomain !== senderDomain) {
@@ -681,8 +661,8 @@ app.post('/send', async (context) => {
     );
   }
 
-  // Custom-domain sends use send_raw and do not depend on this binding.
-  // Check the platform binding before shared-domain admission starts.
+  // Decision: Custom-domain sends use send_raw and don't need this binding, so it's checked here, before
+  // shared-domain admission starts.
   const sendBinding = context.env.SEND_EMAIL;
   if (typeof sendBinding?.send !== 'function') {
     return context.json(
@@ -697,15 +677,11 @@ app.post('/send', async (context) => {
     );
   }
 
-  // Sender ownership is checked against PostgreSQL by the admission service.
+  // Decision: The admission service checks sender ownership against PostgreSQL.
   const expectedSlug = from.split('@')[0]?.split('+')[0] ?? '';
-  // Lowercase once for the strict regex + slug compare; the regex anchors
-  // the whole string and intentionally rejects CR/LF, quotes, brackets,
-  // and display-name forms before we touch EmailMessage.
-  // The envelope is forwarded verbatim, so validation has to run on bytes that
-  // cannot change under case folding. U+212A KELVIN SIGN lowercases to 'k' and
-  // U+0130 to 'i', so a non-ASCII `from` can satisfy a lowercased regex and
-  // still reach the shared envelope sender intact. Refuse it before that.
+  // Decision: The envelope is forwarded verbatim, so validation has to run on bytes that case folding can't
+  // change. U+212A KELVIN SIGN lowercases to `k` and U+0130 to `i`, so a non-ASCII `from` could pass
+  // a lowercased regex and still reach the shared sender, so it's refused first.
   if (!/^[\x21-\x7e]+$/.test(from)) {
     return context.json(
       {
@@ -743,20 +719,16 @@ app.post('/send', async (context) => {
     );
   }
 
-  // The envelope is pinned; now pin what the recipient will actually SEE.
-  // A mismatch here is a request the framework never produces — `buildMime`
-  // renders `From:` from the same `from.email` it posts as the envelope — so
-  // it is refused outright rather than reported per recipient. Runs before
-  // the admission call for the same reason as the slug pin. The refusal may
-  // echo `from`: it is at most `MAX_SENDER_LENGTH` printable-ASCII bytes by
-  // now.
+  // Decision: The envelope is pinned; this pins what the recipient sees. buildMime renders `From:` from the
+  // same address it posts as the envelope, so a mismatch is refused outright, before admission. The
+  // refusal may echo `from`: by now it's at most MAX_SENDER_LENGTH printable-ASCII bytes.
   const mimeFromRefusal = refuseMimeFromMismatch(context, raw, from);
   if (mimeFromRefusal) {
     return mimeFromRefusal;
   }
 
-  // The API transaction is authoritative for project state, sender identity,
-  // recipient consent, suspension, and attempt quotas.
+  // Decision: The API transaction is authoritative for project state, sender identity, recipient consent,
+  // suspension and attempt quotas.
   const admitted = await admitDirectSend(context, sendDeadline, {
     projectId,
     operationKey,
@@ -772,8 +744,7 @@ app.post('/send', async (context) => {
   const allowed = admission.recipients
     .filter((r) => r.state === 'reserved')
     .map((r) => r.recipient);
-  // Send fan-out. CF's `send_email` binding takes one recipient per
-  // EmailMessage — we already split by recipient above.
+  // Decision: Cloudflare's send_email binding takes one recipient per EmailMessage.
   for (let index = 0; index < allowed.length; index++) {
     const r = allowed[index];
     if (sendDeadline.expired(EMAIL_SEND_FINALIZATION_MARGIN_MS)) {
@@ -827,12 +798,10 @@ app.post('/send', async (context) => {
       continue;
     }
     try {
-      // EmailMessage accepts string | ReadableStream — wrap our buffered
-      // bytes as a single-chunk stream. We can't reuse one stream across
-      // recipients because streams are one-shot, so build per send.
+      // Decision: Streams are one-shot, so a new single-chunk stream is built for each send.
       const msg = new EmailMessage(from, r, bytesToStream(raw));
-      // Some CF builds don't return the messageId; we surface "" rather
-      // than crash and let the framework decide whether to fall back.
+      // Decision: Some Cloudflare builds don't return the messageId, so "" is returned and the framework decides
+      // whether to fall back.
       const result = await sendDeadline.run(
         () => sendBinding.send(msg),
         EMAIL_SEND_FINALIZATION_MARGIN_MS,
@@ -876,7 +845,7 @@ app.post('/send', async (context) => {
           sendDeadline.remainingMs(),
         );
       } catch {
-        /* persisted attempt_started remains unresolved */
+        // Decision: The persisted attempt_started stays unresolved.
       }
       deliveries.push({
         recipient: r,
@@ -892,7 +861,7 @@ app.post('/send', async (context) => {
 
   logSend(projectId, requestId, deliveries);
 
-  // Return each outcome; an unknown provider result must be inspected before retry.
+  // Decision: Each outcome is returned: an unknown provider result has to be inspected before a retry.
   const anyFailed = deliveries.some((d) => !d.ok);
   if (anyFailed) {
     return context.json({ ok: false, operationId: admission.operationId, deliveries }, 200);
@@ -907,10 +876,6 @@ app.post('/send', async (context) => {
     })),
   });
 });
-
-// -----------------------------------------------------------------------------
-// Custom sender domains.
-// -----------------------------------------------------------------------------
 
 /**
  * The Email Sending REST `send_raw` result. snake_case — the REST schema
@@ -1045,7 +1010,7 @@ export async function requestSendRaw(
     try {
       reader.releaseLock();
     } catch {
-      // A timed-out read may still be settling after cancellation.
+      // Decision: A timed-out read may still be settling after cancellation.
     }
   }
 }
@@ -1132,9 +1097,8 @@ async function sendViaCustomDomain(
   operationKey: string,
   sendDeadline: EmailProviderDeadline,
 ): Promise<Response> {
-  // The envelope is forwarded verbatim to the customer's account, so the
-  // printable-ASCII guard runs here for the same reason as on the shared
-  // path (case folding must not change the bytes downstream sees).
+  // Decision: The envelope goes verbatim to the customer's account, so the printable-ASCII guard runs here
+  // for the same reason as on the shared path: case folding mustn't change the bytes downstream sees.
   if (!/^[\x21-\x7e]+$/.test(from)) {
     return context.json(
       {
@@ -1145,16 +1109,13 @@ async function sendViaCustomDomain(
     );
   }
 
-  // The MIME From address must match the envelope sender before admission.
   const mimeFromRefusal = refuseMimeFromMismatch(context, raw, from);
   if (mimeFromRefusal) {
     return mimeFromRefusal;
   }
 
-  // send_raw carries the MIME as a JSON string. Decode FATALLY: the
-  // framework's builder emits 7-bit-clean MIME, and a body that is not
-  // valid UTF-8 would be silently altered by a lenient decode — refuse it
-  // instead. Local validation runs before admission.
+  // Decision: send_raw carries the MIME as a JSON string. Decoding is fatal: the framework emits 7-bit-clean
+  // MIME, and a lenient decode would quietly change a body that isn't valid UTF-8.
   let mimeMessage: string;
   try {
     mimeMessage = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false }).decode(raw);
@@ -1181,9 +1142,9 @@ async function sendViaCustomDomain(
   if (recipients.length === 0) {
     return emailActionResponse(context, admission.operationId, deliveries);
   }
-  // A duplicate must return its durable outcome even if the credential was
-  // subsequently revoked. Fresh attempts lease only after admission, then
-  // cancel reservations if there can be no provider submission.
+  // Decision: A duplicate has to return its durable outcome even if the credential was revoked since. Fresh
+  // attempts lease only after admission, and cancel reservations when no provider submission can
+  // happen.
   const lease = await leaseEmailDomainCredential(
     context.env,
     fromDomain,
@@ -1256,9 +1217,8 @@ async function sendViaCustomDomain(
     return emailActionResponse(context, admission.operationId, deliveries);
   }
 
-  // One REST call carries every recipient — unlike the platform binding's
-  // one EmailMessage per recipient. The response's message id is shared by
-  // the whole list.
+  // Decision: One REST call carries all recipients, unlike the binding's one EmailMessage per recipient, so
+  // the whole list shares the response's message id.
   let failure: { code: string; message: string } | null = null;
   let failureState: 'failed' | 'outcome_unknown' = 'failed';
   let sendRawResult: ParsedSendRawResult | null = null;
@@ -1280,8 +1240,7 @@ async function sendViaCustomDomain(
   }
   if (providerResponse) {
     if (!providerResponse.ok) {
-      // A fresh credential is leased for every attempt. Provider error
-      // bodies are not echoed or logged.
+      // Decision: A fresh credential is leased for each attempt. Provider error bodies aren't echoed or logged.
       failure = {
         code: providerResponse.status === 429 ? 'QUOTA_EXCEEDED' : 'UPSTREAM_ERROR',
         message: `email sending API returned ${providerResponse.status}`,
@@ -1402,9 +1361,8 @@ async function sendViaCustomDomain(
   }
   logSend(projectId, requestId, deliveries);
 
-  // Same mid-batch contract as the shared path: any per-recipient failure
-  // (bounce, suppression, or a whole-call failure) answers ok:false with
-  // the complete per-recipient evidence needed for a safe retry decision.
+  // Decision: Same contract as the shared path: any per-recipient failure answers ok:false with the full
+  // per-recipient evidence needed for a safe retry decision.
   if (deliveries.some((d) => !d.ok)) {
     return context.json({ ok: false, operationId: admission.operationId, deliveries }, 200);
   }
@@ -1419,11 +1377,6 @@ async function sendViaCustomDomain(
   });
 }
 
-// -----------------------------------------------------------------------------
-// Inbound delivery log — kept here because it's invoked from the email gateway router
-// inside the same worker (bypasses HTTP/auth).
-// -----------------------------------------------------------------------------
-
 /**
  * Inbound delivery log. Inlined here rather than via service binding because
  * inbound routing reuses this provider helper; routing through env.API would 404.
@@ -1436,10 +1389,6 @@ export async function recordInboundDelivery(
     `[email-recv] ${projectId} ${sanitizeForLog(info.from, 320)} -> ${sanitizeForLog(info.to, 320)} ${info.status} (${info.byteSize}B) @${Date.now()}`,
   );
 }
-
-// -----------------------------------------------------------------------------
-// Helpers
-// -----------------------------------------------------------------------------
 
 interface RecipientResult {
   recipient: string;

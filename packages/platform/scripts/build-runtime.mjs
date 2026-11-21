@@ -105,7 +105,7 @@ try {
       throw new Error(`Failed to build the ${name} platform Worker.`);
     }
     const artifactPath = join(outputDirectory, 'index.js');
-    // Publish executable artifacts without build-only maps or dangling map references.
+    // Decision: Publish executable artifacts without build-only maps or dangling map references.
     const contents = Buffer.from(
       readFileSync(artifactPath, 'utf8').replace(/\n\/\/# sourceMappingURL=[^\r\n]*\s*$/u, '\n'),
     );
@@ -121,7 +121,7 @@ try {
 
   cpSync(drizzleRoot, join(runtimeRoot, 'drizzle'), {
     recursive: true,
-    // Drizzle snapshots support authoring new migrations, not applying them.
+    // Decision: Drizzle snapshots support authoring new migrations, not applying them.
     filter: (source) => !/^\d{4}_snapshot\.json$/.test(basename(source)),
   });
   const packageJson = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
@@ -152,7 +152,7 @@ try {
     platformVersion: packageJson.version,
     safetyProtocols: { sandboxDrain: 3 },
     schemaVersion: 2,
-    // scripts/stamp-source-revision.mjs records the revision after this cached build.
+    // Decision: scripts/stamp-source-revision.mjs records the revision after this cached build.
     sourceRevision: null,
     usageProtocolVersion: PLATFORM_USAGE_PROTOCOL_VERSION,
   });
@@ -179,7 +179,7 @@ function buildDatabaseManifest() {
   if (!Array.isArray(compatibility.rollbackSafeFrom)) {
     throw new Error('bwf Platform rollbackSafeFrom must be an array.');
   }
-  // parsePlatformRuntimeManifest validates these values, their order, and the rollback lineage.
+  // Decision: parsePlatformRuntimeManifest validates these values, their order, and the rollback lineage.
   const migrations = journal.entries.map((entry, position) => {
     const tag = entry?.tag;
     if (typeof tag !== 'string') {

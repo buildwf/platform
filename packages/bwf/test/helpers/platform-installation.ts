@@ -15,7 +15,6 @@ import {
   writePendingInstallationSecrets,
 } from '../../src/cli/platform-registry.ts';
 
-/** Saves the installation and its recovery secrets in a new registry directory added to `directories`. */
 export function persistInstallation(
   manifest: PlatformInstallationManifest,
   directories: Array<string>,
@@ -45,7 +44,7 @@ export function ownershipMarker(
   );
 }
 
-/** The last note shown under `title`. The calling test file must mock `note`. */
+// Decision: The last note shown under `title`. The calling test file must mock `note`.
 export function noteText(title: string): string {
   return String(
     vi

@@ -2,9 +2,10 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vite-plus/test';
 
-// Realtime is a separate project (the @builtbyfriends/realtime packages on npm). bwf talks to it only through the
-// procedures adapter: runtime/procedure.ts, runtime/procedures.ts and the client runtime/rpc.ts. Nothing else in the
-// framework imports a Realtime package, so the framework stays usable and testable without it.
+// Decision: Realtime is a separate project (the @builtbyfriends/realtime packages on npm). bwf talks to
+// it only through the procedures adapter: runtime/procedure.ts, runtime/procedures.ts and the
+// client runtime/rpc.ts. Nothing else in the framework imports a Realtime package, so the
+// framework stays usable and testable without it.
 const src = join(import.meta.dirname, '..', '..', 'src');
 const adapter = new Set(['runtime/procedure.ts', 'runtime/procedures.ts', 'runtime/rpc.ts']);
 

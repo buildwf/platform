@@ -11,13 +11,10 @@ import { renderFateDetailPage, renderFateListPage } from '../fate/render.ts';
 
 const app = new Hono<ApiEnv>();
 
-// GET /deployments
 app.get('/', (context) => renderFateListPage(context, 'deployments'));
 
-// GET /deployments/:id
 app.get('/:id', (context) => renderFateDetailPage(context, 'deploymentDetail'));
 
-// POST /deployments/:id/cancel
 app.post('/:id/cancel', async (context) => {
   const deploymentId = context.req.param('id');
   return executeAuditedMutation(
@@ -48,7 +45,6 @@ app.post('/:id/cancel', async (context) => {
   );
 });
 
-// GET /deployments/:id/logs — shared historical log reader.
 app.get('/:id/logs', async (context) => {
   try {
     return context.json(

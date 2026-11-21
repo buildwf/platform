@@ -95,8 +95,8 @@ export async function resolveEmailUnresolvedAttempt(
   }
   const now = input.now ?? new Date();
   return db.transaction(async (tx) => {
-    // Finishing a send locks the action before deleting its fence. Match that
-    // order so a late provider response and operator resolution cannot race.
+    // Decision: Finishing a send locks the action before deleting its fence. Match that order so a late provider
+    // response and operator resolution can't race.
     const [initialFence] = await tx
       .select()
       .from(emailUnresolvedAttempts)
@@ -551,8 +551,8 @@ export async function transitionEmailRecipients(
 ) {
   const normalized = [...new Set(recipients.map((r) => r.toLowerCase()))];
   return db.transaction(async (tx) => {
-    // Serialize starts with project teardown. Once deleting is visible, an
-    // admitted reservation cannot become a provider side effect.
+    // Decision: Serialize starts with project teardown. Once deleting is visible, an admitted reservation can't
+    // become a provider side effect.
     if (next === 'attempt_started' || next === 'cancelled') {
       await lockEmailPolicyForAdmission(tx);
     }
@@ -573,9 +573,9 @@ export async function transitionEmailRecipients(
       if (!projectIdentity) {
         throw new EmailAdmissionError('INVALID_STATE', 'project is not active');
       }
-      // Lock the owner before the project so a user deletion never has to wait
-      // on the project while this transaction waits on the user. Re-check the
-      // relationship under the project lock in case the unlocked lookup raced.
+      // Decision: Lock the owner before the project so a user deletion doesn't wait on the project while this
+      // transaction waits on the user. Re-check the relationship under the project lock in case the
+      // unlocked lookup raced.
       const [owner] = await tx
         .select({ suspendedReason: users.suspended_reason })
         .from(users)
@@ -731,7 +731,7 @@ export async function drainProjectEmailAdmissions(
       .where(eq(emailProjectControls.project_id, projectId))
       .for('update');
     if (!controls) {
-      // A project with no email control row has never admitted an action.
+      // Decision: A project with no email control row has never admitted an action.
       return { cancelled: 0, inFlight: 0 };
     }
     const cancelled = await tx
@@ -819,7 +819,7 @@ async function lockReceiptAdmissionProject(tx: Tx, projectId: string) {
   if (!identity) {
     return null;
   }
-  // Match outbound admission's owner-before-project lock order during user deletion.
+  // Decision: Match outbound admission's owner-before-project lock order during user deletion.
   const [owner] = await tx
     .select({ suspendedReason: users.suspended_reason })
     .from(users)
@@ -1139,7 +1139,7 @@ export async function pruneEmailActionHistory(
   before: Date = new Date(Date.now() - 30 * 86_400_000),
 ) {
   await cancelExpiredEmailReservations(db);
-  // Active calls leave PII-free tombstones; delivery metadata expires normally.
+  // Decision: Active calls leave PII-free tombstones; delivery metadata expires normally.
   await db.delete(emailActions).where(sql`
     ${emailActions.created_at} < ${before.toISOString()}
   `);
@@ -1152,8 +1152,8 @@ export async function pruneEmailActionHistory(
 async function cancelExpiredEmailReservations(db: Db) {
   const before = new Date(Date.now() - 15 * 60_000).toISOString();
   await db.transaction(async (tx) => {
-    // Starts and explicit cancellations take this lock shared. Whichever wins
-    // decides whether the provider may be called and whether quota is refunded.
+    // Decision: Starts and explicit cancellations take this lock shared. Whichever wins decides whether the
+    // provider may be called and whether quota is refunded.
     await lockEmailPolicy(tx);
     await tx.execute(sql`
       with cancelled as (

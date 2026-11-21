@@ -148,7 +148,7 @@ export async function applyPlatformDomain(
     throw new Error('platform: Domain plan has no application DNS record.');
   }
   if (dnsAction.action === 'create') {
-    // Re-read immediately before creating; a retry must adopt a record created by an ambiguous response.
+    // Decision: Re-read just before creating: a retry has to adopt a record that an ambiguous response created.
     const current = await client.listDnsRecords(zone.id, dnsAction.name);
     if (current.length) {
       throw new Error('platform: DNS changed since the plan. Rerun the command to review it.');
@@ -188,14 +188,14 @@ export async function applyPlatformDomain(
     now(),
   );
   await save({ ...manifest, resources: observed.resources, updatedAt: now() });
-  // The dispatcher health endpoint works while traffic is disabled and before the domain is canonical.
+  // Decision: The dispatcher health endpoint works while traffic is disabled and before the domain is canonical.
   // Project Zero Trust leaves only this hostname of the domain outside Access.
   await (dependencies.probe ?? probePlatformDomain)(
     `${PLATFORM_HEALTH_HOSTNAME_LABEL}.${target.baseDomain}`,
     manifest,
   );
   await dependencies.verifyOwnership(manifest);
-  // The API publishes the application to routing storage during activation.
+  // Decision: The API publishes the application to routing storage during activation.
   // Stop with a repair hint before that call if the installation record says
   // the storage is not ready.
   const routing = manifest.resources.find(
@@ -232,7 +232,7 @@ export async function activatePlatformDomain(
     },
     body: JSON.stringify({ application }),
   });
-  // A runtime before 0.22.0 has no activation handoff and answers with a
+  // Decision: A runtime before 0.22.0 has no activation handoff and answers with a
   // non-JSON 404. Platform management commands do not run the minimum
   // platform version check, so keep this.
   const body = (await response.json().catch(() => null)) as {

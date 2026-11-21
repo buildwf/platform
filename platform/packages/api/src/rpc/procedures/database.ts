@@ -147,7 +147,7 @@ export const provision = procedure('database.provision')
   .cli({ command: 'db provision', description: 'Provision Hyperdrive for an external database' })
   .handler(async ({ env, ctx, input, fail }) => {
     const { projectId, connectionString } = input;
-    // Fast rejection; the transaction below rechecks status and capability under the lock.
+    // Decision: Fast rejection; the transaction below checks status and capability again under the lock.
     if (grantedAccess(ctx).project.status === 'deleting') {
       return fail('PROJECT_DELETING');
     }
@@ -155,7 +155,7 @@ export const provision = procedure('database.provision')
       return fail('ALREADY_PROVISIONED');
     }
     const resourceName = hyperdriveResourceName(projectId);
-    // Only an object WE created is safe to roll back if the locked transaction later fails.
+    // Decision: Only an object we created is safe to roll back if the locked transaction later fails.
     let hyperdriveId: string | undefined;
     let createdByUs = false;
     const encrypted = await encryptProjectSecret(env, projectId, 'database-url', connectionString);
@@ -166,8 +166,8 @@ export const provision = procedure('database.provision')
         if (refused) {
           return refused;
         }
-        // Re-read after the lock: membership changes, teardown and a competing provision all
-        // serialize on this project row.
+        // Decision: Re-read after the lock: membership changes, teardown and a competing provision all serialize on
+        // this project row.
         if ((await getProjectResources(tx, projectId)).some((r) => r.type === 'hyperdrive')) {
           return { code: 'ALREADY_PROVISIONED' };
         }
@@ -183,8 +183,8 @@ export const provision = procedure('database.provision')
           throw error;
         }
         try {
-          // Both handles persist in one transaction: if either write or COMMIT fails, the catch
-          // below removes a Hyperdrive we created so no untracked object is left behind.
+          // Decision: Both handles persist in one transaction: if either write or COMMIT fails, the catch below
+          // removes a Hyperdrive we created so no untracked object is left.
           await upsertProjectDatabaseUrl(
             tx,
             projectId,
@@ -235,8 +235,8 @@ export const setUrl = procedure('database.setUrl')
         if (refused) {
           return refused;
         }
-        // Resolve the resource only after taking the lock: a downgrade or removal is then
-        // authoritative before any live Hyperdrive update is sent to Cloudflare.
+        // Decision: Resolve the resource only after taking the lock, so a downgrade or removal is settled before any
+        // live Hyperdrive update goes to Cloudflare.
         const existing = (await getProjectResources(tx, projectId)).find(
           (r) => r.type === 'hyperdrive',
         );
@@ -291,8 +291,8 @@ export const setUrl = procedure('database.setUrl')
         return { ok: true };
       });
     } catch (error) {
-      // Only a freshly created object is safe to hand back; adopted or pre-existing Hyperdrives
-      // may still be referenced by a prior attempt.
+      // Decision: Only a freshly created object is safe to delete; adopted or existing Hyperdrives may still be
+      // referenced by an earlier attempt.
       if (createdHyperdriveId) {
         await deleteHyperdrive(env.CF_ACCOUNT_ID, env.CF_API_TOKEN, createdHyperdriveId).catch(
           () => {},
@@ -311,7 +311,7 @@ export const setUrl = procedure('database.setUrl')
 export const getUrl = procedure('database.getUrl')
   .use(member)
   .input(type({ projectId: 'string' }))
-  // Only the owner may read the stored connection string: `delete` is the capability only they hold.
+  // Decision: Only the owner may read the stored connection string: `delete` is the capability only they hold.
   .authz({ policy: 'project-owner', check: canOnProject('delete') })
   .output(type({ url: 'string' }))
   .errors({ NOT_STORED: ERRORS.NOT_STORED })

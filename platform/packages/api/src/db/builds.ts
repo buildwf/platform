@@ -26,10 +26,6 @@ import type { Build } from '../types.ts';
 import { type Db } from './client.ts';
 import { installationCoversRepoInTx } from './github-authority.ts';
 
-// ---------------------------------------------------------------------------
-// builds
-// ---------------------------------------------------------------------------
-
 export async function getBuild(db: Db, id: string): Promise<Build | null> {
   const [row] = await db.select().from(builds).where(eq(builds.id, id)).limit(1);
   return row ?? null;
@@ -230,9 +226,8 @@ export async function getQueuedBuilds(
   limit = 50,
   excludeUserIds: ReadonlyArray<string> = [],
 ): Promise<ReadonlyArray<Build>> {
-  // Inner: each idle project's OLDEST queued container build. DISTINCT ON
-  // requires its column (`project_id`) to lead the ORDER BY, so age fairness
-  // can't be expressed here — it is applied by the outer query below.
+  // Decision: Inner query: each idle project's oldest queued container build. DISTINCT ON needs its column
+  // (`project_id`) to lead the ORDER BY, so age fairness can't go here; the outer query applies it.
   const oldestPerProject = db
     .selectDistinctOn([builds.project_id])
     .from(builds)
@@ -245,16 +240,15 @@ export async function getQueuedBuilds(
           where active_builds.project_id = ${builds.project_id}
             and active_builds.status in ('starting', 'building', 'deploying')
         )`,
-        // Omit the clause entirely when empty: `NOT IN ()` is invalid SQL.
+        // Decision: Leave the clause out when the list is empty: `NOT IN ()` is invalid SQL.
         excludeUserIds.length > 0 ? notInArray(builds.user_id, [...excludeUserIds]) : undefined,
       ),
     )
     .orderBy(builds.project_id, asc(builds.created_at))
     .as('oldest_per_project');
 
-  // Outer: re-sort the per-project candidates oldest-first and limit, so the
-  // scan surfaces the globally oldest-waiting startable builds rather than the
-  // lowest project_ids.
+  // Decision: Outer query: re-sort the per-project candidates oldest-first and limit, so the scan surfaces the
+  // oldest-waiting startable builds overall, not the lowest project_ids.
   return db.select().from(oldestPerProject).orderBy(asc(oldestPerProject.created_at)).limit(limit);
 }
 
@@ -286,9 +280,8 @@ export async function getUsersWithQueuedContainerBuilds(db: Db): Promise<
       userId: users.id,
       plan: users.plan,
       suspendedReason: users.suspended_reason,
-      // Count only active rows through idx_builds_user_status. Joining the
-      // entire builds table here would touch every historical build belonging
-      // to each queued owner on every scheduler tick.
+      // Decision: Count only active rows through idx_builds_user_status. Joining the whole builds table would touch
+      // each queued owner's full build history on each scheduler tick.
       activeBuilds: sql<number>`(
         select count(*) from ${builds} as active_builds
         where ${activeBuilds.user_id} = ${users.id}
@@ -297,8 +290,6 @@ export async function getUsersWithQueuedContainerBuilds(db: Db): Promise<
     })
     .from(users)
     .innerJoin(
-      // Restrict to users who own at least one queued container build — the
-      // only work this scan can ever start.
       sql`(
         select distinct ${builds.user_id} as user_id from ${builds}
         where ${builds.status} = 'queued' and ${builds.executor} = 'container'
@@ -396,17 +387,13 @@ export async function supersedeAndCreateContainerBuild(
     | 'owner-suspended';
 }> {
   return db.transaction(async (tx) => {
-    // Serialize all push processing for this project (project<->branch is 1:1 via
-    // the unique github_connections.project_id; the project row always exists),
-    // and re-read its status under the lock. teardownProject's lockAndMarkDeleting
-    // takes the SAME projects FOR UPDATE then flips status='deleting' before the
-    // later cascade deletes the connection; a push landing in that window would
-    // otherwise enqueue a container build for a project being torn down — burning
-    // a scarce build slot (the scheduler + JIT recheck don't reject deleting
-    // projects; only the cascade's terminate eventually cancels it). Mirror the
-    // GitHub Actions path (createGithubActionsBuildWithinLimit) and skip instead.
-    // Lock order stays projects-first, matching the other build paths, so this
-    // cannot deadlock (40P01) against them.
+    // Decision: Serialize all push processing for this project (project and branch are 1:1 through the unique
+    // github_connections.project_id) and re-read its status under the lock. teardownProject's
+    // lockAndMarkDeleting takes the same projects FOR UPDATE and sets status='deleting' before the
+    // cascade deletes the connection. A push in that window would enqueue a container build for a
+    // project being torn down and burn a build slot (the scheduler and JIT recheck don't reject
+    // deleting projects). Skip instead, like createGithubActionsBuildWithinLimit. The lock order stays
+    // projects-first, like the other build paths, so it can't deadlock (40P01) against them.
     const [proj] = await tx
       .select({ status: projects.status, user_id: projects.user_id })
       .from(projects)
@@ -425,20 +412,18 @@ export async function supersedeAndCreateContainerBuild(
     if (ownerState && isAdminSuspended(ownerState.suspendedReason)) {
       return { build: null, reused: false, cancelled: [], skipped: 'owner-suspended' };
     }
-    // Resolve the size of record from the same owner row whose lock serializes
-    // admission. A plan change that lands while webhook processing is doing its
-    // network checks must take effect before this enqueue commits.
+    // Decision: Resolve the build size from the same owner row whose lock serializes admission. A plan change
+    // that lands while webhook processing does its network checks must apply before this enqueue
+    // commits.
     const instanceType = ownerState
       ? (await resolvePlan(tx, ownerState.plan)).buildInstanceType
       : null;
 
-    // Serialize against PATCH /projects/:id/github: lock + re-read the single
-    // connection (project_id is UNIQUE). If a concurrent config change committed
-    // first, the row's branch/executor no longer matches this push — skip rather
-    // than enqueue an orphan build for a now-disabled branch/executor that neither
-    // the scheduler nor the JIT freshness gate would catch. The PATCH holds the
-    // same lock and its terminate step handles old-build cleanup, so we return
-    // `cancelled: []` here.
+    // Decision: Serialize against PATCH /projects/:id/github: lock and re-read the single connection (project_id
+    // is UNIQUE). If a concurrent config change committed first, the branch or executor no longer
+    // matches this push, so skip instead of enqueueing an orphan build that neither the scheduler nor
+    // the JIT freshness gate would catch. The PATCH holds the same lock and its terminate step cleans
+    // up old builds, so return `cancelled: []`.
     const [conn] = await tx
       .select({
         id: githubConnections.id,
@@ -453,26 +438,22 @@ export async function supersedeAndCreateContainerBuild(
       return { build: null, reused: false, cancelled: [], skipped: 'config-changed' };
     }
 
-    // Assert the locked connection is the SAME row the caller resolved. project_id
-    // is UNIQUE, so a disconnect+reconnect to a DIFFERENT repo (same branch/executor)
-    // DELETEs the old row and CREATEs a new one with a fresh id between resolution and
-    // this tx. The branch/executor guard above and the install check below both pass
-    // for such a swap (the install check keys on the PASSED installationId), so the
-    // id-match is the only guard that catches a cross-repo swap — without it the old
-    // repo's push would enqueue a build + mint a deploy token for a project now bound
-    // to a different repo. The reconnect/disconnect already terminalized old builds
-    // under its own lock, so `cancelled: []` is correct.
+    // Decision: Check that the locked connection is the same row the caller resolved. project_id is UNIQUE, so a
+    // disconnect and reconnect to a different repo (same branch and executor) deletes the old row and
+    // creates one with a new id in between. The branch/executor guard and the install check below both
+    // pass for that swap (the install check uses the passed installationId), so the id match is the
+    // only guard against a cross-repo swap. Without it the old repo's push would enqueue a build and
+    // mint a deploy token for a project now bound to another repo. The reconnect already ended old
+    // builds under its own lock, so `cancelled: []` is correct.
     if (conn.id !== args.connectionId) {
       return { build: null, reused: false, cancelled: [], skipped: 'connection-replaced' };
     }
 
-    // Re-check installation status + repo membership under the connection lock.
-    // The push resolver checked the install at resolve time, but a revocation
-    // (App suspend/uninstall, repo removal) can commit AFTER that check and BEFORE
-    // this tx — within the installation-token cache window — and would otherwise
-    // enqueue a build + mint a deploy token for a now-revoked install. The
-    // revocation webhooks lock these same connection rows FIRST, so this plain
-    // read (under READ COMMITTED) sees their committed status. Fails closed.
+    // Decision: Re-check installation status and repo membership under the connection lock. A revocation (App
+    // suspend or uninstall, repo removal) can commit after the push resolver's check and before this
+    // tx, inside the installation-token cache window, and would otherwise enqueue a build and mint a
+    // deploy token for a revoked install. The revocation webhooks lock these connection rows first, so
+    // this plain read (READ COMMITTED) sees their committed status. Fails closed.
     if (
       !(await installationCoversRepoInTx(
         tx,
@@ -485,17 +466,13 @@ export async function supersedeAndCreateContainerBuild(
       return { build: null, reused: false, cancelled: [], skipped: 'install-revoked' };
     }
 
-    // Supersede older queued AND active (starting/building/deploying) container
-    // builds for this branch whose commit is NOT the new head — FIRST, before the
-    // dedup/reuse lookup, so it runs even when this push reuses an already-`complete`
-    // build. This closes the rollback gap: a force-push BACK to a previously-deployed
-    // SHA reuses the old `complete` build, but a newer in-flight build for the
-    // now-off-branch commit must still be cancelled — otherwise it keeps a live
-    // deploy token (the final guard only checks active+project, not freshness) and
-    // would publish the stale newer commit. `exceptCommitSha` spares this push's own
-    // commit (so a same-commit redelivery never self-cancels and returns
-    // `cancelled: []` when nothing else conflicts); the `branch` filter spares other
-    // branches.
+    // Decision: Supersede older queued and active container builds for this branch whose commit isn't the new
+    // head. Do it first, before the reuse lookup, so it runs even when this push reuses a `complete`
+    // build. That closes the rollback gap: a force-push back to a deployed SHA reuses the old build,
+    // but a newer in-flight build for the now-off-branch commit must still be cancelled, or it keeps a
+    // live deploy token (the final guard checks only active+project, not freshness) and publishes the
+    // stale commit. `exceptCommitSha` spares this push's commit, so a same-commit redelivery doesn't
+    // cancel itself; the `branch` filter spares other branches.
     const cancelled = await terminateBuildsForProject(tx, args.projectId, {
       branch: args.branch,
       executor: 'container',
@@ -503,7 +480,6 @@ export async function supersedeAndCreateContainerBuild(
       reason: 'superseded by newer push',
     });
 
-    // (a) active in-flight build for this commit → always reuse.
     const [activeExisting] = await tx
       .select()
       .from(builds)
@@ -519,19 +495,13 @@ export async function supersedeAndCreateContainerBuild(
       .orderBy(desc(builds.created_at))
       .limit(1);
     if (activeExisting) {
-      // Re-stamp created_at to now() on reuse, so a concurrent branch-delete fence
-      // captured BEFORE this push cannot cancel a build this push just re-adopted.
-      // The branch-delete path cancels active builds with created_at <= a fence it
-      // sampled before confirming the branch absent. On a SAME-SHA recreate (delete
-      // then recreate at the same commit), this reuse path returns the pre-existing
-      // active row instead of inserting a fresh one — so without re-stamping, the
-      // reused row keeps its pre-fence created_at and a delete that interleaves AFTER
-      // this push (it lost the connection FOR UPDATE race) would wrongly terminalize
-      // a valid build. Bumping created_at makes the row post-fence, closing that
-      // TOCTOU. Safe for every other consumer: the container reaper keys on
-      // started_at (not created_at), the github_actions reaper filters
-      // executor != container, and the dedup lookups order by created_at desc (this
-      // row stays newest, which is correct — it is the current build for the commit).
+      // Decision: Re-stamp created_at to now() on reuse, so a concurrent branch-delete fence taken before this push
+      // can't cancel a build this push just re-adopted. The branch-delete path cancels active builds with
+      // created_at <= a fence it sampled before confirming the branch is gone. On a same-SHA recreate,
+      // this path returns the existing row, so without the re-stamp it keeps its pre-fence created_at and
+      // a delete that interleaves after this push would end a valid build. Safe for the other readers:
+      // the container reaper keys on started_at, the github_actions reaper skips container builds, and
+      // the dedup lookups order by created_at desc (this row stays newest, which is right).
       const [refreshed] = await tx
         .update(builds)
         .set({ created_at: sql`now()` })
@@ -540,7 +510,8 @@ export async function supersedeAndCreateContainerBuild(
       return { build: refreshed ?? activeExisting, reused: true, cancelled };
     }
 
-    // (b) completed build for this commit → reuse only if this commit is already live.
+    // Decision: A completed build for this commit is reused only if the commit is already live. Otherwise it's a
+    // rollback, and a fresh queued build is inserted below.
     const [completeExisting] = await tx
       .select()
       .from(builds)
@@ -577,7 +548,6 @@ export async function supersedeAndCreateContainerBuild(
       if (liveIsThisCommit) {
         return { build: completeExisting, reused: true, cancelled };
       }
-      // else: rollback — fall through to insert a fresh queued build.
     }
 
     const id = generateId('bld');
@@ -650,20 +620,14 @@ export async function terminateBuildsForProject(
     executor?: Build['executor'];
     exceptCommitSha?: string;
     reason?: string;
-    // Only terminalize builds created at or before this timestamp. Used by the
-    // branch-delete path as a monotonic fence: the caller confirms the branch is
-    // absent, then cancels — but a build enqueued in that window (a branch
-    // recreated + pushed before this UPDATE runs) is created AFTER the fence and
-    // must survive. Without it, a stale/out-of-order delete could clobber a fresh
-    // valid build for the recreated branch. The caller MUST source this from the
-    // database clock (`select now()`), the same clock that stamps `created_at`, so
-    // the two are never compared across independent (Worker vs Postgres) clocks.
-    // The boundary is inclusive (`<=`): a build whose created_at lands exactly on
-    // the fence existed when absence-checking began and is an orphan, so cancel it
-    // — a recreate-race build is always created strictly after the fence. Compared
-    // as an absolute instant (`::timestamptz`): `created_at` is `timestamp without
-    // time zone`, so a naive compare against a UTC `...Z` string drops the offset
-    // and misfires under any non-UTC session timezone.
+    // Decision: Only end builds created at or before this timestamp. The branch-delete path uses it as a
+    // monotonic fence: it confirms the branch is gone, then cancels, and a build enqueued in that window
+    // (branch recreated and pushed) is created after the fence and must survive.
+    // The caller must take it from the database clock (`select now()`), the clock that stamps
+    // `created_at`, so Worker and Postgres clocks are never compared. The boundary is inclusive: a build
+    // exactly on the fence existed when the absence check began. Compare as `::timestamptz`:
+    // `created_at` is `timestamp without time zone`, so a naive compare against a UTC `...Z` string
+    // drops the offset under a non-UTC session timezone.
     createdBefore?: string;
   },
 ): Promise<ReadonlyArray<TerminatedBuild>> {
@@ -695,10 +659,9 @@ export async function terminateBuildsForProject(
       id: builds.id,
       executor: builds.executor,
       status: builds.status,
-      // Carried out so the post-commit DO teardown can address the SAME
-      // container-size namespace the scheduler started this build on
-      // (`buildManagerNamespace`); a paid (standard-4) build cancelled against
-      // the base namespace would miss its live container.
+      // Decision: Returned so the post-commit DO teardown addresses the same container-size namespace the scheduler
+      // started this build on (`buildManagerNamespace`). A paid (standard-4) build cancelled against the
+      // base namespace would miss its live container.
       instance_type: builds.instance_type,
     });
   return affected;
@@ -819,10 +782,9 @@ export async function createGithubActionsBuildWithinLimit(
     connectionId: string;
     installationId: string;
     repositoryId: string;
-    // The authorized workflow path the OIDC gate matched (the token's own
-    // workflow file). Re-checked under the connection lock so a concurrent
-    // PATCH that re-pins `workflow_path` can't let a now-de-authorized workflow
-    // slip a build through the check→lock window. See the re-validation below.
+    // Decision: The authorized workflow path the OIDC gate matched (the token's own workflow file). It's
+    // re-checked under the connection lock so a concurrent PATCH that re-pins `workflow_path` can't let
+    // a de-authorized workflow slip a build through the check-to-lock window.
     expectedWorkflowPath: string;
   },
 ): Promise<
@@ -838,17 +800,12 @@ export async function createGithubActionsBuildWithinLimit(
   | { outcome: 'owner-suspended' }
 > {
   return db.transaction(async (tx) => {
-    // Lock the PROJECT row FIRST — before the users + github_connections locks
-    // below — so this path acquires projects-before-connection, the SAME order
-    // as deleteProjectCascade / lockAndMarkDeleting (projects FOR UPDATE, then
-    // the cascaded connection) and the push path (supersedeAndCreateContainerBuild).
-    // Without it, the builds INSERT below takes an implicit FK `FOR KEY SHARE` on
-    // the projects row AFTER we already hold the connection `FOR UPDATE`, inverting
-    // the lock order against a concurrent teardown (which holds projects FOR UPDATE
-    // then needs this connection) → a Postgres deadlock (40P01) aborts one of the
-    // two. Reject a project being torn down (or already gone): minting a deploy
-    // token for a deleting project would create an orphan build the cascade then
-    // has to cancel.
+    // Decision: Lock the project row first, before the users and github_connections locks, so this path takes
+    // projects before the connection, like deleteProjectCascade, lockAndMarkDeleting and the push path.
+    // Without it, the builds INSERT takes an implicit FK `FOR KEY SHARE` on the project after we hold
+    // the connection `FOR UPDATE`, which inverts the order against a concurrent teardown and causes a
+    // deadlock (40P01). Reject a project being torn down or gone: a deploy token for it would create an
+    // orphan build the cascade then has to cancel.
     const [proj] = await tx
       .select({ status: projects.status, user_id: projects.user_id })
       .from(projects)
@@ -859,9 +816,8 @@ export async function createGithubActionsBuildWithinLimit(
       return { outcome: 'project-deleting' };
     }
 
-    // Serialize per-user slot acquisition. Concurrent exchanges for the same
-    // owner block here until the holder commits, so the count below always
-    // observes prior inserts.
+    // Decision: Serialize per-user slot acquisition. Concurrent exchanges for the same owner wait here until the
+    // holder commits, so the count below sees prior inserts.
     const [ownerState] = await tx
       .select({ plan: users.plan, suspendedReason: users.suspended_reason })
       .from(users)
@@ -874,18 +830,13 @@ export async function createGithubActionsBuildWithinLimit(
     const ownerPlan = ownerState ? await resolvePlan(tx, ownerState.plan) : null;
     const limit = ownerPlan?.limits.concurrentBuilds ?? 0;
 
-    // Serialize against DELETE /projects/:id/github: lock + re-read the connection
-    // inside this tx. If a concurrent disconnect committed first, the row is gone
-    // and we must NOT create a build / mint a token for a removed connection —
-    // otherwise an orphan active build would never be finalized (the workflow_run
-    // webhook ignores a missing connection) and a just-disconnected repo could
-    // still deploy. The disconnect path takes the SAME `FOR UPDATE` lock on this
-    // row, so the two are mutually exclusive: disconnect-first => we see no row
-    // and reject; build-first => the disconnect's terminate step then cancels the
-    // build we just created. Lock order is projects -> users -> github_connections
-    // (projects locked above so it matches teardown's projects-first order); the
-    // disconnect locks only github_connections, so there is no opposite-order
-    // acquirer and no deadlock.
+    // Decision: Serialize against DELETE /projects/:id/github: lock and re-read the connection in this tx. If a
+    // disconnect committed first, the row is gone and we must not create a build or mint a token: the
+    // orphan build would never finish (the workflow_run webhook ignores a missing connection) and a
+    // disconnected repo could still deploy. The disconnect takes the same `FOR UPDATE` lock, so either
+    // we see no row and reject, or its terminate step cancels the build we created. Lock order is
+    // projects, users, github_connections; the disconnect locks only github_connections, so there's no
+    // opposite-order acquirer and no deadlock.
     const [conn] = await tx
       .select({
         id: githubConnections.id,
@@ -905,26 +856,21 @@ export async function createGithubActionsBuildWithinLimit(
       return { outcome: 'connection-removed' };
     }
 
-    // Assert the locked connection is the SAME row the caller resolved. project_id
-    // is UNIQUE, so a disconnect+reconnect to a DIFFERENT repo (same branch/executor)
-    // DELETEs the old row and CREATEs a new one with a fresh id between resolution and
-    // this tx. The install check below keys on the PASSED installationId, so a
-    // same-installation two-repo swap passes it — the id-match is the only guard that
-    // catches a cross-repo swap. Without it the old repo's workflow would create a
-    // build + mint a deploy token for a project now bound to a different repo. Placed
-    // before the install check because an id mismatch is more specific.
+    // Decision: Check that the locked connection is the same row the caller resolved. project_id is UNIQUE, so a
+    // disconnect and reconnect to a different repo creates a row with a new id in between. The install
+    // check below uses the passed installationId, so a same-installation repo swap passes it; the id
+    // match is the only guard. Without it the old repo's workflow would create a build and mint a deploy
+    // token for a project now bound to another repo. It comes before the install check because an id
+    // mismatch is more specific.
     if (conn.id !== args.connectionId) {
       return { outcome: 'connection-replaced' };
     }
 
-    // Re-check installation status + repo membership under the connection lock.
-    // The OIDC resolver (and the live getRepoInstallation call) checked the install
-    // earlier, but a revocation (App suspend/uninstall, repo removal) can commit
-    // AFTER those checks and BEFORE this tx — within the installation-token cache
-    // window — and would otherwise create a `building` row + mint a deploy token
-    // for a now-revoked install. The revocation webhooks lock these same connection
-    // rows FIRST, so this plain read (under READ COMMITTED) sees their committed
-    // status. Fails closed.
+    // Decision: Re-check installation status and repo membership under the connection lock. A revocation (App
+    // suspend or uninstall, repo removal) can commit after the OIDC resolver's checks and before this
+    // tx, inside the installation-token cache window, and would otherwise create a `building` row and
+    // mint a deploy token for a revoked install. The revocation webhooks lock these rows first, so this
+    // plain read (READ COMMITTED) sees their committed status. Fails closed.
     if (
       !(await installationCoversRepoInTx(
         tx,
@@ -937,29 +883,23 @@ export async function createGithubActionsBuildWithinLimit(
       return { outcome: 'install-revoked' };
     }
 
-    // Re-validate the branch under the row lock. auth-oidc's pre-tx branch check
-    // can race a PATCH that re-points the branch after the check but before this
-    // lock; the locked row is authoritative. Reject if the connected branch moved.
+    // Decision: Re-validate the branch under the row lock. auth-oidc's pre-tx branch check can race a PATCH that
+    // re-points the branch; the locked row is authoritative.
     if (args.branch != null && args.branch !== '' && conn.branch !== args.branch) {
       return { outcome: 'branch-mismatch' };
     }
 
-    // Re-validate the authorized workflow path under the SAME row lock — the same
-    // TOCTOU class as the branch check above. auth-oidc's pre-tx gate compares the
-    // OIDC token's own workflow file against the connection SNAPSHOT; a PATCH that
-    // re-pins workflow_path can commit between that check and this lock. A
-    // workflow_path change cannot filter-cancel by workflow (builds don't record
-    // the workflow that authorized them), so the locked row is the authority:
-    // reject if the token's workflow no longer matches the current pin, closing the
-    // window in which a just-de-authorized workflow could still mint a token.
+    // Decision: Re-validate the workflow path under the same lock, for the same race as the branch check. A PATCH
+    // that re-pins workflow_path can commit between auth-oidc's check and this lock. Builds don't record
+    // the workflow that authorized them, so a workflow_path change can't cancel by workflow; the locked
+    // row is the authority, and a token whose workflow no longer matches is rejected.
     if (conn.workflow_path !== args.expectedWorkflowPath) {
       return { outcome: 'workflow-mismatch' };
     }
 
-    // Idempotent reuse: an already in-flight build for this exact run ATTEMPT
-    // does not consume a new slot and must not be double-inserted. Matching on
-    // the attempt (not run_id alone) ensures a RERUN — same run_id, incremented
-    // run_attempt — does NOT wrongly reuse the prior attempt's build.
+    // Decision: Idempotent reuse: an in-flight build for this exact run attempt doesn't take a new slot and must
+    // not be inserted twice. Match on the attempt, not run_id alone, so a rerun (same run_id, higher
+    // run_attempt) doesn't reuse the prior attempt's build.
     const existing = await getBuildByProjectRunIdAndAttempt(
       tx,
       args.projectId,
@@ -970,17 +910,14 @@ export async function createGithubActionsBuildWithinLimit(
       return { outcome: 'reused', build: existing };
     }
 
-    // Latest-wins: a newer run for the same project+branch supersedes ALL other
-    // active GitHub Actions builds — including an older ATTEMPT of the SAME
-    // run_id (a rerun reuses run_id with an incremented run_attempt). The
-    // idempotent-reuse check above already returned early for an ACTIVE exact
-    // (run_id, attempt) row, and this row's INSERT happens AFTER this UPDATE, so
-    // the current attempt can't self-cancel. Marking them terminal frees the
-    // owner's concurrency slot and revokes their deploy token so they can't race
-    // `bwf deploy` for the project — without this, a still-ACTIVE attempt-1
-    // (whose completion webhook was missed) would survive until the stale-build reaper.
-    // (The scaffolded workflow's `concurrency: cancel-in-progress` cancels the
-    // older RUN on GitHub's side; this is the server-side backstop.)
+    // Decision: Latest wins: a newer run for the same project and branch supersedes all other active GitHub
+    // Actions builds, including an older attempt of the same run_id. The reuse check above already
+    // returned for an active exact (run_id, attempt) row, and this row is inserted after this UPDATE,
+    // so the current attempt can't cancel itself. Ending them frees the owner's slot and revokes their
+    // deploy token so they can't race `bwf deploy`; otherwise an active attempt 1 with a missed
+    // completion webhook would live until the stale-build reaper. The scaffolded workflow's
+    // `concurrency: cancel-in-progress` cancels the older run on GitHub; this is the server-side
+    // backstop.
     if (args.branch != null && args.branch !== '') {
       await tx
         .update(builds)
@@ -1067,9 +1004,8 @@ export async function claimBuildForStartWithinLimit(
       }
     }
 
-    // All builds for a project share an owner, so this is protected by the
-    // owner lock. GitHub Actions builds count because deployments serialize at
-    // the project level regardless of executor.
+    // Decision: All builds for a project share an owner, so the owner lock protects this count. GitHub Actions
+    // builds count too, because deployments serialize per project whatever the executor.
     const [active] = await tx
       .select({ count: count() })
       .from(builds)

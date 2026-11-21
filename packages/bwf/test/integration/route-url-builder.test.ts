@@ -21,7 +21,6 @@ afterEach(() => {
   }
 });
 
-// Checked against a fixture generated with routing.typedRoutes on.
 const typedCheck = `import type { Context } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { etag } from 'hono/etag';
@@ -415,7 +414,7 @@ void [known, text, typo, dynamic, external, query];
   });
 
   it('checks URL strings through the package types alone with routing.typedRoutes', () => {
-    // The generated declarations repeat the route URL types, so check the
+    // Decision: The generated declarations repeat the route URL types, so check the
     // package's own copy without a generated .bwf/routes.d.ts.
     const root = mkdtempSync(join(tmpdir(), 'platform-route-stub-'));
     roots.push(root);
@@ -497,7 +496,7 @@ void [hrefs, route, emptyCatchAll, nestedCatchAll, unknown, external];
       const page = await browser.newPage();
       await page.setContent('<iframe></iframe>');
       const dataUrl = `data:text/javascript;base64,${Buffer.from(code).toString('base64')}`;
-      // Keep the import in browser code so Vitest does not rewrite it for SSR.
+      // Decision: Keep the import in browser code so Vitest does not rewrite it for SSR.
       expect(
         await page.evaluate(`import(${JSON.stringify(dataUrl)}).then(({ toUrlString }) => {
           const iframe = document.querySelector('iframe');
@@ -552,7 +551,7 @@ export function buildUrls() {
     try {
       const page = await browser.newPage();
       const dataUrl = `data:text/javascript;base64,${Buffer.from(code).toString('base64')}`;
-      // Keep the dynamic import in browser code so Vitest does not rewrite it for SSR.
+      // Decision: Keep the dynamic import in browser code so Vitest does not rewrite it for SSR.
       expect(
         await page.evaluate(
           `import(${JSON.stringify(dataUrl)}).then((module) => module.buildUrls())`,

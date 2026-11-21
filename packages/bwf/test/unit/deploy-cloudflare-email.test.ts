@@ -8,12 +8,9 @@ import { runCloudflareEmailStep } from '../../src/cli/deploy-cloudflare-email.ts
 import type { DeployWranglerRunResult } from '../../src/cli/deploy-types.ts';
 import { renderAddressMap, type EmailDns } from '../../src/cli/email-cloudflare.ts';
 
-/**
- * A sending-only app (no `email/` handlers) deployed from CI with an API token, shaped like
- * the pocket-folio report: `email.from` on `mail.pkmn.nakazawa.tech`, a subdomain of the
- * `nakazawa.tech` zone, Email Sending onboarded, Email Routing never enabled, and the
- * `SEND_EMAIL` binding plus `__PLATFORM_EMAIL_FROM` already committed.
- */
+// Decision: A sending-only app (no `email/` handlers) deployed from CI with an API token, from a
+// real report: `email.from` on a subdomain of the zone, Email Sending onboarded, Email Routing
+// never enabled, and the `SEND_EMAIL` binding plus `__PLATFORM_EMAIL_FROM` already committed.
 const ACCOUNT = '004b3cab004b3cab004b3cab004b3cab';
 const ZONE_ID = '5b66f5cb84fd7dcfdd0170515e622181';
 const BEARER = 'cfat-SECRET-API-TOKEN-0123456789abcdef';
@@ -43,9 +40,9 @@ function cpojerAccount() {
         return { ...clean, data: { type: 'api_token', token: BEARER } };
       case 'email.routing.settings':
       case 'email.sending.settings': {
-        // The documented token (Zone Read + Email Sending Edit) has no Zone Settings Read,
-        // so the provider's Email Routing settings read, which also locates the zone for its
-        // sending read, is refused.
+        // Decision: The documented token (Zone Read + Email Sending Edit) has no Zone Settings Read, so the
+        // provider's Email Routing settings read, which also locates the zone for its sending read,
+        // is refused.
         const message = 'Cloudflare could not resolve the Email zone.';
         return { status: 1, stdout: '', stderr: message, errors: [{ message }] };
       }
@@ -96,7 +93,7 @@ function cpojerAccount() {
     }
     throw new Error(`unexpected fetch: ${method} ${path}`);
   }) as typeof fetch;
-  // Onboarding wrote its own `_dmarc` and `cf-bounce` records; inbound MX is never read.
+  // Decision: Onboarding wrote its own `_dmarc` and `cf-bounce` records; inbound MX isn't read.
   const dns: EmailDns = {
     resolveMx: async (name) => {
       throw new Error(`a sending-only app must not read inbound MX (${name})`);
@@ -114,7 +111,6 @@ function cpojerAccount() {
   return { operations, fetchCalls, runWrangler, fetchImpl, dns };
 }
 
-/** Everything the step prints: every clack level plus raw stdout/stderr. */
 function captureOutput(): { lines: Array<string>; restore: () => void } {
   const lines: Array<string> = [];
   const spies = (['message', 'info', 'warn', 'error', 'success', 'step'] as const).map((level) =>
@@ -203,11 +199,10 @@ describe('runCloudflareEmailStep — sending-only app in CI', () => {
         creating: [],
       },
     });
-    // The post-deploy block is the only email output of the whole deploy.
     expect(renderAddressMap(result.map!)).toBe(`    outbound  sendEmail() from ${FROM}`);
-    // Nothing touches Email Routing: with a token scoped Zone Read + Email Sending Edit,
-    // sending is read on the zone the bearer resolved, so --require-email passes. The
-    // bearer stays in the Authorization header.
+    // Decision: Nothing touches Email Routing: with a token scoped to Zone Read + Email Sending Edit, sending
+    // is read on the zone the bearer resolved, so --require-email passes. The bearer stays in the
+    // Authorization header.
     expect(account.operations).toEqual(['auth.whoami', 'auth.token']);
     expect(account.fetchCalls.map(({ method, path }) => `${method} ${path}`)).toEqual([
       `GET /zones?name=${DOMAIN}`,

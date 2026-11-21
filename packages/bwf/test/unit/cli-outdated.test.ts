@@ -27,7 +27,7 @@ describe('PlatformApiError + cli_outdated', () => {
   });
 
   it('keeps the default message when body is cli_outdated but status is not 426', () => {
-    // Defensive: status is what the gate sets, body shape alone shouldn't trigger
+    // Decision: Defensive: status is what the gate sets, body shape alone shouldn't trigger
     // the override (avoids letting a misconfigured upstream forge upgrade prompts).
     const err = new PlatformApiError('Deploy failed', 400, OUTDATED_BODY);
     expect(err.message).toContain('400');

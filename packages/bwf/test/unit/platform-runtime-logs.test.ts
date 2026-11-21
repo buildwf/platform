@@ -102,7 +102,7 @@ describe('project Worker runtime logs', () => {
       shouldUpdateProjectWorkerRuntimeLogs({ previous, next, explicit });
     expect(check(full, minimal)).toBe(true);
     expect(check(minimal, full)).toBe(true);
-    // An earlier run may have stopped before this step.
+    // Decision: An earlier run may have stopped before this step.
     expect(check(minimal, minimal)).toBe(true);
     expect(check(full, full)).toBe(false);
     expect(check(full, full, true)).toBe(true);

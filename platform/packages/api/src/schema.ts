@@ -30,9 +30,6 @@ import type {
   ProjectMemberRole,
 } from './types.ts';
 
-// ---------------------------------------------------------------------------
-// users
-// ---------------------------------------------------------------------------
 export const users = pgTable(
   'users',
   {
@@ -55,9 +52,6 @@ export const users = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// oauth_accounts
-// ---------------------------------------------------------------------------
 export const oauthAccounts = pgTable(
   'oauth_accounts',
   {
@@ -172,13 +166,11 @@ export const oauthRefreshTokens = pgTable(
       .notNull()
       .references(() => oauthGrants.id, { onDelete: 'cascade' }),
     token_hash: text('token_hash').notNull(),
-    // Set once from the token that started this rotation family and copied
-    // forward unchanged on every rotation: an absolute cap that rotation
-    // cannot extend.
+    // Decision: Set once from the token that started this rotation family and copied forward unchanged on each
+    // rotation: an absolute cap that rotation can't extend.
     expires_at: timestamp('expires_at', { mode: 'string', withTimezone: true }).notNull(),
-    // Null while this generation is the live refresh token for the grant.
-    // Set when rotated out; a later redemption of a used token is reuse and
-    // revokes the whole grant.
+    // Decision: Null while this generation is the grant's live refresh token. Set when rotated out; a later
+    // redemption of a used token is reuse and revokes the whole grant.
     used_at: timestamp('used_at', { mode: 'string', withTimezone: true }),
     created_at: timestamp('created_at', { mode: 'string', withTimezone: true })
       .notNull()
@@ -211,8 +203,8 @@ export const oauthRequests = pgTable(
   ],
 );
 
-// Platform authentication is database-authoritative after its one-time import.
-// Lock the singleton before changing connections, admission, or administrator reachability.
+// Decision: Platform authentication is database-authoritative after its one-time import. Lock the singleton
+// before changing connections, admission or administrator reachability.
 export const platformAuthSettings = pgTable(
   'platform_auth_settings',
   {
@@ -332,7 +324,7 @@ export const platformHumanSessions = pgTable(
       .references(() => platformLoginConnections.id),
     generation: integer('generation').notNull(),
     audience: text('audience').notNull().$type<'api' | 'admin'>(),
-    // When a company gate is required, both identities must belong to the same person.
+    // Decision: When a company gate is required, both identities have to belong to the same person.
     access_issuer: text('access_issuer'),
     access_subject: text('access_subject'),
     expires_at: timestamp('expires_at', { mode: 'string', withTimezone: true }).notNull(),
@@ -398,7 +390,7 @@ export const platformAuthAttempts = pgTable(
     generation: integer('generation').notNull(),
     purpose: text('purpose').notNull().$type<'login' | 'admin' | 'test' | 'link' | 'bootstrap'>(),
     browser_hash: text('browser_hash').notNull(),
-    // Contains the upstream PKCE verifier and callback context; consumed atomically.
+    // Decision: Holds the upstream PKCE verifier and callback context; consumed atomically.
     context: jsonb('context').notNull().$type<Record<string, unknown>>(),
     expires_at: timestamp('expires_at', { mode: 'string', withTimezone: true }).notNull(),
   },
@@ -429,9 +421,6 @@ export const platformAuthBootstrap = pgTable(
   (table) => [check('platform_auth_bootstrap_singleton', sql`${table.singleton} = true`)],
 );
 
-// ---------------------------------------------------------------------------
-// projects
-// ---------------------------------------------------------------------------
 export const projects = pgTable(
   'projects',
   {
@@ -446,11 +435,11 @@ export const projects = pgTable(
     type: text('mode').notNull().default('platform').$type<'platform' | 'spa' | 'static'>(),
     active_deployment_id: text('active_deployment_id'),
     websocket_version: integer('websocket_version').notNull().default(0),
-    // Highest proxy token generation issued for this project. 0 = legacy token.
+    // Decision: Highest proxy token generation issued for this project. 0 = legacy token.
     proxy_token_gen: integer('proxy_token_gen').notNull().default(0),
     status: text('status').notNull().default('active').$type<'active' | 'deleting'>(),
-    // A second mailbox name on the shared mail domain, set once by the owner. It
-    // shares one namespace with slugs; a database trigger keeps them apart.
+    // Decision: A second mailbox name on the shared mail domain, set once by the owner. It shares one namespace
+    // with slugs; a database trigger keeps them apart.
     email_alias: text('email_alias'),
     created_at: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
   },
@@ -495,10 +484,9 @@ export const previewTickets = pgTable('preview_tickets', {
   expires_at: timestamp('expires_at', { mode: 'string', withTimezone: true }).notNull(),
 });
 
-// Revocable project-scoped credentials for headless CI. The bearer value is a
-// signed aud:deploy JWT; this row is the authoritative revocation and expiry
-// record checked on every request. Human login-provider lifecycle does not
-// revoke these independent deployment credentials.
+// Decision: Revocable project-scoped credentials for headless CI. The bearer value is a signed aud:deploy
+// JWT; this row is the authoritative revocation and expiry record, checked on each request. Human
+// login-provider lifecycle doesn't revoke these.
 export const projectDeployCredentials = pgTable(
   'project_deploy_credentials',
   {
@@ -523,10 +511,8 @@ export const projectDeployCredentials = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// Project access. Ownership remains authoritative on projects.user_id; owners
-// are deliberately not duplicated in project_members.
-// ---------------------------------------------------------------------------
+// Decision: Ownership stays authoritative on projects.user_id; owners are deliberately not duplicated in
+// project_members.
 export const projectMembers = pgTable(
   'project_members',
   {
@@ -537,7 +523,7 @@ export const projectMembers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     role: text('role').notNull().$type<ProjectMemberRole>(),
-    // Durable audit identity. This may name an account deleted later.
+    // Decision: Durable audit identity. It may name an account deleted later.
     added_by_user_id: text('added_by_user_id'),
     created_at: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
     updated_at: timestamp('updated_at', { mode: 'string' }).notNull().defaultNow(),
@@ -562,7 +548,7 @@ export const projectInvitations = pgTable(
     target_email_snapshot: text('target_email_snapshot').notNull(),
     role: text('role').notNull().$type<ProjectMemberRole>(),
     status: text('status').notNull().default('pending').$type<ProjectInvitationStatus>(),
-    // Actor ids are durable audit data and intentionally have no user FK.
+    // Decision: Actor ids are durable audit data and have no user FK on purpose.
     invited_by_user_id: text('invited_by_user_id').notNull(),
     accepted_by_user_id: text('accepted_by_user_id'),
     created_at: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
@@ -595,7 +581,7 @@ export const projectOwnershipPeriods = pgTable(
     project_id: text('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
-    // Billing and operator actor identities must survive account deletion.
+    // Decision: Billing and operator actor identities have to survive account deletion, so no user FK.
     owner_user_id: text('owner_user_id').notNull(),
     starts_at: timestamp('starts_at', { mode: 'string' }).notNull(),
     ends_at: timestamp('ends_at', { mode: 'string' }),
@@ -651,13 +637,9 @@ export const projectAccessEvents = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// Project Cloudflare Access state. The desired/effective split is deliberate:
-// publication is a multi-system operation and dispatch must keep enforcing the
-// last completed state until the corresponding Access application mutation has
-// been verified. Application ids are durable recovery handles for retries and
-// project teardown.
-// ---------------------------------------------------------------------------
+// Decision: Project Cloudflare Access state. The desired/effective split is deliberate: publication spans
+// several systems, and dispatch keeps enforcing the last completed state until the Access application
+// change is verified. Application ids are durable recovery handles for retries and teardown.
 export const projectZeroTrust = pgTable(
   'project_zero_trust',
   {
@@ -666,18 +648,18 @@ export const projectZeroTrust = pgTable(
       .references(() => projects.id, { onDelete: 'cascade' }),
     desired_protected: boolean('desired_protected').notNull().default(false),
     effective_protected: boolean('effective_protected').notNull().default(false),
-    // `ready` means routes and Access applications match the desired protection.
+    // Decision: `ready` means routes and Access applications match the desired protection.
     status: text('status').notNull().default('ready').$type<'ready' | 'reconciling' | 'error'>(),
     bypass_application_id: text('bypass_application_id'),
     bypass_application_name: text('bypass_application_name'),
     protected_application_id: text('protected_application_id'),
     protected_application_name: text('protected_application_name'),
     protected_application_audience: text('protected_application_audience'),
-    // Last custom hostname whose routing protection was cleared. Public
-    // projects can have more domains than fit in one reconciliation run.
+    // Decision: Last custom hostname whose routing protection was cleared. Public projects can have more domains
+    // than fit in one reconciliation run.
     routing_cursor: text('routing_cursor'),
-    // Id of the installation operation this row last completed. Public rows
-    // complete with their bypass; protected rows only after the wildcard phase.
+    // Decision: Id of the installation operation this row last completed. Public rows complete with their bypass;
+    // protected rows only after the wildcard phase.
     reconciled_operation: text('reconciled_operation'),
     last_error: text('last_error'),
     created_at: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
@@ -696,9 +678,6 @@ export const projectZeroTrust = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// deployments
-// ---------------------------------------------------------------------------
 export const deployments = pgTable(
   'deployments',
   {
@@ -739,13 +718,12 @@ export const deployments = pgTable(
     retained: boolean('retained').notNull().default(false),
     applied_migrations: text('applied_migrations'),
     bundle_stored: boolean('bundle_stored').notNull().default(false),
-    // billing_user_id is the project owner at admission time. The actor is
-    // recorded separately and deliberately does not have a user FK so audit
-    // attribution survives account deletion.
+    // Decision: billing_user_id is the project owner at admission time. The actor is recorded separately and has
+    // no user FK on purpose, so audit attribution survives account deletion.
     billing_user_id: text('billing_user_id'),
     initiated_by_user_id: text('initiated_by_user_id'),
-    // Proxy token generation this deployment's Worker holds. 0 = legacy token,
-    // which every Worker deployed before generations were stored holds.
+    // Decision: Proxy token generation this deployment's Worker holds. 0 = legacy token, held by each Worker
+    // deployed before generations were stored.
     proxy_token_gen: integer('proxy_token_gen').notNull().default(0),
   },
   (table) => [
@@ -755,8 +733,8 @@ export const deployments = pgTable(
   ],
 );
 
-// The receipt survives a no-op deployment's placeholder deletion. Execution is
-// claimed once; an expired invocation is reconciled, never replayed.
+// Decision: The receipt survives a no-op deployment's placeholder deletion. Execution is claimed once; an
+// expired invocation is reconciled, not replayed.
 export const deploymentOperations = pgTable(
   'deployment_operations',
   {
@@ -799,9 +777,9 @@ export const deploymentOperations = pgTable(
   ],
 );
 
-// External project resources can outlive a deleted project when a provider
-// deletion fails. These jobs deliberately have no project FK: the project row
-// and its resource handles are removed after jobs have been recorded.
+// Decision: External project resources can outlive a deleted project when a provider deletion fails. These
+// jobs have no project FK on purpose: the project row and its resource handles are removed after the
+// jobs are recorded.
 export const projectCleanupJobs = pgTable(
   'project_cleanup_jobs',
   {
@@ -829,9 +807,6 @@ export const projectCleanupJobs = pgTable(
   (table) => [index('project_cleanup_jobs_due').on(table.next_attempt_at, table.created_at)],
 );
 
-// ---------------------------------------------------------------------------
-// project_secrets
-// ---------------------------------------------------------------------------
 export const projectSecrets = pgTable(
   'project_secrets',
   {
@@ -853,9 +828,6 @@ export const projectSecrets = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// resources
-// ---------------------------------------------------------------------------
 export const resources = pgTable(
   'resources',
   {
@@ -877,9 +849,6 @@ export const resources = pgTable(
   (table) => [unique().on(table.project_id, table.type, table.binding_name)],
 );
 
-// ---------------------------------------------------------------------------
-// domains
-// ---------------------------------------------------------------------------
 export type DomainVerificationData = Readonly<{
   ownership_verification?: Readonly<{
     type: 'txt';
@@ -911,11 +880,8 @@ export const domains = pgTable(
   (table) => [index('idx_domains_project_id').on(table.project_id, table.created_at)],
 );
 
-// ---------------------------------------------------------------------------
-// email_destinations
-// Per-project recipient consent for shared-sender email. Cloudflare destination
-// tags are account-wide; SQL admission enforces consent separately for each project.
-// ---------------------------------------------------------------------------
+// Decision: Per-project recipient consent for shared-sender email. Cloudflare destination tags are
+// account-wide; SQL admission enforces consent for each project separately.
 export const emailDestinations = pgTable(
   'email_destinations',
   {
@@ -925,45 +891,25 @@ export const emailDestinations = pgTable(
       .references(() => projects.id, { onDelete: 'cascade' }),
     address: text('address').notNull(),
     status: text('status').notNull().default('pending').$type<'pending' | 'verified'>(),
-    // Cloudflare account-level tag, populated after destination creation.
     cf_destination_id: text('cf_destination_id'),
-    // Audit timestamp: set the moment status first transitions to 'verified',
-    // never cleared. Use `status === 'verified'` for current state, not
-    // `verified_at !== null`.
+    // Decision: Audit timestamp: set when status first becomes 'verified' and not cleared. Use
+    // `status === 'verified'` for the current state, not `verified_at !== null`.
     verified_at: timestamp('verified_at', { mode: 'string' }),
-    // How the row reached `status='verified'`:
-    //   - 'cf'       — Cloudflare Email Routing's verification email was
-    //                   clicked (the default path). Includes the project
-    //                   owner's own email when CF already had it verified
-    //                   on a prior project (Option C: owner-relaxed reuse).
-    //   - 'platform' — CF already had the address verified by a *different*
-    //                   project. We cannot trust CF's verification flag for
-    //                   per-project consent here, so we issue our own
-    //                   single-use confirmation link to the recipient and
-    //                   keep the row 'pending' until they click it. Once
-    //                   the platform link is clicked, status flips to
-    //                   'verified' but `verification_source` stays
-    //                   'platform' for the audit trail.
+    // Decision: How the row reached `status='verified'`:
+    // - 'cf': the Cloudflare Email Routing verification email was clicked. This includes the project
+    // owner's own email when CF already had it verified on an earlier project (owner-relaxed reuse).
+    // - 'platform': CF had the address verified by a different project. CF's flag can't stand for
+    // per-project consent, so we send our own single-use confirmation link and keep the row 'pending'
+    // until it's clicked. The source stays 'platform' afterwards for the audit trail.
     verification_source: text('verification_source')
       .notNull()
       .default('cf')
       .$type<'cf' | 'platform'>(),
-    // Audit columns for owner-relaxed CF reuse (Option C in design doc
-    // 0078). Populated only when:
-    //   - `verification_source = 'cf'` AND
-    //   - the row was inserted via the owner-relaxed branch (the
-    //     address matched the project owner's `users.email` at
-    //     insert-time and CF already had it verified).
-    //
-    // NULL for `verification_source = 'platform'` rows (no inheritance
-    // — consent was per-recipient via the platform-side click) and for
-    // fresh-CF-verification rows (no prior consent inherited).
-    //
-    // `verified_by_email_snapshot` is the email value the granter held
-    // at insert-time. If the granter's `users.email` later changes, the
-    // snapshot is how `revokeOwnerVerifiedDestinationsForUserChange`
-    // identifies which inherited-consent rows to invalidate (the
-    // identity that consented is no longer the user's identity).
+    // Decision: Audit columns for owner-relaxed CF reuse (Option C in design doc 0078). Set only when
+    // `verification_source = 'cf'` and the row came from the owner-relaxed branch (the address matched
+    // the owner's `users.email` at insert and CF already had it verified). NULL otherwise.
+    // `verified_by_email_snapshot` is the granter's email at insert. If `users.email` changes later,
+    // `revokeOwnerVerifiedDestinationsForUserChange` uses it to find inherited-consent rows to revoke.
     verified_by_user_id: text('verified_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
@@ -978,10 +924,9 @@ export const emailDestinations = pgTable(
       table.verified_by_user_id,
       table.verified_by_email_snapshot,
     ),
-    // CHECK constraints are declared HERE, not only in raw migration SQL.
-    // A `drizzle-kit generate` run diffs the schema against the previous
-    // snapshot: an undeclared constraint reads as "dropped" and the next
-    // migration would silently widen the consent gate.
+    // Decision: Declare CHECK constraints here, not only in raw migration SQL. `drizzle-kit generate` diffs
+    // against the previous snapshot: an undeclared constraint reads as dropped, and the next migration
+    // would silently widen the consent gate.
     check('email_destinations_status_check', sql`${table.status} IN ('pending', 'verified')`),
     check(
       'email_destinations_verification_source_check',
@@ -990,9 +935,9 @@ export const emailDestinations = pgTable(
   ],
 );
 
-// Provider destination deletion outlives the project consent row. The opaque
-// Cloudflare tag is retained as a tombstone so stale list responses cannot
-// reattach a destination while its deletion is pending or after it completes.
+// Decision: Provider destination deletion outlives the project consent row. The opaque Cloudflare tag is kept
+// as a tombstone so stale list responses can't reattach a destination while its deletion is pending
+// or after it completes.
 export const emailDestinationCleanups = pgTable(
   'email_destination_cleanups',
   {
@@ -1027,10 +972,8 @@ export const emailDestinationCleanups = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// email_domains is retained for generated-schema compatibility with the
-// published platform runtime rollback contract. New email routes do not use it.
-// ---------------------------------------------------------------------------
+// Decision: email_domains stays for generated-schema compatibility with the published platform runtime
+// rollback contract. New email routes don't use it.
 export type EmailDomainSetupState = Readonly<{
   /** Orchestration step that left the row 'failed' (e.g. 'zone_lookup'). */
   failed_step?: string;
@@ -1040,8 +983,8 @@ export type EmailDomainSetupState = Readonly<{
   removal_failed_steps?: ReadonlyArray<string>;
 }>;
 
-// Retained for database rollback to published platform runtimes. The current
-// email implementation uses emailDomainRoutes and never reads this table.
+// Decision: Kept for database rollback to published platform runtimes. The current email code uses
+// emailDomainRoutes and doesn't read this table.
 export const emailDomains = pgTable(
   'email_domains',
   {
@@ -1057,17 +1000,16 @@ export const emailDomains = pgTable(
       .notNull()
       .default('pending')
       .$type<'pending' | 'active' | 'token_revoked' | 'token_expired' | 'failed'>(),
-    // `platform` rows carry no credential of their own: the engine and the
-    // lease resolve them to the runtime token (`CF_API_TOKEN`), so their
-    // `token_*` triple is null — the CHECK below pins that pairing.
+    // Decision: `platform` rows carry no credential of their own: the engine and the lease resolve them to the
+    // runtime token (`CF_API_TOKEN`), so their `token_*` triple is null. The CHECK below pins that.
     credential_kind: text('credential_kind')
       .notNull()
       .$type<'oauth_grant' | 'api_token' | 'platform'>(),
     token_ciphertext: text('token_ciphertext'),
     token_iv: text('token_iv'),
     token_key_version: text('token_key_version'),
-    // Who registered the row. An administrator's row runs on the platform's
-    // credential; owners may read it but not sync or remove it.
+    // Decision: Who registered the row. An administrator's row runs on the platform's credential; owners may read
+    // it but not sync or remove it.
     managed_by: text('managed_by').notNull().default('owner').$type<'owner' | 'admin'>(),
     relay_ciphertext: text('relay_ciphertext').notNull(),
     relay_iv: text('relay_iv').notNull(),
@@ -1076,42 +1018,33 @@ export const emailDomains = pgTable(
     relay_version: integer('relay_version'),
     token_id: text('token_id'),
     token_expires_on: timestamp('token_expires_on', { mode: 'string' }),
-    // The CLI add attempt that last wrote the credential — lets a CLI that
-    // lost the POST's answer tell its own committed row apart from the
-    // pre-existing one. Null on rows written by an older CLI.
+    // Decision: The CLI add attempt that last wrote the credential, so a CLI that lost the POST's answer can tell
+    // its own committed row from an existing one. Null on rows written by an older CLI.
     attempt_id: text('attempt_id'),
     setup_state: jsonb('setup_state').$type<EmailDomainSetupState | null>(),
     created_at: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
     updated_at: timestamp('updated_at', { mode: 'string' }).notNull().defaultNow(),
   },
   (table) => [
-    // A domain is GLOBALLY unique, not per-project: the relay secret and
-    // the `email-domain:<domain>` KV mirror map to exactly one registered
-    // domain of one project (design doc 0078, "Trust"), so two projects can
-    // never hold the same domain — one mirror key could not name them both.
+    // Decision: A domain is globally unique, not per project: the relay secret and the `email-domain:<domain>` KV
+    // mirror map to one registered domain of one project (design doc 0078, "Trust").
     unique('email_domains_domain_uq').on(table.domain),
     index('idx_email_domains_project_id').on(table.project_id),
-    // One LIVE row per zone, one relay name per account — the DB backstop
-    // for the check-then-write windows the engine cannot close against the
-    // CF API (concurrent adds; design doc 0078). The
-    // zone index covers only live statuses so a 'failed' row can still
-    // RECORD the zone it failed in (the catch-all conflict path needs
-    // that); the relay index reserves every deployed name outright,
-    // because the worker really exists in the account. A violation reads
-    // to the route as "another live row won the race" — a 409, never a
-    // falsely-active second row.
+    // Decision: One live row per zone and one relay name per account: the DB backstop for check-then-write
+    // windows the engine can't close against the CF API (concurrent adds; design doc 0078). The zone
+    // index covers only live statuses so a 'failed' row can still record its zone (the catch-all conflict
+    // path needs it); the relay index reserves each deployed name, because the worker exists in the
+    // account. A violation means another live row won the race: a 409, not a second active row.
     uniqueIndex('email_domains_zone_uq')
       .on(table.zone_id)
       .where(sql`${table.zone_id} IS NOT NULL AND ${table.status} IN ('active', 'pending')`),
     uniqueIndex('email_domains_relay_uq')
       .on(table.account_id, table.relay_worker_name)
       .where(sql`${table.relay_worker_name} IS NOT NULL`),
-    // The proxy's credential lease (POST /internal/email/domain-credential)
-    // resolves rows by domain alone; the domain unique constraint's own
-    // index covers those lookups.
-    // CHECK constraints are declared HERE, not only in raw migration SQL —
-    // same reason as email_destinations: an undeclared constraint reads as
-    // "dropped" to the next `drizzle-kit generate` diff.
+    // Decision: The proxy's credential lease (POST /internal/email/domain-credential) looks rows up by domain;
+    // the domain unique constraint's index covers that.
+    // Declare CHECK constraints here, not only in raw migration SQL: an undeclared constraint reads as
+    // dropped to the next `drizzle-kit generate` diff.
     check('email_domains_mode_check', sql`${table.mode} IN ('apex', 'subdomain')`),
     check(
       'email_domains_status_check',
@@ -1129,21 +1062,17 @@ export const emailDomains = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// Installation-scoped settings an administrator changes at runtime (design
-// doc 0078, "Recipient policy"). Authoritative here; hot-path readers get a
-// ROUTING KV mirror written by the setting's own writer.
-// ---------------------------------------------------------------------------
+// Decision: Installation-scoped settings an administrator changes at runtime (design doc 0078, "Recipient
+// policy"). Authoritative here; hot-path readers get a ROUTING KV mirror written by the setting's
+// own writer.
 export const platformSettings = pgTable('platform_settings', {
   key: text('key').primaryKey(),
   value: jsonb('value').notNull(),
   updated_at: timestamp('updated_at', { mode: 'string' }).notNull().defaultNow(),
 });
 
-// ---------------------------------------------------------------------------
-// Operator sessions and mutation audit, separate from browser/deployment auth.
-// Audit identities survive account deletion deliberately.
-// ---------------------------------------------------------------------------
+// Decision: Operator sessions and mutation audit, separate from browser and deployment auth. Audit identities
+// survive account deletion on purpose.
 export const operatorSessions = pgTable(
   'operator_sessions',
   {
@@ -1190,9 +1119,6 @@ export const sandboxDrainCheckpoints = pgTable('sandbox_drain_checkpoints', {
   completed_at: timestamp('completed_at', { mode: 'string' }),
 });
 
-// ---------------------------------------------------------------------------
-// platform_events (audit log for admin platform rollbacks)
-// ---------------------------------------------------------------------------
 export const platformEvents = pgTable(
   'platform_events',
   {
@@ -1218,22 +1144,16 @@ export const platformEvents = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// oauth_nonces — short-lived, single-use tokens for OAuth CSRF/replay protection.
-// Stored in PostgreSQL (not KV) because the login and callback requests can hit
-// different CF colos, and KV's eventual consistency would make nonce lookups flaky.
-// Atomic DELETE … RETURNING guarantees true single-use semantics.
-// ---------------------------------------------------------------------------
+// Decision: oauth_nonces: short-lived, single-use tokens for OAuth CSRF and replay protection. They're in
+// PostgreSQL, not KV, because login and callback can hit different CF colos and KV's eventual
+// consistency would make lookups flaky. Atomic DELETE ... RETURNING gives true single use.
 export const oauthNonces = pgTable('oauth_nonces', {
   nonce: text('nonce').primaryKey(),
   expires_at: timestamp('expires_at', { mode: 'string' }).notNull(),
 });
 
-// ---------------------------------------------------------------------------
-// auth_codes — short-lived, single-use authorization codes for dashboard login.
-// Same rationale as oauth_nonces: cross-colo consistency requires PostgreSQL,
-// and atomic DELETE … RETURNING guarantees single-use.
-// ---------------------------------------------------------------------------
+// Decision: auth_codes: short-lived, single-use codes for dashboard login. In PostgreSQL for the same reason
+// as oauth_nonces, with atomic DELETE ... RETURNING for single use.
 export const authCodes = pgTable('auth_codes', {
   code: text('code').primaryKey(),
   jwt: text('jwt').notNull(),
@@ -1243,21 +1163,10 @@ export const authCodes = pgTable('auth_codes', {
   expires_at: timestamp('expires_at', { mode: 'string' }).notNull(),
 });
 
-// ---------------------------------------------------------------------------
-// migration_renames — audit log of successfully committed `/migrations/rename`
-// pairs. Written inside the same locked transaction as the D1 UPDATE +
-// `renameAppliedMigrationsForProject` healing write, so a row exists iff
-// both the D1 UPDATE and the pg rewrite have committed.
-//
-// This table is a durable, rename-specific second corroboration source for
-// same-payload retries after a partial-failure heal: a matching row means
-// "this exact (project_id, from, to) rename was already committed here, so
-// an idempotent retry that observes `to` in D1 and not `from` is genuine
-// rather than a fat-fingered request against an unrelated existing migration".
-// It is needed because the heal rewrites the active deployment's
-// `applied_migrations` to the new name, erasing the active-deployment-based
-// corroboration that would otherwise classify the retry.
-// ---------------------------------------------------------------------------
+// Decision: migration_renames: audit log of committed `/migrations/rename` pairs, written in the same locked
+// transaction as the D1 UPDATE and the pg rewrite, so a row exists only if both committed. It's the
+// second source that lets a same-payload retry after a partial-failure heal be recognized as genuine:
+// the heal rewrites the active deployment's `applied_migrations`, erasing the other evidence.
 export const migrationRenames = pgTable(
   'migration_renames',
   {
@@ -1274,9 +1183,7 @@ export const migrationRenames = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// project_migrations — current project database truth
-// ---------------------------------------------------------------------------
+// Decision: project_migrations: the current truth for the project database.
 export const projectMigrations = pgTable(
   'project_migrations',
   {
@@ -1296,9 +1203,6 @@ export const projectMigrations = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// project_database_credentials
-// ---------------------------------------------------------------------------
 export const projectDatabaseCredentials = pgTable('project_database_credentials', {
   project_id: text('project_id')
     .primaryKey()
@@ -1310,10 +1214,8 @@ export const projectDatabaseCredentials = pgTable('project_database_credentials'
   updated_at: timestamp('updated_at', { mode: 'string' }).notNull().defaultNow(),
 });
 
-// ---------------------------------------------------------------------------
-// project_credentials — third-party tokens the proxy attaches to outbound requests.
-// Never injected into a worker, never returned by any procedure after it is stored.
-// ---------------------------------------------------------------------------
+// Decision: project_credentials: third-party tokens the proxy attaches to outbound requests. They aren't
+// injected into a worker or returned by any procedure after they're stored.
 export const projectCredentials = pgTable(
   'project_credentials',
   {
@@ -1332,16 +1234,11 @@ export const projectCredentials = pgTable(
   (table) => [primaryKey({ columns: [table.project_id, table.provider] })],
 );
 
-// ---------------------------------------------------------------------------
-// github_installations — GitHub App installations.
-//
-// `user_id` is the owner of a personal (account_type='User') installation and
-// is always null for organization installations, which are reached only
-// through `github_installation_members`. A personal installation can also be
-// unlinked (install-before-signin) until the GitHub OAuth callback backfills it
-// (`linkGitHubInstallationToUser`). `repositories` mirrors the installation's
-// repository selection as a JSON array of `{ full_name, id }`.
-// ---------------------------------------------------------------------------
+// Decision: `user_id` is the owner of a personal (account_type='User') installation and is null for
+// organization installations, which are reached only through `github_installation_members`. A
+// personal installation can be unlinked (install before sign-in) until the GitHub OAuth callback
+// backfills it (`linkGitHubInstallationToUser`). `repositories` mirrors the repo selection as a JSON
+// array of `{ full_name, id }`.
 export type GitHubInstallationRepository = Readonly<{
   full_name: string;
   id: number;
@@ -1352,10 +1249,8 @@ export const githubInstallations = pgTable(
   {
     id: text('id').primaryKey(),
     installation_id: text('installation_id').notNull().unique(),
-    // `set null` (not the default NO ACTION): an installation can be linked to a
-    // user (backfilled in the OAuth callback), but deleting that user must not
-    // fail on this FK. Orphaning the row back to user_id=null returns it to the
-    // install-before-signin state, recoverable by re-linking.
+    // Decision: `set null`, not NO ACTION: deleting a linked user mustn't fail on this FK. The row goes back to
+    // user_id=null (the install-before-sign-in state) and can be re-linked.
     user_id: text('user_id').references(() => users.id, { onDelete: 'set null' }),
     account_login: text('account_login').notNull(),
     account_id: text('account_id').notNull(),
@@ -1364,11 +1259,9 @@ export const githubInstallations = pgTable(
       .notNull()
       .default(sql`'[]'::jsonb`)
       .$type<ReadonlyArray<GitHubInstallationRepository>>(),
-    // GitHub's `repository_selection`: `all` grants every repo in the account
-    // (the `repositories` cache is then irrelevant); `selected` restricts to
-    // the cached set. Defaults to `selected` so the OIDC connection lookup
-    // requires explicit membership unless a webhook proves an all-repos
-    // install — an empty `repositories` array never means "all".
+    // Decision: `all` grants every repo in the account (the `repositories` cache is then unused); `selected`
+    // limits to the cached set. Default `selected`, so the OIDC lookup needs explicit membership unless a
+    // webhook proves an all-repos install. An empty `repositories` array doesn't mean "all".
     repository_selection: text('repository_selection')
       .notNull()
       .default('selected')
@@ -1383,14 +1276,9 @@ export const githubInstallations = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// github_connections — links a project to a GitHub repository + branch.
-//
-// `project_id` is unique (one connection per project) and cascades on project
-// delete (mirrors `project_secrets`). `build_executor` selects which build
-// backend runs on push: CF Containers (`container`) or GitHub Actions
+// Decision: `project_id` is unique (one connection per project) and cascades on project delete.
+// `build_executor` picks the build backend on push: CF Containers (`container`) or GitHub Actions
 // (`github_actions`).
-// ---------------------------------------------------------------------------
 export const githubConnections = pgTable(
   'github_connections',
   {
@@ -1401,19 +1289,15 @@ export const githubConnections = pgTable(
       .references(() => projects.id, { onDelete: 'cascade' }),
     installation_id: text('installation_id').notNull(),
     repo_full_name: text('repo_full_name').notNull(),
-    // The repository's immutable numeric GitHub id (as text). A repo can be
-    // renamed, deleted, or have its name reused under the same installation, so
-    // `repo_full_name` is mutable and unsafe as a routing key — a rename/reuse
-    // could match a DIFFERENT repository to this connection and deploy to the
-    // wrong project. Webhook (`repository.id`) and OIDC (`claims.repository_id`)
-    // resolution match on this immutable id, treating `repo_full_name` as
-    // display/fetch metadata.
+    // Decision: The repo's immutable numeric GitHub id, as text. A repo can be renamed, deleted or have its name
+    // reused, so `repo_full_name` is unsafe as a routing key and could deploy to the wrong project.
+    // Webhook (`repository.id`) and OIDC (`claims.repository_id`) resolution match on this id;
+    // `repo_full_name` is display and fetch metadata.
     repository_id: text('repository_id').notNull(),
-    // The project owner or administrator who proved repository access during
-    // connect. Runtime authorization accepts the row only while this still
-    // names the owner or a project administrator. Every path that removes that
-    // authority deletes the connection first, so deleting a user that still
-    // authorizes a connection fails instead of leaving it behind.
+    // Decision: The project owner or administrator who proved repo access at connect. Runtime authorization
+    // accepts the row only while this still names the owner or a project administrator. Each path that
+    // removes that authority deletes the connection first, so deleting a user who still authorizes a
+    // connection fails instead of leaving it behind.
     authorized_by_user_id: text('authorized_by_user_id')
       .notNull()
       .references(() => users.id),
@@ -1422,11 +1306,9 @@ export const githubConnections = pgTable(
       .notNull()
       .default('container')
       .$type<'container' | 'github_actions'>(),
-    // The `.github/workflows/*.yml` file the GitHub Actions OIDC exchange binds
-    // the deploy token to (see `routes/auth-oidc.ts`). Configurable by members
-    // with project settings access; defaults to the file `bwf init --github`
-    // scaffolds. Only the authenticated connect/update routes write this —
-    // never the webhook or the OIDC path — so it stays a trusted server-side pin.
+    // Decision: The `.github/workflows/*.yml` file the GitHub Actions OIDC exchange binds the deploy token to (see
+    // `routes/auth-oidc.ts`). Only the authenticated connect and update routes write it, not the webhook
+    // or the OIDC path, so it stays a trusted server-side pin.
     workflow_path: text('workflow_path').notNull().default('.github/workflows/bwf-deploy.yml'),
     created_at: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
     updated_at: timestamp('updated_at', { mode: 'string' }).notNull().defaultNow(),
@@ -1434,7 +1316,6 @@ export const githubConnections = pgTable(
   (table) => [
     index('idx_github_connections_installation_id').on(table.installation_id),
     index('idx_github_connections_repo_full_name').on(table.repo_full_name),
-    // Webhook resolution matches on the immutable (installation_id, repository_id).
     index('idx_github_connections_installation_repo_id').on(
       table.installation_id,
       table.repository_id,
@@ -1442,22 +1323,13 @@ export const githubConnections = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// github_installation_members — cached org co-membership for the org-shared
-// GitHub App installation flow.
-//
-// Each row records that a Platform user (`user_id`) was verified as a member of the
-// GitHub account behind a numeric installation (`installation_id`). It is a TTL
-// cache (`expires_at`): NO GitHub token is stored — access is re-verified
-// per-repo, and this table only short-circuits the org-membership check while
-// the cache is fresh. `installation_id` is keyed on GitHub's NUMERIC
-// installation id as text with NO `.references()`, deliberately mirroring
-// `github_connections.installation_id` (every call site has the numeric id in
-// hand). `user_id` cascades on user delete (mirrors `oauth_accounts`).
-// `github_account_id` is the GitHub account that proved membership. Every
-// writer sets it. The column stays nullable for now: the schema-compat CI job
-// runs the deployed runtime's tests, which still insert rows without it.
-// ---------------------------------------------------------------------------
+// Decision: github_installation_members: cached org co-membership for org-shared installs. A row records that
+// a Platform user was verified as a member of the GitHub account behind an installation. It's a TTL
+// cache with no GitHub token: access is re-verified per repo. `installation_id` is GitHub's numeric
+// id as text with no `.references()`, like `github_connections.installation_id`. `user_id` cascades
+// on user delete. `github_account_id` is the GitHub account that proved membership; each writer sets
+// it, but it stays nullable while the schema-compat CI job runs the deployed runtime's tests, which
+// still insert rows without it.
 export const githubInstallationMembers = pgTable(
   'github_installation_members',
   {
@@ -1472,69 +1344,39 @@ export const githubInstallationMembers = pgTable(
     created_at: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
   },
   (table) => [
-    // Serves the UNIQUE constraint + the onConflict target + the
-    // find-members-of-install leading-column scan + composite delete.
     uniqueIndex('idx_github_installation_members_install_user').on(
       table.installation_id,
       table.user_id,
     ),
-    // list-for-user + revocation.
     index('idx_github_installation_members_user_id').on(table.user_id),
   ],
 );
 
-// ---------------------------------------------------------------------------
-// github_installation_revocations — durable per-(installation, github_account) tombstone
-//
-// Membership rows are a TTL cache that `member_removed` HARD-DELETES, so on their
-// own they cannot make revocation MONOTONIC: a removed org member who pre-minted
-// a stateless HMAC `join_code`/`connect_grant` could replay it (within its 5-min
-// TTL) to recreate a membership/connection that then auto-deploys forever. This
-// table records the high-water mark `revoked_at` for
-// `(installation_id, github_account_id)`; `member_removed` upserts
-// `revoked_at = now()` (always advances). At redemption, the join/complete +
-// connect gate compare an artifact's `iat` (mint time) to `revoked_at`: an
-// artifact with `iat <= revoked_at` predates the revocation and is rejected, while
-// a legit re-join AFTER re-add mints a fresh artifact with `iat > revoked_at` and
-// is allowed.
-//
-// The tombstone keys on the GitHub ACCOUNT id (X), NOT a Platform user id: X is the
-// durable identity the stateless artifacts carry, and it is the ONLY identity
-// `member_removed` reliably knows from the webhook payload (`membership.user.id`).
-// A soon-to-be-removed member can pre-mint a join_code + connect_grant while still
-// in the org WITHOUT any Platform user / membership / oauth-link, so a user-keyed
-// tombstone would find no user to key on and write nothing — leaving a
-// post-removal replay path. Keying by X closes that hole. `installation_id` keys
-// on GitHub's NUMERIC installation id as text with NO FK (mirrors
-// `github_installation_members`); `github_account_id` is the NUMERIC GitHub
-// account id as text with NO FK — it is not a Platform user id and the tombstone must
-// outlive Platform user deletion.
-// ---------------------------------------------------------------------------
+// Decision: github_installation_revocations: durable per-(installation, github_account) tombstone. Membership
+// rows are a TTL cache that `member_removed` hard-deletes, so alone they can't make revocation
+// monotonic: a removed member could replay a pre-minted join_code or connect_grant within its
+// 5-minute TTL. `member_removed` upserts `revoked_at = now()`, and the join and connect gates reject
+// artifacts with `iat <= revoked_at`; a re-join after re-add has `iat > revoked_at`.
+// Key on the GitHub account id, not a Platform user id: it's what the artifacts carry and what the
+// webhook payload reliably gives, and a member can pre-mint artifacts with no Platform user at all.
+// Both ids are numeric text with no FK, so the tombstone outlives user deletion.
 export const githubInstallationRevocations = pgTable(
   'github_installation_revocations',
   {
     id: text('id').primaryKey(),
     installation_id: text('installation_id').notNull(),
     github_account_id: text('github_account_id').notNull(),
-    // `withTimezone` (timestamptz) is LOAD-BEARING here, UNLIKE the rest of the
-    // schema's tz-naive `created_at`/`expires_at`. This is the one timestamp the
-    // app reads back as an absolute epoch (`extract(epoch from ...) * 1000`) to
-    // compare against an artifact's JS `iat` (`Date.now()`). A tz-naive
-    // `timestamp` stores `now()` as a session-local WALL CLOCK, and
-    // `extract(epoch ...)` then treats those components as UTC — so on any non-UTC
-    // session (PGlite in tests picks up the host tz) the extracted epoch is skewed
-    // by the offset and the comparison breaks. `timestamptz` stores the true
-    // instant, so `extract(epoch ...)` is correct on prod pg (UTC) AND PGlite
-    // (host tz) alike. Membership TTLs avoid this only because they compare
-    // in-SQL (`expires_at > now()`), never crossing into a JS epoch.
+    // Decision: `withTimezone` matters here, unlike the tz-naive timestamps elsewhere. This value is read back as
+    // an absolute epoch (`extract(epoch from ...) * 1000`) to compare with a JS `iat`. A tz-naive
+    // `timestamp` stores `now()` as session-local wall clock, and `extract(epoch ...)` treats it as UTC,
+    // so on a non-UTC session (PGlite in tests uses the host tz) the epoch is skewed. Membership TTLs
+    // avoid this only because they compare in SQL.
     revoked_at: timestamp('revoked_at', { withTimezone: true, mode: 'string' })
       .notNull()
       .defaultNow(),
     created_at: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
   },
   (table) => [
-    // Serves the UNIQUE constraint + the onConflict target + the single-row
-    // (installation_id, github_account_id) lookup at redemption.
     uniqueIndex('idx_github_installation_revocations_install_account').on(
       table.installation_id,
       table.github_account_id,
@@ -1542,47 +1384,33 @@ export const githubInstallationRevocations = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// github_webhook_redeliveries — ledger of GitHub webhook deliveries we asked
-// GitHub to REDELIVER (catch-up for missed/failed webhooks, design 0074).
-//
-// GitHub's own delivery log is the source of truth for what we failed to ack;
-// the hourly replay job lists `status=failure` deliveries and re-sends each one
-// we have not already retried. The dedup key is GitHub's `guid`, which is stable
-// across an event's original delivery AND all of its redeliveries — so keying on
-// it retries each failed event at most once, bounding permanently-failing events.
-// The remaining columns are audit-only.
-// ---------------------------------------------------------------------------
+// Decision: github_webhook_redeliveries: ledger of deliveries we asked GitHub to redeliver (design 0074).
+// GitHub's delivery log is the truth for what we failed to ack; the hourly replay job lists
+// `status=failure` deliveries and re-sends each one not yet retried. The dedup key is GitHub's
+// `guid`, stable across an event's delivery and redeliveries, so each failed event is retried at
+// most once.
 export const githubWebhookRedeliveries = pgTable(
   'github_webhook_redeliveries',
   {
     id: text('id').primaryKey(),
-    // GitHub delivery guid — shared across an event's original + redeliveries;
-    // the dedup key (unique index below).
+    // Decision: GitHub delivery guid, shared across an event's original delivery and its redeliveries: the dedup
+    // key.
     guid: text('guid').notNull(),
-    // The numeric GitHub delivery id (as text) we POSTed the attempt for (audit).
     delivery_id: text('delivery_id').notNull(),
-    // Event type at time of failure (audit; nullable).
     event: text('event'),
-    // The failed delivery's HTTP status (audit; nullable).
     status_code: integer('status_code'),
     redelivered_at: timestamp('redelivered_at', { mode: 'string' }).notNull().defaultNow(),
   },
   (table) => [
-    // UNIQUE on guid — serves the onConflictDoNothing target and the
-    // already-redelivered lookup, so concurrent runs never double-redeliver.
+    // Decision: The unique index on guid is the onConflictDoNothing target, so concurrent runs can't redeliver
+    // the same event twice.
     uniqueIndex('idx_github_webhook_redeliveries_guid').on(table.guid),
   ],
 );
 
-// ---------------------------------------------------------------------------
-// builds — server-side build runs (one per push that triggers a build).
-//
-// A build runs the real `bwf deploy` CLI in a build environment (CF Container
-// or GitHub Actions runner) and produces a `deployment_id` once the deploy
-// endpoint accepts the manifest. `executor` records which backend ran it;
-// `status` tracks the build lifecycle independent of the deployment's status.
-// ---------------------------------------------------------------------------
+// Decision: builds: server-side build runs. A build runs the real `bwf deploy` CLI in a CF Container or a
+// GitHub Actions runner and gets a `deployment_id` once the deploy endpoint accepts the manifest.
+// `status` tracks the build lifecycle separately from the deployment's status.
 export const builds = pgTable(
   'builds',
   {
@@ -1607,18 +1435,14 @@ export const builds = pgTable(
     branch: text('branch'),
     deployment_id: text('deployment_id').references(() => deployments.id),
     github_run_id: text('github_run_id'),
-    // The GitHub Actions `run_attempt` (as text). A workflow RERUN reuses the
-    // same `run_id` with an incremented `run_attempt`, so the pair
-    // `(github_run_id, github_run_attempt)` — not `run_id` alone — identifies a
-    // single attempt. NULL means a container build. The `workflow_run` completion
-    // handler matches on the attempt so a redelivered/late completion from
-    // attempt 1 cannot finalize attempt 2's active build.
+    // Decision: A workflow rerun reuses `run_id` with a higher `run_attempt`, so `(github_run_id,
+    // github_run_attempt)` identifies one attempt. NULL means a container build. The `workflow_run`
+    // completion handler matches on the attempt so a late completion from attempt 1 can't finalize
+    // attempt 2's build.
     github_run_attempt: text('github_run_attempt'),
     logs_url: text('logs_url'),
-    // GitHub Check Run id (numeric, stored as text like github_run_id), or NULL.
-    // NULL = no check-run was created (Actions builds, builds that failed a
-    // pre-create recheck, builds created before this column, or a best-effort
-    // create failure). Finalizers no-op when NULL. Additive-only; backward-compat.
+    // Decision: NULL means no check run was created (Actions builds, builds that failed a pre-create recheck,
+    // older builds, or a failed best-effort create). Finalizers no-op when it's NULL.
     check_run_id: text('check_run_id'),
     error: text('error'),
     exit_code: integer('exit_code'),
@@ -1631,25 +1455,13 @@ export const builds = pgTable(
     index('idx_builds_project_created').on(table.project_id, table.created_at),
     index('idx_builds_status').on(table.status),
     index('idx_builds_user_status').on(table.user_id, table.status),
-    // A GitHub Actions `run_id` is unique only WITHIN a repository, not
-    // globally, so build identity is scoped to the connection's project. The
-    // composite partial unique index closes the concurrent-OIDC-exchange race
-    // (two ACTIVE rows for one run on the same project) without colliding across
-    // projects that happen to share a numeric run_id. `github_run_id IS NULL`
-    // rows (the container-build path) are exempt.
-    //
-    // Scoped to ACTIVE statuses (`starting`/`building`/`deploying`, mirroring
-    // `ACTIVE_BUILD_STATUSES` in db.ts): the invariant is "at most one ACTIVE
-    // build per (project, run_id, run_attempt)". A GitHub RERUN reuses the same
-    // `run_id` with an incremented `run_attempt`, so the attempt is part of the
-    // key — two attempts of the same run can be transiently active (e.g. a
-    // redelivered late completion for attempt 1 while attempt 2 builds) without
-    // violating uniqueness, while a duplicate concurrent insert for the SAME
-    // attempt is still rejected. A GitHub RERUN after the prior attempt reaches
-    // a terminal status (`complete`/`failed`/`cancelled`) must be able to start
-    // a fresh build, so terminal rows are intentionally NOT covered. Rows with a
-    // NULL `github_run_attempt` are container builds and are not covered by the
-    // partial WHERE.
+    // Decision: A GitHub Actions `run_id` is unique only within a repository, so build identity is scoped to the
+    // project. This partial unique index closes the concurrent OIDC exchange race (two active rows for
+    // one run) without colliding across projects that share a run_id.
+    // It covers active statuses only (`starting`/`building`/`deploying`, like `ACTIVE_BUILD_STATUSES` in
+    // db.ts): at most one active build per (project, run_id, run_attempt). The attempt is in the key so
+    // two attempts can be briefly active together. Terminal rows aren't covered, so a rerun after a
+    // terminal attempt can start fresh. Container builds (NULL run_id) are exempt.
     uniqueIndex('idx_builds_project_github_run_id')
       .on(table.project_id, table.github_run_id, table.github_run_attempt)
       .where(
@@ -1658,19 +1470,16 @@ export const builds = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// invitations
-// ---------------------------------------------------------------------------
 export const invitations = pgTable(
   'invitations',
   {
     id: text('id').primaryKey(),
     email: text('email').notNull(),
     status: text('status').notNull().default('pending').$type<InvitationStatus>(),
-    // Null covers invitations created before delivery tracking and interrupted attempts.
+    // Decision: Null covers invitations created before delivery tracking and interrupted attempts.
     email_delivery_status: text('email_delivery_status').$type<InvitationEmailDeliveryStatus>(),
-    // Invitation actor ids are durable audit data. They deliberately outlive
-    // the corresponding user rows, like operator_events.user_id.
+    // Decision: Invitation actor ids are durable audit data and outlive the user rows on purpose, like
+    // operator_events.user_id.
     invited_by: text('invited_by').notNull(),
     accepted_by: text('accepted_by'),
     revoked_at: timestamp('revoked_at', { mode: 'string' }),

@@ -376,7 +376,6 @@ describe('Zero Trust authoritative route metadata', () => {
       const remove = vi.spyOn(env.ROUTING, 'delete');
       const read = staleRouteRead([current.slug], stale);
       try {
-        // The stale read fails only this project; the installation operation finishes.
         await expect(
           configurePlatformZeroTrust(bindings(), env.db, configurationInput(protectedProject)),
         ).resolves.toMatchObject({ status: 'ready', operation: null });
@@ -413,8 +412,6 @@ describe('Zero Trust authoritative route metadata', () => {
       );
       vi.stubGlobal('fetch', accessApi().fetcher);
       await configurePlatformZeroTrust(bindings(), env.db, configurationInput(false));
-      // The previous project released the hostname and the current public
-      // project registered it; KV may still serve the previous project's route.
       const domainKey = 'domain:moved.example.com';
       await env.db.insert(domains).values({
         id: 'dom_moved',

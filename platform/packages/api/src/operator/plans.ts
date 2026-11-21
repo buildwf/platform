@@ -119,8 +119,8 @@ function applyPatch(
   if (body.allowShortSlugs !== undefined && typeof body.allowShortSlugs !== 'boolean') {
     throw new OperatorError(400, 'allowShortSlugs must be a boolean.', 'invalid_argument');
   }
-  // The AI logging default lives in its own setting (see `proposePlanAiLogging`);
-  // here it is only checked, so a bad value fails before anything is saved.
+  // Decision: The AI logging default lives in its own setting (see `proposePlanAiLogging`); here it's only
+  // checked, so a bad value fails before anything is saved.
   planAiLoggingInput(body);
   return {
     ...plan,
@@ -365,8 +365,8 @@ export async function mutateOperatorPlanCatalog(
   }
   const result = await context.get('db').transaction(async (tx) => {
     await lockPlanCatalog(tx);
-    // Read through a write, not a cacheable read: the catalog revision names the AI
-    // logging publish run, and a cached revision would give two changes the same run.
+    // Decision: Read through a write, not a cacheable read: the catalog revision names the AI logging publish run,
+    // and a cached revision would give two changes the same run.
     const { catalog: previous, settings: savedAiLogging } = await freshPlanAiLoggingInputs(
       tx,
       initialPlanDefault(context),
@@ -591,7 +591,7 @@ async function previewQuotaOverages(
         });
         return reasons.length ? { id: account.id, login: account.login, reasons } : null;
       } catch {
-        // The warning remains valid when a counter cannot be inspected; never report unknown usage as zero.
+        // Decision: The warning stays valid when a counter can't be inspected; don't report unknown usage as zero.
         return null;
       }
     }),
@@ -687,7 +687,7 @@ async function reconcilePlanAccountsPage(
     try {
       await reconcileOperatorUserPlan(context, account.id);
     } catch (error) {
-      // Concurrent account deletion needs no publication. Other failures remain retryable.
+      // Decision: A concurrent account deletion needs no publication. Other failures stay retryable.
       if (!(error instanceof OperatorError && error.status === 404)) {
         console.error('[plans] account reconciliation failed', account.id, error);
         failure = {
@@ -707,7 +707,7 @@ async function reconcilePlanAccountsPage(
       ) {
         return current;
       }
-      // Concurrent retries are idempotent; an older response cannot move the cursor backwards.
+      // Decision: Concurrent retries are idempotent; an older response can't move the cursor backwards.
       if (current.reconciliation.cursor && current.reconciliation.cursor >= account.id) {
         return current;
       }
@@ -741,7 +741,7 @@ async function reconcilePlanAccountsPage(
       ) {
         return current;
       }
-      // The next call catches accounts assigned during this page; assignments publish their own state.
+      // Decision: The next call catches accounts assigned during this page; assignments publish their own state.
       const remaining = await tx
         .select({ id: users.id })
         .from(users)

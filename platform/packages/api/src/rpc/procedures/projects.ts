@@ -48,7 +48,7 @@ export const create = procedure('projects.create')
           env,
           db: ctx.db,
           user: ctx.user,
-          // Unlike Hono's executionCtx, waitUntil here never throws, so there is no inline fallback.
+          // Decision: Unlike Hono's executionCtx, this waitUntil doesn't throw, so there's no inline fallback.
           schedule: async (work) => waitUntil(work),
         },
         input.slug,
@@ -75,8 +75,8 @@ export const list = procedure('projects.list')
   .cli({ command: 'project list', description: 'List your projects' })
   .handler(async ({ env, ctx }) => {
     const all = await getAccessibleProjectsByUserId(ctx.db, ctx.user.id);
-    // A scoped deploy token needs only its own project, for slug-to-id resolution. Listing the
-    // rest would let a leaked build-time token read every other project's domains and traffic.
+    // Decision: A scoped deploy token only needs its own project, for slug-to-id resolution. Listing the rest
+    // would let a leaked build-time token read other projects' domains and traffic.
     const projects = ctx.credential.project
       ? all.filter(({ project }) => project.id === ctx.credential.project)
       : all;

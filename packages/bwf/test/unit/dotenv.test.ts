@@ -9,13 +9,6 @@ import {
   scanWranglerDotenvKeys,
 } from '../../src/shared/dotenv.ts';
 
-/**
- * Parser + expander unit coverage. These are the lowest-level helpers behind
- * every CLI path that reads `.env*` files, so we want deliberate regression
- * tests for the expansion edge cases: escapes, nested refs, cycles, missing
- * refs, and the no-process.env guarantee.
- */
-
 describe('parseDotenv', () => {
   it('parses basic KEY=VALUE', () => {
     expect(parseDotenv('FOO=bar')).toEqual({ FOO: 'bar' });
@@ -50,8 +43,8 @@ describe('parseDotenv', () => {
 });
 
 describe('parseDotenv — lines Vite and Wrangler both read', () => {
-  // Expected values come from running Vite's parser (node:util parseEnv)
-  // and Wrangler's (dotenv 16.3.1) on the same lines; both agree on these.
+  // Decision: Expected values come from running Vite's parser (node:util parseEnv) and Wrangler's
+  // (dotenv 16.3.1) on the same lines; both agree on these.
   it.each([
     ['export A=1', { A: '1' }],
     ['export  B = 2', { B: '2' }],
@@ -77,13 +70,13 @@ describe('parseDotenv — lines Vite and Wrangler both read', () => {
     });
   });
 
-  // The runtimes disagree on these, so bwf reads neither.
+  // Decision: The runtimes disagree on these, so bwf reads neither.
   it.each([
-    // Wrangler reads K=v; Vite does not read the line.
+    // Decision: Wrangler reads K=v; Vite doesn't read the line.
     ['K: v'],
-    // Wrangler reads D=4; Vite reads the key "export\tD".
+    // Decision: Wrangler reads D=4; Vite reads the key "export\tD".
     ['export\tD=4'],
-    // Vite reads the key "export H"; Wrangler does not read the line.
+    // Decision: Vite reads the key "export H"; Wrangler doesn't read the line.
     ['export export H=9'],
   ])('skips %j', (line) => {
     expect(parseDotenv(line)).toEqual({});
@@ -91,8 +84,8 @@ describe('parseDotenv — lines Vite and Wrangler both read', () => {
 });
 
 describe('parseDotenv — values read as Vite reads them', () => {
-  // Expected values come from Vite's parser (node:util parseEnv); Wrangler's
-  // dotenv 16 reads the same values for these lines.
+  // Decision: Expected values come from Vite's parser (node:util parseEnv); Wrangler's dotenv 16 reads the
+  // same values for these lines.
   it.each([
     ['inline comment', 'A=val # note', { A: 'val' }],
     ['comment after a quoted value', 'A="v" # note', { A: 'v' }],
@@ -214,7 +207,6 @@ describe('expandDotenv — cycles', () => {
   it('detects an indirect cycle', () => {
     const onWarn = vi.fn();
     const out = expandDotenv({ A: '${B}', B: '${A}' }, { onWarn });
-    // Both values short-circuit back to their raw literals.
     expect(out.A).toBeTypeOf('string');
     expect(out.B).toBeTypeOf('string');
     expect(onWarn).toHaveBeenCalled();
@@ -229,12 +221,10 @@ describe('expandDotenv — cycles', () => {
 
 describe('expandDotenv — security', () => {
   it('does NOT consult process.env for expansion', () => {
-    // A shell env var that isn't in the dotenv record must not leak in.
     const previous = process.env.BWF_DOTENV_EXPAND_TEST;
     process.env.BWF_DOTENV_EXPAND_TEST = 'LEAKED';
     try {
       const out = expandDotenv({ A: '${BWF_DOTENV_EXPAND_TEST}' });
-      // Missing refs expand to empty — expressly not the shell value.
       expect(out.A).toBe('');
     } finally {
       if (previous === undefined) {

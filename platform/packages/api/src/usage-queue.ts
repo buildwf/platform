@@ -101,11 +101,10 @@ export async function processUsageEventBatch(
         return null;
       }
       const event = validSignedEvent(envelope.source, envelope.event);
-      // Cloudflare stamps each message with its enqueue time — which is when
-      // dispatch metered the response at the edge. Keep it: the 5xx alert window
-      // must report when the errors happened, not when this consumer drained the
-      // batch (a backlog or a retried batch can put hours between the two).
-      // Defensive fallback because this is also the billing path.
+      // Decision: Cloudflare stamps each message with its enqueue time, which is when dispatch metered the response.
+      // Keep it: the 5xx alert window has to report when errors happened, not when this consumer drained
+      // the batch (a backlog or retry can put hours between them). The fallback is defensive because this
+      // is also the billing path.
       return event
         ? {
             event,
@@ -116,9 +115,8 @@ export async function processUsageEventBatch(
   );
   const authenticatedRecords = verified.filter((record) => record !== null);
   if (authenticatedRecords.length === 0) {
-    // Legacy tenant producers and malformed/forged envelopes have no
-    // authority. Acknowledge them so an old deployment cannot cause an
-    // endless retry loop after the consumer upgrade.
+    // Decision: Legacy tenant producers and malformed or forged envelopes have no authority. Acknowledge them so
+    // an old deployment can't cause an endless retry loop after the consumer upgrade.
     batch.ackAll();
     return;
   }
@@ -149,8 +147,8 @@ export async function processUsageEventBatch(
     if (!project) {
       return [];
     }
-    // Queue enqueue time is the single attribution timestamp. Managed Sandbox
-    // is hard-disabled; split interval attribution is deferred until reintroduction.
+    // Decision: Queue enqueue time is the single attribution timestamp. Managed Sandbox is hard-disabled, so split
+    // interval attribution waits until it's reintroduced.
     const occurredAt = at;
     const ownershipPeriod = ownershipPeriodsByProject
       .get(event.projectId)
@@ -160,10 +158,9 @@ export async function processUsageEventBatch(
           (period.ends_at === null || occurredAt < Date.parse(period.ends_at)),
       );
     const ownerUserId = ownershipPeriod?.owner_user_id ?? project.user_id;
-    // PostgreSQL owns account identity and the canonical slug. Producer
-    // hints are never forwarded into enforcement or alert routing. Ownership
-    // is resolved at the event timestamp so a delayed queue message crossing
-    // a transfer remains billed to the correct account.
+    // Decision: PostgreSQL owns account identity and the canonical slug; producer hints don't reach enforcement or
+    // alert routing. Ownership is resolved at the event time, so a delayed message that crosses a
+    // transfer is billed to the right account.
     return [
       {
         event: {
@@ -185,11 +182,11 @@ export async function processUsageEventBatch(
 
   const results = await Promise.allSettled(
     [...grouped.entries()].map(async ([userId, userEvents]) => {
-      // Resolve every account so request and sandbox accounting share the same ledger.
+      // Decision: Resolve each account so request and sandbox accounting share the same ledger.
       const user = await getUser(db, userId);
       if (!user) {
         return;
-      } // Unknown user, skip
+      }
       const doId = env.USAGE_COUNTER.idFromName(userId);
       const stub = env.USAGE_COUNTER.get(doId);
       const res = await stub.fetch(
@@ -213,16 +210,15 @@ export async function processUsageEventBatch(
     }),
   );
 
-  // If any UsageCounter DO calls failed, retry the whole batch
-  // Route 5xx events only on the ack path to avoid double-counting on redelivery
+  // Decision: If any UsageCounter call failed, retry the whole batch. Route 5xx events only on the ack path so a
+  // redelivery doesn't count them twice.
   const failures = results.filter((result) => result.status === 'rejected');
   if (failures.length > 0) {
     batch.retryAll();
   } else {
-    // Best-effort: route project 5xx events to ErrorAlertMonitor (failures
-    // don't block ack). Platform-owned static storage failures remain billed
-    // and visible in request analytics, but do not tell users that their
-    // application returned an error.
+    // Decision: Routing 5xx events to ErrorAlertMonitor is best effort and doesn't block the ack.
+    // Platform-owned static storage failures stay billed and visible in request analytics, but don't
+    // tell users their application returned an error.
     const errorRecords = records.filter(
       ({ event }) =>
         event.status !== undefined &&

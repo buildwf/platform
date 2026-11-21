@@ -64,7 +64,6 @@ describe('lintDuplicateSources', () => {
     expect(msg).toContain('/docs/*');
     expect(msg).toContain('_redirects:12');
     expect(msg).toContain('bwf.config.ts#routing.rewrites');
-    // The non-duplicated /api/* source must not appear
     expect(msg).not.toContain('/api/*');
   });
 

@@ -30,7 +30,7 @@ vi.mock('@voidzero-dev/vite-plus-prompts', async (importOriginal) => {
   };
 });
 
-// Record the waits before a read is done again, and do not wait.
+// Decision: Record the waits before a read is done again, and don't wait.
 const wait = vi.hoisted(() => vi.fn(async (_milliseconds: number) => {}));
 vi.mock('node:timers/promises', async (importOriginal) => ({
   ...(await importOriginal<typeof import('node:timers/promises')>()),
@@ -132,7 +132,6 @@ const allWorkers = [
   worker('dispatch-worker', names.dispatchWorker),
 ];
 
-// An installation without a stopped Worker cutover.
 const installed: PlatformOutsideChangeInstallation = { manifest: installationManifest() };
 
 const triggers: CloudflareTriggerConfig = {
@@ -143,10 +142,9 @@ const triggers: CloudflareTriggerConfig = {
   queueConsumers: [],
   workflows: [],
 };
-// Every version that bwf deploys has this record of its triggers.
+// Decision: Each version that bwf deploys has this record of its triggers.
 const recordedMessage = encodeCloudflareVersionMessage([], triggers);
 
-/** Cloudflare API answers for a Worker whose active version has the given message. */
 function activeVersionReads(
   workerName: string,
   message: string | undefined,
@@ -251,7 +249,6 @@ describe('platform Workers changed outside bwf', () => {
   const getWorkerLastDeployedFrom = vi.fn(
     async (_account: string, name: string) => sources.get(name) ?? 'cf_cli',
   );
-  // The message of each Worker's active version. By default, bwf deployed it.
   const activeMessages = new Map<string, string | undefined>();
   const readCloudflare = vi.fn(async (path: string): Promise<unknown> => {
     const name = /\/workers\/scripts\/([^/]+)\//.exec(path)?.[1] ?? '';
@@ -299,14 +296,14 @@ describe('platform Workers changed outside bwf', () => {
   });
 
   it('also flags an existing Worker whose active version has no bwf record of its triggers', async () => {
-    // A run stopped after the Cloudflare CLI replaced the change, before bwf
-    // deployed its own version. The marker shows the Cloudflare CLI.
+    // Decision: A run stopped after the Cloudflare CLI replaced the change, before bwf deployed its own
+    // version. The marker shows the Cloudflare CLI.
     activeMessages.set(names.proxyWorker, undefined);
-    // bwf wrote this older record, which has no triggers. The upgrade refuses it too.
+    // Decision: bwf wrote this older record, which has no triggers. The upgrade refuses it too.
     sources.set(names.tailWorker, null);
     activeMessages.set(names.tailWorker, 'platform:{"schema":1,"migrations":[]}');
-    // The marker already shows the change, so the version is not read. The
-    // deployments are read: the deploy needs one active version.
+    // Decision: The marker already shows the change, so the version isn't read. The deployments are read:
+    // the deploy needs one active version.
     sources.set(names.apiWorker, 'dash');
     activeMessages.set(names.apiWorker, undefined);
 
@@ -352,7 +349,6 @@ describe('platform Workers changed outside bwf', () => {
     const failure = (status: number) => new PlatformCloudflareApiError('Cloudflare error', status);
     const notReadable = (answer: string) =>
       `platform: bwf cannot read the platform Worker ${names.apiWorker} (${answer}), so it cannot find changes made outside bwf. No platform Worker changed. This command did not pause application traffic.`;
-    /** Each read takes the next answer of its kind, then the answer of a Worker that bwf deployed. */
     const find = (answers: Partial<Record<Read, Array<unknown>>>) => {
       const reads: Array<Read> = [];
       const recorded = activeVersionReads(names.apiWorker, recordedMessage);
@@ -419,7 +415,6 @@ describe('platform Workers changed outside bwf', () => {
         message: `platform: Cloudflare returned malformed deployment data for the platform Worker ${names.apiWorker}, so bwf cannot find changes made outside bwf. No platform Worker changed. This command did not pause application traffic. Run the command again.`,
       },
       {
-        // The deploy refuses this deployment after it paused traffic.
         name: 'no version gets all traffic',
         answers: {
           source: ['dash'],
@@ -451,7 +446,6 @@ describe('platform Workers changed outside bwf', () => {
 
       await expect(found.result).rejects.toThrow(message);
       expect(found.reads).toEqual(reads);
-      // bwf reads again only after a failure that can pass.
       expect(wait.mock.calls).toEqual(waits);
     });
 
@@ -464,7 +458,7 @@ describe('platform Workers changed outside bwf', () => {
     });
 
     it('shows no change for a Worker that does not exist', async () => {
-      // Cloudflare answers HTTP 404, and the source read then gives null.
+      // Decision: Cloudflare answers HTTP 404, and the source read then gives null.
       const found = find({ source: [null], deployments: [failure(404)] });
 
       await expect(found.result).resolves.toEqual([]);
@@ -499,9 +493,9 @@ describe('platform Workers changed outside bwf', () => {
         runtime,
         installation,
       );
-    // The run agreed to replace a change made outside bwf on the API Worker.
-    // It made bwf's version active and stopped before the cutover finished.
-    // The marker shows the Cloudflare CLI, and the active version has the record.
+    // Decision: The run agreed to replace a change made outside bwf on the API Worker. It made bwf's version
+    // active and stopped before the cutover finished. The marker shows the Cloudflare CLI, and the
+    // active version has the record.
     const stopped = (manifest = installationManifest()) =>
       recordWorkerCutoverStage(
         manifest,
@@ -523,12 +517,9 @@ describe('platform Workers changed outside bwf', () => {
     });
 
     it('flags a Worker when the run restores an earlier version without a bwf record', async () => {
-      // The installer restores the earlier version first, and then the upgrade
-      // would refuse it.
       await expect(find({ manifest: stopped() })).resolves.toEqual([
         { key: 'api', name: names.apiWorker, source: 'unrecorded' },
       ]);
-      // The active and the earlier version are read at the same time.
       expect(
         reads.mock.calls
           .map(([path]) => path)
@@ -539,12 +530,10 @@ describe('platform Workers changed outside bwf', () => {
         `/accounts/account/workers/scripts/${names.apiWorker}/versions/${bwfVersion}`,
         earlierPath,
       ]);
-      // The other Workers have no staged version, so they get no extra read.
       expect(reads).toHaveBeenCalledTimes(
         (runtime.manifest.artifacts.emailGateway ? 5 : 4) * 2 + 1,
       );
 
-      // Without an open cutover, the run restores nothing.
       reads.mockClear();
       for (const resolution of ['committed', 'restored'] as const) {
         await expect(
@@ -591,8 +580,8 @@ describe('platform Workers changed outside bwf', () => {
           authentication: { ...manifest.deployment.authentication, configurable: true as const },
         },
       });
-      // While the platform changes to configurable sign-in and already requires
-      // sign-in, the installer keeps bwf's version.
+      // Decision: While the platform changes to configurable sign-in and already requires sign-in, the
+      // installer keeps bwf's version.
       const required = authentication(true);
       await expect(
         find({ manifest: stopped(), readAuthenticationState: required }),
@@ -605,8 +594,7 @@ describe('platform Workers changed outside bwf', () => {
       await expect(
         find({ manifest: stopped(), readAuthenticationState: notRequired }),
       ).resolves.toEqual(flagged);
-      // An installation with configurable sign-in always restores, so the
-      // database is not read.
+      // Decision: An installation with configurable sign-in restores, so the database isn't read.
       const unread = authentication(true);
       await expect(
         find({
@@ -615,7 +603,6 @@ describe('platform Workers changed outside bwf', () => {
         }),
       ).resolves.toEqual(flagged);
       expect(unread).not.toHaveBeenCalled();
-      // Without the database read, expect the restore.
       await expect(find({ manifest: stopped() })).resolves.toEqual(flagged);
     });
   });
@@ -642,14 +629,12 @@ describe('platform Workers changed outside bwf', () => {
       sources.set(names.tailWorker, 'api');
       await expect(review(false)).rejects.toThrow(
         [
-          // An older bwf release can have deployed the active version, so
-          // the heading does not say that each Worker was changed outside bwf.
+          // Decision: An older bwf release can have deployed the active version, so the heading doesn't say that
+          // each Worker was changed outside bwf.
           'platform: These platform Workers need your approval before this command replaces their configuration:',
           `${names.apiWorker}: changed in the Cloudflare dashboard`,
           `${names.proxyWorker}: has an active version without a bwf deployment record`,
           `${names.tailWorker}: changed in the Cloudflare API`,
-          // An earlier run can have paused traffic. This one did not. The
-          // lifecycle lock can have changed the database.
           'No platform Worker changed. This command did not pause application traffic.',
           'This command replaces their configuration with the bwf configuration. It can ask for your approval only in a terminal.',
           'Run this command once in a terminal to review them:',
@@ -714,7 +699,6 @@ describe('platform Workers changed outside bwf', () => {
       expect(shown).toContain(
         'It uploads a new version of each of these Workers and does not deploy it.',
       );
-      // The installer uploads later. Here the source is read once, to find the change.
       expect(
         getWorkerLastDeployedFrom.mock.calls.filter(([, name]) => name === names.apiWorker),
       ).toHaveLength(1);
@@ -756,7 +740,6 @@ describe('platform Workers changed outside bwf', () => {
         resourceName: names.apiWorker,
       }),
     );
-    // The installer gives this config. A run can create a resource that it uses.
     const config = {
       account_id: 'account',
       compatibility_date: '2026-09-30',
@@ -767,7 +750,7 @@ describe('platform Workers changed outside bwf', () => {
       vars: { PLATFORM_OWNERSHIP_MARKER: ownershipMarker },
       workers_dev: true,
     };
-    // The active version of a Worker changed with the Workers API has no bwf message.
+    // Decision: The active version of a Worker changed with the Workers API has no bwf message.
     const request = vi.fn(async (path: string): Promise<unknown> => {
       if (path.endsWith('/deployments')) {
         return {
@@ -879,8 +862,8 @@ describe('platform Workers changed outside bwf', () => {
     });
 
     it('uploads nothing for a version that the Cloudflare CLI does not ask about', async () => {
-      // The deploy replaces this version. The marker shows the Cloudflare CLI,
-      // so the Cloudflare CLI would not ask.
+      // Decision: The deploy replaces this version. The marker shows the Cloudflare CLI, so the Cloudflare CLI
+      // wouldn't ask.
       await upload([{ key: 'api', name: names.apiWorker, source: 'unrecorded' }]);
 
       expect(events).toEqual([]);
@@ -944,7 +927,7 @@ describe('installer upload after the operator agrees', () => {
               ],
             };
           case 'versions.view':
-            // A Workers API edit leaves no bwf message on the active version.
+            // Decision: A Workers API edit leaves no bwf message on the active version.
             return {
               status: 0,
               stdout: '',
@@ -1014,7 +997,6 @@ describe('installer upload after the operator agrees', () => {
   it('flags a Worker before a run exactly when the upgrade refuses its active version', async () => {
     const results = [];
     for (const message of [undefined, 'Edited', recordedMessage]) {
-      // The check and the upgrade read the same Cloudflare API answers.
       const reads = activeVersionReads('platform-test-api', message);
       const changes = await findPlatformWorkerOutsideChanges(
         {

@@ -144,7 +144,7 @@ export function assertNoConfigOverrideInProjectDotenv(
   root: string,
   platform: NodeJS.Platform = process.platform,
 ): void {
-  // WRANGLER_CI_OVERRIDE_NAME reaches a deploy through the wrangler dotenv reload.
+  // Decision: WRANGLER_CI_OVERRIDE_NAME reaches a deploy through the wrangler dotenv reload.
   const ciOverrideFile = findWranglerCiOverrideDotenvFile(root, platform);
   if (ciOverrideFile) {
     throw new Error(
@@ -154,8 +154,8 @@ export function assertNoConfigOverrideInProjectDotenv(
         `"${ciOverrideFile}" (set it in your shell/CI only if you truly need a CI name override).`,
     );
   }
-  // CLOUDFLARE_ENV / CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH reach the BUILD via Vite's
-  // production `loadEnv`, whose file set differs from the wrangler dotenv files.
+  // Decision: CLOUDFLARE_ENV and CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH reach the build through Vite's production
+  // `loadEnv`, whose file set differs from the wrangler dotenv files.
   for (const file of DEPLOY_VITE_DOTENV_FILES) {
     const offender = findDotenvDeclaration(
       root,
@@ -209,12 +209,12 @@ export function deployChildEnv(
   for (const name of DEPLOY_CONFIG_OVERRIDE_ENV_VARS) {
     deleteEnvVarCaseAware(env, name);
   }
-  // Pin Wrangler's default log level. Delete case-aware first so a mixed-case
-  // ambient value cannot shadow the pin on win32.
+  // Decision: Pin Wrangler's default log level. Delete case-aware first so a mixed-case ambient value can't
+  // shadow the pin on win32.
   deleteEnvVarCaseAware(env, 'WRANGLER_LOG');
   env.WRANGLER_LOG = 'log';
-  // bwf owns the browser OAuth lifecycle. Never allow Wrangler to fall back to
-  // its plaintext credential file while a bwf command is using that session.
+  // Decision: bwf owns the browser OAuth lifecycle. Don't let Wrangler fall back to its plaintext credential
+  // file while a bwf command is using that session.
   env.CLOUDFLARE_AUTH_USE_KEYRING = 'true';
   return env;
 }
@@ -227,9 +227,8 @@ export function scrubWranglerAuthCredentials(env: NodeJS.ProcessEnv): NodeJS.Pro
   for (const name of WRANGLER_AUTH_CREDENTIAL_ENV_VARS) {
     deleteEnvVarCaseAware(env, name);
   }
-  // These are not Wrangler credentials, but native Cloudflare builds do not
-  // need either one: DATABASE_URL is consumed only by the parent-side
-  // provision/migration steps, and BWF_TOKEN belongs to the managed target.
+  // Decision: These aren't Wrangler credentials, but native Cloudflare builds need neither: DATABASE_URL is used
+  // only by the parent-side provision and migration steps, and BWF_TOKEN belongs to the managed target.
   deleteEnvVarCaseAware(env, 'DATABASE_URL');
   deleteEnvVarCaseAware(env, 'BWF_TOKEN');
   return env;
@@ -249,13 +248,12 @@ export function buildSchemaProbeEnv(accountId: string, apiBaseUrl: string): Node
   const env = scrubManagedDeployBuildMarkers(
     scrubWranglerAuthCredentials(deployChildEnv(accountId, apiBaseUrl)),
   );
-  // Match the Cloudflare deploy build's dotenv boundary. Besides keeping a
-  // schema conditioned on this internal marker consistent with the build,
-  // this prevents an ambient case variant from shadowing the pinned value on
-  // Windows.
+  // Decision: Match the Cloudflare deploy build's dotenv boundary. Besides keeping a schema conditioned on this
+  // internal marker consistent with the build, this stops an ambient case variant from shadowing the
+  // pinned value on Windows.
   deleteEnvVarCaseAware(env, CLOUDFLARE_DEPLOY_BUILD_ENV);
   env[CLOUDFLARE_DEPLOY_BUILD_ENV] = '1';
-  // Scrub any ambient spelling first (case-aware on win32) so it cannot shadow the pin.
+  // Decision: Scrub any ambient spelling first (case-aware on win32) so it can't shadow the pin.
   deleteEnvVarCaseAware(env, 'NODE_ENV');
   env.NODE_ENV = 'production';
   return env;

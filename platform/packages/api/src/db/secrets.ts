@@ -4,8 +4,6 @@ import { projectSecrets, projectDatabaseCredentials } from '../schema.ts';
 import type { ProjectDatabaseCredentials, ProjectSecret } from '../types.ts';
 import { type Db } from './client.ts';
 
-// --- Project secrets ---
-
 export async function listProjectSecretNames(
   db: Db,
   projectId: string,
@@ -67,8 +65,6 @@ export async function deleteProjectSecret(db: Db, projectId: string, name: strin
     .delete(projectSecrets)
     .where(and(eq(projectSecrets.project_id, projectId), eq(projectSecrets.name, name)));
 }
-
-// --- Database credentials ---
 
 export async function upsertProjectDatabaseUrl(
   db: Db,

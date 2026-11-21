@@ -1,15 +1,8 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { awaitBrowserCallback } from '../../src/cli/auth.ts';
 
-// A no-op stand-in for node:child_process.execFile so the helper never tries
-// to launch a real browser during tests.
 const noopExecFile = vi.fn() as unknown as typeof import('node:child_process').execFile;
 
-/**
- * Start awaitBrowserCallback and resolve once it hands us the authorize URL
- * (built from the localhost callback). Returns the callback URL so the test can
- * drive the localhost server directly.
- */
 function startCallback<T = URLSearchParams>(options?: {
   describeError?: (params: URLSearchParams) => string | null;
   finalize?: (params: URLSearchParams) => Promise<T>;
@@ -62,7 +55,6 @@ describe('awaitBrowserCallback', () => {
     const { resultPromise, callbackPromise, state } = startCallback({ finalize });
     const callback = await callbackPromise;
 
-    // The helper appends the caller-supplied state to the callback URL.
     expect(callback.pathname).toBe('/callback');
     expect(callback.searchParams.get('state')).toBe(state);
     expect(callback.protocol).toBe('http:');
@@ -77,8 +69,6 @@ describe('awaitBrowserCallback', () => {
     expect(html).toContain('Signed in to bwf');
     expect(html).toContain('aria-label="Success"');
 
-    // finalize ran inside the request handler with the callback params, and the
-    // outer promise resolves with finalize's return value.
     expect(finalize).toHaveBeenCalledTimes(1);
     expect(finalize.mock.calls[0]![0].get('link_code')).toBe('abc');
     expect(finalize.mock.calls[0]![0].get('state')).toBe(state);
@@ -94,7 +84,7 @@ describe('awaitBrowserCallback', () => {
     const { resultPromise, callbackPromise, state } = startCallback({ finalize });
     const callback = await callbackPromise;
 
-    // Attach the rejection assertion before triggering the request so the
+    // Decision: Attach the rejection assertion before triggering the request so the
     // handler is in place when the promise settles (no unhandled rejection).
     const rejection = expect(resultPromise).rejects.toBe(finalizeError);
 
@@ -103,7 +93,6 @@ describe('awaitBrowserCallback', () => {
     hit.searchParams.set('link_code', 'abc');
 
     const res = await fetch(hit);
-    // The browser must NOT see the success page when finalize fails.
     expect(res.status).toBe(400);
     const body = await res.text();
     expect(body).not.toContain('successful');
@@ -125,10 +114,8 @@ describe('awaitBrowserCallback', () => {
     const badRes = await fetch(bad);
     expect(badRes.status).toBe(400);
 
-    // A state mismatch is rejected before finalize runs.
     expect(finalize).not.toHaveBeenCalled();
 
-    // The genuine callback still completes — the server stayed open.
     const good = new URL(callback);
     good.searchParams.set('state', state);
     good.searchParams.set('link_code', 'real');
@@ -177,8 +164,6 @@ describe('awaitBrowserCallback', () => {
     await fetch(hit);
     await resultPromise;
 
-    // By the time the flow completes, the injected execFile (never a real
-    // browser) was invoked with the authorize URL as a single argv element.
     expect(execFile).toHaveBeenCalledTimes(1);
     expect(execFile).toHaveBeenCalledWith(
       expect.anything(),

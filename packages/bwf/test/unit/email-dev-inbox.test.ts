@@ -1,8 +1,6 @@
-/**
- * In `bwf dev`, `sendEmail` runs in workerd while the inbox lives in the Vite
- * (Node) process, so these tests drive the wire boundary: the capture POST reaches
- * the real dev-inbox middleware through a fake `ASSETS` fetcher.
- */
+// Decision: In `bwf dev`, `sendEmail` runs in workerd while the inbox lives in the Vite (Node) process,
+// so these tests drive the wire boundary: the capture POST reaches the real dev-inbox
+// middleware through a fake `ASSETS` fetcher.
 import { EventEmitter } from 'node:events';
 import { Readable } from 'node:stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
@@ -36,10 +34,8 @@ import {
 } from '../../src/runtime/email/mime.ts';
 import { withRuntimeEnv } from '../../src/runtime/env.ts';
 
-/** The per-project dev-trigger token `bwfPlugin()` hands the plugin. */
 const TOKEN = 'dev-token-test';
 
-/** The worker env `mergeBindings` produces under `bwf dev`: binding var + token var. */
 function devEnv(assets: unknown, bindingName = 'ASSETS'): Record<string, unknown> {
   return {
     [DEV_INBOX_ENV_VAR]: bindingName,
@@ -48,17 +44,11 @@ function devEnv(assets: unknown, bindingName = 'ASSETS'): Record<string, unknown
   };
 }
 
-/** A request that presents the token the way curl and the worker do. */
 function authed(url: string, init: RequestInit = {}): Request {
   const headers = new Headers(init.headers);
   headers.set(DEV_INBOX_TOKEN_HEADER, TOKEN);
   return new Request(url, { ...init, headers });
 }
-
-// ---------------------------------------------------------------------------
-// A minimal connect-style middleware stack, so the plugin's real
-// `configureServer` handler runs against real Node req/res objects.
-// ---------------------------------------------------------------------------
 
 type NodeHandler = (req: unknown, res: unknown, next: () => void) => void;
 
@@ -95,7 +85,7 @@ function createFakeViteServer(): FakeServer {
       if (!entry) {
         return new Response('no middleware', { status: 404 });
       }
-      // connect strips the mounted prefix from req.url.
+      // Decision: connect strips the mounted prefix from req.url.
       const rest = url.pathname.slice(entry.route.length) || '/';
       const bodyBytes = new Uint8Array(await request.arrayBuffer());
 
@@ -129,8 +119,8 @@ function createFakeViteServer(): FakeServer {
             if (chunk) {
               chunks.push(Buffer.from(chunk));
             }
-            // A WHATWG Response rejects a body on 204/304, which the plugin's
-            // DELETE answers with; node:http has no such rule.
+            // Decision: A WHATWG Response rejects a body on 204/304, which the plugin's DELETE answers with;
+            // node:http has no such rule.
             const body = status === 204 || status === 304 ? null : Buffer.concat(chunks);
             resolve(new Response(body, { status, headers }));
           },
@@ -143,12 +133,9 @@ function createFakeViteServer(): FakeServer {
   };
 }
 
-/**
- * Stand-in for the dev `env.ASSETS` binding. In a real `bwf dev` this is a
- * miniflare service binding whose implementation is the Vite dev server's Node
- * middleware stack; here it is the same middleware stack, reached over a real
- * Request/Response pair.
- */
+// Decision: Stand-in for the dev `env.ASSETS` binding. In a real `bwf dev` this is a miniflare service
+// binding whose implementation is the Vite dev server's Node middleware stack; here it's the
+// same middleware stack, reached over a real Request/Response pair.
 function fakeAssetsBinding(server: FakeServer): {
   fetch(req: Request | string, init?: RequestInit): Promise<Response>;
   calls: Array<{ url: string; method: string }>;
@@ -213,7 +200,6 @@ describe('dev inbox capture wire format', () => {
   });
 });
 
-/** Serialized capture size of a message, alongside the MIME it was built from. */
 async function serializedSizeOf(
   opts: Parameters<typeof normalizeEmail>[0],
 ): Promise<{ mimeBytes: number; jsonBytes: number }> {
@@ -224,8 +210,8 @@ async function serializedSizeOf(
 }
 
 describe('dev inbox capture cap (sized for the serialized capture)', () => {
-  // A control byte is `=01` in the quoted-printable MIME but `\u0001` in the
-  // JSON text, so this legal message serializes past three MIME budgets.
+  // Decision: A control byte is `=01` in the quoted-printable MIME but `\u0001` in the JSON text, so this
+  // legal message serializes past three MIME budgets.
   it('captures a legal message whose serialized capture exceeds three MIME budgets', async () => {
     const text = '\x01'.repeat(Math.floor(MAX_MESSAGE_BYTES / 3.15));
     const server = createFakeViteServer();
@@ -238,12 +224,10 @@ describe('dev inbox capture cap (sized for the serialized capture)', () => {
     expect(message.subject).toBe('control-heavy');
     expect(message.raw.byteLength).toBeLessThanOrEqual(MAX_MESSAGE_BYTES);
     expect(message.text).toBe(text);
-    // ASCII JSON, so its length is its byte size.
     expect(serializeCapturedMessage(message).length).toBeGreaterThan(3 * MAX_MESSAGE_BYTES);
   });
 
-  // The ratio is per octet, so checking the real serializer at a small scale
-  // holds at any size.
+  // Decision: The ratio is per octet, so checking the real serializer at a small scale holds at any size.
   it('covers base64 raw (4/3) plus caller strings at their worst JSON expansion (3.75x)', async () => {
     const worstExpansion = 6 / 1.6;
     const framing = 1024;
@@ -254,20 +238,21 @@ describe('dev inbox capture cap (sized for the serialized capture)', () => {
     const base = { from: 'a@x.dev', to: 'b@y.dev', subject: 's' };
     const control = '\x01'.repeat(30_000);
     const shapes: Array<[string, Parameters<typeof normalizeEmail>[0]]> = [
-      // encoded-word header: base64 plus framing (1.6) in the MIME, 6 in JSON — 3.75x
+      // Decision: Encoded-word header: base64 plus framing (1.6) in the MIME, 6 in JSON, so 3.75x.
       ['control subject', { ...base, subject: control, text: 't' }],
       ['control display name', { ...base, to: [{ email: 'b@y.dev', name: control }], text: 't' }],
       [
         'control custom header value',
         { ...base, headers: { 'X-Note': control.slice(0, 8_192) }, text: 't' },
       ],
-      // body: `=01` (3) in the MIME, `\u0001` (6) in JSON — 2x
+      // Decision: Body: `=01` (3) in the MIME, `\u0001` (6) in JSON, so 2x.
       ['control text', { ...base, text: control }],
-      // body, 7bit path: CRLF (2) in the MIME, `\r\n` (4) in JSON — exactly 2x
+      // Decision: Body, 7bit path: CRLF (2) in the MIME, `\r
+      // ` (4) in JSON, so 2x.
       ['crlf text', { ...base, text: '\r\n'.repeat(30_000) }],
-      // body, quoted-printable path: a mid-line HTAB is 1 octet, `\t` in JSON is 2 — 2x
+      // Decision: Body, quoted-printable path: a mid-line HTAB is 1 octet, `\t` in JSON is 2, so 2x.
       ['tab text', { ...base, text: '\t'.repeat(30_000) }],
-      // custom header names: printable ASCII, `"` is 1 in the MIME and 2 in JSON — 2x
+      // Decision: Custom header names: printable ASCII, `"` is 1 in the MIME and 2 in JSON, so 2x.
       [
         'quote header names',
         {
@@ -289,8 +274,8 @@ describe('dev inbox capture cap (sized for the serialized capture)', () => {
 
 describe('sendEmail -> dev inbox (cross-process transport)', () => {
   it('POSTs the captured message to the dev inbox when no in-process sink exists', async () => {
-    // This is the shape workerd sees during `bwf dev`: the Node-side sink
-    // registry is unreachable, so hasActiveSink() is false.
+    // Decision: This is the shape workerd sees during `bwf dev`: the Node-side sink registry is unreachable,
+    // so hasActiveSink() is false.
     expect(hasActiveSink()).toBe(false);
 
     const server = createFakeViteServer();
@@ -317,7 +302,6 @@ describe('sendEmail -> dev inbox (cross-process transport)', () => {
       { url: `http://localhost${DEV_INBOX_CAPTURE_URL}`, method: 'POST' },
     ]);
 
-    // ...and the Node-side buffer that `/__platform/inbox` renders now has it.
     const messages = listDevMessages();
     expect(messages).toHaveLength(1);
     expect(messages[0].subject).toBe('Cross-process hello');
@@ -330,9 +314,9 @@ describe('sendEmail -> dev inbox (cross-process transport)', () => {
     expect(subjectsInListHtml(await listed.text())).toContain('Cross-process hello');
   });
 
-  // The cross-process capture answers with the same `ids` the in-process
-  // sink does — one per unique address, lowercased, as production sends —
-  // while the buffered message the inbox renders keeps every field as given.
+  // Decision: The cross-process capture answers with the same `ids` the in-process sink does (one per
+  // unique address, lowercased, as production sends), while the buffered message the inbox
+  // renders keeps each field as given.
   it('reports one id per unique address while the buffered message keeps the fields', async () => {
     const server = createFakeViteServer();
     const assets = fakeAssetsBinding(server);
@@ -472,8 +456,8 @@ describe('dev inbox auth (dev-trigger token on every route)', () => {
         new Request(`${url}?${DEV_INBOX_TOKEN_QUERY}=nope`, init),
       );
       expect(wrongQuery.status).toBe(401);
-      // A header that is wrong is not rescued by a query that is right — the
-      // header is what the worker and curl send, so it is what gets checked.
+      // Decision: A wrong header isn't rescued by a right query: the header is what the worker and curl send,
+      // so it's what gets checked.
       const wrongHeaderRightQuery = await server.dispatch(
         new Request(`${url}?${DEV_INBOX_TOKEN_QUERY}=${TOKEN}`, {
           ...init,
@@ -482,7 +466,6 @@ describe('dev inbox auth (dev-trigger token on every route)', () => {
       );
       expect(wrongHeaderRightQuery.status).toBe(401);
 
-      // The refusal had no side effect: the seeded message is still the only one.
       expect(listDevMessages().map((m) => m.id)).toEqual(['dev_seeded']);
     },
   );
@@ -567,7 +550,6 @@ describe('dev inbox auth (dev-trigger token on every route)', () => {
     try {
       const stalled = {
         async fetch() {
-          // Status arrives, the body never does.
           return new Response(new ReadableStream({ start() {} }), { status: 401 });
         },
       };
@@ -614,7 +596,7 @@ describe('shouldInjectEmailDevInboxVar (dev-only gate)', () => {
   });
 });
 
-// The buffer lives in the dev server's Node process, so it is bounded by retained bytes.
+// Decision: The buffer lives in the dev server's Node process, so it's bounded by retained bytes.
 
 const MIB = 1024 * 1024;
 
@@ -637,14 +619,12 @@ function capturedOfSize(id: string, rawBytes: number, htmlChars = 0): CapturedMe
 
 describe('dev inbox buffer bounds', () => {
   it('evicts on the retained-byte budget well below the count cap', () => {
-    // 16 MiB charged per message, so the fifth push crosses the 64 MiB budget.
+    // Decision: 16 MiB is charged per message, so the fifth push crosses the 64 MiB budget.
     for (let i = 1; i <= 5; i++) {
       pushToDevBuffer(capturedOfSize(`msg-${i}`, 8 * MIB, 8 * MIB));
     }
     const retained = listDevMessages();
     expect(retained).toHaveLength(4);
-    // listDevMessages() is newest-first: the send that just happened survives,
-    // and the oldest is the one that went.
     expect(retained[0].id).toBe('msg-5');
     expect(retained.map((m) => m.id)).not.toContain('msg-1');
   });
@@ -652,7 +632,6 @@ describe('dev inbox buffer bounds', () => {
   it('keeps the newest message even when it alone exceeds the budget', () => {
     pushToDevBuffer(capturedOfSize('small', 1024));
     pushToDevBuffer(capturedOfSize('huge', 1024, 70 * MIB));
-    // A send must always be visible in the inbox, whatever its size.
     const retained = listDevMessages();
     expect(retained).toHaveLength(1);
     expect(retained[0].id).toBe('huge');
@@ -663,9 +642,8 @@ describe('dev inbox buffer bounds', () => {
       pushToDevBuffer(capturedOfSize(`big-${i}`, 8 * MIB, 8 * MIB));
     }
     clearDevBuffer();
-    // A stale counter would leave the buffer permanently over budget, so every
-    // later push would evict its predecessor and the inbox would silently show
-    // exactly one message.
+    // Decision: A stale counter would leave the buffer over budget for good, so each later push would evict
+    // its predecessor and the inbox would silently show one message.
     for (let i = 1; i <= 3; i++) {
       pushToDevBuffer(capturedOfSize(`small-${i}`, 1024));
     }

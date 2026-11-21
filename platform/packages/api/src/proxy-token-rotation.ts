@@ -102,28 +102,20 @@ export async function issueProjectProxyToken(
   return { gen: row.gen, token: await deriveProxyToken(jwtSecret, projectId, row.gen) };
 }
 
-// --- Rotation ---
-//
-// A rotation is one `project_cleanup_jobs` row (kind `proxy-token-rotation`)
-// that moves through these phases, one short transaction per step:
-//
-//   requested  START: raise projects.proxy_token_gen to T. Postgres only, so
-//              T is committed before anything outside sees tok(T).
-//   patch      one Worker per step: GET its bindings, PATCH tok(T) in, then
-//              record T on its deployment row and, for the active Worker,
-//              point the queue entries and the cron scheduler at tok(T).
-//   revoke     every Worker holds tok(T): write the accept floor T.
-//   settle     wait until every floor reader sees T, then finish.
-//
-// Every step locks the project row, then the job row, and refuses while a
-// deployment is in flight (the same fence as deploys, rollback and secret
-// writes). A wait is stored in the payload as `waitUntil`, taken from
-// `clock_timestamp()` after the step's last outside write, so a kick of
-// `next_attempt_at` never cuts it short. Until the floor rises both tokens are
-// accepted, so a failed or unfinished rotation never breaks a tenant. Each
-// sender presents only the token its deployment row records, so right after a
-// PATCH, until the step commits and Cloudflare stops serving the Worker's old
-// version, a call can get a 403 that is not retried.
+// Decision: A rotation is one `project_cleanup_jobs` row (kind `proxy-token-rotation`) that moves through these
+// phases, one short transaction per step:
+// requested  START: raise projects.proxy_token_gen to T. Postgres only, so T is committed before
+//            anything outside sees tok(T).
+// patch      one Worker per step: GET its bindings, PATCH tok(T) in, record T on its deployment
+//            row and, for the active Worker, point the queue entries and cron scheduler at tok(T).
+// revoke     each Worker holds tok(T): write the accept floor T.
+// settle     wait until each floor reader sees T, then finish.
+// Each step locks the project row, then the job row, and refuses while a deployment is in flight
+// (the same fence as deploys, rollback and secret writes). A wait is stored as `waitUntil` from
+// `clock_timestamp()` after the step's last outside write, so a kick of `next_attempt_at` can't cut
+// it short. Until the floor rises both tokens are accepted, so a failed rotation doesn't break a
+// tenant. Each sender presents only the token its deployment row records, so right after a PATCH, a
+// call can get a 403 that isn't retried.
 
 type ProxyTokenRotationPhase = 'requested' | 'patch' | 'revoke' | 'settle';
 
@@ -173,8 +165,6 @@ function waitInterval(waitMs: number): SQL {
 
 const jobTarget = (projectId: string) =>
   eq(projectCleanupJobs.target, proxyTokenRotationTarget(projectId));
-
-// --- Requests ---
 
 /**
  * Queues every project not being deleted, with the member rule on an
@@ -263,8 +253,6 @@ export async function requestRotationIfReplacingUntrustedCode(
   await requestProxyTokenRotation(tx, projectId, 'untrusted-deploy-replaced', 'member');
   return true;
 }
-
-// --- Inventory ---
 
 type InventoryRow = Readonly<{
   deploymentId: string;
@@ -365,8 +353,6 @@ function parseCursor(cursor: string | undefined): { createdAt: string; id: strin
     ? { createdAt: cursor!.slice(0, split), id: cursor!.slice(split + 1) }
     : undefined;
 }
-
-// --- Steps ---
 
 type JobPayload = Readonly<Record<string, string>>;
 
@@ -553,7 +539,7 @@ async function patchNext(tx: DbOrTx, ctx: StepContext, locked: LockedStep): Prom
     limit: 1,
   });
   if (!row) {
-    // Old versions of a patched Worker drain for one wait after the last PATCH.
+    // Decision: Old versions of a patched Worker drain for one wait after the last PATCH.
     await finishStep(
       tx,
       ctx.projectId,
@@ -576,12 +562,10 @@ async function patchNext(tx: DbOrTx, ctx: StepContext, locked: LockedStep): Prom
   const bindings = await ctx.cf.getScriptBindings(row.workerName);
   const current = bindings ? tokenBinding(bindings) : undefined;
   if (bindings && !current) {
-    // No token binding to PATCH. Every per-deployment Worker the platform
-    // creates has one, so it was removed outside the platform (Workers from
-    // before the binding rename are `user-<slug>` scripts that never reach
-    // this step). Its row and copies keep the generation it holds, so senders
-    // still reach it; its own proxy calls fail once the floor rises, until a
-    // redeploy.
+    // Decision: No token binding to PATCH. Each per-deployment Worker the platform creates has one, so it was
+    // removed outside the platform (legacy `user-<slug>` scripts don't reach this step). Its row and
+    // copies keep the generation it holds, so senders still reach it; its own proxy calls fail once the
+    // floor rises, until a redeploy.
     rotationLog(
       'skipped',
       ctx.projectId,
@@ -605,7 +589,7 @@ async function patchNext(tx: DbOrTx, ctx: StepContext, locked: LockedStep): Prom
       throw new Error(`Worker ${row.workerName} has a ${current.type} proxy token binding`);
     }
     if (current.text !== token) {
-      // Cloudflare can apply the PATCH even when its response is lost.
+      // Decision: Cloudflare can apply the PATCH even when its response is lost.
       ctx.workerAheadOfRow = true;
       const result =
         (await ctx.cf.patchScriptBindings(
@@ -618,15 +602,14 @@ async function patchNext(tx: DbOrTx, ctx: StepContext, locked: LockedStep): Prom
       patched = true;
       rotationLog('patched', ctx.projectId, `worker=${row.workerName} gen=${gen}`);
     } else if (locked.attempts > 0 || row.proxyTokenGen !== gen) {
-      // An earlier attempt patched this Worker and then lost the response,
-      // failed or rolled back before its step committed. Its old version can
-      // still serve, so it drains as if patched now.
+      // Decision: An earlier attempt patched this Worker and then lost the response, failed or rolled back before its
+      // step committed. Its old version can still serve, so it drains as if patched now.
       patched = true;
       ctx.workerAheadOfRow = row.proxyTokenGen !== gen;
     }
   }
-  // The Worker now holds tok(gen), or has no script. Only now do the row and
-  // the copies name it, so senders never run ahead of the Worker.
+  // Decision: The Worker now holds tok(gen), or has no script. Only now do the row and copies name it, so senders
+  // don't run ahead of the Worker.
   if (patched && row.active) {
     const active = await activeWorker(tx, project);
     if (hasTokenCopies(project, active)) {
@@ -653,8 +636,8 @@ async function patchNext(tx: DbOrTx, ctx: StepContext, locked: LockedStep): Prom
     );
     if (resource) {
       if (patched) {
-        // Commit the application's token and its queue/cron copies before
-        // starting another provider write that can fail or exhaust the budget.
+        // Decision: Commit the application's token and its queue/cron copies before starting another provider write
+        // that can fail or use up the budget.
         await finishStep(
           tx,
           ctx.projectId,
@@ -695,8 +678,8 @@ async function patchNext(tx: DbOrTx, ctx: StepContext, locked: LockedStep): Prom
         .update(resources)
         .set({ metadata: { ...resource.metadata, proxyTokenGen: gen } })
         .where(eq(resources.id, resource.id));
-      // Keep the deployment cursor here. Each step patches at most one native
-      // Worker so large projects stay within the rotation's provider budget.
+      // Decision: Keep the deployment cursor here. Each step patches at most one native Worker so large projects stay
+      // within the rotation's provider budget.
       await finishStep(
         tx,
         ctx.projectId,
@@ -722,7 +705,7 @@ async function revoke(tx: DbOrTx, ctx: StepContext, locked: LockedStep): Promise
     limit: 1,
   });
   if (later) {
-    // A deploy finished after the walk passed; patch (or skip) it first.
+    // Decision: A deploy finished after the walk passed it; patch (or skip) it first.
     await finishStep(tx, ctx.projectId, sql`'{"phase":"patch"}'::jsonb`);
     return { kind: 'continue' };
   }
@@ -732,7 +715,7 @@ async function revoke(tx: DbOrTx, ctx: StepContext, locked: LockedStep): Promise
     (row) => !row.skipped && !unbound.has(row.deploymentId) && row.proxyTokenGen !== gen,
   );
   if (stale) {
-    // The floor would reject the token a sender still presents to this Worker.
+    // Decision: The floor would reject the token a sender still presents to this Worker.
     rotationLog('rewalk', ctx.projectId, `worker=${stale.workerName} gen=${stale.proxyTokenGen}`);
     await finishStep(tx, ctx.projectId, sql`'{"phase":"patch","cursor":""}'::jsonb`);
     return { kind: 'continue' };
@@ -750,12 +733,12 @@ async function revoke(tx: DbOrTx, ctx: StepContext, locked: LockedStep): Promise
       await finishStep(tx, ctx.projectId, sql`'{"phase":"patch","cursor":""}'::jsonb`);
       return { kind: 'continue' };
     }
-    // An active Worker without the binding keeps the copies of the token it holds.
+    // Decision: An active Worker without the binding keeps the copies of the token it holds.
     if (current && hasTokenCopies(project, active)) {
       await writeCopies(ctx.env, ctx.projectId, active, token);
     }
   }
-  // Written before COMMIT: KV may only run ahead, and every patched Worker holds T.
+  // Decision: Written before COMMIT: KV may only run ahead, and each patched Worker holds T.
   await ctx.env.ROUTING.put(proxyTokenStateKey(ctx.projectId), serializeProxyTokenState({ gen }));
   await finishStep(
     tx,
@@ -828,8 +811,6 @@ function runStep(db: Db, ctx: StepContext): Promise<StepResult> {
   });
 }
 
-// --- Runs ---
-
 async function setNextAttempt(db: Db, projectId: string, at: SQL): Promise<void> {
   await db.update(projectCleanupJobs).set({ next_attempt_at: at }).where(jobTarget(projectId));
 }
@@ -864,8 +845,8 @@ async function runClaimed(
       result = await runStep(db, ctx);
     } catch (error) {
       if (error instanceof CloudflareRateLimitError) {
-        // Not a failed attempt: owners cannot fix a platform-wide rate limit.
-        // The log line lets operators alert on a rotation that stays limited.
+        // Decision: Not a failed attempt: owners can't fix a platform-wide rate limit. The log line lets operators
+        // alert on a rotation that stays limited.
         rotationLog(
           'RATE-LIMITED',
           projectId,
@@ -895,9 +876,8 @@ async function runClaimed(
         .set({
           attempts: sql`${projectCleanupJobs.attempts} + 1`,
           last_error: message,
-          // A Worker ahead of its row rejects the token that the proxy, queue
-          // relays and cron fires send it, now if it is active or after a
-          // rollback to it. Retry on the next run; a run tries each job once.
+          // Decision: A Worker ahead of its row rejects the token that the proxy, queue relays and cron fires send it,
+          // now if it's active or after a rollback to it. Retry on the next run; a run tries each job once.
           next_attempt_at: ctx.workerAheadOfRow ? sql`now()` : sql`now() + ${CLAIM_LEASE}`,
         })
         .where(jobTarget(projectId))
@@ -1012,7 +992,7 @@ export async function reconcileProxyTokenRotations(
     deadline: Date.now() + (limits.maxMs ?? 25_000),
   };
   const summary: RotationRunSummary = { done: 0, pending: 0, failed: 0, retryAfterSeconds: null };
-  // One attempt per job per run: a failed step can be due again at once.
+  // Decision: One attempt per job per run: a failed step can be due again at once.
   const attempted = new Set<string>();
   while (budget.cfCallsRemaining > 0 && Date.now() < budget.deadline) {
     const projectId = await claimDueJob(db, undefined, attempted);
@@ -1040,8 +1020,6 @@ export async function reconcileProxyTokenRotations(
   }
   return summary;
 }
-
-// --- Owner warning ---
 
 export function proxyTokenRotationStuckWarning(projectId: string): string {
   return (

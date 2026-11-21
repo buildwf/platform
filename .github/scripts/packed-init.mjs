@@ -8,7 +8,7 @@ function quote(value) {
   return `'${String(value).replaceAll("'", "'\\''")}'`;
 }
 
-/** Drive a real terminal using the OS PTY utility, without a native npm dependency. */
+// Decision: Drives a real terminal with the OS PTY utility, so we don't need a native npm dependency.
 export function runPty(
   argv,
   { cwd, env, prompts, timeoutMs = 240_000, onOutput = (data) => process.stdout.write(data) },
@@ -24,9 +24,9 @@ export function runPty(
       : ['-q', '-e', '-f', '-c', command, '/dev/null'];
 
   return new Promise((resolveRun, reject) => {
-    // BSD script needs a real pipe instead of Node's macOS socket pair. Only
-    // bridge stdin there: on Linux the extra cat retains the output descriptors
-    // after script exits, so Node never receives the child's close event.
+    // Decision: BSD script needs a real pipe instead of Node's macOS socket pair. Only bridge stdin there:
+    // on Linux the extra cat keeps the output descriptors open after script exits, so Node doesn't
+    // get the child's close event.
     const child = spawn(
       process.platform === 'darwin' ? 'bash' : 'script',
       process.platform === 'darwin'
@@ -51,15 +51,11 @@ export function runPty(
       }
       try {
         process.kill(-child.pid, 'SIGTERM');
-      } catch {
-        /* already exited */
-      }
+      } catch {}
       force = setTimeout(() => {
         try {
           process.kill(-child.pid, 'SIGKILL');
-        } catch {
-          /* already exited */
-        }
+        } catch {}
       }, 5000);
     };
     const interrupt = () => stop('Packed initializer interrupted');

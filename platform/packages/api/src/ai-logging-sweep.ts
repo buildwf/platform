@@ -144,8 +144,8 @@ export async function sweepAiLogging(
     readPlanAiLoggingSettings(db),
     readPlanCatalog(db, initialPlanDefault),
   ]);
-  // Keep room for the plan publish page when one is running. A cached read can only
-  // delay that page to the next run; `plans sync` runs it too.
+  // Decision: Keep room for the plan publish page when one is running. A cached read can only delay that
+  // page to the next run; `plans sync` runs it too.
   const planPage = settings.publish !== null && !settings.publish.complete;
   const available = Math.max(
     0,
@@ -166,24 +166,23 @@ export async function sweepAiLogging(
   for (const projectId of orphans) {
     const projectStatus = status.get(projectId);
     if (projectStatus === 'active') {
-      // Now inherit, or the candidate read was stale: the helper decides under the lock.
+      // Decision: Now inherits, or the candidate read was stale: the helper decides under the lock.
       repairs.push(projectId);
     } else if (projectStatus === undefined) {
-      // A create writes its key before it commits; leave young keys alone.
+      // Decision: A create writes its key before it commits; leave young keys alone.
       const metadata = published.get(projectId);
       if (!metadata || now - metadata.at >= AI_LOGGING_ORPHAN_GRACE_MS) {
         gone.push(projectId);
       }
     }
-    // A project being deleted keeps its key until its row is gone; teardown removes
-    // it then.
+    // Decision: A project being deleted keeps its key until its row is gone; teardown removes it then.
   }
   const mismatched = repairs.length + gone.length;
 
   let repaired = 0;
   let budget = repairLimit;
   for (const projectId of repairs.sort()) {
-    // A project not in `expected` now inherits, so its repair removes the key.
+    // Decision: A project not in `expected` now inherits, so its repair removes the key.
     const cost = expected.has(projectId) ? 1 : 2;
     if (cost > budget) {
       break;

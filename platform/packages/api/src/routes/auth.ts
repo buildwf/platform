@@ -63,7 +63,7 @@ app.use('*', async (context, next) => {
   context.header('Cache-Control', 'no-store');
   context.header('Referrer-Policy', 'no-referrer');
   await next();
-  // Only browser navigation gets a presentation layer; API error bodies stay JSON.
+  // Decision: Only browser navigation gets a presentation layer; API error bodies stay JSON.
   if (
     ['/auth/login', '/auth/callback', '/auth/link/confirm'].includes(context.req.path) &&
     acceptsBrowserHtml(context) &&
@@ -128,7 +128,6 @@ app.post('/link', authMiddleware, async (context) => {
   }
 });
 
-// GET /auth/login?redirect=http://localhost:PORT/callback&provider=github|google
 app.get('/login', async (context) => {
   const managed = await startPlatformLogin(context, 'login');
   if (managed) {
@@ -190,9 +189,9 @@ app.get('/login', async (context) => {
 
   const nonce = crypto.randomUUID();
 
-  // Store nonce in PostgreSQL so callback can validate it (prevents login CSRF / replay).
-  // Not KV: login and callback can hit different CF colos, and KV's eventual consistency
-  // would make the lookup flaky. PG also gives us atomic DELETE for true single-use.
+  // Decision: Store the nonce in PostgreSQL so the callback can validate it (prevents login CSRF and replay). Not
+  // KV: login and callback can hit different CF colos, and KV's eventual consistency would make the
+  // lookup flaky. PG also gives an atomic DELETE for single use.
   const db = context.get('db');
   await storeOAuthNonce(db, nonce, 600);
 
@@ -210,7 +209,7 @@ app.get('/login', async (context) => {
 
   const redirectUri = context.env.AUTH_REDIRECT_URI ?? DEFAULT_REDIRECT_URI;
 
-  // Bind nonce to this browser to prevent login CSRF / session swapping
+  // Decision: Bind the nonce to this browser to prevent login CSRF and session swapping.
   setCookie(context, 'oauth_nonce', nonce, {
     httpOnly: true,
     secure: true,
@@ -228,7 +227,6 @@ app.get('/login', async (context) => {
   return context.redirect(url);
 });
 
-// GET /auth/dev-login?redirect=http://localhost:PORT/auth/callback — localhost-only, DEV_AUTH_BYPASS only
 app.get('/dev-login', async (context) => {
   if (!isDevBypass(context.env)) {
     return context.json({ error: 'not found' }, 404);
@@ -266,12 +264,11 @@ app.get('/dev-login', async (context) => {
 
   const url = redirectUrl;
   url.searchParams.set('token', jwt);
-  // 200 + JS redirect, not 302 — the target is always localhost and `wrangler dev`
-  // mangles `Location: http://localhost:*` headers (see html-redirect.ts / meta/lessons.md).
+  // Decision: 200 with a JS redirect, not 302: the target is localhost and `wrangler dev` mangles
+  // `Location: http://localhost:*` headers (see html-redirect.ts and meta/lessons.md).
   return localhostRedirectResponse(url.toString(), 'Dev login');
 });
 
-// GET /auth/callback?code=...&state=...
 app.get('/callback', async (context) => {
   const code = context.req.query('code');
   const state = context.req.query('state');
@@ -318,27 +315,25 @@ app.get('/callback', async (context) => {
     codeChallengeMethod?: string;
   };
 
-  // Verify the nonce matches the cookie set during login redirect.
-  // This binds the OAuth flow to the browser that initiated it,
-  // preventing login CSRF / session swapping attacks.
+  // Decision: Check the nonce matches the cookie set during the login redirect. This binds the OAuth flow to the
+  // browser that started it, preventing login CSRF and session swapping.
   const cookieNonce = getCookie(context, 'oauth_nonce');
   if (!cookieNonce || cookieNonce !== nonce) {
     return context.json({ error: 'OAuth session mismatch' }, 400);
   }
 
-  // Validate and consume nonce atomically (single-use, 10-minute TTL).
-  // Uses PostgreSQL — not KV — for strong consistency across colos.
+  // Decision: Validate and consume the nonce atomically (single use, 10-minute TTL) in PostgreSQL, not KV, for
+  // strong consistency across colos.
   const db = context.get('db');
   const nonceValid = await consumeOAuthNonce(db, nonce);
   if (!nonceValid) {
     return context.json({ error: 'invalid or expired OAuth state' }, 400);
   }
 
-  // Clear the cookie only after successful validation so stale callbacks
-  // from duplicate tabs don't invalidate a legitimate in-progress login.
+  // Decision: Clear the cookie only after validation succeeds, so stale callbacks from duplicate tabs don't break
+  // a real in-progress login.
   deleteCookie(context, 'oauth_nonce', { path: '/auth/callback' });
 
-  // Re-validate redirect after decoding
   if (
     !isAllowedRedirect(
       redirect,
@@ -391,19 +386,18 @@ app.get('/callback', async (context) => {
     email = ghUser.email;
     emailVerified = ghUser.emailVerified;
   }
-  // Set when the email-match branch rejects a SECOND github identity for an account that already has one
-  // (RFC 0074). The user is signed into the existing account, but `providerId` is NOT their github identity, so
-  // the installation backfill below must be skipped.
+  // Decision: Set when the email-match branch rejects a second GitHub identity for an account that already has
+  // one (RFC 0074). The user is signed into the existing account, but `providerId` isn't their GitHub
+  // identity, so the installation backfill below is skipped.
   let githubIdentityRejected = false;
 
-  // Upsert user — check oauth_accounts first, then email, then create
   let user = await getUserByOAuthAccount(db, resolvedProvider, providerId);
   if (user) {
-    // Only update login/email when the provider matches the user's primary provider
-    // (avoids overwriting GitHub username with Google email)
+    // Decision: Update login and email only when the provider matches the user's primary provider, so a Google
+    // email doesn't overwrite a GitHub username.
     if (user.provider === resolvedProvider) {
-      // Only overwrite stored email when the new one is verified;
-      // a transient /user/emails failure must not wipe the existing email.
+      // Decision: Overwrite the stored email only when the new one is verified; a transient /user/emails failure must
+      // not wipe the existing email.
       if (emailVerified) {
         await updateUserRevokingInheritedDestinations(db, user.id, login, user.email, email);
       } else {
@@ -411,14 +405,12 @@ app.get('/callback', async (context) => {
       }
     }
   } else if (email && emailVerified) {
-    // Link new provider to existing account with the same email.
     const existing = await getUserByEmail(db, email);
     if (existing) {
       if (existing.role === 'admin') {
-        // An administrator's login token can open an operator session, so a matching
-        // email alone must not sign in to or link an administrator account.
-        // Administrators sign in with a login already linked to them. Managed login
-        // refuses email links for every account.
+        // Decision: An administrator's login token can open an operator session, so a matching email alone must not
+        // sign in to or link an administrator account. Administrators sign in with a login already linked to
+        // them. Managed login refuses email links for all accounts.
         return context.json(
           {
             error: 'identity_link_required',
@@ -428,14 +420,10 @@ app.get('/callback', async (context) => {
         );
       }
       if (resolvedProvider === 'github') {
-        // Enforce RFC 0074's one-github-identity-per-account invariant on the login
-        // path too (Vercel model: a Platform account has a single GitHub login identity;
-        // extra repo access is via installations, not a second identity). `providerId`
-        // is guaranteed NOT yet an oauth row (the getUserByOAuthAccount branch above
-        // handled that), so linkGitHubIdentity either links it (existing had no github)
-        // or throws GitHubIdentityAlreadyLinkedError (existing already linked a
-        // DIFFERENT github) — in which case sign the user into the existing account
-        // WITHOUT creating a duplicate github row.
+        // Decision: Enforce RFC 0074's one GitHub identity per account on the login path too; extra repo access comes
+        // through installations, not a second identity. `providerId` isn't an oauth row yet (handled above),
+        // so linkGitHubIdentity either links it or throws GitHubIdentityAlreadyLinkedError, and then the user
+        // is signed into the existing account without a duplicate github row.
         try {
           await linkGitHubIdentity(db, existing.id, providerId);
         } catch (err) {
@@ -453,7 +441,6 @@ app.get('/callback', async (context) => {
 
   let createdUser = false;
   if (!user) {
-    // Check signup allowlist (new users only)
     const enabled = await context.env.ROUTING.get('signup:enabled');
     const selfHosted = Boolean(context.env.PLATFORM_INSTALLATION_ID);
     let additionalSignupAllowed = !selfHosted || enabled === 'false';
@@ -511,10 +498,9 @@ app.get('/callback', async (context) => {
   }
 
   if (resolvedProvider === 'github' && !githubIdentityRejected) {
-    // Backfill GitHub App installations created before this user signed in.
-    // `providerId` is the user's numeric GitHub account id, matched against
-    // `github_installations.account_id`. Best-effort — a failure here must
-    // never block login.
+    // Decision: Backfill GitHub App installations created before this user signed in. `providerId` is the user's
+    // numeric GitHub account id, matched against `github_installations.account_id`. A failure here must
+    // not block login.
     try {
       await linkGitHubInstallationToUser(db, providerId, user.id);
     } catch (err) {
@@ -540,13 +526,13 @@ app.get('/callback', async (context) => {
       redirectUrl.searchParams.set('code', authCode);
       redirectUrl.searchParams.delete('token');
     } else {
-      // Legacy CLI / local dev: token in query param (localhost-only, safe).
+      // Decision: Legacy CLI and local dev get the token in a query param (localhost only, so safe).
       redirectUrl.searchParams.set('token', jwt);
     }
   } else {
-    // Dashboard: short-lived auth code exchanged server-side, so the JWT never appears in the URL.
-    // Stored in PostgreSQL (not KV) for strong cross-colo consistency and atomic single-use
-    // via DELETE … RETURNING — same rationale as the OAuth nonce flow.
+    // Decision: Dashboard: a short-lived auth code is exchanged server-side, so the JWT never appears in the URL.
+    // It's stored in PostgreSQL, not KV, for cross-colo consistency and atomic single use through
+    // DELETE ... RETURNING, as with the OAuth nonce.
     const authCode = crypto.randomUUID();
     await storeAuthCode(db, authCode, jwt, DASHBOARD_AUTH_CODE_TTL_SECONDS);
     redirectUrl.searchParams.set('code', authCode);
@@ -555,7 +541,6 @@ app.get('/callback', async (context) => {
   return context.redirect(redirectUrl.toString());
 });
 
-// POST /auth/exchange — single-use code → JWT (called by dashboard callback)
 app.post('/exchange', async (context) => {
   const { code } = await context.req.json<{ code: string }>();
   if (!code) {
@@ -572,7 +557,6 @@ app.post('/exchange', async (context) => {
   return context.json({ token: jwt });
 });
 
-// POST /auth/cli/token — single-use CLI code + PKCE verifier → JWT
 app.post('/cli/token', async (context) => {
   const body = await context.req.json<{
     code?: unknown;

@@ -116,12 +116,12 @@ export function buildDrizzleKitSpawnEnv(root: string): NodeJS.ProcessEnv {
   }
   const flags: Array<string> = [];
   if (pnp.pnpCjs) {
-    // `JSON.stringify` double-quotes the path, which is how Node's
+    // Decision: `JSON.stringify` double-quotes the path, which is how Node's
     // NODE_OPTIONS parser handles spaces (e.g. "My Project").
     flags.push(`--require ${JSON.stringify(pnp.pnpCjs)}`);
   }
   if (pnp.pnpLoader) {
-    // `--experimental-loader` takes a URL, not a path. `pathToFileURL`
+    // Decision: `--experimental-loader` takes a URL, not a path. `pathToFileURL`
     // emits a valid `file://` URL with any spaces percent-encoded.
     flags.push(`--experimental-loader ${pathToFileURL(pnp.pnpLoader).href}`);
   }

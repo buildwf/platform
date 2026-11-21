@@ -26,8 +26,6 @@ import {
 } from './tiers.ts';
 import { SANDBOX_USAGE_RETENTION_MS } from './usage-auth.ts';
 
-// --- Exported types ---
-
 export type CounterState = {
   /** Account represented by this counter, learned from trusted API requests. */
   ownerUserId: string | null;
@@ -35,12 +33,12 @@ export type CounterState = {
   totalNeurons: number;
   totalSandboxSeconds: number;
   plan: string;
-  billingPeriodStart: string; // ISO date
+  billingPeriodStart: string;
   billingPeriodInitialized?: boolean;
   requestsSuspended: boolean;
   aiSuspended: boolean;
   sandboxRuntimeSuspended: boolean;
-  projectSlugs: Record<string, string>; // projectId → slug
+  projectSlugs: Record<string, string>;
   /** Start of the current ownership period for each actively owned project. */
   projectOwnershipStarts: Record<string, string>;
   /** Latest per-project AI readings for actively owned projects. */
@@ -99,8 +97,6 @@ export type UsageEvent = Readonly<{
   ownershipStartedAt?: string;
 }>;
 
-// --- Pure functions (exported for unit testing) ---
-
 /** Returns true if adding incomingRequests would exceed the plan's requestsPerMonth limit. */
 export function evaluateRequestLimit(
   state: CounterState,
@@ -130,8 +126,6 @@ export function evaluateSandboxRuntimeLimit(
   );
 }
 
-// --- Default state ---
-
 function defaultState(): CounterState {
   return {
     ownerUserId: null,
@@ -153,8 +147,8 @@ function defaultState(): CounterState {
 }
 
 async function settleWrites(writes: Array<Promise<unknown>>): Promise<void> {
-  // A rejected write must not release the operation queue while a sibling
-  // write can still land and undo the next operation's suspension decision.
+  // Decision: A rejected write mustn't release the operation queue while a sibling write can still land and
+  // undo the next operation's suspension decision, so wait for all of them.
   const results = await Promise.allSettled(writes);
   for (const result of results) {
     if (result.status === 'rejected') {
@@ -163,15 +157,13 @@ async function settleWrites(writes: Array<Promise<unknown>>): Promise<void> {
   }
 }
 
-// --- UsageCounter Durable Object ---
-
 export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
   private state: CounterState | null = null;
   private operationTail: Promise<void> = Promise.resolve();
 
   private serialize<T>(operation: () => Promise<T>): Promise<T> {
-    // External suspension writes and AI queries open the DO input gate. Keep
-    // each request/alarm in order through its durable save, including retries.
+    // Decision: External suspension writes and AI queries open the DO input gate. Keep each request and alarm in
+    // order through its durable save, including retries.
     const result = this.operationTail.then(operation);
     this.operationTail = result.then(
       () => {},
@@ -183,7 +175,7 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
   private async getState(): Promise<CounterState> {
     if (!this.state) {
       const stored = await this.ctx.storage.get<CounterState>('state');
-      // Backfill defaults so DOs with pre-sandbox state load cleanly.
+      // Decision: Backfill defaults so DOs with pre-sandbox state load cleanly.
       this.state = stored
         ? {
             ...defaultState(),
@@ -192,8 +184,8 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
           }
         : defaultState();
     }
-    // Every operation edits its own copy. Neither a failed external write nor
-    // a failed storage put may silently commit totals/latches to the cache.
+    // Decision: Each operation edits its own copy, so a failed external write or storage put can't silently
+    // commit totals or latches to the cache.
     return {
       ...this.state,
       projectSlugs: { ...this.state.projectSlugs },
@@ -212,15 +204,14 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
   ): Promise<boolean> {
     const cutoff = Date.now() - SANDBOX_USAGE_RETENTION_MS;
     const hasWatermarks = await this.ctx.storage.transaction(async (transaction) => {
-      // Receipts live in separate bounded-size records. Never evict a fresh
-      // generation to make room: its next cumulative frame would rebill it.
+      // Decision: Receipts live in separate bounded-size records. Don't evict a fresh generation to make room: its
+      // next cumulative frame would bill it again.
       for (const [key, through] of options.watermarks ?? []) {
         await transaction.put(key, through);
       }
 
-      // Advance a durable cursor through at most one page per operation.
-      // Hash ordering is unrelated to age, so wrap after the last page and
-      // eventually revisit every receipt without ever scanning the full set.
+      // Decision: Advance a durable cursor by at most one page per operation. Hash order isn't age order, so wrap
+      // after the last page and revisit each receipt over time without scanning the full set.
       const cursor = await transaction.get<string>(SANDBOX_PRUNE_CURSOR_KEY);
       const page = await transaction.list<number>({
         prefix: SANDBOX_WATERMARK_PREFIX,
@@ -239,8 +230,8 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
         await transaction.delete(SANDBOX_PRUNE_CURSOR_KEY);
       }
 
-      // Counters, receipts, and pruning progress commit together. Publishing
-      // the isolate cache afterwards also keeps a rejected commit retryable.
+      // Decision: Counters, receipts and pruning progress commit together. Publishing the isolate cache after that
+      // keeps a rejected commit retryable.
       await transaction.put('state', state);
       if (options.scheduleAiAlarm) {
         const nextAlarm = Date.now() + AI_ALARM_INTERVAL_MS;
@@ -305,8 +296,8 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
     if (body.userId) {
       state.ownerUserId = body.userId;
     }
-    // A new counter can first see an interval after that interval has ended.
-    // Its construction time is not the account's billing-period boundary.
+    // Decision: A new counter can first see an interval after it ended. Its construction time isn't the
+    // account's billing-period boundary.
     if (!state.billingPeriodInitialized && body.billingPeriodStart) {
       if (!Number.isFinite(Date.parse(body.billingPeriodStart))) {
         return Response.json({ error: 'invalid billing period' }, { status: 400 });
@@ -318,9 +309,9 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
     const incomingRequests = body.events.reduce((sum, e) => sum + e.requests, 0);
     state.totalRequests += incomingRequests;
 
-    // The API-owned producer sends cumulative intervals with a stable start
-    // per lease generation. A high watermark handles retries and out-of-order
-    // delivery, while a new generation excludes idle time between leases.
+    // Decision: The API-owned producer sends cumulative intervals with a stable start per lease generation. A high
+    // watermark handles retries and out-of-order delivery; a new generation leaves out idle time between
+    // leases.
     const periodStart = state.billingPeriodInitialized ? Date.parse(state.billingPeriodStart) : 0;
     const watermarkCutoff = Date.now() - SANDBOX_USAGE_RETENTION_MS;
     const watermarks = new Map<string, number>();
@@ -344,8 +335,8 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
         previous,
         from!,
         Number.isFinite(periodStart) ? periodStart : from!,
-        // Receipts older than retention may already be pruned. A cumulative
-        // frame must not revive their billed prefix after a long delivery gap.
+        // Decision: Receipts older than retention may already be pruned. A cumulative frame mustn't revive their
+        // billed prefix after a long delivery gap.
         watermarkCutoff,
       );
       if (through! > billFrom) {
@@ -355,9 +346,9 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
     }
     state.totalSandboxSeconds += incomingSandboxSeconds;
 
-    // Only the current owner may keep a project in the active enforcement set.
-    // Recheck the queue consumer's snapshot here so a transfer that completed
-    // before this serialized operation cannot be undone by a delayed record.
+    // Decision: Only the current owner may keep a project in the active enforcement set. Recheck the queue
+    // consumer's snapshot here so a transfer that finished before this serialized operation can't be
+    // undone by a delayed record.
     let db: ReturnType<typeof createDb> | undefined;
     const getDb = (): ReturnType<typeof createDb> => {
       db ??= createDb(this.env.HYPERDRIVE.connectionString);
@@ -390,22 +381,22 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
       }
     }
 
-    // The queue envelope may have waited behind a plan change. Resolve current
-    // ownership and limits from PostgreSQL, independently of the producer hint.
+    // Decision: The queue envelope may have waited behind a plan change, so resolve ownership and limits from
+    // PostgreSQL, not the producer hint.
     const owner = await getUser(getDb(), body.userId);
     state.plan = owner?.plan ?? state.plan;
     const limits = await resolvePlanLimits(getDb(), state.plan);
 
-    // Commit each suspension latch only after every enforcement write succeeds.
-    const exceedsLimit = evaluateRequestLimit(state, 0, limits); // already added above
+    // Decision: Commit each suspension latch only after each enforcement write succeeds.
+    const exceedsLimit = evaluateRequestLimit(state, 0, limits);
     if (exceedsLimit && !state.requestsSuspended) {
       await settleWrites([
         this.suspendProjects(getDb(), state.projectSlugs, body.userId, REASON_REQUESTS_EXCEEDED),
         suspendUser(getDb(), body.userId, REASON_REQUESTS_EXCEEDED),
       ]);
-      // The first route stamp and account-row update intentionally run
-      // together. An ownership-transfer republish can land between them after
-      // reading the old account row, so reconcile once more after both settle.
+      // Decision: The first route stamp and the account-row update run together on purpose. An ownership-transfer
+      // republish can land between them after reading the old account row, so reconcile once more after
+      // both settle.
       await this.suspendProjects(
         getDb(),
         state.projectSlugs,
@@ -415,7 +406,7 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
       state.requestsSuspended = true;
     }
 
-    const exceedsSandbox = evaluateSandboxRuntimeLimit(state, 0, limits); // already added above
+    const exceedsSandbox = evaluateSandboxRuntimeLimit(state, 0, limits);
     if (exceedsSandbox && !state.sandboxRuntimeSuspended) {
       await settleWrites([
         this.env.ROUTING.put(sandboxBlockKey(body.userId), '1'),
@@ -451,7 +442,7 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
       state.ownerUserId = body.userId;
     }
 
-    // A delayed scheduler snapshot must not rewind an already advanced ledger.
+    // Decision: A delayed scheduler snapshot mustn't rewind a ledger that already advanced.
     if (
       state.billingPeriodInitialized &&
       incomingPeriodStart <= Date.parse(state.billingPeriodStart)
@@ -460,9 +451,9 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
         rolled: false,
         unsuspendRequests: false,
         unsuspendAi: false,
-        // The authoritative request-suspension latch, returned on EVERY response
-        // (not just rollovers) so the scheduler can reconcile the KV `suspended`
-        // marker against it each pass — see processUserRollover in index.ts.
+        // Decision: Return the authoritative request-suspension latch on each response, not only on rollovers, so the
+        // scheduler can reconcile the KV `suspended` marker against it each pass (see processUserRollover in
+        // index.ts).
         requestsSuspended: state.requestsSuspended,
         projectSlugs: state.projectSlugs,
       });
@@ -476,9 +467,8 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
       rolled: true,
       unsuspendRequests: previousSuspensions.requests,
       unsuspendAi: previousSuspensions.ai,
-      // Post-rollover latch (false after a request rollover). Returned every
-      // response so the scheduler reconciles KV against it each pass — see
-      // processUserRollover in index.ts.
+      // Decision: Post-rollover latch, returned on each response so the scheduler reconciles KV against it each pass
+      // (see processUserRollover in index.ts).
       requestsSuspended: state.requestsSuspended,
       projectSlugs: state.projectSlugs,
     });
@@ -501,9 +491,8 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
       state.ownerUserId = body.userId;
     }
 
-    // PostgreSQL owns the current project set. Replace instead of merge so an
-    // ownership transfer cannot leave the old owner's DO able to restamp the
-    // transferred project's routing or AI block.
+    // Decision: PostgreSQL owns the current project set. Replace instead of merging, so after an ownership
+    // transfer the old owner's DO can't restamp the transferred project's routing or AI block.
     const previousProjectIds = new Set(Object.keys(state.projectSlugs));
     const removedProjectIds = [...previousProjectIds].filter(
       (projectId) => !(projectId in body.projectSlugs),
@@ -521,7 +510,6 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
     );
     state.plan = body.plan;
 
-    // Re-suspend any newly added project slugs if user is currently suspended
     if (state.requestsSuspended) {
       await this.suspendProjects(
         db,
@@ -582,9 +570,8 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
     if (!owner) {
       return Response.json({ error: 'project owner changed' }, { status: 409 });
     }
-    // Ownership transfer requests may have waited behind a concurrent plan
-    // change. PostgreSQL is authoritative; never restore the caller's stale
-    // pre-transfer snapshot into this counter.
+    // Decision: A transfer request may have waited behind a concurrent plan change. PostgreSQL is authoritative;
+    // don't restore the caller's stale pre-transfer snapshot.
     state.plan = owner.plan;
     if (body.billingPeriodStart !== undefined) {
       await this.syncBillingPeriod(state, body.billingPeriodStart, owner.plan);
@@ -656,9 +643,9 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
       this.retainHistoricalAiSample(state, body.projectId);
     }
     this.recomputeTotalNeurons(state);
-    // Teardown may remove the SQL ownership history once this returns. Retain
-    // both the cutoff and its next reconciliation in one durable transaction;
-    // provider analytics availability must not hold deletion or transfer open.
+    // Decision: Teardown may remove the SQL ownership history once this returns. Keep the cutoff and its next
+    // reconciliation in one durable transaction; provider analytics availability mustn't hold deletion
+    // or transfer open.
     await this.saveState(state, {
       scheduleAiAlarm: Object.keys(state.historicalAiWindows).length > 0,
     });
@@ -739,7 +726,7 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
     state.requestsSuspended = false;
     state.sandboxRuntimeSuspended = false;
     if (state.aiSuspended) {
-      // Keep the durable latch set until every idempotent delete succeeds.
+      // Decision: Keep the durable latch set until each idempotent delete succeeds.
       const db = createDb(this.env.HYPERDRIVE.connectionString);
       if (state.ownerUserId) {
         for (const projectId of Object.keys(state.projectSlugs)) {
@@ -775,15 +762,13 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
     return Response.json(state);
   }
 
-  // --- AI alarm handler ---
-
   async alarm(): Promise<void> {
     return this.serialize(async () => {
       try {
         await this.handleAlarm();
       } catch (error) {
-        // Native alarm retries are bounded. Preserve a future wakeup through
-        // longer provider outages without replacing persisted usage with zero.
+        // Decision: Native alarm retries are bounded. Set a future wakeup to survive longer provider outages without
+        // replacing stored usage with zero.
         await this.ctx.storage.setAlarm(Date.now() + AI_ALARM_INTERVAL_MS);
         throw error;
       }
@@ -793,8 +778,8 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
   private async handleAlarm(): Promise<void> {
     const state = await this.getState();
 
-    // Older persisted states do not identify their account. Wait for the next
-    // trusted record/rollover/init instead of risking a cross-owner KV write.
+    // Decision: Older stored states don't name their account. Wait for the next trusted record, rollover or init
+    // instead of risking a cross-owner KV write.
     if (!state.ownerUserId) {
       await this.saveState(state);
       await this.ctx.storage.setAlarm(Date.now() + AI_ALARM_INTERVAL_MS);
@@ -812,8 +797,8 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
     );
     await this.retainTransferredProjectWindows(db, state, transferredProjectIds);
     if (Object.keys(state.historicalAiWindows).length > 0) {
-      // Deleting the last project also deletes its ownership history, so the
-      // scheduler can no longer discover this counter for billing rollover.
+      // Decision: Deleting the last project also deletes its ownership history, so the scheduler can't find this
+      // counter for billing rollover any more.
       const owner = await getUser(db, state.ownerUserId);
       if (!owner) {
         await this.ctx.storage.deleteAlarm();
@@ -841,9 +826,9 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
     }
     const limits = await resolvePlanLimits(db, state.plan);
     const projectIds = [...ownedProjectIds];
-    // Closed windows still need reconciliation on unlimited plans: detachment
-    // preserves their samples without depending on provider availability.
-    // Otherwise inactive accounts only wake while receipt pruning has work.
+    // Decision: Closed windows still need reconciliation on unlimited plans: detachment keeps their samples
+    // without depending on the provider. Otherwise inactive accounts wake only while receipt pruning has
+    // work.
     if (
       Object.keys(state.historicalAiWindows).length === 0 &&
       (limits.aiNeuronsPerMonth === 0 || projectIds.length === 0)
@@ -854,12 +839,10 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
       return;
     }
 
-    // Re-query closed ownership windows because Analytics ingestion can lag the
-    // transfer transaction. Exact half-open cutoffs prevent either owner from
-    // being charged for the other side of the transfer boundary.
+    // Decision: Re-query closed ownership windows because Analytics ingestion can lag the transfer transaction.
+    // Exact half-open cutoffs keep either owner from being charged for the other side of the transfer.
     await this.refreshHistoricalAiWindows(state);
 
-    // Query AI Gateway for each currently owned project's neuron usage.
     const billingSince = new Date(state.billingPeriodStart);
     for (const projectId of limits.aiNeuronsPerMonth === 0 ? [] : projectIds) {
       const ownershipStartedAt = state.projectOwnershipStarts[projectId];
@@ -898,8 +881,6 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
 
     await this.ctx.storage.setAlarm(Date.now() + AI_ALARM_INTERVAL_MS);
   }
-
-  // --- Private helpers ---
 
   private async ensureAiAlarm(): Promise<void> {
     if (!(await this.ctx.storage.getAlarm())) {
@@ -995,8 +976,8 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
       if (period?.ends_at) {
         this.retainHistoricalAiWindow(state, projectId, period.starts_at, period.ends_at);
       } else {
-        // Project deletion removes ownership history with the project. Retain
-        // the last sampled amount when no closed transfer window survives.
+        // Decision: Project deletion removes ownership history with the project. Keep the last sampled amount when no
+        // closed transfer window survives.
         this.retainHistoricalAiSample(state, projectId);
       }
     }
@@ -1076,8 +1057,8 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
     const sandbox = state.sandboxRuntimeSuspended;
     const db = createDb(this.env.HYPERDRIVE.connectionString);
 
-    // Finish idempotent external cleanup before committing the new period.
-    // A failure leaves the cached and persisted period unchanged for retry.
+    // Decision: Finish idempotent external cleanup before committing the new period. A failure leaves the cached
+    // and stored period unchanged for retry.
     if (ai) {
       const ownerUserId = next.userId || state.ownerUserId;
       if (ownerUserId) {
@@ -1132,15 +1113,10 @@ export class UsageCounter extends DurableObject<ApiEnv['Bindings']> {
     if (!expectedOwnerUserId) {
       return;
     }
-    // Stamp `suspended` on each project's slug route AND its active custom-domain
-    // routes — dispatch enforces suspension from all of them, so a slug-only
-    // stamp would leave over-limit projects serving on their custom domains.
-    //
-    // `force: false`: a usage suspension must never overwrite an admin
-    // suspension already on the route. If an admin suspended the user first, the
-    // route carries `admin_suspended` and this leaves it intact (the admin
-    // reason already blocks dispatch; downgrading it to `requests_exceeded`
-    // would let the next admin unsuspend silently un-block an admin action).
+    // Decision: Stamp `suspended` on each project's slug route and its active custom-domain routes: dispatch
+    // enforces suspension from all of them.
+    // `force: false`: a usage suspension mustn't overwrite an admin suspension on the route. Downgrading
+    // `admin_suspended` to `requests_exceeded` would let a later usage unsuspend lift an admin action.
     const projects = await this.ownedProjects(db, projectSlugs, expectedOwnerUserId);
     await setProjectsRoutingSuspension(this.env.ROUTING, db, projects, {
       op: 'suspend',

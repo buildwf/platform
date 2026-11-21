@@ -11,11 +11,9 @@ import type { Context } from 'hono';
  */
 export const MIN_CLI_VERSION = '0.7.0';
 
-// SemVer 2.0 with optional prerelease (`-...`) and/or build metadata (`+...`).
-// Both suffixes must be `[\w.-]+` (word chars, dots, hyphens). The build
-// metadata branch matters because CI-built CLIs commonly stamp commit
-// SHAs as `1.2.3+sha.abcdef` — without `+...` support, those would be
-// rejected by the fail-closed gate even though they're newer than MIN.
+// Decision: SemVer 2.0 with optional prerelease (`-...`) and build metadata (`+...`), each `[\w.-]+`. Build
+// metadata matters because CI-built CLIs often stamp commit SHAs as `1.2.3+sha.abcdef`; without it
+// the fail-closed gate would reject them.
 const SEMVER_RE = /^(\d+)\.(\d+)\.(\d+)(?:-[\w.-]+)?(?:\+[\w.-]+)?$/;
 
 function parseSemver(version: string): [number, number, number] | null {

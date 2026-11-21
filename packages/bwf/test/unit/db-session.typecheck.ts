@@ -10,7 +10,7 @@ createDb(binding);
 
 declare const bookmark: D1SessionBookmark;
 binding.withSession(bookmark);
-// bwf distinguishes carried bookmarks from constraint literals.
+// Decision: bwf tells carried bookmarks apart from constraint literals.
 // https://developers.cloudflare.com/d1/best-practices/read-replication/#start-a-session-from-previous-context-bookmark
 createDb(binding, { session: { bookmark } });
 setSession({ bookmark });

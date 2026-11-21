@@ -470,15 +470,15 @@ async function withReader<T>(
   try {
     return await read(reader);
   } catch (error) {
-    // Cancellation is cleanup, not part of the protocol deadline. A hostile
-    // stream may never settle its underlying cancel algorithm.
+    // Decision: Cancellation is cleanup, not part of the protocol deadline. A hostile stream may never
+    // settle its underlying cancel algorithm.
     void reader.cancel().catch(() => {});
     throw error;
   } finally {
     try {
       reader.releaseLock();
     } catch {
-      // A non-standard stream may keep a read pending after cancellation.
+      // Decision: A non-standard stream may keep a read pending after cancellation.
     }
   }
 }

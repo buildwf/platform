@@ -64,7 +64,7 @@ export function toNativeCloudflareConfig(raw: WorkerConfig, root: string): Cloud
   const { env, vars, ...base } = raw;
   const selected = process.env.CLOUDFLARE_ENV ? env?.[process.env.CLOUDFLARE_ENV] : undefined;
   const values = selected ? selected.vars : vars;
-  // Wrangler environments are selected explicitly, independently of Vite's mode.
+  // Decision: Wrangler environments are selected explicitly, independently of Vite's mode.
   // Give the codemod distinct mode names so `env.production` cannot accidentally
   // replace the top-level configuration during an ordinary production build.
   const environments =
@@ -89,7 +89,7 @@ export function toNativeCloudflareConfig(raw: WorkerConfig, root: string): Cloud
   if (!config.worker) {
     throw new Error('bwf requires a Cloudflare Worker configuration.');
   }
-  // `vars` was left out of the translation above; add the values here.
+  // Decision: `vars` was left out of the translation above; add the values here.
   for (const [name, value] of Object.entries(values ?? {})) {
     config.worker.env ??= {};
     config.worker.env[name] =

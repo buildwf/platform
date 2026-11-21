@@ -4,10 +4,9 @@ import { afterAll } from 'vite-plus/test';
 import { app } from '../../src/index.ts';
 import type { TestEnv } from './helpers.ts';
 
-// One browser serves every submission in a test file; each submission gets its
-// own context, so cookies and page state stay isolated. Launching and closing
-// Chromium per submission costs more than the form exchange itself on a busy
-// machine.
+// Decision: One browser serves each submission in a test file, and each submission gets its own context, so
+// cookies and page state stay isolated. Launching Chromium per submission costs more than the form
+// exchange on a busy machine.
 let browser: Promise<Browser> | undefined;
 afterAll(async () => {
   const launched = browser;
@@ -15,7 +14,6 @@ afterAll(async () => {
   await (await launched?.catch(() => undefined))?.close();
 });
 
-/** Exercise the rendered native form locally, without provider or public HTTP. */
 export async function nativeFormSubmission(input: {
   env: TestEnv;
   origin: string;
@@ -50,7 +48,7 @@ export async function nativeFormSubmission(input: {
         await route.abort();
         return;
       }
-      // The admin SPA needs its bundle and data requests; only documents are recorded below.
+      // Decision: The admin SPA needs its bundle and data requests. Only documents are recorded below.
       if (url.pathname === '/admin/client.js' || url.pathname === '/admin/style.css') {
         await route.fulfill({
           contentType: url.pathname.endsWith('.js') ? 'text/javascript' : 'text/css',
@@ -92,8 +90,8 @@ export async function nativeFormSubmission(input: {
       } else {
         submission = { origin: headers.origin, referrer: headers.referer, status: response.status };
       }
-      // Preserve actual API status evidence without letting a redirect escape
-      // Playwright's first-request routing and resolve an external fixture host.
+      // Decision: Keep the real API status, but don't let a redirect escape Playwright's first-request routing and
+      // resolve an external fixture host.
       if (response.status >= 300 && response.status < 400) {
         delete responseHeaders.location;
         await route.fulfill({
@@ -110,14 +108,14 @@ export async function nativeFormSubmission(input: {
       });
     });
     await page.goto(`${input.origin}${input.path}`);
-    // The admin is an SPA: wait for it to render; the form itself still submits natively.
+    // Decision: The admin is an SPA, so wait for it to render. The form itself still submits natively.
     await page.locator('[data-hydrated="true"]').waitFor();
     for (const [name, value] of Object.entries(input.fields)) {
       await page.locator(`input[name="${name}"]`).fill(value);
     }
     const button = page.getByRole('button', { name: input.button, exact: true });
     const formAction = await button.evaluate((element) => {
-      // A form input named action shadows HTMLFormElement.action.
+      // Decision: A form input named action shadows HTMLFormElement.action.
       const action = (element as HTMLButtonElement).form?.getAttribute('action');
       return action ? new URL(action, location.href).href : null;
     });

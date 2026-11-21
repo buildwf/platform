@@ -246,7 +246,7 @@ describe('deployment compensation during Zero Trust changes', () => {
         }),
       };
       vi.spyOn(env.ROUTING, 'put').mockImplementation(async (key, value, options) => {
-        // The cutover releases its project fence before publishing this checkpoint.
+        // Decision: The cutover releases its project fence before publishing this checkpoint.
         if (key.startsWith('cutover-ready:') && !changed) {
           changed = true;
           const route = JSON.parse((await env.ROUTING.get(project.slug))!);

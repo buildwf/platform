@@ -52,8 +52,8 @@ export function safeDecodePathname(pathname: string): string {
   if (canonical === null) {
     return pathname;
   }
-  // Compare up to percent-escape letter case: the URL encoder emits upper-case
-  // (`%C3`), but a client may send lower-case (`%c3`), and both are valid.
+  // Decision: Compare up to percent-escape letter case: the URL encoder emits upper-case (`%C3`), but a
+  // client may send lower-case (`%c3`), and both are valid.
   const normalized = normalizePercentCase(pathname).replace(/%5B/g, '[').replace(/%5D/g, ']');
   return normalizePercentCase(canonical) === normalized ? decoded : pathname;
 }
@@ -89,19 +89,16 @@ function matchManifestEntry(
   manifest: Record<string, string>,
   htmlHandling: NonNullable<AssetConfig['html_handling']>,
 ): ResolvedAsset | null {
-  // Exact match always wins
   if (manifest[pathname]) {
     return { path: pathname, hash: manifest[pathname] };
   }
 
   switch (htmlHandling) {
     case 'auto-trailing-slash': {
-      // Try appending .html first (preferred over /index.html)
       const withHtml = pathname + '.html';
       if (manifest[withHtml]) {
         return { path: withHtml, hash: manifest[withHtml] };
       }
-      // Try /index.html
       const withIndex = (pathname.endsWith('/') ? pathname : pathname + '/') + 'index.html';
       if (manifest[withIndex]) {
         return { path: withIndex, hash: manifest[withIndex] };
@@ -109,7 +106,6 @@ function matchManifestEntry(
       break;
     }
     case 'force-trailing-slash': {
-      // If path doesn't end with /, redirect to trailing slash version
       if (!pathname.endsWith('/') && pathname !== '/') {
         const withIndex = pathname + '/index.html';
         if (manifest[withIndex]) {
@@ -120,7 +116,6 @@ function matchManifestEntry(
           };
         }
       }
-      // Serve /path/ from /path/index.html
       const indexPath = pathname + 'index.html';
       if (manifest[indexPath]) {
         return { path: indexPath, hash: manifest[indexPath] };
@@ -128,14 +123,12 @@ function matchManifestEntry(
       break;
     }
     case 'drop-trailing-slash': {
-      // Root path: serve /index.html directly
       if (pathname === '/') {
         if (manifest['/index.html']) {
           return { path: '/index.html', hash: manifest['/index.html'] };
         }
         break;
       }
-      // If path ends with /, redirect to non-trailing-slash version
       if (pathname.endsWith('/')) {
         const withoutSlash = pathname.slice(0, -1);
         const withHtml = withoutSlash + '.html';
@@ -147,7 +140,6 @@ function matchManifestEntry(
           };
         }
       }
-      // Serve /path from /path.html
       const withHtml = pathname + '.html';
       if (manifest[withHtml]) {
         return { path: withHtml, hash: manifest[withHtml] };
@@ -172,19 +164,19 @@ export function resolveStaticPath(
 ): ResolvedAsset | null {
   const htmlHandling = config.html_handling ?? 'auto-trailing-slash';
 
-  // Try the raw (percent-encoded) path first — the fast path, and it lets a
-  // filename that literally contains a `%` win. On a miss, retry with the
-  // decoded path so a file named e.g. `a b.txt` resolves for an `a%20b.txt`
-  // request (manifest keys are decoded on-disk paths).
+  // Decision: Try the raw (percent-encoded) path first: it's the fast path, and it lets a filename that
+  // literally contains a `%` win. On a miss, retry with the decoded path so a file named, for
+  // example, `a b.txt` resolves for an `a%20b.txt` request (manifest keys are decoded on-disk
+  // paths).
   let matched = matchManifestEntry(pathname, manifest, htmlHandling);
   if (!matched) {
     const decoded = safeDecodePathname(pathname);
     if (decoded !== pathname) {
       matched = matchManifestEntry(decoded, manifest, htmlHandling);
       if (matched?.redirect !== undefined) {
-        // The Location was derived from the decoded path; serialize it back to
-        // a safe URL pathname (`/docs/a#b/` → `/docs/a%23b/`) so the client
-        // doesn't read `#`/space/etc. as URL structure.
+        // Decision: The Location was derived from the decoded path; serialize it back to a safe URL pathname
+        // (`/docs/a#b/` → `/docs/a%23b/`) so the client doesn't read `#`, space and so on as URL
+        // structure.
         const safeRedirect = reencodePathname(matched.redirect);
         if (safeRedirect !== null) {
           matched = { ...matched, redirect: safeRedirect };
@@ -196,7 +188,6 @@ export function resolveStaticPath(
     return matched;
   }
 
-  // Not found handling
   switch (config.not_found_handling ?? 'none') {
     case 'single-page-application':
       if (manifest['/index.html']) {

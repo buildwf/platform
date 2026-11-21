@@ -32,12 +32,12 @@ export function parsePlatformErrorBody(body: string): PlatformErrorPayload | nul
 function plainExplanation(value: string | undefined): string | undefined {
   const text = value
     ? stripVTControlCharacters(value)
-        // Keep line breaks and tabs, but not control characters that rewrite the terminal.
+        // Decision: Keep line breaks and tabs, but not control characters that rewrite the terminal.
         // eslint-disable-next-line no-control-regex
         .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, ' ')
         .trim()
     : undefined;
-  // Error fields should contain an explanation, not another serialized response
+  // Decision: Error fields should contain an explanation, not another serialized response
   // or an upstream login/error page. Keep the original body on PlatformApiError.
   return text && !text.startsWith('{') && !text.startsWith('[') && !/<[^>]+>/.test(text)
     ? text
@@ -139,7 +139,6 @@ export function formatPlatformApiError(
           : unexplainedRejection(status);
       return `${action} (HTTP ${status}): ${explanation}`;
     }
-    // Keep the raw status and body of other opaque provider failures for diagnostics.
     return `${action}: ${status} ${body}`;
   }
   const detail =

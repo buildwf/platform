@@ -165,18 +165,16 @@ function providerAuthDefaults(provider: string): { header: string; prefix: strin
   return PROVIDER_AUTH_DEFAULTS[provider] ?? { header: 'authorization', prefix: 'Bearer ' };
 }
 
-// AI usage is counted from the platform gateway's analytics by their
-// `projectId` metadata, which holds the signed project tag from
-// `deriveAiUsageTag`, so the platform owns the gateway id, its metadata and
-// logging policy. Cloudflare saves only the first five metadata entries, and
-// integer-like keys always sort first, so caller metadata could push the
-// project out. Applications cannot override an operator's logging decision.
+// Decision: AI usage is counted from the platform gateway's analytics by `projectId` metadata (the signed
+// tag from deriveAiUsageTag), so the platform owns the gateway id, metadata and logging policy.
+// Cloudflare saves only the first five metadata entries and sorts integer-like keys first, so
+// caller metadata could push the project out.
 const PLATFORM_GATEWAY_KEYS = new Set(['id', 'metadata', 'collectLog', 'collectLogPayload']);
-// `cf-aig-*` request headers set the same metadata, logging and cost.
+// Decision: `cf-aig-*` request headers set the same metadata, logging and cost.
 const GATEWAY_CONTROL_HEADER = /^cf-aig-/i;
-// Provider-native calls keep the gateway headers that only shape their own
-// request: cache, timeout, retry and the trace id. A caller cache key is kept
-// inside its project; every other `cf-aig-*` header is dropped.
+// Decision: Provider-native calls keep the gateway headers that only shape their own request: cache,
+// timeout, retry and trace id. A caller cache key stays inside its project; other `cf-aig-*` headers
+// are dropped.
 const PROVIDER_GATEWAY_HEADERS = new Set([
   'cf-aig-cache-ttl',
   'cf-aig-skip-cache',
@@ -208,8 +206,8 @@ function gatewayOptions(
   gatewayId: string,
   loggingMode: AiLoggingMode,
 ): Record<string, unknown> {
-  // JSON cannot carry cancellation state. Never pass a serialized signal to
-  // a native binding, including when an older SDK still sends the field.
+  // Decision: JSON can't carry cancellation state, so a serialized signal is never passed to a native
+  // binding, including when an older SDK still sends the field.
   const options = withoutKeys(asRecord(value), (key) => key === 'signal');
   const gateway = withoutKeys(asRecord(options.gateway), (key) => PLATFORM_GATEWAY_KEYS.has(key));
   if (typeof gateway.cacheKey === 'string') {
@@ -269,11 +267,9 @@ function applyProviderHeaders({
   const keyPrefix = apiKeyPrefix ?? defaults.prefix;
 
   headers.set(keyHeader, `${keyPrefix}${providerKey}`);
-  // Provider-native calls bill to the app's own provider key, so they carry
-  // no usage tag and do not count toward the platform AI allowance. Caller
-  // gateway headers are filtered after the key header is set, so neither they
-  // nor a caller-chosen key header name can set gateway metadata, logging,
-  // cost or billing, or use a cache key outside the project.
+  // Decision: Provider-native calls bill to the app's own provider key, so they carry no usage tag. Caller
+  // gateway headers are filtered after the key header is set, so they can't set gateway metadata,
+  // logging, cost or billing, or use a cache key outside the project.
   const callerGatewayHeaders = [...headers.keys()].filter(
     (name) => GATEWAY_CONTROL_HEADER.test(name) && !PROVIDER_GATEWAY_HEADERS.has(name),
   );
@@ -470,7 +466,7 @@ ai.post('/provider', async (context) => {
   }
 
   try {
-    // Decode the body first so a malformed file is a 400 that never reads the policy.
+    // Decision: The body is decoded first, so a malformed file is a 400 that never reads the policy.
     const requestBody = providerRequestBody(providerBody(body.body));
     const logging = await readAiLoggingMode(context);
     if (!logging.ok) {

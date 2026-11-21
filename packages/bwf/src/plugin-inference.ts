@@ -110,7 +110,7 @@ export function inferProjectBindings(
     }
   }
 
-  // Custom scan directories should still see client/auth helpers and colocated
+  // Decision: Custom scan directories should still see client/auth helpers and colocated
   // server-only modules under src/.
   const dirsSet = new Set(dirs);
   const srcRel = paths.sourceDir ? paths.sourceDir : 'src';
@@ -127,7 +127,7 @@ export function inferProjectBindings(
     }
   }
 
-  // Overrides apply to their named binding only. Setting KV must not suppress
+  // Decision: Overrides apply to their named binding only. Setting KV must not suppress
   // auth, Sandbox, queues, or any other feature found in the same application.
   return applyBindingOverrides(mergeBindings(allBindings), options?.bindings);
 }

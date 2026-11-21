@@ -51,7 +51,7 @@ export function cfAccessHeaders(
           : {};
       }
     } catch {
-      // Invalid explicit configuration never falls back to credentials for another recipient.
+      // Decision: Invalid explicit configuration never falls back to credentials for another recipient.
       return {};
     }
   }

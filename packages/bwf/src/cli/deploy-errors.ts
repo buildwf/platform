@@ -111,10 +111,9 @@ export function formatStreamDeployError(
     const parsedDeployment = parsed?.deployment ?? null;
     const effectiveDeploymentId = parsedDeployment ?? deploymentId;
 
-    // cli_outdated: surface the platform's upgrade message verbatim with
-    // no "Deploy failed (HTTP 426)" wrapper. The message already includes
-    // `npm i -g @builtbyfriends/bwf@latest`, so adding a status prefix would only obscure
-    // the actionable line.
+    // Decision: cli_outdated: show the platform's upgrade message as is, without a "Deploy failed (HTTP 426)"
+    // wrapper. The message already includes `npm i -g @builtbyfriends/bwf@latest`, and a status prefix
+    // would only hide the actionable line.
     if (isCliOutdatedError(err) && parsed?.message) {
       err.message = appendTrailingLines(err.message, effectiveDeploymentId, logPath);
       return err;

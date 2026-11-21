@@ -53,19 +53,16 @@ export function parseHeadersFile(dir: string): Array<HeaderRule> | undefined {
   let current: HeaderRule | null = null;
 
   for (const line of content.split('\n')) {
-    // Skip blank lines and comments
     const trimmed = line.trimEnd();
     if (trimmed === '' || trimmed.startsWith('#')) {
       continue;
     }
 
-    // Indented line = header within current block
     if (line[0] === ' ' || line[0] === '\t') {
       if (!current) {
         continue;
       }
       const stripped = trimmed.trimStart();
-      // Skip unset directives (! Header-Name)
       if (stripped.startsWith('!')) {
         continue;
       }
@@ -79,7 +76,6 @@ export function parseHeadersFile(dir: string): Array<HeaderRule> | undefined {
         current.headers.push([name, value]);
       }
     } else {
-      // Non-indented line = path pattern (new block)
       if (current && current.headers.length > 0) {
         rules.push(current);
       }
@@ -87,7 +83,6 @@ export function parseHeadersFile(dir: string): Array<HeaderRule> | undefined {
     }
   }
 
-  // Flush last block
   if (current && current.headers.length > 0) {
     rules.push(current);
   }
@@ -96,8 +91,6 @@ export function parseHeadersFile(dir: string): Array<HeaderRule> | undefined {
     return undefined;
   }
 
-  // Sort by pattern length ascending: shorter (less specific) first,
-  // longer (more specific) last — last-match-wins = most-specific-wins
   rules.sort((a, b) => a.pattern.length - b.pattern.length);
 
   return rules;
@@ -150,7 +143,7 @@ export function parseRedirectsFile(dir: string): ParsedRedirects | undefined {
 
     const [rawSource, destination, statusStr] = parts;
 
-    // An optional `https://host` prefix becomes a Host filter on the rule.
+    // Decision: An optional `https://host` prefix becomes a Host filter on the rule.
     const parsedSource = parseHostPrefixedSource(rawSource);
     if ('error' in parsedSource) {
       bwfWarn(
@@ -160,8 +153,7 @@ export function parseRedirectsFile(dir: string): ParsedRedirects | undefined {
     }
     const { host, path: source } = parsedSource;
 
-    // Each `*` compiles to a `(?<splat>...)` group, and a RegExp cannot repeat
-    // a group name.
+    // Decision: Each `*` compiles to a `(?<splat>...)` group, and a RegExp can't repeat a group name.
     if (countSplats(source) > 1) {
       bwfWarn(
         `Skipping _redirects entry "${rawSource} ${destination}${statusStr ? ` ${statusStr}` : ''}" (line ${lineNumber}): source must contain at most one "*" wildcard (captured as :splat).`,
@@ -186,8 +178,8 @@ export function parseRedirectsFile(dir: string): ParsedRedirects | undefined {
       status = 302;
     }
 
-    // Status 200 is an internal rewrite. External (proxy) destinations are not
-    // supported, as with `routing.rewrites` in bwf.config.ts.
+    // Decision: Status 200 is an internal rewrite. External (proxy) destinations aren't supported, as with
+    // `routing.rewrites` in bwf.config.ts.
     if (status === 200) {
       if (!destination.startsWith('/')) {
         bwfWarn(
@@ -263,8 +255,8 @@ export function mergeRoutingRules(opts: {
   redundantForceOn3xx: number;
 } {
   const { dir, routing } = opts;
-  // `dir === null` when the user set `publicDir: false` in Vite config. Skip
-  // file-based rule reads but still merge config-based rules below.
+  // Decision: `dir === null` when the user set `publicDir: false` in the Vite config. Skip file-based rule reads
+  // but still merge config-based rules below.
   const fileDir = dir !== null && existsSync(dir) ? dir : null;
 
   const fileHeaders = fileDir !== null ? parseHeadersFile(fileDir) : undefined;
@@ -278,10 +270,9 @@ export function mergeRoutingRules(opts: {
   const cfgRewrites = convertRewritesConfig(routing?.rewrites);
   const cfgFallbacks = convertFallbacksConfig(routing?.fallbacks);
 
-  // Header rules are last-match-wins, so config rules go last to override `_headers`.
+  // Decision: Header rules are last-match-wins, so config rules go last to override `_headers`.
   const headerRules: Array<HeaderRule> = [...(fileHeaders ?? []), ...(cfgHeaders ?? [])];
-  // Routing rules are first-match-wins, so config rules go first to override
-  // `_redirects`.
+  // Decision: Routing rules are first-match-wins, so config rules go first to override `_redirects`.
   const redirectRules: Array<DevRedirectRule> = [
     ...(cfgRedirects ?? []),
     ...(cfgRewrites ?? []),

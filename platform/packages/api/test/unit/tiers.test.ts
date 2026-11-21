@@ -72,8 +72,8 @@ describe('PLAN_LIMITS', () => {
   });
 
   it('free tier sandbox is effectively disabled (non-zero finite limit)', () => {
-    // 0 would mean "unlimited" by the shared isWithinLimit convention, so
-    // we use a tiny finite limit to ensure any real sandbox use is rejected.
+    // Decision: 0 means unlimited by the shared isWithinLimit convention, so free gets a tiny finite limit that
+    // rejects any real sandbox use.
     expect(PLAN_LIMITS.free.sandboxRuntimeSecondsPerMonth).toBeGreaterThan(0);
     expect(PLAN_LIMITS.free.sandboxRuntimeSecondsPerMonth).toBeLessThan(
       PLAN_LIMITS.solo.sandboxRuntimeSecondsPerMonth,
@@ -85,7 +85,7 @@ describe('PLAN_LIMITS', () => {
     expect(PLAN_LIMITS.solo.concurrentBuilds).toBe(2);
     expect(PLAN_LIMITS.pro.concurrentBuilds).toBe(3);
     expect(PLAN_LIMITS.sponsored.concurrentBuilds).toBe(6);
-    // 0 = unlimited by the shared isWithinLimit convention.
+    // Decision: 0 means unlimited by the shared isWithinLimit convention.
     expect(PLAN_LIMITS.custom.concurrentBuilds).toBe(0);
   });
 
@@ -94,7 +94,7 @@ describe('PLAN_LIMITS', () => {
     expect(PLAN_LIMITS.solo.maxCpuMsPerRequest).toBe(30_000);
     expect(PLAN_LIMITS.pro.maxCpuMsPerRequest).toBe(30_000);
     expect(PLAN_LIMITS.sponsored.maxCpuMsPerRequest).toBe(30_000);
-    // 0 = no ceiling by the shared PlanLimits convention.
+    // Decision: 0 means no ceiling by the shared PlanLimits convention.
     expect(PLAN_LIMITS.custom.maxCpuMsPerRequest).toBe(0);
   });
 
@@ -103,7 +103,7 @@ describe('PLAN_LIMITS', () => {
     expect(PLAN_LIMITS.solo.buildTimeoutMinutes).toBe(15);
     expect(PLAN_LIMITS.pro.buildTimeoutMinutes).toBe(15);
     expect(PLAN_LIMITS.sponsored.buildTimeoutMinutes).toBe(20);
-    // 0 = unlimited by the shared isWithinLimit convention.
+    // Decision: 0 means unlimited by the shared isWithinLimit convention.
     expect(PLAN_LIMITS.custom.buildTimeoutMinutes).toBe(0);
   });
 });
@@ -151,7 +151,6 @@ describe('isWithinLimit', () => {
 
 describe('getCurrentBillingPeriodStart', () => {
   it('returns current month when today is past the anniversary day', () => {
-    // Signup on the 5th, today is the 18th → period starts on the 5th of this month
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-18T12:00:00Z'));
 
@@ -162,7 +161,6 @@ describe('getCurrentBillingPeriodStart', () => {
   });
 
   it('returns previous month when today is before the anniversary day', () => {
-    // Signup on the 25th, today is the 10th → period starts on the 25th of last month
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-10T12:00:00Z'));
 
@@ -173,19 +171,16 @@ describe('getCurrentBillingPeriodStart', () => {
   });
 
   it('clamps to last day of month for short months (31st → Feb 28)', () => {
-    // Signup on Jan 31, today is Feb 18 → Feb only has 28 days → period starts Feb 28
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2027-02-18T12:00:00Z'));
 
     const result = getCurrentBillingPeriodStart('2026-01-31T10:00:00Z');
-    // Feb 2027 has 28 days, today (18th) < 28th → falls back to Jan 31
     expect(result).toEqual(new Date('2027-01-31T00:00:00Z'));
 
     vi.useRealTimers();
   });
 
   it('clamps to last day of month (31st → Apr 30)', () => {
-    // Signup on the 31st, today is May 5 → April has 30 days → period starts Apr 30
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-05T12:00:00Z'));
 
@@ -196,7 +191,6 @@ describe('getCurrentBillingPeriodStart', () => {
   });
 
   it('handles first billing period (signup was this month)', () => {
-    // Signup on Feb 3, today is Feb 18 → period starts on Feb 3
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-18T12:00:00Z'));
 

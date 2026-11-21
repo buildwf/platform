@@ -18,10 +18,6 @@ describe('applyRoutingRules', () => {
     expect(result).toEqual({ type: 'redirect', destination: '/new', status: 301 });
   });
 
-  // Regression: 303 See Other is a valid redirect status but had no explicit
-  // coverage. Exercise it through the full rule path so the framework →
-  // platform → dispatch contract is pinned end-to-end for all accepted 3xx
-  // codes (301/302/303/307/308).
   it('returns 303 redirect for status 303 rules', () => {
     const rules = [{ source: '/submit', destination: '/thanks', status: 303 }];
     const result = applyRoutingRules('/submit', rules);
@@ -73,10 +69,8 @@ describe('applyRoutingRules', () => {
     expect(result).toEqual({ type: 'rewrite', destination: '/storage/a/b/c.txt' });
   });
 
-  // First-match-wins matches Netlify `_redirects` and Vercel `vercel.json`
-  // semantics — users put more-specific rules above more-general ones, and
-  // the first rule whose source matches takes effect. Header rules use
-  // last-match-wins for `_headers` compat; the asymmetry is intentional.
+  // Decision: First-match-wins follows Netlify `_redirects` and Vercel `vercel.json`. Header rules use
+  // last-match-wins for `_headers` compatibility; the difference is on purpose.
   it('first match wins when redirect comes before rewrite', () => {
     const rules = [
       { source: '/page', destination: '/other', status: 302 },
@@ -96,7 +90,6 @@ describe('applyRoutingRules', () => {
   });
 
   it('first match wins on overlapping wildcards', () => {
-    // Specific rule above catch-all is the typical Netlify/Vercel pattern.
     const rules = [
       { source: '/blog/preview', destination: '/preview', status: 302 },
       { source: '/blog/*', destination: '/posts/:splat', status: 301 },
@@ -106,7 +99,6 @@ describe('applyRoutingRules', () => {
       destination: '/preview',
       status: 302,
     });
-    // The catch-all still applies for non-overlapping pathnames.
     expect(applyRoutingRules('/blog/hello', rules)).toEqual({
       type: 'redirect',
       destination: '/posts/hello',
@@ -157,10 +149,8 @@ describe('applyRoutingRules', () => {
     });
   });
 
-  // Percent-encoded / non-ASCII paths come in as-is from `new URL().pathname`
-  // (Cloudflare does not normalize them). Pattern text must match the raw
-  // pathname unit for unit; non-ASCII characters and percent-triples are plain
-  // literals, so both cases should match without special handling.
+  // Decision: Percent-encoded and non-ASCII paths arrive as is from `new URL().pathname` (Cloudflare
+  // doesn't normalize them), so pattern text matches the raw pathname unit for unit.
   it('matches non-ASCII path segments literally', () => {
     const rules = [{ source: '/café/*', destination: '/fr/café/:splat', status: 301 }];
     expect(applyRoutingRules('/café/menu', rules)).toEqual({
@@ -179,9 +169,8 @@ describe('applyRoutingRules', () => {
   });
 
   describe('host-scoped rules', () => {
-    // The API normalizes `host` to lowercase at deploy ingest and
-    // `url.hostname` is lowercase per WHATWG, so the runtime compare is a
-    // byte-exact equality.
+    // Decision: The API lowercases `host` at deploy ingest and `url.hostname` is lowercase per WHATWG, so the
+    // runtime compare is exact equality.
     it('fires when rule.host equals requestHost', () => {
       const rules = [
         { source: '/*', destination: 'https://foo.com/:splat', status: 301, host: 'www.foo.com' },
@@ -201,9 +190,8 @@ describe('applyRoutingRules', () => {
     });
 
     it('skips when rule.host set but requestHost is undefined', () => {
-      // Defensive: callers in dispatch always pass `url.hostname`, but the
-      // parameter is optional. A host-scoped rule must not fire when no host
-      // is provided (otherwise it would silently leak across domains).
+      // Decision: The host parameter is optional. A host-scoped rule mustn't fire when no host is given, or it
+      // would leak across domains.
       const rules = [
         { source: '/*', destination: 'https://foo.com/:splat', status: 301, host: 'www.foo.com' },
       ];
@@ -215,8 +203,6 @@ describe('applyRoutingRules', () => {
         { source: '/*', destination: 'https://foo.com/:splat', status: 301, host: 'www.foo.com' },
         { source: '/old', destination: '/new', status: 301 },
       ];
-      // Request to a different host: host-rule skipped via `continue`, path
-      // rule still considered.
       expect(applyRoutingRules('/old', rules, 'foo.com')).toEqual({
         type: 'redirect',
         destination: '/new',
@@ -225,7 +211,6 @@ describe('applyRoutingRules', () => {
     });
 
     it('matches the first host-scoped rule whose host equals requestHost', () => {
-      // Two host-scoped rules with overlapping path patterns; first wins.
       const rules = [
         { source: '/*', destination: 'https://foo.com/:splat', status: 301, host: 'www.foo.com' },
         { source: '/*', destination: 'https://other.com/:splat', status: 301, host: 'other.com' },
@@ -238,10 +223,6 @@ describe('applyRoutingRules', () => {
     });
 
     it('host comparison is case-sensitive (relies on API lowercasing)', () => {
-      // API normalizes both sides to lowercase. If a manifest with mixed-case
-      // host slips past validation, the runtime correctly does not match an
-      // already-lowercase `url.hostname`. This documents the contract; in
-      // practice the API gate makes case mismatches impossible.
       const rules = [{ source: '/*', destination: '/x', status: 301, host: 'WWW.FOO.COM' }];
       expect(applyRoutingRules('/about', rules, 'www.foo.com')).toBeNull();
     });
@@ -270,13 +251,11 @@ describe('applyRoutingRules', () => {
         },
         { source: '/old', destination: '/new', status: 301 },
       ];
-      // On www.foo.com: host-scoped rule fires (first match).
       expect(applyRoutingRules('/old', rules, 'www.foo.com')).toEqual({
         type: 'redirect',
         destination: 'https://foo.com/new',
         status: 301,
       });
-      // On any other bound host: host-scoped rule skipped, path rule fires.
       expect(applyRoutingRules('/old', rules, 'foo.com')).toEqual({
         type: 'redirect',
         destination: '/new',
@@ -312,8 +291,6 @@ describe('mergeQueryIntoLocation', () => {
   });
 
   it('preserves destination fragment when appending request query', () => {
-    // Without fragment handling this would return `/new#faq?utm=x` which
-    // browsers treat as fragment text — the utm param would be lost.
     expect(mergeQueryIntoLocation('/new#faq', '?utm=x')).toBe('/new?utm=x#faq');
   });
 

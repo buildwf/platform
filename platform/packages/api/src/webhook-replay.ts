@@ -5,12 +5,10 @@ import {
   redeliverWebhookDelivery,
 } from './github/webhook-deliveries.ts';
 
-// Per-run attempt cap: at most this many distinct failed deliveries are
-// redelivered on one scheduled pass, so a large backlog is drained gradually
-// without hammering GitHub's redeliver API from a single tick.
+// Decision: At most this many distinct failed deliveries are redelivered per scheduled pass, so a large
+// backlog drains gradually without hammering GitHub's redeliver API.
 const MAX_WEBHOOK_REDELIVERIES_PER_RUN = 50;
 
-// Cap on the number of `status=failure` delivery-log pages the scan follows.
 const MAX_WEBHOOK_DELIVERY_PAGES = 5;
 
 /**
@@ -43,14 +41,13 @@ export async function replayFailedWebhookDeliveries(
     failed.map((d) => d.guid),
   );
 
-  // In-batch dedup: GitHub returns the original delivery AND each of its prior
-  // redeliveries, all sharing one guid — attempt each guid at most once per run.
+  // Decision: GitHub returns the original delivery and each prior redelivery, all with one guid, so attempt
+  // each guid at most once per run.
   const attempted = new Set<string>();
   let redelivered = 0;
 
   for (const d of failed) {
-    // The cap bounds distinct ATTEMPTS (not the scan): stop once we've attempted
-    // maxRedeliveries unique guids this run; the rest drain on the next tick.
+    // Decision: The cap counts distinct attempts, not the scan; the rest drain on the next tick.
     if (attempted.size >= maxRedeliveries) {
       break;
     }

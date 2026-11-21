@@ -28,11 +28,11 @@ function printable(value: unknown): string {
     return '—';
   }
   if (typeof value === 'string') {
-    // Tenant text must not execute terminal control sequences.
+    // Decision: Tenant text mustn't run terminal control sequences.
     return sanitizeTerminalText(value);
   }
   if (typeof value === 'object') {
-    // JSON escapes C0 controls but leaves C1 controls such as U+009B (CSI) raw.
+    // Decision: JSON escapes C0 controls but leaves C1 controls such as U+009B (CSI) raw.
     return sanitizeTerminalText(JSON.stringify(value));
   }
   return String(value);
@@ -150,7 +150,7 @@ function output(value: unknown, json: boolean): void {
 
 function outputMutation(result: Record<string, unknown>, args: OperatorArgs): void {
   output(result, args.json);
-  // Some successful HTTP responses checkpoint work rather than complete it.
+  // Decision: Some successful HTTP responses checkpoint work instead of completing it.
   const configuration = result.configuration as { status?: string } | undefined;
   const project = result.project as { state?: string; last_error?: string | null } | undefined;
   if (
@@ -183,7 +183,7 @@ function outputLogs(
   }
   const minimal = result.runtimeLogs === 'minimal';
   if (minimal && !state.runtimeLogsNoted) {
-    // Follow polls print it once.
+    // Decision: Follow polls print it once.
     state.runtimeLogsNoted = true;
     console.log(dim(MINIMAL_RUNTIME_LOGS_NOTE));
   }
@@ -217,7 +217,7 @@ function outputLogs(
         printable(row.url),
         printable(row.status ?? row.statusCode ?? row.outcome),
       ];
-      // Minimal runtime logs record no URL or messages; their lines skip them.
+      // Decision: Minimal runtime logs record no URL or messages; their lines skip them.
       console.log((minimal ? parts.filter((part) => part !== '') : parts).join(' '));
       if (Array.isArray(row.logs)) {
         for (const log of row.logs) {
@@ -333,8 +333,8 @@ async function confirmOperatorMutation(
     output({ origin, ...preview }, args.json);
     return false;
   }
-  // Unattended JSON mode reserves stderr for a single structured failure.
-  // The server preview still runs and is validated before every mutation.
+  // Decision: Unattended JSON mode reserves stderr for a single structured failure. The server preview still
+  // runs and is validated before each mutation.
   if (!args.json || !args.yes) {
     process.stderr.write(`${JSON.stringify({ origin, ...preview }, null, 2)}\n`);
   }
@@ -404,7 +404,7 @@ async function runAuth(origin: string, args: OperatorArgs): Promise<void> {
     try {
       await client.request('/session/logout', { method: 'POST', body: {} });
     } catch (error) {
-      // An already expired/revoked session may still be removed locally.
+      // Decision: An already expired or revoked session may still be removed locally.
       if (!(error instanceof OperatorClientError) || error.status !== 401) {
         throw error;
       }
@@ -517,9 +517,8 @@ export async function followOperatorLogs(
           if (result.logsComplete === true) {
             return;
           }
-          // `null` means the current server cannot prove completion. `undefined`
-          // comes from platforms before 0.20.0. Operator commands do not run the
-          // minimum platform version check, so keep it.
+          // Decision: `null` means the current server can't prove completion. `undefined` comes from platforms before
+          // 0.20.0. Operator commands don't run the minimum platform version check, so keep it.
           if (result.logsComplete === null || result.logsComplete === undefined) {
             throw new OperatorClientError(
               'This platform cannot confirm that the final build logs were captured. Upgrade the platform runtime, or read the retained logs without --follow.',
@@ -618,7 +617,7 @@ async function migrateDeploymentAssets(
       return;
     }
     authorized = true;
-    // Each batch is pinned to its own preview. Failed or ambiguous writes are never retried.
+    // Decision: Each batch is pinned to its own preview. Failed or ambiguous writes aren't retried.
     const result = await client.request(args.path, {
       method: 'POST',
       body: { ...body, expected: preview.expected },
@@ -641,7 +640,7 @@ async function migrateDeploymentAssets(
         { target, lastSuccessfulCursor: body.cursor ?? null, result },
       );
     }
-    // Preserve each successful continuation in stdout if a later batch fails or is interrupted.
+    // Decision: Keep each successful continuation in stdout if a later batch fails or is interrupted.
     output(result, args.json);
     if (result.complete) {
       if (!args.json) {
@@ -672,7 +671,7 @@ export async function runOperatorCommand(args: OperatorArgs): Promise<void> {
   }
   const client = new OperatorClient(origin, readOperatorToken(origin));
   if (args.method === 'POST') {
-    // Fail before contacting the server when unattended mutation authorization is missing.
+    // Decision: Fail before contacting the server when unattended mutation authorization is missing.
     if (!args.plan && !args.yes && (!process.stdin.isTTY || !process.stderr.isTTY)) {
       throw new OperatorClientError(
         'Mutations in non-interactive mode require --yes or --plan.',
@@ -686,7 +685,7 @@ export async function runOperatorCommand(args: OperatorArgs): Promise<void> {
     if (aiLogging) {
       await assertAiLoggingPlatform(origin);
     }
-    // Read once for preview and apply; the server excludes the token from audit output.
+    // Decision: Read once for preview and apply; the server excludes the token from audit output.
     if (
       args.tokenStdin &&
       ((args.group === 'email' &&
@@ -728,7 +727,7 @@ export async function runOperatorCommand(args: OperatorArgs): Promise<void> {
       }
       recoveryFence = { recoveryFence: target.recoveryFence };
     }
-    // An older platform ignores outboundOnly and would take over the domain's MX.
+    // Decision: An older platform ignores outboundOnly and would take over the domain's MX.
     if (
       args.group === 'email' &&
       args.action === 'domain-add' &&
@@ -779,7 +778,7 @@ export async function runOperatorCommand(args: OperatorArgs): Promise<void> {
       !args.json &&
       Array.isArray(result.deployments)
     ) {
-      // Keep every migration count and protection flag visible without table truncation.
+      // Decision: Keep all migration counts and protection flags visible without table truncation.
       console.log(
         [
           ...humanLines({ pagination: result.pagination }),
@@ -788,7 +787,7 @@ export async function runOperatorCommand(args: OperatorArgs): Promise<void> {
         ].join('\n'),
       );
     } else if (args.group === 'project' && args.action === 'show' && !args.json) {
-      // One readable line instead of the raw AI logging fields; --json keeps them all.
+      // Decision: One readable line instead of the raw AI logging fields; --json keeps them all.
       const { aiLogging, ...project } = result;
       const line = aiLoggingStatusLine(aiLogging);
       console.log((line ? [...humanLines(project), line] : humanLines(result)).join('\n'));

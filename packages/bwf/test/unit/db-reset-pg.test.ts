@@ -39,7 +39,7 @@ const BREAKPOINT = '--> statement-breakpoint\n';
 const roots: Array<string> = [];
 
 beforeAll(async () => {
-  // Load PostgreSQL once: Windows' cold WASM startup belongs to the hook budget.
+  // Decision: Load PostgreSQL once: Windows' cold WASM startup belongs to the hook budget.
   state.pg = new PGlite({ extensions: { citext } });
   await state.pg.waitReady;
 }, 30_000);
@@ -76,7 +76,6 @@ function project(statements: Array<string>): string {
 describe('bwf db reset on PostgreSQL', () => {
   it('drops types, sequences and views so the migrations apply again, and keeps extensions', async () => {
     const pg = state.pg!;
-    // Installed by hand, outside the migrations.
     await pg.exec('CREATE EXTENSION citext');
     const root = project([
       `CREATE TYPE "public"."mood" AS ENUM('happy', 'sad');`,
@@ -129,7 +128,6 @@ describe('bwf db reset on PostgreSQL', () => {
       'CREATE TABLE "users" ("id" serial PRIMARY KEY NOT NULL, "mood" "mood" NOT NULL);',
     ]);
     await runDbCommand(root, { action: 'migrate' });
-    // Made by hand, outside the migrations.
     await pg.exec(`
       INSERT INTO users (mood) VALUES ('happy');
       CREATE DOMAIN public.score AS integer;
@@ -171,7 +169,6 @@ describe('bwf db reset on PostgreSQL', () => {
     const pg = state.pg!;
     const root = project([`CREATE VIEW "public"."app_info" AS (select 'v1'::text as version);`]);
     await runDbCommand(root, { action: 'migrate' });
-    // Made by hand, outside the migrations.
     await pg.exec(`
       CREATE SCHEMA analytics;
       CREATE VIEW analytics.versions AS SELECT version FROM public.app_info;

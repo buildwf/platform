@@ -52,8 +52,8 @@ describe('kitchen-sink Sandbox requests', () => {
             release();
           }
           await bothStarted;
-          // The command reads its program only after both requests have
-          // written files, reproducing the race when they share a container.
+          // Decision: The command reads its program only after both requests have written files, which reproduces the
+          // race when they share a container.
           const marker = files.get('/workspace/platform-kitchen-sink-code-lab/user-code.mjs');
           const output = JSON.stringify({ value: marker });
           files.set('/workspace/platform-kitchen-sink-code-lab/output.json', output);

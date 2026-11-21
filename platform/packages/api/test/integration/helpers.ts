@@ -79,14 +79,11 @@ export type TestEnv = {
   SITE_DOMAIN?: string;
   EMAIL?: SendEmail;
   EMAIL_GATEWAY_ORIGIN?: string;
-  /**
-   * Platform mail zone for the environment (`mail.buildwf.dev` in production,
-   * `mail.staging.buildwf.dev` in staging). Left UNSET by `setupEnv` on
-   * purpose: every reader fails closed without it, and a test that wants the
-   * email paths must opt in with `{ ...env, EMAIL_SENDER_DOMAIN: '...' }` so
-   * the fail-closed branch stays reachable. Verification-mail tests also set
-   * `EMAIL_GATEWAY_ORIGIN` explicitly.
-   */
+  // Decision: Platform mail zone for the environment (`mail.buildwf.dev` in production,
+  // `mail.staging.buildwf.dev` in staging). `setupEnv` leaves it unset on purpose: readers fail
+  // closed without it, and a test that wants the email paths opts in with
+  // `{ ...env, EMAIL_SENDER_DOMAIN: '...' }`, so the fail-closed branch stays reachable.
+  // Verification-mail tests also set `EMAIL_GATEWAY_ORIGIN`.
   EMAIL_SENDER_DOMAIN?: string;
   REQUESTS_DATASET?: string;
   TAIL_SERVICE_NAME?: string;
@@ -103,7 +100,6 @@ export type TestEnv = {
   BUILD_SCHEDULER: DurableObjectNamespace;
   BUILD_MANAGER: DurableObjectNamespace;
   BUILD_MANAGER_LARGE: DurableObjectNamespace;
-  /** Test-only override for the deploy handler's heartbeat interval. */
   DEPLOY_HEARTBEAT_INTERVAL_MS?: number;
 };
 
@@ -240,7 +236,7 @@ export class MemoryKVNamespace {
     this.store.delete(key);
   }
 
-  /** Like KV: sorted pages of up to `limit` (default 1000) keys, with metadata. */
+  // Decision: Like KV: sorted pages of up to `limit` (default 1000) keys, with metadata.
   async list(options?: { prefix?: string; cursor?: string; limit?: number }): Promise<{
     keys: Array<{ name: string; metadata?: unknown }>;
     list_complete: boolean;
@@ -274,8 +270,6 @@ type MemoryR2Entry = {
 };
 
 function memoryR2Etag(): string {
-  // Stable-ish etag: monotonically increasing counter is enough for tests
-  // to detect "same object, different object, same bytes different identity".
   return `memr2-${++memoryR2EtagCounter}-${Math.random().toString(36).slice(2, 10)}`;
 }
 let memoryR2EtagCounter = 0;
@@ -298,9 +292,7 @@ async function readStreamToBytes(stream: ReadableStream<Uint8Array>): Promise<Ui
   } finally {
     try {
       reader.releaseLock();
-    } catch {
-      // ignore
-    }
+    } catch {}
   }
   const out = new Uint8Array(total);
   let offset = 0;
@@ -333,11 +325,9 @@ class MemoryR2Bucket {
       onlyIf?: { etagMatches?: string; etagDoesNotMatch?: string };
     },
   ): Promise<{ key: string; size: number; etag: string; uploaded: Date } | null> {
-    // Evaluate precondition BEFORE draining the stream, matching R2's
-    // behaviour on a wildcard etagDoesNotMatch='*' hit: if the key exists,
-    // the put is a no-op and returns null. We still need to drain any
-    // ReadableStream so a streaming producer (such as a hashing transform)
-    // sees closure and settles its state.
+    // Decision: Check the precondition before draining the stream, as R2 does on an etagDoesNotMatch='*' hit:
+    // if the key exists, the put is a no-op and returns null. Still drain a ReadableStream, so a
+    // streaming producer (such as a hashing transform) sees it close and settles its state.
     const preconditionFail = options?.onlyIf?.etagDoesNotMatch === '*' && this.store.has(key);
 
     let body: ArrayBuffer;
@@ -411,11 +401,6 @@ class MemoryR2Bucket {
     return { objects, truncated: false };
   }
 
-  /**
-   * Test-only helper: override the `uploaded` timestamp on an existing key.
-   * Used by retention-sweep tests to simulate keys uploaded outside the
-   * pending-upload protection window without sleeping for an hour.
-   */
   setUploadedAt(key: string, uploaded: Date): void {
     const entry = this.store.get(key);
     if (entry) {
@@ -454,7 +439,6 @@ export async function captureQueries<T>(
   }
 }
 
-/** Queries captured so far by the active `captureQueries` on `db`. */
 export function capturedQueryCount(db: Db): number {
   const capture = queryCaptures.get(db);
   if (!capture?.active) {
@@ -463,10 +447,6 @@ export function capturedQueryCount(db: Db): number {
   return capture.queries.length;
 }
 
-/**
- * Stateful CronScheduler namespace: `/sync` stores the posted state per
- * project, `/snapshot` returns it, `/clear` removes it. Records every call.
- */
 export function createCronSchedulerMock(): {
   namespace: DurableObjectNamespace;
   states: Map<string, CronSyncState>;
@@ -496,11 +476,9 @@ export function createCronSchedulerMock(): {
 }
 
 export type SetupEnvOptions = Readonly<{
-  /**
-   * Set `PLATFORM_AUTH_DATABASE_UNCACHED` (default true, like a self-hosted install).
-   * Hosted Platform leaves it unset; suites whose behaviour must not depend on it
-   * pass false. Keep the default: platform access protection needs the flag.
-   */
+  // Decision: Set `PLATFORM_AUTH_DATABASE_UNCACHED` (default true, like a self-hosted install). Hosted
+  // Platform leaves it unset, and suites that mustn't depend on it pass false. Keep the default:
+  // platform access protection needs the flag.
   authDatabaseUncached?: boolean;
 }>;
 
@@ -528,12 +506,12 @@ export async function setupEnv(options: SetupEnvOptions = {}): Promise<TestEnv> 
       loadDataDir: await loadPGliteTemplateBundle(),
       relaxedDurability: true,
     });
-    // PGlite uses the same queries but exposes its own driver result type.
+    // Decision: PGlite runs the same queries but has its own driver result type.
     db = drizzle(pglite, { schema, logger }) as unknown as TestEnv['db'];
   }
   queryCaptures.set(db, queryCapture);
 
-  // Register the test db so the vi.mock in setup.ts routes createDb() here
+  // Decision: Register the test db, so the vi.mock in setup.ts routes createDb() here.
   setTestDb(db);
 
   return {
@@ -643,7 +621,6 @@ export async function clearTables(db: Db): Promise<void> {
   end $$;`);
 }
 
-/** Keep both orphan sweeps while skipping the provider-settling wait in in-memory tests. */
 export function skipOrphanSweepDelay(): void {
   const schedule = globalThis.setTimeout;
   vi.spyOn(globalThis, 'setTimeout').mockImplementation((callback, delay, ...args) =>
@@ -651,7 +628,6 @@ export function skipOrphanSweepDelay(): void {
   );
 }
 
-/** Establish a real revocable operator session for integration requests. */
 export async function createOperatorToken(
   db: Db,
   user: { id: string; login: string },
@@ -672,7 +648,6 @@ export async function seedOAuthNonce(db: Db, nonce: string): Promise<void> {
   await db.insert(oauthNonces).values({ nonce, expires_at: sql`now() + interval '600 seconds'` });
 }
 
-/** All cached members of an installation, newest verification first. */
 export async function getTestGitHubInstallationMembers(
   db: Db,
   installationId: string,
@@ -725,7 +700,7 @@ export async function createTestProject(
 ): Promise<{ id: string; slug: string }> {
   const n = ++projectCounter;
   const s = slug ?? `test-project-${n}`;
-  // Same shape as generateId('proj'): internal routes reject any other id.
+  // Decision: Same shape as generateId('proj'): internal routes reject any other id.
   const id = `proj_test${String(n).padStart(8, '0')}`;
   await db.insert(projects).values({ id, user_id: userId, slug: s });
   return { id, slug: s };
@@ -789,27 +764,23 @@ export async function createTestDeployment(
 ): Promise<{ id: string }> {
   const n = ++deploymentCounter;
   const id = `dpl_test${n}`;
-  // Mirror production semantics from `updateDeploymentStatus`:
-  // `deployed_at` is stamped via `COALESCE(deployed_at, now())` on the
-  // first transition to `live` and is never overwritten. Tests seeding
-  // a deployment directly in `live` state need the same marker, otherwise
-  // `getActivatedDeployments` won't see it.
+  // Decision: Match `updateDeploymentStatus`: it stamps `deployed_at` with `COALESCE(deployed_at, now())` on
+  // the first move to `live` and doesn't overwrite it. A deployment seeded directly as `live` needs
+  // the same marker, or `getActivatedDeployments` won't see it.
   await db.insert(deployments).values({
     id,
     project_id: projectId,
     status,
     source: source ?? null,
     cli_version: options?.cliVersion ?? null,
-    // The commit this deployment published, when the caller wants to exercise
-    // the `deployments.commit == pushed SHA` freshness fallback (the supersede
-    // rollback gate). Left null otherwise (container deploys record no commit).
+    // Decision: Set the commit when a test exercises the `deployments.commit == pushed SHA` freshness fallback
+    // (the supersede rollback gate). Otherwise it's null, as container deploys record no commit.
     commit: options?.commit ?? null,
     error_message: errorMessage ?? null,
     admission_protocol: options?.admissionProtocol,
-    // Production deploys always have a manifest set after `updateDeploymentManifest`
-    // (post-parse). Test fixtures seeding rows directly need a non-null
-    // manifest so they're counted by `countUserDeploymentsToday` (which
-    // filters `manifest IS NOT NULL` to exclude precheck placeholders).
+    // Decision: Production deploys have a manifest after `updateDeploymentManifest`. Seeded rows need a
+    // non-null manifest so `countUserDeploymentsToday` counts them (it filters `manifest IS NOT NULL`
+    // to leave out precheck placeholders).
     manifest: '{}',
     deployed_at: status === 'live' ? sql`now()` : null,
   });
@@ -851,8 +822,6 @@ export async function createTestProjectSecret(
     });
 }
 
-// --- Fetch mocking ---
-
 export function cfSuccess(result: unknown): Response {
   return Response.json({ success: true, errors: [], result });
 }
@@ -861,33 +830,18 @@ export function cfError(message: string, status = 400, code = 1000): Response {
   return Response.json({ success: false, errors: [{ code, message }] }, { status });
 }
 
-// ---------------------------------------------------------------------------
-// Dispatch script / container application stateful mock infrastructure
-// ---------------------------------------------------------------------------
-//
-// Sandbox-related integration tests need a mock fetch that can model:
-//   - WfP dispatch namespace scripts that mint a stable namespace_id on first
-//     PUT (when `metadata.migrations` declares `new_sqlite_classes`) and
-//     PRESERVE that namespace_id on subsequent PUTs without migrations (the
-//     wrangler migration_tag protocol).
-//   - Container applications keyed by name with POST/PATCH/DELETE/GET. The
-//     container POST also enforces the CF invariant that a given DO
-//     namespace_id can only ever be bound to ONE container application
-//     (CF code 1608 DURABLE_OBJECT_ALREADY_HAS_APPLICATION).
-//   - Cross-script DO binding validation — CF rejects cross-script DO bindings
-//     to dispatch namespace scripts; only same-script DO bindings work in
-//     dispatch namespaces.
-//   - Recording of CF call ordering so tests can assert PUT/POST sequencing.
-//
-// The state container is fresh per `mockCfApi()` call.
-// ---------------------------------------------------------------------------
+// Decision: The sandbox mock models these Cloudflare behaviors:
+// - WfP dispatch scripts mint a stable namespace_id on the first PUT that declares
+//   `new_sqlite_classes`, and keep it on later PUTs without migrations (wrangler migration_tag).
+// - A DO namespace_id can be bound to only one container application
+//   (CF code 1608 DURABLE_OBJECT_ALREADY_HAS_APPLICATION).
+// - CF rejects cross-script DO bindings to dispatch namespace scripts; only same-script
+//   DO bindings work there.
+// It also records the CF call order. The state is fresh for each `mockCfApi()` call.
 
 type SandboxMockHostScript = {
-  /** wrangler-style migration_tag — present once `migrations` has been applied. */
   migration_tag?: string;
-  /** className -> namespace_id (stable per-script-per-class). */
   classes: Map<string, string>;
-  /** Most recent bindings list parsed from the multipart PUT body. */
   bindings: Array<{
     type: string;
     name?: string;
@@ -896,7 +850,6 @@ type SandboxMockHostScript = {
     script_name?: string;
     [key: string]: unknown;
   }>;
-  /** Raw last-PUT metadata object. */
   metadata: Record<string, unknown>;
 };
 
@@ -910,11 +863,8 @@ type SandboxMockContainerApp = {
 };
 
 type SandboxMockState = {
-  /** scriptName -> recorded dispatch namespace script state. */
   hostScripts: Map<string, SandboxMockHostScript>;
-  /** appId -> recorded container application state. */
   containerApps: Map<string, SandboxMockContainerApp>;
-  /** Structured ordered recording of every method-modifying call. */
   recordedCalls: Array<{ method: string; url: string; body?: string | undefined }>;
 };
 
@@ -926,13 +876,9 @@ function createSandboxMockState(): SandboxMockState {
   };
 }
 
-/**
- * Worker uploads stream their multipart body. Parse the bytes the platform
- * actually sends and put the resulting FormData on `init.body`, so handlers
- * and later `mock.calls` assertions read the parts as they would read a
- * FormData body. A body stream that errors (a module failing its integrity
- * check) rejects here, as `fetch` would; the upload never reaches a handler.
- */
+// Decision: Worker uploads stream their multipart body. Parse the bytes the platform sends and put the
+// FormData on `init.body`, so handlers and `mock.calls` assertions read the parts as FormData. A
+// body stream that errors (a module failing its integrity check) rejects here, as `fetch` would.
 async function readStreamedMultipartBody(init: RequestInit): Promise<void> {
   const contentType = new Headers(init.headers).get('content-type') ?? '';
   if (!contentType.startsWith('multipart/form-data')) {
@@ -944,19 +890,14 @@ async function readStreamedMultipartBody(init: RequestInit): Promise<void> {
   init.body = form;
 }
 
-/**
- * Best-effort multipart-body parser tailored to the platform's CF Workers
- * Upload API usage. Returns the parsed `metadata` JSON and the raw bindings
- * array if present. Returns `null` if the body is not a parseable multipart
- * form (e.g. tests overriding `uploadWorker` may supply opaque bodies).
- */
+// Decision: Returns `null` when the body isn't a parseable multipart form, for example when a test overrides
+// `uploadWorker` with an opaque body.
 async function parseMultipartMetadata(
   init: RequestInit | undefined,
 ): Promise<{ metadata: Record<string, unknown> } | null> {
   if (!init?.body) {
     return null;
   }
-  // Worker uploads send FormData.
   if (init.body instanceof FormData) {
     const metaEntry = init.body.get('metadata');
     if (typeof metaEntry === 'string') {
@@ -974,15 +915,12 @@ async function parseMultipartMetadata(
       }
     }
   }
-  // Some helpers serialize their own multipart string. We don't attempt to
-  // parse arbitrary multipart strings — tests that pass strings either don't
-  // need binding validation or they install a custom uploadWorker handler.
+  // Decision: Some helpers serialize their own multipart string, which isn't parsed here. Tests that pass
+  // strings don't need binding validation, or they install their own uploadWorker handler.
   return null;
 }
 
 function mintNamespaceId(scriptName: string, className: string): string {
-  // Deterministic and unique per (scriptName, className). Test code only
-  // cares about stability across calls, not the exact format.
   return `ns_${scriptName}_${className}`;
 }
 
@@ -1025,7 +963,7 @@ function extractNewSqliteClasses(metadata: Record<string, unknown>): Array<strin
     return [];
   }
   const classes: Array<string> = [];
-  // CF Workers Upload API shape: `{ new_tag, steps: [{ new_sqlite_classes, new_classes }] }`
+  // Decision: CF Workers Upload API shape: `{ new_tag, steps: [{ new_sqlite_classes, new_classes }] }`
   if (typeof migrations === 'object' && !Array.isArray(migrations)) {
     const obj = migrations as {
       steps?: unknown;
@@ -1044,7 +982,7 @@ function extractNewSqliteClasses(metadata: Record<string, unknown>): Array<strin
       }
     }
   }
-  // Wrangler config-array shape: `[{ tag, new_sqlite_classes }]`
+  // Decision: Wrangler config-array shape: `[{ tag, new_sqlite_classes }]`
   if (Array.isArray(migrations)) {
     for (const step of migrations) {
       if (typeof step === 'object' && step !== null) {
@@ -1072,7 +1010,6 @@ function extractMigrationTag(metadata: Record<string, unknown>): string | undefi
     }
   }
   if (Array.isArray(migrations)) {
-    // Wrangler config form — last `tag` wins.
     let tag: string | undefined;
     for (const step of migrations) {
       if (typeof step === 'object' && step !== null) {
@@ -1088,13 +1025,11 @@ function extractMigrationTag(metadata: Record<string, unknown>): string | undefi
 }
 
 function parseScriptNameFromUrl(url: string): string | null {
-  // .../workers/dispatch/namespaces/{ns}/scripts/{name}[/...]
   const m = /\/workers\/(?:dispatch\/namespaces\/[^/]+\/)?scripts\/([^/?#]+)/.exec(url);
   return m ? decodeURIComponent(m[1]!) : null;
 }
 
 function parseAppIdFromUrl(url: string): string | null {
-  // .../containers/applications/{id}[/...]
   const m = /\/containers\/applications\/([^/?#]+)/.exec(url);
   return m ? decodeURIComponent(m[1]!) : null;
 }
@@ -1140,13 +1075,9 @@ export type CfApiMocks = {
   deleteCustomHostname: (url: string, init?: RequestInit) => Response | Promise<Response>;
   purgeCache: (url: string, init?: RequestInit) => Response | Promise<Response>;
   analyticsQuery: (url: string, init?: RequestInit) => Response | Promise<Response>;
-  // CF Email Routing account-level destination-address API. Backs
-  // `provisioning/email-routing.ts` (add / list / delete).
   addEmailDestination: (url: string, init?: RequestInit) => Response | Promise<Response>;
   listEmailDestinations: (url: string, init?: RequestInit) => Response | Promise<Response>;
   deleteEmailDestination: (url: string, init?: RequestInit) => Response | Promise<Response>;
-  // Dispatch script / container-app endpoints. State-aware defaults are wired
-  // up when overrides are not supplied. Tests can still override individually.
   getDispatchScript?: (url: string, init?: RequestInit) => Response | Promise<Response>;
   patchScriptSettings?: (url: string, init?: RequestInit) => Response | Promise<Response>;
   prepareContainerImage?: (url: string, init?: RequestInit) => Response | Promise<Response>;
@@ -1177,8 +1108,7 @@ const baseDefaultMocks: Omit<CfApiMocks, 'uploadWorker' | 'listWorkerBindings' |
   deleteQueue: () => cfSuccess(null),
   queryD1: () => cfSuccess([{ results: [] }]),
   assetUploadSession: async (_url: string, init?: RequestInit) => {
-    // Echo the manifest hashes so the mock bucket matches what the deploy
-    // route computed.
+    // Decision: Echo the manifest hashes, so the mock bucket matches what the deploy route computed.
     try {
       const body = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
       if (body?.manifest) {
@@ -1195,9 +1125,7 @@ const baseDefaultMocks: Omit<CfApiMocks, 'uploadWorker' | 'listWorkerBindings' |
         ];
         return cfSuccess({ jwt: 'test-asset-jwt', buckets: [hashes] });
       }
-    } catch {
-      // fall through to default
-    }
+    } catch {}
     return cfSuccess({ jwt: 'test-asset-jwt', buckets: [['hash1']] });
   },
   assetUpload: () => cfSuccess({ jwt: 'test-completion-jwt' }),
@@ -1256,10 +1184,8 @@ const baseDefaultMocks: Omit<CfApiMocks, 'uploadWorker' | 'listWorkerBindings' |
   deleteCustomHostname: () => cfSuccess(null),
   purgeCache: () => cfSuccess({ id: 'purge-test-id' }),
   analyticsQuery: () => Response.json({ data: [{ requests: 0, bandwidth_bytes: 0 }] }),
-  // Fresh add: CF echoes the row back immediately with `verified: null` —
-  // the recipient has been mailed a link but hasn't clicked it yet. The tag
-  // is derived from the address so a test can predict it without capturing
-  // the response.
+  // Decision: On a fresh add, CF echoes the row back at once with `verified: null`: the recipient got a link
+  // but hasn't clicked it yet. The tag comes from the address, so a test can predict it.
   addEmailDestination: (_url: string, init?: RequestInit) => {
     const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
     const email = typeof body.email === 'string' ? body.email : 'test@example.com';
@@ -1271,8 +1197,8 @@ const baseDefaultMocks: Omit<CfApiMocks, 'uploadWorker' | 'listWorkerBindings' |
       modified: '2026-04-27T00:00:00Z',
     });
   },
-  // `listDestinations` paginates until a short page comes back, so an empty
-  // array terminates after one request.
+  // Decision: `listDestinations` paginates until a short page comes back, so an empty array ends after one
+  // request.
   listEmailDestinations: () => cfSuccess([]),
   deleteEmailDestination: (url: string) => {
     const tag = url.split('/').pop()?.split('?')[0] ?? 'unknown';
@@ -1280,19 +1206,8 @@ const baseDefaultMocks: Omit<CfApiMocks, 'uploadWorker' | 'listWorkerBindings' |
   },
 };
 
-/**
- * Mock fetch handle. The handle IS the `vi.fn()` (e.g. `fetchMock.mock.calls`),
- * with `state` / `seedHostScript` / `seedContainerApp` / `expectCallOrder`
- * attached for sandbox scenarios (dispatch namespace scripts + container apps).
- */
 export type MockCfApiHandle = ReturnType<typeof vi.fn> & {
-  /** Live state container — fresh per `mockCfApi()` call. */
   state: SandboxMockState;
-  /**
-   * Seed a dispatch namespace script directly into the mock state without
-   * going through a real PUT. Useful for fixturing tests that assert the
-   * cached-fast-path of a deploy or set up cross-script binding precondition.
-   */
   seedHostScript(args: {
     scriptName: string;
     migrationTag?: string;
@@ -1300,10 +1215,7 @@ export type MockCfApiHandle = ReturnType<typeof vi.fn> & {
     bindings?: Array<Record<string, unknown>>;
     metadata?: Record<string, unknown>;
   }): SandboxMockHostScript;
-  /**
-   * Seed a container application directly into the mock state. The minted id
-   * is `app_<name>` to match the create handler's id format.
-   */
+  // Decision: The minted id is `app_<name>`, to match the create handler's id format.
   seedContainerApp(args: {
     name: string;
     namespaceId: string;
@@ -1311,23 +1223,12 @@ export type MockCfApiHandle = ReturnType<typeof vi.fn> & {
     instanceType?: string;
     maxInstances?: number;
   }): SandboxMockContainerApp;
-  /**
-   * Assert that a sequence of substrings appears (in order) in the recorded
-   * call URLs. Each substring may be a plain URL fragment or an object with
-   * `{ method, url }` for a stricter match.
-   */
   expectCallOrder(...steps: Array<string | { method: string; url: string }>): void;
 };
 
 export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle {
   const state = createSandboxMockState();
 
-  // ------------------------------------------------------------------------
-  // State-aware defaults (closure over `state`).
-  // ------------------------------------------------------------------------
-
-  // Default `uploadWorker` parses the multipart metadata, mints + preserves
-  // namespace_ids, validates cross-script bindings, and records the script.
   const defaultUploadWorker = async (url: string, init?: RequestInit): Promise<Response> => {
     const scriptName = parseScriptNameFromUrl(url);
     if (!scriptName) {
@@ -1336,19 +1237,15 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
 
     const parsed = await parseMultipartMetadata(init);
     if (!parsed) {
-      // Opaque body (string or non-FormData): accept without recording state.
-      // Tests that need state for these bodies install their own override.
       return new Response('ok', { status: 200 });
     }
 
     const { metadata } = parsed;
     const bindings = extractBindings(metadata);
 
-    // Cross-script binding validation. CF empirically rejects ALL cross-script DO bindings between dispatch
-    // namespace scripts, regardless of whether the target script exists or
-    // declares the class as container-enabled. Reject unconditionally so any
-    // future code that introduces cross-script DO bindings fails fast in CI
-    // instead of shipping to production.
+    // Decision: CF rejects each cross-script DO binding between dispatch namespace scripts, whether or not the
+    // target script exists or declares the class as container-enabled (seen against the real API).
+    // Reject them here too, so code that adds one fails in CI instead of in production.
     for (const binding of bindings) {
       const refScript = (binding as { script_name?: unknown }).script_name;
       if (typeof refScript === 'string' && refScript !== scriptName) {
@@ -1367,7 +1264,6 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
       }
     }
 
-    // Resolve / mint namespace_ids for declared classes.
     const existing = state.hostScripts.get(scriptName);
     const declaredClasses = extractNewSqliteClasses(metadata);
     const newTag = extractMigrationTag(metadata);
@@ -1379,12 +1275,12 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
       }
     }
 
-    // Tag handling: declaring `migrations` advances the tag (or creates one);
-    // omitting `migrations` preserves whatever tag was already there.
+    // Decision: Declaring `migrations` advances the tag (or creates one). Leaving `migrations` out keeps the
+    // existing tag, as wrangler's migration_tag protocol does.
     const migrationTag = newTag ?? existing?.migration_tag;
 
-    // Populate same-script DO bindings with their resolved namespace_id so
-    // GET /bindings reflects what `findDurableObjectNamespaceId` reads.
+    // Decision: Fill same-script DO bindings with their resolved namespace_id, so GET /bindings shows what
+    // `findDurableObjectNamespaceId` reads.
     const persistedBindings = bindings.map((b) => {
       if (
         b.type === 'durable_object_namespace' &&
@@ -1409,8 +1305,6 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
     return new Response('ok', { status: 200 });
   };
 
-  // Default `listWorkerBindings` reads from state when the script has been
-  // PUT through the stateful path; otherwise returns a proxy-token binding.
   const defaultListWorkerBindings = (url: string): Response => {
     const scriptName = parseScriptNameFromUrl(url);
     if (scriptName && state.hostScripts.has(scriptName)) {
@@ -1422,9 +1316,6 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
     ]);
   };
 
-  // Default `deleteWorker` removes the script from state. Unknown scripts
-  // also return 200 (idempotent delete); tests that need a 404 install an
-  // override.
   const defaultDeleteWorker = (url: string): Response => {
     const scriptName = parseScriptNameFromUrl(url);
     if (scriptName) {
@@ -1433,13 +1324,10 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
     return new Response('ok', { status: 200 });
   };
 
-  // GET dispatch script — returns metadata including migration_tag.
-  //
-  // Matches the real CF API envelope:
-  //   { success: true, result: { script: { id, migration_tag, ... } } }
-  //
-  // (See workers-sdk/packages/wrangler/src/durable.ts — wrangler reads
-  // `result.script.migration_tag`, not `result.migration_tag`.)
+  // Decision: Matches the real CF API envelope:
+  // { success: true, result: { script: { id, migration_tag, ... } } }
+  // wrangler reads `result.script.migration_tag`, not `result.migration_tag`
+  // (workers-sdk/packages/wrangler/src/durable.ts).
   const defaultGetDispatchScript = (url: string): Response => {
     const scriptName = parseScriptNameFromUrl(url);
     if (!scriptName || !state.hostScripts.has(scriptName)) {
@@ -1461,9 +1349,9 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
     });
   };
 
-  // PATCH dispatch script settings — the binding list replaces the stored one:
-  // `inherit` keeps the stored binding of that name (unknown name → 400) and a
-  // name left out is removed. Echoes the new bindings like Cloudflare does.
+  // Decision: The PATCH binding list replaces the stored one, as Cloudflare does: `inherit` keeps the stored
+  // binding of that name (an unknown name gives 400), and a name left out is removed. The response
+  // echoes the new bindings.
   const defaultPatchScriptSettings = async (url: string, init?: RequestInit): Promise<Response> => {
     const scriptName = parseScriptNameFromUrl(url);
     const script = scriptName ? state.hostScripts.get(scriptName) : undefined;
@@ -1497,7 +1385,6 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
     return cfSuccess({ bindings });
   };
 
-  // Container app handlers.
   const defaultListContainerApps = (url: string): Response => {
     const name = parseAppNameQuery(url);
     if (!name) {
@@ -1526,9 +1413,7 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
     if (typeof init?.body === 'string') {
       try {
         body = JSON.parse(init.body) as Record<string, unknown>;
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
     const name = typeof body.name === 'string' ? body.name : '';
     if (!name) {
@@ -1544,10 +1429,9 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
         { status: 409 },
       );
     }
-    // CF rejects a 2nd container application bound to the same DO
-    // namespace_id with code 1608 DURABLE_OBJECT_ALREADY_HAS_APPLICATION
-    // (verified against the real CF API). Each deploy mints a fresh
-    // namespace_id, so healthy code never hits this.
+    // Decision: CF rejects a second container application bound to the same DO namespace_id with code 1608
+    // DURABLE_OBJECT_ALREADY_HAS_APPLICATION (checked against the real CF API). Each deploy mints a
+    // fresh namespace_id, so healthy code doesn't hit this.
     const namespaceId = (body.durable_objects as { namespace_id?: string } | undefined)
       ?.namespace_id;
     if (namespaceId) {
@@ -1603,9 +1487,7 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
     if (typeof init?.body === 'string') {
       try {
         body = JSON.parse(init.body) as Record<string, unknown>;
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
     if (body.configuration && typeof body.configuration === 'object') {
       const cfg = body.configuration as { image?: string; instance_type?: string };
@@ -1661,8 +1543,6 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
       await readStreamedMultipartBody(init);
     }
 
-    // Record every call for ordering assertions. Non-string bodies are
-    // summarized as `[FormData]` or `[binary]`.
     let bodySnapshot: string | undefined;
     if (init?.body !== undefined) {
       if (typeof init.body === 'string') {
@@ -1675,14 +1555,13 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
     }
     state.recordedCalls.push({ method, url, body: bodySnapshot });
 
-    // Order matters: more specific patterns first.
+    // Decision: Order matters: more specific patterns first.
     if (method === 'POST' && url.includes('/purge_cache')) {
       return mocks.purgeCache(url, init);
     }
-    // CF Email Routing destinations. All three verbs share the
-    // `/email/routing/addresses` prefix — DELETE and GET both land on
-    // `/addresses/<tag>` or `/addresses?page=...`, POST on the bare
-    // collection — so the method is the only disambiguator.
+    // Decision: The three Email Routing destination verbs share the `/email/routing/addresses` prefix (DELETE
+    // and GET both land on `/addresses/<tag>` or `/addresses?page=...`), so only the method tells
+    // them apart.
     if (url.includes('/email/routing/addresses')) {
       if (method === 'DELETE') {
         return mocks.deleteEmailDestination(url, init);
@@ -1741,8 +1620,8 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
       );
     }
 
-    // Container application endpoints (must come before the generic dispatch
-    // worker matchers because both live under /accounts/{a}/...).
+    // Decision: Match container application endpoints before the generic dispatch worker matchers, since both
+    // live under /accounts/{a}/....
     if (
       method === 'POST' &&
       url.includes('/containers/applications/') &&
@@ -1773,8 +1652,8 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
       if (method === 'GET' && url.endsWith('/settings')) {
         const name = parseScriptNameFromUrl(url);
         const script = name ? state.hostScripts.get(name) : undefined;
-        // Cloudflare accepts `props` on a service binding upload and applies
-        // them at runtime, but never echoes them from `/settings`.
+        // Decision: Cloudflare accepts `props` on a service binding upload and applies them at runtime, but doesn't
+        // echo them from `/settings`.
         return script
           ? cfSuccess({
               bindings: script.bindings.map((binding) => {
@@ -1812,9 +1691,7 @@ export function mockCfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle 
     if (method === 'PATCH' && url.includes('/workers/dispatch/') && url.endsWith('/settings')) {
       return mocks.patchScriptSettings!(url, init);
     }
-    // GET on a dispatch script (no /bindings, no /secrets) — read the
-    // script's metadata + migration_tag. Must come AFTER /bindings and
-    // /secrets matches because those URLs share the prefix.
+    // Decision: Match this after the /bindings and /secrets routes, because those URLs share the prefix.
     if (
       method === 'GET' &&
       /\/workers\/dispatch\/namespaces\/[^/]+\/scripts\/[^/?#]+(?:[?#]|$)/.test(url)
@@ -1946,12 +1823,10 @@ export async function readAllEvents(res: Response): Promise<Array<unknown>> {
     .map((line) => JSON.parse(line));
 }
 
-/** The `data` of a successful `/rpc` response. */
 export function rpcData<T = unknown>(body: unknown): T {
   return (body as { data: T }).data;
 }
 
-/** A `/rpc/<procedure>` request, signed in with `token` when there is one. */
 export function rpcRequest(procedure: string, token: string | undefined, input?: unknown): Request {
   return new Request(`http://localhost/rpc/${procedure}`, {
     method: 'POST',
@@ -1963,19 +1838,17 @@ export function rpcRequest(procedure: string, token: string | undefined, input?:
   });
 }
 
-/** The message of a failed `/rpc` response. */
 export function rpcError(body: unknown): string {
   return (body as { error: { message: string } }).error.message;
 }
 
 const DEPLOY_PATH = /^\/projects\/([^/]+)\/deploy$/;
 
-/**
- * The app, with a deploy request written as the old `POST /projects/:id/deploy` answered by
- * `deploy.finalize`. An accepted deploy answers the NDJSON events the inline pipeline produced, under the receipt
- * header. Every other request goes to the app untouched. A refusal is told as the old handler told
- * it: the in-flight deployment under `deployment`, an invalid request as an `error` event.
- */
+// Decision: Wraps the app so tests can still send the old `POST /projects/:id/deploy`, answered by
+// `deploy.finalize`. An accepted deploy returns the NDJSON events the inline pipeline produced,
+// under the receipt header. A refusal comes back the way the old handler sent it: the in-flight
+// deployment under `deployment`, an invalid request as an `error` event. Other requests pass
+// through untouched.
 export function withLegacyDeploy<
   A extends { fetch: (request: Request, env?: never, ctx?: never) => unknown },
 >(
@@ -2009,7 +1882,7 @@ export function withLegacyDeploy<
       ...rest,
     );
     const raw = (await res.json()) as unknown;
-    // The auth middleware answers a refused credential before the procedure runs, in its own shape.
+    // Decision: The auth middleware answers a refused credential before the procedure runs, in its own shape.
     if (typeof (raw as { error?: unknown }).error === 'string') {
       return Response.json(raw, { status: res.status });
     }
@@ -2054,9 +1927,9 @@ export function withLegacyDeploy<
       ...(deploymentId ? { 'x-platform-deployment-id': deploymentId } : {}),
     };
     if (!body.data.events && deploymentId) {
-      // The Queue owns the deployment: read its events the way the CLI does,
-      // but only as the caller reads the body. A caller that cancels the body
-      // stops reading, like an observer that disconnects from the old route.
+      // Decision: The Queue owns the deployment. Read its events the way the CLI does, but only as the caller
+      // reads the body: a caller that cancels the body stops reading, like an observer that
+      // disconnected from the old route.
       let since = 0;
       let canceled = false;
       const encoder = new TextEncoder();

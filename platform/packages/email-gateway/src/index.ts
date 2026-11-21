@@ -167,7 +167,7 @@ async function resolveIngress(
     try {
       reader.releaseLock();
     } catch {
-      // A timed-out read may still be settling after cancellation.
+      // Decision: A timed-out read may still be settling after cancellation.
     }
   }
   const bytes = new Uint8Array(total);
@@ -254,7 +254,7 @@ async function readMime(
     try {
       reader.releaseLock();
     } catch {
-      // A timed-out read may still be settling after cancellation.
+      // Decision: A timed-out read may still be settling after cancellation.
     }
   }
 }
@@ -452,8 +452,8 @@ async function ingress(request: Request, env: Env, ctx: ExecutionContext): Promi
     try {
       await completeRelayedReceipt(env, identity, result.reject);
     } catch {
-      // The receipt remains unresolved. Never rerun completed tenant work or
-      // already-submitted actions just because its final checkpoint was lost.
+      // Decision: The receipt stays unresolved. Completed tenant work or submitted actions aren't run again just
+      // because the final checkpoint was lost.
       console.error('[email-gateway] receipt completion remains unresolved', receiptId);
     }
     return new Response(null, {
@@ -529,7 +529,7 @@ async function probe(request: Request, env: Env): Promise<Response> {
     try {
       reader.releaseLock();
     } catch {
-      // A timed-out read may still be settling after cancellation.
+      // Decision: A timed-out read may still be settling after cancellation.
     }
   }
   if (size === 0 || (declared && size !== Number(declared))) {
@@ -593,8 +593,8 @@ function confirmationResponse(
   status: number,
   contentType?: string | null,
 ): Response {
-  // API response headers are not relayed, so the anti-framing headers are
-  // set here; another site must not frame the Confirm button.
+  // Decision: API response headers aren't relayed, so the anti-framing headers are set here: another site
+  // mustn't frame the Confirm button.
   const headers = new Headers({
     'cache-control': 'no-store',
     'content-security-policy': "frame-ancestors 'none'",
@@ -657,7 +657,7 @@ async function readConfirmationResponse(
     try {
       reader.releaseLock();
     } catch {
-      // A timed-out read may still be settling after cancellation.
+      // Decision: A timed-out read may still be settling after cancellation.
     }
   }
 }
@@ -685,8 +685,8 @@ async function confirmDestination(request: Request, env: Env): Promise<Response>
   try {
     const target = new URL(`https://api${CONFIRMATION_PATH}`);
     target.searchParams.set('token', entries[0]![1]);
-    // GET shows the Confirm button and its POST grants consent. Only the
-    // method and the token are relayed; the request body is not.
+    // Decision: GET shows the Confirm button and its POST grants consent. Only the method and the token are
+    // relayed, not the request body.
     const serviceRequest = env.API.fetch(target.toString(), {
       method: request.method,
       redirect: 'manual',

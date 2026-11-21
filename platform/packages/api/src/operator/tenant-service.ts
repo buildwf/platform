@@ -310,8 +310,8 @@ async function getOwnershipTransferBlockers(
         ),
       )
       .orderBy(asc(builds.created_at), asc(builds.id)),
-    // Live/failed/canceled deployments no longer block as active work, but
-    // their owner-bound Sandbox controllers still do until cleanup completes.
+    // Decision: Live, failed and canceled deployments no longer block as active work, but their owner-bound
+    // Sandbox controllers still do until cleanup completes.
     db
       .select({ id: deployments.id, status: deployments.status })
       .from(deployments)
@@ -480,9 +480,8 @@ async function commitOwnershipTransfer(
       .for('update')
       .limit(1);
 
-    // Ownership is implicit. Keep these convergence writes before the
-    // idempotent branch so a retry also removes target access left behind by
-    // an owner change that committed without cleaning it.
+    // Decision: Ownership is implicit. Keep these convergence writes before the idempotent branch so a retry also
+    // removes target access left behind by an owner change that committed without cleaning it.
     await tx
       .delete(projectMembers)
       .where(
@@ -704,8 +703,8 @@ async function republishProjectOwnerState(
         }),
       );
     }
-    // Background runs (cron, queues) pause only for an administrator suspension;
-    // usage-limit suspensions keep them running.
+    // Decision: Background runs (cron, queues) pause only for an administrator suspension; usage-limit suspensions
+    // keep them running.
     const markerKey = projectSuspensionKey(project.id);
     const marker = await context.env.ROUTING.get(markerKey);
     const reason = owner.suspended_reason;
@@ -801,8 +800,8 @@ export async function transferOperatorProjectOwner(
     aiLoggingComplete: false,
   };
   let convergedOwner = transfer.newOwner;
-  // Once, not inside republishProjectOwnerState: that runs twice back to back and
-  // would hit the one-write-per-second limit on the AI logging key.
+  // Decision: Run once here, not inside republishProjectOwnerState: that runs twice back to back and would hit
+  // the one-write-per-second limit on the AI logging key.
   const [aiLoggingResult] = await Promise.allSettled([
     publishProjectsAiLogging(db, context.env.ROUTING, [transfer.project.id], {
       trigger: 'transfer',
@@ -810,8 +809,8 @@ export async function transferOperatorProjectOwner(
     }),
   ]);
   convergence.aiLoggingComplete = aiLoggingResult.status === 'fulfilled';
-  // Publish immediately even if counter reconciliation fails, then repeat after
-  // it settles so a concurrent plan or suspension change wins in the final state.
+  // Decision: Publish at once even if counter reconciliation fails, then repeat after it settles so a concurrent
+  // plan or suspension change wins in the final state.
   const [counterResult, earlyRoutingResult] = await Promise.allSettled([
     updateOwnershipCounters(context, transfer),
     republishTransferredProject(context, transfer),
@@ -890,9 +889,9 @@ export async function changeOperatorUserPlan(
   await updateUserPlan(db, id, plan, (tx, previousPlan) =>
     startUserAiLoggingPublish(tx, id, previousPlan, plan),
   );
-  // Before the usage counter calls, so a counter failure still leaves the new
-  // plan's AI logging default published. One call publishes one page; a large
-  // account needs the same plan change again for the rest.
+  // Decision: Before the usage counter calls, so a counter failure still leaves the new plan's AI logging default
+  // published. One call publishes one page; a large account needs the same plan change again for the
+  // rest.
   let aiLogging: UserAiLoggingPublishProgress | null = null;
   try {
     aiLogging = await runUserAiLoggingPublishPage(db, context.env.ROUTING, id, plan, {
@@ -901,8 +900,8 @@ export async function changeOperatorUserPlan(
   } catch (error) {
     console.error('[admin] plan-change AI logging publish failed', { userId: id, error });
   }
-  // Runs even when the publish is unfinished: it is idempotent, and limits must
-  // follow the new plan at once.
+  // Decision: Runs even when the publish is unfinished: it's idempotent, and limits must follow the new plan at
+  // once.
   let cleanupComplete = true;
   try {
     await reconcileOperatorUserPlan(context, id);
@@ -985,8 +984,8 @@ export async function reconcileOperatorUserPlan(context: Context<ApiEnv>, id: st
   if (!reevaluated.ok) {
     throw new Error(`Usage counter limit reevaluation returned HTTP ${reevaluated.status}`);
   }
-  // Ownership and quota writes can settle while a transfer is publishing. Each
-  // project is reread under its row fence before its final route publication.
+  // Decision: Ownership and quota writes can settle while a transfer is publishing. Each project is reread under
+  // its row fence before its final route publication.
   await reconcileOperatorUserProjects(context, id);
 }
 
@@ -1014,8 +1013,8 @@ export async function suspendOperatorUser(
         'Requests, cron jobs and queue delivery stop for these projects. Queue messages are dropped when their retries run out: after about 3 hours by default, at once with maxRetries 0. Restore does not bring them back.',
     });
   }
-  // Ordinary users remain edge-first. Administrators have already lost access
-  // atomically, so concurrent removals cannot count them during this fan-out.
+  // Decision: Ordinary users stay edge-first. Administrators already lost access atomically, so concurrent
+  // removals can't count them during this fan-out.
   try {
     await setProjectsRoutingSuspension(context.env.ROUTING, db, projects, {
       op: 'suspend',
@@ -1049,7 +1048,7 @@ export async function restoreOperatorUser(context: Context<ApiEnv>, id: string, 
       projects: projects.map((p) => ({ id: p.id, slug: p.slug })),
     });
   }
-  // Preserve the DB suspension until every routing, sandbox and DO latch clears.
+  // Decision: Keep the DB suspension until each routing, sandbox and DO latch clears.
   try {
     const stub = context.env.USAGE_COUNTER.get(context.env.USAGE_COUNTER.idFromName(id));
     const results = await Promise.allSettled([

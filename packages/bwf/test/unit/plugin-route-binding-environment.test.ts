@@ -10,7 +10,7 @@ type MockCloudflareConfig = {
 
 vi.mock('../../src/plugin-cloudflare.ts', () => import('../helpers/cloudflare-vite-plugin.ts'));
 
-// Binding inference must not consult a developer's system keychain.
+// Decision: Binding inference mustn't consult a developer's system keychain.
 vi.mock('../../src/cli/auth.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/cli/auth.ts')>()),
   getToken: () => null,

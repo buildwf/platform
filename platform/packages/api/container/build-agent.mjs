@@ -1,48 +1,45 @@
 #!/usr/bin/env node
 // @ts-check
-/**
- * Build agent for "Deploy on GitHub".
- *
- * Runs inside the Cloudflare Container managed by the BuildManager Durable
- * Object (packages/api/src/build-manager.ts). It is intentionally THIN: it does
- * not re-implement deploy packaging. It downloads the pushed source, installs
- * the repo's dependencies, and runs the REAL `bwf deploy` CLI, which performs
- * all build + upload work using the short-lived scoped BWF_TOKEN.
- *
- * Contract with the DO (env vars the DO injects at start()):
- *   BUILD_ID            build row id (logging only)
- *   PROJECT_ID          project id (logging only)
- *   PROJECT_SLUG        project slug
- *   SOURCE_TARBALL_URL  GitHub source tarball (codeload) URL
- *   SOURCE_TOKEN        GitHub installation token (Bearer) to fetch the tarball
- *   BWF_TOKEN          project-scoped deploy JWT (consumed by `bwf deploy`).
- *                       Scrubbed from the install + any untrusted child env and
- *                       re-injected ONLY for the trusted `bwf deploy` spawn.
- *   BWF_API_URL        https://platform.buildwithfriends.dev (or staging)
- *   PLATFORM_PROXY_URL      Explicit platform resource proxy
- *   BWF_PROJECT        project slug passed to `bwf deploy --project`
- *   CF_ACCESS_CLIENT_ID     staging CF Access service-token id (staging builds
- *   CF_ACCESS_CLIENT_SECRET only). Like BWF_TOKEN: scrubbed from untrusted
- *                       children and re-injected ONLY for the `bwf deploy` spawn
- *                       so it can pass CF Access on the staging API host.
- *   DO_LOG_URL          full URL of the DO's log sink, e.g. https://manager/logs
- *   AGENT_TOKEN         per-build secret presented on this agent's DO control
- *                       POSTs (/logs, /status, /cancel). NEVER forwarded into
- *                       untrusted repo child processes (see `sanitizeChildEnv`).
- *
- * DO endpoints (see build-manager.ts `fetch`):
- *   POST /logs    body: Array<{ line, stream, ts, lineEnding? }>
- *   POST /status  body: { status }
- *   POST /cancel  (DO -> agent; handled by this server)
- *   GET  /        (DO -> agent; health check)
- *
- * Transport note: the DO talks to the container over the Container model. The
- * agent talks back to the DO by POSTing to DO_LOG_URL (resolved via the
- * Container outbound-interception chain). ALL DO writes here are best-effort —
- * a transport failure must never abort the build. Logs are also retained
- * in-process and exposed at `GET /logs?since=<seq>` so the DO can PULL them if
- * push transport is unavailable (see open questions in the PR).
- */
+// Decision: Build agent for "Deploy on GitHub".
+//
+// Runs inside the Cloudflare Container managed by the BuildManager Durable Object
+// (packages/api/src/build-manager.ts). It's deliberately thin: it doesn't re-implement deploy
+// packaging. It downloads the pushed source, installs the repo's dependencies, and runs the
+// real `bwf deploy` CLI, which does all build and upload work using the short-lived scoped
+// BWF_TOKEN.
+//
+// Contract with the DO (env vars the DO injects at start()):
+//   BUILD_ID            build row id (logging only)
+//   PROJECT_ID          project id (logging only)
+//   PROJECT_SLUG        project slug
+//   SOURCE_TARBALL_URL  GitHub source tarball (codeload) URL
+//   SOURCE_TOKEN        GitHub installation token (Bearer) to fetch the tarball
+//   BWF_TOKEN           project-scoped deploy JWT (consumed by `bwf deploy`). Scrubbed from
+//                       the install and any untrusted child env, and re-injected only for
+//                       the trusted `bwf deploy` spawn.
+//   BWF_API_URL         https://platform.buildwithfriends.dev (or staging)
+//   PLATFORM_PROXY_URL  explicit platform resource proxy
+//   BWF_PROJECT         project slug passed to `bwf deploy --project`
+//   CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET
+//                       staging CF Access service token (staging builds only). Like
+//                       BWF_TOKEN: scrubbed from untrusted children and re-injected only for
+//                       the `bwf deploy` spawn so it can pass CF Access on the staging API.
+//   DO_LOG_URL          full URL of the DO's log sink, for example https://manager/logs
+//   AGENT_TOKEN         per-build secret presented on this agent's DO control POSTs (/logs,
+//                       /status, /cancel). Not forwarded into untrusted repo child
+//                       processes (see `sanitizeChildEnv`).
+//
+// DO endpoints (see build-manager.ts `fetch`):
+//   POST /logs    body: Array<{ line, stream, ts, lineEnding? }>
+//   POST /status  body: { status }
+//   POST /cancel  (DO -> agent; handled by this server)
+//   GET  /        (DO -> agent; health check)
+//
+// Transport: the DO talks to the container over the Container model. The agent talks back by
+// POSTing to DO_LOG_URL (resolved via the Container outbound-interception chain). DO writes
+// here are best-effort: a transport failure mustn't abort the build. Logs are also kept
+// in-process and exposed at `GET /logs?since=<seq>` so the DO can pull them if push transport
+// is unavailable.
 
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
@@ -54,79 +51,58 @@ import { pipeline } from 'node:stream/promises';
 import { pathToFileURL } from 'node:url';
 import bwfPackageJson from '../../../../packages/bwf/package.json' with { type: 'json' };
 
-// --- constants ---------------------------------------------------------------
-
 const PORT = 4000;
-// Overridable ONLY so a test that drives the real `tar` extraction can claim a
-// private directory. Vitest runs test files in parallel workers, and two suites
-// wiping one absolute path under each other is a race, not a flake. The container
-// never sets this: production is always `/tmp/build/src` (pinned by the
-// `childSpawnOptions` cwd assertion in build-manager.test.ts).
+// Decision: Overridable only so a test that drives the real `tar` extraction can claim a private
+// directory. Vitest runs test files in parallel workers, and two suites wiping one absolute
+// path under each other is a race, not a flake. The container doesn't set this: production
+// is `/tmp/build/src` (pinned by the `childSpawnOptions` cwd assertion in
+// build-manager.test.ts).
 const WORK_DIR = process.env.PLATFORM_BUILD_WORK_DIR ?? '/tmp/build/src';
-/** The npm package that ships the `bwf` CLI. */
 const BWF_PACKAGE = '@builtbyfriends/bwf';
 const LOG_FLUSH_MS = 500;
-// Hard timeout on each best-effort DO POST. Without it a hung DO connection would
-// stall the single-flight log flush forever (logging would silently stop for the
-// rest of the build); with it the flush retries on the next tick. Also bounds how
-// long the final drain at exit can block before the container terminates.
+// Decision: Hard timeout on each best-effort DO POST. Without it a hung DO connection would stall the
+// single-flight log flush forever (logging would silently stop for the rest of the build);
+// with it the flush retries on the next tick. Also bounds how long the final drain at exit can
+// block before the container terminates.
 const DO_POST_TIMEOUT_MS = 10000;
-// BuildManager injects BWF_CLI_VERSION. If absent, use the release manifest
-// copied into this image, never a mutable npm dist-tag or the untrusted app's manifest.
+// Decision: BuildManager injects BWF_CLI_VERSION. If absent, use the release manifest copied into this
+// image, not a mutable npm dist-tag or the untrusted app's manifest.
 export const DEFAULT_PLATFORM_CLI_VERSION = bwfPackageJson.version;
 
-// --- source-download bounds --------------------------------------------------
+// Decision: A degraded tarball stream can deliver short bursts separated by dead minutes and burn the
+// whole build budget while looking healthy to the DO's log puller. Node's undici defaults
+// don't catch this: `bodyTimeout` resets on each chunk, so any trickle defeats it.
 //
-// A degraded tarball stream can deliver short bursts separated by dead minutes
-// and burn the whole build budget while looking healthy to the DO's log puller.
-// Node's undici defaults do not catch this: `bodyTimeout` resets on every chunk,
-// so any trickle defeats it.
-//
-// The guard that matters is the STALL timer, not a wall-clock cap on the attempt.
-// A healthy download streams continuously, so a "no bytes at all for 20s" rule
-// cannot fire on it — while an absolute per-attempt cap, or a minimum-throughput
-// floor, WOULD fail a large repo on a slow but steady link. The phase budget
-// below is the only wall clock, and it bounds every attempt together rather than
-// each one separately.
+// The guard that matters is the stall timer, not a wall-clock cap on the attempt. A healthy
+// download streams continuously, so a "no bytes at all for 20s" rule can't fire on it, while
+// an absolute per-attempt cap, or a minimum-throughput floor, would fail a large repo on a
+// slow but steady link. The phase budget below is the only wall clock, and it bounds all
+// attempts together rather than each one separately.
 
-/**
- * No bytes received for this long aborts the in-flight attempt. Reset by every
- * chunk, so it measures a dead stream, not a slow one.
- */
+// Decision: No bytes received for this long aborts the in-flight attempt. Reset by each chunk, so it
+// measures a dead stream, not a slow one.
 export const SOURCE_STALL_TIMEOUT_MS = 20000;
-/**
- * Hard ceiling on the whole download phase, across ALL attempts. Sized to sit
- * well inside the smallest plan budget (free tier = 10 minutes) so a pathological
- * but never-quite-stalled trickle still leaves most of the budget for the build.
- */
+// Decision: Hard ceiling on the whole download phase, across all attempts. Sized to sit well inside the
+// smallest plan budget (free tier = 10 minutes) so a pathological but never-quite-stalled
+// trickle still leaves most of the budget for the build.
 export const SOURCE_PHASE_BUDGET_MS = 240000;
-/** Attempts per build, including the first. */
+// Decision: Attempts per build, including the first.
 export const SOURCE_DOWNLOAD_MAX_ATTEMPTS = 3;
-/** Backoff before attempt 2 and attempt 3. */
 export const SOURCE_RETRY_BACKOFF_MS = [2000, 5000];
-/**
- * How often the download logs progress, so a stalled download is visible in the
- * live tail and the check-run tail. The check run keeps the last 100 lines and the phase is capped at 4 minutes, so this can add at most
- * ~16 lines.
- */
+// Decision: How often the download logs progress, so a stalled download is visible in the live tail and
+// the check-run tail. The check run keeps the last 100 lines and the phase is capped at 4
+// minutes, so this can add at most about 16 lines.
 export const SOURCE_PROGRESS_INTERVAL_MS = 15000;
-/**
- * How long a killed `tar` gets between SIGTERM and SIGKILL. A child that ignores
- * SIGTERM must not be able to hold the retry loop — and therefore the phase
- * budget — open.
- */
+// Decision: How long a killed `tar` gets between SIGTERM and SIGKILL. A child that ignores SIGTERM
+// mustn't be able to hold the retry loop, and so the phase budget, open.
 export const EXTRACT_KILL_GRACE_MS = 5000;
 
-// --- non-root build isolation ------------------------------------------------
-
-/**
- * uid/gid the untrusted build children (dependency install + `bwf deploy`) run
- * under. The agent itself stays root so it can setuid-spawn them; dropping the
- * children to a non-root uid means their `/proc/<ppid>/environ` read of the root
- * agent is denied by the kernel (cross-uid), closing the secret-recovery vector
- * `delete process.env.*` cannot (unsetenv leaves the initial-stack env block in
- * /proc intact). MUST match the `builder` user created in the Dockerfile.
- */
+// Decision: uid/gid the untrusted build children (dependency install + `bwf deploy`) run under. The
+// agent itself stays root so it can setuid-spawn them. Dropping the children to a non-root
+// uid means the kernel denies their `/proc/<ppid>/environ` read of the root agent
+// (cross-uid), closing the secret-recovery vector that `delete process.env.*` can't (unsetenv
+// leaves the initial-stack env block in /proc intact). Has to match the `builder` user
+// created in the Dockerfile.
 export const BUILDER_UID = 1000;
 export const BUILDER_GID = 1000;
 export const BUILDER_HOME = '/home/builder';
@@ -201,8 +177,6 @@ function bwfFallbackVersion() {
   return process.env.BWF_CLI_VERSION || DEFAULT_PLATFORM_CLI_VERSION;
 }
 
-// --- mutable build state -----------------------------------------------------
-
 /**
  * The currently-running untrusted build child (dependency install OR `void
  * deploy`). At most one runs at a time — install is awaited and the BUILDER_UID
@@ -226,70 +200,50 @@ let cancelled = false;
  */
 const logBuffer = [];
 let logSeq = 0;
-/** Running SERIALIZED size of `logBuffer` — see MAX_BUFFERED_LOG_BYTES. */
+// Decision: Running serialized size of `logBuffer`; see MAX_BUFFERED_LOG_BYTES.
 let bufferedBytes = 0;
 
-/**
- * Hard cap on the retained PULL history. A pathologically verbose build (huge
- * package-manager / compiler output) would otherwise grow `logBuffer` without
- * bound and OOM the agent on the memory-constrained standard-1 container, failing
- * an otherwise-valid build purely because it logged too much. `record()` evicts
- * the oldest lines in a chunk once over this cap. The /logs pull is a best-effort
- * tail, so a far-behind puller simply misses the very start; `seq` stays
- * monotonic, so `since` queries over RETAINED lines are still exact.
- */
+// Decision: Hard cap on the retained PULL history. A very verbose build (huge package-manager or
+// compiler output) would otherwise grow `logBuffer` without bound and OOM the agent on the
+// memory-constrained standard-1 container, failing a valid build only because it logged too
+// much. `record()` evicts the oldest lines in a chunk once over this cap. The /logs pull is a
+// best-effort tail, so a far-behind puller misses the very start; `seq` stays monotonic, so
+// `since` queries over retained lines are still exact.
 export const MAX_BUFFERED_LOG_LINES = 10000;
 
-/**
- * Companion BYTE cap on the same ring. The line cap alone bounds the COUNT, not
- * the size: at MAX_PARTIAL_LINE_CHARS each, 10000 retained lines is ~1.22 GiB of
- * live strings in the agent, and a puller draining MAX_LOG_PULL_PAGES x
- * MAX_LOG_RESPONSE_BYTES per callback would need ~19 callbacks to clear it —
- * which is what makes "32 pages covers the buffer" an average-case fact rather
- * than a guarantee. Measured in SERIALIZED bytes (see `measureEntry`), the same
- * unit the page cap uses, so the comparison is exact — counting UTF-16 code units
- * here would let a nominal 16 MiB ring hold ~96 MiB on the wire and land straight
- * back past the 64 MiB one drain can fetch. Capping bytes makes it structural: the retained ring is
- * always smaller than a single drain, so the DO can never fall a callback behind
- * on backlog size, only on wall clock. Well above any real build (a verbose
- * install plus bundler is single-digit MiB in total), so this only ever trims
- * output that is already far past what the 60000-byte check-run tail can show.
- */
+// Decision: Companion byte cap on the same ring. The line cap bounds the count, not the size: at
+// MAX_PARTIAL_LINE_CHARS each, 10000 retained lines is about 1.22 GiB of live strings, and a
+// puller draining MAX_LOG_PULL_PAGES x MAX_LOG_RESPONSE_BYTES per callback would need about 19
+// callbacks to clear it. Measured in serialized bytes (see `measureEntry`), the same unit the
+// page cap uses, so the comparison is exact: counting UTF-16 code units would let a nominal
+// 16 MiB ring hold about 96 MiB on the wire, past the 64 MiB one drain can fetch. Capping bytes
+// keeps the retained ring smaller than a single drain, so the DO can't fall a callback behind
+// on backlog size, only on wall clock. Well above any real build, so this only trims output
+// far past what the 60000-byte check-run tail can show.
 export const MAX_BUFFERED_LOG_BYTES = 16 * 1024 * 1024;
 
-/**
- * Hard cap on the unflushed PUSH batch. `pendingLines` is drained every
- * LOG_FLUSH_MS, but a flood can outrun the flush WITHIN a single synchronous
- * `data` handler: `pipeStream` scans an entire chunk in one turn, so a chunk
- * carrying millions of delimiters (a bare-`\r` progress flood, or a `\n`-only
- * blast) makes millions of `record()` calls — and the flush timer can't fire
- * until that turn yields — ballooning the batch and OOMing the standard-1
- * container. The per-line byte cap (MAX_PARTIAL_LINE_CHARS) bounds one line's
- * SIZE but not the COUNT of short delimiter-emitted lines, so this bounds the
- * count too. `record()` evicts the oldest entries once over the cap (mirroring
- * the `logBuffer` ring); the most-recent output — what a live tail cares about —
- * is preserved, and the retained PULL history (`logBuffer`) is independently
- * bounded, so a far-behind reader simply misses the flood's start.
- */
+// Decision: Hard cap on the unflushed PUSH batch. `pendingLines` is drained each LOG_FLUSH_MS, but a
+// flood can outrun the flush within a single synchronous `data` handler: `pipeStream` scans a
+// whole chunk in one turn, so a chunk carrying millions of delimiters (a bare-`\r` progress
+// flood, or a `\n`-only blast) makes millions of `record()` calls, and the flush timer can't
+// fire until that turn yields. That balloons the batch and OOMs the standard-1 container. The
+// per-line byte cap (MAX_PARTIAL_LINE_CHARS) bounds one line's size but not the count of short
+// lines, so this bounds the count too. `record()` evicts the oldest entries once over the cap,
+// keeping the most recent output; the retained PULL history is bounded separately.
 export const MAX_PENDING_LOG_LINES = 10000;
 
-/**
- * Per-response bounds on `GET /logs?since=N`.
- *
- * Without paging, a puller that fell behind a verbose build could be handed
- * MAX_BUFFERED_LOG_LINES entries of MAX_PARTIAL_LINE_CHARS each — well over a
- * gigabyte in one body. The DO aborts that read at LOG_PULL_TIMEOUT_MS and only advances `logCursor`
- * after a SUCCESSFUL parse, so an oversized body is a livelock rather than a slow
- * transfer: every retry asks for the same backlog, is aborted at the same point,
- * and the cursor never moves. Natural exit then burns the drain idle timeout
- * waiting for an ack that cannot arrive, and the tail is lost — the exact failure
- * the drain barrier exists to prevent.
- *
- * Paging avoids this because `lastSeq` reports the last line actually INCLUDED, so
- * each successful batch advances the cursor and the next pull asks for less. One
- * line is always returned even if it alone exceeds the byte cap, or a single
- * oversized line would reintroduce the same stall it is meant to remove.
- */
+// Decision: Per-response bounds on `GET /logs?since=N`.
+//
+// Without paging, a puller that fell behind a verbose build could be handed
+// MAX_BUFFERED_LOG_LINES entries of MAX_PARTIAL_LINE_CHARS each, well over a gigabyte in one
+// body. The DO aborts that read at LOG_PULL_TIMEOUT_MS and only advances `logCursor` after a
+// successful parse, so an oversized body is a livelock: each retry asks for the same backlog,
+// is aborted at the same point, and the cursor doesn't move. Natural exit then burns the drain
+// idle timeout waiting for an ack that can't arrive, and the tail is lost.
+//
+// Paging avoids this because `lastSeq` reports the last line actually included, so each
+// successful batch advances the cursor. One line is returned even if it alone exceeds the byte
+// cap, or a single oversized line would bring back the same stall.
 export const MAX_LOG_RESPONSE_BYTES = 2 * 1024 * 1024;
 export const MAX_LOG_RESPONSE_LINES = 2000;
 
@@ -300,43 +254,29 @@ export const MAX_LOG_RESPONSE_LINES = 2000;
  */
 let pendingLines = [];
 
-/**
- * Backpressure latch for the stderr mirror in `record()`. The in-memory buffers
- * are capped, but `process.stderr.write` ALSO queues in Node's Writable buffer
- * when the sink can't keep up — a flood whose log consumer drains slowly (or not
- * at all) would grow that buffer without bound, moving the same OOM into the
- * stream layer. Set when `write()` signals saturation (returns false), cleared on
- * the next 'drain'; while set, the mirror is skipped. The mirror is best-effort
- * and dropped lines remain in logBuffer (PULL) + pendingLines (PUSH), so skipping
- * it under saturation loses nothing primary.
- */
+// Decision: Backpressure latch for the stderr mirror in `record()`. The in-memory buffers are capped,
+// but `process.stderr.write` also queues in Node's Writable buffer when the sink can't keep
+// up, so a flood with a slow consumer would grow that buffer without bound. Set when
+// `write()` returns false, cleared on the next 'drain'; while set, the mirror is skipped. The
+// mirror is best-effort and the lines stay in logBuffer (PULL) and pendingLines (PUSH), so
+// skipping it loses nothing primary.
 let stderrSaturated = false;
-
-// --- DO endpoints (best-effort push) ----------------------------------------
 
 const DO_LOG_URL = process.env.DO_LOG_URL ?? '';
 const AGENT_TOKEN = process.env.AGENT_TOKEN ?? '';
 
-// Drop these control-plane secrets from the PARENT process's heap env once
-// captured into the module-level consts above. `postToDo` reads the consts (and
-// DO_STATUS_URL, derived from the DO_LOG_URL const below) — NOT process.env — so
-// this is functionally inert for the build. It is defense-in-depth ONLY for the
-// spawn-inheritance path (a child spawned with the parent's `process.env` would
-// otherwise inherit these); `sanitizeChildEnv` is the real control there, since
-// every untrusted child is given a scrubbed COPY anyway.
+// Decision: Drop these control-plane secrets from the parent process's heap env once captured into the
+// module-level consts above. `postToDo` reads the consts (and DO_STATUS_URL, derived from
+// DO_LOG_URL), not process.env, so this doesn't affect the build. It's defense in depth for
+// the spawn-inheritance path only; `sanitizeChildEnv` is the real control there.
 //
-// NOTE: `delete process.env.X` calls `unsetenv()`, which mutates only the in-heap
-// `environ` array; `/proc/<pid>/environ` reflects the initial-stack env block set
-// at `execve` and still returns the original secret. The agent runs as root with
-// no PID isolation, so on its own this delete would NOT stop a child from reading
-// the parent's `/proc/<ppid>/environ`. That vector is closed at the uid boundary
-// Untrusted children run as the non-root BUILDER_UID (childSpawnOptions), so
-// their cross-uid read of the root agent's /proc is denied by the kernel. This
-// delete remains as defense-in-depth for the spawn-inheritance path.
+// `delete process.env.X` calls `unsetenv()`, which changes only the in-heap `environ` array;
+// `/proc/<pid>/environ` still shows the original secret. That vector is closed at the uid
+// boundary: untrusted children run as the non-root BUILDER_UID (childSpawnOptions), so the
+// kernel denies their cross-uid read of the root agent's /proc.
 delete process.env.AGENT_TOKEN;
 delete process.env.DO_LOG_URL;
 
-/** Derive a sibling DO endpoint (e.g. /status) from DO_LOG_URL's origin. */
 function doEndpoint(pathname) {
   if (!DO_LOG_URL) {
     return '';
@@ -366,9 +306,9 @@ async function postToDo(url, body) {
   try {
     /** @type {Record<string, string>} */
     const headers = { 'content-type': 'application/json' };
-    // The DO authenticates control POSTs with the per-build secret. The agent
-    // (parent process) holds AGENT_TOKEN; untrusted repo child processes never
-    // see it (scrubbed by `sanitizeChildEnv`), so they can't authenticate.
+    // Decision: The DO authenticates control POSTs with the per-build secret. The agent (parent process)
+    // holds AGENT_TOKEN; untrusted repo child processes don't see it (scrubbed by
+    // `sanitizeChildEnv`), so they can't authenticate.
     if (AGENT_TOKEN) {
       headers.authorization = `Bearer ${AGENT_TOKEN}`;
     }
@@ -376,21 +316,18 @@ async function postToDo(url, body) {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
-      // Bound a slow/hung DO so the caller (the single-flight log flush) can't
-      // stall indefinitely — see DO_POST_TIMEOUT_MS. AbortError lands in catch.
+      // Decision: Bound a slow or hung DO so the caller (the single-flight log flush) can't stall
+      // indefinitely; see DO_POST_TIMEOUT_MS. AbortError lands in catch.
       signal: AbortSignal.timeout(DO_POST_TIMEOUT_MS),
     });
   } catch {
-    // Best-effort — never throw into the build path.
+    // Decision: Best-effort: don't throw into the build path.
   }
 }
 
-/** Report a build status to the DO (best-effort). */
 async function reportStatus(status) {
   await postToDo(DO_STATUS_URL, { status });
 }
-
-// --- log capture + batched flush ---------------------------------------------
 
 /**
  * Serialized size of one retained entry, in the SAME unit `GET /logs` budgets a
@@ -404,7 +341,7 @@ async function reportStatus(status) {
  * @param {{ seq: number, line: string, stream: string, ts: number }} entry
  */
 function measureEntry(entry) {
-  const bytes = Buffer.byteLength(JSON.stringify(entry)) + 1; // + separator
+  const bytes = Buffer.byteLength(JSON.stringify(entry)) + 1; /* Decision: +1 for the separator. */
   Object.defineProperty(entry, 'bytes', { value: bytes, enumerable: false });
   return bytes;
 }
@@ -422,21 +359,19 @@ export function record(line, stream, lineEnding) {
   const entry = { seq: logSeq, line, stream, ts, ...(lineEnding ? { lineEnding } : {}) };
   logBuffer.push(entry);
   bufferedBytes += measureEntry(entry);
-  // Bound the retained history (see MAX_BUFFERED_LOG_LINES): once over the cap,
-  // drop the oldest fifth in one splice so eviction is amortized O(1) per line —
-  // a per-line front-shift would be O(n^2) over a long, verbose build.
+  // Decision: Bound the retained history (see MAX_BUFFERED_LOG_LINES): once over the cap, drop the oldest
+  // fifth in one splice so eviction is amortized O(1) per line. A per-line front-shift would be
+  // O(n^2) over a long, verbose build.
   if (logBuffer.length > MAX_BUFFERED_LOG_LINES) {
     for (const evicted of logBuffer.splice(0, Math.ceil(MAX_BUFFERED_LOG_LINES / 5))) {
       bufferedBytes -= evicted.bytes;
     }
   }
-  // And by SERIALIZED SIZE (see MAX_BUFFERED_LOG_BYTES) — the line cap bounds the
-  // count only, so a run of MAX_PARTIAL_LINE_CHARS lines sits ~1.22 GiB under it.
-  // Trims to a LOW-WATER MARK, not to the cap exactly, for the same reason the
-  // eviction above drops a fifth at a time: landing on the cap means the very
-  // next big line evicts again, so the cost stops being amortized. One splice,
-  // since a repeated shift() is O(n) each. Always keeps the newest line, even
-  // when it alone exceeds the cap.
+  // Decision: Also bound by serialized size (see MAX_BUFFERED_LOG_BYTES): the line cap bounds the count
+  // only. Trims to a low-water mark, not to the cap exactly, for the same reason the eviction
+  // above drops a fifth at a time: landing on the cap means the next big line evicts again, so
+  // the cost stops being amortized. One splice, since a repeated shift() is O(n) each. Keeps the
+  // newest line, even when it alone exceeds the cap.
   if (bufferedBytes > MAX_BUFFERED_LOG_BYTES) {
     const target = Math.floor(MAX_BUFFERED_LOG_BYTES * 0.8);
     let drop = 0;
@@ -449,19 +384,16 @@ export function record(line, stream, lineEnding) {
     bufferedBytes -= freed;
   }
   pendingLines.push({ line, stream, ts, ...(lineEnding ? { lineEnding } : {}) });
-  // Bound the unflushed PUSH batch the same way as logBuffer (see
-  // MAX_PENDING_LOG_LINES): a flood can fill it faster than LOG_FLUSH_MS drains,
-  // so evict the oldest fifth in one splice once over the cap — amortized O(1)
-  // per line, keeping the most-recent output.
+  // Decision: Bound the unflushed PUSH batch the same way as logBuffer (see MAX_PENDING_LOG_LINES): a
+  // flood can fill it faster than LOG_FLUSH_MS drains, so evict the oldest fifth in one splice
+  // once over the cap, keeping the most recent output.
   if (pendingLines.length > MAX_PENDING_LOG_LINES) {
     pendingLines.splice(0, Math.ceil(MAX_PENDING_LOG_LINES / 5));
   }
-  // Also mirror to the container's own stderr. This is the last-resort log
-  // path: if DO push transport is unavailable and the DO never PULLs, the
-  // build output is still visible in the container's runtime logs. Respect
-  // backpressure (see stderrSaturated): once write() reports the sink is full,
-  // skip mirroring until 'drain' so a flood with a slow consumer can't grow the
-  // Writable's internal buffer without bound.
+  // Decision: Also mirror to the container's own stderr. This is the last-resort log path: if DO push
+  // transport is unavailable and the DO doesn't pull, the build output is still in the
+  // container's runtime logs. Respect backpressure (see stderrSaturated) so a flood with a slow
+  // consumer can't grow the Writable's internal buffer without bound.
   if (!stderrSaturated && !process.stderr.write(`${line}\n`)) {
     stderrSaturated = true;
     process.stderr.once('drain', () => {
@@ -470,33 +402,27 @@ export function record(line, stream, lineEnding) {
   }
 }
 
-/** Agent-originated line (not from the child) — surfaced on both streams' UI. */
 function agentLog(line) {
   record(`[build-agent] ${line}`, 'stdout', 'crlf');
 }
 
-/**
- * Test-only: drop the retained PULL buffer. `logBuffer` is module state shared by
- * every test in the file, and the byte cap trims from the FRONT, so a test that
- * fills the ring shifts the indices a later `getBufferedLogLines().slice(before)`
- * depends on. Call this after any test that deliberately saturates it.
- */
+// Decision: Test-only: drop the retained PULL buffer. `logBuffer` is module state shared by each test in
+// the file, and the byte cap trims from the front, so a test that fills the ring shifts the
+// indices a later `getBufferedLogLines().slice(before)` depends on. Call this after any test
+// that deliberately saturates it.
 export function clearBufferedLogLines() {
   logBuffer.length = 0;
   bufferedBytes = 0;
 }
 
-/** Test-only: snapshot of the retained PULL buffer (bounded by MAX_BUFFERED_LOG_LINES). */
 export function getBufferedLogLines() {
   return logBuffer.slice();
 }
 
-/** Test-only: current length of the unflushed PUSH batch (bounded by MAX_PENDING_LOG_LINES). */
 export function getPendingLogLineCount() {
   return pendingLines.length;
 }
 
-/** In-flight flush promise, or null when idle. See flushLogs. */
 let flushInFlight = null;
 
 /**
@@ -529,17 +455,13 @@ export function flushLogs() {
   return flushInFlight;
 }
 
-/**
- * Per-line character cap for `pipeStream`. A producer that writes a very long
- * run with no line terminator (a `\n`-free blob, or a pure-`\r` progress stream)
- * would otherwise grow the partial-line buffer until it OOMs the standard-1
- * container on an otherwise-valid build. A line over this length is recorded
- * truncated (and the rest of that one line is dropped until its terminator), so
- * a single terminator-free run yields ONE bounded record — not the whole run.
- */
+// Decision: Per-line character cap for `pipeStream`. A producer that writes a very long run with no
+// line terminator (an LF-free blob, or a pure-CR progress stream) would otherwise grow the
+// partial-line buffer until it OOMs the standard-1 container on a valid build. A line over
+// this length is recorded truncated (and the rest of that line is dropped until its
+// terminator), so a single terminator-free run yields one bounded record.
 export const MAX_PARTIAL_LINE_CHARS = 128 * 1024;
 
-/** Appended to a line that exceeded MAX_PARTIAL_LINE_CHARS and was cut short. */
 const LINE_TRUNCATION_MARKER = ' …[line truncated]';
 
 /**
@@ -561,11 +483,10 @@ const LINE_TRUNCATION_MARKER = ' …[line truncated]';
  * @param {'stdout' | 'stderr'} stream
  */
 export function pipeStream(source, stream) {
-  let tail = ''; // current unterminated line; never holds a trailing CR
-  let pendingCr = false; // a CR at the prior chunk seam; classification needs one-byte lookahead
-  let dropping = false; // truncated an over-cap line — drop bytes until its terminator
+  let tail = ''; /* Decision: Current unterminated line; never holds a trailing CR. */
+  let pendingCr = false; /* Decision: A CR at the prior chunk seam; classification needs one-byte lookahead. */
+  let dropping = false; /* Decision: Truncated an over-cap line: drop bytes until its terminator. */
 
-  /** Record `line`, truncated if it exceeds the per-line cap. */
   const recordLine = (line, lineEnding) => {
     record(
       line.length > MAX_PARTIAL_LINE_CHARS
@@ -576,14 +497,12 @@ export function pipeStream(source, stream) {
     );
   };
 
-  /** Finish the bounded current row with its exact delimiter. */
   const finishLine = (lineEnding) => {
     recordLine(tail, lineEnding);
     tail = '';
     dropping = false;
   };
 
-  /** Append data while retaining at most one capped row until its delimiter. */
   const appendToTail = (text) => {
     if (dropping) {
       return;
@@ -599,9 +518,8 @@ export function pipeStream(source, stream) {
   source.on('data', (chunk) => {
     const n = chunk.length;
     let i = 0;
-    // A CR at a chunk seam is the one ambiguous case: wait for the next byte so
-    // torn CRLF is not misreported as a bare-CR rewrite. Same-chunk CR frames
-    // still flush synchronously.
+    // Decision: A CR at a chunk seam is the one ambiguous case: wait for the next byte so a torn CRLF isn't
+    // misreported as a bare-CR rewrite. Same-chunk CR frames still flush synchronously.
     if (pendingCr && n > 0) {
       pendingCr = false;
       if (chunk[0] === '\n') {
@@ -612,7 +530,6 @@ export function pipeStream(source, stream) {
       }
     }
     while (i < n) {
-      // Scan to the next CR or LF delimiter.
       let j = i;
       while (j < n && chunk[j] !== '\n' && chunk[j] !== '\r') {
         j += 1;
@@ -633,7 +550,6 @@ export function pipeStream(source, stream) {
           i = j + 1;
         }
       } else {
-        // No delimiter to end of chunk — extend the partial line.
         appendToTail(chunk.slice(i, n));
         i = n;
       }
@@ -650,51 +566,34 @@ export function pipeStream(source, stream) {
   });
 }
 
-// --- HTTP control server -----------------------------------------------------
-// GET /            -> 200 health (DO readiness probe)
-// GET /logs?since= -> buffered lines with seq > since (PULL fallback)
-// POST /cancel     -> set cancel flag + SIGTERM the active build child
-
-/**
- * Highest `lastSeq` this agent has actually SERVED on `GET /logs`. Diagnostic
- * only — it says the bytes left this process, NOT that the DO stored them, so
- * the exit barrier must not trust it. See `ackedLogSeq`.
- */
+// Decision: Highest `lastSeq` this agent has actually served on `GET /logs`. Diagnostic only: it says
+// the bytes left this process, not that the DO stored them, so the exit barrier mustn't trust
+// it. See `ackedLogSeq`.
 let servedLogSeq = 0;
 
-/** Test-only: the `lastSeq` high-water mark handed to the DO's `GET /logs` puller. */
 export function getServedLogSeq() {
   return servedLogSeq;
 }
 
-/**
- * Highest `since` cursor the DO has ever SENT US, which is the only sound
- * acknowledgement available and is what the exit barrier waits on.
- *
- * The DO advances its `logCursor` strictly AFTER a successful `res.json()` and a
- * successful `ingestLines()` (`build-manager.ts` `runLogPull`), and every pull
- * URL is built from that cursor. So a request carrying `since=N` proves every
- * line up to N is already INSERTed in the DO's `logs` table. Any failure on the
- * DO side — unparseable body, SQLite throw, aborted read — leaves the cursor
- * where it was, so the next request repeats the old `since` and we keep waiting;
- * the lines get re-delivered instead of dying with the container.
- *
- * `servedLogSeq` cannot do this job, and the reason is easy to miss: `res.end`'s
- * completion callback means "this process finished writing the message", not
- * "the peer received it". Measured on Node 24 — a client that hangs up without
- * reading a single byte still fires that callback with NO error, for bodies from
- * a few bytes to 8MB. Stamping the barrier there certified the wrong side of the
- * transport: it proved the agent handed bytes to its own kernel, while the whole
- * point of the barrier is that the DO has the tail.
- *
- * No off-by-one: the agent serves `lastSeq = logSeq` and lines with `seq > since`,
- * and the DO stores `logCursor = max(cursor, lastSeq)` verbatim — so after
- * ingesting through N the next request is `since=N`, and `acked >= recorded` is
- * the exact release condition.
- */
+// Decision: Highest `since` cursor the DO has sent us. It's the only sound acknowledgement available,
+// and it's what the exit barrier waits on.
+//
+// The DO advances its `logCursor` only after a successful `res.json()` and `ingestLines()`
+// (`build-manager.ts` `runLogPull`), and each pull URL is built from that cursor. So a request
+// carrying `since=N` proves each line up to N is already stored in the DO's `logs` table. Any
+// failure on the DO side leaves the cursor where it was, so the next request repeats the old
+// `since` and the lines get re-delivered instead of dying with the container.
+//
+// `servedLogSeq` can't do this job: `res.end`'s completion callback means "this process
+// finished writing the message", not "the peer received it". Measured on Node 24, a client
+// that hangs up without reading a byte still fires that callback with no error, for bodies
+// from a few bytes to 8MB.
+//
+// No off-by-one: the agent serves `lastSeq = logSeq` and lines with `seq > since`, and the DO
+// stores `logCursor = max(cursor, lastSeq)` verbatim, so after ingesting through N the next
+// request is `since=N`, and `acked >= recorded` is the exact release condition.
 let ackedLogSeq = 0;
 
-/** Test-only: the highest `since` cursor the DO's puller has acknowledged. */
 export function getAckedLogSeq() {
   return ackedLogSeq;
 }
@@ -718,50 +617,40 @@ export function startControlServer(port = PORT) {
 
     if (req.method === 'GET' && url.pathname === '/logs') {
       const since = Number.parseInt(url.searchParams.get('since') ?? '0', 10) || 0;
-      // Snapshot the cursor ONCE so the body, the ack clamp and the served
-      // high-water mark can never disagree (they are read in the same synchronous
-      // turn, but a single read makes that invariant explicit rather than
-      // incidental).
+      // Decision: Snapshot the cursor once so the body, the ack clamp and the served high-water mark can't
+      // disagree. They're read in the same synchronous turn, but a single read makes that invariant
+      // explicit.
       const lastSeq = logSeq;
-      // The ACK, stamped synchronously at receipt: this cursor exists only because
-      // the DO already ingested everything below it (see `ackedLogSeq`). Monotonic,
-      // so an out-of-order or replayed request can never walk it backwards.
+      // Decision: The ack, stamped synchronously at receipt: this cursor exists only because the DO already
+      // ingested everything below it (see `ackedLogSeq`). Monotonic, so an out-of-order or replayed
+      // request can't walk it backwards.
       //
-      // CLAMPED to lines actually recorded. This server is unauthenticated and
-      // binds all interfaces on a fixed port, and the untrusted build children run
-      // in the same network namespace — so `since` is attacker-reachable. Unclamped,
-      // ONE forged `?since=2**53` would mark every FUTURE line acked and release the
-      // exit barrier permanently, which is the tail loss this barrier exists to
-      // prevent. For the real DO this is a no-op: its cursor is always a previously
-      // served `lastSeq` and `logSeq` only grows, so `since <= lastSeq` always holds.
-      // The clamp restores the invariant `ackedLogSeq <= logSeq at some past moment`,
-      // which forces a forger back to holding a request loop open through exit
-      // instead of firing one request — the same cost it faced before the ack
-      // existed. Closing that remaining loop needs the pull authenticated (the DO
-      // already mints a per-build `AGENT_TOKEN`); left out here deliberately, since
-      // the forger is the build's own code, it can only suppress its own log tail,
-      // and the build OUTCOME comes from the container exit code, not the logs.
+      // Clamped to lines actually recorded. This server is unauthenticated and binds all interfaces
+      // on a fixed port, and the untrusted build children run in the same network namespace, so
+      // `since` is attacker-reachable. Unclamped, one forged `?since=2**53` would mark each future
+      // line acked and release the exit barrier permanently. For the real DO this is a no-op: its
+      // cursor is a previously served `lastSeq` and `logSeq` only grows. The clamp forces a forger
+      // to hold a request loop open through exit instead of firing one request. Closing that loop
+      // needs the pull authenticated (the DO already mints a per-build `AGENT_TOKEN`); left out on
+      // purpose, since the forger is the build's own code, it can only suppress its own log tail,
+      // and the build outcome comes from the container exit code, not the logs.
       ackedLogSeq = Math.max(ackedLogSeq, Math.min(since, lastSeq));
-      // PAGED — see MAX_LOG_RESPONSE_BYTES. `servedSeq` is the last line actually
-      // included, NOT the global high-water mark, so the puller's cursor advances
-      // exactly as far as this body carries it and the remainder arrives next tick.
+      // Decision: Paged; see MAX_LOG_RESPONSE_BYTES. `servedSeq` is the last line actually included, not the
+      // global high-water mark, so the puller's cursor advances exactly as far as this body carries
+      // it and the rest arrives next tick.
       const lines = [];
       let responseBytes = 0;
       for (const entry of logBuffer) {
         if (entry.seq <= since) {
           continue;
         }
-        // Budget the SERIALIZED entry, not `entry.line.length`. That length is
-        // UTF-16 code units of the raw string, which is not what goes on the
-        // wire: JSON escaping turns one control character into six bytes
-        // (NUL U+0000), a BMP CJK code unit is three UTF-8 bytes, and each entry
-        // carries ~61 bytes of `seq`/`stream`/`ts` envelope. Counting code units
-        // under-counted the body by up to 6x — a full page of NUL-filled lines
-        // measured 12.1 MiB against a 2 MiB cap — and overran it by 6% even on
-        // plain ASCII. That matters because the DO advances `logCursor` only
-        // after a successful parse, so a body too large to read inside
-        // LOG_PULL_TIMEOUT_MS is a livelock, not a slow transfer: every retry
-        // asks for the same backlog and the cursor never moves.
+        // Decision: Budget the serialized entry, not `entry.line.length`. That length is UTF-16 code units of
+        // the raw string, which isn't what goes on the wire: JSON escaping turns one control character
+        // into six bytes, a BMP CJK code unit is three UTF-8 bytes, and each entry carries about 61
+        // bytes of `seq`/`stream`/`ts` envelope. Counting code units under-counted the body by up to
+        // 6x. That matters because the DO advances `logCursor` only after a successful parse, so a
+        // body too large to read inside LOG_PULL_TIMEOUT_MS is a livelock: each retry asks for the
+        // same backlog and the cursor doesn't move.
         const entryBytes = entry.bytes;
         if (
           lines.length > 0 &&
@@ -774,18 +663,16 @@ export function startControlServer(port = PORT) {
         responseBytes += entryBytes;
       }
       const servedSeq = lines.length > 0 ? lines[lines.length - 1].seq : lastSeq;
-      // Explicit, because the puller cannot infer it: it does not know our caps,
-      // and a page that happens to land exactly on one is indistinguishable from
-      // the last page. Without it the puller waits a full tick per page, and the
-      // exit barrier's idle deadline resets only when the acknowledged cursor
-      // advances, so `hasMore` lets productive pagination continue across
-      // scheduled callbacks without turning a dead peer into an unbounded wait.
+      // Decision: Explicit, because the puller can't infer it: it doesn't know our caps, and a page that
+      // lands exactly on one looks like the last page. Without it the puller waits a full tick per
+      // page, and the exit barrier's idle deadline resets only when the acknowledged cursor
+      // advances, so `hasMore` lets productive pagination continue across scheduled callbacks
+      // without turning a dead peer into an unbounded wait.
       const hasMore = logBuffer.some((entry) => entry.seq > servedSeq);
       res.writeHead(200, { 'content-type': 'application/json' });
-      // Stamped from `end`'s completion callback so it at least reflects a message
-      // this process finished writing rather than one merely queued. Diagnostic
-      // only — the callback does NOT prove the response reached the DO, which is
-      // why the exit barrier waits on `ackedLogSeq` instead.
+      // Decision: Stamped from `end`'s completion callback so it at least reflects a message this process
+      // finished writing rather than one merely queued. Diagnostic only: the callback doesn't prove
+      // the response reached the DO, which is why the exit barrier waits on `ackedLogSeq` instead.
       res.end(JSON.stringify({ lines, lastSeq: servedSeq, hasMore }), () => {
         servedLogSeq = Math.max(servedLogSeq, servedSeq);
       });
@@ -799,7 +686,7 @@ export function startControlServer(port = PORT) {
         try {
           activeChild.kill('SIGTERM');
         } catch {
-          // already gone
+          // Decision: The child already exited.
         }
       }
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -816,26 +703,21 @@ export function startControlServer(port = PORT) {
   });
 }
 
-/**
- * Exit-time drain barrier: how long the agent will hold the container open
- * waiting for the DO's pull-loop to catch up, and how often it re-checks.
- *
- * The DO polls `GET /logs` on a ~1s cadence and one paginated callback may spend
- * its full 4s wall-clock budget. The puller normally sends the final ACK inside
- * that callback, but a callback that expires with `hasMore` must re-arm before it
- * can fetch the unread page and acknowledge it. A deep ring can require several
- * productive callbacks, so one fixed short deadline still loses the tail. Reset
- * the 8s IDLE deadline only when the acknowledged cursor advances, while a 120s
- * ABSOLUTE cap bounds even a peer that keeps making partial progress forever.
- *
- * It MUST stay bounded: a dead, wedged, or already-terminal DO will never
- * acknowledge anything, and an unbounded wait would pin one of the fleet's global
- * container slots on every such build. One path always runs to the idle deadline —
- * `onError` writes a terminal status without force-stopping, so `pollLogs` takes
- * its non-re-arming terminal branch and the last tail it pulled is never acked.
- * That costs a container slot for `idleTimeoutMs` on a container that is already
- * failing, which is the right side of the trade against losing its logs.
- */
+// Decision: Exit-time drain barrier: how long the agent holds the container open waiting for the DO's
+// pull-loop to catch up, and how often it re-checks.
+//
+// The DO polls `GET /logs` about once a second and one paginated callback may spend its full
+// 4s wall-clock budget. A callback that expires with `hasMore` has to re-arm before it can
+// fetch the unread page and acknowledge it, and a deep ring can need several callbacks. So
+// reset the 8s idle deadline only when the acknowledged cursor advances, while a 120s absolute
+// cap bounds even a peer that keeps making partial progress.
+//
+// It has to stay bounded: a dead, wedged or already-terminal DO won't acknowledge anything,
+// and an unbounded wait would pin one of the fleet's global container slots on each such
+// build. One path runs to the idle deadline: `onError` writes a terminal status without
+// force-stopping, so `pollLogs` takes its non-re-arming terminal branch and the last tail it
+// pulled is never acked. That costs a slot for `idleTimeoutMs` on a container that's already
+// failing, which is the right side of the trade against losing its logs.
 export const LOG_DRAIN_IDLE_TIMEOUT_MS = 8000;
 export const LOG_DRAIN_ABSOLUTE_TIMEOUT_MS = 120000;
 export const LOG_DRAIN_POLL_MS = 100;
@@ -887,9 +769,8 @@ export async function waitForLogDrain(options = {}) {
     timeoutMs = LOG_DRAIN_ABSOLUTE_TIMEOUT_MS,
     idleTimeoutMs = Math.min(LOG_DRAIN_IDLE_TIMEOUT_MS, timeoutMs),
     pollMs = LOG_DRAIN_POLL_MS,
-    // Named `served` for the injection sites; the DEFAULT is deliberately the
-    // acked cursor. Anything wired to the served mark would certify the wrong
-    // side of the transport.
+    // Decision: Named `served` for the injection sites; the default is deliberately the acked cursor.
+    // Anything wired to the served mark would certify the wrong side of the transport.
     served = getAckedLogSeq,
     recorded = () => logSeq,
     sleep = sleepMs,
@@ -968,21 +849,18 @@ export function closeControlServer(server) {
  * @returns {Promise<void>}
  */
 export async function finishBuildLogging(server, drainOptions) {
-  // Drain barrier BEFORE the server closes: the DO PULLs logs from this server on
-  // a ~1s cadence and can no longer reach it once the container is gone, so
-  // everything recorded since its last poll — the failing build's actual error
-  // output and the final `bwf deploy exited with code N` — would be lost.
-  // Bounded by idle + absolute deadlines so an absent/dead DO can't pin the slot.
+  // Decision: Drain barrier before the server closes: the DO pulls logs from this server about once a
+  // second and can't reach it once the container is gone, so everything recorded since its last
+  // poll (the failing build's actual error output and the final `bwf deploy exited with code N`)
+  // would be lost. Bounded by idle and absolute deadlines so an absent or dead DO can't pin the
+  // slot.
   await waitForLogDrain(drainOptions);
-  // Close the control server unconditionally: its open listening socket would
-  // otherwise keep the Node event loop alive after the build resolves, so the
-  // container would never reach `process.exit` and would leak a build slot until
-  // the DO's `sleepAfter` ceiling (or, for unlimited plans with no timeout alarm,
-  // far longer).
+  // Decision: Close the control server unconditionally: its open listening socket would otherwise keep
+  // the Node event loop alive after the build resolves, so the container would never reach
+  // `process.exit` and would leak a build slot until the DO's `sleepAfter` ceiling (or, for
+  // unlimited plans with no timeout alarm, far longer).
   await closeControlServer(server);
 }
-
-// --- source download ---------------------------------------------------------
 
 /**
  * Tag an error with whether another attempt could plausibly succeed. The retry
@@ -997,8 +875,8 @@ function sourceError(message, retryable, retryAfterMs = null) {
     new Error(message)
   );
   err.retryable = retryable;
-  // A server-directed delay (GitHub's `retry-after` / `x-ratelimit-reset`). Null
-  // means "use the caller's fixed backoff".
+  // Decision: A server-directed delay (GitHub's `retry-after` / `x-ratelimit-reset`). Null means "use
+  // the caller's fixed backoff".
   err.retryAfterMs = retryAfterMs;
   return err;
 }
@@ -1011,16 +889,14 @@ function sourceError(message, retryable, retryAfterMs = null) {
  * @param {{ get(name: string): string | null } | undefined | null} headers
  * @param {number} now
  */
-/**
- * GitHub's secondary-limit wording. Matched against a BOUNDED prefix of the error
- * body, never the whole response.
- */
+// Decision: GitHub's secondary-limit wording. Matched against a bounded prefix of the error body, not
+// the whole response.
 export const SECONDARY_RATE_LIMIT_PATTERN = /secondary rate limit|abuse detection/i;
 
-/** Bytes of a 403 body read to look for that wording. Error bodies are tiny JSON. */
+// Decision: Bytes of a 403 body read to look for that wording. Error bodies are tiny JSON.
 export const ERROR_BODY_SNIFF_BYTES = 2048;
 
-/** Fallback wait for a rate limit that names no delay (GitHub advises >= 60s). */
+// Decision: Fallback wait for a rate limit that names no delay (GitHub advises >= 60s).
 export const SECONDARY_RATE_LIMIT_DELAY_MS = 60000;
 
 export function parseRetryAfterMs(headers, now = Date.now()) {
@@ -1038,10 +914,10 @@ export function parseRetryAfterMs(headers, now = Date.now()) {
       return Math.max(0, at - now);
     }
   }
-  // ONLY when the quota is actually spent. GitHub returns `x-ratelimit-reset` on
-  // EVERY response, so honouring it unconditionally turns an ordinary retryable
-  // 500 into a fatal one: the routine reset can be an hour out, and a backoff that
-  // long never fits the phase budget, so the loop breaks instead of retrying.
+  // Decision: Only when the quota is actually spent. GitHub returns `x-ratelimit-reset` on each response,
+  // so honoring it unconditionally turns an ordinary retryable 500 into a fatal one: the routine
+  // reset can be an hour out, and a backoff that long doesn't fit the phase budget, so the loop
+  // breaks instead of retrying.
   if (headers.get('x-ratelimit-remaining') !== '0') {
     return null;
   }
@@ -1076,13 +952,13 @@ export function isRetryableSourceStatus(status, headers = null, body = '') {
       return true;
     }
   }
-  // A SECONDARY rate limit can arrive with neither header — GitHub documents it
-  // as a 403 (or 429) whose body names the limit. Without this, a burst of
-  // concurrent builds against one installation fails outright on the first try.
+  // Decision: A secondary rate limit can arrive with neither header: GitHub documents it as a 403 (or
+  // 429) whose body names the limit. Without this, a burst of concurrent builds against one
+  // installation fails outright on the first try.
   return SECONDARY_RATE_LIMIT_PATTERN.test(body);
 }
 
-/** `headers.get`, tolerant of the plain objects the unit tests hand in. */
+// Decision: `headers.get`, tolerant of the plain objects the unit tests hand in.
 function headerValue(headers, name) {
   return headers && typeof headers.get === 'function' ? headers.get(name) : null;
 }
@@ -1100,7 +976,7 @@ async function discardBody(res) {
   try {
     await body.cancel();
   } catch {
-    // Already errored or closed; nothing to release.
+    // Decision: Already errored or closed; nothing to release.
   }
 }
 
@@ -1125,44 +1001,39 @@ async function readErrorSnippet(res) {
       if (done) {
         break;
       }
-      // Slice BEFORE decoding. Bounding the loop on the accumulated result is not
-      // the same as bounding the work: one chunk can be arbitrarily large, and
-      // decoding it whole would materialize the entire body before the next
-      // length check ever runs.
+      // Decision: Slice before decoding. Bounding the loop on the accumulated result isn't the same as
+      // bounding the work: one chunk can be arbitrarily large, and decoding it whole would
+      // materialize the whole body before the next length check runs.
       const take = value.subarray(0, ERROR_BODY_SNIFF_BYTES - bytes);
       bytes += take.length;
       out += decoder.decode(take, { stream: true });
     }
   } catch {
-    // A truncated or broken error body tells us nothing; treat it as empty.
+    // Decision: A truncated or broken error body tells us nothing; treat it as empty.
   } finally {
     try {
       await reader.cancel();
     } catch {
-      // already closed
+      // Decision: Already closed.
     }
   }
   return out;
 }
 
-/**
- * Wipe and recreate WORK_DIR. A retry MUST start from an empty tree: a stalled
- * attempt leaves a partially extracted archive behind, and `tar` would happily
- * extract the second attempt's copy on top of it, leaving a mix of both.
- *
- * Scoped to WORK_DIR (`/tmp/build/src`) and nothing else.
- */
+// Decision: Wipe and recreate WORK_DIR. A retry has to start from an empty tree: a stalled attempt
+// leaves a partially extracted archive behind, and `tar` would extract the second attempt's
+// copy on top of it, leaving a mix of both.
+//
+// Scoped to WORK_DIR (`/tmp/build/src`) and nothing else.
 async function resetWorkDirTree() {
-  // ASYNC, not `rmSync`. This agent is PID 1: a synchronous recursive delete of a
-  // large partial tree blocks the stall watchdog, the HTTP control server (so
-  // /cancel and the DO's log pull both stop answering) and the event loop itself
-  // for as long as it runs. It also sits on the timed path, so it must not be able
-  // to push the phase budget past its ceiling unobserved.
+  // Decision: Async, not `rmSync`. This agent is PID 1: a synchronous recursive delete of a large partial
+  // tree blocks the stall watchdog, the HTTP control server (so /cancel and the DO's log pull
+  // both stop answering) and the event loop itself for as long as it runs. It also sits on the
+  // timed path, so it mustn't be able to push the phase budget past its ceiling unobserved.
   await rm(WORK_DIR, { recursive: true, force: true });
   mkdirSync(WORK_DIR, { recursive: true });
 }
 
-/** Render a byte count for a log line. Whole units — this is progress, not telemetry. */
 function formatBytes(bytes) {
   if (bytes >= 1024 * 1024) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -1173,16 +1044,12 @@ function formatBytes(bytes) {
   return `${Math.round(bytes)} B`;
 }
 
-/**
- * Render a duration for a log line. Sub-second values stay in milliseconds:
- * rounding them to seconds prints "0s", which reads as a bug in the very message
- * that is supposed to explain a failure.
- */
+// Decision: Sub-second values stay in milliseconds: rounding them to seconds prints "0s", which reads
+// as a bug in the very message that's supposed to explain a failure.
 function formatDuration(ms) {
   return ms < 1000 ? `${Math.round(ms)}ms` : `${Math.round(ms / 1000)}s`;
 }
 
-/** Average transfer rate over an elapsed span, rendered as bytes-per-second. */
 function formatRate(bytes, elapsedMs) {
   return `${formatBytes((bytes * 1000) / Math.max(1, elapsedMs))}/s`;
 }
@@ -1207,10 +1074,10 @@ export function extractTarball(body, options = {}) {
   const {
     onBytes = () => {},
     signal,
-    // Seams for the child-lifecycle test. A real `tar` reacts to SIGTERM far too
-    // promptly to prove that this promise waits for 'close' rather than settling
-    // on the pipeline's rejection, so the test supplies a child that deliberately
-    // stays alive. Production always uses the real spawn and grace.
+    // Decision: Seams for the child-lifecycle test. A real `tar` reacts to SIGTERM too promptly to prove
+    // that this promise waits for 'close' rather than settling on the pipeline's rejection, so the
+    // test supplies a child that deliberately stays alive. Production uses the real spawn and
+    // grace.
     spawnImpl = spawn,
     killGraceMs = EXTRACT_KILL_GRACE_MS,
   } = options;
@@ -1218,20 +1085,19 @@ export function extractTarball(body, options = {}) {
     const tar = spawnImpl('tar', ['xz', '--strip-components=1', '-C', WORK_DIR], {
       stdio: ['pipe', 'inherit', 'pipe'],
     });
-    // Track the extraction child as the cancel target, mirroring runChild, so a
-    // /cancel (or PID-1 SIGTERM) stops a large download promptly: killing tar
-    // closes its stdin, so the `pipeline` below rejects and destroys the source
-    // web stream — which also aborts the in-flight fetch body pull.
+    // Decision: Track the extraction child as the cancel target, mirroring runChild, so a /cancel (or PID-1
+    // SIGTERM) stops a large download promptly: killing tar closes its stdin, so the `pipeline`
+    // below rejects and destroys the source web stream, which also aborts the in-flight fetch
+    // body pull.
     activeChild = tar;
 
-    /** First failure seen. The promise still settles from 'close', never before. */
+    // Decision: First failure seen. The promise still settles from 'close', not before.
     let settleError = null;
     /** @type {NodeJS.Timeout | undefined} */
     let killTimer;
 
-    // SIGTERM, then SIGKILL if the child ignores it. Without the escalation a
-    // wedged `tar` would hold this promise — and therefore the retry loop and the
-    // phase budget — open indefinitely.
+    // Decision: SIGTERM, then SIGKILL if the child ignores it. Without the escalation a wedged `tar` would
+    // hold this promise, and so the retry loop and the phase budget, open indefinitely.
     const stopTar = () => {
       if (tar.exitCode !== null || tar.signalCode !== null) {
         return;
@@ -1239,14 +1105,14 @@ export function extractTarball(body, options = {}) {
       try {
         tar.kill('SIGTERM');
       } catch {
-        // already gone
+        // Decision: The child already exited.
       }
       if (!killTimer) {
         killTimer = setTimeout(() => {
           try {
             tar.kill('SIGKILL');
           } catch {
-            // already gone
+            // Decision: The child already exited.
           }
         }, killGraceMs);
         killTimer.unref?.();
@@ -1260,22 +1126,22 @@ export function extractTarball(body, options = {}) {
       stopTar();
     };
 
-    // Aborting the fetch errors the body stream, which `pipeline` already turns
-    // into a rejection — but only once the stream notices. Killing `tar` directly
-    // makes the stall guard authoritative instead of dependent on how promptly a
-    // half-dead socket reports itself, and it releases the child either way.
+    // Decision: Aborting the fetch errors the body stream, which `pipeline` turns into a rejection, but
+    // only once the stream notices. Killing `tar` directly makes the stall guard authoritative
+    // instead of dependent on how promptly a half-dead socket reports itself, and it releases the
+    // child either way.
     signal?.addEventListener('abort', () => fail(sourceError('extraction aborted', true)), {
       once: true,
     });
     if (cancelled) {
-      // Cancel raced the spawn — terminate immediately.
+      // Decision: Cancel raced the spawn: terminate immediately.
       stopTar();
     }
     pipeStream(/** @type {NodeJS.ReadableStream} */ (tar.stderr), 'stderr');
     tar.on('error', (err) => {
       if (tar.pid === undefined) {
-        // The child never spawned, so 'close' is not guaranteed to arrive. This is
-        // the ONE path allowed to settle without it.
+        // Decision: The child never spawned, so 'close' isn't guaranteed to arrive. This is the one path
+        // allowed to settle without it.
         if (activeChild === tar) {
           activeChild = null;
         }
@@ -1287,9 +1153,9 @@ export function extractTarball(body, options = {}) {
     });
     tar.on('close', (code) => {
       clearTimeout(killTimer);
-      // Clear the cancel target only when it is still OURS. A superseded attempt's
-      // late 'close' must not erase the CURRENT attempt's child — that would make a
-      // subsequent /cancel or PID-1 SIGTERM a silent no-op for a live extraction.
+      // Decision: Clear the cancel target only when it's still ours. A superseded attempt's late 'close'
+      // mustn't erase the current attempt's child, or a later /cancel or PID-1 SIGTERM would be a
+      // silent no-op for a live extraction.
       if (activeChild === tar) {
         activeChild = null;
       }
@@ -1301,23 +1167,20 @@ export function extractTarball(body, options = {}) {
         resolve(undefined);
         return;
       }
-      // Retryable: by far the likeliest cause is a truncated stream, which is
-      // exactly what an aborted or dropped download produces. A genuinely
-      // corrupt archive costs the remaining attempts, and the phase budget
-      // bounds that.
+      // Decision: Retryable: the likeliest cause is a truncated stream, which is what an aborted or dropped
+      // download produces. A truly corrupt archive costs the remaining attempts, and the phase
+      // budget bounds that.
       reject(sourceError(`tar exited with code ${code}`, true));
     });
-    // Use `pipeline` (not a bare `.pipe()`): the source web stream can abort
-    // mid-download, and a bare pipe would emit 'error' on the Readable with no
-    // listener → an uncaughtException that crashes the process WITHOUT the
-    // structured fatal log / final flushLogs.
+    // Decision: Use `pipeline` (not a bare `.pipe()`): the source web stream can abort mid-download, and a
+    // bare pipe would emit 'error' on the Readable with no listener, an uncaughtException that
+    // crashes the process without the structured fatal log and final flushLogs.
     //
-    // A pipeline failure records the error and KILLS the child — it does NOT
-    // settle. Settling here was a real hazard: the promise resolved while `tar`
-    // was still alive and writing, so the retry loop could `rm -rf` WORK_DIR under
-    // a running extraction, and the old child's later 'close' would clear
-    // `activeChild` out from under the new attempt. Waiting for 'close' makes
-    // "attempt finished" mean the child is actually reaped.
+    // A pipeline failure records the error and kills the child; it doesn't settle. Settling here
+    // resolved the promise while `tar` was still writing, so the retry loop could `rm -rf`
+    // WORK_DIR under a running extraction, and the old child's later 'close' would clear
+    // `activeChild` out from under the new attempt. Waiting for 'close' makes "attempt finished"
+    // mean the child is actually reaped.
     pipeline(
       Readable.fromWeb(/** @type {any} */ (body)),
       async function* meter(source) {
@@ -1409,10 +1272,10 @@ export async function downloadSource(options = {}) {
       break;
     }
 
-    // Always from an empty tree — see resetWorkDirTree. Awaited: the reset is real
-    // I/O on the timed path, so the deadline is re-checked AFTER it. Without the
-    // recheck a slow cleanup could hand the next attempt a budget that is already
-    // spent, and the phase would quietly overrun the ceiling it advertises.
+    // Decision: Start from an empty tree; see resetWorkDirTree. Awaited: the reset is real I/O on the timed
+    // path, so the deadline is re-checked after it. Without the recheck a slow cleanup could hand
+    // the next attempt a budget that's already spent, and the phase would quietly overrun its
+    // ceiling.
     await resetWorkDir();
     if (Date.now() >= phaseDeadline) {
       lastError = sourceError(
@@ -1438,22 +1301,22 @@ export async function downloadSource(options = {}) {
       lastError = /** @type {Error & { retryable?: boolean }} */ (
         err instanceof Error ? err : new Error(String(err))
       );
-      // A cancel is not a download failure and must never be retried.
+      // Decision: A cancel isn't a download failure and mustn't be retried.
       if (isCancelled()) {
         throw new Error('build cancelled');
       }
       if (lastError.retryable !== true || attempt >= maxAttempts) {
         break;
       }
-      // A rate-limited server told us when to come back; retrying sooner just
-      // deepens the limit. Anything else uses the fixed backoff.
+      // Decision: A rate-limited server told us when to come back; retrying sooner just deepens the limit.
+      // Anything else uses the fixed backoff.
       const backoff =
         typeof lastError.retryAfterMs === 'number' && lastError.retryAfterMs >= 0
           ? lastError.retryAfterMs
           : (backoffMs[attempt - 1] ?? backoffMs[backoffMs.length - 1] ?? 0);
-      // Don't sleep into the deadline just to be refused at the top of the loop.
-      // This is also what keeps a long `retry-after` from parking the whole build:
-      // a delay that does not fit the phase budget ends the download now.
+      // Decision: Don't sleep into the deadline just to be refused at the top of the loop. This also keeps a
+      // long `retry-after` from parking the whole build: a delay that doesn't fit the phase budget
+      // ends the download now.
       if (Date.now() + backoff >= phaseDeadline) {
         break;
       }
@@ -1501,13 +1364,13 @@ async function downloadSourceAttempt(args) {
   let bytes = 0;
   let lastByteAt = startedAt;
   let lastProgressAt = startedAt;
-  /** Set by whichever watchdog aborted, so the throw below can name the cause. */
+  // Decision: Set by whichever watchdog aborted, so the throw below can name the cause.
   let abortReason = null;
   let abortRetryable = true;
 
-  // ONE repeating watchdog rather than a timer re-armed per chunk: a 20 MB archive
-  // is hundreds of chunks, and this also covers the case where the very first byte
-  // never arrives (lastByteAt starts at the attempt's start).
+  // Decision: One repeating watchdog rather than a timer re-armed per chunk: a 20 MB archive is hundreds
+  // of chunks, and this also covers the case where the first byte never arrives (lastByteAt
+  // starts at the attempt's start).
   const tick = Math.max(1, Math.min(1000, Math.floor(stallTimeoutMs / 4)));
   const watchdog = setInterval(() => {
     const nowMs = Date.now();
@@ -1531,7 +1394,7 @@ async function downloadSourceAttempt(args) {
     const res = await fetchImpl(tarballUrl, {
       headers: {
         authorization: `Bearer ${sourceToken}`,
-        // GitHub codeload follows a redirect from api.github.com; UA keeps it happy.
+        // Decision: GitHub codeload follows a redirect from api.github.com; the UA keeps it happy.
         'user-agent': 'platform-build-agent',
         accept: 'application/vnd.github+json',
       },
@@ -1539,24 +1402,22 @@ async function downloadSourceAttempt(args) {
       signal: controller.signal,
     });
     if (!res.ok) {
-      // Classify from the STATUS LINE AND HEADERS FIRST, before touching the body.
-      // A 429, or a 403 that already carries `retry-after` / `x-ratelimit-remaining:
-      // 0`, is a rate limit on the evidence we already hold — and reading its body
-      // could only lose that: a response whose headers arrived and whose body then
-      // stalls trips the stall watchdog, and the abort would replace a known
-      // `retry-after` with a generic retryable error.
+      // Decision: Classify from the status line and headers first, before touching the body. A 429, or a 403
+      // that already carries `retry-after` / `x-ratelimit-remaining: 0`, is a rate limit on the
+      // evidence we hold, and reading its body could only lose that: a response whose body stalls
+      // trips the stall watchdog, and the abort would replace a known `retry-after` with a generic
+      // retryable error.
       const headerRateLimited =
         res.status === 429 ||
         (res.status === 403 &&
           (headerValue(res.headers, 'retry-after') !== null ||
             headerValue(res.headers, 'x-ratelimit-remaining') === '0'));
-      // ONLY an otherwise-ambiguous 403 is worth a body read: it is the one case
-      // where retryability itself is undecidable from status plus headers.
+      // Decision: Only an otherwise-ambiguous 403 is worth a body read: it's the one case where
+      // retryability can't be decided from status plus headers.
       const snippet = res.status === 403 && !headerRateLimited ? await readErrorSnippet(res) : '';
-      // Release the connection. Nothing downstream reads an error body, and undici
-      // holds the socket open for one that is never consumed OR cancelled — which
-      // on the retry path means the abandoned attempt competes with its own retry
-      // for the pool.
+      // Decision: Release the connection. Nothing downstream reads an error body, and undici holds the socket
+      // open for one that's neither consumed nor cancelled, so on the retry path the abandoned
+      // attempt competes with its own retry for the pool.
       await discardBody(res);
       const retryable = isRetryableSourceStatus(res.status, res.headers, snippet);
       const rateLimited =
@@ -1571,7 +1432,7 @@ async function downloadSourceAttempt(args) {
       throw sourceError('source download failed: empty response body', true);
     }
     if (isCancelled()) {
-      // Cancel landed during the fetch await — don't start extraction at all.
+      // Decision: Cancel landed during the fetch await: don't start extraction at all.
       throw new Error('build cancelled');
     }
 
@@ -1596,32 +1457,28 @@ async function downloadSourceAttempt(args) {
       `source extracted (${formatBytes(bytes)} in ${formatDuration(elapsed)}, ${formatRate(bytes, elapsed)})`,
     );
   } catch (err) {
-    // An abort surfaces as a generic AbortError from fetch or the pipeline, so the
-    // watchdog's reason is the only thing that says WHICH bound was hit.
+    // Decision: An abort surfaces as a generic AbortError from fetch or the pipeline, so the watchdog's
+    // reason is the only thing that says which bound was hit.
     if (abortReason) {
       throw sourceError(`source download aborted: ${abortReason}`, abortRetryable);
     }
-    // A cancel is not a transport failure and must never be retried; the loop's
-    // own `isCancelled()` check owns it. Pass it through untouched.
+    // Decision: A cancel isn't a transport failure and mustn't be retried; the loop's own `isCancelled()`
+    // check owns it. Pass it through untouched.
     if (cancelled) {
       throw err;
     }
-    // Anything already classified (an HTTP status, a non-zero `tar`) keeps its
-    // verdict.
+    // Decision: Anything already classified (an HTTP status, a non-zero `tar`) keeps its verdict.
     if (err instanceof Error && typeof (/** @type {any} */ (err).retryable) === 'boolean') {
       throw err;
     }
-    // Everything else reaching here came off the wire: `fetch` rejecting with
-    // `TypeError: fetch failed`, or the body stream erroring mid-transfer so
-    // `pipeline` rejects. Those are the most ordinary transient failures, so
-    // retry them; `maxAttempts` and the phase budget are what bound it.
+    // Decision: Everything else reaching here came off the wire: `fetch` rejecting with `TypeError: fetch
+    // failed`, or the body stream erroring mid-transfer so `pipeline` rejects. Those are the most
+    // ordinary transient failures, so retry them; `maxAttempts` and the phase budget bound it.
     throw sourceError(err instanceof Error ? err.message : String(err), true);
   } finally {
     clearInterval(watchdog);
   }
 }
-
-// --- dependency install ------------------------------------------------------
 
 /**
  * Read the repo's `package.json#packageManager` pin (e.g. "pnpm@9.1.0"). Returns
@@ -1677,11 +1534,8 @@ function hasYarnrcYarnPath() {
   }
 }
 
-/**
- * Detect the package manager from the lockfile present in WORK_DIR and return
- * the install command + argv. corepack runs pnpm/yarn so the repo's
- * `packageManager` pin is honored; bun and npm run directly.
- */
+// Decision: corepack runs pnpm and yarn so the repo's `packageManager` pin is honored; bun and npm run
+// directly.
 function resolveInstall() {
   if (existsSync(`${WORK_DIR}/pnpm-lock.yaml`)) {
     return { manager: 'pnpm', cmd: 'corepack', args: ['pnpm', 'install', '--frozen-lockfile'] };
@@ -1690,19 +1544,17 @@ function resolveInstall() {
     return { manager: 'bun', cmd: 'bun', args: ['install', '--frozen-lockfile'] };
   }
   if (existsSync(`${WORK_DIR}/yarn.lock`)) {
-    // Yarn Classic (1.x) does NOT recognize Berry's `--immutable` and would
-    // SILENTLY run a MUTABLE install, losing the frozen-lockfile guarantee.
-    // Choose the flag by the Yarn version that will ACTUALLY run:
-    //   - pin `yarn@1.x`              → `--frozen-lockfile` (Classic)
-    //   - pin `yarn@2+`               → `--immutable` (Berry)
-    //   - no pin, `.yarnrc.yml` yarnPath present → Yarn 1.22 re-execs the bundled
-    //     Berry release → `--immutable` (Berry), regardless of lock header.
-    //   - no pin, no yarnPath, Berry `__metadata` lock → corepack's default Yarn
-    //     1.22 (Classic) would run, but it ignores `--immutable` AND cannot parse
-    //     a Berry lock. There is no resolvable Yarn version, so FAIL FAST with
-    //     actionable guidance instead of a confusing mid-install error.
-    //   - no pin otherwise (Classic `# yarn lockfile v1` header / unknown lock)
-    //     → Classic's `--frozen-lockfile`.
+    // Decision: Yarn Classic (1.x) doesn't recognize Berry's `--immutable` and would silently run a mutable
+    // install, losing the frozen-lockfile guarantee. Choose the flag by the Yarn version that will
+    // actually run:
+    // - pin `yarn@1.x`: `--frozen-lockfile` (Classic)
+    // - pin `yarn@2+`: `--immutable` (Berry)
+    // - no pin, `.yarnrc.yml` yarnPath present: Yarn 1.22 re-execs the bundled Berry release, so
+    //   `--immutable` (Berry), whatever the lock header.
+    // - no pin, no yarnPath, Berry `__metadata` lock: corepack's default Yarn 1.22 would run, but
+    //   it ignores `--immutable` and can't parse a Berry lock. There's no resolvable Yarn version,
+    //   so fail fast with actionable guidance instead of a confusing mid-install error.
+    // - no pin otherwise (Classic `# yarn lockfile v1` header or unknown lock): `--frozen-lockfile`.
     const pin = readPackageManagerPin();
     let flag;
     if (/^yarn@1\./.test(pin)) {
@@ -1722,34 +1574,29 @@ function resolveInstall() {
     }
     return { manager: 'yarn', cmd: 'corepack', args: ['yarn', 'install', flag] };
   }
-  // npm: prefer `ci` when a lockfile exists, else plain `install`.
   if (existsSync(`${WORK_DIR}/package-lock.json`)) {
     return { manager: 'npm', cmd: 'npm', args: ['ci'] };
   }
-  // No lockfile. Before defaulting to `npm install` (which would break a pnpm
-  // `workspace:*` repo / install a different graph), honor a `packageManager`
-  // pin if present. No lockfile means no frozen flag.
+  // Decision: No lockfile. Before defaulting to `npm install` (which would break a pnpm `workspace:*` repo
+  // or install a different graph), honor a `packageManager` pin if present. No lockfile means no
+  // frozen flag.
   const pin = readPackageManagerPin();
   if (pin.startsWith('pnpm@')) {
     return { manager: 'pnpm', cmd: 'corepack', args: ['pnpm', 'install'] };
   }
   if (pin.startsWith('yarn@')) {
-    // `--no-immutable` is REQUIRED here, and only here. Yarn Berry >= 3.0.0
-    // defaults `enableImmutableInstalls` to true whenever it smells CI — and
-    // `nonInteractiveEnv()` tells every child `CI=true` — so this branch,
-    // whose entire purpose is to CREATE the missing lockfile, would abort with
-    // `YN0028: The lockfile would have been created by this install, which is
-    // explicitly forbidden`. Measured on Berry 3.0.0 / 3.6.4 / 4.14.1 / 4.18.0;
-    // 2.4.3 predates the default, and Yarn Classic ignores the flag (exit 0,
-    // "Saved lockfile"), which matters because a `yarn@1.x` pin lands here too.
-    // pnpm needs nothing: it drops its implicit CI frozen-lockfile when the
-    // lockfile is ABSENT. Yarn Berry is the outlier.
+    // Decision: `--no-immutable` is required here, and only here. Yarn Berry >= 3.0.0 defaults
+    // `enableImmutableInstalls` to true when it detects CI, and `nonInteractiveEnv()` sets
+    // `CI=true` for each child, so this branch, whose purpose is to create the missing lockfile,
+    // would abort with `YN0028: The lockfile would have been created by this install, which is
+    // explicitly forbidden`. Measured on Berry 3.0.0 / 3.6.4 / 4.14.1 / 4.18.0; 2.4.3 predates the
+    // default, and Yarn Classic ignores the flag, which matters because a `yarn@1.x` pin lands here
+    // too. pnpm needs nothing: it drops its implicit CI frozen-lockfile when the lockfile is absent.
     //
-    // Scope matters. Do NOT hoist this into `nonInteractiveEnv()` — that env is
-    // shared with the deploy child, where a repo's own `yarn install --immutable`
-    // must stay immutable — and do NOT relax the lockfile plans above, or a build
-    // could mutate a committed lockfile and deploy resolutions the repo never
-    // pinned.
+    // Scope matters. Don't hoist this into `nonInteractiveEnv()`: that env is shared with the
+    // deploy child, where a repo's own `yarn install --immutable` has to stay immutable. And don't
+    // relax the lockfile plans above, or a build could mutate a committed lockfile and deploy
+    // resolutions the repo never pinned.
     return { manager: 'yarn', cmd: 'corepack', args: ['yarn', 'install', '--no-immutable'] };
   }
   if (pin.startsWith('bun@')) {
@@ -1757,8 +1604,6 @@ function resolveInstall() {
   }
   return { manager: 'npm', cmd: 'npm', args: ['install'] };
 }
-
-// --- child process runner -----------------------------------------------------
 
 /**
  * Spawn a child in WORK_DIR, stream its stdout/stderr into the log pipeline,
@@ -1782,25 +1627,22 @@ function runChild(cmd, args, opts = {}) {
       ...childSpawnOptions(),
       env: opts.env ?? process.env,
     });
-    // Track every child as the active cancel target. Only one untrusted child
-    // runs at a time (install is awaited before the deploy child spawns), so a
-    // cancel that arrives mid-install interrupts the install instead of letting
-    // it run to completion and burn the container slot.
+    // Decision: Track each child as the active cancel target. Only one untrusted child runs at a time
+    // (install is awaited before the deploy child spawns), so a cancel that arrives mid-install
+    // interrupts the install instead of letting it run to completion and burn the container slot.
     activeChild = child;
     if (cancelled) {
-      // Cancel raced the spawn — terminate immediately.
+      // Decision: Cancel raced the spawn: terminate immediately.
       try {
         child.kill('SIGTERM');
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
     pipeStream(/** @type {NodeJS.ReadableStream} */ (child.stdout), 'stdout');
     pipeStream(/** @type {NodeJS.ReadableStream} */ (child.stderr), 'stderr');
     child.on('error', reject);
     child.on('close', (code, signal) => {
       activeChild = null;
-      // Signal-terminated (e.g. cancel) reports as non-zero so the DO fails it.
+      // Decision: Signal-terminated (for example cancel) reports as non-zero so the DO fails it.
       resolve(code ?? (signal ? 1 : 0));
     });
   });
@@ -1892,8 +1734,8 @@ function killBuilderProcesses() {
   let killed = 0;
   for (const entry of entries) {
     const pid = Number(entry);
-    // Skip non-pid entries and pid 1 (the root agent — never our target, and
-    // killing it would tear down the build itself).
+    // Decision: Skip non-pid entries and pid 1 (the root agent: killing it would tear down the build
+    // itself).
     if (!Number.isInteger(pid) || pid <= 1) {
       continue;
     }
@@ -1901,7 +1743,7 @@ function killBuilderProcesses() {
     try {
       uid = parseProcStatusUid(readFileSync(`/proc/${pid}/status`, 'utf8'));
     } catch {
-      // Process exited between readdir and read — nothing to kill.
+      // Decision: Process exited between readdir and read: nothing to kill.
       continue;
     }
     if (uid !== BUILDER_UID) {
@@ -1911,7 +1753,7 @@ function killBuilderProcesses() {
       process.kill(pid, 'SIGKILL');
       killed++;
     } catch {
-      // Already gone / unsignalable — best effort.
+      // Decision: Already gone or unsignalable; best effort.
     }
   }
   if (killed > 0) {
@@ -1919,8 +1761,6 @@ function killBuilderProcesses() {
   }
   return Promise.resolve();
 }
-
-// --- env helpers --------------------------------------------------------------
 
 /**
  * Control-plane + credential env vars that must NEVER reach untrusted repo
@@ -1982,8 +1822,8 @@ function requireEnv(name) {
   return value;
 }
 
-/** Strip query/userinfo from a URL for logging (codeload URLs are tokenless,
- *  but be defensive about anything sensitive in the query string). */
+// Decision: Strip query and userinfo from a URL for logging (codeload URLs are tokenless, but be
+// defensive about anything sensitive in the query string).
 function redactUrl(raw) {
   try {
     const u = new URL(raw);
@@ -1993,9 +1833,6 @@ function redactUrl(raw) {
   }
 }
 
-// --- main ---------------------------------------------------------------------
-
-/** Resolve the CLI when deploying the Platform source repository or a fork. */
 export function resolveSourceBwfCli(root = WORK_DIR) {
   const packageRoot = `${root}/packages/bwf`;
   let manifest;
@@ -2045,24 +1882,20 @@ export async function runBuild(deps = {}) {
   const chownWorkDir = deps.chownWorkDir ?? chownWorkDirToBuilder;
   const killBuilders = deps.killBuilderProcesses ?? killBuilderProcesses;
   const status = deps.reportStatus ?? reportStatus;
-  // A present `.pnp.cjs` means the repo uses Yarn Berry Plug'n'Play: there is no
-  // `node_modules` tree, so the deploy must run THROUGH the package manager
-  // (`corepack yarn ...`) to activate the PnP runtime rather than bare npx.
-  // `pnpPresent` only selects the RUNNER below — it must NOT be conflated with
-  // "void is locally resolvable": a PnP repo that does not declare `@builtbyfriends/bwf` still
-  // needs the `yarn dlx bwf@<ver>` fetch fallback, so the local-platform signal is
-  // an actual dependency check, not the mere presence of `.pnp.cjs`.
+  // Decision: A present `.pnp.cjs` means the repo uses Yarn Berry Plug'n'Play: there's no `node_modules`
+  // tree, so the deploy has to run through the package manager (`corepack yarn ...`) to activate
+  // the PnP runtime rather than bare npx. `pnpPresent` only selects the runner below. It isn't
+  // the same as "bwf is locally resolvable": a PnP repo that doesn't declare
+  // `@builtbyfriends/bwf` still needs the `yarn dlx bwf@<ver>` fallback, so the local signal is
+  // an actual dependency check.
   //
-  // Assigned AFTER the install step (below): a Yarn Berry PnP repo may not commit
-  // `.pnp.cjs` and instead GENERATE it during `yarn install`, so a pre-install (or
-  // pre-download) check would read `false` and silently route it down the bare-
-  // `npx` path (which can't resolve PnP-managed deps during `bwf deploy`).
-  // `hasLocalBwf` and the runner selection both read it lazily (after install),
-  // so a reassignable `let` is correct.
+  // Assigned after the install step: a Yarn Berry PnP repo may not commit `.pnp.cjs` and instead
+  // generate it during `yarn install`, so a pre-install check would read `false` and route it
+  // down the bare-`npx` path (which can't resolve PnP-managed deps during `bwf deploy`).
   let pnpPresent = false;
-  // Whether the repo DECLARES `@builtbyfriends/bwf` as a dependency — the accurate "is bwf
-  // locally resolvable" signal under PnP, where `node_modules/.bin/bwf` never
-  // exists. Falls back to `false` on any read/parse error (→ fetch the CLI).
+  // Decision: Whether the repo declares `@builtbyfriends/bwf` as a dependency: the accurate "is bwf
+  // locally resolvable" signal under PnP, where `node_modules/.bin/bwf` doesn't exist. Falls back
+  // to `false` on any read or parse error (so the CLI is fetched).
   const repoDeclaresBwf = () => {
     try {
       const pkg = JSON.parse(readFileSync(`${WORK_DIR}/package.json`, 'utf8'));
@@ -2076,26 +1909,23 @@ export async function runBuild(deps = {}) {
     (() => existsSync(`${WORK_DIR}/node_modules/.bin/bwf`) || (pnpPresent && repoDeclaresBwf()));
 
   try {
-    // Capture the deploy token into a local, then drop it from the parent's heap
-    // env. Only the trusted `bwf deploy` child legitimately needs it, and it is
-    // re-injected there via the `extra` overrides below. Deleting it from
-    // `process.env` is defense-in-depth for the spawn-inheritance path only:
-    // `sanitizeChildEnv` already strips it from every untrusted child's COPY, so
-    // the install child never sees it.
+    // Decision: Capture the deploy token into a local, then drop it from the parent's heap env. Only the
+    // trusted `bwf deploy` child needs it, and it's re-injected there via the `extra` overrides
+    // below. Deleting it from `process.env` is defense in depth for the spawn-inheritance path
+    // only: `sanitizeChildEnv` already strips it from each untrusted child's copy.
     //
-    // This delete does NOT scrub `/proc/self/environ` (`unsetenv()` mutates only
-    // the heap `environ`), but the install child runs as the non-root BUILDER_UID,
-    // so its cross-uid read of the root agent's `/proc/<ppid>/environ` is
-    // denied. NOTE: BWF_TOKEN is RE-INJECTED into the deploy child's OWN env
-    // below, so the untrusted `vite build` run inside `bwf deploy` can still read
-    // it from its own `/proc/self/environ` — that is the separate CLI
-    // trust-split escalation, not addressed by the uid boundary.
+    // This delete doesn't scrub `/proc/self/environ` (`unsetenv()` changes only the heap
+    // `environ`), but the install child runs as the non-root BUILDER_UID, so its cross-uid read of
+    // the root agent's `/proc/<ppid>/environ` is denied. BWF_TOKEN is re-injected into the deploy
+    // child's own env, so the untrusted `vite build` inside `bwf deploy` can still read it from
+    // its own `/proc/self/environ`: that's the separate CLI trust-split issue, not covered by the
+    // uid boundary.
     const bwfToken = requireEnv('BWF_TOKEN');
     delete process.env.BWF_TOKEN;
-    // Staging CF Access service token (set only on staging builds). Capture +
-    // drop from the parent heap exactly like BWF_TOKEN; re-injected only into
-    // the trusted deploy child below so `bwf deploy` can authenticate past CF
-    // Access on `api.staging.void.cloud`. Absent on production/dev builds.
+    // Decision: Staging CF Access service token (set only on staging builds). Capture and drop from the
+    // parent heap like BWF_TOKEN; re-injected only into the trusted deploy child below so
+    // `bwf deploy` can authenticate past CF Access on the staging API host. Absent on production
+    // and dev builds.
     const cfAccessClientId = process.env.CF_ACCESS_CLIENT_ID;
     const cfAccessClientSecret = process.env.CF_ACCESS_CLIENT_SECRET;
     delete process.env.CF_ACCESS_CLIENT_ID;
@@ -2108,39 +1938,34 @@ export async function runBuild(deps = {}) {
       throw new Error('build cancelled before start');
     }
 
-    // 1. Download + extract source. The source token is last needed for the
-    //    authenticated tarball fetch inside `download()`; drop it from the
-    //    parent's heap env the moment the download completes, BEFORE the
-    //    untrusted install/build children spawn. This is defense-in-depth for the
-    //    spawn-inheritance path only — `sanitizeChildEnv` already strips it from
-    //    every untrusted child's COPY. The heap delete does NOT scrub
-    //    `/proc/self/environ` (`unsetenv()` only touches the heap `environ`), but
-    //    the install/deploy children run as the non-root BUILDER_UID, so
-    //    their cross-uid read of the root agent's `/proc/<ppid>/environ` is denied
-    //    by the kernel. The token is also repo-scoped + read-only (BuildManager
-    //    mints it with `{ contents: 'read' }` for this one repo).
+    // Decision: The source token is last needed for the authenticated tarball fetch inside `download()`, so
+    // drop it from the parent's heap env as soon as the download completes, before the untrusted
+    // install and build children spawn. Defense in depth for the spawn-inheritance path only:
+    // `sanitizeChildEnv` already strips it from each untrusted child's copy, and the children run
+    // as the non-root BUILDER_UID, so the kernel denies their read of the root agent's
+    // `/proc/<ppid>/environ`. The token is also repo-scoped and read-only (BuildManager mints it
+    // with `{ contents: 'read' }` for this one repo).
     await download();
     delete process.env.SOURCE_TOKEN;
-    // Hand the root-extracted tree to the non-root builder so the install/deploy
-    // children (spawned as BUILDER_UID) can write into it. No-op off-container.
+    // Decision: Hand the root-extracted tree to the non-root builder so the install and deploy children
+    // (spawned as BUILDER_UID) can write into it. No-op off-container.
     await chownWorkDir();
     if (cancelled) {
       throw new Error('build cancelled');
     }
 
-    // 2. Install dependencies. Repo lifecycle scripts (postinstall etc.) run
-    //    here with a scrubbed env — no DO_LOG_URL/SOURCE_TOKEN/AGENT_TOKEN and
-    //    no BWF_TOKEN — so they can't forge build status, exfiltrate the source
-    //    token, or steal the deploy token.
+    // Decision: Repo lifecycle scripts (postinstall and so on) run here with a scrubbed env, with no
+    // DO_LOG_URL, SOURCE_TOKEN, AGENT_TOKEN or BWF_TOKEN, so they can't forge build status,
+    // exfiltrate the source token, or steal the deploy token.
     const installPlan = install();
     agentLog(`detected package manager: ${installPlan.manager}`);
     const installCode = await run(installPlan.cmd, installPlan.args, {
       env: sanitizeChildEnv(process.env, { ...nonInteractiveEnv(), ...builderCacheEnv() }),
     });
     if (installCode !== 0) {
-      // Fall through to the single exit decision with the failing code — do NOT
-      // bail out of the driver, or the open control server would keep the
-      // container alive past install failure (leaking a build slot).
+      // Decision: Fall through to the single exit decision with the failing code. Don't bail out of the
+      // driver, or the open control server would keep the container alive past install failure
+      // (leaking a build slot).
       agentLog(`dependency install failed (exit ${installCode})`);
       return installCode;
     }
@@ -2148,60 +1973,44 @@ export async function runBuild(deps = {}) {
       throw new Error('build cancelled');
     }
 
-    // Install is done and its children have closed. Before spawning the trusted
-    // deploy child — which carries the re-injected BWF_TOKEN + CF Access pair in
-    // its env — best-effort reap any BUILDER_UID process a dependency lifecycle
-    // script daemonized during install. Left alive it would be a same-uid sibling
-    // of the deploy child and could read its /proc/<pid>/environ (the uid boundary
-    // only blocks reading the ROOT agent's env). This narrows the surface but does
-    // not seal it (a process that re-forks after the sweep survives) — see
-    // killBuilderProcesses for the full limitation.
+    // Decision: Install is done and its children have closed. Before spawning the trusted deploy child,
+    // which carries the re-injected BWF_TOKEN and CF Access pair, reap any BUILDER_UID process a
+    // dependency lifecycle script daemonized during install. Left alive it would be a same-uid
+    // sibling of the deploy child and could read its /proc/<pid>/environ (the uid boundary only
+    // blocks reading the root agent's env). This narrows the surface but doesn't seal it; see
+    // killBuilderProcesses.
     await killBuilders();
 
-    // Detect Yarn PnP now that install has run: a Berry PnP repo may GENERATE
-    // `.pnp.cjs` during `yarn install` rather than committing it. This drives the
-    // deploy RUNNER selection (`corepack yarn ...` vs bare `npx`) and the PnP
-    // branch of hasLocalBwf below — both read pnpPresent post-install.
+    // Decision: Detect Yarn PnP now that install has run: a Berry PnP repo may generate `.pnp.cjs` during
+    // `yarn install` rather than committing it. This drives the deploy runner selection
+    // (`corepack yarn ...` vs bare `npx`) and the PnP branch of hasLocalBwf below.
     pnpPresent = existsSync(`${WORK_DIR}/.pnp.cjs`);
 
-    // 3. Tell the DO we're past install and into the deploy phase.
     await status('deploying');
 
-    // 4. Run the REAL deploy via the built CLI in Platform source checkouts or the
-    //    repo-local CLI in consumer projects. `npx` resolves the
-    //    version pinned in the repo's package.json (installed in step 2); if
-    //    the repo has no local `platform`, npx fetches the pinned fallback. The
-    //    --no-install guard is intentionally omitted so the fallback path works.
-    //    The deploy child is the ONE trusted step that needs the deploy token,
-    //    so BWF_TOKEN is RE-INJECTED here on top of the scrubbed base env (it
-    //    is in SCRUBBED_ENV_VARS, so it is absent from the install + any other
-    //    untrusted child). The staging CF Access service token
-    //    (CF_ACCESS_CLIENT_ID/SECRET) is re-injected the same way so `bwf deploy`
-    //    can authenticate past CF Access on the staging API host (undefined off
-    //    staging → dropped by sanitizeChildEnv). BWF_API_URL / BWF_PROJECT are
-    //    not secrets and pass through normally. DO_LOG_URL/SOURCE_TOKEN/AGENT_TOKEN
-    //    stay scrubbed — `bwf deploy` runs repo build code and has no business
-    //    reaching the DO control plane.
+    // Decision: Run the real deploy via the built CLI in Platform source checkouts or the repo-local CLI in
+    // consumer projects. `npx` resolves the version pinned in the repo's package.json; if the repo
+    // has no local CLI, npx fetches the pinned fallback, which is why there's no --no-install
+    // guard. The deploy child is the one trusted step that needs the deploy token, so BWF_TOKEN is
+    // re-injected here on top of the scrubbed base env. The staging CF Access pair is re-injected
+    // the same way (undefined off staging, so sanitizeChildEnv drops it). BWF_API_URL and
+    // BWF_PROJECT aren't secrets. DO_LOG_URL, SOURCE_TOKEN and AGENT_TOKEN stay scrubbed:
+    // `bwf deploy` runs repo build code and has no business reaching the DO control plane.
     //
-    //    Exposure boundary of the re-injected secrets: the framework CLI deletes
-    //    CF_ACCESS_CLIENT_ID/SECRET from its own process.env right after its API
-    //    client captures the Access headers and BEFORE it spawns the repo's
-    //    `vite build`, so untrusted build code does NOT inherit the pair. What
-    //    remains is the same-uid /proc/<deploy-pid>/environ residue (initial-env
-    //    block; heap deletes don't scrub it) plus BWF_TOKEN itself, which the
-    //    CLI's build child still inherits — both are the CLI trust-split
-    //    escalation (build and upload share one process), a pending owner design
-    //    decision, NOT addressable from this agent.
+    // Exposure of the re-injected secrets: the CLI deletes CF_ACCESS_CLIENT_ID/SECRET from its own
+    // process.env after its API client captures the Access headers and before it spawns the repo's
+    // `vite build`, so untrusted build code doesn't inherit the pair. What's left is the same-uid
+    // /proc/<deploy-pid>/environ residue plus BWF_TOKEN itself, which the CLI's build child still
+    // inherits. Both come from the CLI trust split (build and upload share one process) and can't
+    // be fixed from this agent.
     const sourceCli = (deps.resolveSourceBwfCli ?? resolveSourceBwfCli)();
     const localBwf = hasLocalBwf();
     const fallbackVersion = bwfFallbackVersion();
-    // Yarn Berry PnP repos have no `node_modules`, so a bare `npx bwf deploy`
-    // would run void OUTSIDE the PnP runtime and the `execSync` build children it
-    // spawns (vite build etc.) couldn't resolve the repo's deps. Run the deploy
-    // THROUGH the package manager (`corepack yarn ...`) so PnP is active and the
-    // build children inherit it: `yarn bwf deploy` when void resolves in the PnP
-    // graph (hasLocalBwf is true under PnP), else `yarn dlx bwf@<ver> deploy`.
-    // The non-PnP path is unchanged (bare npx).
+    // Decision: Yarn Berry PnP repos have no `node_modules`, so a bare `npx bwf deploy` would run the CLI
+    // outside the PnP runtime and the build children it spawns (vite build and so on) couldn't
+    // resolve the repo's deps. Run the deploy through the package manager (`corepack yarn ...`) so
+    // PnP is active and the children inherit it: `yarn bwf deploy` when bwf resolves in the PnP
+    // graph, else `yarn dlx bwf@<ver> deploy`. The non-PnP path uses bare npx.
     /** @type {string} */
     let deployCmd;
     /** @type {Array<string>} */
@@ -2227,7 +2036,7 @@ export async function runBuild(deps = {}) {
         agentLog(`no local void CLI found; falling back to npx bwf@${fallbackVersion}`);
       }
     }
-    // Register the explicitly selected platform in this fresh build environment.
+    // Decision: Register the explicitly selected platform in this fresh build environment.
     const connectArgs = [
       ...deployArgs.slice(0, deployArgs.indexOf('deploy')),
       'connect',
@@ -2247,8 +2056,8 @@ export async function runBuild(deps = {}) {
       agentLog(`bwf connect exited with code ${connectCode}`);
       return connectCode;
     }
-    // The API and resource proxy are independently protected origins. Scope
-    // the platform-provided pair explicitly; never infer a proxy hostname.
+    // Decision: The API and resource proxy are independently protected origins. Scope the
+    // platform-provided pair explicitly; don't infer a proxy hostname.
     const accessCredentials =
       cfAccessClientId && cfAccessClientSecret
         ? JSON.stringify(
@@ -2270,8 +2079,8 @@ export async function runBuild(deps = {}) {
         BWF_TOKEN: bwfToken,
         PLATFORM_ACCESS_ORIGIN: apiUrl,
         PLATFORM_ACCESS_CREDENTIALS: accessCredentials,
-        // Re-inject the staging CF Access service token (undefined off staging,
-        // which sanitizeChildEnv drops) so `bwf deploy` can pass CF Access.
+        // Decision: Re-inject the staging CF Access service token (undefined off staging, which
+        // sanitizeChildEnv drops) so `bwf deploy` can pass CF Access.
         CF_ACCESS_CLIENT_ID: cfAccessClientId,
         CF_ACCESS_CLIENT_SECRET: cfAccessClientSecret,
       }),
@@ -2308,34 +2117,29 @@ function onShutdownSignal(signal) {
     try {
       activeChild.kill('SIGTERM');
     } catch {
-      // already gone
+      // Decision: The child already exited.
     }
   }
   process.exit(1);
 }
 
-/**
- * Register the PID-1 termination handlers. Exported so a unit test can assert the
- * listeners are installed (the kernel-delivery precondition) without an actual
- * signal arriving. Called once at the top of `main()` — module import alone does
- * not register anything (the entrypoint guard keeps `main()` from running under
- * test).
- */
+// Decision: Module import alone registers nothing; `main()` calls this once (the entrypoint guard keeps
+// `main()` from running under test). Exported so a test can assert the listeners are
+// installed.
 export function installShutdownHandlers() {
   process.on('SIGTERM', onShutdownSignal);
   process.on('SIGINT', onShutdownSignal);
 }
 
 async function main() {
-  // PID-1 signal handlers FIRST: without them the kernel drops the DO's SIGTERM
-  // and a torn-down build would keep running, leaking a global container slot.
+  // Decision: PID-1 signal handlers first: without them the kernel drops the DO's SIGTERM and a
+  // torn-down build would keep running, leaking a global container slot.
   installShutdownHandlers();
 
-  // Health/control server first so the DO's readiness probe and /cancel work
-  // throughout the build.
+  // Decision: Health and control server first so the DO's readiness probe and /cancel work throughout
+  // the build.
   const server = await startControlServer();
 
-  // Periodic best-effort log flush to the DO.
   const flushTimer = setInterval(() => {
     void flushLogs();
   }, LOG_FLUSH_MS);
@@ -2349,20 +2153,19 @@ async function main() {
     await finishBuildLogging(server);
   }
 
-  // The DO's onStop maps exit 0 -> complete, non-zero -> failed. Run on EVERY
-  // path (install/download/deploy failure and success alike) so the container
-  // always terminates.
+  // Decision: The DO's onStop maps exit 0 to complete and non-zero to failed. Run on each path (install,
+  // download or deploy failure and success alike) so the container terminates.
   process.exit(exitCode);
 }
 
-// Only auto-run when executed as the container entrypoint. When imported (e.g.
-// unit tests exercising `sanitizeChildEnv`/`runBuild`), the module exposes its
-// helpers without starting the control server or spawning any build steps.
+// Decision: Only auto-run when executed as the container entrypoint. When imported (for example by unit
+// tests of `sanitizeChildEnv` or `runBuild`), the module exposes its helpers without starting
+// the control server or spawning build steps.
 const isEntrypoint = argv[1] && import.meta.url === pathToFileURL(argv[1]).href;
 if (isEntrypoint) {
   main().catch((err) => {
-    // Last-resort guard — main() already wraps its body, but never let an
-    // unhandled rejection leave the container hanging without an exit code.
+    // Decision: Last-resort guard: main() already wraps its body, but don't let an unhandled rejection
+    // leave the container hanging without an exit code.
     console.error(err);
     process.exit(1);
   });

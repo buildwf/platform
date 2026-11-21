@@ -14,7 +14,7 @@ export async function updateUserRevokingInheritedDestinations(
   previousEmail: string | null,
   nextEmail: string | null,
 ): Promise<void> {
-  // A missing address is a data gap, not evidence of reassignment.
+  // Decision: A missing address is a data gap, not evidence of reassignment.
   if (!previousEmail || !nextEmail || previousEmail.toLowerCase() === nextEmail.toLowerCase()) {
     await updateUser(db, userId, login, nextEmail);
     return;

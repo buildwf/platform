@@ -64,7 +64,6 @@ export function isAdminOAuthState(state: string): boolean {
   }
 }
 
-// GET /login
 app.get('/login', async (context) => {
   if (await pendingAuthenticationSetup(context.get('db'))) {
     return context.redirect('/setup');
@@ -86,7 +85,6 @@ app.get('/login', async (context) => {
   });
 });
 
-// GET /login/:provider
 app.get('/login/:provider', async (context) => {
   const provider = context.req.param('provider');
   const managed = await startPlatformLogin(context, 'admin', provider);
@@ -115,7 +113,7 @@ app.get('/login/:provider', async (context) => {
     provider === 'github'
       ? getGitHubAuthorizeUrl(context.env.GITHUB_CLIENT_ID, redirectUri, state)
       : getGoogleAuthorizeUrl(context.env.GOOGLE_CLIENT_ID, redirectUri, state);
-  // Bind nonce to this browser to prevent login CSRF / session swapping
+  // Decision: Bind the nonce to this browser to prevent login CSRF and session swapping.
   setCookie(context, 'oauth_nonce', nonce, {
     httpOnly: true,
     secure: true,
@@ -147,7 +145,7 @@ export async function handleAdminOAuthCallback(context: Context<ApiEnv>): Promis
     return loginFailure(context, 'Invalid state signature.', 400);
   }
 
-  // Consume the nonce atomically — prevents replay of the callback URL
+  // Decision: Consume the nonce atomically to prevent replay of the callback URL.
   let nonce: string;
   let provider: AdminProvider;
   try {
@@ -160,7 +158,7 @@ export async function handleAdminOAuthCallback(context: Context<ApiEnv>): Promis
       throw new Error('unknown audience');
     }
     nonce = stateData.nonce;
-    // Preserve Google callbacks initiated before a deployment of this version.
+    // Decision: Preserve Google callbacks started before a deployment of this version.
     provider = stateData.provider ?? 'google';
     if (provider !== 'github' && provider !== 'google') {
       throw new Error('unknown provider');
@@ -169,9 +167,8 @@ export async function handleAdminOAuthCallback(context: Context<ApiEnv>): Promis
     return loginFailure(context, 'Invalid state data.', 400);
   }
 
-  // Verify the nonce matches the cookie set during login redirect.
-  // This binds the OAuth flow to the browser that initiated it,
-  // preventing login CSRF / session swapping attacks.
+  // Decision: Verify the nonce matches the cookie set during the login redirect. This binds the OAuth flow
+  // to the browser that started it, preventing login CSRF and session swapping.
   const cookieNonce = getCookie(context, 'oauth_nonce');
   if (!cookieNonce || cookieNonce !== nonce) {
     return loginFailure(context, 'OAuth session mismatch.', 400);
@@ -203,7 +200,7 @@ export async function handleAdminOAuthCallback(context: Context<ApiEnv>): Promis
       if (!(error instanceof LoginFailure)) {
         throw error;
       }
-      // Log only the failure code, never the provider response.
+      // Decision: Log only the failure code, not the provider response.
       console.error('[auth] login failed', { code: error.code, purpose: 'admin', provider });
       const hint = loginFailureHint(error.code);
       return loginFailure(context, hint.message, 400, [
@@ -232,11 +229,11 @@ export async function handleAdminOAuthCallback(context: Context<ApiEnv>): Promis
   const db = context.get('db');
   let user = await getUserByOAuthAccount(db, provider, providerId);
 
-  // Fall back to email lookup — handles first login after seeding by email
+  // Decision: Fall back to email lookup: handles the first login after seeding by email.
   if (!user && email && emailVerified) {
     const byEmail = await getUserByEmail(db, email);
-    // Backfill only an account seeded by email that has never signed in with this
-    // provider. Never replace or add to an identity the account already linked.
+    // Decision: Backfill only an account seeded by email that has never signed in with this provider.
+    // Don't replace or add to an identity the account already linked.
     if (
       byEmail &&
       byEmail.provider === provider &&
@@ -280,7 +277,6 @@ export async function handleAdminOAuthCallback(context: Context<ApiEnv>): Promis
   return context.redirect('/admin/');
 }
 
-// GET /logout
 app.get('/logout', (context) => {
   deleteCookie(context, 'admin_token', { path: '/' });
   return context.redirect('/admin/login');

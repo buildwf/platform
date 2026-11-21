@@ -92,8 +92,8 @@ export function convertWorkerConfig(
 ): OutputObject {
   const properties: Array<OutputProperty> = [];
   const comments: Array<OutputComment> = [];
-  // `inline` follow-ups are already attached as a comment to the generated
-  // value they concern, so they aren't repeated at the end of the Worker.
+  // Decision: `inline` follow-ups are already attached as a comment to the generated value they concern, so
+  // they aren't repeated at the end of the Worker.
   const report = (followUp: MigrationFollowUp, options: { inline?: boolean } = {}) => {
     followUps.push(followUp);
     if (!options.inline) {

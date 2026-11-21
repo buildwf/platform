@@ -308,8 +308,6 @@ describe('internal route blocking', () => {
     expect(response.status).toBe(404);
   });
 
-  // Legacy: old SDK versions register these top-level paths.
-  // TODO: remove these blocks once all deployed workers use /__platform/* paths. See #88
   it('blocks /__scheduled (legacy compat) with 404', async () => {
     const response = await app.fetch(
       new Request('https://my-app.buildwf.dev/__scheduled', { method: 'POST' }),
@@ -362,9 +360,8 @@ describe('internal route blocking', () => {
   });
 });
 
-// Zero Trust leaves `/health` on the health hostname outside Cloudflare Access.
-// A project created before its slug was reserved may still own the hostname, so
-// dispatch routes every other path there like any other hostname.
+// Decision: Zero Trust leaves `/health` on the health hostname outside Cloudflare Access. A project created
+// before its slug was reserved may still own the hostname, so other paths there route normally.
 describe('platform health hostname', () => {
   const healthHost = 'https://void-platform-health.buildwf.dev';
 
@@ -387,7 +384,6 @@ describe('platform health hostname', () => {
 
   it('never routes the Access exception path to that project', async () => {
     const env = createHealthHostEnv({ workerName: 'user-app', projectId: 'proj_1' });
-    // A URL exactly as the client sent it, before the runtime normalizes it.
     const sent = (url: string) => {
       const request = new Request(`${healthHost}/`);
       Object.defineProperty(request, 'url', { value: url });

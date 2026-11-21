@@ -1,13 +1,3 @@
-/**
- * Integration tests for the direct-to-R2 asset upload deploy flow
- * (`meta/design-docs/0068-direct-r2-asset-upload.md`).
- *
- * Two endpoints are exercised:
- *   - `POST /:id/deploy/upload-urls` — issues presigned R2 PUT URLs for
- *     declared assets.
- *   - `POST /:id/deploy` (Content-Type: application/json) — manifest-only
- *     deploy whose asset bytes are already in R2 from prior direct PUTs.
- */
 import { eq, sql } from 'drizzle-orm';
 import {
   describe,
@@ -67,18 +57,12 @@ function mockSetTimeout() {
   ) => nativeSetTimeout(fn, 0, ...args)) as typeof setTimeout);
 }
 
-// Synthetic 32-hex blake3 / md5 strings. Real hashes round-trip through the
-// presigner unchanged; the deploy pipeline only validates shape (32 hex)
-// and looks up bytes by `assets/${projectId}/${blake3}`. Tests put the
-// bytes into our R2 mock at that exact key — no real BLAKE3 needed.
 const HASH = (n: number): string => n.toString(16).padStart(32, '0');
 const MD5 = HASH;
 
-/**
- * Pre-stage asset bytes in R2 under the direct-to-R2 storage key. Mirrors
- * what the CLI does after receiving presigned URLs from
- * `POST /deploy/upload-urls`.
- */
+// Decision: Synthetic 32-hex blake3 and md5 strings. The deploy pipeline only checks the shape (32 hex)
+// and looks up bytes at `assets/${projectId}/${blake3}`, so tests put the bytes into the R2 mock
+// at that key and don't need real hashes.
 async function stageAssetInR2(
   bucket: R2Bucket,
   projectId: string,
@@ -87,7 +71,6 @@ async function stageAssetInR2(
 ): Promise<void> {
   await bucket.put(
     `assets/${projectId}/${blake3}`,
-    // R2's `put` accepts ArrayBuffer.
     bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer,
   );
 }
@@ -177,10 +160,6 @@ describe('POST /projects/:id/deploy/upload-urls', () => {
     expect(first.url).toContain(`/${env.R2_STATIC_ASSETS_BUCKET}/assets/${project.id}/${HASH(1)}`);
     expect(first.headers['Content-Md5']).toBeDefined();
     expect(first.headers['Content-Type']).toBe('text/html');
-    // TTL: 30 minutes. Bumped from 10 min to cover slow tail uploads
-    // (large bundle × low concurrency × residential uplink). Both URLs in
-    // the batch must carry the same expiry — they're issued in parallel
-    // off the same handler invocation.
     const url1 = new URL(first.url);
     expect(url1.searchParams.get('X-Amz-Expires')).toBe('1800');
     const url2 = new URL(body.urls[HASH(3)].url);
@@ -251,15 +230,6 @@ describe('POST /projects/:id/deploy/upload-urls', () => {
     expect(res.status).toBe(400);
   });
 
-  // Regression: a teardown that commits AFTER the unlocked early-out check
-  // but BEFORE the FOR SHARE lock acquires must still surface as 410 from
-  // the in-tx re-read. Without the in-tx check, the handler would proceed
-  // to issue presigned PUT URLs against a project that's being deleted,
-  // letting the CLI write durable orphan bytes that teardown's R2 sweep
-  // races to clean up. We simulate the race by intercepting the direct
-  // `getProject` call made inside the FOR SHARE transaction. The unlocked
-  // read now comes from the central project-access query, so this locked
-  // read must see `status='deleting'`.
   it('returns 410 when status flips to deleting between unlocked check and FOR SHARE re-read', async () => {
     const { setGetProjectOverride } = await import('./setup.ts');
     const user = await createTestUser(env.db);
@@ -296,10 +266,11 @@ describe('POST /projects/:id/deploy/upload-urls', () => {
     }
   });
 
-  // Regression: projects in `deleting` cannot finalize a deploy (the finalize
-  // path returns 410). Issuing presigned R2 PUT URLs after status flips to
-  // deleting would let clients leak orphaned `assets/{projectId}/*` blobs
-  // during teardown. Mirrors the guard `POST /:id/deploy` already enforces.
+  // Decision: A teardown that commits after the unlocked early-out check but before the FOR SHARE lock
+  // must still give 410 from the re-read inside the transaction. Without it, the handler issues
+  // presigned PUT URLs for a project being deleted, and the CLI writes orphan bytes. The unlocked
+  // read comes from the central project-access query, so intercepting the direct `getProject` call
+  // inside the transaction lets only the locked read see `status='deleting'`.
   it('returns 410 for projects with status=deleting and never presigns bytes', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'uu-deleting');
@@ -322,7 +293,6 @@ describe('POST /projects/:id/deploy/upload-urls', () => {
     expect(res.status).toBe(410);
     const body = (await res.json()) as { error: { message: string }; urls?: unknown };
     expect(body.error.message).toMatch(/being deleted/);
-    // Bytes must NOT be presigned — the response must not carry any `urls`.
     expect(body.urls).toBeUndefined();
   });
 });
@@ -455,7 +425,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     let releaseList: (() => void) | undefined;
     const assetPrefix = `assets/${project.id}/`;
     const list = vi.spyOn(env.STATIC_ASSETS_R2, 'list').mockImplementation(async (options) => {
-      // Only asset GC is deferred; ISR cleanup uses the same bucket.
       if (options?.prefix === assetPrefix) {
         await new Promise<void>((resolve) => {
           releaseList = resolve;
@@ -647,12 +616,11 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     const done = events.find((e) => isEvent(e, 'done'));
     expect(start).toBeDefined();
     expect(done).toBeDefined();
-    // assets count + url
+    // Decision: Only the asset GC list is held back. ISR cleanup uses the same bucket with another prefix.
     const doneEvt = done as unknown as { url: string; assets: number };
     expect(doneEvt.assets).toBe(2);
     expect(doneEvt.url).toBe('https://jm-static-ok.buildwf.dev');
 
-    // DB row reaches `live`
     const [dpl] = await env.db
       .select({ cli_version: deployments.cli_version, status: deployments.status })
       .from(deployments)
@@ -660,8 +628,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     expect(dpl?.status).toBe('live');
     expect(dpl?.cli_version).toBe('0.8.3');
 
-    // Serving manifest: each path → `!{hash}` (direct-to-R2 always lands
-    // in R2)
     const serving = (await env.ROUTING.get(
       `manifest:${(doneEvt as unknown as { deployment: string }).deployment}`,
       'json',
@@ -672,17 +638,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     });
   });
 
-  // Regression: a successful static deploy must opportunistically sweep
-  // orphan blobs uploaded via direct-to-R2 presigned PUTs that never made
-  // it into a finalized manifest. Without this, abandoned upload-urls
-  // bytes accumulate forever (the eviction loop only walks evicted
-  // deployments' `asset_hashes`, never the raw R2 keyspace).
-  //
-  // Orphans uploaded within `PENDING_UPLOAD_PROTECTION_SECONDS` (2× presign
-  // TTL = 3600s) are preserved by the sweep — they may be in-flight uploads
-  // for a not-yet-finalized deploy. The companion test below pins down that
-  // protection-window behaviour. Here we age the orphan past the window so
-  // the sweep is allowed to delete it.
   it('static deploy sweeps R2 assets/{projectId}/* orphans that were uploaded but never referenced', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'jm-orphan-sweep');
@@ -692,7 +647,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     const indexHash = HASH(0x4a4a);
     await stageAssetInR2(env.STATIC_ASSETS_R2, project.id, indexHash, indexBytes);
 
-    // Orphan: uploaded via upload-urls but never referenced by a manifest.
     const orphanHash = HASH(0xdead);
     const orphanKey = `assets/${project.id}/${orphanHash}`;
     await stageAssetInR2(
@@ -701,14 +655,11 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
       orphanHash,
       new TextEncoder().encode('orphaned bytes'),
     );
-    // Age the orphan past the pending-upload protection window so the sweep
-    // is allowed to evict it. Using 2 hours leaves headroom over the 3600s
-    // window and survives small clock jitter.
+    // Decision: Two hours leaves headroom over the 3600s protection window and survives small clock jitter.
     (
       env.STATIC_ASSETS_R2 as unknown as { setUploadedAt: (k: string, d: Date) => void }
     ).setUploadedAt(orphanKey, new Date(Date.now() - 2 * 3600 * 1000));
 
-    // Other-project orphan: must NOT be touched by this project's sweep.
     const otherKey = 'assets/proj_other/cccccccccccccccccccccccccccccccc';
     await env.STATIC_ASSETS_R2.put(otherKey, new Uint8Array([9, 9, 9]).buffer as ArrayBuffer);
 
@@ -738,11 +689,8 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     const events = await readAllEvents(res);
     expect(events.find((e) => isEvent(e, 'done'))).toBeDefined();
 
-    // Manifest-referenced bytes survive.
     expect(await env.STATIC_ASSETS_R2.head(`assets/${project.id}/${indexHash}`)).not.toBeNull();
-    // Orphaned bytes for THIS project are gone.
     expect(await env.STATIC_ASSETS_R2.head(orphanKey)).toBeNull();
-    // Other-project bytes untouched.
     expect(await env.STATIC_ASSETS_R2.head(otherKey)).not.toBeNull();
   });
 
@@ -862,12 +810,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     },
   );
 
-  // Regression: orphans uploaded inside the pending-upload protection
-  // window MUST be preserved by the retention sweep — those bytes may be
-  // in-flight uploads for a not-yet-finalized deploy on the same project.
-  // Deleting them would race a concurrent `upload-urls`-then-finalize flow
-  // and break the second deploy with a missing-asset error. See
-  // `scanProjectAssetOrphanCandidates` in `assets.ts` for the rationale.
   it('static deploy preserves recently-uploaded R2 orphans within the pending-upload protection window', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'jm-orphan-recent');
@@ -877,9 +819,8 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     const indexHash = HASH(0x4b4b);
     await stageAssetInR2(env.STATIC_ASSETS_R2, project.id, indexHash, indexBytes);
 
-    // Orphan uploaded "just now" — simulates a concurrent upload-urls flow
-    // for a future deploy that hasn't finalized yet. MemoryR2Bucket stamps
-    // `uploaded = new Date()` on put, so no override is needed.
+    // Decision: MemoryR2Bucket stamps `uploaded = new Date()` on put, so this orphan counts as just uploaded
+    // without an override.
     const recentOrphanHash = HASH(0xbeef);
     const recentOrphanKey = `assets/${project.id}/${recentOrphanHash}`;
     await stageAssetInR2(
@@ -915,10 +856,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     const events = await readAllEvents(res);
     expect(events.find((e) => isEvent(e, 'done'))).toBeDefined();
 
-    // Manifest-referenced bytes survive.
     expect(await env.STATIC_ASSETS_R2.head(`assets/${project.id}/${indexHash}`)).not.toBeNull();
-    // Recently-uploaded orphan must STILL exist — the sweep skipped it
-    // because it falls inside the protection window.
     expect(await env.STATIC_ASSETS_R2.head(recentOrphanKey)).not.toBeNull();
   });
 
@@ -963,8 +901,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
       | undefined;
     expect(errEvt).toBeDefined();
     expect(errEvt!.message).toContain(missingHash);
-    // Deployment row should NOT be live; it should either be reaped
-    // (placeholder DELETED) or in a terminal non-live status.
     const rows = await env.db
       .select({ status: deployments.status })
       .from(deployments)
@@ -986,7 +922,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     const r2Get = vi.spyOn(env.STATIC_ASSETS_R2, 'get');
     const kvGet = vi.spyOn(env.STATIC_ASSETS, 'get');
 
-    // Mock DISPATCH so the migration / readiness probe paths can run if invoked.
     const originalDispatch = env.DISPATCH;
     env.DISPATCH = {
       get: () => ({
@@ -998,7 +933,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
       const indexJs = new TextEncoder().encode(
         "export default { fetch() { return new Response('ok'); } }",
       );
-      // base64 encode
       let bin = '';
       for (let i = 0; i < indexJs.length; i++) {
         bin += String.fromCharCode(indexJs[i]);
@@ -1128,10 +1062,8 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     const indexHash = HASH(0xc1c1);
     await stageAssetInR2(env.STATIC_ASSETS_R2, project.id, indexHash, indexBytes);
 
-    // Pre-seed a live deployment whose manifest matches what we'll send.
-    // The dedupe compare is against the FULL enriched manifest stored on
-    // the live deployment row; we mirror that exactly by JSON-stringifying
-    // the manifest after enrichment is a no-op (no websocket / no sandbox).
+    // Decision: The dedupe compares against the full enriched manifest stored on the live deployment row.
+    // Enrichment is a no-op here (no websocket, no sandbox), so the plain manifest matches it.
     const liveId = 'dpl_live_jm_dedupe';
     const liveManifest = {
       version: 3,
@@ -1187,7 +1119,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     );
     expect(res.status).toBe(200);
     const events = await readAllEvents(res);
-    // Dedupe short-circuit: only `start` + `done` for the live deployment.
     expect(events.some((e) => isEvent(e, 'start'))).toBe(true);
     const done = events.find((e) => isEvent(e, 'done')) as unknown as
       | { deployment: string }
@@ -1205,9 +1136,8 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     const indexHash = HASH(0xca01);
     await stageAssetInR2(env.STATIC_ASSETS_R2, project.id, indexHash, bytes);
 
-    // Patch ROUTING.put to cancel mid-flight on the slug write — same trick
-    // multipart cancellation tests use to slip the cancel between the
-    // pre-routing checks and the slug-route flip.
+    // Decision: Patch ROUTING.put to cancel on the slug write, so the cancel lands between the pre-routing
+    // checks and the slug-route flip (the multipart cancel tests use the same trick).
     const originalPut = env.ROUTING.put.bind(env.ROUTING);
     let cancelTriggered = false;
     let inFlightDeploymentId: string | undefined;
@@ -1222,14 +1152,12 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
       }
       if (!cancelTriggered && key === project.slug) {
         cancelTriggered = true;
-        // Queue cancellation behind the cutover's project-row lock. Awaiting
-        // it from this transaction-backed KV mock would deadlock PGlite's
-        // single connection; the queued update runs when the thrown error
+        // Decision: Queue the cancel behind the cutover's project-row lock. Awaiting it from this transaction-backed
+        // KV mock would deadlock PGlite's single connection. The queued update runs when the thrown error
         // releases the cutover transaction.
         if (inFlightDeploymentId) {
           cancelPromise = cancelDeployment(env.db, inFlightDeploymentId, 'test cancel');
         }
-        // Throw to abort the slug write itself.
         throw new Error('canceled before slug write');
       }
       return originalPut(key, value, options);
@@ -1266,9 +1194,8 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
       (env.ROUTING.put as unknown) = originalPut;
     }
 
-    // Deployment row should be either canceled or failed (not pending,
-    // not live). The exact terminal status depends on whether the cancel
-    // was observed before or after the slug-write throw.
+    // Decision: The exact terminal status depends on whether the cancel is seen before or after the slug-write
+    // throw, so accept canceled or failed.
     const rows = await env.db
       .select({ status: deployments.status })
       .from(deployments)
@@ -1290,7 +1217,7 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          manifest: { version: 3, bindings: {} }, // no assetManifestVersion
+          manifest: { version: 3, bindings: {} },
           assetManifest: {},
           source: null,
           commit: null,
@@ -1369,15 +1296,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     expect(res.status).toBe(400);
   });
 
-  // Regression for the multi-copy base64 decode path: each `workerFiles`
-  // entry used to materialize as `raw` (UTF-16) → `bin` (latin1) →
-  // `Uint8Array` → `Blob`, which for a near-cap 32 MiB module pushed peak
-  // residency past the 128 MiB isolate cap. The decode now uses a
-  // single-allocation helper and `delete`-s each source string from the
-  // parsed body before moving on. This test exercises a multi-entry
-  // `workerFiles` map (the path that previously held every base64 string
-  // live for the full loop) and verifies every decoded module round-trips
-  // byte-for-byte through the persisted R2 bundle.
   it('decodes multi-entry workerFiles correctly (no per-entry corruption from delete-as-we-go)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'jm-wfp-multi');
@@ -1391,8 +1309,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     } as unknown as DispatchNamespace;
 
     try {
-      // Three modules with deliberately distinct contents so a copy/dedupe
-      // bug would surface as a content mismatch on at least one entry.
       const modules: Record<string, Uint8Array> = {
         'index.js': new TextEncoder().encode(
           "export default { fetch() { return new Response('a'); } }",
@@ -1442,7 +1358,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
       expect(done).toBeDefined();
       expect(done!.workers).toBe(3);
 
-      // Verify the actual Cloudflare upload, where every decoded module is consumed.
       const upload = cf.mock.calls.find(
         ([url, init]) =>
           String(url).endsWith('/scripts/user-' + project.slug + '-' + done!.deployment) &&
@@ -1462,20 +1377,12 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     }
   });
 
-  // Body cap regression — a 32 MiB raw worker module becomes ~43 MiB
-  // base64-encoded, which under the original 32 MiB cap was a 413 even
-  // though the per-module limit is 32 MiB. Cap is now 64 MiB. We exercise
-  // a body comfortably above the old cap and below the new one to prove
-  // the regression is fixed without taking 60 MiB of test memory.
   it('accepts JSON-mode bodies larger than the legacy 32 MiB cap', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'jm-big-body');
     mockCfApi();
 
-    // 36 MiB of base64 worker bytes — well past the old cap (32 MiB) and
-    // well under the new one (64 MiB). Random-ish content keeps the
-    // gzip compressor honest.
-    const rawSize = 27 * 1024 * 1024; // base64-expanded ≈ 36 MiB
+    const rawSize = 27 * 1024 * 1024;
     const raw = new Uint8Array(rawSize);
     for (let i = 0; i < raw.length; i++) {
       raw[i] = i & 0xff;
@@ -1507,11 +1414,8 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
       env,
     );
 
-    // We don't care whether downstream finalization succeeds — we just
-    // need the body cap NOT to 413. Anything other than 413 is a pass
-    // for this regression check.
     expect(res.status).not.toBe(413);
-    // Finish the deployment's database work before the next fixture resets its tables.
+    // Decision: Finish the deployment's database work before the next fixture resets its tables.
     await res.text();
   });
 
@@ -1520,15 +1424,12 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     const project = await createTestProject(env.db, user.id, 'jm-static-kv-cf');
     mockCfApi();
 
-    // Prior deploy: small asset stored in KV (no `!` prefix in serving
-    // manifest), simulating what the multipart path does for assets
-    // smaller than KV_THRESHOLD. The R2 bucket is intentionally empty
-    // for this hash — the asset only exists in KV.
+    // Decision: The prior deploy stored this small asset in KV (no `!` prefix in the serving manifest), as the
+    // multipart path does below KV_THRESHOLD. The R2 bucket is empty for this hash on purpose.
     const kvHash = HASH(0x4101);
     const kvBytes = new TextEncoder().encode('<h1>kv-prior</h1>');
     const newR2Hash = HASH(0x4102);
     const newR2Bytes = new TextEncoder().encode('body { color: blue }');
-    // Historical serving bytes must survive the failed and successful redeploy.
     await env.STATIC_ASSETS.put(
       `assets/${project.id}/${kvHash}`,
       kvBytes.buffer.slice(0, kvBytes.byteLength) as ArrayBuffer,
@@ -1569,14 +1470,11 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
         type: 'spa',
       }),
     );
-    // Prior serving manifest with NO `!` prefix → KV placement.
     const oldServingManifest = { '/index.html': kvHash, '/style.css': `!${newR2Hash}` };
     await env.ROUTING.put(`manifest:${liveId}`, JSON.stringify(oldServingManifest));
 
-    // The unchanged redeploy initially has only its CSS in scoped R2.
     await stageAssetInR2(env.STATIC_ASSETS_R2, project.id, newR2Hash, newR2Bytes);
 
-    // Sanity-check: kvHash is NOT in R2.
     const headBefore = await env.STATIC_ASSETS_R2.head(`assets/${project.id}/${kvHash}`);
     expect(headBefore).toBeNull();
 
@@ -1638,14 +1536,13 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     expect(done!.assets).toBe(2);
 
     expect(done!.deployment).not.toBe(liveId);
-    // New serving placement is uniformly scoped R2; historical state stays usable.
     const serving = (await env.ROUTING.get(`manifest:${done!.deployment}`, 'json')) as Record<
       string,
       string
     > | null;
     expect(serving).toEqual({
-      '/index.html': `!${kvHash}`, // redeploy writes only scoped R2 placement
-      '/style.css': `!${newR2Hash}`, // new this deploy, R2-prefixed
+      '/index.html': `!${kvHash}`,
+      '/style.css': `!${newR2Hash}`,
     });
     const fresh = (
       await env.db.select().from(deployments).where(eq(deployments.id, done!.deployment))
@@ -1660,9 +1557,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     );
   });
 
-  // Bug 2 — JSON mode must reject `workerFiles` for static-typed manifests,
-  // mirroring multipart's `worker:*` rejection. Must happen BEFORE
-  // placeholder insert so the rejected request leaves no phantom row.
   it('rejects workerFiles when manifest.type is spa', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'jm-spa-no-worker');
@@ -1690,8 +1584,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     const body = (await res.json()) as { message?: string };
     expect(body.message).toMatch(/worker.*not allowed.*spa or static/);
 
-    // No phantom placeholder row should remain — the rejection happened
-    // before the precheck-and-claim transaction.
     const rows = await env.db
       .select({ id: deployments.id })
       .from(deployments)
@@ -1722,25 +1614,18 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
     expect(body.message).toMatch(/worker.*not allowed.*spa or static/);
   });
 
-  // Bug 3 — A `cancelDeployment` call landing during the early-error
-  // window (after placeholder insert but before manifest update) must not
-  // strand the row in `canceling`. The finally-reaper must clean it up.
   it('placeholder reaper cleans up canceling rows when cancel races early-error path', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'jm-cancel-early');
     mockCfApi();
 
-    // Patch R2.head() to flip the in-flight placeholder to `canceling`
-    // BEFORE returning null — simulating a `cancelDeployment` API call
-    // that lands during the asset-verify phase. R2.head() is called
-    // immediately after the placeholder insert, so this races the
-    // early-error path that fires when we report missing hashes.
+    // Decision: R2.head() runs right after the placeholder insert, so flipping the placeholder to `canceling`
+    // here simulates a cancelDeployment call that races the missing-hash early-error path.
     const originalHead = env.STATIC_ASSETS_R2.head.bind(env.STATIC_ASSETS_R2);
     let canceledOnce = false;
     env.STATIC_ASSETS_R2.head = (async (key: string) => {
       if (!canceledOnce) {
         canceledOnce = true;
-        // Find the placeholder row this request just inserted.
         const rows = await env.db
           .select({ id: deployments.id, status: deployments.status })
           .from(deployments)
@@ -1749,9 +1634,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
           await cancelDeployment(env.db, rows[0].id, 'test cancel during asset_verify');
         }
       }
-      // Return null so the request takes the missing-hash early-return
-      // path. Without the reaper fix the canceled row would be stranded
-      // at `canceling` with manifest=null.
       return null;
     }) as typeof env.STATIC_ASSETS_R2.head;
 
@@ -1782,8 +1664,6 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
       env.STATIC_ASSETS_R2.head = originalHead;
     }
 
-    // After the reaper runs, the placeholder row (manifest=null) must
-    // be deleted — leaving NO row in `canceling` or `pending`.
     const finalRows = await env.db
       .select({ id: deployments.id, status: deployments.status, manifest: deployments.manifest })
       .from(deployments)
@@ -1794,15 +1674,9 @@ describe('POST /projects/:id/deploy (JSON mode — direct-to-R2)', () => {
   });
 });
 
-/**
- * Regression: CF's documented `assets-upload-session` shape is
- * `{ <path>: { hash, size } }`. The framework CLI now emits v2 manifest
- * entries (`{ blake3, md5, size, hash }`) — `hash` is a deprecated alias
- * of `blake3` that keeps existing structural typing happy. The platform
- * propagates the manifest mostly verbatim through the pipeline, so a
- * defensive normalizer at the CF API boundary must strip every field
- * that isn't `hash` or `size` before the body hits CF.
- */
+// Decision: Cloudflare's assets-upload-session body takes `{ <path>: { hash, size } }`. The CLI emits v2
+// entries (`blake3`, `md5`, `size`, `hash`), so the normalizer at the CF API boundary strips
+// the extra fields.
 describe('CF asset-upload-session body never carries v2 manifest extras', () => {
   function findAssetSessionBody(fetchMock: ReturnType<typeof mockCfApi>): {
     manifest: Record<string, Record<string, unknown>>;
@@ -1855,8 +1729,6 @@ describe('CF asset-upload-session body never carries v2 manifest extras', () => 
           },
           body: JSON.stringify({
             manifest: { version: 3, assetManifestVersion: 2, bindings: {}, type: 'platform' },
-            // v2 entries — `blake3` and `md5` MUST be stripped before
-            // reaching CF.
             assetManifest: {
               '/static/x.js': {
                 blake3: assetHash,
@@ -1877,15 +1749,12 @@ describe('CF asset-upload-session body never carries v2 manifest extras', () => 
       expect(events.find((e) => isEvent(e, 'done'))).toBeDefined();
 
       const body = findAssetSessionBody(fetchMock);
-      // Every entry must be exactly { hash, size } — no blake3, md5,
-      // or other fields.
       for (const [path, entry] of Object.entries(body.manifest)) {
         expect(typeof entry.hash).toBe('string');
         expect(typeof entry.size).toBe('number');
         expect(Object.keys(entry).sort()).toEqual(['hash', 'size']);
         expect(entry).not.toHaveProperty('blake3');
         expect(entry).not.toHaveProperty('md5');
-        // sanity: at least one entry should be the asset we declared
         if (path === '/static/x.js') {
           expect(entry.hash).toBe(assetHash);
           expect(entry.size).toBe(assetBytes.byteLength);
@@ -1930,7 +1799,6 @@ describe('direct Worker module upload', () => {
     );
   }
 
-  /** What the CLI does: request URLs, then PUT each module to its URL's key. */
   async function upload(projectId: string, files: Record<string, Uint8Array<ArrayBuffer>>) {
     const modules = await Promise.all(
       Object.entries(files).map(async ([name, bytes]) => ({
@@ -2147,8 +2015,6 @@ describe('direct Worker module upload', () => {
       400,
       `has ${code.byteLength} bytes in storage instead of ${code.byteLength + 1}`,
     );
-    // Keys derive from the authenticated project, so another project's id
-    // names nothing here, and its upload stays untouched.
     await reject({ workerInput: foreign }, 400, '"index.js" was not uploaded');
     expect(
       await env.STATIC_ASSETS_R2.head(`deployment-inputs/${other.id}/${foreign.id}/0`),
@@ -2190,7 +2056,7 @@ describe('direct Worker module upload', () => {
     const { id, modules } = await upload(project.id, { 'index.js': code });
     const uploaded = vi.fn(async () => cfSuccess({}));
     const cf = mockCfApi({ uploadWorker: uploaded });
-    // Same size, so the finalize listing accepts it; only the digest differs.
+    // Decision: Same size, so the finalize listing accepts it. Only the digest differs.
     await env.STATIC_ASSETS_R2.put(
       `deployment-inputs/${project.id}/${id}/0`,
       new TextEncoder().encode('export default [];'),
@@ -2205,14 +2071,12 @@ describe('direct Worker module upload', () => {
       }),
     );
     expect(uploaded).not.toHaveBeenCalled();
-    // Changed bytes fail every attempt, so the upload is not retried.
     expect(workerUploadCalls(cf, project.slug)).toHaveLength(1);
     const [deployment] = await env.db
       .select({ status: deployments.status })
       .from(deployments)
       .where(eq(deployments.project_id, project.id));
     expect(deployment?.status).toBe('failed');
-    // A failed deploy is terminal too, so its upload is gone.
     const left = await env.STATIC_ASSETS_R2.list({
       prefix: `deployment-inputs/${project.id}/${id}/`,
     });
@@ -2234,7 +2098,6 @@ describe('direct Worker module upload', () => {
       }
       return originalGet(getKey, options);
     });
-    // Skip the retry backoff.
     mockSetTimeout();
 
     const events = await readAllEvents(

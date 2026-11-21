@@ -14,7 +14,7 @@ it('adds the email ledger without changing tables used by the previous runtime',
   expect(journal.entries[emailIndex]?.idx).toBe(47);
   const previous = journal.entries.slice(0, emailIndex);
   const compatibility = JSON.parse(readFileSync(resolve(root, 'compatibility.json'), 'utf8'));
-  // The schema used by the 0.20.1 runtime.
+  // Decision: This is the schema the 0.20.1 runtime uses.
   expect(
     platformDatabaseSchemaDigest(
       compatibility.lineage,

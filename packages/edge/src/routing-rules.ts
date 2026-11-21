@@ -40,10 +40,9 @@ export function applyRoutingRules(
     try {
       compilePattern(rule.source);
     } catch (err) {
-      // A malformed `source` (e.g. duplicate named params) throws here.
-      // Framework validation rejects those at build, but a hand-crafted
-      // manifest could still reach the edge. Skip the offending rule and
-      // continue rather than 500ing the whole request.
+      // Decision: A malformed `source` (for example duplicate named params) throws here. Framework validation
+      // rejects those at build, but a hand-crafted manifest could still reach the edge. Skip the
+      // offending rule and continue rather than failing the whole request with a 500.
       console.warn(
         `[dispatch] skipping routing rule with invalid source ${JSON.stringify(rule.source)}: ${err instanceof Error ? err.message : String(err)}`,
       );

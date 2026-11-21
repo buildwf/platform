@@ -15,7 +15,7 @@ export const get = procedure('me.get')
       plan: 'string',
       role: 'string',
       billing_cycle_start: 'string',
-      // The plan catalog is operator-defined, so its shape is not fixed here.
+      // Decision: The plan catalog is operator-defined, so its shape isn't fixed here.
       limits: 'object',
     }),
   )

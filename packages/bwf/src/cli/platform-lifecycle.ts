@@ -132,7 +132,7 @@ export function resolvePlatformInstallDatabaseUrl(
   if (isPlatformInstallDatabaseBound(checkpoint, manifest)) {
     if (!recorded) {
       if (explicit) {
-        // Discovery intentionally recovers no credentials. The database's
+        // Decision: Discovery intentionally recovers no credentials. The database's
         // installation claim and ownership nonce are verified under the
         // advisory lock before any lifecycle mutation, and the live
         // Hyperdrive origin is checked against this URL before redeployment.
@@ -149,7 +149,7 @@ export function resolvePlatformInstallDatabaseUrl(
     }
     return recorded;
   }
-  // A failed initial claim has no Cloudflare resource bound to the database,
+  // Decision: A failed initial claim has no Cloudflare resource bound to the database,
   // so explicit operator input may correct an unreachable or mistyped URL.
   return explicit || recorded;
 }
@@ -293,7 +293,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
           }
           if (choice === 'new') {
             reuseSavedPlan = false;
-            // Do not let --name silently reselect the draft the user just declined.
+            // Decision: Do not let --name silently reselect the draft the user just declined.
             requestedName = '';
           } else if (choice.startsWith('plan:')) {
             const saved = savedPlans.find((plan) => `plan:${plan.id}` === choice);
@@ -478,7 +478,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
   }
   const release = args.plan ? null : acquirePlatformLifecycleLock(accountId, installationSlug);
   let progress: ReturnType<typeof createPlatformProgress> | undefined;
-  // Set while a step uses an unclaimed database URL, which a resume may still replace.
+  // Decision: Set while a step uses an unclaimed database URL, which a resume may still replace.
   let usingUnboundDatabase = false;
   try {
     if (!existing && !args.plan) {
@@ -838,7 +838,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       ...(!existing && plan.deployment.storageLocationHint
         ? { storageLocation: plan.deployment.storageLocationHint }
         : {}),
-      // A resume keeps the recorded value, so only a new install repeats it.
+      // Decision: A resume keeps the recorded value, so only a new install repeats it.
       ...(!existing && plan.deployment.runtimeLogs ? { runtimeLogs: 'minimal' as const } : {}),
       ...(existing ? { resumeId: existing.id } : {}),
       yes: args.yes || process.stdin.isTTY !== true,
@@ -983,7 +983,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
     const credentialSetup = isPlatformSetupDraft(existing);
     const values: Record<string, string> = { ...checkpoint };
     if (managementAccess) {
-      // A verified management token replaces an older, separately collected Access token.
+      // Decision: A verified management token replaces an older, separately collected Access token.
       delete values.accessManagementToken;
     }
     if (managementApiToken) {
@@ -1001,7 +1001,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
         writePendingInstallationSecrets(setupManifest, values);
       }
     };
-    // After the draft stage, a resume keeps the saved values. The runtime token
+    // Decision: After the draft stage, a resume keeps the saved values. The runtime token
     // is the exception: an explicit replacement wins, and is sent to Workers
     // that are already deployed (see `updateExistingWorkers` below).
     const configured = (key: string, environment: string) =>
@@ -1075,7 +1075,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       } catch (error) {
         if (
           token === values.cloudflareApiToken &&
-          // The operator adds a missing email permission to the same token.
+          // Decision: The operator adds a missing email permission to the same token.
           !(error instanceof PlatformRuntimeTokenEmailPermissionError) &&
           isPlatformTokenAuthorizationError(
             error,
@@ -1083,7 +1083,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
           )
         ) {
           delete values.cloudflareApiToken;
-          // After the draft stage the installer saves the replacement, so a
+          // Decision: After the draft stage the installer saves the replacement, so a
           // cancelled prompt keeps the token the deployed Workers still hold.
           if (credentialSetup) {
             writePendingInstallationSecrets(setupManifest, values);
@@ -1211,7 +1211,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       process.env.PLATFORM_PROJECT_SECRET_KEYS_JSON ||
       process.env.PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION,
     );
-    // Interactive fresh installs keep the identity keys in this machine's encrypted
+    // Decision: Interactive fresh installs keep the identity keys in this machine's encrypted
     // recovery data, like the email signing key. Headless runners may lose that data,
     // so they still supply both keys.
     const generateIdentityKeys = credentialSetup && !!process.stdin.isTTY;
@@ -1224,7 +1224,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
             : 'project encryption key',
         ].filter(Boolean)
       : [];
-    // A replaced runtime token must also reach the Workers already deployed,
+    // Decision: A replaced runtime token must also reach the Workers already deployed,
     // and a saved update must finish after a crash. Only the token is sent as
     // an update: every other value comes from the checkpoint. Without a saved
     // token (another machine) there is nothing to compare, so nothing is sent.
@@ -1244,7 +1244,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       checkpoint: values,
       databaseUrl: installationDatabaseUrl,
       emailEnabled: plan.deployment.capabilities.email,
-      // A saved email key wins on resume, so the variable would only add an update.
+      // Decision: A saved email key wins on resume, so the variable would only add an update.
       emailSigningSecret:
         updateExistingWorkers && values.emailSigningSecret
           ? ''
@@ -1303,7 +1303,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
           }),
       );
     }
-    // A resumed install uploads the Workers it created before. Without a
+    // Decision: A resumed install uploads the Workers it created before. Without a
     // terminal, the Cloudflare CLI stops that upload after a change outside bwf,
     // and the install refuses an active version without bwf's record of its
     // triggers. The installer takes the database lock later, so this check
@@ -1318,7 +1318,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
     });
     progress = createPlatformProgress('Installing the platform');
     if (credentialSetup) {
-      // Stop treating this as an untouched local draft before any database claim is attempted.
+      // Decision: Stop treating this as an untouched local draft before any database claim is attempted.
       saveValues({
         jwtSecret: secrets.jwtSecret,
         projectSecretKey: secrets.projectSecretKey,
@@ -1601,7 +1601,7 @@ export function assertNoninteractivePlatformMutationAcknowledged(
 async function readAccounts(
   client: PlatformCloudflareClient,
 ): Promise<ReadonlyArray<CloudflareAccount>> {
-  // Listing authorized accounts works for browser OAuth and both account- and
+  // Decision: Listing authorized accounts works for browser OAuth and both account- and
   // user-scoped API tokens. /user/tokens/verify only understands the latter.
   const accounts = await client.listAccounts();
   if (accounts.length === 0) {

@@ -114,8 +114,8 @@ describe('parseEmailArgs', () => {
       platform: 'platform',
     });
     expect(parseEmailArgs(['status', '--platform=platform']).platform).toBe('platform');
-    // The platform-only subcommands are the platform already, so naming it is a no-op
-    // there — unlike `cloudflare`, which they reject.
+    // Decision: The platform-only subcommands are the platform already, so naming it does nothing there,
+    // unlike `cloudflare`, which they reject.
     expect(
       parseEmailArgs(['usage', '--platform', 'platform', '--project', 'my-app']),
     ).toMatchObject({
@@ -153,7 +153,6 @@ describe('parseEmailArgs', () => {
     expect(() => parseEmailArgs(['usage', '--project'])).toThrow(
       'email: --project requires a value (a project name).',
     );
-    // A value that starts with `-` is the next flag, not a project name.
     expect(() => parseEmailArgs(['usage', '--project', '--limit', '5'])).toThrow(
       'email: --project requires a value (a project name).',
     );
@@ -170,8 +169,8 @@ describe('parseEmailArgs', () => {
     expect(() => parseEmailArgs(['allow', 'a@x.dev', '--project=  '])).toThrow(message);
   });
 
-  // Same rule as `bwf deploy` and this file's `--platform`: the last value never wins,
-  // so a wrapper's override and a caller's cannot silently disagree about the target.
+  // Decision: Same rule as `bwf deploy` and this file's `--platform`: the last value doesn't win, so a
+  // wrapper's override and a caller's can't silently disagree about the target.
   it('errors when --project is repeated, even if the final value is valid', () => {
     const message = 'email: --project can only be specified once.';
     expect(() =>
@@ -192,7 +191,6 @@ describe('parseEmailArgs', () => {
     expect(() => parseEmailArgs(['logs', '--limit', '--project', 'my-app'])).toThrow(
       'email: --limit requires a value (a positive integer).',
     );
-    // The value check still applies once a value is present.
     expect(() => parseEmailArgs(['logs', '--limit=abc'])).toThrow(
       /--limit must be a positive integer \(got 'abc'\)/,
     );
@@ -274,7 +272,6 @@ describe('parseEmailArgs', () => {
       address: 'short',
       yes: true,
     });
-    // Without a name there is nothing to confirm; the flag is harmless.
     expect(parseEmailArgs(['alias', '--yes'])).toMatchObject({
       address: undefined,
       yes: true,
@@ -293,8 +290,8 @@ describe('parseEmailArgs', () => {
     );
   });
 
-  // `--yes` is an alias-only flag: elsewhere it is not read as a flag at all, so it
-  // never sets `yes` and counts as a positional like any other unknown word.
+  // Decision: `--yes` is an alias-only flag: elsewhere it isn't read as a flag, so it doesn't set `yes` and
+  // counts as a positional like any other unknown word.
   it('does not accept --yes on the other subcommands', () => {
     expect(() => parseEmailArgs(['allow', 'a@x.dev', '--yes'])).toThrow(
       'email: `bwf email allow` takes exactly one positional argument (got 2: "a@x.dev", "--yes").',

@@ -240,7 +240,6 @@ describe('Zero Trust deployment route consistency', () => {
         delete staleEntry.version;
         staleEntry.workerName = 'legacy-worker-without-deployment-id';
       } else {
-        // A matching version alone cannot authorize publication of another backend.
         staleEntry.version = committed.id;
       }
       const stale = staleRead(project.slug, JSON.stringify(staleEntry));

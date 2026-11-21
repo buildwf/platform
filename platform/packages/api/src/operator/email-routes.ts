@@ -582,12 +582,9 @@ emailOperatorRoutes.post('/email/operations/:id/resolve', async (context) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// Administrator-managed domains. The operations are the owner routes' own
-// (email/domain-service.ts); this layer resolves the project for the
-// administrator, previews without touching Cloudflare, and re-shapes the
-// service's JSON responses into operator results.
-// ---------------------------------------------------------------------------
+// Decision: Administrator-managed domains. The operations are the owner routes' own (email/domain-service.ts);
+// this layer resolves the project for the administrator, previews without touching Cloudflare, and
+// reshapes the service's JSON responses into operator results.
 
 /** The service answers with the owner routes' JSON; carry a refusal over as an OperatorError. */
 async function operatorResult(
@@ -603,8 +600,8 @@ async function operatorResult(
         : 'The email domain operation failed.';
     throw new OperatorError(response.status, message, 'email_domain_error', body);
   }
-  // Owner routes return durable operation state with HTTP 200. The operator
-  // contract also needs a failure signal for its audit log and CLI exit status.
+  // Decision: Owner routes return durable operation state with HTTP 200. The operator contract also needs a
+  // failure signal for its audit log and CLI exit status.
   const failed = body.ok === false || body.operationStatus !== 'completed';
   return { action, target, ...(failed ? { ok: false } : {}), domain: body };
 }
@@ -695,15 +692,12 @@ async function addOperatorEmailDomain(
   const action = 'email.domain.add';
   const target = { domain, projectId: project.id, slug: project.slug, credentialKind, inboundMode };
   if (dryRunRequested) {
-    // Read-only: the engine's own MX rule, previewed over public DNS. No
-    // Cloudflare call — the preview must never spend the credential.
+    // Decision: Read-only: the engine's own MX rule, previewed over public DNS. No Cloudflare call, so the preview
+    // doesn't spend the credential.
     let mx: 'apex' | 'subdomain' | 'unknown' = 'unknown';
     try {
       mx = (await lookupMxOverDns(domain)).length > 0 ? 'subdomain' : 'apex';
-    } catch {
-      // A failed lookup leaves the placement unknown.
-    }
-    // The engine refuses to switch an active domain between inbound and outbound-only.
+    } catch {}
     const modeChange =
       existing?.desired_state === 'active' && existing.inbound_mode !== inboundMode;
     return preview(action, target, {

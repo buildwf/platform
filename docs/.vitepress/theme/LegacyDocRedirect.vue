@@ -18,7 +18,7 @@ function redirect() {
 }
 
 watch(() => [router.route.data.relativePath, router.route.hash], redirect, { flush: 'post' });
-// Let the index finish hydrating before replacing it with the destination page.
+// Decision: Let the index finish hydrating before replacing it with the destination page.
 onMounted(() => nextTick(redirect));
 </script>
 

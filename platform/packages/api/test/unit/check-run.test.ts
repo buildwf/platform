@@ -3,9 +3,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import type { ApiEnv } from '../../src/env.ts';
 import { completeCheckRun, createCheckRun } from '../../src/github/check-run.ts';
 
-// Real RS256 PKCS#8 key so the REAL getInstallationToken -> createAppJwt ->
-// importPKCS8/sign path runs (the integration suite vi.mock's that module, so
-// only a real-module unit test can exercise the real mint + retry behavior).
+// Decision: A real RS256 PKCS#8 key, so the real getInstallationToken -> createAppJwt -> sign path runs.
+// The integration suite mocks that module, so only this unit test covers the real mint and retry.
 let PRIVATE_KEY_PEM: string;
 
 beforeAll(async () => {
@@ -44,7 +43,6 @@ function isCheckRun(url: string): boolean {
   return url.includes('/check-runs');
 }
 
-// A valid access-token POST response so the check-run path is reached.
 function accessTokenOk(): Response {
   return Response.json({
     token: 'minted-installation-token',
@@ -52,8 +50,6 @@ function accessTokenOk(): Response {
   });
 }
 
-// Parse the structured `console.warn` JSON lines this module emits (non-JSON
-// fallback lines, if any, are ignored).
 function warnObjects(spy: ReturnType<typeof vi.spyOn>): Array<Record<string, unknown>> {
   const out: Array<Record<string, unknown>> = [];
   for (const call of spy.mock.calls) {
@@ -63,9 +59,7 @@ function warnObjects(spy: ReturnType<typeof vi.spyOn>): Array<Record<string, unk
     }
     try {
       out.push(JSON.parse(arg) as Record<string, unknown>);
-    } catch {
-      // non-JSON fallback line — skip
-    }
+    } catch {}
   }
   return out;
 }
@@ -76,7 +70,6 @@ function reasonsOf(spy: ReturnType<typeof vi.spyOn>, phase: string): Array<unkno
     .map((o) => o.reason);
 }
 
-/** Keep every retry attempt but run its backoff timer at once. */
 function skipRetryDelay(): void {
   const schedule = globalThis.setTimeout;
   vi.spyOn(globalThis, 'setTimeout').mockImplementation((callback, delay, ...args) =>
@@ -86,9 +79,8 @@ function skipRetryDelay(): void {
 
 describe('createCheckRun', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
-  // Unique installation id per test — getInstallationToken caches the
-  // installation-wide token per id for the isolate, so a shared id would let a
-  // minted token from one test satisfy the mint in another.
+  // Decision: Each test gets its own installation id: getInstallationToken caches the token per id for the
+  // isolate, so a shared id would let one test's token satisfy the mint in another.
   let installId = 0;
   function nextInstallId(): string {
     installId += 1;
@@ -116,8 +108,6 @@ describe('createCheckRun', () => {
     });
   }
 
-  // create: POST -> 201 {id: 99001} => returns '99001', POST body has the
-  // expected in_progress shape.
   it('returns the id as a string and POSTs the in_progress body', async () => {
     const installationId = nextInstallId();
     let postBody: Record<string, unknown> | undefined;
@@ -153,8 +143,6 @@ describe('createCheckRun', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  // create: POST -> 404 => returns null, exactly ONE POST (no retry on 4xx), one
-  // check-run-create warn.
   it('returns null with no retry on a 4xx and logs one failure', async () => {
     const installationId = nextInstallId();
     let postCount = 0;
@@ -182,10 +170,8 @@ describe('createCheckRun', () => {
     expect(reasons).not.toContain('exhausted');
   });
 
-  // create: POST -> 500 => returns null WITHOUT retrying. The create POST is
-  // SINGLE-SHOT (not idempotent — a retry on an ambiguous 5xx could duplicate the run
-  // and orphan the first `in_progress`). Exactly ONE POST, one http-5xx warn, and NO
-  // `exhausted` warn (the loop returns immediately, it does not run out of attempts).
+  // Decision: The create POST is single-shot. It isn't idempotent, so a retry after an ambiguous 5xx or
+  // network error could create a duplicate run and orphan the first `in_progress` one.
   it('does NOT retry on a 5xx — returns null after exactly one POST', async () => {
     const installationId = nextInstallId();
     let postCount = 0;
@@ -207,16 +193,12 @@ describe('createCheckRun', () => {
     const result = await callCreate(installationId);
 
     expect(result).toBeNull();
-    expect(postCount).toBe(1); // single-shot — no retry on 5xx
+    expect(postCount).toBe(1);
     const reasons = reasonsOf(warnSpy, 'check-run-create');
     expect(reasons.filter((r) => r === 'http-5xx')).toHaveLength(1);
-    expect(reasons).not.toContain('exhausted'); // returns, never loops to exhaustion
+    expect(reasons).not.toContain('exhausted');
   });
 
-  // create: POST rejects (network error) => returns null WITHOUT retrying.
-  // A network failure on the POST is ambiguous (GitHub may have created the run), so
-  // a retry risks a duplicate — single-shot. Exactly ONE POST attempt, one
-  // network-error warn, no `exhausted`.
   it('does NOT retry on a network error — returns null after exactly one POST', async () => {
     const installationId = nextInstallId();
     let postCount = 0;
@@ -238,13 +220,12 @@ describe('createCheckRun', () => {
     const result = await callCreate(installationId);
 
     expect(result).toBeNull();
-    expect(postCount).toBe(1); // single-shot — no retry on a network failure
+    expect(postCount).toBe(1);
     const reasons = reasonsOf(warnSpy, 'check-run-create');
     expect(reasons.filter((r) => r === 'network-error')).toHaveLength(1);
     expect(reasons).not.toContain('exhausted');
   });
 
-  // token-mint throws (e.g. missing App key) => returns null, never throws.
   it('returns null without throwing when token mint fails', async () => {
     const installationId = nextInstallId();
     vi.stubGlobal(
@@ -295,7 +276,6 @@ describe('completeCheckRun', () => {
     });
   }
 
-  // complete: PATCH -> 200 => returns true, body has completed + conclusion.
   it('returns true and PATCHes the completed body', async () => {
     const installationId = nextInstallId();
     let patchBody: Record<string, unknown> | undefined;
@@ -331,8 +311,6 @@ describe('completeCheckRun', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  // complete with `text` => PATCH body's output.text is the given string
-  // verbatim, title/summary unchanged.
   it('includes output.text in the PATCH body when text is provided', async () => {
     const installationId = nextInstallId();
     const logTail = '```\nlog line 1\nlog line 2\n```';
@@ -364,8 +342,6 @@ describe('completeCheckRun', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  // complete without `text` => PATCH body's output has NO `text` key at all
-  // (assert key absence, not just an undefined value).
   it('omits the text key from output when text is not provided', async () => {
     const installationId = nextInstallId();
     let patchBody: Record<string, unknown> | undefined;
@@ -394,7 +370,6 @@ describe('completeCheckRun', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  // complete: PATCH -> 500 x3 => returns false, one exhausted warn.
   it('retries a persistent 5xx then returns false with an exhausted warn', async () => {
     const installationId = nextInstallId();
     let patchCount = 0;
@@ -422,7 +397,6 @@ describe('completeCheckRun', () => {
     expect(reasons.filter((r) => r === 'exhausted')).toHaveLength(1);
   });
 
-  // token-mint throws => returns false, never throws.
   it('returns false without throwing when token mint fails', async () => {
     const installationId = nextInstallId();
     vi.stubGlobal(
@@ -444,10 +418,9 @@ describe('completeCheckRun', () => {
     expect(reasons).toContain('exhausted');
   });
 
-  // 422 fallback: GitHub validates output.text server-side (65535 UTF-8 BYTES
-  // and content checks beyond size). The complete PATCH is idempotent, so a
-  // 422 on a body that included `text` is retried ONCE without `output.text` —
-  // a rejected tail must never cost the completion itself.
+  // Decision: GitHub validates output.text on its side (65535 UTF-8 bytes and other content checks). The
+  // complete PATCH is idempotent, so a 422 on a body with `text` is retried once without it: a
+  // rejected log tail shouldn't cost the completion.
   it('retries ONCE without output.text when a 422 rejects a body that included text', async () => {
     const installationId = nextInstallId();
     const bodies: Array<Record<string, unknown>> = [];
@@ -478,7 +451,6 @@ describe('completeCheckRun', () => {
     expect(result).toBe(true);
     expect(bodies).toHaveLength(2);
     expect('text' in (bodies[0].output as Record<string, unknown>)).toBe(true);
-    // Fallback body: identical minus output.text.
     expect('text' in (bodies[1].output as Record<string, unknown>)).toBe(false);
     expect(bodies[1].output).toEqual({ title: 'Done', summary: 'Build succeeded' });
     expect(bodies[1].status).toBe('completed');
@@ -488,7 +460,6 @@ describe('completeCheckRun', () => {
     expect(reasons).toEqual(['text-rejected-retry']);
   });
 
-  // Non-422 4xx stays definitive even when text was included — no fallback.
   it('keeps a non-422 4xx single-shot even when text was included', async () => {
     const installationId = nextInstallId();
     let patchCount = 0;
@@ -515,7 +486,6 @@ describe('completeCheckRun', () => {
     expect(reasons).toEqual(['http-4xx']);
   });
 
-  // 422 on a body that never had text => nothing to strip, no retry.
   it('does not retry a 422 when the body never included text', async () => {
     const installationId = nextInstallId();
     let patchCount = 0;
@@ -545,8 +515,6 @@ describe('completeCheckRun', () => {
     expect(reasons).toEqual(['http-4xx']);
   });
 
-  // The fallback follows the existing definitive-4xx handling when it ALSO
-  // fails: exactly two PATCHes (strip once, then definitive), returns false.
   it('returns false after exactly two PATCHes when the text-less fallback also 422s', async () => {
     const installationId = nextInstallId();
     let patchCount = 0;

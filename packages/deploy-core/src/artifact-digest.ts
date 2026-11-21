@@ -3,8 +3,8 @@ import { canonicalJson } from './canonical-json.ts';
 
 /** Commit to all executable bytes, asset hashes, bindings, migrations, and routing. */
 export async function deployArtifactDigest(artifact: DeployArtifact): Promise<string> {
-  // Describe only the standard host capabilities we need, without introducing
-  // DOM declarations into Node or Workers consumers of this shared package.
+  // Decision: Describe only the standard host capabilities we need, without bringing DOM declarations into
+  // Node or Workers consumers of this shared package.
   const host = globalThis as unknown as {
     crypto: { subtle: { digest(algorithm: string, data: Uint8Array): Promise<ArrayBuffer> } };
     TextEncoder: new () => { encode(value: string): Uint8Array };

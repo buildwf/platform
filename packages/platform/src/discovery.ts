@@ -235,7 +235,7 @@ export function parsePlatformDiscoveryDocument(value: unknown): PlatformDiscover
     proxyUrl,
     usageProtocolVersion: parseUsageProtocolVersion(document.usageProtocolVersion),
   });
-  // Report only what the platform said: an older platform omits the field.
+  // Decision: Report only what the platform said: an older platform omits the field.
   return directWorkerUpload === undefined ? parsed : { ...parsed, directWorkerUpload };
 }
 

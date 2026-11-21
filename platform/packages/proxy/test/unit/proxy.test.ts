@@ -9,8 +9,6 @@ import { readRequestJson } from '../../src/request-body.ts';
 const JWT_SECRET = 'test-secret-key';
 const EMAIL_SIGNING_SECRET = 'test-email-signing-key-independent';
 
-// --- JWT helper (mirrors the worker's HMAC-SHA256 signing) ---
-
 function base64urlEncode(data: Uint8Array): string {
   let binary = '';
   for (const byte of data) {
@@ -56,8 +54,6 @@ async function signJwt(
   return `${header}.${body}.${base64urlEncode(sig)}`;
 }
 
-// --- HMAC helper (mirrors the worker's project token signing) ---
-
 async function signAiToken(projectId: string, secret: string): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
@@ -70,8 +66,6 @@ async function signAiToken(projectId: string, secret: string): Promise<string> {
   const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(projectId)));
   return base64urlEncode(sig);
 }
-
-// --- Mock env factory ---
 
 type MockAi = {
   run: ReturnType<typeof vi.fn>;
@@ -88,10 +82,7 @@ function createMockKv(data: Record<string, string> = {}) {
   };
 }
 
-/**
- * User-to-project deploy-access map used by the mock API. The endpoint retains
- * its legacy verify-owner URL while the API now resolves roles dynamically.
- */
+// Decision: The endpoint keeps its legacy verify-owner URL, while the API resolves roles dynamically.
 const DEFAULT_OWNERSHIP: Record<string, Array<string>> = {
   user_1: ['proj_000000000001', 'proj_000000000042', 'proj_000000000099', 'proj_000000000000'],
 };
@@ -102,12 +93,11 @@ function createMockApi(
   handler?: ApiFetchHandler,
   ownership: Record<string, Array<string>> = DEFAULT_OWNERSHIP,
 ) {
-  // Fetcher.fetch() is called as (url: string, init: RequestInit), not (Request).
+  // Decision: Fetcher.fetch() is called as (url, init), not with a Request.
   const defaultHandler = async (input: string | Request, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.url;
     const body = init?.body ?? (input instanceof Request ? await input.text() : undefined);
 
-    // Handle live project deploy-access requests.
     if (url.includes('/internal/verify-owner/')) {
       const projectId = url.split('/').pop()!;
       const parsed = typeof body === 'string' ? JSON.parse(body) : {};
@@ -123,7 +113,6 @@ function createMockApi(
       });
     }
 
-    // Default: generic success response
     return new Response(JSON.stringify({ purged: 1 }), {
       headers: { 'content-type': 'application/json' },
     });
@@ -166,7 +155,7 @@ function createEnv(
 }
 
 function post(path: string, body: unknown, headers?: Record<string, string>): Request {
-  // Service-binding callers use bare hosts and no header; HTTPS callers send Bearer.
+  // Decision: Service-binding callers use bare hosts and no header; HTTPS callers send a Bearer token.
   const origin =
     headers?.authorization === undefined ? 'https://proxy' : 'https://proxy.void.cloud';
   return new Request(`${origin}${path}`, {
@@ -175,8 +164,6 @@ function post(path: string, body: unknown, headers?: Record<string, string>): Re
     body: JSON.stringify(body),
   });
 }
-
-// --- Tests ---
 
 describe('proxy worker', () => {
   let validToken: string;
@@ -770,7 +757,6 @@ describe('proxy worker', () => {
     );
 
     it('rejects access when user does not own the project', async () => {
-      // user_1 has no deploy role on "proj_other"
       const env = createEnv();
       const res = await worker.fetch(
         post(
@@ -792,7 +778,6 @@ describe('proxy worker', () => {
     });
 
     it("rejects cross-tenant access to another user's project", async () => {
-      // user_2 owns proj_cross but user_1 (validToken) does not
       const ownership = { user_2: ['proj_cross'] };
       const env = createEnv(undefined, undefined, createMockApi(undefined, ownership));
       const res = await worker.fetch(
@@ -834,7 +819,6 @@ describe('proxy worker', () => {
     });
 
     it('returns 403 when the live deploy-access API call fails', async () => {
-      // API returns 500 for all requests
       const failingApi = createMockApi(async () => new Response('error', { status: 500 }));
       const env = createEnv(undefined, undefined, failingApi);
       const res = await worker.fetch(
@@ -909,7 +893,6 @@ describe('proxy worker', () => {
     });
 
     it('HMAC path bypasses ownership check (service binding is trusted)', async () => {
-      // Even for a project not in user_1's ownership, HMAC path should work
       const env = createEnv(undefined, undefined, createMockApi(undefined, {}));
       const res = await worker.fetch(
         post('/ai/run', {
@@ -992,7 +975,6 @@ describe('proxy worker', () => {
 
     it('rejects a login JWT split into projectId and aiToken', async () => {
       const [header, body, signature] = validToken.split('.');
-      // The JWT signature is the same HMAC a project token would carry for this string.
       expect(await signAiToken(`${header}.${body}`, JWT_SECRET)).toBe(signature);
       const env = createEnv();
       const res = await worker.fetch(
@@ -1494,8 +1476,6 @@ describe('proxy worker', () => {
       },
     );
 
-    // Which values are refused is unit tested with the shared parser; the read-error
-    // test above shows every path stops when the policy is refused.
     it('refuses a published value it does not know', async () => {
       const [path, value] = ['/ai/run', 'bogus'];
       const { env, upstream } = loggingEnv({ [POLICY_KEY]: value });
@@ -1510,7 +1490,6 @@ describe('proxy worker', () => {
           reason: 'invalid_value',
           valueLength: value.length,
         });
-        // The value itself is never logged.
         for (const call of logged.mock.calls) {
           expect(JSON.stringify(call)).not.toContain(value);
         }

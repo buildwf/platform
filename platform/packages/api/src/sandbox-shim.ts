@@ -1,5 +1,5 @@
-// Immutable SDK 1.0.3 helper layer. Verify before extracting executable bytes.
-// The published SDK image contains only this helper, not a runnable environment.
+// Decision: Immutable SDK 1.0.3 helper layer. Verify the digest before extracting executable bytes. The
+// published SDK image holds only this helper, not a runnable environment.
 const LAYER_DIGEST = 'f7a1c91dcb86ff275307a455c11809413cf7c07d7dfc09f6222c87ed5a3b7ab3';
 let shim: Promise<Uint8Array> | undefined;
 

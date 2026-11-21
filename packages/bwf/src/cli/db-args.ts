@@ -112,7 +112,6 @@ export type DbArgs =
     }
   | { action: 'rename-migrations' };
 
-// Positional arguments each action accepts after its name.
 const MAX_POSITIONALS: Record<DbArgs['action'], number> = {
   push: 0,
   generate: 0,
@@ -129,8 +128,8 @@ const MAX_POSITIONALS: Record<DbArgs['action'], number> = {
   export: 0,
 };
 
-// Flags each action reads. Every other flag stops the command, so `reset --remote` cannot
-// quietly act on the local database.
+// Decision: Flags each action reads. Any other flag stops the command, so `reset --remote` can't quietly act
+// on the local database.
 const ACTION_FLAGS: Record<DbArgs['action'], Array<string>> = {
   push: [],
   generate: [],

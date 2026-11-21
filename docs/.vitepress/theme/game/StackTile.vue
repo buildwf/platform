@@ -42,7 +42,7 @@ const logoSize = computed(() => Math.min(88, props.tile.width * 0.5, props.tile.
 const radius = computed(() => Math.min(34, props.tile.width / 3, props.tile.depth / 3));
 const depth = 24;
 const sides = [depth, 20, 16, 12, 8, 4];
-// The Rive hover paints these same light streaks over its colored side face.
+// Decision: The Rive hover paints these same light streaks over its colored side face.
 // Keep them in screen space so they follow the extrusion, rather than the top plane.
 const lightBounds = computed(() => ({
   x: props.originX + (props.tile.x - props.tile.z - props.tile.depth) * 0.8,

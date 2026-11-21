@@ -167,9 +167,8 @@ describe('compileRouteTable', () => {
   });
 });
 
-/** Evaluate a compiled route table with its imports supplied and return its Hono app. */
 function evalCompiledApp(code: string): Hono {
-  // Drop imports and `export` keywords so the module body runs inside `new Function`;
+  // Decision: Drop imports and `export` keywords so the module body runs inside `new Function`;
   // a noop `withRuntimeEnv` replaces the imported one.
   const stripped = code
     .replace(/^import\s+\{[^}]*\}\s+from\s+["'][^"']+["'];?\s*$/gm, '')
@@ -211,7 +210,7 @@ describe('c.redirect runtime wrapper', () => {
     ['/new', '/new'],
     ['/new?tab=1', '/new?tab=1'],
     ['https://example.com/next', 'https://example.com/next'],
-    // A protocol-relative location is cross-origin, so the request query must not leak to it.
+    // Decision: A protocol-relative location is cross-origin, so the request query must not leak to it.
     ['//partner.example.com/landing', '//partner.example.com/landing'],
   ])('redirects to %s with Location %s', async (destination, location) => {
     const app = new Hono();
@@ -233,7 +232,6 @@ function installRoutingRulesMiddleware(
   app.use('*', runtime.routingMiddleware(rules));
 }
 
-/** Calls `c.rewrite(destination)` from a handler and returns what it threw. */
 async function rewriteError(destination: string): Promise<unknown> {
   const app = new Hono();
   installBwfWrappers(app);
@@ -453,7 +451,7 @@ describe('c.rewrite runtime wrapper', () => {
     expect(await res.text()).toBe('index-body');
   });
 
-  // Setting `URL.pathname` to a value with `?` or `#` would percent-encode it,
+  // Decision: Setting `URL.pathname` to a value with `?` or `#` would percent-encode it,
   // so the destination is split: the query is kept and the fragment dropped.
   it.each([
     ['/page?x=1', '', '/page', '?x=1'],
@@ -519,7 +517,7 @@ describe('c.rewrite runtime wrapper', () => {
     },
   );
 
-  // `.html` may be a real route, so it is not treated as a static asset.
+  // Decision: `.html` may be a real route, so it isn't treated as a static asset.
   it.each(['/about.html', '/users/123'])(
     'c.rewrite to %s re-dispatches without throwing',
     async (destination) => {
@@ -636,7 +634,7 @@ describe('compileWorkerEntry', () => {
       sandbox: true,
     });
 
-    // BwfPlatformSandbox carries the metering/gate hooks, so user subclasses inherit them.
+    // Decision: BwfPlatformSandbox carries the metering and gate hooks, so user subclasses inherit them.
     expect(code).toContain(
       'import { BwfPlatformSandbox as __PlatformSandbox, __setSandboxBindingName } from "@builtbyfriends/bwf/sandbox"',
     );
@@ -747,8 +745,8 @@ describe('compileWorkerEntry', () => {
   it('serveWithAssets does not include the SPA shell fallback by default', () => {
     const code = compileWorkerEntry();
 
-    // Pages and SSR apps generate intentional HTML 404 responses. The outer
-    // asset fallthrough must not rewrite those to the SPA shell.
+    // Decision: Pages and SSR apps return intentional HTML 404 responses. The outer asset fallthrough
+    // must not rewrite those to the SPA shell.
     expect(code).not.toContain('"/index.html"');
     expect(code).not.toContain('accept.includes("text/html")');
   });
@@ -815,7 +813,7 @@ describe('shared pattern compiler in generated routes', () => {
   });
 
   it('__compilePattern itself still throws on duplicate capture group names', () => {
-    // Config validation rejects these; the runtime skips such rules per request.
+    // Decision: Config validation rejects these; the runtime skips such rules per request.
     expect(() => compilePattern('/:id/:id')).toThrow(/duplicate capture group name/i);
     expect(() => compilePattern('/:splat/*')).toThrow(/duplicate capture group name/i);
     expect(() => compilePattern('/:rest*/:rest*')).toThrow(/duplicate capture group name/i);
@@ -1062,7 +1060,7 @@ describe('default-target dev parity', () => {
 
     for (const { label, opts, trustsHeader } of permutations) {
       const app = evalCompiledApp(compileWithRules(opts));
-      // Registered after eval so the compiled context middleware runs first.
+      // Decision: Registered after eval so the compiled context middleware runs first.
       app.get('/probe', (c: any) => {
         const orig = c.originalUrl();
         return new Response('probe', {

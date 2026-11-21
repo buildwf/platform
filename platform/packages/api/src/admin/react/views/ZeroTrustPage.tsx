@@ -88,8 +88,8 @@ export function ZeroTrustPage({ path, platformName, username }: AdminPageProps) 
     live,
     projects,
   } = pageData;
-  // The existing-project choice applies only when enabling, or when a
-  // replacement token resumes an enabling operation.
+  // Decision: The existing-project choice applies only when enabling, or when a replacement token resumes
+  // an enabling operation.
   const choosesExistingProjects = operation ? operation.existingProjects !== null : !enabled;
   const [existingProjects, setExistingProjects] = useState<'protected' | 'public'>(
     operation?.existingProjects === 'public' ? 'public' : 'protected',

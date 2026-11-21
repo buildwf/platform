@@ -10,7 +10,6 @@ const runAiSetupPrompt = vi.hoisted(() => vi.fn());
 vi.mock('../../src/plugin-cloudflare.ts', () => import('../helpers/cloudflare-vite-plugin.ts'));
 vi.mock('../../src/plugin-ai-setup.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/plugin-ai-setup.ts')>()),
-  // Signed in to bwf, with no project linked.
   readBwfDevCredentials: () => ({
     status: 'no-project',
     apiUrl: 'https://platform.example',
@@ -32,7 +31,6 @@ afterEach(() => {
   }
 });
 
-/** Starts `platform:env` for an app that uses `@builtbyfriends/bwf/ai`, in a server with the given plugins. */
 async function startAiApp(plugins: Array<PluginOption>): Promise<void> {
   const root = mkdtempSync(join(tmpdir(), 'platform-ai-onboarding-'));
   roots.push(root);
@@ -55,7 +53,7 @@ async function startAiApp(plugins: Array<PluginOption>): Promise<void> {
   const configureServer = getHookHandler(envPlugin?.configureServer) as (
     server: ViteDevServer,
   ) => void;
-  // Without an HTTP server, the setup starts right away.
+  // Decision: Without an HTTP server, the setup starts right away.
   configureServer({ config: { plugins }, httpServer: null } as unknown as ViteDevServer);
 }
 
@@ -70,7 +68,7 @@ describe('AI project setup in development', () => {
   it("prints how to link one instead in Vitest's server", async () => {
     process.stdin.isTTY = true;
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-    // Vitest adds plugins of its own to the server that runs the tests.
+    // Decision: Vitest adds plugins of its own to the server that runs the tests.
     await startAiApp([{ name: 'vitest:config' }]);
 
     expect(runAiSetupPrompt).not.toHaveBeenCalled();

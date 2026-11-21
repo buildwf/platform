@@ -14,10 +14,10 @@ const roots: Array<string> = [];
 function createProject(envSchemaBody?: string): string {
   const root = mkdtempSync(join(tmpdir(), 'platform-env-cli-'));
   roots.push(root);
-  // Node loads env.ts with the nearest package's module type; tmpdir has no package.json.
+  // Decision: Node loads env.ts with the nearest package's module type; tmpdir has no package.json.
   writeFileSync(join(root, 'package.json'), '{"type":"module"}\n');
   if (envSchemaBody !== undefined) {
-    // Import defineEnv from dist so the CLI and env.ts share one schema registry.
+    // Decision: Import defineEnv from dist so the CLI and env.ts share one schema registry.
     const envPublicUrl = pathToFileURL(ENV_PUBLIC_DIST).href;
     writeFileSync(
       join(root, 'env.ts'),
@@ -80,8 +80,6 @@ describe('bwf env check (subprocess)', () => {
   });
 
   it('redacts secret-looking values from invalid-env report output', () => {
-    // PORT expects a number; the user accidentally pasted an API key.
-    // The CLI output must NOT contain the raw token.
     const root = createProject('{ PORT: number() }');
     writeFileSync(join(root, '.env'), 'PORT=sk_live_abc123456\n');
     const { stdout, status } = runBwf(root, ['env', 'check']);

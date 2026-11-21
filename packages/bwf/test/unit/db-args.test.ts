@@ -248,7 +248,7 @@ describe('parseDbArgs', () => {
     [['--timestamp', '2026-10-16T09:30:00'], 'with Z or an offset'],
     [['--timestamp', '2026-02-30T09:30:00Z'], 'must be a valid ISO 8601 time'],
     [['--timestamp', '2026-10-16T24:00:00Z'], 'must be a valid ISO 8601 time'],
-    // `new Date` would truncate this to .123, an earlier instant than the user wrote.
+    // Decision: `new Date` would truncate this to .123, an earlier instant than the user wrote.
     [['--timestamp', '2026-10-16T09:30:00.123456Z'], 'at most millisecond precision'],
     [['--platform', 'platform', '--bookmark', '00000085-0000024c'], "accepts only 'cloudflare'"],
     [['--bookmark=--dry-run'], '--bookmark must be a D1 restore point'],

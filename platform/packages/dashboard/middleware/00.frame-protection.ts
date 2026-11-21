@@ -1,7 +1,7 @@
 import { defineMiddleware } from '@builtbyfriends/bwf';
 
-// No dashboard page is meant to be framed. Only HTML is touched, so redirects,
-// WebSocket upgrades and other responses pass through unchanged.
+// Decision: No dashboard page is meant to be framed. Only HTML is touched, so redirects, WebSocket upgrades
+// and other responses pass through unchanged.
 export default defineMiddleware(async (context, next) => {
   await next();
   if (context.res.headers.get('Content-Type')?.startsWith('text/html')) {

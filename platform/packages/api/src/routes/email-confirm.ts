@@ -26,10 +26,9 @@ import type { EmailDestination } from '../types.ts';
 
 const app = new Hono<ApiEnv>();
 
-// Keep the single-use confirmation token from leaking via shared caches or
-// `Referer` to anything the success page links to. Token is in the URL —
-// once consumed it's harmless, but until then a naive cache or Referer
-// header could let a later visitor flip the row.
+// Decision: Keep the single-use confirmation token from leaking through shared caches or `Referer` to pages the
+// success page links to. Until it's consumed, a cache or Referer could let a later visitor flip the
+// row.
 app.use('/destinations/confirm', async (context, next) => {
   await next();
   context.res.headers.set('cache-control', 'no-store');
@@ -56,9 +55,8 @@ async function loadConfirmTarget(context: Context<ApiEnv>): Promise<ConfirmTarge
 
   const payload = await verifyConfirmToken(token, context.env.EMAIL_SIGNING_SECRET);
   if (!payload) {
-    // Don't distinguish bad signature vs expired vs malformed in the
-    // user-visible page — they're all "this link no longer works".
-    // Distinct outcomes are still observable via tail logs if needed.
+    // Decision: Don't tell bad signature, expired and malformed apart on the page; they're all "this link no longer
+    // works". Tail logs still show the distinct outcomes.
     return platformBrowserPage(
       context,
       'Confirmation failed',
@@ -71,11 +69,8 @@ async function loadConfirmTarget(context: Context<ApiEnv>): Promise<ConfirmTarge
 
   const row = await getEmailDestinationById(context.get('db'), payload.did);
   if (!row || row.project_id !== payload.pid || row.address !== payload.addr) {
-    // Token's claims don't match a real destination row. Could be:
-    // (1) destination deleted between token issue and click,
-    // (2) tampered token (different did/pid/addr),
-    // (3) projectId / address mismatch from a token replay attempt.
-    // All three deserve 404 — there is no row to confirm.
+    // Decision: The token's claims don't match a real destination row: deleted between issue and click, tampered,
+    // or a replay with a mismatched project or address. All of these get 404.
     return platformBrowserPage(
       context,
       'Confirmation failed',
@@ -88,8 +83,8 @@ async function loadConfirmTarget(context: Context<ApiEnv>): Promise<ConfirmTarge
   return { row, slug: project?.slug ?? row.project_id, token };
 }
 
-// Mail security scanners open every link in a message, so opening the link
-// only shows the Confirm button; consent is the POST that button sends.
+// Decision: Mail security scanners open each link in a message, so opening the link only shows the Confirm
+// button; consent is the POST that button sends.
 app.get('/destinations/confirm', async (context) => {
   const target = await loadConfirmTarget(context);
   if (target instanceof Response) {
@@ -126,10 +121,8 @@ app.post('/destinations/confirm', async (context) => {
     'verified',
     row.cf_destination_id ?? null,
     new Date().toISOString(),
-    // Preserve verification_source='platform' on the row — the audit
-    // trail says "the recipient clicked the platform-side link", not
-    // "CF verified it". Pass undefined so the existing source value
-    // (whatever the row was created with) stays put.
+    // Decision: Keep verification_source='platform' on the row: the audit trail says the recipient clicked the
+    // platform link, not that CF verified it. Pass undefined so the existing source stays.
     undefined,
   );
   if (!updated) {

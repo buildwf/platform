@@ -23,8 +23,8 @@ describe('openDeployLog', () => {
     rmSync(home.dir, { recursive: true, force: true });
   });
 
-  // Two deploys started at the same moment (for example two apps deployed in
-  // parallel from one machine) must not interleave their records in one file.
+  // Decision: Two deploys started at the same moment (for example two apps deployed in parallel from one
+  // machine) must not interleave their records in one file.
   it('gives loggers opened in the same millisecond their own files', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-10-06T00:00:00.000Z'));
@@ -50,10 +50,10 @@ describe('openDeployLog', () => {
     expect(secondText).not.toContain('first_only');
   });
 
-  // Many CLI failure paths call process.exit() right after logging. A buffered stream would
-  // lose every record still in memory at that point, including deploy_end.
+  // Decision: Many CLI failure paths call process.exit() right after logging. A buffered stream would lose
+  // the records still in memory at that point, including deploy_end.
   it('keeps every record on disk when the process exits right after writing', () => {
-    // A file URL, not a path: import() reads a Windows drive path as a 'c:' URL scheme.
+    // Decision: A file URL, not a path: import() reads a Windows drive path as a 'c:' URL scheme.
     const logFile = new URL('../../src/cli/log-file.ts', import.meta.url).href;
     const script = [
       `const { openDeployLog } = await import(${JSON.stringify(logFile)});`,
@@ -62,7 +62,7 @@ describe('openDeployLog', () => {
       "log.error('deploy_end', undefined, { ok: false, exitCode: 1 });",
       'process.exit(1);',
     ].join('\n');
-    // The child resolves homedir() from these, so its log lands in the test's home.
+    // Decision: The child resolves homedir() from these, so its log lands in the test's home.
     const child = spawnSync(process.execPath, ['--input-type=module', '--eval', script], {
       env: { ...process.env, HOME: home.dir, USERPROFILE: home.dir },
       encoding: 'utf8',
@@ -115,7 +115,7 @@ describe('openDeployLog', () => {
   );
 
   it('keeps working without a file when the log directory cannot be created', () => {
-    // A file where the directory should be makes mkdir fail.
+    // Decision: A file where the directory should be makes mkdir fail.
     rmSync(home.dir, { recursive: true, force: true });
     writeFileSync(home.dir, '');
     try {

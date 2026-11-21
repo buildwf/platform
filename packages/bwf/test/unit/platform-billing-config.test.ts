@@ -162,7 +162,6 @@ describe('bwf platform config billing', () => {
     expect(printed).not.toContain(SECRET_KEY);
     expect(printed).not.toContain(WEBHOOK_SECRET);
 
-    // A later save keeps the earlier values.
     await runPlatformBillingConfig(parsePlatformArgs(['config', 'billing']) as never, {
       env: { STRIPE_PRICE_PRO: 'price_pro' },
       registryDirectory: directory,

@@ -42,8 +42,8 @@ import {
   type TestEnv,
 } from './helpers.ts';
 
-// The platform uninstall check in the CLI reads and locks this database
-// directly, so these tests run it against the API's real schema and writers.
+// Decision: The CLI's platform uninstall check reads and locks this database directly, so these tests run it
+// against the API's real schema and writers.
 
 let env: TestEnv;
 
@@ -179,7 +179,6 @@ describe('platform uninstall check against the API database', () => {
         platform,
       );
 
-    // Teardown marks the project deleting, then fails before Access cleanup.
     const deleteRoute = env.ROUTING.delete.bind(env.ROUTING);
     const routeDelete = vi.spyOn(env.ROUTING, 'delete').mockImplementation(async (key) => {
       if (key === project.slug) {
@@ -190,7 +189,6 @@ describe('platform uninstall check against the API database', () => {
     expect((await deleteProject()).status).toBe(500);
     routeDelete.mockRestore();
 
-    // Disable and hourly maintenance both skip the deleting project.
     await disablePlatformZeroTrust(platform, env.db);
     await settleOperation(platform);
     await reconcilePendingProjectZeroTrust(platform, env.db);
@@ -212,7 +210,6 @@ describe('platform uninstall check against the API database', () => {
     expect(refusal!.message).toContain('Deletion of project stopped-deletion stopped');
     expect(refusal!.message).toContain('`bwf project delete <name>`');
 
-    // The operator follows the dashboard hint first, then reruns the deletion.
     cloudflare.applications.delete(bypass.bypass_application_id!);
     expect((await deleteProject()).status).toBe(200);
     await expect(check()).resolves.toBeUndefined();
@@ -247,14 +244,12 @@ describe('platform uninstall check against the API database', () => {
     await expect(configurePlatformZeroTrust(platform, env.db, configureInput)).rejects.toThrow(
       'The platform is being uninstalled',
     );
-    // Deployments read project routing under the same lock.
     await expect(resolveProjectZeroTrustRouting(env.db, project.id)).rejects.toThrow(
       'The platform is being uninstalled',
     );
     expect(cloudflare.applications.size).toBe(0);
     expect(await readZeroTrustConfigurationStrict(env.db)).toBeNull();
 
-    // Enabling the platform again lifts the fence before traffic opens.
     await liftPlatformProjectZeroTrustFenceConnection(connection);
     await configurePlatformZeroTrust(platform, env.db, configureInput);
     expect(cloudflare.applications.size).toBeGreaterThan(0);
@@ -265,7 +260,6 @@ describe('platform uninstall check against the API database', () => {
     const platform = bindings();
     const connection = (env.db as unknown as { $client: QueryConnection }).$client;
 
-    // The request was admitted before traffic was disabled.
     await fencePlatformProjectZeroTrustConnection(connection);
     const response = await app.fetch(
       new Request('http://localhost/rpc/projects.create', {
@@ -294,8 +288,6 @@ describe('platform uninstall check against the API database', () => {
         const readProjects = () => readPlatformProjectSlugsConnection(session);
         await assertNoPlatformProjects(readProjects);
 
-        // Admitted before traffic was disabled, it reaches the insert after
-        // the final check passed.
         const created = Promise.resolve(
           app.fetch(
             new Request('http://localhost/rpc/projects.create', {
@@ -315,7 +307,6 @@ describe('platform uninstall check against the API database', () => {
         await fencePlatformProjectZeroTrustConnection(session);
         await unlock();
         expect(await created).toBe(409);
-        // Teardown deletes the platform only while this stays empty.
         await expect(assertNoPlatformProjects(readProjects)).resolves.toBeUndefined();
       } finally {
         await liftPlatformProjectZeroTrustFenceConnection(session);
@@ -337,13 +328,10 @@ describe('platform uninstall check against the API database', () => {
         const check = () => readPlatformProjectZeroTrustStateConnection(session);
         expect(await check()).toMatchObject({ active: false, applications: [] });
 
-        // Both requests were admitted before traffic was disabled and now
-        // wait on the lock uninstall holds.
         const configure = configurePlatformZeroTrust(platform, env.db, configureInput).then(
           () => 'configured',
           (error: Error) => error.message,
         );
-        // Project protection changes and deployments take the shared side.
         const projectWriter = env.db
           .transaction(async (tx) => {
             await lockZeroTrustConfiguration(tx, 'shared');

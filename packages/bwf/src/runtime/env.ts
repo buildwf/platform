@@ -20,7 +20,7 @@ type RuntimeRequestScope = {
   resources: Map<object, unknown>;
 };
 
-// Shared across copies of this module for the reason given at `envContext`.
+// Decision: Shared across copies of this module for the reason given at `envContext`.
 const REQUEST_SCOPE_SYMBOL: unique symbol = Symbol.for('bwf.runtimeRequestScope.v1');
 const shared = globalThis as { [REQUEST_SCOPE_SYMBOL]?: AsyncLocalStorage<RuntimeRequestScope> };
 shared[REQUEST_SCOPE_SYMBOL] ??= new AsyncLocalStorage<RuntimeRequestScope>();

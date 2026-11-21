@@ -16,7 +16,7 @@ import {
   pgMigrationRunner,
 } from '../../src/runtime/auth-migrations.ts';
 
-// PGlite serves the `pg` clients, and each client records the database it names.
+// Decision: PGlite serves the `pg` clients, and each client records the database it names.
 const state = vi.hoisted(() => ({ pg: null as PGlite | null, connections: [] as Array<string> }));
 vi.mock('pg', () => ({
   Client: class {
@@ -32,7 +32,7 @@ vi.mock('pg', () => ({
 }));
 
 beforeAll(async () => {
-  // Load PostgreSQL once: Windows' cold WASM startup belongs to the hook budget.
+  // Decision: Load PostgreSQL once: Windows' cold WASM startup belongs to the hook budget.
   state.pg = new PGlite();
   await state.pg.waitReady;
 }, 30_000);
@@ -482,7 +482,7 @@ describe('auth migration runner', () => {
         },
       ],
     };
-    // MySQL 8 labels an unaliased information_schema column with its uppercase name.
+    // Decision: MySQL 8 labels an unaliased information_schema column with its uppercase name.
     const row = (sql: string, values: Record<string, string>) =>
       Object.fromEntries(
         Object.entries(values).map(([column, value]) => [
@@ -554,7 +554,7 @@ describe('auth migration runner', () => {
   it('fills rows that exist with the fixed default of a new required field (postgres)', async () => {
     const pg = state.pg!;
     const runner = pgMigrationRunner(pg);
-    // With standard_conforming_strings off, a backslash in '...' starts an escape.
+    // Decision: With standard_conforming_strings off, a backslash in '...' starts an escape.
     for (const mode of ['on', 'off']) {
       await pg.exec(
         `DROP SCHEMA public CASCADE; CREATE SCHEMA public; SET standard_conforming_strings = ${mode}`,
@@ -591,7 +591,6 @@ describe('auth migration runner', () => {
     try {
       const runner = sqliteRunner(db);
       await applySqliteAuthMigrations(runner, resolveWithUserFields('sqlite'));
-      // An empty table takes the column: no row needs a value.
       await applySqliteAuthMigrations(
         runner,
         resolveWithUserFields('sqlite', { nickname: { type: 'string' } }),
@@ -649,7 +648,6 @@ describe('auth migration runner', () => {
       db.prepare(
         "INSERT INTO user (id, name, email, emailVerified, createdAt, updatedAt) VALUES ('u1', 'A', 'a@example.com', 0, 0, 0)",
       ).run();
-      // One row can take the default of a unique field.
       await applySqliteAuthMigrations(
         runner,
         resolveWithUserFields('sqlite', {
@@ -706,7 +704,6 @@ describe('auth migration runner', () => {
           if (sql.includes('information_schema.statistics')) {
             return [{ index_name: 'user_email_uidx' }] as unknown as Array<T>;
           }
-          // The user table has rows.
           return [{ present: 1 }] as unknown as Array<T>;
         },
         async run(sql: string) {
@@ -718,7 +715,7 @@ describe('auth migration runner', () => {
 
     expect(statements).toEqual([
       "ALTER TABLE `user` ADD COLUMN `plan` varchar(255) NOT NULL DEFAULT 'free'",
-      // A hex string keeps the backslash when the server sets NO_BACKSLASH_ESCAPES.
+      // Decision: A hex string keeps the backslash when the server sets NO_BACKSLASH_ESCAPES.
       "ALTER TABLE `user` ADD COLUMN `motto` varchar(255) NOT NULL DEFAULT _utf8mb4 X'6974277320615c62'",
       'ALTER TABLE `user` ADD COLUMN `nickname` varchar(255) NOT NULL',
     ]);
@@ -768,7 +765,7 @@ describe('auth migration runner', () => {
 });
 
 describe('runLocalBwfAuthMigrations', () => {
-  // This test writes a SQLite file on disk. Windows CI disk writes can stall for 30 seconds.
+  // Decision: This test writes a SQLite file on disk. Windows CI disk writes can stall for 30 seconds.
   it(
     'creates the local D1 directory on the first dev run',
     async () => {
@@ -799,7 +796,6 @@ describe('runLocalBwfAuthMigrations', () => {
     process.platform === 'win32' ? 60_000 : undefined,
   );
 
-  // An empty DATABASE_URL in the shell counts as unset, so the one in .env is used.
   it('uses DATABASE_URL from .env when the shell value is empty', async () => {
     const root = mkdtempSync(join(tmpdir(), 'platform-auth-migrations-'));
     writeFileSync(join(root, '.env'), 'DATABASE_URL=postgres://localhost/app\n');

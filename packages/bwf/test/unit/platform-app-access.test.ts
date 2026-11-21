@@ -355,7 +355,7 @@ describe('guided installation app access', () => {
       (body: unknown, status = 200) =>
       async () =>
         body === null ? new Response('404 Not Found', { status }) : Response.json(body, { status });
-    // Runtimes from before the turn-off route answer in one of these ways.
+    // Decision: Runtimes from before the turn-off route answer in one of these ways.
     for (const old of [
       answer(null, 404),
       answer({ error: 'Platform disabled' }, 503),

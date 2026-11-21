@@ -91,9 +91,6 @@ describe('manifest var / secret collision warning', () => {
     expect(res.status).toBe(200);
     await res.text();
 
-    // Logger emits a structured JSON line via console.warn; the relevant
-    // record carries `msg: 'var_secret_collisions'` and the colliding name
-    // in `collisions`.
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('var_secret_collisions'));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('API_KEY'));
 

@@ -5,11 +5,9 @@ import type { FailedWebhookDelivery } from '../../src/github/webhook-deliveries.
 import { replayFailedWebhookDeliveries } from '../../src/webhook-replay.ts';
 import { clearTables, setupEnv, teardownEnv, type TestEnv } from './helpers.ts';
 
-// Drive the mocked deliveries client via module-level mutable state (mirrors the
-// `compareStatus` pattern in api-webhooks.test.ts): the factory closures read
-// these at call time, so no `vi.hoisted` / TDZ dance is needed.
+// Decision: The factory closures read this module-level state at call time (like `compareStatus` in
+// api-webhooks.test.ts), so no `vi.hoisted` or TDZ workaround is needed.
 let failedDeliveries: Array<FailedWebhookDelivery> = [];
-// deliveryId -> redeliver result; any id not present defaults to `true`.
 let redeliverResults: Record<string, boolean> = {};
 const listCalls: Array<{ opts?: { maxPages?: number; perPage?: number } }> = [];
 const redeliverCalls: Array<string> = [];
@@ -30,8 +28,7 @@ vi.mock('../../src/github/webhook-deliveries.ts', () => ({
 
 let env: TestEnv;
 
-// An env with the App secrets present so the App-secret gate opens. The mocked
-// deliveries client never reads them, so any non-empty values suffice.
+// Decision: The mocked deliveries client doesn't read the App secrets, so any non-empty values open the gate.
 function envWithApp(): ApiEnv['Bindings'] {
   return {
     ...env,
@@ -40,7 +37,6 @@ function envWithApp(): ApiEnv['Bindings'] {
   } as unknown as ApiEnv['Bindings'];
 }
 
-// An env with the App secrets absent (dev/unconfigured) so the gate stays shut.
 function envWithoutApp(): ApiEnv['Bindings'] {
   return {
     ...env,
@@ -88,12 +84,10 @@ describe('replayFailedWebhookDeliveries()', () => {
     const result = await replayFailedWebhookDeliveries(envWithApp(), env.db);
 
     expect(result).toEqual({ scanned: 3, redelivered: 3 });
-    // Redeliver POSTs the numeric delivery id, not the guid.
+    // Decision: Redeliver POSTs the numeric delivery id, not the guid.
     expect(redeliverCalls).toEqual(['del-1', 'del-2', 'del-3']);
-    // Every guid is now in the ledger.
     const seen = await getRedeliveredGuids(env.db, ['g1', 'g2', 'g3']);
     expect(seen).toEqual(new Set(['g1', 'g2', 'g3']));
-    // The list scan is bounded by the page cap.
     expect(listCalls).toHaveLength(1);
     expect(listCalls[0].opts?.maxPages).toBe(5);
   });
@@ -114,13 +108,12 @@ describe('replayFailedWebhookDeliveries()', () => {
     const result = await replayFailedWebhookDeliveries(envWithApp(), env.db);
 
     expect(result).toEqual({ scanned: 2, redelivered: 1 });
-    // The already-recorded guid is never re-POSTed.
     expect(redeliverCalls).toEqual(['del-new']);
   });
 
   it('attempts a duplicate guid within the batch only once', async () => {
-    // GitHub returns the original + a prior redelivery of the same event; both
-    // share the guid, so the in-batch dedup Set collapses them to one attempt.
+    // Decision: GitHub returns the original and an earlier redelivery of the same event. Both share the guid, so
+    // the in-batch dedupe Set collapses them to one attempt.
     failedDeliveries = [
       delivery({ id: 'del-a1', guid: 'g-dup' }),
       delivery({ id: 'del-a2', guid: 'g-dup' }),
@@ -144,7 +137,6 @@ describe('replayFailedWebhookDeliveries()', () => {
     });
 
     expect(result).toEqual({ scanned: 3, redelivered: 2 });
-    // Stops calling redeliver once the per-run attempt cap is hit.
     expect(redeliverCalls).toEqual(['del-1', 'del-2']);
     const seen = await getRedeliveredGuids(env.db, ['g1', 'g2', 'g3']);
     expect(seen).toEqual(new Set(['g1', 'g2']));

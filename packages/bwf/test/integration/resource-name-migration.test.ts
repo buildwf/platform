@@ -268,7 +268,7 @@ export default defineRoom({
     expect(await connect('/rooms/other')).toEqual({ visits: 2, id: 'room=other' });
     const removedRoute = await runtime!.dispatchFetch('http://localhost/chat/general');
     expect(removedRoute.status).toBe(404);
-    // Drain the response before restarting workerd so disposal cannot wait on its open stream.
+    // Decision: Drain the response before restarting workerd so disposal cannot wait on its open stream.
     await removedRoute.arrayBuffer();
 
     rmSync(join(routesDirectory, 'rooms', '[room].ws.ts'));
@@ -290,7 +290,7 @@ export default defineRoom({
       mkdirSync(join(directory, 'routes', 'rooms'), { recursive: true });
       const nodeModules = join(directory, 'node_modules');
       mkdirSync(join(nodeModules, '@builtbyfriends'), { recursive: true });
-      // Link each package to its real directory so pnpm's relative workspace
+      // Decision: Link each package to its real directory so pnpm's relative workspace
       // links do not depend on the temporary app's ancestors on Windows.
       for (const [name, source] of [
         ['vite-plus', join(repository, 'node_modules/vite-plus')],
@@ -377,7 +377,7 @@ export default defineRoom({
         { tag: 'platform-durable-counter-v1', new_sqlite_classes: ['CounterDurableObject'] },
         { tag: 'platform-ws-v1', new_sqlite_classes: ['ChatRoomWs'] },
       ]);
-      // Source maps belong in uploads, but are not executable Worker modules.
+      // Decision: Source maps belong in uploads, but are not executable Worker modules.
       const main = String(config.main).replace(/^\.\//, '');
       const modules = readdirSync(output, { recursive: true })
         .map(String)

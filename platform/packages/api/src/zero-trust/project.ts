@@ -83,9 +83,9 @@ async function checkpointProjectReconciliation(
   options?: ProjectReconciliationOptions,
 ): Promise<ProjectZeroTrust> {
   return withProjectZeroTrustLock(db, projectId, async (lockedDb) => {
-    // The route precheck can go stale. Team and ownership changes share this
-    // lock, so authorize again before committing the new intent. Platform
-    // callers (operators, maintenance, domain hooks) have no actor here.
+    // Decision: The route precheck can go stale. Team and ownership changes share this lock, so authorize again
+    // before committing the new intent. Platform callers (operators, maintenance, domain hooks) have no
+    // actor here.
     if (options?.actorUserId) {
       await requireProjectCapability(lockedDb, projectId, options.actorUserId, 'settings');
     }
@@ -297,8 +297,8 @@ async function reconcileProjectZeroTrustLocked(
         options?.routingBudget,
       ))
     ) {
-      // Unpublished keys still lack the audience set. Keep the public
-      // exception and stay reconciling until every route carries it.
+      // Decision: Unpublished keys still lack the audience set. Keep the public exception and stay reconciling until
+      // each route carries it.
       return (await getProjectZeroTrustState(lockedDb, projectId))!;
     }
     row = await updateProjectState(lockedDb, projectId, { effective_protected: true });
@@ -323,7 +323,7 @@ export async function reconcileProjectZeroTrust(
   const checkpointed = await checkpointProjectReconciliation(env, db, projectId, options);
   const budget = options?.routingBudget;
   if (budget && budget.remaining < requiredRoutingBudget(checkpointed)) {
-    // The committed checkpoint keeps this project reconciling for the next batch.
+    // Decision: The committed checkpoint keeps this project reconciling for the next batch.
     budget.exhausted = true;
     return checkpointed;
   }
@@ -439,8 +439,8 @@ export async function initializeNewProjectZeroTrust(
   if (!initializesProjectZeroTrust(await readZeroTrustConfigurationStrict(db))) {
     return null;
   }
-  // Operation heartbeats advance the saved revision. Decide from the
-  // configuration read under the lock, never from the unlocked snapshot above.
+  // Decision: Operation heartbeats advance the saved revision. Decide from the configuration read under the
+  // lock, not from the unlocked snapshot above.
   const initialized = await withProjectZeroTrustLock(db, projectId, async (lockedDb) => {
     const project = await getProject(lockedDb, projectId);
     const saved = await readZeroTrustConfigurationStrict(lockedDb);
@@ -450,15 +450,15 @@ export async function initializeNewProjectZeroTrust(
     if (!saved || !initializesProjectZeroTrust(saved)) {
       return null;
     }
-    // Project creation commits before this initializer runs. A platform batch
-    // may already have seeded or reconciled it, including its ownership handles.
+    // Decision: Project creation commits before this initializer runs. A platform batch may already have seeded or
+    // reconciled it, including its ownership handles.
     const existing = await getProjectZeroTrustState(lockedDb, projectId);
     if (existing) {
       return { row: existing, created: false };
     }
     const desired = initialProjectProtection(saved, project);
-    // A new protected project has no route or custom domain yet, so the
-    // wildcard alone settles it when no operation is running.
+    // Decision: A new protected project has no route or custom domain yet, so the wildcard alone settles it when
+    // no operation is running.
     const settled = desired && !!saved.wildcardApplication && !saved.operation;
     return {
       row: await putProjectState(lockedDb, projectId, {
@@ -484,7 +484,7 @@ export async function initializeNewProjectZeroTrust(
     if (!saved || !initializesProjectZeroTrust(saved)) {
       throw new ZeroTrustUnavailableError('Project Zero Trust configuration changed.');
     }
-    // A running operation still owns this row; its batch finishes the transition.
+    // Decision: A running operation still owns this row; its batch finishes the transition.
     return recordErrors(async () =>
       ensureProjectBypassLocked(
         env,
@@ -538,8 +538,8 @@ export async function reconcileProjectZeroTrustDomains(
   if (!configuration?.enabled || configuration.operation?.kind === 'disable' || !row) {
     return row;
   }
-  // Operation heartbeats advance the saved revision, so this unlocked read
-  // only filters. Reconciliation uses the configuration saved under the lock.
+  // Decision: Operation heartbeats advance the saved revision, so this unlocked read only filters.
+  // Reconciliation uses the configuration saved under the lock.
   return reconcileProjectZeroTrust(env, db, projectId, {
     duringOperation: true,
     verifiedDomainId: options?.verifiedDomainId,

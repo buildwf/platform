@@ -44,7 +44,7 @@ export async function putDurableSnapshotModule(
   digest: string,
 ): Promise<void> {
   await putVerifiedSnapshotObject(bucket, key, digest, () => {
-    // A stream is written once, so every attempt reopens the module.
+    // Decision: A stream can be written once, so each attempt reopens the module.
     const source = trackedModuleStream(module);
     return { value: withKnownLength(source.stream, module.size), failure: source.failure };
   });
@@ -65,15 +65,15 @@ async function putVerifiedSnapshotObject(
         return;
       }
     } catch (error) {
-      // Source bytes that fail their integrity check fail every retry too.
+      // Decision: Source bytes that fail their integrity check fail each retry too.
       const integrity = sourceFailure?.();
       if (integrity instanceof WorkerModuleIntegrityError) {
         throw integrity;
       }
       failure = error;
     }
-    // R2 reads are strongly consistent. Verify an acknowledged or ambiguous
-    // write before accepting it; the condition also fences any late PUT.
+    // Decision: R2 reads are strongly consistent. Verify an acknowledged or ambiguous write before accepting it;
+    // the condition also fences any late PUT.
     const stored = await bucket.get(key);
     if (stored) {
       if ((await streamSha256(stored.body)) === expected) {

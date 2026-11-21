@@ -145,7 +145,6 @@ describe('first administrator dashboard login', () => {
       if (scenario === 'hosted-cloud') {
         env.PLATFORM_INSTALLATION_ID = undefined;
       }
-      // Even public signup must not allow an arbitrary visitor to claim the admin UI.
       await env.ROUTING.put('signup:enabled', 'false');
       const response = await login();
       expect(response.status).toBe(403);

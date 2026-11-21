@@ -177,7 +177,7 @@ export async function enableInstallationServices(input: {
             preservedRoutes,
             previousConfig: previousWorkerConfig,
             previousPublicEndpoints: true,
-            // Traffic opens only after every Worker in this generation is
+            // Decision: Traffic opens only after every Worker in this generation is
             // verified against its own staged checkpoint, so none may be reused.
             reuseMatchingVersion: false,
             runner: runPinnedPlatformWrangler,
@@ -208,7 +208,7 @@ export async function enableInstallationServices(input: {
   await verifyCurrentWorkerCutover();
   let emailOperationId: string | undefined;
   if (shouldBootstrapSharedEmail) {
-    // Shared-zone setup mutates provider routing. Once it begins, retain the
+    // Decision: Shared-zone setup mutates provider routing. Once it begins, retain the
     // verified Worker set and keep the installation's routing gate closed on
     // failure so a retry can resume the durable email operation safely.
     state.workerDeploymentCommitted = true;
@@ -236,7 +236,7 @@ export async function enableInstallationServices(input: {
       createPlatformHealthProbeToken(state.manifest.ownershipNonce),
     );
   }
-  // A failed uninstall, or one whose database is reused, leaves its record
+  // Decision: A failed uninstall, or one whose database is reused, leaves its record
   // behind. Remove it before traffic opens so Zero Trust writers run again.
   await releaseDatabaseLock.liftProjectZeroTrustFence?.();
   await dependencies.client.deleteKvValue(

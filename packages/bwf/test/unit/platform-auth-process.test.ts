@@ -59,8 +59,8 @@ describe('non-blocking platform auth processes', () => {
       await expect(
         resolvePlatformCloudflareCredentialWithInput(
           async () => {
-            // The input callback and timers must run while the child is still
-            // alive; a synchronous auth process would block this entirely.
+            // Decision: The input callback and timers have to run while the child is still alive; a synchronous auth
+            // process would block this entirely.
             await vi.waitFor(() => expect(existsSync(ready)).toBe(true));
             pid = Number(readFileSync(ready, 'utf8'));
             expect(() => process.kill(pid!, 0)).not.toThrow();
@@ -74,9 +74,7 @@ describe('non-blocking platform auth processes', () => {
       if (pid) {
         try {
           process.kill(pid);
-        } catch {
-          /* Already stopped. */
-        }
+        } catch {}
       }
     }
   });
@@ -107,9 +105,7 @@ describe('non-blocking platform auth processes', () => {
       if (pid) {
         try {
           process.kill(pid);
-        } catch {
-          /* Already stopped. */
-        }
+        } catch {}
       }
     }
   });

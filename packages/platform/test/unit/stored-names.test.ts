@@ -9,8 +9,8 @@ import {
 } from '../../src/installation.ts';
 import { createPlatformDeploymentManifest } from '../../src/manifest.ts';
 
-// An install made from the rebrand-nosam branch (4f39e4c) stored these names. Renaming them
-// leaves an upgrade unable to find its ownership records, so they stay as that release wrote them.
+// Decision: An earlier install stored these names. Renaming them leaves an upgrade unable to find its
+// ownership records, so they stay as that release wrote them.
 describe('names that an earlier install stored', () => {
   it('keeps the stored keys and proof prefix', () => {
     expect(PLATFORM_R2_OWNERSHIP_MARKER_KEY).toBe('__void/platform/ownership/v1');

@@ -179,12 +179,12 @@ export async function connectCloudflareDeployAccount(options: {
     log.error(`deploy: ${getErrorMessage(error)}`);
     return null;
   }
-  // Pin the region from the same inputs, before project code can edit the root config.
+  // Decision: Pin the region from the same inputs, before project code can edit the root config.
   const complianceRegion = resolveWorkersDevComplianceRegion(
     process.env,
     readWranglerTopLevelString(rootConfig, 'compliance_region'),
   );
-  // Pin the uploaders before the first authenticated command, including account discovery.
+  // Decision: Pin the uploaders before the first authenticated command, including account discovery.
   const pins = createCloudflareUploaderPins(root, deps);
   let accountId =
     readWranglerTopLevelString(rootConfig, 'account_id') ??
@@ -212,7 +212,7 @@ export async function connectCloudflareDeployAccount(options: {
   let readinessAccessOrigin: string | undefined;
   try {
     workersDevSubdomain = resolveCloudflareWorkersDevSubdomain(root, accountId);
-    // Reject an invalid opt-in before the build.
+    // Decision: Reject an invalid opt-in before the build.
     readinessAccessOrigin = resolveCloudflareReadinessAccessOrigin({
       CF_ACCESS_READINESS_ORIGIN: options.readinessAccessOrigin ?? undefined,
     });
@@ -409,7 +409,7 @@ export function cloudflareCandidateActivationOptions(options: {
     workersDevSubdomain,
     resolveWorkersDevSubdomain: async () => {
       const { complianceRegion } = options;
-      // Without a region, the host is unknown. Do not guess one.
+      // Decision: Without a region, the host is unknown. Don't guess one.
       if (complianceRegion === undefined) {
         return { ok: false, reason: 'unavailable' };
       }
@@ -517,7 +517,7 @@ export async function reportCloudflareActivationFailure(
     triggerRepair: execution.triggerRepair,
     containersUnavailable: execution.containersUnavailable,
   });
-  // Written here because the log is closed below, before the caller exit(1) could record it.
+  // Decision: Written here because the log is closed below, before the caller's exit(1) could record it.
   cliLog.error('deploy_end', undefined, { ok: false, exitCode: 1 });
   await cliLog.close().catch(() => {});
   log.error(`${safeMessage}${cliLog.path ? `\n\nDetailed log: ${cliLog.path}` : ''}`);
@@ -647,8 +647,8 @@ function formatCloudflareActivationFailure(
       return `deploy: Cloudflare could not publish the Worker atomically${status}; inspect production status before retrying.${cloudflareCode}${diagnostic}`;
     case 'atomic-output-invalid':
       if (result.versionId) {
-        // An atomic retry publishes through the same bootstrap, which then
-        // enables workers.dev during trigger synchronization.
+        // Decision: An atomic retry publishes through the same bootstrap, which then enables workers.dev during
+        // trigger sync.
         return formatCloudflarePublishWithoutUrl(
           `Cloudflare published Worker version ${result.versionId} atomically`,
           workersDevReadinessRecovery(result.workersDev, 'atomic'),
@@ -687,8 +687,8 @@ function formatCloudflareActivationFailure(
       return `deploy: Cloudflare could not bootstrap the first Worker deployment${status}.${cloudflareCode}${diagnostic}`;
     case 'bootstrap-output-invalid':
       if (result.versionId) {
-        // A non-atomic retry stages the next version behind the workers.dev
-        // URL, which stays off until a trigger synchronization succeeds.
+        // Decision: A non-atomic retry stages the next version behind the workers.dev URL, which stays off until a
+        // trigger sync succeeds.
         return formatCloudflarePublishWithoutUrl(
           `Cloudflare published the first Worker deployment as version ${result.versionId}`,
           workersDevReadinessRecovery(result.workersDev, 'bootstrap'),
@@ -762,8 +762,8 @@ function formatCloudflareTriggerRecovery(
     ];
   }
   if (live === result.versionId) {
-    // Only a real app is worth rolling back to. Without `restoreSkipped`, bwf could not tell
-    // whether the previous version is an empty draft, so it offers nothing.
+    // Decision: Only a real app is worth rolling back to. Without `restoreSkipped`, bwf can't tell whether the
+    // previous version is an empty draft, so it offers nothing.
     const rollbackHint =
       previous &&
       (result.restoreSkipped === 'no-trigger-snapshot' || result.restoreSkipped === 'atomic')
@@ -780,8 +780,8 @@ function formatCloudflareTriggerRecovery(
     ];
   }
   if (live === previous) {
-    // Without restored triggers, bwf cannot tell whether its own command or another operation
-    // moved traffic back (a restore skipped over a foreign deployment also lands here).
+    // Decision: Without restored triggers, bwf can't tell whether its own command or another operation moved
+    // traffic back (a restore skipped over a foreign deployment also lands here).
     return [
       result.triggersRestored === 'yes'
         ? `Live now: ${live} (the previous version). bwf switched traffic back to it and restored its ${TRIGGER_KINDS}.`

@@ -278,8 +278,8 @@ describe('administrator plan dashboard', () => {
     const off = await preview('set', 'pro', { ...(await editFields('pro')), aiLogging: 'off' });
     expect((await apply(off)).status).toBe(303);
     expect(await adminHtml(await request(`${home}/pro/edit`))).toContain('name="aiLoggingInitial"');
-    // A form loaded from a cached read before that change still shows Inherit. Only the
-    // name changes, so the review must not clear the saved default.
+    // Decision: A form loaded from a cached read before that change still shows Inherit. Only the name changes, so
+    // the review mustn't clear the saved default.
     const renamed = await preview('set', 'pro', {
       ...(await editFields('pro')),
       name: 'Pro renamed',
@@ -293,7 +293,6 @@ describe('administrator plan dashboard', () => {
     expect(await getPlatformSetting(env.db, PLAN_AI_LOGGING_SETTING)).toMatchObject({
       modes: { pro: 'off' },
     });
-    // A changed selector still applies.
     const cleared = await preview('set', 'pro', {
       ...(await editFields('pro')),
       aiLogging: 'inherit',

@@ -108,7 +108,7 @@ export function getOrCreateDevTriggerToken(root: string): string {
       return undefined;
     }
   };
-  // Best-effort: a token we can read but not chmod (foreign owner, read-only
+  // Decision: Best-effort: a token we can read but not chmod (foreign owner, read-only
   // mount) must still start the dev server.
   const tightenExisting = (): void => {
     if (process.platform === 'win32') {
@@ -118,9 +118,7 @@ export function getOrCreateDevTriggerToken(root: string): string {
       if ((statSync(tokenPath).mode & 0o077) !== 0) {
         chmodSync(tokenPath, DEV_TRIGGER_TOKEN_FILE_MODE);
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
 
   const existing = readExisting();
@@ -129,7 +127,7 @@ export function getOrCreateDevTriggerToken(root: string): string {
     return existing;
   }
 
-  // Atomic create — `wx` fails with EEXIST if the file appeared between the
+  // Decision: Atomic create — `wx` fails with EEXIST if the file appeared between the
   // read above and the write below (parent + child Vite both racing). On
   // EEXIST we re-read the winner's token and use that, so both processes
   // converge on the same UUID.
@@ -151,13 +149,13 @@ export function getOrCreateDevTriggerToken(root: string): string {
     if (winner) {
       return winner;
     }
-    // EEXIST but file is empty — extreme edge case (interrupted writer).
+    // Decision: EEXIST but file is empty — extreme edge case (interrupted writer).
     // Fall through and accept the fresh UUID; subsequent reads will win.
     return fresh;
   }
 }
 
-// Request paths that would return the dev-trigger token: `.bwf/dev-trigger-token`,
+// Decision: Request paths that would return the dev-trigger token: `.bwf/dev-trigger-token`,
 // the generated `.bwf/dev-triggers.ts`. Also
 // `.bwf/drizzle.config.json`, where older CLI versions wrote database URLs.
 // Matched anywhere in the decoded, lower-cased path so `/@fs/<abs>/`, `/@id/`,

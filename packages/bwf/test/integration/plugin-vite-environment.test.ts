@@ -143,9 +143,8 @@ describe('bwfPlugin Vite environments', () => {
     expect(config.environments.ssr.optimizeDeps.exclude ?? []).not.toContain('better-auth');
   });
 
-  /** An installed package with the given manifest and `index.js`. */
   it('loads a table file outside db/ that imports sql from bwf/db after a route loads bwf/db', async () => {
-    // #472: db/schema.ts re-exports a table file outside db/, which imports bwf/db while
+    // Decision: db/schema.ts re-exports a table file outside db/, which imports bwf/db while
     // bwf/db is still loading db/schema.ts.
     const root = realpathSync.native(createProjectRoot());
     mkdirSync(join(root, 'db'));
@@ -154,7 +153,7 @@ describe('bwfPlugin Vite environments', () => {
       'export * from "../src/resources/projects/projects.schema";\n',
     );
     mkdirSync(join(root, 'src/resources/projects'), { recursive: true });
-    // A top-level sql`` call, as in a column default, is enough to need the helper.
+    // Decision: A top-level sql`` call, as in a column default, is enough to need the helper.
     writeFileSync(
       join(root, 'src/resources/projects/projects.schema.ts'),
       "import { sql } from '@builtbyfriends/bwf/db';\nexport const projects = sql`(datetime('now'))`;\n",
@@ -177,7 +176,7 @@ describe('bwfPlugin Vite environments', () => {
       logLevel: 'silent',
       plugins: [bwfPlugin()],
       optimizeDeps: { noDiscovery: true },
-      // No watcher: macOS can report the files just written as changed, which
+      // Decision: No watcher: macOS can report the files just written as changed, which
       // reloads bwf/db while the route is still loading it.
       server: { middlewareMode: true, ws: false, watch: null, preTransformRequests: false },
     });

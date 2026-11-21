@@ -72,7 +72,7 @@ describe('filterLogEntries', () => {
   });
 
   it('--level error matches a 5xx status even when the worker did not throw or log', () => {
-    // A returned Response(status:500): outcome ok, no logs, no exceptions.
+    // Decision: A returned Response(status:500) has outcome ok, no logs and no exceptions.
     const silent500 = entry({ outcome: 'ok', logs: [], exceptions: [], status: '500' });
     expect(filterLogEntries([E_OK, silent500], 'error', '')).toEqual([silent500]);
   });
@@ -108,7 +108,6 @@ describe('filterLogEntries', () => {
 
   it("--level log matches entries whose log line has no level (printEntry renders those as '[log]')", () => {
     const E_NULLISH_LEVEL = entry({
-      // Cast covers the user-DTO case where `level` is missing or undefined.
       logs: [
         {
           level: undefined as unknown as string,
@@ -151,7 +150,7 @@ function setFetchMock() {
   return fetchMock;
 }
 
-/** The API request URL; the platform discovery request never reaches the mock. */
+// Decision: The platform discovery request doesn't reach the mock.
 function requestUrl(fetchMock: ReturnType<typeof vi.fn>): string {
   const call = fetchMock.mock.calls[0];
   if (!call) {

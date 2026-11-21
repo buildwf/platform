@@ -64,7 +64,6 @@ export async function githubWebhookIngressFetch(
     throw error;
   }
 
-  // Drop unauthenticated traffic before invoking the protected API Worker.
   if (!(await verifyGithubWebhookSignature(raw, signature, webhookSecret))) {
     return json({ error: 'invalid signature' }, 401);
   }
@@ -78,8 +77,8 @@ export async function githubWebhookIngressFetch(
     body: raw,
   });
 
-  // Construct a new request from an explicit allow-list. In particular, caller
-  // Authorization, Cookie, and Cloudflare Access headers never cross the binding.
+  // Decision: Build a new request from an explicit allow-list, so caller Authorization, Cookie and Cloudflare
+  // Access headers don't cross the binding.
   const headers = new Headers({
     'Content-Type': 'application/json',
     [GITHUB_EVENT_HEADER]: event,
@@ -102,7 +101,7 @@ export async function githubWebhookIngressFetch(
     return json({ error: 'upstream unavailable' }, 502);
   }
 
-  // Do not reflect arbitrary internal response headers onto the public ingress.
+  // Decision: Don't reflect arbitrary internal response headers onto the public ingress.
   return new Response(response.body, {
     status: response.status,
     headers: {

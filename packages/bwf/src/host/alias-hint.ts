@@ -12,7 +12,7 @@ function extractFailedSpecifier(err: unknown): string | null {
   if (!(err instanceof Error)) {
     return null;
   }
-  // `import()` reports `ERR_MODULE_NOT_FOUND`; jiti loads through `require`,
+  // Decision: `import()` reports `ERR_MODULE_NOT_FOUND`; jiti loads through `require`,
   // which reports `MODULE_NOT_FOUND`.
   const code = (err as NodeJS.ErrnoException).code;
   if (
@@ -22,7 +22,7 @@ function extractFailedSpecifier(err: unknown): string | null {
   ) {
     return null;
   }
-  // Node's message shapes: `Cannot find package '@/foo' imported from ...`
+  // Decision: Node's message shapes: `Cannot find package '@/foo' imported from ...`
   // or `Cannot find module '@/foo' imported from ...`.
   const match = /Cannot find (?:package|module) '([^']+)'/.exec(err.message);
   return match ? (match[1] ?? null) : null;
@@ -39,12 +39,12 @@ function looksLikeAlias(specifier: string): boolean {
   ) {
     return false;
   }
-  // Bare scoped package: `@scope/name[/subpath]` where scope and name are valid.
+  // Decision: Bare scoped package: `@scope/name[/subpath]` where scope and name are valid.
   // Alias forms like `@/foo` fail this because the scope is empty.
   if (specifier.startsWith('@')) {
     return !/^@[^/]+\/[^/]+/.test(specifier);
   }
-  // Tilde and plain `#` prefixes are common alias conventions that aren't
+  // Decision: Tilde and plain `#` prefixes are common alias conventions that aren't
   // valid bare packages.
   return specifier.startsWith('~') || specifier.startsWith('#');
 }

@@ -128,7 +128,7 @@ export function writePlatformSelection(
   if (pinnedUrl && pinnedUrl !== connection.apiUrl) {
     return false;
   }
-  // An unscoped legacy project ID cannot be carried to a newly selected platform.
+  // Decision: An unscoped legacy project ID cannot be carried to a newly selected platform.
   const metadata = { ...existing };
   delete metadata.bwfInternalStaging;
   if (linked && !pinnedUrl) {
@@ -191,9 +191,6 @@ export function attachSelectedPlatform(
   );
 }
 
-/**
- * Write the project config to the project root.
- */
 export function writeProjectConfig(root: string, config: ProjectConfig): void {
   const filePath = join(root, PROJECT_FILE);
   const existing = readProjectConfigFile(root);

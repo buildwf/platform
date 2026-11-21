@@ -58,8 +58,8 @@ describe('assertInstalledBwfMatchesCli', () => {
 
   it('reports a declared but uninstalled project package', () => {
     project();
-    // Vitest resolves missing bare imports through the workspace. Check the
-    // missing-package case with Node's actual project-relative resolver.
+    // Decision: Vitest resolves missing bare imports through the workspace. Check the missing-package case
+    // with Node's own project-relative resolver.
     const source = new URL('../../src/cli/installed-platform.ts', import.meta.url).href;
     const result = spawnSync(
       process.execPath,

@@ -62,8 +62,8 @@ function isCommittedSubdomainPlanWaitingForDns(
   if (pre.domainMx.state === 'empty') {
     return allBlockers.length === 0;
   }
-  // `preflightEmail` always adds one all-scope blocker for an unknown domain MX. Exactly one
-  // therefore means DNS is the only such blocker, without coupling this gate to rendered prose.
+  // Decision: `preflightEmail` adds one all-scope blocker for an unknown domain MX. Exactly one means DNS is the
+  // only such blocker, without tying this gate to rendered prose.
   return allBlockers.length === 1;
 }
 
@@ -132,8 +132,8 @@ export async function runCloudflareEmailStep(
     sendingOnly: pre.usage.handlers.length === 0,
     creating,
   });
-  // Pin `configPath` so every step writes the same file. A refused write (e.g. a comment
-  // nested in `addresses`) is reported as-is; the caller decides what the deploy ships.
+  // Decision: Pin `configPath` so all steps write the same file. A refused write (for example a comment nested
+  // in `addresses`) is reported as is; the caller decides what the deploy ships.
   const writeConfig = (patch: ProvisionedWranglerPatch): boolean => {
     try {
       writeProvisionedWranglerConfig(input.root, patch, { configPath: input.configPath });
@@ -144,12 +144,12 @@ export async function runCloudflareEmailStep(
     }
   };
 
-  // A saved setup is never prompted or retried here: a ready one, and a sending-only one that
-  // still waits for Email Sending onboarding (Workers Free cannot be told apart from "not
-  // onboarded yet", so asking on every deploy would loop). `bwf email setup` owns that retry.
-  // The config rows are still rewritten, because a stale `addresses` entry becomes a plan
-  // conflict and a stale `__PLATFORM_EMAIL_FROM` ships the old sender. `null` removes the key
-  // when every derived address is routed elsewhere.
+  // Decision: A saved setup isn't prompted or retried here: a ready one, and a sending-only one that still
+  // waits for Email Sending onboarding (Workers Free can't be told apart from "not onboarded yet", so
+  // asking on each deploy would loop). `bwf email setup` owns that retry. The config rows are still
+  // rewritten, because a stale `addresses` entry becomes a plan conflict and a stale
+  // `__PLATFORM_EMAIL_FROM` ships the old sender. `null` removes the key when all derived addresses
+  // are routed elsewhere.
   const awaitingOnboarding = isAwaitingSendingOnboarding(pre);
   if (pre.ready || awaitingOnboarding) {
     if (awaitingOnboarding) {
@@ -171,7 +171,7 @@ export async function runCloudflareEmailStep(
     }
     let configWritten = false;
     if (rows.length > 0) {
-      // The prune rows the checklist would have carried: say why an entry goes.
+      // Decision: The prune rows the checklist would have carried: say why an entry goes.
       for (const foreign of pre.addressesStale ? pre.rules.foreign : []) {
         log.message(
           `    ! ${foreign.address}: already routed to ${foreign.owner}; left alone, not in addresses`,
@@ -198,7 +198,7 @@ export async function runCloudflareEmailStep(
     };
   }
 
-  // The checklist carries the `✘` rows, so a blocked run explains itself before the warn line.
+  // Decision: The checklist carries the `✘` rows, so a blocked run explains itself before the warn line.
   log.message(renderEmailChecklist(pre));
   if (isCommittedSubdomainPlanWaitingForDns(pre, rootConfig)) {
     const dnsState =
@@ -218,9 +218,9 @@ export async function runCloudflareEmailStep(
       map: mapFor(existingAddresses(rootConfig, pre), pre.sending.state === 'ready'),
     };
   }
-  // The exits below leave the account alone and ship whatever the config carries. bwf's own
-  // `addresses` array is removed (never `[]`) when routing is off, since its plan would fail
-  // (`2062`) after the upload on every deploy.
+  // Decision: The exits below leave the account alone and ship whatever the config carries. bwf's own
+  // `addresses` array is removed (not set to `[]`) when routing is off, since its plan would fail
+  // (`2062`) after the upload on each deploy.
   const shipsBinding = pre.binding.state === 'present';
   const leaveAccount = (reason: string): CloudflareEmailStepResult => {
     let configWritten = false;
@@ -229,7 +229,7 @@ export async function runCloudflareEmailStep(
       pre.addressesOwnership.state === 'mine' &&
       pre.routing.state !== 'ready'
     ) {
-      // A refused write leaves the array where it is; the deploy goes on as it would have.
+      // Decision: A refused write leaves the array where it is; the deploy goes on as it would have.
       if (writeConfig({ addresses: null })) {
         configWritten = true;
         log.message(
@@ -276,7 +276,7 @@ export async function runCloudflareEmailStep(
   }
   const bindingPresent = shipsBinding || out.patch.sendEmail !== undefined;
   const written = out.patch.addresses ?? [];
-  // Require the capabilities the app uses; sending-only apps need no inbound setup.
+  // Decision: Require the capabilities the app uses; sending-only apps need no inbound setup.
   // The map follows the binding, since the worker ships with email either way.
   return {
     satisfied: out.ready,

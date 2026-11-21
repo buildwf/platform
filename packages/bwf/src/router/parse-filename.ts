@@ -22,10 +22,8 @@ const ENV_SUFFIXES: Array<RouteEnvironment> = ['dev', 'prod'];
 function parsePath(relativePath: string, isWebSocketRoute: boolean): RouteDefinition {
   const filePath = relativePath;
 
-  // Normalize path separators
   let path = relativePath.replace(/\\/g, '/');
 
-  // 1. Strip extension
   for (const ext of ROUTE_EXTENSIONS) {
     if (path.endsWith(`.${ext}`)) {
       path = path.slice(0, -(ext.length + 1));
@@ -33,16 +31,13 @@ function parsePath(relativePath: string, isWebSocketRoute: boolean): RouteDefini
     }
   }
 
-  // 1b. Strip .ws segment for WebSocket routes
   if (isWebSocketRoute && path.endsWith('.ws')) {
     path = path.slice(0, -3);
   }
 
-  // Split into segments for processing
   const segments = path.split('/');
   let filename = segments.pop()!;
 
-  // 2. Check for env suffix
   let env: RouteEnvironment | null = null;
   for (const suffix of ENV_SUFFIXES) {
     if (filename.endsWith(`.${suffix}`)) {
@@ -52,23 +47,18 @@ function parsePath(relativePath: string, isWebSocketRoute: boolean): RouteDefini
     }
   }
 
-  // Reassemble segments
   segments.push(filename);
 
-  // 3. Strip trailing "index"
   if (segments[segments.length - 1] === 'index') {
     segments.pop();
   }
 
-  // 4. Remove route groups: (groupname)
   const filtered = segments.filter((s) => !s.startsWith('(') || !s.endsWith(')'));
 
-  // 5. Convert dynamic segments
   const params: Array<string> = [];
   let catchAll = false;
 
   const converted = filtered.map((segment) => {
-    // [...param] - catch-all with named param
     if (segment.startsWith('[...') && segment.endsWith(']')) {
       const paramName = segment.slice(4, -1);
       catchAll = true;
@@ -78,7 +68,6 @@ function parsePath(relativePath: string, isWebSocketRoute: boolean): RouteDefini
       }
       return '*';
     }
-    // [param] - single dynamic param
     if (segment.startsWith('[') && segment.endsWith(']')) {
       const paramName = segment.slice(1, -1);
       params.push(paramName);
@@ -87,12 +76,11 @@ function parsePath(relativePath: string, isWebSocketRoute: boolean): RouteDefini
     return segment;
   });
 
-  // 6. Build pattern with leading /
   const pattern = '/' + converted.join('/');
 
   return {
     pattern,
-    methods: [], // populated by scanner via export detection
+    methods: [] /* Decision: The scanner fills `methods` in later from the file's exports. */,
     params,
     catchAll,
     env,

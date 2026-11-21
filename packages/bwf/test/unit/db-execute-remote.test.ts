@@ -165,7 +165,7 @@ describe('bwf db execute --remote (D1)', () => {
     },
   );
 
-  // D1's maximum SQL statement length decides between the query API and a D1 import.
+  // Decision: D1's maximum SQL statement length decides between the query API and a D1 import.
   const D1_STATEMENT_LIMIT = 100_000;
   function directD1File(sql: string, tty: boolean): string {
     mockReadDeploymentPlatform.mockReturnValue('cloudflare');
@@ -176,7 +176,6 @@ describe('bwf db execute --remote (D1)', () => {
     writeFileSync(join(root, 'input.sql'), sql);
     return root;
   }
-  // A read-only SELECT padded with a leading comment to exactly `bytes` UTF-8 bytes.
   function selectOfSize(bytes: number): string {
     const fixed = '-- \nSELECT 42 AS answer'.length;
     const padding = 'é'.repeat(Math.floor((bytes - fixed) / 2)) + 'x'.repeat((bytes - fixed) % 2);
@@ -510,8 +509,8 @@ describe('bwf db execute --remote (D1)', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  // Comments are stripped before the check. EXPLAIN ANALYZE in any form and WITH
-  // (a CTE can write) always prompt.
+  // Decision: Comments are stripped before the check. EXPLAIN ANALYZE in any form and WITH (a CTE can
+  // write) prompt.
   it.each<[string, boolean]>([
     ['SELECT * FROM users', false],
     ['EXPLAIN SELECT * FROM users', false],
@@ -577,7 +576,6 @@ describe('bwf db execute --remote (D1)', () => {
 
   it('runs execute without --remote against the local database, not the proxy', async () => {
     const root = createProjectRoot();
-    // No local database exists, so the local path exits.
     await expect(runDbCommand(root, { action: 'execute', command: 'SELECT 1' })).rejects.toThrow(
       'process.exit:1',
     );
@@ -658,7 +656,6 @@ describe('bwf db execute --remote (PostgreSQL)', () => {
   it('surfaces a friendly error on 404 (database URL not stored)', async () => {
     const root = createProjectRoot({ database: 'pg' });
 
-    // Simulate the PlatformApiError that getDatabaseUrl throws on 404
     const { PlatformApiError } = await import('../../src/cli/client.ts');
     mockGetDatabaseUrl.mockRejectedValue(new PlatformApiError('test', 404, '{}'));
 

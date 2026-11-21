@@ -35,7 +35,7 @@ async function requireOperatorProject(db: Db, projectId: string, active: boolean
 /** Map Zero Trust failures for operators; the admin UI uses the same mapping. */
 export function zeroTrustOperatorError(error: unknown, failure: string): OperatorError {
   if (error instanceof ZeroTrustSavedConfigurationError) {
-    // Stored state, not the request, is wrong; retrying the request cannot help.
+    // Decision: Stored state, not the request, is wrong; retrying the request can't help.
     return new OperatorError(500, error.message, 'invalid_saved_zero_trust_configuration');
   }
   if (error instanceof ZeroTrustConfigurationError) {
@@ -73,7 +73,7 @@ zeroTrustOperatorRoutes.post('/zero-trust/configure', async (context) => {
     operationError(error);
   }
   if (dryRun(body)) {
-    // A preview must fail wherever the real configure would reject the choice.
+    // Decision: A preview must fail wherever the real configure would reject the choice.
     try {
       assertExistingProjectsChoice(
         await readZeroTrustConfigurationStrict(context.get('db')),

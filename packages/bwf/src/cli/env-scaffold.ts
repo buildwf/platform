@@ -22,9 +22,9 @@ export type InferredEntry = {
 
 const BOOLEAN_LITERAL = /^(true|false)$/i;
 const HTTP_URL = /^https?:\/\/\S+$/;
-// Plain integer, reasonable port/size range, no leading zero unless value is 0.
-// Deliberately strict: phone numbers, Stripe IDs, and timestamps all look
-// numeric but users read them as strings.
+// Decision: Plain integer, reasonable port or size range, no leading zero unless the value is 0.
+// Deliberately strict: phone numbers, Stripe IDs and timestamps look numeric but users read them as
+// strings.
 const SMALL_INTEGER = /^(?:0|[1-9]\d{0,4})$/;
 
 /**
@@ -112,7 +112,7 @@ export type ScaffoldResult = {
  * no-ops when `env.ts` is present. Never overwrites an existing file.
  */
 export function maybeScaffoldEnvTs(root: string): ScaffoldResult {
-  // Respect `env.*` at the root or under `src/`, whichever the user already uses.
+  // Decision: Respect `env.*` at the root or under `src/`, whichever the user already uses.
   for (const dir of ['', 'src/']) {
     for (const ext of ['ts', 'mts', 'js', 'mjs']) {
       if (existsSync(join(root, `${dir}env.${ext}`))) {

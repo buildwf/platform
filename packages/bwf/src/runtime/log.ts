@@ -23,7 +23,7 @@ type Logger = {
   child(fields: Fields): Logger;
 };
 
-// `name`, `message`, `stack` and `cause` are non-enumerable on `Error`, so plain
+// Decision: `name`, `message`, `stack` and `cause` are non-enumerable on `Error`, so plain
 // `JSON.stringify` turns an error into `{}`. Copy them next to the error's own
 // enumerable fields. An error seen again (for example a `cause` cycle) keeps only
 // its name and message so serialization always terminates.

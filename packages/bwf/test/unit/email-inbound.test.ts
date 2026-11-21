@@ -32,7 +32,6 @@ import {
 } from '../../src/runtime/email/inbound.ts';
 import { MAX_MESSAGE_BYTES, MimeError } from '../../src/runtime/email/mime.ts';
 
-/** The one shape message the address rule (`email-validator`) throws; it never echoes the address. */
 const INVALID_ADDRESS =
   'address is not a valid email address (ASCII local part and dotted domain, RFC 5322 dot-atom; ' +
   "at most 64 characters before the '@' and 254 in total).";
@@ -139,8 +138,8 @@ describe('scanEmailHandlersSync', () => {
       'dynamic-tag',
       'dynamic',
     ]);
-    // The generated dispatcher returns on the first regex that matches, so
-    // the exact handler must be the first one that matches `support+vip`.
+    // Decision: The generated dispatcher returns on the first regex that matches, so the exact handler has
+    // to be the first one that matches `support+vip`.
     const first = scan.addresses.find((a) =>
       new RegExp(a.pattern.regexSource, 'i').test('support+vip'),
     );
@@ -149,9 +148,9 @@ describe('scanEmailHandlersSync', () => {
 
   it('skips files with invalid pattern shapes', () => {
     const root = setupRoot({
-      'email/support+ticket+extra.ts': 'export default () => {}', // two `+`
-      'email/Bad Name.ts': 'export default () => {}', // space
-      'email/[bad-name].ts': 'export default () => {}', // hyphen in param
+      'email/support+ticket+extra.ts': 'export default () => {}',
+      'email/Bad Name.ts': 'export default () => {}',
+      'email/[bad-name].ts': 'export default () => {}',
       'email/ok.ts': 'export default () => {}',
     });
     const scan = scanEmailHandlersSync(root);
@@ -163,8 +162,8 @@ describe('scanEmailHandlersSync', () => {
       'email/_default.ts': 'export default () => {}',
       'email/_default.js': 'export default () => {}',
     });
-    // Glob order is readdir order, so either file may be reported as the
-    // "second" one — the error must name both regardless.
+    // Decision: Glob order is readdir order, so either file may be reported as the "second" one; the error
+    // names both.
     expect(() => scanEmailHandlersSync(root)).toThrow(/is a second default handler next to/);
     expect(() => scanEmailHandlersSync(root)).toThrow(/"_default\.ts"/);
     expect(() => scanEmailHandlersSync(root)).toThrow(/"_default\.js"/);
@@ -233,15 +232,15 @@ describe('compileEmailPattern', () => {
   });
 
   it('lowercases uppercase basenames before compilation', () => {
-    // Patterns are lowercased to match the lowercased recipient — uppercase
-    // in the filename is fine, just normalized.
+    // Decision: Patterns are lowercased to match the lowercased recipient, so uppercase in the filename is
+    // fine, just normalized.
     expect(compileEmailPattern('[Foo]')?.paramNames).toEqual(['foo']);
     expect(compileEmailPattern('Support')?.regexSource).toBe('^support$');
   });
 
   it('returns null for invalid param shapes', () => {
-    expect(compileEmailPattern('[1abc]')).toBeNull(); // starts with digit
-    expect(compileEmailPattern('[]')).toBeNull(); // empty
+    expect(compileEmailPattern('[1abc]')).toBeNull();
+    expect(compileEmailPattern('[]')).toBeNull();
   });
 });
 
@@ -290,7 +289,6 @@ const COMPILE_OPTIONS = {
   emailDir: '/e',
 };
 
-/** A route table whose only content is `email`, with handlers under `/e`. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function compile(email: any): string {
   return compileRouteTable(
@@ -324,7 +322,6 @@ describe('compileRouteTable (email)', () => {
   });
 });
 
-/** Executes the generated `__emailHandler` instead of asserting on its source. */
 function buildEmailDispatcher(
   code: string,
   modules: Record<string, { default: unknown }>,
@@ -382,7 +379,6 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
       '/e/support+[ticket].ts': { default: () => calls.push({ to: 'WRONG', params: null }) },
     });
 
-    // The wire recipient the platform delivers, for project slug `acme`.
     const { message } = createMessageProxy(
       {
         from: 'sender@example.com',
@@ -394,7 +390,7 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
       { slug: 'acme' },
     );
 
-    // The user-visible address has the slug removed - that is the DX contract.
+    // Decision: The user-visible address has the slug removed: that's the DX contract.
     expect(message.to).toBe('support@mail.buildwf.dev');
 
     await dispatch(message, {}, {}, { slug: 'acme' });
@@ -429,9 +425,8 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
   });
 
   it('matches the full local part when the recipient carries no <slug>+ prefix', async () => {
-    // Own-account delivery: Cloudflare hands the worker the address the
-    // handler author wrote, with no platform slug in front of it. Nothing
-    // was stripped, so nothing is stripped again — `support@` is `support`.
+    // Decision: Own-account delivery: Cloudflare hands the worker the address the handler author wrote,
+    // with no platform slug in front of it. Nothing was stripped, so nothing is stripped again.
     const hits: Array<string> = [];
     const dispatch = buildEmailDispatcher(compile({ ...SUPPORT, defaultHandler: '_default.ts' }), {
       '/e/support.ts': { default: () => hits.push('support') },
@@ -453,10 +448,9 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
   });
 
   it('keeps the tag of an unprefixed recipient: support+T-42@zone reaches support+[ticket]', async () => {
-    // The flagship own-account case. The first `+` here belongs to the
-    // TAG, not to a platform slug; stripping through it (the platform rule)
-    // would leave `T-42`, which matches nothing, and the mail would land in
-    // `_default`. Case is preserved in the captured param.
+    // Decision: The main own-account case. The first `+` here belongs to the tag, not to a platform slug;
+    // stripping through it (the platform rule) would leave `T-42`, which matches nothing, and the
+    // mail would land in `_default`. Case is preserved in the captured param.
     const seen: Array<unknown> = [];
     const dispatch = buildEmailDispatcher(compile({ ...SUPPORT, defaultHandler: '_default.ts' }), {
       '/e/support.ts': { default: () => seen.push('static') },
@@ -481,11 +475,10 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
   });
 
   it('runs a verified custom-domain recipient in no-prefix mode even when a slug is passed', async () => {
-    // A verified receipt carries `viaDomain` and no `<slug>+` prefix. A platform
-    // deployment still injects `__PLATFORM_PROJECT_SLUG`, and the generated
-    // handleEmail suppresses it for this lane — and createMessageProxy
-    // itself ignores a slug passed alongside viaDomain, so a slug equal to
-    // the local-part prefix cannot strip `support+` off the address either.
+    // Decision: A verified receipt carries `viaDomain` and no `<slug>+` prefix. A platform deployment still
+    // injects `__PLATFORM_PROJECT_SLUG`, and the generated handleEmail suppresses it for this lane.
+    // createMessageProxy also ignores a slug passed with viaDomain, so a slug equal to the
+    // local-part prefix can't strip `support+` off the address either.
     const seen: Array<unknown> = [];
     const dispatch = buildEmailDispatcher(compile({ ...SUPPORT, defaultHandler: '_default.ts' }), {
       '/e/support.ts': { default: () => seen.push('static') },
@@ -508,8 +501,6 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
       { slug: 'support' },
     );
 
-    // Unstripped: the address IS the one the handler author wrote, and no
-    // wire-form `__platformTo` was preserved because nothing was stripped.
     expect(message.to).toBe('support+T-42@acme.com');
     expect((message as { __platformTo?: string }).__platformTo).toBeUndefined();
     expect((message as { __platformRelayDomain?: string }).__platformRelayDomain).toBe('acme.com');
@@ -541,9 +532,9 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
   });
 
   it('still strips the platform prefix when a slug was removed and no tag follows', async () => {
-    // `<slug>+@<domain>` with the slug injected: the prefix is recorded as
-    // `__platformTo`, the tag after it is empty, and the empty string
-    // must fall through to `_default` rather than match `support`.
+    // Decision: `<slug>+@<domain>` with the slug injected: the prefix is recorded as `__platformTo`, the tag
+    // after it is empty, and the empty string has to fall through to `_default` instead of
+    // matching `support`.
     const hits: Array<string> = [];
     const dispatch = buildEmailDispatcher(compile({ ...SUPPORT, defaultHandler: '_default.ts' }), {
       '/e/support.ts': { default: () => hits.push('support') },
@@ -568,10 +559,10 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
   });
 
   it('reads a bare <slug>@<domain> on the platform as an EMPTY tag, never as the slug itself', async () => {
-    // The platform router forwards a `+`-less recipient (the bare project address) with the
-    // slug configured but nothing to strip, so `createMessageProxy` records no
-    // `__platformTo`. Keyed on the marker, the dispatcher would match the full local part
-    // and hand `email/[user].ts` `user = acme`; keyed on the configured slug, it is `_default`.
+    // Decision: The platform router forwards a `+`-less recipient (the bare project address) with the slug
+    // configured but nothing to strip, so `createMessageProxy` records no `__platformTo`. Keyed on
+    // the marker, the dispatcher would match the full local part and give `email/[user].ts`
+    // `user = acme`; keyed on the configured slug, it goes to `_default`.
     const hits: Array<string> = [];
     const withDynamic = {
       addresses: [
@@ -609,7 +600,6 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
     await dispatch(bare, {}, {}, { slug: 'acme' });
     expect(hits).toEqual(['default']);
 
-    // And with no `_default`, the bare address is rejected rather than routed to `[user]`.
     const rejections: Array<string> = [];
     const strict = buildEmailDispatcher(
       compile({ ...withDynamic, defaultHandler: undefined }),
@@ -623,7 +613,6 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
     expect(hits).toEqual([]);
     expect(rejections).toHaveLength(1);
 
-    // Own account (no slug configured): `acme@` IS the local part, so `[user]` gets it.
     hits.length = 0;
     await dispatch(
       createMessageProxy({
@@ -667,9 +656,9 @@ describe('generated __emailHandler dispatch (behavioural)', () => {
   });
 
   it('runs the exact-tag handler for support+vip@ when a capturing sibling exists (real scan)', async () => {
-    // Scanner → codegen → dispatch, end to end. The hand-built scans above
-    // fix their own order; this one takes the order `scanEmailHandlersSync`
-    // produces, which is the only thing the generated loop relies on.
+    // Decision: Scanner, codegen and dispatch end to end. The hand-built scans above fix their own order;
+    // this one takes the order `scanEmailHandlersSync` produces, which is what the generated loop
+    // relies on.
     const root = setupRoot({
       'email/[user].ts': 'export default () => {}',
       'email/[user]+[tag].ts': 'export default () => {}',
@@ -793,9 +782,9 @@ describe('createInboundTestHarness', () => {
       },
     );
     const harness = createInboundTestHarness({ routes: { support } });
-    // Production: every recipient is `<slug>+<tag>@mail.buildwf.dev`; the
-    // dispatcher strips through the first `+` before matching, so the
-    // handler-side tag is `support`. Tests mirror the wire format.
+    // Decision: Production: each recipient is `<slug>+<tag>@mail.buildwf.dev`; the dispatcher strips through
+    // the first `+` before matching, so the handler-side tag is `support`. Tests mirror the wire
+    // format.
     const result = await harness.deliver({ from: 'a@x.dev', to: 'myslug+support@app.dev' });
     expect(result.handler).toBe('support');
     expect(result.params).toEqual({});
@@ -847,8 +836,8 @@ describe('createInboundTestHarness', () => {
   it('prefers an exact tag over a captured tag of the same shape', async () => {
     const exact = vi.fn(async () => {});
     const captured = vi.fn(async () => {});
-    // Keys are declared capture-first on purpose: object order must not
-    // decide, and neither may the alphabetical `[` < `v` tie-break.
+    // Decision: Keys are declared capture-first on purpose: object order mustn't decide, and neither may
+    // the alphabetical `[` < `v` tie-break.
     const harness = createInboundTestHarness({
       routes: { 'support+[tag]': captured, 'support+vip': exact },
     });
@@ -912,8 +901,8 @@ describe('createInboundTestHarness', () => {
     expect(result.handler).toBe('support');
   });
 
-  // The codegen twin is 'captures the tag parameter from the wire recipient,
-  // not the stripped one'; the two must agree.
+  // Decision: The codegen twin is 'captures the tag parameter from the wire recipient, not the stripped
+  // one'; the two have to agree.
   it('preserves the case of a captured tag, like the generated dispatcher', async () => {
     let seen: unknown;
     const harness = createInboundTestHarness({
@@ -938,8 +927,8 @@ describe('createInboundTestHarness', () => {
 });
 
 describe('harness enforces the proxy action bounds, like production', () => {
-  // The handler runs against production's own `createMessageProxy`, so the
-  // harness throws the same error (class, code, message) at the same call.
+  // Decision: The handler runs against production's own `createMessageProxy`, so the harness throws the
+  // same error (class, code, message) at the same call.
   function harnessFor(handler: Parameters<typeof defineEmail>[0]) {
     return createInboundTestHarness({ routes: { _default: defineEmail(handler) } });
   }
@@ -978,8 +967,6 @@ describe('harness enforces the proxy action bounds, like production', () => {
       } catch (e) {
         thrown = e;
       }
-      // A record that `new Headers()` accepts is recorded, and the capture
-      // exposes it as the `Headers` its type declares.
       await message.forward('archive@example.com', {
         'X-Forwarded-By': 'platform-test',
       } as unknown as Headers);
@@ -1006,8 +993,8 @@ describe('harness enforces the proxy action bounds, like production', () => {
 });
 
 describe('harness rejects an unmatched delivery, like production', () => {
-  // The generated dispatcher calls setReject when nothing matches and there
-  // is no _default, so the sender gets an NDR; the harness mirrors it.
+  // Decision: The generated dispatcher calls setReject when nothing matches and there's no _default, so
+  // the sender gets an NDR; the harness mirrors it.
   it('records the reject when nothing matches and there is no _default', async () => {
     const harness = createInboundTestHarness({ routes: { 'support+[ticket]': async () => {} } });
 
@@ -1015,8 +1002,8 @@ describe('harness rejects an unmatched delivery, like production', () => {
 
     expect(result.handler).toBeUndefined();
     expect(harness.rejects).toHaveLength(1);
-    // The reason must match the dispatcher's byte for byte — it reaches the
-    // sender's DSN. `__to` is the WIRE address, case preserved.
+    // Decision: The reason has to match the dispatcher's byte for byte: it reaches the sender's DSN. `__to`
+    // is the wire address, case preserved.
     expect(harness.rejects[0]).toBe(
       'no handler matched recipient "myslug+billing@app.dev" — add email/_default.ts to handle unmatched mail',
     );
@@ -1053,9 +1040,9 @@ describe('harness rejects an unmatched delivery, like production', () => {
   });
 
   it('`slug: null` matches the full local part, like a worker on your own Cloudflare account', async () => {
-    // Own-account deploys carry no platform prefix: `support@mail.acme.com` reaches
-    // `support`, and the first `+` belongs to the TAG. The default harness would read
-    // `support` as a slug and land a plain `support@` in `_default`.
+    // Decision: Own-account deploys carry no platform prefix: `support@mail.acme.com` reaches `support`, and
+    // the first `+` belongs to the tag. The default harness would read `support` as a slug and
+    // land a plain `support@` in `_default`.
     const seen: Array<string> = [];
     const harness = createInboundTestHarness({
       slug: null,
@@ -1078,15 +1065,14 @@ describe('harness rejects an unmatched delivery, like production', () => {
     expect(tagged.handler).toBe('support+[ticket]');
     expect(tagged.params).toEqual({ ticket: 'T-42' });
     expect(seen).toEqual(['support', 'ticket=T-42']);
-    // Nothing was stripped from what the handler sees either.
     const other = await harness.deliver({ from: 'u@x.dev', to: 'billing@mail.acme.com' });
     expect(other.handler).toBe('_default');
   });
 });
 
 describe('harness headers match the bytes, like production', () => {
-  // In production `buildEnvelope` copies every wire header verbatim, so
-  // `message.headers` and `message.raw` agree, and `replyEmail` threads off them.
+  // Decision: In production `buildEnvelope` copies each wire header verbatim, so `message.headers` and
+  // `message.raw` agree, and `replyEmail` threads off them.
   it('exposes the generated Message-ID, so replyEmail threads', async () => {
     let seen: string | null = null;
     const harness = createInboundTestHarness({
@@ -1103,7 +1089,6 @@ describe('harness headers match the bytes, like production', () => {
   });
 
   it('exposes headers from a caller-supplied raw MIME', async () => {
-    // The `raw:` override hands the harness exact wire bytes.
     const raw = [
       'Message-ID: <fromraw@remote.dev>',
       'From: u@x.dev',
@@ -1133,10 +1118,9 @@ describe('harness headers match the bytes, like production', () => {
   });
 
   it('exposes Subject the way the wire carries it, not decoded', async () => {
-    // `buildMime` RFC 2047-encodes a non-ASCII subject and production hands
-    // the handler that encoded form. A handler comparing
-    // `message.headers.get('Subject')` — the pattern the guide shows — must
-    // see the same string in both places.
+    // Decision: `buildMime` RFC 2047-encodes a non-ASCII subject and production hands the handler that
+    // encoded form. A handler comparing `message.headers.get('Subject')`, the pattern the guide
+    // shows, has to see the same string in both places.
     let seen: string | null = null;
     const harness = createInboundTestHarness({
       routes: {
@@ -1173,13 +1157,12 @@ describe('harness headers match the bytes, like production', () => {
 });
 
 describe('admission checks mirrored from the managed router', () => {
-  // `routeInbound` refuses a message over `MAX_INBOUND_BYTES` (from
-  // `rawSize`) or with more than `MAX_INBOUND_HEADERS` distinct names before
-  // dispatch. Platform lane only — an own-account worker has no router.
+  // Decision: `routeInbound` refuses a message over `MAX_INBOUND_BYTES` (from `rawSize`) or with more than
+  // `MAX_INBOUND_HEADERS` distinct names before dispatch. Platform lane only: an own-account
+  // worker has no router.
   const TO = 'myslug+support@app.dev';
   const HEAD = `From: u@x.dev\r\nTo: ${TO}\r\nSubject: big\r\n\r\n`;
 
-  /** A well-formed text message padded to exactly `total` bytes. */
   function rawOfSize(total: number): Uint8Array {
     const head = new TextEncoder().encode(HEAD);
     const out = new Uint8Array(total);
@@ -1192,7 +1175,6 @@ describe('admission checks mirrored from the managed router', () => {
     return `${lines.join('\r\n')}\r\n\r\nbody\r\n`;
   }
 
-  /** `n` distinct names on the wire, `From:` and `To:` among them. */
   function distinctHeaderLines(n: number): Array<string> {
     return [
       'From: u@x.dev',
@@ -1218,11 +1200,9 @@ describe('admission checks mirrored from the managed router', () => {
     });
 
     expect(handler).not.toHaveBeenCalled();
-    // Byte-for-byte the router's reason: `<zone>: ...`, the zone being the
-    // recipient's domain.
+    // Decision: Byte for byte the router's reason: `<zone>: ...`, the zone being the recipient's domain.
     expect(harness.rejects).toEqual(['app.dev: message too large (max 10485760 bytes)']);
     expect(harness.forwards).toEqual([]);
-    // Recorded like a handler's own `setReject`: unhandled, one delivery.
     expect(result).toEqual({ handler: undefined, params: {} });
     expect(harness.deliveries).toEqual([result]);
   });
@@ -1244,9 +1224,8 @@ describe('admission checks mirrored from the managed router', () => {
   });
 
   it('a handler that calls parseEmail() on a message at the cap still works', async () => {
-    // The router's admission and `parseEmail`'s own guard are both `>`, so
-    // the largest message the router dispatches is also one `parseEmail`
-    // reads.
+    // Decision: The router's admission and `parseEmail`'s own guard both use `>`, so the largest message
+    // the router dispatches is also one `parseEmail` reads.
     let subject: string | undefined;
     const harness = createInboundTestHarness({
       routes: {
@@ -1317,8 +1296,8 @@ describe('admission checks mirrored from the managed router', () => {
       ),
     ],
   ])('counts distinct names, like the router: %s do not add up', async (_label, lines) => {
-    // The router walks the `Headers` Cloudflare built from the wire, and a
-    // `Headers` holds one entry per distinct (case-insensitive) name.
+    // Decision: The router walks the `Headers` Cloudflare built from the wire, and a `Headers` holds one
+    // entry per distinct (case-insensitive) name.
     const handler = forwarding();
     const harness = createInboundTestHarness({ routes: { _default: handler } });
 
@@ -1329,8 +1308,8 @@ describe('admission checks mirrored from the managed router', () => {
   });
 
   it("checks size before headers, in the router's order", async () => {
-    // Over both caps at once: the router refuses on `rawSize` before it
-    // walks a single header, so that is the reason the sender sees.
+    // Decision: Over both caps at once: the router refuses on `rawSize` before it walks a single header, so
+    // that's the reason the sender sees.
     const lines = distinctHeaderLines(MAX_INBOUND_HEADERS + 1);
     const headBytes = new TextEncoder().encode(rawWithHeaderLines(lines));
     const raw = new Uint8Array(MAX_INBOUND_BYTES + 1);
@@ -1361,16 +1340,14 @@ describe('admission checks mirrored from the managed router', () => {
 
     expect(harness.rejects).toEqual([
       'mail.platform.cloud: message too large (max 10485760 bytes)',
-      // The router's own fallback label, for a recipient that names no zone.
       'bwf email: message too large (max 10485760 bytes)',
     ]);
   });
 
   it('applies neither check on the own-account lane (`slug: null`)', async () => {
-    // There is no router in front of a worker on your own Cloudflare
-    // account: Cloudflare hands the handler every message it accepts, so a
-    // 10 MiB + 1 forward IS reachable there and the harness must not bounce
-    // it. (`parseEmail` keeps its own `MAX_MESSAGE_BYTES` guard.)
+    // Decision: There's no router in front of a worker on your own Cloudflare account: Cloudflare hands the
+    // handler each message it accepts, so a 10 MiB + 1 forward is reachable there and the harness
+    // mustn't bounce it. (`parseEmail` keeps its own `MAX_MESSAGE_BYTES` guard.)
     const handler = forwarding();
     const harness = createInboundTestHarness({ slug: null, routes: { _default: handler } });
 
@@ -1391,11 +1368,9 @@ describe('admission checks mirrored from the managed router', () => {
   });
 });
 
-/**
- * Builds a reply in a child Node under the tenant isolate's 128 MB heap cap
- * and reports what it cost there. `headersSource` is a JS expression
- * evaluated in the child, so the fixture is built inside the cap too.
- */
+// Decision: Builds a reply in a child Node under the tenant isolate's 128 MB heap cap and reports what
+// it cost there. `headersSource` is a JS expression evaluated in the child, so the fixture is
+// built inside the cap too.
 function replyInIsolate(headersSource: string): {
   text: string;
   subject: string;
@@ -1441,8 +1416,8 @@ function replyInIsolate(headersSource: string): {
 }
 
 describe('reply threading survives a hostile inbound header', () => {
-  // A remote sender controls the threaded `Message-ID` and `References`.
-  // Threading is best-effort: an unusable value is dropped, the reply still goes.
+  // Decision: A remote sender controls the threaded `Message-ID` and `References`, so threading drops an
+  // unusable value and the reply still goes.
   const HUGE = 'x'.repeat(1100);
 
   function inbound(headers: Record<string, string>) {
@@ -1470,8 +1445,8 @@ describe('reply threading survives a hostile inbound header', () => {
     expect(Math.max(...text.split('\r\n').map((l) => l.length))).toBeLessThanOrEqual(998);
   });
 
-  // The line guard measures octets, and the only break it may count on is
-  // SP or HTAB — the whitespace `foldHeader` folds at.
+  // Decision: The line guard measures octets, and the only break it may count on is SP or HTAB, the
+  // whitespace `foldHeader` folds at.
   const MESSAGE_ID = '<abc@remote.dev>';
 
   async function replyText(references: string, messageId = MESSAGE_ID): Promise<string> {
@@ -1486,8 +1461,8 @@ describe('reply threading survives a hostile inbound header', () => {
   }
 
   it('keeps an id that exactly fills the line, and drops one octet more', async () => {
-    // `References: ` is 12 octets, so 986 is the widest id one line carries.
-    // With no Message-ID to append, the header is that one id, unfolded.
+    // Decision: `References: ` is 12 octets, so 986 is the widest id one line carries. With no Message-ID
+    // to append, the header is that one id, unfolded.
     const atBudget = `<${'x'.repeat(984)}>`;
     const overBudget = `<${'x'.repeat(985)}>`;
 
@@ -1501,7 +1476,7 @@ describe('reply threading survives a hostile inbound header', () => {
   });
 
   it('measures an id in UTF-8 octets, not UTF-16 units', async () => {
-    // 495 units but 988 octets: a code-unit count would pass it.
+    // Decision: 495 units but 988 octets: a code-unit count would pass it.
     const id = `<${'é'.repeat(493)}>`;
     const text = await replyText(id);
     expect(text).not.toContain(id);
@@ -1510,10 +1485,10 @@ describe('reply threading survives a hostile inbound header', () => {
   });
 
   it('counts a surrogate pair as one four-octet code point', async () => {
-    // A `Headers` value is a ByteString, so nothing above U+00FF arrives this
-    // way in production; the count still has to agree with `TextEncoder`,
-    // which is what `buildMime` measures the rendered line with.
-    const id = `<${'😀'.repeat(247)}>`; // 496 units, 990 octets
+    // Decision: A `Headers` value is a ByteString, so nothing above U+00FF arrives this way in production;
+    // the count still has to agree with `TextEncoder`, which is what `buildMime` measures the
+    // rendered line with.
+    const id = `<${'😀'.repeat(247)}>`;
     const headers = new Map([
       ['subject', 'hi'],
       ['message-id', MESSAGE_ID],
@@ -1531,15 +1506,15 @@ describe('reply threading survives a hostile inbound header', () => {
   });
 
   it('keeps a multibyte id that fits once encoded', async () => {
-    const id = `<${'é'.repeat(492)}>`; // 494 units, 986 octets
+    const id = `<${'é'.repeat(492)}>`;
     const text = await replyText(id, '');
     expect(text).toContain(`References: ${id}\r\n`);
     expect(widestLineOctets(text)).toBe(998);
   });
 
   it('does not count whitespace the folder cannot fold at as a break', async () => {
-    // `\s` matches NBSP and FF, but RFC 5322 §3.2.2 folds only at SP/HTAB and
-    // so does `foldHeader`.
+    // Decision: `\s` matches NBSP and FF, but RFC 5322 section 3.2.2 folds only at SP and HTAB, and so does
+    // `foldHeader`.
     const id = `<${'x'.repeat(600)}@remote.dev>`;
     for (const separator of [' ', '\f']) {
       const text = await replyText(`${id}${separator}${id}`);
@@ -1550,24 +1525,22 @@ describe('reply threading survives a hostile inbound header', () => {
   });
 
   it('answers for a chain of MAX_MESSAGE_BYTES in one pass', async () => {
-    // Two-character ids with one over-long id at the very end, so the whole
-    // chain is scanned before it is refused.
+    // Decision: Two-character ids with one over-long id at the very end, so the whole chain is scanned
+    // before it's refused.
     const chain = 'ab '.repeat(Math.floor(MAX_MESSAGE_BYTES / 3)) + `<${HUGE}@remote.dev>`;
     const started = performance.now();
     const text = await replyText(chain);
     const elapsed = performance.now() - started;
     expect(text).not.toContain(HUGE);
     expect(text).toContain(`References: ${MESSAGE_ID}`);
-    // A gross bound: time stands in for the memory the runner cannot cap.
+    // Decision: A gross bound: time stands in for the memory the runner can't cap.
     expect(elapsed).toBeLessThan(1000);
   });
 
-  // The line guard bounds one id, not the chain, so the chain is bounded at
-  // 8192 characters; past that the reply keeps the newest ids whole, the
-  // parent's id still last.
+  // Decision: The line guard bounds one id, not the chain, so the chain is bounded at 8192 characters;
+  // past that the reply keeps the newest ids whole, with the parent's id still last.
   const REFERENCES_BUDGET = 8192;
 
-  /** The `References` value of a rendered reply, unfolded; `undefined` when absent. */
   function referencesOf(text: string): string | undefined {
     const headers = text.split('\r\n\r\n')[0].replace(/\r\n(?=[ \t])/g, '');
     return headers
@@ -1577,7 +1550,6 @@ describe('reply threading survives a hostile inbound header', () => {
   }
 
   it('threads the newest ids of a chain over the budget, inside a 128 MB heap', () => {
-    // A `References` just under the inbound cap, of short ids.
     const result = replyInIsolate(
       `{ references: '<a@b> '.repeat(Math.floor((${MAX_MESSAGE_BYTES} - 200) / 6)).trimEnd(), ` +
         `'message-id': ${JSON.stringify(MESSAGE_ID)}, subject: 'hi' }`,
@@ -1589,14 +1561,14 @@ describe('reply threading survives a hostile inbound header', () => {
     expect(references!.startsWith('<a@b> ')).toBe(true);
     expect(references!.endsWith(` <a@b> ${MESSAGE_ID}`)).toBe(true);
     expect(widestLineOctets(result.text)).toBeLessThanOrEqual(998);
-    // The bound leaves room for CI's slower runner.
+    // Decision: The bound leaves room for CI's slower runner.
     expect(result.ms).toBeLessThan(5000);
     expect(result.heapDeltaMB).toBeLessThan(16);
   }, 30_000);
 
   it('keeps the whole chain at the budget, and drops the oldest id one character over', async () => {
-    // 900 eight-character ids and one 75-character first id: 8175 characters,
-    // which with the parent's ` <abc@remote.dev>` is the budget exactly.
+    // Decision: 900 eight-character ids and one 75-character first id: 8175 characters, which with the
+    // parent's ` <abc@remote.dev>` is the budget exactly.
     const rest = Array.from({ length: 900 }, (_, i) => `<${String(i + 1).padStart(4, '0')}@r>`);
     const oldest = `<${'x'.repeat(71)}@r>`;
     const atBudget = [oldest, ...rest].join(' ');
@@ -1611,8 +1583,8 @@ describe('reply threading survives a hostile inbound header', () => {
   });
 
   it('never splits an id at the cut', async () => {
-    // Long ids, so the character cut lands inside one: that id goes, whole,
-    // and the tail starts on the next boundary.
+    // Decision: Long ids, so the character cut lands inside one: that id goes, whole, and the tail starts on
+    // the next boundary.
     const ids = Array.from(
       { length: 200 },
       (_, i) => `<${String(i).padStart(3, '0')}${'y'.repeat(96)}@r>`,
@@ -1641,18 +1613,16 @@ describe('reply threading survives a hostile inbound header', () => {
 
   it('threads the newest ids when the id no line can carry is an old one', async () => {
     const ids = Array.from({ length: 1000 }, (_, i) => `<${String(i).padStart(4, '0')}@r>`);
-    // Oldest: outside the tail, so the tail threads.
     const oldestHuge = referencesOf(await replyText(`<${HUGE}@r> ${ids.join(' ')}`));
     expect(oldestHuge).not.toContain(HUGE);
     expect(oldestHuge!.endsWith(` <0999@r> ${MESSAGE_ID}`)).toBe(true);
-    // Newest: inside the tail, so only the parent's id is threaded.
     const newestHuge = referencesOf(await replyText(`${ids.join(' ')} <${HUGE}@r>`));
     expect(newestHuge).toBe(MESSAGE_ID);
   });
 
   it('keeps the actions queued before a reply to a chain over the budget', async () => {
-    // `handleEmail` returns the queue only once the handler resolves, so a
-    // reply that threw would take the earlier forward with it.
+    // Decision: `handleEmail` returns the queue only once the handler resolves, so a reply that threw would
+    // take the earlier forward with it.
     const references = '<a@b> '.repeat(Math.floor((MAX_MESSAGE_BYTES - 200) / 6)).trimEnd();
     const raw = new TextEncoder().encode('Subject: hi\r\n\r\nbody\r\n');
     const { message, getActions } = createMessageProxy(
@@ -1682,8 +1652,8 @@ describe('reply threading survives a hostile inbound header', () => {
   });
 
   describe('a control character in a threading id', () => {
-    // `\x01` or DEL pass a WHATWG `Headers`, but an RFC 5322 §3.6.4 `msg-id`
-    // admits no control: such an id is dropped on its own, never a throw.
+    // Decision: `\x01` or DEL pass a WHATWG `Headers`, but an RFC 5322 section 3.6.4 `msg-id` admits no
+    // control: such an id is dropped on its own, without a throw.
     // eslint-disable-next-line no-control-regex -- C0 controls and DEL are the point
     const rawControl = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/;
 
@@ -1698,7 +1668,6 @@ describe('reply threading survives a hostile inbound header', () => {
       expect(text).not.toContain('In-Reply-To:');
       expect(referencesOf(text)).toBe('<r1@remote.dev>');
       expect(headersOf(text)).not.toMatch(rawControl);
-      // With no chain to thread either, the reply carries no threading at all.
       const bare = await replyText('', parent);
       expect(bare).toContain('Subject: Re: hi');
       expect(bare).not.toContain('In-Reply-To:');
@@ -1718,9 +1687,8 @@ describe('reply threading survives a hostile inbound header', () => {
 });
 
 describe('reply subject survives a hostile inbound header', () => {
-  // The default reply subject is decoded from the sender's `Subject`. Like
-  // threading it is best-effort: repair what can be repaired, fall back to
-  // `Re:` for what cannot, and always send the reply.
+  // Decision: The default reply subject is decoded from the sender's `Subject`. Like threading, it repairs
+  // what it can, falls back to `Re:` for what it can't, and sends the reply.
   const FROM = 'acme+noreply@x.dev';
 
   function inbound(subject: string) {
@@ -1746,7 +1714,7 @@ describe('reply subject survives a hostile inbound header', () => {
     );
   }
 
-  // RFC 2045 §6.7: a robust decoder keeps a malformed `=` escape as-is.
+  // Decision: RFC 2045 section 6.7: a robust decoder keeps a malformed `=` escape as is.
   it('keeps a malformed Q escape literal instead of decoding half of it', async () => {
     const reply = await buildReplyMessage(inbound('=?UTF-8?Q?bad=0Gsubject?='), {
       text: 'thanks',
@@ -1759,7 +1727,6 @@ describe('reply subject survives a hostile inbound header', () => {
     ['a well-formed Q-encoded NUL', '=?UTF-8?Q?bad=00subject?='],
     ['a well-formed Q-encoded LF', '=?UTF-8?Q?bad=0Asubject?='],
     ['a well-formed Q-encoded CR', '=?UTF-8?Q?bad=0Dsubject?='],
-    // base64('bad\0subject')
     ['a B-encoded NUL', '=?UTF-8?B?YmFkAHN1YmplY3Q=?='],
   ])('replaces %s with a space rather than failing the reply', async (_label, subject) => {
     const reply = await buildReplyMessage(inbound(subject), { text: 'thanks', from: FROM });
@@ -1775,8 +1742,8 @@ describe('reply subject survives a hostile inbound header', () => {
     expect(maxLine(reply)).toBeLessThanOrEqual(998);
   });
 
-  // The fit check must not over-reject: a non-ASCII subject is chunked
-  // into 75-character encoded-words that fold, however long it is.
+  // Decision: The fit check mustn't over-reject: a non-ASCII subject is chunked into 75-character
+  // encoded-words that fold, however long it is.
   it('keeps a long non-ASCII subject, which encodes into foldable words', async () => {
     const subject = 'é'.repeat(600);
     const reply = await buildReplyMessage(inbound(subject), { text: 'thanks', from: FROM });
@@ -1793,32 +1760,28 @@ describe('reply subject survives a hostile inbound header', () => {
   });
 
   it('decodes a subject of MAX_MESSAGE_BYTES of encoded-words one word at a time', async () => {
-    // MAX_MESSAGE_BYTES of `=?UTF-8?Q?a?=`: adjacent encoded-words join into
-    // one ASCII token no line can carry, so the reply falls back to `Re:`.
+    // Decision: MAX_MESSAGE_BYTES of `=?UTF-8?Q?a?=`: adjacent encoded-words join into one ASCII token no
+    // line can carry, so the reply falls back to `Re:`.
     const subject = '=?UTF-8?Q?a?= '.repeat(Math.floor(MAX_MESSAGE_BYTES / 14));
     const reply = await buildReplyMessage(inbound(subject), { text: 'thanks', from: FROM });
     expect(reply.subject).toBe('Re:');
   });
 
-  // ONE encoded-word carrying the whole message: a folded `Subject` arrives
-  // (unfolded by `Headers`) as a single Q-word, so the decoder sees all of it.
+  // Decision: One encoded-word carrying the whole message: a folded `Subject` arrives (unfolded by
+  // `Headers`) as a single Q-word, so the decoder sees all of it.
   it('replies to a single Q-encoded word of MAX_MESSAGE_BYTES inside a 128 MB heap', () => {
     const result = replyInIsolate(
       `{ subject: '=?UTF-8?Q?' + 'a'.repeat(${MAX_MESSAGE_BYTES} - 20) + '?=' }`,
     );
-    // The decoded word is one ASCII token no line can carry, so the subject
-    // falls back — the same answer the many-word shape gets.
     expect(result.subject).toBe('Re:');
-    // The bound leaves room for CI's slower runner.
     expect(result.ms).toBeLessThan(5000);
   }, 30_000);
 
-  // A folded `Subject` reaches the decoder unfolded: `Headers` — Cloudflare's
-  // `ForwardableEmailMessage.headers` and the proxy's `new Headers(envelope
-  // .headers)` alike — rejects CR and LF, so what the payload can carry from a
-  // fold is the SP / HTAB that followed the CRLF. That whitespace is a literal
-  // byte to the Q decoder, and `prefixReplySubject` folds the run into the
-  // single space `_` would have produced.
+  // Decision: A folded `Subject` reaches the decoder unfolded: `Headers` (Cloudflare's
+  // `ForwardableEmailMessage.headers` and the proxy's `new Headers(envelope.headers)` alike)
+  // rejects CR and LF, so what the payload can carry from a fold is the SP or HTAB that followed
+  // the CRLF. That whitespace is a literal byte to the Q decoder, and `prefixReplySubject` folds
+  // the run into the single space `_` would have produced.
   it('decodes a Q-word carrying unfolded FWS to the same subject as the unfolded word', async () => {
     const unfolded = await buildReplyMessage(inbound('=?UTF-8?Q?good=20sub_ject?='), {
       text: 'thanks',
@@ -1843,8 +1806,8 @@ describe('reply subject survives a hostile inbound header', () => {
     expect(reply.subject).toBe(expected);
   });
 
-  // Aimed past the decoder at the control-character replacements: the
-  // decoded subject is bounded before they run.
+  // Decision: Aimed past the decoder at the control-character replacements: the decoded subject is
+  // bounded before they run.
   it('replies to a 5 MiB subject of alternating tabs and letters inside a 128 MB heap', () => {
     const result = replyInIsolate(`{ subject: '\\ta'.repeat(${(5 * 1024 * 1024) / 2}) }`);
     expect(result.subject).toBe('Re:');
@@ -1852,12 +1815,11 @@ describe('reply subject survives a hostile inbound header', () => {
     expect(result.heapDeltaMB).toBeLessThan(64);
   }, 30_000);
 
-  // The bound sits on the decoded subject and is checked before the
-  // replacements: a subject exactly at it is still repaired, one character
-  // over falls back. `\x01` rather than a tab, because `Headers` strips
-  // leading and trailing HTTP whitespace and the count must be exact.
+  // Decision: The bound sits on the decoded subject and is checked before the replacements: a subject at
+  // the bound is still repaired, one character over falls back. `\x01` instead of a tab, because
+  // `Headers` strips leading and trailing HTTP whitespace and the count has to be exact.
   it('repairs a subject exactly at the bound and falls back one character over', async () => {
-    const atBound = 'a\x01'.repeat(2048); // 4096 code units
+    const atBound = 'a\x01'.repeat(2048);
     const kept = await buildReplyMessage(inbound(atBound), { text: 'thanks', from: FROM });
     expect(kept.subject).toBe(`Re: ${'a '.repeat(2048).trim()}`);
     expect(maxLine(kept)).toBeLessThanOrEqual(998);
@@ -1866,11 +1828,11 @@ describe('reply subject survives a hostile inbound header', () => {
     expect(over.subject).toBe('Re:');
   });
 
-  // It is the DECODED length that is bounded: B-encoded, 4096 three-octet
-  // characters arrive as a 19,945-character header.
+  // Decision: It's the decoded length that's bounded: B-encoded, 4096 three-octet characters arrive as a
+  // 19,945-character header.
   it('bounds the decoded subject, not the encoded header it arrived in', async () => {
-    // Fifteen three-octet characters fill a 45-octet encoded-word exactly,
-    // so no character is split across words (RFC 2047 §5).
+    // Decision: Fifteen three-octet characters fill a 45-octet encoded-word exactly, so no character is
+    // split across words (RFC 2047 section 5).
     const encode = (text: string) => {
       const words: Array<string> = [];
       for (let i = 0; i < text.length; i += 15) {
@@ -1895,8 +1857,8 @@ describe('reply subject survives a hostile inbound header', () => {
     expect(over.subject).toBe('Re:');
   });
 
-  // A subject with spaces folds, so only the decoded-length bound keeps its
-  // rendered size from failing the reply.
+  // Decision: A subject with spaces folds, so only the decoded-length bound keeps its rendered size from
+  // failing the reply.
   it('replies to a subject of MAX_MESSAGE_BYTES that folds instead of throwing MimeError from the size check', async () => {
     const raw = new TextEncoder().encode('body');
     const { message, getActions } = createMessageProxy(
@@ -1921,10 +1883,9 @@ describe('reply subject survives a hostile inbound header', () => {
 });
 
 describe('parseEmail error contract', () => {
-  // Every code in `ParseEmailErrorCode` is reachable.
   it('wraps a raw-stream read failure as PARSE_FAILED', async () => {
-    // An own-account delivery wraps Cloudflare's native one-shot `raw` with
-    // `createMessageProxy`, so the buffering read is what fails.
+    // Decision: An own-account delivery wraps Cloudflare's native one-shot `raw` with `createMessageProxy`,
+    // so the buffering read is what fails.
     const raw = new ReadableStream<Uint8Array>({
       start(controller) {
         controller.error(new Error('stream broke mid-delivery'));
@@ -1941,8 +1902,8 @@ describe('parseEmail error contract', () => {
   });
 
   it('wraps a parser rejection as PARSE_FAILED', async () => {
-    // postal-mime refuses past 256 levels of nesting. Build one bomb that
-    // trips exactly that, and nothing else.
+    // Decision: postal-mime refuses past 256 levels of nesting. Build one bomb that trips that limit and
+    // nothing else.
     const depth = 300;
     let body = 'boom\r\n';
     for (let i = depth; i > 0; i--) {
@@ -1962,8 +1923,8 @@ describe('parseEmail error contract', () => {
     );
   });
 
-  // `@builtbyfriends/bwf/email` is the only public path to the error classes, so a handler
-  // can `instanceof` them only through it.
+  // Decision: `@builtbyfriends/bwf/email` is the only public path to the error classes, so a handler can
+  // `instanceof` them only through it.
   it('reports an oversized message as INBOUND_TOO_LARGE, with the classes bwf/email exports', async () => {
     expect(emailBarrel.ParseEmailError).toBe(ParseEmailError);
     expect(emailBarrel.MimeError).toBe(MimeError);
@@ -1999,14 +1960,11 @@ describe('buildReplyMessage', () => {
     } as unknown as ForwardableEmailMessage;
   }
 
-  // The platform mail domain is injected per environment, so the tests use a
-  // non-production value: asserting on it proves the reply address came from
-  // the binding and not from a baked-in constant.
+  // Decision: The platform mail domain is injected per environment, so the tests use a non-production
+  // value: asserting on it shows the reply address came from the binding, not a baked-in
+  // constant.
   const MAIL_DOMAIN = 'mail.staging.void.cloud';
 
-  // Most reply tests exercise the platform-defaulted `from = <slug>+noreply@…`
-  // path. Set both platform bindings once via envContext so each test inside
-  // this describe sees them without per-test boilerplate.
   function withSlug<T>(fn: () => T | Promise<T>): T | Promise<T> {
     return envContext.run(
       { __PLATFORM_PROJECT_SLUG: 'myslug', __PLATFORM_EMAIL_DOMAIN: MAIL_DOMAIN },
@@ -2015,10 +1973,9 @@ describe('buildReplyMessage', () => {
   }
 
   it('throws rather than falling back to message.to when the slug cannot be a sender', async () => {
-    // A slug over 56 characters cannot build `<slug>+noreply@`, which must
-    // stay inside RFC 5321's 64-octet local part. Falling through to
-    // `message.to` builds the slug-stripped shape the platform reply pin
-    // drops, so the handler would see a success and the mail would vanish.
+    // Decision: A slug over 56 characters can't build `<slug>+noreply@`, which has to stay inside RFC 5321's
+    // 64-octet local part. Falling through to `message.to` builds the slug-stripped shape the
+    // platform reply pin drops, so the handler would see a success and the mail would vanish.
     await envContext.run(
       { __PLATFORM_PROJECT_SLUG: 'a'.repeat(57), __PLATFORM_EMAIL_DOMAIN: MAIL_DOMAIN },
       async () => {
@@ -2034,7 +1991,7 @@ describe('buildReplyMessage', () => {
     await withSlug(async () => {
       const message = makeMessage({ Subject: 'Help me' });
       const built = await buildReplyMessage(message, { text: 'sure' });
-      // Reply-from is the platform sender, so the slug-pin allowlist accepts it.
+      // Decision: Reply-from is the platform sender, so the slug-pin allowlist accepts it.
       expect(built.from).toBe(`myslug+noreply@${MAIL_DOMAIN}`);
       expect(built.to).toBe('user@example.com');
       expect(built.subject).toBe('Re: Help me');
@@ -2059,7 +2016,6 @@ describe('buildReplyMessage', () => {
 
   it('decodes RFC 2047 encoded-word subjects before prepending Re:', async () => {
     await withSlug(async () => {
-      // base64('日本語') in UTF-8 = "5pel5pys6Kqe"
       const message = makeMessage({ Subject: '=?UTF-8?B?5pel5pys6Kqe?=' });
       const built = await buildReplyMessage(message, { text: 'ack' });
       expect(built.subject).toBe('Re: 日本語');
@@ -2068,7 +2024,6 @@ describe('buildReplyMessage', () => {
 
   it('decodes Q-encoded subjects (RFC 2047 quoted-printable variant)', async () => {
     await withSlug(async () => {
-      // =?UTF-8?Q?caf=C3=A9?= → "café"
       const message = makeMessage({ Subject: '=?UTF-8?Q?caf=C3=A9?=' });
       const built = await buildReplyMessage(message, { text: 'ack' });
       expect(built.subject).toBe('Re: café');
@@ -2077,8 +2032,7 @@ describe('buildReplyMessage', () => {
 
   it('decodes ISO-8859-1 Q-encoded subjects with the actual charset', async () => {
     await withSlug(async () => {
-      // =?iso-8859-1?Q?J=FCrgen?= → "Jürgen"  (0xFC is 'ü' in Latin-1)
-      // Decoding the same bytes as UTF-8 would mojibake.
+      // Decision: 0xFC is 'ü' in Latin-1; decoding the same bytes as UTF-8 would mojibake.
       const message = makeMessage({ Subject: '=?iso-8859-1?Q?J=FCrgen?=' });
       const built = await buildReplyMessage(message, { text: 'ack' });
       expect(built.subject).toBe('Re: Jürgen');
@@ -2087,7 +2041,6 @@ describe('buildReplyMessage', () => {
 
   it('does not double-prefix Re: when the encoded subject already starts with Re:', async () => {
     await withSlug(async () => {
-      // base64('Re: hi') = "UmU6IGhp"
       const message = makeMessage({ Subject: '=?UTF-8?B?UmU6IGhp?=' });
       const built = await buildReplyMessage(message, { text: 'ack' });
       expect(built.subject).toBe('Re: hi');
@@ -2122,7 +2075,6 @@ describe('buildReplyMessage', () => {
   });
 
   it('honors explicit overrides', async () => {
-    // No slug needed — explicit `from` skips the defaulting path.
     const message = makeMessage({ Subject: 'Hi' });
     const built = await buildReplyMessage(message, {
       from: 'override@app.dev',
@@ -2136,11 +2088,10 @@ describe('buildReplyMessage', () => {
   });
 
   it('renders a dotted sender name, handed back as `to`, as one quoted-string', async () => {
-    // The default `to` is the bare envelope sender, so no display name is
-    // formatted unless the handler passes one — typically the parsed
-    // `From`. postal-mime gives the name as its raw text (`Dr. Smith`, the
-    // quotes undone), and `buildMime` quotes it again on the way out: `.`
-    // is an RFC 5322 special, so the name is not a phrase of atoms.
+    // Decision: The default `to` is the bare envelope sender, so no display name is formatted unless the
+    // handler passes one, typically the parsed `From`. postal-mime gives the name as its raw text
+    // (`Dr. Smith`, quotes undone), and `buildMime` quotes it again on the way out: `.` is an
+    // RFC 5322 special, so the name isn't a phrase of atoms.
     const raw = new TextEncoder().encode(
       'From: "Dr. Smith" <user@example.com>\r\n' +
         'To: support@app.dev\r\n' +
@@ -2172,12 +2123,6 @@ describe('buildReplyMessage', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// The verified receipt path builds a proxy, runs the matching handler, and
-// encodes the recorded actions for the platform. This exercises those pieces
-// without evaluating the generated Worker module.
-// ---------------------------------------------------------------------------
-
 describe('end-to-end: envelope → handler → action queue', () => {
   function makeEnvelope(overrides: Partial<EmailEnvelope> = {}): EmailEnvelope {
     const raw = new TextEncoder().encode(
@@ -2199,7 +2144,6 @@ describe('end-to-end: envelope → handler → action queue', () => {
     };
   }
 
-  // Mirrors the codegen pattern: build proxy, run handler, return actions.
   async function dispatchToHandler(
     envelope: EmailEnvelope,
     handler: (
@@ -2239,9 +2183,8 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('records a reply action with threaded MIME from replyEmail', async () => {
-    // Explicit `from` — without __PLATFORM_PROJECT_SLUG / __PLATFORM_EMAIL_DOMAIN
-    // in scope, replyEmail's defaulting path errors. Production threads both
-    // from env; bare unit tests pass `from` explicitly to skip that machinery.
+    // Decision: Explicit `from`: without __PLATFORM_PROJECT_SLUG and __PLATFORM_EMAIL_DOMAIN in scope,
+    // replyEmail's defaulting path errors. Production threads both from env.
     const handler = defineEmail(async (message, _env, _ctx, info) => {
       const ticket = info?.params.ticket ?? 'unknown';
       await replyEmail(message, {
@@ -2268,9 +2211,9 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('strips the platform <slug>+ prefix from message.to before user code sees it', async () => {
-    // Production: every recipient arrives as `<slug>+<tag>@mail.buildwf.dev`.
-    // The user-visible `message.to` should be the bare `<tag>@<domain>`,
-    // matching the address shape user handlers wrote in `email/<addr>.ts`.
+    // Decision: Production: each recipient arrives as `<slug>+<tag>@mail.buildwf.dev`. The user-visible
+    // `message.to` is the bare `<tag>@<domain>`, matching the address shape handlers wrote in
+    // `email/<addr>.ts`.
     let observedTo: string | undefined;
     let platformTo: string | undefined;
     const handler = defineEmail(async (message) => {
@@ -2292,10 +2235,8 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('leaves message.to untouched when no slug is provided', async () => {
-    // Unit-level safety net: slug-stripping is opt-in (the dispatcher
-    // passes the slug explicitly). Without it, the proxy must not mangle
-    // the address — local tests / harnesses without a known slug rely on
-    // this for predictable behavior.
+    // Decision: Slug-stripping is opt-in (the dispatcher passes the slug explicitly). Without it, the proxy
+    // mustn't mangle the address: local tests and harnesses without a known slug rely on this.
     let observedTo: string | undefined;
     const handler = defineEmail(async (message) => {
       observedTo = message.to;
@@ -2323,9 +2264,9 @@ describe('end-to-end: envelope → handler → action queue', () => {
   }
 
   it('replyEmail without from replies from message.to when there is no __PLATFORM_PROJECT_SLUG', async () => {
-    // No slug means no platform slug-pin to satisfy: the message reached a
-    // real address on the developer's own zone, and that address is the
-    // reply sender. A domain binding on its own does not change that.
+    // Decision: No slug means no platform slug pin to satisfy: the message reached a real address on the
+    // developer's own zone, and that address is the reply sender. A domain binding on its own
+    // doesn't change that.
     const built = await envContext.run({ __PLATFORM_EMAIL_DOMAIN: 'mail.staging.void.cloud' }, () =>
       buildReplyMessage(replyTestMessage(), { text: 'ack' }),
     );
@@ -2333,8 +2274,8 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('replyEmail without from errors when __PLATFORM_EMAIL_DOMAIN is unavailable', async () => {
-    // No silent fallback: with a slug but no configured mail domain the
-    // reply must fail rather than being addressed from the production zone.
+    // Decision: No silent fallback: with a slug but no configured mail domain, the reply fails instead of
+    // being addressed from the production zone.
     await expect(
       envContext.run({ __PLATFORM_PROJECT_SLUG: 'myslug' }, () =>
         replyEmail(replyTestMessage(), { text: 'ack' }),
@@ -2343,7 +2284,6 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('replyEmail keeps an explicit from with neither binding present', async () => {
-    // The bindings only feed the default; an explicit sender is untouched.
     const built = await envContext.run({}, () =>
       buildReplyMessage(replyTestMessage(), { from: 'support@app.dev', text: 'ack' }),
     );
@@ -2351,12 +2291,11 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('setReject is terminal: prior forwards are dropped and later forward/reply are no-ops', async () => {
-    // CF treats setReject as terminal — once setReject fires, anything
-    // queued before it never runs (router drops them) and anything called
-    // after is silently discarded. The proxy mirrors that contract by
-    // (a) walking back the action queue on setReject to remove preceding
-    // forward/reply entries (with one warning describing how many were
-    // dropped) and (b) warning + no-op for forward/reply called after.
+    // Decision: Cloudflare treats setReject as terminal: once it fires, anything queued before it doesn't
+    // run (the router drops it) and anything called after is silently discarded. The proxy mirrors
+    // that: it walks back the action queue on setReject to remove earlier forward and reply
+    // entries (with one warning saying how many were dropped), and warns and does nothing for
+    // forward or reply called after.
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       const handler = defineEmail(async (message) => {
@@ -2367,17 +2306,13 @@ describe('end-to-end: envelope → handler → action queue', () => {
           from: 'support@app.dev',
           to: 'sender@example.com',
           raw: new TextEncoder().encode('Subject: late\r\n\r\nbody\r\n'),
-          // The proxy's reply() accepts a duck-typed { from, to, raw },
-          // but the ForwardableEmailMessage interface expects EmailMessage.
-          // This cast keeps the runtime contract under test while
+          // Decision: The proxy's reply() accepts a duck-typed { from, to, raw }, but the ForwardableEmailMessage
+          // interface expects EmailMessage. This cast keeps the runtime contract under test while
           // satisfying the public type.
         } as unknown as Parameters<ForwardableEmailMessage['reply']>[0]);
       });
       const actions = await dispatchToHandler(makeEnvelope(), handler);
-      // Only the reject survives — the prior forward was walked back, the
-      // later forward/reply are no-ops.
       expect(actions.map((a) => a.type)).toEqual(['reject']);
-      // Three warnings: walk-back (prior forward), late forward, late reply.
       expect(warn).toHaveBeenCalledTimes(3);
       const warnMessages = warn.mock.calls.map((c) => String(c[0]));
       expect(warnMessages.some((m) => m.includes('1 forward/reply call'))).toBe(true);
@@ -2389,8 +2324,8 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('reply() refuses a native EmailMessage with a named error', async () => {
-    // What workerd's `EmailMessage` looks like to JS: `from` and `to` only —
-    // the body has no accessor, so the proxy cannot record it as bytes.
+    // Decision: What workerd's `EmailMessage` looks like to JS: only `from` and `to`. The body has no
+    // accessor, so the proxy can't record it as bytes.
     const native = Object.freeze({ from: 'support@app.dev', to: 'sender@example.com' });
     const handler = defineEmail(async (message) => {
       await message.reply(native as unknown as Parameters<ForwardableEmailMessage['reply']>[0]);
@@ -2415,7 +2350,7 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('reply() stops reading a stream raw once MAX_MESSAGE_BYTES is exceeded', async () => {
-    // A stream that never closes: without the bound, reply() would buffer forever.
+    // Decision: A stream that never closes: without the bound, reply() would buffer forever.
     let pulls = 0;
     let cancelled = false;
     const chunk = new Uint8Array(1024 * 1024);
@@ -2439,7 +2374,7 @@ describe('end-to-end: envelope → handler → action queue', () => {
       /exceeds bwf's sending limit/,
     );
     expect(cancelled).toBe(true);
-    // 5 MiB limit + the chunk that crosses it + the stream's own read-ahead.
+    // Decision: 5 MiB limit + the chunk that crosses it + the stream's own read-ahead.
     expect(pulls).toBeLessThanOrEqual(7);
   });
 
@@ -2471,9 +2406,9 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('refuses the 101st queued action and leaves the queue at 100', async () => {
-    // The queue crosses the RPC boundary into the SHARED proxy isolate, where
-    // it is walked entry by entry before any quota gate has looked at it.
-    // The router enforces the same 100; this is the fast, precise failure.
+    // Decision: The queue crosses the RPC boundary into the shared proxy isolate, where it's walked entry by
+    // entry before any quota gate has looked at it. The router enforces the same 100; this is the
+    // fast, precise failure.
     let thrown: unknown;
     const handler = defineEmail(async (message) => {
       for (let i = 0; i < 100; i++) {
@@ -2528,14 +2463,11 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('cancels a stream reply at the REMAINING budget, not the per-reply cap', async () => {
-    // 7 MiB of reply bodies plus their frames have already been spent, so
-    // slightly less than 1 MiB is left. A
-    // stream bounded by the per-reply cap would keep pulling to 5 MiB and
-    // report the wrong limit; the pull count and the message both pin that
-    // the remaining budget is what stopped it.
-    //
-    // Two prior replies, not one: after a single full-size reply the
-    // remaining budget is still below the per-reply cap, but this pins a tighter boundary.
+    // Decision: 7 MiB of reply bodies plus their frames have already been spent, so a little under 1 MiB is
+    // left. A stream bounded by the per-reply cap would keep pulling to 5 MiB and report the wrong
+    // limit; the pull count and the message both show that the remaining budget stopped it.
+    // Two prior replies, not one: after a single full-size reply the remaining budget is still
+    // below the per-reply cap, but this pins a tighter boundary.
     let pulls = 0;
     let cancelled = false;
     const chunk = new Uint8Array(1024 * 1024);
@@ -2567,7 +2499,6 @@ describe('end-to-end: envelope → handler → action queue', () => {
     const actions = await dispatchToHandler(makeEnvelope(), handler);
     expect(actions).toHaveLength(2);
     expect(cancelled).toBe(true);
-    // Less than 1 MiB remains; allow the crossing chunk plus read-ahead.
     expect(pulls).toBeLessThanOrEqual(3);
     expect(thrown).toBeInstanceOf(MimeError);
     expect((thrown as MimeError).message).toMatch(/serialized actions/);
@@ -2657,7 +2588,7 @@ describe('end-to-end: envelope → handler → action queue', () => {
 
   it('records a plain header record verbatim, keeping the name casing', async () => {
     const handler = defineEmail(async (message) => {
-      // The record form is a runtime affordance (JS handlers, or a cast):
+      // Decision: The record form is a runtime affordance (JS handlers, or a cast):
       // `ForwardableEmailMessage.forward` is typed against `Headers`.
       const record = { 'X-Forwarded-By': 'platform-test' } as unknown as Headers;
       await message.forward('archive@example.com', record);
@@ -2679,9 +2610,9 @@ describe('end-to-end: envelope → handler → action queue', () => {
   ])(
     'refuses a forward header record with %s at the call, recording nothing for it',
     async (_label, headers) => {
-      // The record is replayed through `new Headers()` (natively and in the
-      // platform router). What that constructor rejects must fail here, in
-      // the handler, not after earlier actions have already fired.
+      // Decision: The record is replayed through `new Headers()` (natively and in the platform router). What
+      // that constructor rejects has to fail here, in the handler, not after earlier actions have
+      // already fired.
       const { message, getActions } = createMessageProxy(makeEnvelope());
       await message.forward('first@example.com');
       let thrown: unknown;
@@ -2735,7 +2666,7 @@ describe('end-to-end: envelope → handler → action queue', () => {
   ])(
     'refuses a forward header bag with %s at the call, recording nothing for it',
     async (_label, headers, expected) => {
-      // `new Headers()` accepts every one of these, but the platform router's
+      // Decision: `new Headers()` accepts each of these, but the platform router's
       // `forwardHeadersWithinBounds` would drop the whole action list.
       const { message, getActions } = createMessageProxy(makeEnvelope());
       await message.forward('first@example.com');
@@ -2782,10 +2713,10 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('normalizes the reject reason as the router does: slice to 1000, then strip controls', () => {
-    // The router's own fixture (`email-router.test.ts`): 300 x "line\r\n" is
-    // 1800 characters; the first 1000 code units are 166 full lines plus
-    // "line", and each CRLF then becomes one space — 834 characters, not
-    // 1000. Recorded this way, the native replay hands `setReject()` the
+    // Decision: The router's own fixture (`email-router.test.ts`): 300 x "line\r
+    // " is 1800 characters; the
+    // first 1000 code units are 166 full lines plus "line", and each CRLF then becomes one space,
+    // so 834 characters, not 1000. Recorded this way, the native replay hands `setReject()` the
     // string the platform router would, and a harness reports it.
     const { message, getActions } = createMessageProxy(makeEnvelope());
     message.setReject('line\r\n'.repeat(300));
@@ -2793,8 +2724,8 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('bounds a multi-megabyte control-laden reject reason before it is recorded', () => {
-    // A reason built from the inbound message can be as large as the message
-    // and carry a remote sender's CRLF.
+    // Decision: A reason built from the inbound message can be as large as the message and carry a remote
+    // sender's CRLF.
     const { message, getActions } = createMessageProxy(makeEnvelope());
     message.setReject(`${'x'.repeat(5 * 1024 * 1024)}\r\n\x00`);
     const [action] = getActions();
@@ -2802,8 +2733,8 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it("records the router's substitute for an empty reason, and a space for a controls-only one", () => {
-    // The router checks for empty BEFORE it strips (`validateActions`), so a
-    // reason that is only controls becomes one space, not the substitute.
+    // Decision: The router checks for empty before it strips (`validateActions`), so a reason that's only
+    // controls becomes one space, not the substitute.
     const empty = createMessageProxy(makeEnvelope());
     empty.message.setReject('');
     expect(empty.getActions()).toEqual([{ type: 'reject', reason: 'rejected by handler' }]);
@@ -2814,9 +2745,8 @@ describe('end-to-end: envelope → handler → action queue', () => {
 
   it.each([
     ['no @', 'not-an-address'],
-    // `forward(rcptTo)` takes a bare address — Cloudflare's "verified
-    // destination address" — so the display-name form `sendEmail` parses
-    // is not an address here.
+    // Decision: `forward(rcptTo)` takes a bare address (Cloudflare's "verified destination address"), so the
+    // display-name form `sendEmail` parses isn't an address here.
     ['a display name', 'Ops <ops@example.com>'],
     ['two @', 'a@b@example.com'],
     ['an empty domain', 'user@'],
@@ -2835,7 +2765,7 @@ describe('end-to-end: envelope → handler → action queue', () => {
   ])(
     'refuses a forward address with %s at the call, recording nothing for it',
     async (_label, to) => {
-      // The rule `sendEmail` applies to its `to`, and the one the router drops on.
+      // Decision: The rule `sendEmail` applies to its `to`, and the one the router drops on.
       const { message, getActions } = createMessageProxy(makeEnvelope());
       await message.forward('first@example.com');
       let thrown: unknown;
@@ -2852,10 +2782,9 @@ describe('end-to-end: envelope → handler → action queue', () => {
   );
 
   it('refuses a hand-built reply with a malformed address at the call, recording nothing for it', async () => {
-    // The `{ from, to, raw }` reply form bypasses `normalizeEmail`, so it
-    // gets the same record-time rule as `forward(to)`: a bad address fails
-    // in the handler's own call, before any native replay could fire the
-    // actions queued ahead of it.
+    // Decision: The `{ from, to, raw }` reply form bypasses `normalizeEmail`, so it gets the same record-time
+    // rule as `forward(to)`: a bad address fails in the handler's own call, before any native
+    // replay could fire the actions queued ahead of it.
     const cases: Array<[Record<'from' | 'to', string>, 'INVALID_FROM' | 'INVALID_TO', string]> = [
       [
         { from: 'not-an-address', to: 'ops@example.com' },
@@ -2894,11 +2823,10 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('records every forward address sendEmail would accept', async () => {
-    // The same rule as the platform router's `isValidEmailAddress`
-    // (`email-validator` on both sides), so everything recorded here is
-    // enacted there. A local part of exactly 64 characters, a `+` tag, dots
-    // between atoms, a punycode IDN domain and a numeric second character
-    // in the TLD are all fine.
+    // Decision: The same rule as the platform router's `isValidEmailAddress` (`email-validator` on both
+    // sides), so what's recorded here is enacted there. A local part of 64 characters, a `+` tag,
+    // dots between atoms, a punycode IDN domain and a numeric second character in the TLD are
+    // all fine.
     const accepted = [
       'ops+T-42@example.com',
       `${'a'.repeat(64)}@example.com`,
@@ -2920,8 +2848,8 @@ describe('end-to-end: envelope → handler → action queue', () => {
         for (let i = 0; i < 100; i++) {
           await message.forward(`box${i}@example.com`);
         }
-        // The queue is at MAX_ACTIONS; setReject must not throw here — it
-        // purges the 100 forwards and leaves one reject behind.
+        // Decision: The queue is at MAX_ACTIONS; setReject mustn't throw here. It purges the 100 forwards and
+        // leaves one reject behind.
         message.setReject('not allowed');
       });
       const actions = await dispatchToHandler(makeEnvelope(), handler);
@@ -2932,11 +2860,10 @@ describe('end-to-end: envelope → handler → action queue', () => {
   });
 
   it('parseEmail can be called multiple times (cache replays)', async () => {
-    // parseEmail caches the buffered raw bytes in a WeakMap keyed by the
-    // proxy, so handlers can call it repeatedly without the underlying
-    // ReadableStream being "already consumed". After parseEmail, accessing
-    // message.raw still yields a usable ReadableStream (a fresh one per
-    // access, backed by the cached bytes).
+    // Decision: parseEmail caches the buffered raw bytes in a WeakMap keyed by the proxy, so handlers can
+    // call it repeatedly without the ReadableStream being "already consumed". After parseEmail,
+    // message.raw still yields a usable ReadableStream (a fresh one per access, backed by the
+    // cached bytes).
     let firstSubject: string | undefined;
     let secondSubject: string | undefined;
     let rawAfterParse: ReadableStream<Uint8Array> | undefined;
@@ -2950,7 +2877,6 @@ describe('end-to-end: envelope → handler → action queue', () => {
     await dispatchToHandler(makeEnvelope(), handler);
     expect(firstSubject).toBe('Help me');
     expect(secondSubject).toBe('Help me');
-    // message.raw is a fresh ReadableStream each access, replayed from cache.
     expect(rawAfterParse).toBeInstanceOf(ReadableStream);
     const reader = rawAfterParse?.getReader();
     const chunks: Array<Uint8Array> = [];

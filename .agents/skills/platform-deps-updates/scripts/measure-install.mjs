@@ -38,7 +38,7 @@ if (values.help) {
 async function measure() {
   assert(values.repo && values.out, '--repo and --out are required; use --help.');
   const repository = realpathSync(resolve(values.repo));
-  // Resolve existing ancestors too: /var and /private/var alias on macOS.
+  // Decision: Resolve existing ancestors too: /var and /private/var are aliases on macOS.
   let ancestor = resolve(values.out);
   const suffix = [];
   while (!existsSync(ancestor)) {
@@ -194,7 +194,7 @@ async function measure() {
             largeFiles.push({ path: relative(output, file), bytes: stat.size, inode });
           }
           if (entry.name === 'package.json') {
-            // Bundled fixtures can contain non-manifest package.json files.
+            // Decision: Bundled fixtures can contain package.json files that aren't manifests.
             let manifest;
             try {
               manifest = JSON.parse(readFileSync(file, 'utf8'));

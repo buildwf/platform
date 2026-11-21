@@ -150,7 +150,7 @@ function showPreview(
     | { modes?: PlanAiLoggingModes; modesBefore?: PlanAiLoggingModes }
     | undefined;
   const afterAiLogging = change?.modes;
-  // The preview reads the saved defaults under the catalog lock; the listing may be cached.
+  // Decision: The preview reads the saved defaults under the catalog lock; the listing may be cached.
   const savedAiLogging = change?.modesBefore ?? beforeAiLogging;
   const aiLogging = (from: string, to: string) =>
     afterAiLogging

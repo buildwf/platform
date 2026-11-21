@@ -24,7 +24,7 @@ function isGenericPermissionMessage(message: string): boolean {
 }
 
 async function proxyError(response: Response): Promise<Error> {
-  // Error pages are untrusted and can be large. Read only enough for a diagnostic.
+  // Decision: Error pages are untrusted and can be large. Read only enough for a diagnostic.
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
   let text = '';
@@ -40,7 +40,7 @@ async function proxyError(response: Response): Promise<Error> {
     }
     text += decoder.decode();
   } catch {
-    // An unreadable body should not hide the HTTP status or recovery guidance.
+    // Decision: An unreadable body should not hide the HTTP status or recovery guidance.
   } finally {
     await reader?.cancel().catch(() => {});
     reader?.releaseLock();

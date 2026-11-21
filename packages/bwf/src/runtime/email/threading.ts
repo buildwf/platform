@@ -47,7 +47,7 @@ export function fitsHeaderLine(name: string, value: string | undefined): value i
   if (!value) {
     return false;
   }
-  // One pass without allocation: tokenizing a hostile 10 MiB header could
+  // Decision: One pass without allocation: tokenizing a hostile 10 MiB header could
   // exhaust the isolate. Other `\s` characters do not end a run, because
   // `foldHeader` cannot fold at them.
   const budget = 998 - (name.length + 2);
@@ -66,7 +66,7 @@ export function fitsHeaderLine(name: string, value: string | undefined): value i
       run = 0;
       continue;
     }
-    // UTF-8 octets: a surrogate pair is 4, a lone surrogate (U+FFFD) is 3.
+    // Decision: UTF-8 octets: a surrogate pair is 4, a lone surrogate (U+FFFD) is 3.
     if (c < 0x80) {
       run += 1;
     } else if (c < 0x800) {
@@ -102,7 +102,7 @@ const MAX_REFERENCES_CHARS = 8192;
  */
 function newestIds(chain: string, budget: number): string {
   if (chain.length > budget) {
-    // Cut at the next SP or HTAB so no id is split.
+    // Decision: Cut at the next SP or HTAB so no id is split.
     let cut = chain.length - budget;
     while (cut < chain.length) {
       const c = chain.charCodeAt(cut);
@@ -113,7 +113,7 @@ function newestIds(chain: string, budget: number): string {
     }
     chain = chain.slice(cut);
   }
-  // After the cut, so the walk is bounded.
+  // Decision: After the cut, so the walk is bounded.
   return dropControlIds(chain);
 }
 

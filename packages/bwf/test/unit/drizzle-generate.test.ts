@@ -40,7 +40,7 @@ afterEach(() => {
 });
 
 describe('SQLite migration generation', () => {
-  // This exercises three Drizzle Kit CLI runs, which can exceed the default timeout on Windows CI.
+  // Decision: This runs Drizzle Kit three times, which can exceed the default timeout on Windows CI.
   it('rolls back SQL, journal and snapshots when Drizzle copies a newly added column from the old table', async () => {
     const root = fixture();
     const migrations = join(root, 'migrations');
@@ -73,7 +73,7 @@ describe('SQLite migration generation', () => {
     expect(collectMigrations(migrations)[0]?.sql).toContain('CREATE TABLE `session`');
     const before = files(migrations);
 
-    // Removing a default forces a table rebuild while Better Auth adds impersonatedBy.
+    // Decision: Removing a default forces a table rebuild while Better Auth adds impersonatedBy.
     writeFileSync(
       schema,
       schemaSource("token: text('token'), impersonatedBy: text('impersonatedBy'),"),
@@ -83,7 +83,7 @@ describe('SQLite migration generation', () => {
     );
     expect(files(migrations)).toEqual(before);
 
-    // A subsequent additive change must still generate from the ORIGINAL snapshot.
+    // Decision: A later additive change still has to generate from the original snapshot.
     writeFileSync(
       schema,
       schemaSource(

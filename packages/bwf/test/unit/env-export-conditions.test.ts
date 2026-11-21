@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vite-plus/test';
 
-// @cloudflare/vite-plugin resolves workerd with ["workerd","worker","module","browser"];
-// export keys match in order, so the worker branches must stay before "browser".
+// Decision: @cloudflare/vite-plugin resolves workerd with ["workerd","worker","module","browser"];
+// export keys match in order, so the worker branches have to stay before "browser".
 
 type ExportEntry = string | { [condition: string]: ExportEntry };
 

@@ -163,7 +163,6 @@ test('AI policy readback requires a project- and purpose-bound proxy credential'
   expect(policy.status).toBe(200);
   expect(policy.headers.get('Cache-Control')).toContain('no-store');
   expect(await policy.json()).toEqual({ mode: 'metadata' });
-  // Answered from the published key, so the auth-database flag does not matter.
   expect((await read(auth, { ...env, PLATFORM_AUTH_DATABASE_UNCACHED: 'false' })).status).toBe(200);
 });
 
@@ -255,8 +254,8 @@ describe('operator tenant reads', () => {
     const formerOwner = await createTestUser(env.db, 'operator-usage-former');
     const currentOwner = await createTestUser(env.db, 'operator-usage-current');
     const project = await createTestProject(env.db, currentOwner.id, 'operator-usage-project');
-    // Pin the clock and anchor both billing cycles at the first interval so
-    // both ownership intervals fall inside the current billing period.
+    // Decision: Pin the clock and anchor both billing cycles at the first interval, so both ownership intervals
+    // fall in the current billing period.
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
     const ownedFrom = new Date(Date.now() - 5 * 24 * 60 * 60 * 1_000);
@@ -554,8 +553,8 @@ describe('operator tenant mutations', () => {
     expect(current).toMatchObject({ ends_at: null, changed_by_user_id: operatorAdminId });
     const [revokedCredential] = await env.db
       .select({
-        // Ownership periods use timestamp, credentials use timestamptz. Let
-        // PostgreSQL interpret its own session timezone when comparing them.
+        // Decision: Ownership periods use timestamp and credentials use timestamptz. Let PostgreSQL apply its own
+        // session timezone when comparing them.
         sameTransferInstant: sql<boolean>`${projectDeployCredentials.revoked_at} = ${current.starts_at}::timestamp::timestamptz`,
       })
       .from(projectDeployCredentials)
@@ -1141,7 +1140,6 @@ describe('operator tenant mutations', () => {
       { projectId: shared.id, payload: { phase: 'requested', reason: 'user-suspended' } },
     ]);
 
-    // A retry runs the whole suspension again; the queued request covers it.
     expect((await req(`/users/${target.id}/suspend`, { reason: 'admin_suspended' })).status).toBe(
       200,
     );
@@ -1249,9 +1247,9 @@ describe('operator tenant mutations', () => {
     const staleProject = await dbModule.getProject(env.db, project.id);
     expect(staleProject).not.toBeNull();
 
-    // Force the operator workflow to consume the pre-transfer enumeration
-    // while the authoritative project row already names the new owner. The
-    // teardown lock must treat this as a stale snapshot and skip all cleanup.
+    // Decision: Make the operator workflow use the enumeration from before the transfer while the project row
+    // already names the new owner. The teardown lock has to treat it as a stale snapshot and skip
+    // cleanup.
     await env.db.update(projects).set({ user_id: newOwner.id }).where(eq(projects.id, project.id));
     vi.spyOn(dbModule, 'getOwnedProjectsByUserId').mockResolvedValue([staleProject!]);
     const cf = mockCfApi();

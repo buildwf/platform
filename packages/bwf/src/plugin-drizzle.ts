@@ -17,7 +17,7 @@ import { discoverSchema } from './drizzle/discover.ts';
 import { bwfWarn } from './log.ts';
 import { readProjectPaths, resolveProjectPaths, type ProjectPaths } from './project-paths.ts';
 
-// Resolve drizzle-orm paths from void's own deps so they work in any project
+// Decision: Resolve drizzle-orm paths from void's own deps so they work in any project
 // (including metaframeworks where drizzle-orm isn't a direct dependency).
 const drizzleD1Resolved = fileURLToPath(import.meta.resolve('drizzle-orm/d1'));
 const drizzleOrmResolved = fileURLToPath(import.meta.resolve('drizzle-orm'));
@@ -29,7 +29,7 @@ const drizzleMysql2Resolved = fileURLToPath(import.meta.resolve('drizzle-orm/mys
 const VIRTUAL_DB_ID = '\0virtual:platform-db';
 const VIRTUAL_SCHEMA_DB_ID = '\0virtual:platform-db-schema';
 
-// Workers tie a connection to the request that opened it. bwf/db's PostgreSQL and MySQL
+// Decision: Workers tie a connection to the request that opened it. bwf/db's PostgreSQL and MySQL
 // templates share one drizzle instance whose client looks up the current request's pool on
 // every call, so a query built or prepared in one request runs on the pool of the request that
 // executes it. `has` and `getPrototypeOf` answer drizzle's pool checks before a transaction.
@@ -78,7 +78,7 @@ function createBwfDbModule(
   paths: ProjectPaths = readProjectPaths(root),
 ) {
   const schema = discoverSchema(root, paths);
-  // The package's own `@builtbyfriends/bwf/db` is a D1 client, so PostgreSQL and MySQL always need this one.
+  // Decision: The package's own `@builtbyfriends/bwf/db` is a D1 client, so PostgreSQL and MySQL need this one.
   // It cannot apply `database.casing` either, which also names the columns of tables that an
   // app keeps outside its schema.
   const hasDbRuntime =
@@ -96,12 +96,11 @@ function createBwfDbModule(
       if (id === '@builtbyfriends/bwf/db') {
         if (!hasDbRuntime) {
           return;
-        } // Fall through to the real module (stub)
-        // Don't redirect schema files to avoid circular dependency
-        // (virtual:platform-db imports the schema, which imports bwf/db).
-        // Schema files only need SQL helpers, not the runtime DB instance.
+        } /* Decision: A missing runtime falls through to the real module (a stub). Schema files are not redirected,
+           to avoid a circular dependency: virtual:platform-db imports the schema, which imports bwf/db.
+           Schema files need only the SQL helpers, not the runtime DB instance. */
         if (schema && importer) {
-          // Normalize separators for Windows — Vite uses forward slashes,
+          // Decision: Normalize separators for Windows — Vite uses forward slashes,
           // but schema.path from Node's path.join uses backslashes on Windows.
           const normalizedImporter = normalizePath(importer);
           const normalizedSchemaPath = normalizePath(schema.path);
@@ -119,7 +118,7 @@ function createBwfDbModule(
         return VIRTUAL_DB_ID;
       }
 
-      // Resolve @schema alias explicitly via resolveId so it works where
+      // Decision: Resolve @schema alias explicitly via resolveId so it works where
       // Vite's config-level resolve.alias may not be applied.
       if (schema && (id === '@schema' || id.startsWith('@schema/'))) {
         if (id === '@schema') {
@@ -143,7 +142,7 @@ export function createDb() {
 `;
         }
 
-        // bwf/db virtual module. Each dialect keeps the SQL helper export first: schema files
+        // Decision: bwf/db virtual module. Each dialect keeps the SQL helper export first: schema files
         // that db/schema.ts reaches from outside db/ import bwf/db while this module is still
         // loading. Vite SSR runs imports in source order, so the helpers must be loaded before
         // the schema import.
@@ -153,11 +152,11 @@ export function createDb() {
         const casingOption = options.casing ? `casing: ${JSON.stringify(options.casing)}` : '';
         const drizzleOptions = [schema ? 'schema' : '', casingOption].filter(Boolean);
         const drizzleConfig = drizzleOptions.length > 0 ? `, { ${drizzleOptions.join(', ')} }` : '';
-        // The same options as keys after the client in drizzle's single-object form.
+        // Decision: The same options as keys after the client in drizzle's single-object form.
         const drizzleOptionKeys = drizzleOptions.map((option) => `, ${option}`).join('');
 
         if (dialect === 'mysql') {
-          // drizzle builds the pool from `connection`, so its bare mysql2 import is the only one
+          // Decision: drizzle builds the pool from `connection`, so its bare mysql2 import is the only one
           // and the worker prebundle serves it. Its config check rejects `mode` without `schema`.
           const mysqlDrizzleConfig =
             (schema ? ', schema, mode: "default"' : '') + (casingOption ? `, ${casingOption}` : '');
@@ -242,7 +241,7 @@ export function createDb(connectionString) {
         }
 
         if (dialect === 'postgresql') {
-          // Like MySQL: drizzle builds the pool, so its bare pg import is the only one.
+          // Decision: Like MySQL: drizzle builds the pool, so its bare pg import is the only one.
           return `
 export { ${DRIZZLE_OPERATORS} } from ${JSON.stringify(drizzleOrmResolved)};
 import { drizzle } from ${JSON.stringify(drizzleNodePgResolved)};
@@ -294,7 +293,6 @@ export function createDb(connectionString) {
 `;
         }
 
-        // SQLite (default)
         return `
 export { ${DRIZZLE_OPERATORS} } from ${JSON.stringify(drizzleOrmResolved)};
 import { drizzle } from ${JSON.stringify(drizzleD1Resolved)};
@@ -367,13 +365,12 @@ export function drizzlePlugin(
   const dbModule = createBwfDbModule(root, dialect, options, paths);
   const { schema, hasDbRuntime } = dbModule;
 
-  // Always write tsconfig (for routes.d.ts, queues.d.ts, etc.)
+  // Decision: Always write tsconfig (for routes.d.ts, queues.d.ts, etc.)
   ensureProjectTsconfig(root, hasRouteTypes, hasDbRuntime, schema != null, {
     redirectDbModule: options.redirectDbTypePaths,
     paths,
   });
 
-  // Generate db.d.ts when bwf/db is available, even without a user schema.
   if (hasDbRuntime) {
     generateDbDts(outDir, schema ?? null, dialect);
   }
@@ -399,7 +396,6 @@ export function drizzlePlugin(
     resolveId: {
       filter: { id: /^(@builtbyfriends\/bwf\/db|@schema)/ },
       handler(id, importer) {
-        // Only intercept bwf/db in server/worker environments (not client)
         if (id === '@builtbyfriends/bwf/db' && this.environment?.name === 'client') {
           return;
         }
@@ -415,7 +411,6 @@ export function drizzlePlugin(
         return;
       }
 
-      // Check for schema drift on startup
       const migrationsDir = paths.migrationsDir;
       const hasMigrations =
         existsSync(migrationsDir) && readdirSync(migrationsDir).some((f) => f.endsWith('.sql'));
@@ -469,7 +464,7 @@ export function bwfDbBundlerPlugin(
   const dbModule = createBwfDbModule(
     root,
     dialect,
-    // The package's own `@builtbyfriends/bwf/db` reads D1 from the `DB` binding.
+    // Decision: The package's own `@builtbyfriends/bwf/db` reads D1 from the `DB` binding.
     {
       d1BindingName,
       forceVirtualDb: d1BindingName !== undefined,
@@ -487,7 +482,7 @@ export function bwfDbBundlerPlugin(
     async resolveId(id, importer, resolveOptions) {
       const promiseApi = driverPackage === 'mysql2' && MYSQL2_PROMISE.test(id);
       if ((id === driverPackage || promiseApi) && options.sqlDriver && dialect !== 'sqlite') {
-        // Resolve it as a `require` would. For an import, Rollup's CommonJS plugin loads a CommonJS
+        // Decision: Resolve it as a `require` would. For an import, Rollup's CommonJS plugin loads a CommonJS
         // driver to wrap it: that hides the file, and its build of the driver can fail on optional
         // native modules.
         const custom = resolveOptions?.custom;
@@ -512,10 +507,10 @@ export function bwfDbBundlerPlugin(
           });
           drivers.set(entry, driver);
         }
-        // The promise API sits next to the driver, named the way `sqlDriver` names the driver.
+        // Decision: The promise API sits next to the driver, named the way `sqlDriver` names the driver.
         return promiseApi ? (await driver).replace(/mysql2\.mjs$/, 'promise.mjs') : driver;
       }
-      // The driver needs workerd's own Node modules.
+      // Decision: The driver needs workerd's own Node modules.
       if (
         id.startsWith('node:') &&
         importer &&
@@ -525,7 +520,7 @@ export function bwfDbBundlerPlugin(
       }
       const resolved = dbModule.resolveId(id, importer);
       if (resolved !== undefined && id !== '@builtbyfriends/bwf/db') {
-        // `@schema` can name a schema folder or a file without its extension. Only Vite's
+        // Decision: `@schema` can name a schema folder or a file without its extension. Only Vite's
         // config alias hands those to a resolver, so apply the bundler's own rules here.
         return this.resolve(resolved, importer, { skipSelf: true });
       }

@@ -1,6 +1,6 @@
 import { defineConfig } from '@builtbyfriends/bwf/config';
 
-// The GitHub container executor deploys the docs from the repository root.
+// Decision: The GitHub container executor deploys the docs from the repository root.
 export default defineConfig({
   inference: {
     appType: 'static',

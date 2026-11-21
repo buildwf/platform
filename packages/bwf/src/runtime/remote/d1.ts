@@ -48,7 +48,7 @@ export class ProxyD1Database {
     throw new Error('dump() is not supported with remote bindings');
   }
 
-  // Each statement is a separate proxy call that the platform runs on the
+  // Decision: Each statement is a separate proxy call that the platform runs on the
   // deployed binding without a session, so there is no replica or bookmark
   // state to carry. The proxy itself serves as the session.
   withSession(_constraintOrBookmark?: string): ProxyD1Database {

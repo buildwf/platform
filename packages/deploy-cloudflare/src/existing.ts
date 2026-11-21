@@ -285,7 +285,7 @@ export async function assertCloudflareDurableObjectLifecycleSupported(options: {
       'Cloudflare production or Durable Object migration state changed during verification. Retry from the current deployment.',
     );
   }
-  // A retry after first-secret provisioning still needs its initial class migration. Use the
+  // Decision: A retry after first-secret provisioning still needs its initial class migration. Use the
   // same complete-version check as activation, and require no prior class migration history.
   if (activeTag === null && existing.isSecretOnlyDraft && after.isSecretOnlyDraft) {
     return;
@@ -403,8 +403,8 @@ export function assertCloudflareBindingsPreserved(
   after: ExistingCloudflareWorker,
   options: { staticAssetsBinding?: string } = {},
 ): void {
-  // Only the static adapter may introduce its fetch wrapper around an assets-only
-  // deployment. All existing bindings (including colliding names) remain protected.
+  // Decision: Only the static adapter may introduce its fetch wrapper around an assets-only deployment.
+  // All existing bindings (including colliding names) stay protected.
   const staticAssetsBinding = isAssetsOnlyWorker(before) ? options.staticAssetsBinding : undefined;
   const addsAssetsBinding =
     staticAssetsBinding !== undefined &&
@@ -449,12 +449,11 @@ function isAssetsOnlyWorker(worker: ExistingCloudflareWorker): boolean {
 }
 
 function existingWorkerHandlers(worker: ExistingCloudflareWorker): unknown {
-  // Cloudflare represents the absence of a script on assets-only Workers as null.
-  // Missing or malformed handler metadata on other Workers must still fail closed.
+  // Decision: Cloudflare represents the absence of a script on assets-only Workers as null. Missing or
+  // malformed handler metadata on other Workers still has to fail closed.
   return isAssetsOnlyWorker(worker) ? [] : worker.script.handlers;
 }
 
-/** Preserve the existing Worker. */
 export function assertExistingCloudflareConfig(
   existing: ExistingCloudflareWorker,
   config: Record<string, unknown>,

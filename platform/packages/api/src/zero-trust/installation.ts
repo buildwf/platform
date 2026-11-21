@@ -109,8 +109,8 @@ export async function activatePlatformApplication(
 }
 
 function wildcardDestinationMatches(pattern: string, hostname: string): boolean {
-  // Treat `*` as any non-empty text, including dots. Over-matching only
-  // rejects a configuration; under-matching could gate the control plane.
+  // Decision: Treat `*` as any non-empty text, dots included. Over-matching only rejects a configuration;
+  // under-matching could gate the control plane.
   const expression = pattern
     .toLowerCase()
     .split('*')
@@ -202,7 +202,7 @@ export async function configurePlatformZeroTrust(
   input: ZeroTrustConfigureInput,
   options: Readonly<{ requestUrl?: string }> = {},
 ): Promise<ReturnType<typeof redactedZeroTrustConfiguration>> {
-  // Zero Trust always uses the Cloudflare account that owns the installation.
+  // Decision: Zero Trust uses the Cloudflare account that owns the installation.
   const accountId = env.CF_ACCOUNT_ID;
   env = await resolveZeroTrustApplicationEnvironment(env, db);
   const destinations = zeroTrustWildcardDestinations(readPlatformApplication(env));
@@ -212,11 +212,11 @@ export async function configurePlatformZeroTrust(
     );
   }
   const previous = await readZeroTrustConfigurationStrict(db);
-  // Fail before any Cloudflare call; the claim below checks again under the lock.
+  // Decision: Fail before any Cloudflare call; the claim below checks again under the lock.
   assertExistingProjectsChoice(previous, input);
   const replacingDisableCredential = previous?.operation?.kind === 'disable';
-  // A disable removes the wildcard, so a replacement credential for it must
-  // not be blocked by hostnames that moved under the wildcard afterwards.
+  // Decision: A disable removes the wildcard, so a replacement credential for it isn't blocked by hostnames that
+  // moved under the wildcard later.
   if (!replacingDisableCredential && !input.publicAccess) {
     assertWildcardExcludesControlPlane(env, destinations, options.requestUrl);
   }
@@ -235,8 +235,8 @@ export async function configurePlatformZeroTrust(
     ? publicAppManagementDestination('https://' + publicGuardHostname)
     : undefined;
   const client = new ZeroTrustCloudflareClient(accountId, input.apiToken);
-  // Teardown needs the account credential, not the IdPs/policies being removed.
-  // Those selections may themselves have disappeared while cleanup was pending.
+  // Decision: Teardown needs the account credential, not the IdPs and policies being removed. Those selections
+  // may have disappeared while cleanup was pending.
   const selection =
     replacingDisableCredential || input.publicAccess
       ? await client.getOrganization()
@@ -296,8 +296,8 @@ export async function configurePlatformZeroTrust(
       identityProviderIds: [...input.identityProviderIds],
       policyIds: [...input.policyIds],
       credential,
-      // The name is kept for the installation's lifetime so a retry or a later
-      // re-enable can recover the same wildcard application.
+      // Decision: The name is kept for the installation's lifetime so a retry or a later re-enable can recover the
+      // same wildcard application.
       wildcardApplicationName:
         current?.wildcardApplicationName ?? (await applicationName(env, 'project-zero-trust')),
       wildcardApplication: current?.wildcardApplication ?? null,

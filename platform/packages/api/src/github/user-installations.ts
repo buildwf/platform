@@ -74,12 +74,10 @@ async function exchangeInstallCodeForUserToken(
   return data.access_token;
 }
 
-// Shape of `GET /user/installations` we care about.
 type UserInstallationsResponse = Readonly<{
   installations?: ReadonlyArray<{ id?: number }>;
 }>;
 
-// Shape of `GET /user` we care about — the authenticated user's numeric id.
 type AuthenticatedUserResponse = Readonly<{ id?: number }>;
 
 /**
@@ -172,7 +170,7 @@ async function listUserInstallationIds(userToken: string): Promise<Set<string>> 
         ids.add(String(installation.id));
       }
     }
-    // GitHub returns up to `per_page` per page; a short page is the last one.
+    // Decision: GitHub returns up to `per_page` per page; a short page is the last one.
     if (installations.length < 100) {
       break;
     }
@@ -263,7 +261,6 @@ export async function listAuthorizedInstallationIds(
   };
 }
 
-// Shape of `GET /user/installations/:id/repositories` we care about.
 type InstallationRepositoriesResponse = Readonly<{
   repositories?: ReadonlyArray<{ id?: number; full_name?: string }>;
 }>;
@@ -334,7 +331,7 @@ export async function verifyUserRepoAccess(
         break;
       }
     }
-    // Stop once found, or on a short page (GitHub returns up to `per_page`).
+    // Decision: Stop once found, or on a short page (GitHub returns up to `per_page`).
     if (repositoryId !== null || repositories.length < 100) {
       break;
     }

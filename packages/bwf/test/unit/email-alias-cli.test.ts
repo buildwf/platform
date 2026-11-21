@@ -8,12 +8,7 @@ import type {
 import { emailAlias } from '../../src/cli/email.ts';
 import * as output from '../../src/cli/output.ts';
 
-/**
- * `bwf email alias [name]`. Without a name it shows the shared mail address;
- * with one it sets a permanent alias, which needs `--yes` or a confirmed prompt.
- */
-
-/** What the mocked `confirm` returns for Ctrl-C; the mocked `isCancel` knows only this. */
+// Decision: The mocked `isCancel` knows only this value.
 const CANCEL = Symbol('cancel');
 
 vi.mock('@voidzero-dev/vite-plus-prompts', async (importOriginal) => {
@@ -149,7 +144,6 @@ describe('bwf email alias (no name)', () => {
     expect(block).toContain(`Address:  my-long-project@${DOMAIN}`);
     expect(block).not.toContain('Also:');
     expect(printed(infoSpy)).toContain('Run `bwf email alias <name>`');
-    // `--yes` without a name has nothing to set.
     expect(api.setEmailAlias).not.toHaveBeenCalled();
   });
 

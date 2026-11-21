@@ -29,7 +29,7 @@ function notesWithoutColors(): Array<[string, string]> {
 }
 vi.mock('@voidzero-dev/vite-plus-prompts', async (original) => ({
   ...(await original<typeof import('@voidzero-dev/vite-plus-prompts')>()),
-  // These fixtures retain GitHub-only setup; Access choices have their own matrix.
+  // Decision: These fixtures keep GitHub-only setup; the Access choices have their own matrix.
   confirm: (input: { message: string }) =>
     input.message === 'Also protect the platform UI and APIs with Cloudflare Access?'
       ? Promise.resolve(false)

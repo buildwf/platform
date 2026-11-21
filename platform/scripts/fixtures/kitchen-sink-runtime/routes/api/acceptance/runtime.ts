@@ -2,7 +2,7 @@ import { defineHandler } from '@builtbyfriends/bwf';
 import { ai } from '@builtbyfriends/bwf/ai';
 import { env } from '@builtbyfriends/bwf/env';
 
-// Root can change this literal between two disposable deployments for rollback proof.
+// Decision: Root can change this literal between two disposable deployments to prove a rollback.
 export const acceptanceVersion = 'void-runtime-acceptance-v1';
 
 export const GET = defineHandler(async (c) => {
@@ -25,7 +25,7 @@ export const POST = defineHandler(async (c) => {
     }
     console.log(body.marker);
     console.error(body.marker);
-    // This fixed 503 also exercises dispatch request metering without logging user input.
+    // Decision: This fixed 503 also exercises dispatch request metering without logging user input.
     return c.json({ ok: true, marker: body.marker }, 503);
   }
   if (body?.action === 'ai' || body?.action === 'ai-stream') {

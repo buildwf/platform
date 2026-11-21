@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vite-plus/test';
 
-// Mock db.ts (createDb is called inside processUsageEventBatch).
 const getUserMock = vi.fn();
 const getProjectsByIdsMock = vi.fn();
 const getProjectOwnershipPeriodsByProjectIdsMock = vi.fn();
@@ -70,7 +69,7 @@ function fetchCalls(mock: ReturnType<typeof vi.fn>): Array<[Request, ...Array<un
 }
 
 function makeBatch(events: ReadonlyArray<unknown>, timestamps?: ReadonlyArray<number>) {
-  // Cloudflare stamps every queue message with its enqueue time.
+  // Decision: Cloudflare stamps each queue message with its enqueue time.
   const messages = events.map((event, i) => ({
     body: event,
     timestamp: new Date(timestamps?.[i] ?? Date.now()),
@@ -435,13 +434,10 @@ describe('processUsageEventBatch — 5xx alert window', () => {
     const errorStubFetch = vi.fn(async () => new Response(null, { status: 200 }));
     getUserMock.mockResolvedValue({ id: 'u1', plan: 'solo' });
 
-    // A burst metered at the edge over ten minutes. Whenever this consumer
-    // drains the batch, the window must report the edge times — stamping the
-    // drain time is what makes the emailed `--range` miss the rows.
     const t0 = Date.parse('2026-07-23T10:00:00Z');
     const t1 = Date.parse('2026-07-23T10:05:00Z');
     const t2 = Date.parse('2026-07-23T10:10:00Z');
-    // Deliberately out of order: queues do not guarantee ordering.
+    // Decision: Out of order on purpose: queues don't guarantee ordering.
     const batch = await makeSignedBatch(
       [error5xx('p1'), error5xx('p1'), error5xx('p1')],
       [t1, t0, t2],

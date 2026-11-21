@@ -21,11 +21,6 @@ function sha256(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-/**
- * Serves fixed objects in small chunks, like an R2 body. It records which
- * keys were requested and opened, how many chunks each body gave up, which
- * bodies ended or were canceled, and can hold `get()` until released.
- */
 function bucket(
   objects: Record<string, Uint8Array>,
   options: { chunk?: number; hold?: (key: string) => boolean } = {},
@@ -41,7 +36,6 @@ function bucket(
     pending: 0,
     maxPending: 0,
     held: new Map<string, () => void>(),
-    /** Each get() call, with the keys whose bodies had ended at that moment. */
     gets: [] as Array<{ key: string; ended: Array<string> }>,
     release(key: string) {
       state.held.get(key)?.();
@@ -109,7 +103,6 @@ function concat(chunks: ReadonlyArray<Uint8Array>): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-/** `count` R2 modules named m0, m1, ... stored at in/0, in/1, ... */
 function storedModules(
   sizes: ReadonlyArray<number>,
   options: Parameters<typeof bucket>[1] = {},
@@ -184,7 +177,6 @@ describe('workerUploadBody', () => {
         },
         errors,
       ),
-      // Names may carry quotes and non-ASCII characters.
       r2WorkerModule(
         r2,
         {
@@ -199,7 +191,6 @@ describe('workerUploadBody', () => {
       blobWorkerModule('add.wasm', new Blob([wasm], { type: 'application/wasm' })),
     ];
     const upload = workerUploadBody({ main_module: 'index.js' }, modules);
-    // No module opens before the body is read.
     expect(r2.opened).toEqual([]);
     const bytes = await readAll(upload.stream);
     expect(bytes.byteLength).toBe(upload.length);
@@ -266,7 +257,6 @@ describe('workerUploadBody', () => {
       received.map((chunk) => decoder.decode(chunk, { stream: true })).join('') + decoder.decode();
     const boundary = upload.contentType.split('boundary=')[1]!;
     expect(text).not.toContain(`--${boundary}--`);
-    // A longer object never passes more bytes than the declared size.
     expect(text).not.toContain('more');
   });
 
@@ -289,7 +279,6 @@ describe('workerUploadBody', () => {
       }
       return done;
     };
-    // The metadata part header, its bytes, CRLF and the m0 part header.
     for (let i = 0; i < 4; i++) {
       await read();
     }
@@ -303,15 +292,15 @@ describe('workerUploadBody', () => {
     await firstOfM0;
     expect(r2.requested).toEqual(['in/0', 'in/1', 'in/2', 'in/3', 'in/4']);
     expect(r2.requested).not.toContain('in/5');
-    // Release every later get as soon as it is made.
     const releaser = setInterval(() => {
       for (const key of r2.held.keys()) {
         r2.release(key);
       }
     }, 0);
     try {
-      while (!(await read())) {
-        // Read to the end.
+      let done = false;
+      while (!done) {
+        done = await read();
       }
     } finally {
       clearInterval(releaser);
@@ -332,11 +321,8 @@ describe('workerUploadBody', () => {
     await expectSameForm(bytes, upload.contentType, contents);
     const at = (key: string) => r2.gets.find((get) => get.key === key)!.ended;
     expect(r2.gets.map((get) => get.key)).toEqual(['in/0', 'in/1', 'in/2', 'in/3', 'in/4']);
-    // m1 and m2 open while m0 still streams.
     expect(at('in/2')).not.toContain('in/0');
-    // m3 is larger than the budget: it opens only once m2 has ended.
     expect(at('in/3')).toEqual(expect.arrayContaining(['in/0', 'in/1', 'in/2']));
-    // m4 opens ahead while m3 streams.
     expect(at('in/4')).not.toContain('in/3');
   });
 
@@ -354,8 +340,6 @@ describe('workerUploadBody', () => {
       }
       chunks.push(value);
       received += value.byteLength;
-      // The first module not yet fully pulled may be the one being read;
-      // any module opened after it has given up at most two chunks.
       const open = r2.opened.filter((key) => !r2.ended.has(key));
       for (const key of open.slice(1)) {
         expect(r2.pulledChunks[key]).toBeLessThanOrEqual(2);
@@ -417,7 +401,6 @@ describe('workerUploadBody', () => {
     const { r2, modules } = storedModules(Array(6).fill(9), { hold: (key) => key === 'in/4' });
     const upload = workerUploadBody({}, modules);
     const reader = upload.stream.getReader();
-    // Up to the first chunk of m0, which opens m1..m4 ahead.
     for (let i = 0; i < 5; i++) {
       await reader.read();
     }
@@ -425,7 +408,6 @@ describe('workerUploadBody', () => {
     stop(upload, reader);
     await ticks(20);
     expect([...r2.canceled].sort()).toEqual(['in/0', 'in/1', 'in/2', 'in/3']);
-    // The held get resolves after the release; its body is canceled too.
     r2.release('in/4');
     await ticks(20);
     expect([...r2.canceled].sort()).toEqual(['in/0', 'in/1', 'in/2', 'in/3', 'in/4']);
@@ -506,7 +488,7 @@ describe('uploadWatchdog', () => {
   });
 
   it('aborts a stalled storage read', async () => {
-    // Real setImmediate lets the body run up to the stall.
+    // Decision: setImmediate isn't faked, so the body can run up to the stall.
     vi.useFakeTimers({ now: 0, toFake: ['setTimeout', 'clearTimeout', 'Date'] });
     const { r2, modules } = storedModules([6, 6, 6], { hold: (key) => key === 'in/1' });
     const upload = workerUploadBody({}, modules);
@@ -520,7 +502,6 @@ describe('uploadWatchdog', () => {
       }
     })();
     drained.catch(() => {});
-    // Let the body run up to m1, whose get never answers.
     while (upload.progress().sourcesStarted < 3) {
       await new Promise((resolve) => setImmediate(resolve));
     }

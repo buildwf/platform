@@ -40,15 +40,13 @@ export type CodemodTranslation = {
   followUps: Array<{ blocking: boolean; code: string; message: string; sourcePath?: string }>;
 };
 
-/**
- * Translates Wrangler-format settings with the installed `@cloudflare/codemods`: for each input
- * it migrates a `wrangler.json` in its own scratch project, runs the `cloudflare.config.ts` it
- * writes and parses the result with `@cloudflare/config`. bwf's own translation must give the
- * same configuration. `config` is null when cf rejects the generated configuration.
- *
- * One process translates every input: starting the codemod costs far more than a translation.
- * An input the codemod cannot translate gives an `Error` in its place.
- */
+// Decision: Translates Wrangler-format settings with the installed `@cloudflare/codemods`: for each input
+// it migrates a `wrangler.json` in its own scratch project, runs the `cloudflare.config.ts` it
+// writes and parses the result with `@cloudflare/config`. bwf's own translation must give the
+// same configuration. `config` is null when cf rejects the generated configuration.
+//
+// One process translates every input: starting the codemod costs far more than a translation.
+// An input the codemod cannot translate gives an `Error` in its place.
 export async function translateWithCodemod(
   inputs: ReadonlyArray<{ raw: Record<string, unknown>; mode: string }>,
 ): Promise<Array<CodemodTranslation | Error>> {

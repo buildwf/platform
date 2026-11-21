@@ -78,11 +78,6 @@ getRoom('/feed');
 plain.actions.missing();
 `;
 
-/**
- * Typecheck `getRoom()` against the declarations `generateRouteTypes()` emits for
- * real route files, so codegen and the public handle types cannot drift apart
- * without failing here.
- */
 function typecheck(
   routes: Record<string, string>,
   files: Record<string, string>,
@@ -125,7 +120,7 @@ function typecheck(
           '@builtbyfriends/bwf': [join(bwfDist, 'index.d.mts')],
           '@builtbyfriends/bwf/ws': [join(bwfDist, 'runtime/ws.d.mts')],
           '@builtbyfriends/bwf/ws/server': [join(bwfDist, 'runtime/ws-room.d.mts')],
-          // Generated declarations augment this base module; the package helper
+          // Decision: Generated declarations augment this base module; the package helper
           // aliases must not hide defects in the generated output.
           '@builtbyfriends/bwf/routes': [join(root, 'routes-base.d.ts')],
         },
@@ -208,7 +203,7 @@ const devOnly: Promise<'dev'> = room.actions.revoke('session_1', 4001);
         'feed.ws.ts': feedRoute,
       },
       { 'check.ts': check },
-      // Same check, but the generated map no longer exposes the room's actions.
+      // Decision: Same check, but the generated map no longer exposes the room's actions.
       // The assertions above must fail, so this proves they are live.
       (dts) => dts.replace(/^\s*actions: .*$/m, ''),
     );

@@ -50,8 +50,6 @@ export type AllowlistEntryStatus = AllowlistEntry & {
   deployed: boolean;
 };
 
-// --- Counts ---
-
 export async function countUsers(db: Db): Promise<number> {
   const [result] = await db.select({ count: count() }).from(users);
   return result?.count ?? 0;
@@ -61,8 +59,6 @@ export async function countProjects(db: Db): Promise<number> {
   const [result] = await db.select({ count: count() }).from(projects);
   return result?.count ?? 0;
 }
-
-// --- Admin ---
 
 export async function getAllUsers(
   db: Db,
@@ -145,8 +141,8 @@ async function withAdminRemovalGuard<T>(
   change: (db: Db, user: User | null) => Promise<T>,
 ): Promise<T> {
   return db.transaction(async (tx) => {
-    // Serialize the check and access change with other removals and bootstrap.
-    // A count outside this lock lets two administrators remove each other.
+    // Decision: Serialize the check and the access change with other removals and with bootstrap. A count taken
+    // outside this lock lets two administrators remove each other.
     const authSettings = await lockAuthSettings(tx);
     await tx.execute(sql`LOCK TABLE ${users} IN SHARE ROW EXCLUSIVE MODE`);
     const user = await getUser(tx, id);
@@ -201,8 +197,7 @@ export async function prepareUserRemoval(
         .update(users)
         .set(action.kind === 'delete' ? { role: 'user' } : { suspended_reason: action.reason })
         .where(eq(users.id, id));
-      // The suspension is in force from here, even when the rest of the
-      // removal fails.
+      // Decision: The suspension is in force from here, even when the rest of the removal fails.
       if (action.kind === 'suspend' && isAdminSuspended(action.reason)) {
         await requestRotationsForAdminSuspension(tx, id);
       }
@@ -221,8 +216,8 @@ export async function suspendUser(db: Db, id: string, reason: string): Promise<v
       await requestRotationsForAdminSuspension(tx, id);
     });
   } else {
-    // Usage limits suspend app traffic, not administrator access. A delayed
-    // quota write must not undo an administrator's manual access revocation.
+    // Decision: Usage limits suspend app traffic, not administrator access. A delayed quota write must not undo
+    // an administrator's manual access revocation.
     await db
       .update(users)
       .set({ suspended_reason: reason })
@@ -248,8 +243,8 @@ export async function unsuspendUser(db: Db, id: string): Promise<void> {
 export async function deleteUser(db: Db, id: string): Promise<ReadonlyArray<TerminatedBuild>> {
   return withAdminRemovalGuard(db, id, async (tx) => {
     const cancelledBuilds: Array<TerminatedBuild> = [];
-    // Discover every project from one statement snapshot. Separate reads could
-    // miss an invitation accepted between the membership and invitation reads.
+    // Decision: Find all projects in one statement snapshot. Separate reads could miss an invitation accepted
+    // between the membership read and the invitation read.
     const affectedProjects = await tx
       .select({ projectId: projectMembers.project_id })
       .from(projectMembers)
@@ -273,9 +268,8 @@ export async function deleteUser(db: Db, id: string): Promise<ReadonlyArray<Term
       );
     const projectIds = affectedProjects.map(({ projectId }) => projectId).sort();
     if (projectIds.length > 0) {
-      // GitHub connection CRUD and build creation take the project lock before
-      // the connection lock. Preserve that order here so deleting an
-      // authorizing member serializes with both paths without deadlocking.
+      // Decision: GitHub connection CRUD and build creation take the project lock before the connection lock. Keep
+      // that order here so deleting an authorizing member serializes with both paths without deadlocks.
       await tx
         .select({ id: projects.id })
         .from(projects)
@@ -283,10 +277,9 @@ export async function deleteUser(db: Db, id: string): Promise<ReadonlyArray<Term
         .orderBy(asc(projects.id))
         .for('update');
 
-      // Pending invitations are in the lock set so acceptance cannot add a
-      // membership after discovery. Re-read the connections under every lock:
-      // a creator that acquired a project lock first may have inserted after
-      // discovery and would otherwise block the user delete below.
+      // Decision: Pending invitations are in the lock set so an acceptance can't add a membership after discovery.
+      // Re-read the connections under the locks: a creator that got a project lock first may have
+      // inserted after discovery, and that row would block the user delete below.
       const authorizedConnections = await tx
         .select({ projectId: githubConnections.project_id })
         .from(githubConnections)
@@ -420,8 +413,6 @@ export async function getAllProjectsWithOwner(
     .limit(limit)
     .offset(offset);
 }
-
-// --- Users ---
 
 export async function getFirstAdmin(db: Db) {
   const [row] = await db
@@ -647,8 +638,6 @@ export async function unsuspendUserIfReason(db: Db, id: string, reason: string):
     .where(and(eq(users.id, id), eq(users.suspended_reason, reason)));
 }
 
-// --- Platform Events ---
-
 export async function updatePlatformEventStatus(
   db: Db,
   id: string,
@@ -671,8 +660,6 @@ export async function getPlatformEventsByBatchId(
     .where(eq(platformEvents.batch_id, batchId))
     .orderBy(asc(platformEvents.created_at));
 }
-
-// --- Invitations ---
 
 export async function createInvitation(
   db: Db,

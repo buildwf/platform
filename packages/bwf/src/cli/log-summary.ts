@@ -24,15 +24,14 @@ const TERMINAL_ERROR_MSG = 'deploy_end';
 
 const RESERVED_KEYS = new Set(['ts', 'elapsedMs', 'lvl', 'msg', 'err']);
 
-// The trace was a file the user opened by hand; the summary publishes it to
-// whatever reads stderr, which in CI is a stored, often public, log.
+// Decision: The trace was a file the user opened by hand; the summary publishes it to whatever reads stderr,
+// which in CI is a stored, often public, log.
 //
-// Scrubbing here covers only credentials this code emits itself — a presigned
-// URL it built, an auth header it set, a field it named. Scrubbing user data is
-// left to the CI platform, which owns the secrets and masks them before the log
-// is written. GitHub Actions does this for everything under `secrets.*`. bwf
-// does not guess at credential-shaped names or at credentials embedded in
-// values the user supplied.
+// Scrubbing here covers only credentials this code emits itself: a presigned URL it built, an auth
+// header it set, a field it named. Scrubbing user data is left to the CI platform, which owns the
+// secrets and masks them before the log is written. GitHub Actions does this for everything under
+// `secrets.*`. bwf doesn't guess at credential-shaped names or at credentials embedded in values the
+// user supplied.
 
 /** Query parameters whose value must never reach a CI log. */
 const SIGNED_QUERY_RE =
@@ -117,8 +116,8 @@ function colorLevel(level: string, padded: string): string {
   if (level === 'warn') {
     return pc.yellow(padded);
   }
-  // `info` and `debug` are context, not signal — dim them so the red and
-  // yellow rows stand out in a wall of CI output.
+  // Decision: `info` and `debug` are context, not signal. Dim them so the red and yellow rows stand out in a
+  // wall of CI output.
   return pc.dim(padded);
 }
 
@@ -135,7 +134,7 @@ function parseRecords(lines: Array<string>): Array<LogRecord> {
         records.push(parsed as LogRecord);
       }
     } catch {
-      // A partially flushed or corrupt line must not hide the rest of the log.
+      // Decision: A partially flushed or corrupt line mustn't hide the rest of the log.
     }
   }
   return records;

@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { parseEmailArgs } from '../../src/cli/email-args.ts';
 
-/**
- * The nested `bwf email domain <verb>` group. `runSubcommandGroup` handles one level,
- * so the group parses its own positionals: verb first, domain second.
- */
+// Decision: `runSubcommandGroup` handles one level, so the `bwf email domain <verb>` group parses its own
+// positionals: verb first, domain second.
 describe('parseEmailArgs — domain group', () => {
   it('parses domain add with a domain', () => {
     expect(parseEmailArgs(['domain', 'add', 'acme.com'])).toEqual({

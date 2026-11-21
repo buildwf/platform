@@ -55,7 +55,6 @@ describe('AI logging readback state', () => {
       publishedAt: null,
       state: 'applied',
     });
-    // A marker never hides a key that should be there.
     expect(state('off', removed, { clearedAt: at, now: at + 1 }).state).toBe('drift');
   });
 

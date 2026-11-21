@@ -199,13 +199,10 @@ describe('addQueueConsumer', () => {
   });
 
   it('returns {status:"updated"} when the consumer already exists under our script', async () => {
-    // POST fails with "already has a consumer"
     fetchMock.mockResolvedValueOnce(cfError('queue already has a consumer'));
-    // GET lists our consumer
     fetchMock.mockResolvedValueOnce(
       cfSuccess([{ consumer_id: 'c1', script: SCRIPT, settings: {} }]),
     );
-    // PUT to update settings
     fetchMock.mockResolvedValueOnce(cfSuccess({ consumer_id: 'c1' }));
 
     const result = await addQueueConsumer(ACCOUNT, TOKEN, QUEUE_ID, SCRIPT, { batch_size: 1 });
@@ -224,7 +221,6 @@ describe('addQueueConsumer', () => {
     const result = await addQueueConsumer(ACCOUNT, TOKEN, QUEUE_ID, SCRIPT, { batch_size: 1 });
 
     expect(result).toEqual({ status: 'conflict', ownerScript: 'other-script' });
-    // POST + GET, but no PUT on the conflicting consumer
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 

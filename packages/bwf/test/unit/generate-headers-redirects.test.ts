@@ -59,7 +59,7 @@ describe('parseRedirectsFile', () => {
   });
 
   it('returns undefined when file does not exist', () => {
-    setup(); // no file
+    setup();
     expect(parseRedirectsFile(tmpDir)).toBeUndefined();
   });
 
@@ -201,8 +201,6 @@ describe('parseRedirectsFile', () => {
   });
 
   it('warns via bwfWarn when a 200 rewrite destination contains "?" (skip path)', () => {
-    // bwfWarn writes through console.log — observe both that the entry was
-    // dropped AND that a yellow-tagged warning surfaced for the author.
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     setup('/docs /en/docs?lang=en 200\n/app/* /index.html 200\n');
     const parsed = parseRedirectsFile(tmpDir);
@@ -221,9 +219,8 @@ describe('parseRedirectsFile', () => {
   });
 
   it('skips _redirects entries whose source has more than one "*" and warns', () => {
-    // Dispatch compiles `*` → `(?<splat>...)`; two of them yield duplicate
-    // group names and crash the regex at startup. Drop the entry with a
-    // friendly warning so the rest of the file still deploys.
+    // Decision: Dispatch compiles `*` to `(?<splat>...)`; two of them give duplicate group names and crash
+    // the regex at startup. Drop the entry with a warning so the rest of the file still deploys.
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     setup('/a/*/b/* /dest 301\n/ok /new 301\n');
     const parsed = parseRedirectsFile(tmpDir);
@@ -238,7 +235,7 @@ describe('parseRedirectsFile', () => {
   });
 
   it('skips 200 rewrites whose destination is protocol-relative ("//host/x") and warns', () => {
-    // `//host` parses as a cross-origin URL, which would turn the rewrite into a proxy.
+    // Decision: `//host` parses as a cross-origin URL, which would turn the rewrite into a proxy.
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     setup('/docs //evil.com/docs 200\n/app/* /index.html 200\n');
     const parsed = parseRedirectsFile(tmpDir);
@@ -262,10 +259,9 @@ describe('parseRedirectsFile', () => {
     expect(parsed).toBeUndefined();
   });
 
-  // Host-prefixed sources: `https://host/path` on a `_redirects` line scopes
-  // the rule to a specific Host header. The parser splits the URL, strips
-  // the scheme + host, and stores them as `host` on the rule; `source`
-  // becomes the path-only pattern. Lowercase-normalized so the byte-exact
+  // Decision: Host-prefixed sources: `https://host/path` on a `_redirects` line scopes the rule to a
+  // specific Host header. The parser strips the scheme and host and stores the host as `host`
+  // on the rule; `source` becomes the path-only pattern. The host is lowercased so the exact
   // match against `url.hostname` at dispatch is deterministic.
 
   it('extracts host and path from a https:// prefixed source', () => {
@@ -306,7 +302,6 @@ describe('parseRedirectsFile', () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     setup('http://www.foo.com/about /about 301\n/ok /new 301\n');
     const parsed = parseRedirectsFile(tmpDir);
-    // Only the path-only rule survives.
     expect(parsed?.rules).toEqual([
       { source: '/ok', destination: '/new', status: 301, origin: '_redirects:2' },
     ]);
@@ -349,9 +344,9 @@ describe('parseRedirectsFile', () => {
 });
 
 describe('warnRedundantForceOn3xx', () => {
-  // `parseRedirectsFile` tallies `!` suffixes on 3xx entries into
-  // `redundantForceOn3xx` and strips them silently; the deploy pipeline
-  // surfaces a single aggregated `log.warn` via `warnRedundantForceOn3xx`.
+  // Decision: `parseRedirectsFile` counts `!` suffixes on 3xx entries into `redundantForceOn3xx` and
+  // strips them silently; the deploy pipeline shows one aggregated `log.warn` through
+  // `warnRedundantForceOn3xx`.
   it('skips emitting when the count is zero', async () => {
     const { warnRedundantForceOn3xx } = await import('../../src/cli/deploy-managed-events.ts');
     const { log } = await import('@voidzero-dev/vite-plus-prompts');

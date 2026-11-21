@@ -35,7 +35,7 @@ export const MAX_ROUTING_KEYS_PER_RUN = 300;
 export type RoutingBudget = { remaining: number; exhausted?: boolean };
 
 export function requiredRoutingBudget(row: Pick<ProjectZeroTrust, 'desired_protected'>): number {
-  // Protected routes are published in one pass: slug plus every capped custom domain.
+  // Decision: Protected routes are published in one pass: the slug plus each capped custom domain.
   return row.desired_protected ? MAX_ZERO_TRUST_CUSTOM_DOMAINS_PER_PROJECT + 1 : 1;
 }
 
@@ -148,9 +148,9 @@ export async function resolveProjectZeroTrustRoutingForPublication(
   options: Readonly<{ retryable?: boolean }> = {},
 ): Promise<ProjectZeroTrustRouting | null> {
   try {
-    // A durable bypass makes PUBLIC intent safe even while paginated cleanup
-    // is unfinished. Reintroducing a deny marker behind its routing cursor
-    // would strand already-completed keys. Deploys retain the stricter gate.
+    // Decision: A durable bypass makes public intent safe even while paginated cleanup is unfinished. Putting a
+    // deny marker back behind its routing cursor would strand keys already done. Deploys keep the
+    // stricter gate.
     return await readProjectZeroTrustRouting(db, projectId, true);
   } catch (error) {
     if (
@@ -254,9 +254,8 @@ function routingMatchesDeployment(
     }
     identifiers.push(deploymentId);
   }
-  // Canonical builders identify the target. Unknown legacy snapshots cannot
-  // prove freshness after a committed deployment, and conflicting fields must
-  // not be hidden by another field that happens to match.
+  // Decision: Canonical builders identify the target. Unknown legacy snapshots can't prove freshness after a
+  // committed deployment, and a field that happens to match mustn't hide conflicting ones.
   const knownIdentifiers = identifiers.filter(
     (identifier) => typeof identifier === 'string' && identifier.length > 0,
   );
@@ -274,9 +273,9 @@ export async function publishProjectZeroTrustRoutingLocked(
   budget = { remaining: MAX_ROUTING_KEYS_PER_RUN },
 ): Promise<boolean> {
   const row = await getProjectZeroTrustState(db, project.id);
-  // Cutover publishes before committing the project pointer. Read its target
-  // once under the project lock so metadata changes can accompany that route,
-  // but cannot republish a stale previous deployment from KV.
+  // Decision: Cutover publishes before committing the project pointer. Read its target once under the project
+  // lock so metadata changes can go with that route, but can't republish a stale earlier deployment
+  // from KV.
   const [activeDeployment, owner] = await Promise.all([
     getActiveDeployment(db, project.id),
     getUser(db, project.user_id),
@@ -302,8 +301,8 @@ export async function publishProjectZeroTrustRoutingLocked(
     manifest?.limits,
   );
   const suspensionReason = routingSuspensionReason(owner.suspended_reason);
-  // Protected destinations are capped separately. Clearing public routing has
-  // no domain cap and checkpoints progress while holding the project lock.
+  // Decision: Protected destinations are capped separately. Clearing public routing has no domain cap and
+  // checkpoints progress while holding the project lock.
   const cursor = protection ? null : (row?.routing_cursor ?? null);
   const domainBudget = Math.max(0, budget.remaining - (cursor === null ? 1 : 0));
   const projectDomains = await db
@@ -332,8 +331,8 @@ export async function publishProjectZeroTrustRoutingLocked(
     budget.remaining -= 1;
     const raw = await env.ROUTING.get(key);
     if (!raw) {
-      // KV can return a cached miss even after a route was published. Keep its
-      // cleanup checkpoint retryable instead of permanently skipping live keys.
+      // Decision: KV can return a cached miss even after a route was published. Keep the cleanup checkpoint
+      // retryable instead of skipping live keys for good.
       if (expected) {
         throw new ZeroTrustUnavailableError(
           `Live routing for ${key} is temporarily unavailable. Retry Zero Trust reconciliation.`,
@@ -343,9 +342,8 @@ export async function publishProjectZeroTrustRoutingLocked(
     }
     const entry = JSON.parse(raw) as Record<string, unknown>;
     if (entry.projectId !== undefined && entry.projectId !== project.id) {
-      // A reused slug or hostname may still return the previous project's KV
-      // value, even when this project has never deployed. Never republish or
-      // delete another project's route based on that stale read.
+      // Decision: A reused slug or hostname may still return the previous project's KV value, even when this project
+      // has never deployed. Don't republish or delete another project's route based on that stale read.
       throw new ZeroTrustUnavailableError(
         `Live routing for ${key} is temporarily unavailable. Retry Zero Trust reconciliation.`,
       );
@@ -355,9 +353,8 @@ export async function publishProjectZeroTrustRoutingLocked(
       !routingMatchesDeployment(entry, project.slug, expectedDeploymentId)
     ) {
       if (pending) {
-        // Activation may have crashed before marking this domain active. Drop
-        // obsolete residue so its next activation can publish the current slug
-        // without getting stuck on reconciliation of the old deployment.
+        // Decision: Activation may have crashed before marking this domain active. Drop the obsolete residue so its
+        // next activation can publish the current slug without getting stuck on the old deployment.
         await env.ROUTING.delete(key);
         continue;
       }
@@ -365,8 +362,8 @@ export async function publishProjectZeroTrustRoutingLocked(
         `Live routing for ${key} is temporarily unavailable. Retry Zero Trust reconciliation.`,
       );
     }
-    // A fresh project lock does not make a cached KV snapshot fresh, so every
-    // mutable field is rewritten from PostgreSQL.
+    // Decision: A fresh project lock doesn't make a cached KV snapshot fresh, so rewrite each mutable field from
+    // PostgreSQL.
     await env.ROUTING.put(
       key,
       rewriteProjectRouteMetadata(entry, {

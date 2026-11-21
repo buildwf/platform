@@ -19,7 +19,7 @@ export type OAuthRequestData = {
   projectId?: string;
 };
 export type OAuthSession = Pick<JwtPayload, 'sub' | 'aud' | 'sid' | 'exp'> & {
-  // Attested by Platform's Access middleware during consent, never by the client.
+  // Decision: Attested by Platform's Access middleware during consent, not by the client.
   companyIdentity?: CompanyIdentity;
   /**
    * Set on a grant that a trusted application asked for on behalf of one of its own people

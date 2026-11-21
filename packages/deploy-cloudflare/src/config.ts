@@ -36,7 +36,6 @@ export function readWranglerTopLevelString(
   return readConfigEntryString(config, field);
 }
 
-/** The first entry of `config[field]` whose `binding` matches. */
 function findBindingEntry(
   config: Record<string, unknown>,
   field: string,

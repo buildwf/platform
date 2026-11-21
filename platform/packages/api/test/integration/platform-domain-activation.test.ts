@@ -188,7 +188,6 @@ describe('installer domain activation', () => {
     expect(JSON.parse((await env.ROUTING.get(PLATFORM_APPLICATION_KEY))!)).toEqual(target);
   });
 
-  // Exercises several persisted reconciliation batches across more than 100 projects.
   it('resumes a bounded cutover with its saved target and preserves public and protected projects', async () => {
     const cloudflare = accessApi();
     vi.stubGlobal('fetch', cloudflare.fetcher);
@@ -271,7 +270,6 @@ describe('installer domain activation', () => {
       ).toBe(true);
       expect(JSON.parse((await env.ROUTING.get(project.slug))!).zeroTrust).toBeUndefined();
     }
-    // Even a request holding old Worker vars must keep the completed target.
     await reconcilePlatformZeroTrust(bindings(), env.db);
     for (
       let index = 0;
@@ -317,8 +315,6 @@ describe('installer domain activation', () => {
       protectNewProjects: true,
       existingProjects: 'protected',
     });
-    // A cached read still returns another project's route, a project-specific
-    // failure that the operation skips instead of failing as a whole.
     const stuckRoute = await env.ROUTING.get(stuck.slug);
     await env.ROUTING.put(
       stuck.slug,
@@ -343,7 +339,6 @@ describe('installer domain activation', () => {
       expect.arrayContaining([expect.objectContaining({ hostname: '*.apps.example.com' })]),
     );
 
-    // The two-minute tier leaves the failed run alone.
     await scheduled(
       { cron: FAST_CRON, scheduledTime: Date.now() } as ScheduledController,
       bindings(),

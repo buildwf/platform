@@ -34,9 +34,9 @@ export type JwtPayload = Readonly<{
   oauthGrant?: string;
 }>;
 
-const EXPIRY_SECONDS = 30 * 24 * 60 * 60; // 30 days
+const EXPIRY_SECONDS = 30 * 24 * 60 * 60;
 
-// Import each secret's HMAC key once per isolate; the secret doesn't change while it runs.
+// Decision: Import each secret's HMAC key once per isolate; the secret doesn't change while it runs.
 const keyCache = new Map<string, Promise<CryptoKey>>();
 
 function hmacKey(secret: string): Promise<CryptoKey> {
@@ -60,7 +60,7 @@ export async function signJwt(
   opts?: { ttlSeconds?: number },
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  // Header first, then the claims with iat and exp last: the same bytes the old signer made.
+  // Decision: Header first, then the claims with iat and exp last: the same bytes the old signer made.
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setIssuedAt(now)

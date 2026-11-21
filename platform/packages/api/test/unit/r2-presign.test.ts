@@ -8,8 +8,7 @@ const BASE_OPTS = {
   accessKeyId: 'AKIAIOSFODNN7EXAMPLE',
   secretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
   bucket: 'platform-static-assets-overflow',
-  key: 'assets/proj_abc/dead', // 'dead' stands in for a blake3 prefix
-  // MD5 of empty string — the canonical fixture.
+  key: 'assets/proj_abc/dead',
   md5: 'd41d8cd98f00b204e9800998ecf8427e',
   contentType: 'application/javascript',
   now: FIXED_NOW,
@@ -39,7 +38,6 @@ describe('presignAssetPut', () => {
   });
 
   it('returns headers with Content-Md5 set to base64 of the raw digest', async () => {
-    // The known empty-string MD5 hex round-trips to this exact base64.
     const out = await presignAssetPut(BASE_OPTS);
     expect(out.headers['Content-Md5']).toBe('1B2M2Y8AsgTpgAmY7PhCfg==');
     expect(out.headers['Content-Type']).toBe('application/javascript');
@@ -52,7 +50,6 @@ describe('presignAssetPut', () => {
   });
 
   it('defaults X-Amz-Expires to 600 when ttlSeconds is omitted', async () => {
-    // BASE_OPTS does not set ttlSeconds, so this exercises the default.
     const out = await presignAssetPut(BASE_OPTS);
     const u = new URL(out.url);
     expect(u.searchParams.get('X-Amz-Expires')).toBe('600');
@@ -71,10 +68,8 @@ describe('presignAssetPut', () => {
     const signed = u.searchParams.get('X-Amz-SignedHeaders');
     expect(signed).not.toBeNull();
     const headerNames = (signed ?? '').split(';');
-    // AWS V4 canonical form lowercases header names.
+    // Decision: AWS SigV4's canonical form lowercases header names.
     expect(headerNames).toContain('content-md5');
-    // Content-Type and host are also covered — the URL is tamper-evident
-    // for the full PUT envelope.
     expect(headerNames).toContain('content-type');
     expect(headerNames).toContain('host');
   });

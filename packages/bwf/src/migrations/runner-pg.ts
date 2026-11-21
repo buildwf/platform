@@ -71,7 +71,7 @@ export async function applyPgMigrations(
       ]);
       await client.query('COMMIT');
     } catch (err) {
-      // A failed ROLLBACK means the session is gone, and PostgreSQL rolls back with it.
+      // Decision: A failed ROLLBACK means the session is gone, and PostgreSQL rolls back with it.
       await client.query('ROLLBACK').catch(() => {});
       throw new Error(
         `migration ${m.name} failed: ${err instanceof Error ? err.message : String(err)}`,

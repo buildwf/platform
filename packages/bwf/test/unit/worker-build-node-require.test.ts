@@ -21,9 +21,9 @@ afterEach(() => {
   }
 });
 
-// pnpm installs Vite once per set of peers, so the Vite that runs a build can differ from the one
-// the Cloudflare plugin imports. Rolldown then skips the Cloudflare plugin's esmExternalRequirePlugin,
-// as this plugin does.
+// Decision: pnpm installs Vite once per set of peers, so the Vite that runs a build can differ from the
+// one the Cloudflare plugin imports. Rolldown then skips the Cloudflare plugin's
+// esmExternalRequirePlugin, as this plugin does.
 const skipCloudflareRequireConversion: Plugin = {
   name: 'test:skip-cloudflare-require-conversion',
   configResolved(config) {
@@ -40,7 +40,7 @@ const skipCloudflareRequireConversion: Plugin = {
 };
 
 it('serves the Node built-ins that CommonJS requires in a MySQL Worker build from imports', async () => {
-  // Windows runners report a short-name temp path, which Vite refuses to serve.
+  // Decision: Windows runners report a short-name temp path, which Vite refuses to serve.
   const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'platform-worker-require-')));
   roots.push(root);
   writeFileSync(join(root, 'package.json'), JSON.stringify({ type: 'module' }));
@@ -48,7 +48,7 @@ it('serves the Node built-ins that CommonJS requires in a MySQL Worker build fro
     join(root, 'bwf.json'),
     JSON.stringify({ database: 'mysql', worker: { compatibility_date: '2026-02-24' } }),
   );
-  // mysql2 requires node:buffer like this.
+  // Decision: mysql2 requires node:buffer like this.
   mkdirSync(join(root, 'lib'));
   writeFileSync(
     join(root, 'lib/size.cjs'),
@@ -78,7 +78,7 @@ it('serves the Node built-ins that CommonJS requires in a MySQL Worker build fro
     .filter((file) => file.endsWith('.js'))
     .map((file) => readFileSync(join(output, file), 'utf8'))
     .join('\n');
-  // workerd has no `require`, so this call would throw when the route runs.
+  // Decision: workerd has no `require`, so this call would throw when the route runs.
   expect(code).not.toContain('__require("node:buffer")');
   expect(code).toMatch(/^import \w+ from "node:buffer";$/m);
 });

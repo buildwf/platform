@@ -32,12 +32,12 @@ const { tmpDir, wranglerPath, setup } = useProvisionTestDir('lock-durability');
 describe('acquireProvisionLock — durable sidecar is a PRECONDITION for quarantine', () => {
   const sidecar = `${wranglerPath}.bwf-provision.lock.quarantine.json`;
   const lockMutex = `${wranglerPath}.bwf-provision.lock.lock`;
-  // A directory at the sidecar's temp path makes the durable write fail with no sidecar.
+  // Decision: A directory at the sidecar's temp path makes the durable write fail with no sidecar.
   const tmpBlocker = `${sidecar}.tmp-${process.pid}`;
 
-  // The retention watchdog frees the process-wide provision slot a microtask after the
-  // mutex is gone. Poll a throwaway provision until it gets past the slot guard, so the
-  // next test does not trip on a watchdog that is still resolving.
+  // Decision: The retention watchdog frees the process-wide provision slot a microtask after the mutex is
+  // gone. Poll a throwaway provision until it gets past the slot guard, so the next test doesn't
+  // trip on a watchdog that's still resolving.
   async function drainRetentionWatchdog(timeoutMs = 20_000): Promise<void> {
     const probeDir = join(import.meta.dirname, '.tmp-provision-drain');
     const probeCfg = join(probeDir, 'wrangler.jsonc');
@@ -54,7 +54,7 @@ describe('acquireProvisionLock — durable sidecar is a PRECONDITION for quarant
             log: silentLog,
           });
         } catch (error) {
-          // Only the slot-guard error means the watchdog is still active.
+          // Decision: Only the slot-guard error means the watchdog is still active.
           guardHeld = /still retaining its lock|already active in this process/.test(
             (error as Error).message,
           );
@@ -85,15 +85,14 @@ describe('acquireProvisionLock — durable sidecar is a PRECONDITION for quarant
         /intentionally STILL HELD/,
       );
       expect(existsSync(sidecar)).toBe(false);
-      // The lock stays tracked, so its heartbeat keeps it fresh past proper-lockfile's
-      // 2000ms stale floor.
+      // Decision: The lock stays tracked, so its heartbeat keeps it fresh past proper-lockfile's 2000ms stale
+      // floor.
       await new Promise((r) => setTimeout(r, 2_300));
       await expect(
         acquireProvisionLock(wranglerPath, { stale: 2_000, retries: 0 }),
       ).rejects.toThrow(/already being held/);
     } finally {
       rmSync(tmpBlocker, { recursive: true, force: true });
-      // Still tracked → release works normally and frees the mutex.
       await lock.release();
     }
     expect(existsSync(lockMutex)).toBe(false);
@@ -101,7 +100,7 @@ describe('acquireProvisionLock — durable sidecar is a PRECONDITION for quarant
 
   it('provision level: a persistence failure surfaces BOTH errors, arms the retention watchdog, and resolves by confirming the child DEAD (mutex released cleanly)', async () => {
     setup(JSON.stringify({ account_id: 'acct', name: 'app' }));
-    // A real child that is already dead stands in for the unconfirmed wrangler group.
+    // Decision: A real child that's already dead stands in for the unconfirmed wrangler group.
     const child = spawnHang();
     const childPid = child.pid!;
     reap(child);
@@ -119,7 +118,7 @@ describe('acquireProvisionLock — durable sidecar is a PRECONDITION for quarant
           log: silentLog,
           lockOptions: {
             stale: 2_000,
-            // Every persistence attempt fails, so only the death probe can resolve it.
+            // Decision: Each persistence attempt fails, so only the death probe can resolve it.
             dirDurability: {
               fsyncSync: () => {
                 throw Object.assign(new Error('ENOSPC: no space left on device, fsync'), {
@@ -139,8 +138,8 @@ describe('acquireProvisionLock — durable sidecar is a PRECONDITION for quarant
     expect(String((thrown as AggregateError).errors[1])).toMatch(/could not persist/);
     expect(existsSync(lockMutex)).toBe(true);
     expect(existsSync(sidecar)).toBe(false);
-    // The watchdog confirms the recorded group dead and releases the mutex. The bound is
-    // generous because its tick is a real timer.
+    // Decision: The watchdog confirms the recorded group dead and releases the mutex. The bound is generous
+    // because its tick is a real timer.
     const deadline = Date.now() + 15_000;
     while (existsSync(lockMutex) && Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 50));
@@ -191,8 +190,8 @@ describe('acquireProvisionLock — durable sidecar is a PRECONDITION for quarant
       expect(thrown).toBeInstanceOf(AggregateError);
       expect(existsSync(lockMutex)).toBe(true);
       expect(existsSync(sidecar)).toBe(false);
-      // Once persistence works, the watchdog's next retry writes the sidecar and detaches
-      // the lock. The bound is generous because the retry is a real backoff timer.
+      // Decision: Once persistence works, the watchdog's next retry writes the sidecar and detaches the lock.
+      // The bound is generous because the retry is a real backoff timer.
       failPersistence = false;
       const deadline = Date.now() + 15_000;
       while (!existsSync(sidecar) && Date.now() < deadline) {
@@ -201,9 +200,10 @@ describe('acquireProvisionLock — durable sidecar is a PRECONDITION for quarant
       expect(existsSync(sidecar)).toBe(true);
       const recorded = JSON.parse(readFileSync(sidecar, 'utf-8')) as Record<string, unknown>;
       expect(recorded.pid).toBe(live.pid);
-      expect(existsSync(lockMutex)).toBe(true); // retained, now safely detached
-      // The retained mutex is guarded by the sidecar: an acquirer fails closed on the
-      // live recorded group even with the mutex aged stale.
+      expect(existsSync(lockMutex)).toBe(
+        true,
+      ); /* Decision: The retained mutex is guarded by the sidecar: an acquirer fails closed on the live recorded
+         group even with the mutex aged stale. */
       const old = new Date(Date.now() - 3_600_000);
       utimesSync(lockMutex, old, old);
       await expect(
@@ -217,8 +217,8 @@ describe('acquireProvisionLock — durable sidecar is a PRECONDITION for quarant
   }, 30_000);
 
   it('the watchdog HOLDS the process at natural exit until the child dies, then releases and exits cleanly', async () => {
-    // proper-lockfile's exit sweep removes every tracked mutex, so the watchdog must keep
-    // the process alive until the child is confirmed dead.
+    // Decision: proper-lockfile's exit sweep removes each tracked mutex, so the watchdog has to keep the
+    // process alive until the child is confirmed dead.
     const WATCHDOG_EXIT_TMP = join(import.meta.dirname, '.tmp-watchdog-exit');
     rmSync(WATCHDOG_EXIT_TMP, { recursive: true, force: true });
     mkdirSync(WATCHDOG_EXIT_TMP, { recursive: true });
@@ -235,8 +235,8 @@ describe('acquireProvisionLock — durable sidecar is a PRECONDITION for quarant
         `mkdirSync(root, { recursive: true });\n` +
         `const cfg = join(root, 'wrangler.jsonc');\n` +
         `writeFileSync(cfg, JSON.stringify({ name: 'app', account_id: 'acct' }));\n` +
-        // A real detached child standing in for the unconfirmed wrangler group; it
-        // exits BY ITSELF after 700ms.
+        // Decision: A real detached child standing in for the unconfirmed wrangler group; it exits by itself
+        // after 700ms.
         `const child = spawn(process.execPath, ['-e', 'setTimeout(() => process.exit(0), 700)'], { detached: true, stdio: 'ignore' });\n` +
         `child.unref();\n` +
         `const startedAt = Date.now();\n` +
@@ -275,7 +275,6 @@ describe('acquireProvisionLock — durable sidecar is a PRECONDITION for quarant
       expect(signal).toBeNull();
       expect(code).toBe(0);
       expect(readFileSync(join(appRoot, 'outcome.txt'), 'utf-8')).toContain('REJECTED:');
-      // The watchdog held the process open past the child's 700ms lifetime.
       const exitState = JSON.parse(readFileSync(join(appRoot, 'exit.txt'), 'utf-8')) as {
         elapsed: number;
         childAlive: boolean;
@@ -290,9 +289,7 @@ describe('acquireProvisionLock — durable sidecar is a PRECONDITION for quarant
       clearTimeout(killTimer);
       try {
         parent.kill('SIGKILL');
-      } catch {
-        // already gone
-      }
+      } catch {}
       rmSync(WATCHDOG_EXIT_TMP, { recursive: true, force: true });
     }
   }, 20_000);
@@ -303,7 +300,7 @@ describe('acquireProvisionLock — sidecar DIRECTORY durability failures propaga
   const lockMutex = `${wranglerPath}.bwf-provision.lock.lock`;
 
   it('ENOSPC on the directory fsync is a PERSISTENCE FAILURE: no detach, lock stays tracked, hard error', async () => {
-    // Without a durable directory entry the sidecar can vanish on a crash, so only
+    // Decision: Without a durable directory entry the sidecar can vanish on a crash, so only
     // platform-unsupported codes may be ignored.
     setup(JSON.stringify({ name: 'app' }));
     const lock = await acquireProvisionLock(wranglerPath, {
@@ -320,15 +317,13 @@ describe('acquireProvisionLock — sidecar DIRECTORY durability failures propaga
       expect(() => lock.quarantine({ pid: 42_424, reason: 'enospc' })).toThrow(
         /could not persist quarantine metadata.*ENOSPC/s,
       );
-      // The non-durable sidecar was rolled back.
       expect(existsSync(sidecar)).toBe(false);
-      // The lock stays tracked, so its heartbeat keeps it fresh past the 2000ms stale floor.
+      // Decision: The lock stays tracked, so its heartbeat keeps it fresh past the 2000ms stale floor.
       await new Promise((r) => setTimeout(r, 2_300));
       await expect(
         acquireProvisionLock(wranglerPath, { stale: 2_000, retries: 0 }),
       ).rejects.toThrow(/already being held/);
     } finally {
-      // Still tracked → release works normally and frees the mutex.
       await lock.release();
     }
     expect(existsSync(lockMutex)).toBe(false);
@@ -344,10 +339,10 @@ describe('acquireProvisionLock — sidecar DIRECTORY durability failures propaga
         },
       },
     });
-    lock.quarantine({ pid: 42_425, reason: 'einval' }); // must not throw
+    lock.quarantine({ pid: 42_425, reason: 'einval' });
     expect(existsSync(sidecar)).toBe(true);
-    expect(existsSync(lockMutex)).toBe(true); // retained (detached from the exit sweep)
-    await lock.release(); // no-op after a successful quarantine
+    expect(existsSync(lockMutex)).toBe(true);
+    await lock.release();
     expect(existsSync(lockMutex)).toBe(true);
     rmSync(lockMutex, { recursive: true, force: true });
     rmSync(sidecar, { force: true });

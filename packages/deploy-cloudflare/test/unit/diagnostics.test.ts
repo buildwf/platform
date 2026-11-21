@@ -58,7 +58,7 @@ describe('Cloudflare command diagnostics', () => {
       cloudflareCommandDiagnostic({
         status: 1,
         stdout: '',
-        // cf 1.0.0-beta.21 and later print upload progress and bindings on stderr.
+        // Decision: cf 1.0.0-beta.21 and later print upload progress and bindings on stderr.
         stderr: [
           '├  Upload',
           '│  Your Worker has access to the following bindings:',
@@ -106,11 +106,11 @@ describe('Cloudflare command diagnostics', () => {
       `■  ${abort}`,
       '◆  Version upload complete',
     ].join('\n');
-    // cf 1.0.0-beta.21 and later print upload messages on stderr, earlier releases on stdout.
+    // Decision: cf 1.0.0-beta.21 and later print upload messages on stderr, earlier releases on stdout.
     for (const [stdout, stderr] of [
       ['', scriptApi],
       [scriptApi, ''],
-      // Without a Unicode terminal, cf prints fallback symbols.
+      // Decision: Without a Unicode terminal, cf prints fallback symbols.
       ['', scriptApi.replace('▲', '!').replace('■', 'x').replace('│', '|').replace('◆', '*')],
     ]) {
       expect(cloudflareCommandDiagnostic({ status: 1, stdout: stdout!, stderr: stderr! })).toBe(

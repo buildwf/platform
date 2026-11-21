@@ -32,14 +32,6 @@ beforeEach(async () => {
   await clearTables(env.db);
 });
 
-/**
- * Confirms `checkCliVersionOrRespond` rejects stale CLIs at every deploy
- * endpoint they could plausibly hit, AND that it correctly defers to
- * project-level authorization (404 / 403 / 410) for missing, foreign,
- * and deleting projects.
- *
- * The gate answers only requests that are otherwise authorized for the target project.
- */
 describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
   it('rejects old X-Platform-CLI-Version header on deploy.finalize', async () => {
     const user = await createTestUser(env.db);
@@ -157,20 +149,13 @@ describe('cliVersionGate — deploy endpoints (passing the gate)', () => {
       env,
     );
 
-    // Past the gate — handler returns a non-426 status for a valid
-    // empty-asset request. Specific status doesn't matter; we only need
-    // to confirm we did NOT short-circuit at 426.
     expect(res.status).not.toBe(426);
   });
 });
 
-/**
- * Project-authorization checks must run BEFORE the CLI version gate so a
- * stale CLI hitting a missing / foreign / deleting project gets the more
- * specific 404 / 403 / 410 first instead of a misleading "upgrade your
- * CLI" 426. Otherwise a user who typo'd a project name (or lost access)
- * would be told to upgrade when in fact the upgrade won't fix anything.
- */
+// Decision: Project-authorization checks run before the CLI version gate so a stale CLI hitting a missing,
+// foreign or deleting project gets the more specific 404 / 403 / 410 instead of a misleading
+// "upgrade your CLI" 426.
 describe('cliVersionGate — defers to project authorization', () => {
   it('returns 403 (not 426) when project does not exist, even with a stale version header', async () => {
     const user = await createTestUser(env.db);
@@ -220,9 +205,6 @@ describe('cliVersionGate — defers to project authorization', () => {
     expect(res.status).toBe(410);
   });
 
-  // /preflight checks `status === 'deleting'` like the other two endpoints, so
-  // a stale CLI gets 410 rather than 426 and a current CLI never body-parses a
-  // doomed deploy.
   it('returns 410 (not 426) on /deploy/preflight when project is being deleted', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'pf-deleting-app');
@@ -244,16 +226,11 @@ describe('cliVersionGate — defers to project authorization', () => {
     expect(res.status).toBe(410);
   });
 
-  // /upload-urls re-reads the project status under a FOR SHARE lock, so a
-  // teardown that commits AFTER the unlocked early-out 410 read but BEFORE
-  // the share lock still surfaces as 410 rather than serving presigned URLs
-  // against a being-deleted bucket.
-  //
-  // Mechanism: wrap env.db.transaction with a Proxy that pauses before delegating to
-  // the real implementation. Between handler entry's reads and the tx,
-  // we directly UPDATE projects.status='deleting' through realDb (the
-  // proxy doesn't intercept update()), then release the tx. The in-tx
-  // re-read sees the mutated state and throws UPLOAD_URLS_PROJECT_DELETING.
+  // Decision: /upload-urls re-reads the project status under a FOR SHARE lock, so a teardown that commits after
+  // the unlocked early-out 410 read but before the share lock still surfaces as 410 rather than
+  // serving presigned URLs against a bucket being deleted. The test wraps env.db.transaction in a
+  // Proxy that pauses before the real call, updates projects.status='deleting' through realDb, then
+  // releases.
   it('returns 410 when project flips to deleting between handler entry and FOR-SHARE acquisition', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'uu-race-app');
@@ -287,9 +264,6 @@ describe('cliVersionGate — defers to project authorization', () => {
     setTestDb(wrappedDb);
 
     try {
-      // Issue the request with a CURRENT CLI header so the pre-parse
-      // version gate passes — we want to exercise the in-tx status
-      // check, not the version gate.
       const reqPromise = app.fetch(
         new Request(`http://localhost/rpc/deploy.uploadUrls`, {
           method: 'POST',
@@ -304,8 +278,6 @@ describe('cliVersionGate — defers to project authorization', () => {
       );
       await beforeTxReachedPromise;
 
-      // Simulate teardown landing AFTER the unlocked early-out check
-      // (which saw 'live') but BEFORE the FOR-SHARE acquisition.
       await realDb.update(projects).set({ status: 'deleting' }).where(eq(projects.id, project.id));
 
       beforeTxResolver?.();

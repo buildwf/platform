@@ -1,5 +1,5 @@
-// Probe the connection without DNS and explicitly close it on timeout. Both
-// Internet-disabled and Internet-enabled cases run this same command.
+// Decision: Probes the connection without DNS and closes it on timeout. The Internet-disabled and
+// Internet-enabled cases both run this command.
 export const internetAccessProbe = [
   'node',
   '-e',

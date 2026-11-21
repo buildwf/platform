@@ -358,7 +358,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
       await uninstallPlatform(client, manifest, args, {
         checkpoint: databaseLock?.checkpoint,
         databaseUrl,
-        // A plan holds no lifecycle lock, so it opens its own read-only connection.
+        // Decision: A plan holds no lifecycle lock, so it opens its own read-only connection.
         readProjectZeroTrust: databaseLock
           ? databaseLock.readProjectZeroTrust
           : () =>
@@ -409,7 +409,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
       return;
     }
 
-    // repair --auth-config replaces the login settings of a first administrator
+    // Decision: repair --auth-config replaces the login settings of a first administrator
     // setup that is still pending. Refuse what no database read can change first.
     const loginFile = args.subcommand === 'repair' ? args.authConfig : undefined;
     if (loginFile !== undefined) {
@@ -505,7 +505,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
           `Login settings will be replaced from ${loginFile}; a new setup code is printed at the end.`,
         );
       }
-      // A plan holds no lifecycle lock, so it cannot read the database.
+      // Decision: A plan holds no lifecycle lock, so it cannot read the database.
       const outsideChanges = await findPlatformWorkerOutsideChanges(client, plan, runtime!, {
         manifest,
       });
@@ -630,7 +630,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
         plan.deployment.capabilities.customDomains &&
         !manifest.deployment.capabilities.customDomains,
     });
-    // Shared email setup runs after traffic pauses and uses the runtime token,
+    // Decision: Shared email setup runs after traffic pauses and uses the runtime token,
     // also when this run keeps the saved token. Check its email access first.
     const emailZoneId =
       installation.desiredState !== 'disabled' && plan.deployment.capabilities.email
@@ -654,7 +654,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
           { accountId: manifest.account.id, savedToken: true, zoneId: emailZoneId },
         );
       } catch (error) {
-        // This run does not send the saved token to the Workers. A run from
+        // Decision: This run does not send the saved token to the Workers. A run from
         // another machine can have replaced their token, and the old one was
         // then revoked. Only a valid token that lacks a permission stops here.
         if (!(error instanceof PlatformRuntimeTokenEmailPermissionError) || !error.tokenNotValid) {
@@ -671,7 +671,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
         'platform: The database lifecycle lock cannot read authoritative authentication settings.',
       );
     }
-    // Without a terminal, the Cloudflare CLI stops the upload of a Worker
+    // Decision: Without a terminal, the Cloudflare CLI stops the upload of a Worker
     // changed outside bwf, and the upgrade refuses an active version without
     // bwf's record of its triggers. Both happen after traffic pauses. Find
     // them first.
@@ -703,12 +703,11 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
       },
       interactive: process.stdin.isTTY === true && process.stdout.isTTY === true && !args.yes,
       command: platformLifecycleResumeCommand({ ...args, yes: false }, manifest.id),
-      // Only upgrade and repair take --accept-outside-changes.
       ...((args.subcommand === 'upgrade' || args.subcommand === 'repair') && {
         accepted: 'acceptOutsideChanges' in args && args.acceptOutsideChanges === true,
       }),
     });
-    // The new API Worker version keeps secrets but drops plain-text variables
+    // Decision: The new API Worker version keeps secrets but drops plain-text variables
     // that bwf does not set. Keep billing values set that way outside bwf as
     // saved values, and set them again as secrets.
     const savedBilling = parsePlatformBillingSecrets(recovery?.billingJson);
@@ -739,7 +738,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
     if (installation !== manifest) {
       writeInstallationManifest(installation);
     }
-    // The platform refuses new login settings once an administrator signed in.
+    // Decision: The platform refuses new login settings once an administrator signed in.
     // Keep the saved settings the platform still has, so later lifecycle
     // commands do not resend the refused ones.
     const keepAcceptedLogin = async (error: unknown): Promise<unknown> => {
@@ -768,7 +767,7 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
       );
     };
     const result = await installPlatform(plan, secrets, installation, {
-      // runInstalledPlatformCommand holds the database session lock across the
+      // Decision: runInstalledPlatformCommand holds the database session lock across the
       // entire replan and mutation sequence.
       acquireDatabaseLifecycleLock: async () =>
         Object.assign(async () => {}, {
@@ -822,7 +821,6 @@ export async function runInstalledPlatformCommand(args: PlatformArgs): Promise<v
     }).catch(async (error: unknown) => {
       throw await keepAcceptedLogin(error);
     });
-    // Keep progress visible while the outer database session releases its lock.
     progress.message('Finalizing platform changes');
     markPhase('installer complete');
     const runtimeLogsWarning =
@@ -1065,7 +1063,7 @@ export function resolvePlatformRuntimeTokenToPreflight(
   if (explicitUpdate) {
     return explicitUpdate;
   }
-  // Enabling custom hostnames adds a runtime permission even when the Workers
+  // Decision: Enabling custom hostnames adds a runtime permission even when the Workers
   // retain their token. Check it before the installer can pause traffic.
   if (options.enablingCustomDomains) {
     if (!secrets.cloudflareApiToken) {
@@ -1207,7 +1205,7 @@ export async function uninstallPlatform(
   const retainData = !args.purgeData;
   const purgeResources = args.purgeResources;
   const routingKv = manifest.resources.find((resource) => resource.key === 'routing-kv');
-  // --purge-resources also uses routing KV that an uninstall which stopped before it
+  // Decision: --purge-resources also uses routing KV that an uninstall which stopped before it
   // finished recorded as retained.
   const reopenedRouting =
     purgeResources &&
@@ -1303,15 +1301,15 @@ export async function uninstallPlatform(
         (resource) =>
           (shouldDeleteResource(resource, retainData) ||
             (purgeResources &&
-              // Includes what an uninstall that stopped before it finished
+              // Decision: Includes what an uninstall that stopped before it finished
               // recorded as retained, so a replaced one stops the run here too.
               (resource.state === 'ready' || isPurgeResourcesCandidate(manifest, resource)) &&
               !purgeResourcesKept.has(resource.key) &&
               isOwnershipVerifiableKind(resource.kind) &&
-              // A changed DNS record is kept, not a reason to stop, so it is
+              // Decision: A changed DNS record is kept, not a reason to stop, so it is
               // proven only right before its DELETE.
               resource.kind !== 'dns-record' &&
-              // After its ownership marker was removed, the bucket is proven
+              // Decision: After its ownership marker was removed, the bucket is proven
               // by its creation fingerprint instead.
               !hasLifecycleStep(
                 manifest,
@@ -1333,7 +1331,7 @@ export async function uninstallPlatform(
       .map((resource) => resource.key),
     ...resourcesToDelete,
   ]);
-  // Ownership checks only look at ready resources. Prove retained ones that
+  // Decision: Ownership checks only look at ready resources. Prove retained ones that
   // --purge-resources reopens the same way, without recording them as ready again.
   const proofManifest = {
     ...manifest,
@@ -1361,7 +1359,7 @@ export async function uninstallPlatform(
     missingResources = new Set();
   }
 
-  // Zero Trust writers and project creation in the API take this lock and
+  // Decision: Zero Trust writers and project creation in the API take this lock and
   // never the lifecycle lock. Holding it from the final check until traffic is
   // disabled keeps them from creating Access applications or projects the
   // check did not see. A request admitted before the disable may already be
@@ -1374,7 +1372,7 @@ export async function uninstallPlatform(
     );
   }
   if (zeroTrust) {
-    // The API takes the Zero Trust lock to turn it off, so this runs before
+    // Decision: The API takes the Zero Trust lock to turn it off, so this runs before
     // uninstall takes that lock. The final check below then reads the result.
     log.step('Turning off project Zero Trust');
     await dependencies.turnOffProjectZeroTrust!();
@@ -1457,7 +1455,7 @@ export async function uninstallPlatform(
         {
           client,
           checkpoint: async (checkpointManifest) => {
-            // Keep `next` current so a failure records the progress made.
+            // Decision: Keep `next` current so a failure records the progress made.
             next = checkpointManifest;
             await saveCheckpoint(checkpointManifest);
           },
@@ -1477,7 +1475,7 @@ export async function uninstallPlatform(
               ? 'unknown'
               : r2BucketConfigHash(bucket.name, live.fingerprint);
           },
-          // --purge-resources already refused unless the project list could be read.
+          // Decision: --purge-resources already refused unless the project list could be read.
           readProjects: () => dependencies.readProjects!(),
         },
         next,
@@ -1499,7 +1497,7 @@ export async function uninstallPlatform(
         resourceDeletionPriority(left, deletionPriority) -
         resourceDeletionPriority(right, deletionPriority),
     );
-    // Uninstall retains Workers, and Cloudflare refuses to delete a Queue that
+    // Decision: Uninstall retains Workers, and Cloudflare refuses to delete a Queue that
     // a Worker still binds. Delete Queues only once none of this installation's
     // Workers exist, so a retained Worker keeps its bindings intact.
     const queuesInUse =
@@ -1509,7 +1507,7 @@ export async function uninstallPlatform(
       ) &&
       (await hasLiveInstallationWorker(client, next));
     for (const listed of resources) {
-      // Routing KV that a stopped uninstall retained is deleted last, like a ready one.
+      // Decision: Routing KV that a stopped uninstall retained is deleted last, like a ready one.
       const resource =
         reopenedRouting && listed.key === 'routing-kv'
           ? { ...listed, state: 'ready' as const }
@@ -1523,7 +1521,7 @@ export async function uninstallPlatform(
         continue;
       }
       if (!shouldDeleteResource(resource, retainData)) {
-        // AI Gateway is never deleted, but one already removed in Cloudflare
+        // Decision: AI Gateway is never deleted, but one already removed in Cloudflare
         // is not left behind, so record it like other missing resources.
         const removed =
           resource.kind === 'ai-gateway' &&
@@ -1665,7 +1663,7 @@ function isOwnershipVerifiableKind(kind: InstallationResource['kind']): boolean 
   );
 }
 
-// Kinds in the order of the manual cleanup steps in the uninstall guide. The
+// Decision: Kinds in the order of the manual cleanup steps in the uninstall guide. The
 // tail Worker is listed after the dispatch namespace (see keptResourceRank),
 // because Cloudflare refuses to delete it while other Workers send it logs.
 const KEPT_RESOURCE_ORDER: ReadonlyArray<InstallationResourceKind> = [
@@ -1689,7 +1687,7 @@ function plannedKeptResources(
   retainData: boolean,
   hasRoutingCheckpoint: boolean,
 ): Array<InstallationResource> {
-  // Uninstall never deletes Workers, and Queues are deleted only once no
+  // Decision: Uninstall never deletes Workers, and Queues are deleted only once no
   // installation Worker remains.
   const workersRemain = manifest.resources.some(
     (resource) => resource.kind === 'worker' && resource.state === 'ready',
@@ -1715,7 +1713,7 @@ function keptResourceRank(
 
 function purgeResourcesPlanText(manifest: PlatformInstallationManifest): string {
   const permissions = purgeResourcesPermissions(manifest);
-  // Created Access resources are deleted unless an earlier run kept them.
+  // Decision: Created Access resources are deleted unless an earlier run kept them.
   const keepManifest = {
     ...manifest,
     authenticationResources: (manifest.authenticationResources ?? []).filter(
@@ -1769,7 +1767,7 @@ function describeKeptResources(
     emailSharedZoneId,
     resources: names,
   } = manifest.deployment;
-  // Email Routing is set up through the platform API and is not a manifest
+  // Decision: Email Routing is set up through the platform API and is not a manifest
   // resource. Its rules point at the email gateway Worker, so it comes before
   // the Workers.
   const email = capabilities.email
@@ -1786,7 +1784,7 @@ function describeKeptResources(
   );
   const accessLine = (resource: (typeof remainingAccess)[number]) =>
     `  ${resource.ownership} ${resource.kind}: ${resource.name} (${resource.id}, account ${resource.accountId})${why(`access:${resource.key}`)}`;
-  // Access resources --purge-resources kept because they changed are listed with the
+  // Decision: Access resources --purge-resources kept because they changed are listed with the
   // other kept resources, not as ones the operator connected.
   const keptAccess = (resource: (typeof remainingAccess)[number]) =>
     purgeResourcesKeptReason(manifest, `access:${resource.key}`) !== null;
@@ -1810,33 +1808,33 @@ function shouldDeleteResource(resource: InstallationResource, retainData: boolea
   if (resource.kind === 'zone') {
     return false;
   }
-  // AI Gateway ids are caller-selected and can be reused after deletion. The
+  // Decision: AI Gateway ids are caller-selected and can be reused after deletion. The
   // API exposes no durable ownership marker, so automatic deletion could
   // remove a replacement gateway created by another installation.
   if (resource.kind === 'ai-gateway') {
     return false;
   }
-  // DNS record deletion is id-addressed but Cloudflare exposes no conditional
+  // Decision: DNS record deletion is id-addressed but Cloudflare exposes no conditional
   // delete tied to the exact type/content/proxy tuple we verified. A dashboard
   // edit can retain the id while repurposing the record, so keep it for manual
   // cleanup instead of racing an unrelated production record.
   if (resource.kind === 'dns-record') {
     return false;
   }
-  // Cloudflare exposes no server-enforced condition tying object deletion to
+  // Decision: Cloudflare exposes no server-enforced condition tying object deletion to
   // an R2 bucket generation. A same-name replacement can therefore race any
   // client-side ownership recheck. Retain R2 even during --purge-data and
   // require the operator to remove it explicitly in the Cloudflare dashboard.
   if (resource.kind === 'r2-bucket') {
     return false;
   }
-  // Worker lifecycle mutations are name-addressed. Cloudflare exposes no
+  // Decision: Worker lifecycle mutations are name-addressed. Cloudflare exposes no
   // generation precondition that can prevent a same-name replacement from
   // racing the final ownership check, so retain Workers for manual cleanup.
   if (resource.kind === 'worker') {
     return false;
   }
-  // Traffic attachments are removed only through their immutable Cloudflare
+  // Decision: Traffic attachments are removed only through their immutable Cloudflare
   // ids after tuple validation. Never pass an untracked or stale attachment to
   // the generic resource deleter.
   if (resource.kind === 'worker-route' || resource.kind === 'worker-custom-domain') {
@@ -1869,7 +1867,7 @@ function resourceDeletionPriority(
   resource: InstallationResource,
   priorities: Readonly<Record<string, number>>,
 ): number {
-  // The routing namespace contains the authoritative ownership checkpoint.
+  // Decision: The routing namespace contains the authoritative ownership checkpoint.
   // Delete it last so interrupted purges can still prove every earlier mutation.
   return resource.key === 'routing-kv' ? 100 : (priorities[resource.kind] ?? 99);
 }
@@ -1935,7 +1933,7 @@ async function verifyPlatformMutationOwnership(
         (options.allowMissingRoutingCheckpoint && !routingIdentityCollides) ||
         (options.allowUninitializedRoutingCheckpoint && routingMatches)
       ) {
-        // The caller holds the authoritative PostgreSQL lifecycle lock. Repair
+        // Decision: The caller holds the authoritative PostgreSQL lifecycle lock. Repair
         // or resume may use that manifest as the replacement checkpoint, but
         // every surviving resource must still pass fresh inventory and marker
         // checks. An existing routing namespace is accepted only with the
@@ -1983,7 +1981,7 @@ async function verifyPlatformMutationOwnership(
   const zone = manifest.resources.find((resource) => resource.key === 'zone');
   const inventory = await Promise.all([
     client.listAiGateways(accountId),
-    // Workers for Platforms is a paid product; list namespaces only when one
+    // Decision: Workers for Platforms is a paid product; list namespaces only when one
     // is being checked.
     targetResources.some((resource) => resource.kind === 'dispatch-namespace')
       ? client.listDispatchNamespaces(accountId)
@@ -2176,7 +2174,7 @@ export function isPlatformManifestMonotonicExtension(
       next.ownership === resource.ownership &&
       (next.state === resource.state ||
         (resource.state === 'ready' && (next.state === 'deleted' || next.state === 'retained')) ||
-        // --purge-resources deletes routes and custom domains recorded as retained.
+        // Decision: --purge-resources deletes routes and custom domains recorded as retained.
         (resource.state === 'retained' && next.state === 'deleted'))
     );
   });
@@ -2250,7 +2248,7 @@ function updateResourceState(
   return recordInstallationResource(manifest, { ...resource, state }, new Date().toISOString());
 }
 
-// Cloudflare has no precondition for route or custom domain deletion, so even a
+// Decision: Cloudflare has no precondition for route or custom domain deletion, so even a
 // checked record id can be reused before DELETE. The routing KV gate blocks
 // traffic instead, and attachments stay for dashboard cleanup.
 function markTrafficAttachmentsRetained(

@@ -51,12 +51,11 @@ const COMPOUND_START = new RegExp(
 /** The statements in `sql`, without the comments around them. */
 function splitMySqlStatements(sql: string): Array<MySqlMigrationStatement> {
   const statements: Array<MySqlMigrationStatement> = [];
-  // The current statement with quoted text and comments blanked out.
+  // Decision: The current statement with quoted text and comments blanked out.
   let bare = '';
-  // Where the current statement starts and ends, or -1 before its first character.
   let start = -1;
   let end = -1;
-  // Set once a statement opens a BEGIN ... END body: the rest of the part stays with it.
+  // Decision: Set once a statement opens a BEGIN ... END body: the rest of the part stays with it.
   let compound = false;
   let index = 0;
   const take = (from: number, to: number) => {
@@ -77,7 +76,7 @@ function splitMySqlStatements(sql: string): Array<MySqlMigrationStatement> {
       index = close;
       continue;
     }
-    // MySQL reads `--` as a comment only when whitespace or a control character follows it.
+    // Decision: MySQL reads `--` as a comment only when whitespace or a control character follows it.
     if (
       character === '#' ||
       (character === '-' && next === '-' && !/\S/.test(sql[index + 2] ?? ' '))
@@ -90,7 +89,7 @@ function splitMySqlStatements(sql: string): Array<MySqlMigrationStatement> {
     if (character === '/' && next === '*') {
       const close = sql.indexOf('*/', index + 2);
       const commentEnd = close === -1 ? sql.length : close + 2;
-      // `/*! ... */` is SQL that MySQL runs, and `/*+ ... */` holds optimizer hints.
+      // Decision: `/*! ... */` is SQL that MySQL runs, and `/*+ ... */` holds optimizer hints.
       if (sql[index + 2] === '!' || sql[index + 2] === '+') {
         take(index, commentEnd);
       }
@@ -131,7 +130,7 @@ function skipQuoted(sql: string, open: number, quote: string): number {
   let index = open + 1;
   while (index < sql.length) {
     const character = sql[index];
-    // Backslash escapes apply in strings, not in backtick-quoted names.
+    // Decision: Backslash escapes apply in strings, not in backtick-quoted names.
     if (character === '\\' && quote !== '`') {
       index += 2;
       continue;

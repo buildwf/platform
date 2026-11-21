@@ -1,4 +1,4 @@
-// Generated email handlers import the wire protocol through bwf so consumer
+// Decision: Generated email handlers import the wire protocol through bwf so consumer
 // projects do not need a direct dependency on @builtbyfriends/platform.
 export {
   EMAIL_PROTOCOL_VERSION,
@@ -85,12 +85,12 @@ export async function readBoundedJson(
       size += chunk.value.byteLength;
     }
   } finally {
-    // Do not await cancellation: an uncooperative stream may never settle it.
+    // Decision: Do not await cancellation: an uncooperative stream may never settle it.
     void reader.cancel().catch(() => {});
     try {
       reader.releaseLock();
     } catch {
-      // A timed-out read may still be settling after cancellation.
+      // Decision: A timed-out read may still be settling after cancellation.
     }
   }
   if (declared !== null && size !== Number(declared)) {

@@ -18,7 +18,7 @@ const USERS = [
   { id: 2, name: 'Linus', email: 'linus@example.com' },
 ];
 
-// workerd cannot evaluate mysql2's CommonJS source or the eval its row parsers use by default.
+// Decision: workerd cannot evaluate mysql2's CommonJS source or the eval its row parsers use by default.
 describe('playground/mysql-test', () => {
   let mysqlServer: FakeMySqlServer;
   let child: ChildProcess | undefined;
@@ -35,9 +35,7 @@ describe('playground/mysql-test', () => {
     await mysqlServer?.close();
     try {
       unlinkSync(ENV_PATH);
-    } catch {
-      // Ignore missing cleanup files between test runs.
-    }
+    } catch {}
   });
 
   function start(script: 'dev' | 'preview'): Promise<StartedServer> {

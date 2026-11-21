@@ -127,15 +127,13 @@ describe('provisionBindings', () => {
     });
     expect(createResource).toHaveBeenCalledWith(mockDb, PROJECT_ID, 'd1', 'd1-uuid-123', 'DB');
     expect(bindings[0]).toEqual({ type: 'd1', name: 'DB', id: 'd1-uuid-123' });
-    // + 4 always-injected platform bindings
     expect(bindings).toHaveLength(5);
   });
 
   it('rolls back the CF resource it created when the resources-row INSERT fails', async () => {
     const manifest: DeployManifest = { version: 1, bindings: { d1: ['DB'] } };
-    // Model a concurrent-teardown FK violation: the row INSERT throws AFTER CF
-    // created the D1 database. Without rollback this leaves an orphaned CF object
-    // with no durable handle (the cascade-capture sweep never sees it).
+    // Decision: Models a concurrent-teardown FK violation: the row INSERT throws after Cloudflare created the D1
+    // database. Without rollback, the Cloudflare object is orphaned and the cascade sweep never sees it.
     vi.mocked(createResource).mockRejectedValueOnce(new Error('insert failed (FK violation)'));
 
     await expect(
@@ -145,19 +143,16 @@ describe('provisionBindings', () => {
       }),
     ).rejects.toThrow('insert failed');
 
-    // CF created it...
     expect(createD1Database).toHaveBeenCalledWith(ACCOUNT_ID, API_TOKEN, 'proj-abc123-db', {
       readReplication: undefined,
     });
-    // ...and the rollback deleted exactly that object.
     expect(deleteD1Database).toHaveBeenCalledWith(ACCOUNT_ID, API_TOKEN, 'd1-uuid-123');
   });
 
   it('does NOT roll back a CF resource adopted via the already-exists lookup', async () => {
     const manifest: DeployManifest = { version: 1, bindings: { d1: ['DB'] } };
-    // createCfResource hits "already exists" → lookupCfResource adopts a
-    // pre-existing object we do NOT own. Even if the row INSERT then fails, we
-    // must not delete someone else's resource.
+    // Decision: On "already exists", lookupCfResource adopts an object we don't own. If the row INSERT then
+    // fails, that resource mustn't be deleted.
     vi.mocked(createD1Database).mockRejectedValueOnce(new Error('database already exists'));
     vi.mocked(createResource).mockRejectedValueOnce(new Error('insert failed (FK violation)'));
 
@@ -390,7 +385,6 @@ describe('provisionBindings', () => {
     expect(createD1Database).toHaveBeenCalledOnce();
     expect(createKVNamespace).toHaveBeenCalledOnce();
     expect(createR2Bucket).toHaveBeenCalledOnce();
-    // 3 provisioned + 4 always-injected platform bindings
     expect(bindings).toHaveLength(7);
     expect(bindings[0]).toEqual({ type: 'd1', name: 'DB', id: 'd1-uuid-123' });
     expect(bindings[1]).toEqual({ type: 'kv_namespace', name: 'KV', namespace_id: 'kv-id-456' });
@@ -418,7 +412,6 @@ describe('provisionBindings', () => {
     expect(createKVNamespace).not.toHaveBeenCalled();
     expect(createR2Bucket).not.toHaveBeenCalled();
     expect(createResource).not.toHaveBeenCalled();
-    // Proxy bindings are always injected
     expect(bindings).toHaveLength(4);
     expect(bindings[0]).toEqual({
       type: 'service',
@@ -455,9 +448,8 @@ describe('provisionBindings', () => {
   });
 
   it('always injects __PLATFORM_PROJECT_SLUG, for sandbox and non-sandbox projects alike', async () => {
-    // `@builtbyfriends/bwf/email` defaults an outbound `from` to `<slug>+noreply@<domain>` on
-    // EVERY worker, so this is the single unconditional producer — and the
-    // sandbox runtime reads the same name.
+    // Decision: `@builtbyfriends/bwf/email` defaults an outbound `from` to `<slug>+noreply@<domain>` on each
+    // worker, so this binding is injected unconditionally. The sandbox runtime reads the same name.
     const manifest: DeployManifest = { version: 1, bindings: {} };
 
     const bindings = await provisionBindings(
@@ -478,9 +470,8 @@ describe('provisionBindings', () => {
   });
 
   it('injects __PLATFORM_EMAIL_DOMAIN from the configured platform mail domain', async () => {
-    // Per-environment, never hard-coded: production is `mail.buildwf.dev` and
-    // staging `mail.staging.buildwf.dev`, and the proxy validates senders
-    // against its own copy of the same value.
+    // Decision: The domain is per environment (production `mail.buildwf.dev`, staging
+    // `mail.staging.buildwf.dev`), and the proxy checks senders against its own copy of it.
     const manifest: DeployManifest = { version: 1, bindings: {} };
 
     const bindings = await provisionBindings(
@@ -505,9 +496,8 @@ describe('provisionBindings', () => {
   });
 
   it('omits __PLATFORM_EMAIL_DOMAIN entirely when no mail domain is configured', async () => {
-    // Injecting an empty string would build a malformed `slug+noreply@` the
-    // proxy rejects for an unrelated reason. Omitted, the framework fails
-    // naming `__PLATFORM_EMAIL_DOMAIN`, which points straight at the misconfig.
+    // Decision: An empty string would build a malformed `slug+noreply@` that the proxy rejects for an unrelated
+    // reason. Left out, the framework fails naming `__PLATFORM_EMAIL_DOMAIN`, which points at the cause.
     const manifest: DeployManifest = { version: 1, bindings: {} };
 
     const bindings = await provisionBindings(
@@ -536,7 +526,6 @@ describe('provisionBindings', () => {
       { projectSlug: PROJECT_SLUG, proxyToken: PROXY_TOKEN },
     );
 
-    // D1 + 4 platform bindings
     expect(bindings).toHaveLength(5);
     expect(bindings[0]).toEqual({ type: 'd1', name: 'DB', id: 'd1-uuid-123' });
     expect(bindings[1]).toEqual({
@@ -583,7 +572,6 @@ describe('provisionBindings', () => {
 
     expect(createD1Database).not.toHaveBeenCalled();
     expect(createKVNamespace).toHaveBeenCalledOnce();
-    // 2 provisioned + 4 always-injected platform bindings
     expect(bindings).toHaveLength(6);
     expect(bindings[0]).toEqual({ type: 'd1', name: 'DB', id: 'existing-d1-id' });
     expect(bindings[1]).toEqual({ type: 'kv_namespace', name: 'KV', namespace_id: 'kv-id-456' });

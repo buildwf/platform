@@ -69,7 +69,7 @@ function linkSkills(
           continue;
         }
       } catch {
-        // not a symlink
+        // Decision: Not a symlink; the warning below handles it.
       }
       log.warn(`  ${skill.name} — path exists but is not the expected symlink, skipping`);
       continue;

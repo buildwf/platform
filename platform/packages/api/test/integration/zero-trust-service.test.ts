@@ -347,7 +347,6 @@ describe('project Zero Trust reconciliation', () => {
       zeroTrustStatus({ ...bindings, SITE_DOMAIN: 'new.example.com' }, env.db, { check: true }),
     ).resolves.toMatchObject({ checked: true, live: { present: true, drifted: true } });
     cloudflare.fetcher.mockClear();
-    // Reads use saved state unless an operator asks for the live check.
     await expect(
       zeroTrustStatus({ ...bindings, SITE_DOMAIN: 'new.example.com' }, env.db),
     ).resolves.toMatchObject({ enabled: true, status: 'ready', checked: false, live: null });
@@ -377,13 +376,11 @@ describe('project Zero Trust reconciliation', () => {
       destinations: ['void-platform-health.apps.example.com/health'],
     });
     expect(health.name).toMatch(/-platform-health$/);
-    // Only the probe path is exempt; the rest of the hostname stays under the wildcard.
     expect(cloudflare.applications.get(health.id)).toMatchObject({
       domain: 'void-platform-health.apps.example.com/health',
       destinations: [{ type: 'public', uri: 'void-platform-health.apps.example.com/health' }],
       policies: [{ decision: 'bypass', include: [{ everyone: {} }] }],
     });
-    // The exception exists before the wildcard covers its hostname.
     expect(applicationWrites()).toEqual([
       { method: 'POST', domain: 'void-platform-health.apps.example.com/health' },
       { method: 'POST', domain: '*.apps.example.com' },
@@ -406,7 +403,6 @@ describe('project Zero Trust reconciliation', () => {
     cloudflare.fetcher.mockClear();
     await disablePlatformZeroTrust(bindings, env.db);
     const { wildcardApplication } = configured;
-    // The exception outlives the wildcard.
     expect(applicationWrites()).toEqual([
       { method: 'DELETE', domain: wildcardApplication!.id },
       { method: 'DELETE', domain: restored.id },
@@ -457,8 +453,7 @@ describe('project Zero Trust reconciliation', () => {
     await configurePlatformZeroTrust(bindings, env.db, PROTECTED_CONFIGURATION);
     const configured = (await readZeroTrustConfigurationStrict(env.db))!;
     const health = configured.healthApplication!;
-    // An exception saved for the whole hostname would leave every project path
-    // on it outside Access.
+    // Decision: An exception saved for the whole hostname would leave each project path on it outside Access.
     const hostOnly = 'void-platform-health.apps.example.com';
     cloudflare.applications.set(health.id, {
       ...cloudflare.applications.get(health.id),
@@ -476,7 +471,6 @@ describe('project Zero Trust reconciliation', () => {
 
     cloudflare.fetcher.mockClear();
     await reconcilePlatformZeroTrust(bindings, env.db);
-    // Updated in place, so the application keeps its id and audience.
     expect(
       cloudflare.fetcher.mock.calls.some(
         ([input, init]) =>
@@ -517,7 +511,6 @@ describe('project Zero Trust reconciliation', () => {
     ]);
   });
 
-  // Exercises several persisted reconciliation batches across more than 100 projects.
   it('bounds installation work and resumes it on the fast maintenance tier', async () => {
     const owner = await createTestUser(env.db, 'zero-trust-bounded-owner');
     await env.db.insert(projectTable).values(
@@ -567,8 +560,6 @@ describe('project Zero Trust reconciliation', () => {
       operation: { kind: 'configure', phase: 'public-bypasses' },
     });
 
-    // Public projects finish in the public-bypass phase, so the projects
-    // phase has nothing left to repeat and the operation completes.
     await scheduled(controller, bindings, context);
     const completed = (await readZeroTrustConfigurationStrict(env.db))!;
     expect(completed).toMatchObject({ lastError: null, operation: null });
@@ -582,8 +573,6 @@ describe('project Zero Trust reconciliation', () => {
       }
     }
     expect(bypassWrites.size).toBe(101);
-    // Only the project initialized during the operation is written twice:
-    // once at creation and once by the operation batch.
     expect([...bypassWrites.values()].filter((count) => count > 1)).toHaveLength(1);
     expect(
       await env.db

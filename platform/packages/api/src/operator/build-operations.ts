@@ -83,8 +83,8 @@ export async function buildLogs(
     lastSeq: Math.max(since, lastSeq!),
     status: body.status ?? build.status,
     terminal: body.terminal === true || terminal,
-    // A terminal row that was never claimed could not have had a container log
-    // producer. For started builds, terminal status alone is not drain proof.
+    // Decision: A terminal row that was never claimed couldn't have had a container log producer. For started
+    // builds, terminal status alone doesn't prove the logs drained.
     logsComplete: body.logsComplete ?? (terminal && build.started_at === null ? true : null),
   };
 }

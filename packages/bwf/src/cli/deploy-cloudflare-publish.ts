@@ -145,7 +145,7 @@ export async function publishCloudflareWorker(input: {
       execution.reason === 'atomic-readiness-failed' ||
       execution.reason === 'atomic-readiness-access-denied'
     ) {
-      // The atomic publish went live, so the saved candidate chain is stale.
+      // Decision: The atomic publish went live, so the saved candidate chain is stale.
       clearCloudflareCandidate(root);
     }
     await reportCloudflareActivationFailure(
@@ -173,7 +173,7 @@ export async function publishCloudflareWorker(input: {
       migrations: appliedMigrations,
       d1MigrationsCurrent:
         input.migration.migrationHistory !== null && d1MigrateToken !== undefined,
-      // Existing Worker handoffs preserve remote triggers rather than publishing source jobs.
+      // Decision: Existing Worker handoffs keep remote triggers instead of publishing source jobs.
       cronJobs: existingWorker ? undefined : analysis.jobs.length,
       queues: existingWorker ? undefined : desired.queues.length,
     }),

@@ -8,7 +8,6 @@ import {
 } from '../../src/queues/cloudflare-names.ts';
 import { generateQueueResolverSource } from '../../src/queues/dispatch.ts';
 
-/** Run the emitted resolver source and return its lookup function. */
 function resolver(
   queueNames: Array<string>,
   cloudflareNames?: Array<string>,
@@ -93,7 +92,6 @@ describe('Cloudflare queue names', () => {
 
 describe('queue resolver with Cloudflare names', () => {
   it('matches each Cloudflare name exactly where a suffix would pick the wrong queue', () => {
-    // Worker `app-staging` with queues `jobs` and `staging-jobs`.
     const names = ['jobs', 'staging-jobs'];
     const scoped = ['app-staging-jobs', 'app-staging-staging-jobs'];
     expect(resolver(names)('app-staging-jobs')).toBe(1);
@@ -103,7 +101,7 @@ describe('queue resolver with Cloudflare names', () => {
   });
 
   it('prefers a Cloudflare name over an equal plain name', () => {
-    // Worker `x` with queues `jobs` and `x-jobs`: `x-jobs` is the Cloudflare name of `jobs`.
+    // Decision: Worker `x` with queues `jobs` and `x-jobs`: `x-jobs` is the Cloudflare name of `jobs`.
     const exact = resolver(['jobs', 'x-jobs'], ['x-jobs', 'x-x-jobs']);
     expect(exact('x-jobs')).toBe(0);
     expect(exact('x-x-jobs')).toBe(1);

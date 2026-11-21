@@ -73,7 +73,7 @@ function readOrCreateProjectWranglerConfig(root: string): {
     try {
       parsed = parseJsonc(readFileSync(configPath, 'utf-8'));
     } catch {
-      // Can't read, replace with the generated config below.
+      // Decision: A config that can't be read is replaced with the generated config below.
     }
     if (parsed) {
       return { configPath, parsed, created: false };
@@ -204,7 +204,6 @@ type DurableObjectMigration = DurableObjectMigrationStep & {
 /** Latest compatibility date the bwf test suite is pinned against. */
 export const LATEST_KNOWN_COMPAT_DATE = '2026-02-24';
 
-/** Subset of wrangler config fields we extract. */
 export type WranglerCompat = {
   compatibilityDate: string;
   compatibilityFlags?: Array<string>;
@@ -314,9 +313,7 @@ function readWranglerDurableObjectBindings(
         (binding): binding is { name: string; class_name: string } =>
           typeof binding.name === 'string' && typeof binding.class_name === 'string',
       );
-    } catch {
-      // Try the next wrangler config filename.
-    }
+    } catch {}
   }
   return [];
 }
@@ -405,9 +402,7 @@ function readWranglerCompatFields(
     try {
       raw = readFileSync(path, 'utf-8');
       break;
-    } catch {
-      // try next
-    }
+    } catch {}
   }
 
   let wranglerDate: string | undefined;
@@ -426,7 +421,7 @@ function readWranglerCompatFields(
     }
   }
 
-  // Fallback: the build output config written by @cloudflare/vite-plugin.
+  // Decision: Fallback: the build output config written by @cloudflare/vite-plugin.
   let buildDate: string | undefined;
   let buildFlags: Array<string> | undefined;
   if (buildOutputDir) {
@@ -444,7 +439,7 @@ function readWranglerCompatFields(
         buildFlags = buildParsed.compatibility_flags;
       }
     } catch {
-      // no build output wrangler.json
+      // Decision: No build output wrangler.json: the fallback stays unset.
     }
   }
 
@@ -503,15 +498,15 @@ function ensureBwfCompatibilityDate(root: string, rootWrangler: boolean): string
   const filePath = join(root, BWF_CONFIG_FILE);
   if (!existsSync(filePath)) {
     if (existsSync(join(root, 'wrangler.toml'))) {
-      // bwf.config.ts would point the Cloudflare plugin away from wrangler.toml and drop
+      // Decision: bwf.config.ts would point the Cloudflare plugin away from wrangler.toml and drop
       // its bindings, so keep the date in bwf.json.
       const pinned: BwfConfig = { worker: { compatibility_date: LATEST_KNOWN_COMPAT_DATE } };
       writeFileSync(filePath, `${JSON.stringify(pinned, null, 2)}\n`);
     } else if (rootWrangler || projectWranglerPaths(root).some((path) => existsSync(path))) {
-      // A root Wrangler config cannot sit next to bwf.config.ts, so pin the date in it.
+      // Decision: A root Wrangler config cannot sit next to bwf.config.ts, so pin the date in it.
       writeProvisionedWranglerConfig(root, { compatibilityDate: LATEST_KNOWN_COMPAT_DATE });
     } else {
-      // New projects get the date in bwf.config.ts, as `bwf init` writes it.
+      // Decision: New projects get the date in bwf.config.ts, as `bwf init` writes it.
       writeBwfProjectConfig(root, { worker: { compatibility_date: LATEST_KNOWN_COMPAT_DATE } });
       ignoreMaterializedCloudflareConfig(root);
     }
@@ -587,7 +582,7 @@ export function syncWranglerBindings(
     }
   }
 
-  // Workers AI has no local simulator, so direct Cloudflare development binds it remotely.
+  // Decision: Workers AI has no local simulator, so direct Cloudflare development binds it remotely.
   // Managed projects keep using bwf's proxy and gain no billable binding.
   if (bindings.needsAI && options?.directCloudflareAi) {
     const existing = parsed.ai as Record<string, unknown> | undefined;
@@ -615,7 +610,7 @@ export function syncWranglerBindings(
   }
 
   if (options?.websockets) {
-    // Never remove a binding or emit `deleted_classes` for a removed route: that can break
+    // Decision: Never remove a binding or emit `deleted_classes` for a removed route: that can break
     // the next upload or destroy the class's SQLite storage. The compiler exports a tombstone.
     const existing = durableObjectBindingsOf(parsed);
     const migrations = Array.isArray(parsed.migrations)
@@ -947,7 +942,7 @@ function readManagedQueueProvenance(text: string): ManagedQueueProvenance {
       pendingConsumerRemovals: strings(parsed.pendingConsumerRemovals),
     };
   } catch {
-    // A malformed marker proves no ownership. Fail safe by retaining every entry.
+    // Decision: A malformed marker proves no ownership. Fail safe by retaining every entry.
     return none;
   }
 }
@@ -1041,7 +1036,7 @@ export function writeProvisionedWranglerConfig(
 ): WriteProvisionedWranglerResult {
   const configPath = options?.configPath ?? discoverWranglerConfigPath(root);
 
-  // Wrangler strips a leading BOM before parsing. Strip it for editing and restore it on write.
+  // Decision: Wrangler strips a leading BOM before parsing. Strip it for editing and restore it on write.
   const rawContent = existsSync(configPath) ? readFileSync(configPath, 'utf-8') : '{}';
   const hasBom = rawContent.startsWith(UTF8_BOM);
   const original = hasBom ? rawContent.slice(UTF8_BOM.length) : rawContent;
@@ -1050,20 +1045,20 @@ export function writeProvisionedWranglerConfig(
   try {
     parsed = parseJsonc(original);
   } catch (error) {
-    // Never treat an unparseable config as `{}`: the only-if-absent upserts would clobber it.
+    // Decision: Never treat an unparseable config as `{}`: the only-if-absent upserts would clobber it.
     throw new Error(
       `deploy: cannot update "${configPath}" — it is not valid JSON/JSONC. ` +
         `Fix the file and retry. (${(error as Error).message})`,
     );
   }
 
-  // With a duplicate key, `parse()` reads the last member (as Wrangler does) but `modify()`
+  // Decision: With a duplicate key, `parse()` reads the last member (as Wrangler does) but `modify()`
   // edits the first, so an upsert would silently not apply.
   assertNoDuplicateMembers(original, configPath);
 
   const formattingOptions = detectFormattingOptions(original);
   let text = original;
-  // Paths overwritten with a scalar. If one held an object/array, `modify()` dropped its
+  // Decision: Paths overwritten with a scalar. If one held an object/array, `modify()` dropped its
   // nested comments; the final comment gate uses these paths to name the field.
   const scalarSetPaths: Array<Array<string | number>> = [];
   const set = (path: Array<string | number>, value: unknown): void => {
@@ -1071,7 +1066,7 @@ export function writeProvisionedWranglerConfig(
     text = applyMemberEdit(text, path, value, { formattingOptions });
   };
 
-  // Always overwrite account_id so a re-resolve can correct a stale value.
+  // Decision: Always overwrite account_id so a re-resolve can correct a stale value.
   if (patch.accountId !== undefined) {
     set(['account_id'], patch.accountId);
   }
@@ -1105,7 +1100,7 @@ export function writeProvisionedWranglerConfig(
     }
   }
 
-  // Binding name -> owner label for the producer guard, built from the current text on first use.
+  // Decision: Binding name -> owner label for the producer guard, built from the current text on first use.
   let workerBindingOwners: Map<string, string> | undefined;
 
   if (patch.webSockets && patch.webSockets.length > 0) {
@@ -1197,7 +1192,7 @@ export function writeProvisionedWranglerConfig(
     }
   }
 
-  // Upsert the supplied properties into the entry keyed by `identityKey`, or append one.
+  // Decision: Upsert the supplied properties into the entry keyed by `identityKey`, or append one.
   // Runs before migrations_dir so a D1 entry created here is matched there.
   const upsertAdoptedBinding = (
     field: string,
@@ -1205,10 +1200,10 @@ export function writeProvisionedWranglerConfig(
     properties: Record<string, string>,
     identityKey: 'binding' | 'name' = 'binding',
   ): void => {
-    // Re-parse so an adopt earlier in this call is seen.
+    // Decision: Re-parse so an adopt earlier in this call is seen.
     const currentConfig = parseJsonc(text);
     const rawList = currentConfig[field];
-    // The owner collector below excludes this field, so validate its shape here.
+    // Decision: The owner collector below excludes this field, so validate its shape here.
     bindingNamesForField(field, rawList);
     const currentList = Array.isArray(rawList) ? [...rawList] : [];
     const matches: Array<{ index: number; entry: Record<string, unknown> }> = [];
@@ -1225,7 +1220,7 @@ export function writeProvisionedWranglerConfig(
           `wrangler rejects duplicate binding names. Remove the duplicate and retry.`,
       );
     }
-    // A name shared with another binding type is undeployable, whether this entry is new or not.
+    // Decision: A name shared with another binding type is undeployable, whether this entry is new or not.
     const owners = collectWorkerBindingNames(configWithoutField(currentConfig, field));
     addQueueProducerOwners(owners, currentConfig);
     const owner = owners.get(binding);
@@ -1312,7 +1307,7 @@ export function writeProvisionedWranglerConfig(
             `and retry.`,
         );
       }
-      // Once set, `migrations_dir` is user-owned: rewriting it would strand their migrations.
+      // Decision: Once set, `migrations_dir` is user-owned: rewriting it would strand their migrations.
       const existingDir = d1Entries[index].migrations_dir;
       if (existingDir !== undefined && typeof existingDir !== 'string') {
         throw new Error(
@@ -1333,7 +1328,7 @@ export function writeProvisionedWranglerConfig(
               `move the migrations and keep your directory, then retry.`,
           );
         }
-        // An equivalent spelling (`./db/migrations`, a trailing slash, an absolute path) is
+        // Decision: An equivalent spelling (`./db/migrations`, a trailing slash, an absolute path) is
         // kept as written.
       } else {
         if (
@@ -1371,7 +1366,7 @@ export function writeProvisionedWranglerConfig(
     if (!entries || entries.length === 0) {
       return;
     }
-    // Re-parse so earlier edits are seen; appends are tracked locally to keep indices valid.
+    // Decision: Re-parse so earlier edits are seen; appends are tracked locally to keep indices valid.
     const currentQueues = assertObjectContainer(parseJsonc(text).queues, 'queues');
     const currentList =
       section === 'producers'
@@ -1380,7 +1375,7 @@ export function writeProvisionedWranglerConfig(
           ? [...(currentQueues.consumers as Array<Record<string, unknown>>)]
           : [];
     for (const entry of entries) {
-      // A producer binding maps to exactly one queue, so every producer with the binding is
+      // Decision: A producer binding maps to exactly one queue, so every producer with the binding is
       // checked: none appends, one must name the same queue, more than one fails closed.
       let index: number;
       if (section === 'producers') {
@@ -1399,7 +1394,7 @@ export function writeProvisionedWranglerConfig(
               `this config. Remove the duplicate producers and retry.`,
           );
         }
-        // A producer bwf wrote earlier may move to the queue's new name; the update below
+        // Decision: A producer bwf wrote earlier may move to the queue's new name; the update below
         // rewrites its `queue` in place.
         const bwfOwned =
           reconcileManagedQueues && managedProducerBindings.has(String(entry.binding));
@@ -1416,7 +1411,7 @@ export function writeProvisionedWranglerConfig(
           }
         }
         index = matches.length === 1 ? matches[0] : -1;
-        // Check matched producers too: a cross-type collision is undeployable either way.
+        // Decision: Check matched producers too: a cross-type collision is undeployable either way.
         workerBindingOwners ??= collectWorkerBindingNames(parseJsonc(text));
         const bindingName = String(entry.binding);
         const owner = workerBindingOwners.get(bindingName);
@@ -1439,14 +1434,14 @@ export function writeProvisionedWranglerConfig(
         if (entry.max_concurrency !== undefined) {
           managedConsumerConcurrencyQueues.add(entry.queue);
         } else if (managedConsumerConcurrencyQueues.delete(entry.queue) && index >= 0) {
-          // Removing the export restores autoscaling without clearing a cap bwf never wrote.
+          // Decision: Removing the export restores autoscaling without clearing a cap bwf never wrote.
           set(['queues', section, index, 'max_concurrency'], undefined);
           delete currentList[index].max_concurrency;
         }
       }
 
       if (index >= 0) {
-        // Set only the supplied properties: replacing the element would drop comments and
+        // Decision: Set only the supplied properties: replacing the element would drop comments and
         // user-tuned fields such as `dead_letter_queue`.
         const existing = currentList[index];
         for (const [key, value] of Object.entries(entry)) {
@@ -1529,7 +1524,7 @@ export function writeProvisionedWranglerConfig(
     }
   }
 
-  // A var name is also a binding name, so it must not collide with another binding type.
+  // Decision: A var name is also a binding name, so it must not collide with another binding type.
   if (patch.vars) {
     const currentConfig = parseJsonc(text);
     bindingNamesForField('vars', currentConfig.vars);
@@ -1552,7 +1547,7 @@ export function writeProvisionedWranglerConfig(
     }
   }
 
-  // `addresses` skips `set()`: it is composite by design, so the final gate's "expected a
+  // Decision: `addresses` skips `set()`: it is composite by design, so the final gate's "expected a
   // string" diagnosis would be wrong. A dropped nested comment still fails that gate.
   if (patch.addresses !== undefined) {
     const currentAddresses = parseJsonc(text).addresses;
@@ -1563,7 +1558,7 @@ export function writeProvisionedWranglerConfig(
     }
   }
 
-  // Every comment's text must survive (relocation only moves it). Refuse to write otherwise.
+  // Decision: Every comment's text must survive (relocation only moves it). Refuse to write otherwise.
   const droppedComment = findDroppedComment(
     extractCommentTokens(original),
     extractCommentTokens(text),
@@ -1838,12 +1833,12 @@ function applyMemberEdit(
     return plain();
   }
 
-  // Only an append can separate a sibling from its trailing comment.
+  // Decision: Only an append can separate a sibling from its trailing comment.
   if (!options.isArrayInsertion && findNodeAtLocation(root, path) !== undefined) {
     return plain();
   }
 
-  // A missing container is created inside the deepest existing ancestor, which then
+  // Decision: A missing container is created inside the deepest existing ancestor, which then
   // receives the new member.
   let receivingPath = path.slice(0, -1);
   let container = findNodeAtLocation(root, receivingPath);
@@ -1856,7 +1851,7 @@ function applyMemberEdit(
     return plain();
   }
 
-  // jsonc-parser appends both new object properties and new array elements after
+  // Decision: jsonc-parser appends both new object properties and new array elements after
   // the container's current last member, so that member is the preceding sibling.
   const last = members[members.length - 1];
   const trailing = readTrailingComment(text, last.offset + last.length);
@@ -1864,7 +1859,7 @@ function applyMemberEdit(
     return plain();
   }
 
-  // Strip the comment (and the comma before it), edit, then re-attach it after the new comma.
+  // Decision: Strip the comment (and the comma before it), edit, then re-attach it after the new comma.
   const stripped = text.slice(0, last.offset + last.length) + text.slice(trailing.end);
   const rewritten = applyEdits(stripped, modify(stripped, path, value, options));
 
@@ -1872,10 +1867,10 @@ function applyMemberEdit(
   const newContainer = newRoot ? findNodeAtLocation(newRoot, receivingPath) : undefined;
   const newMembers = newContainer?.children;
   if (!newRoot || !newContainer || !newMembers || newMembers.length < 2) {
-    // We just appended, so this should not happen; fall back rather than corrupt.
+    // Decision: We just appended, so this should not happen; fall back rather than corrupt.
     return plain();
   }
-  // The appended member is last; its predecessor is the sibling we relocate onto.
+  // Decision: The appended member is last; its predecessor is the sibling we relocate onto.
   const sibling = newMembers[newMembers.length - 2];
   const commaPos = rewritten.indexOf(',', sibling.offset + sibling.length);
   if (commaPos === -1) {
@@ -1883,7 +1878,7 @@ function applyMemberEdit(
   }
   const relocated = `${rewritten.slice(0, commaPos + 1)} ${trailing.text}${rewritten.slice(commaPos + 1)}`;
 
-  // Relocation may only move a comment. If the result does not parse or its data differs
+  // Decision: Relocation may only move a comment. If the result does not parse or its data differs
   // from the plain edit, use the plain edit.
   const plainResult = plain();
   let relocatedParsed: Record<string, unknown>;
@@ -1940,7 +1935,7 @@ function removeMember(
         ? preceding
         : undefined;
 
-  // Splice the higher range first so the lower offsets stay valid.
+  // Decision: Splice the higher range first so the lower offsets stay valid.
   const ranges = [{ offset: start, length: end - start }];
   if (comma) {
     ranges.push({ offset: comma.offset, length: comma.length });
@@ -1951,7 +1946,7 @@ function removeMember(
     spliced = spliced.slice(0, range.offset) + spliced.slice(range.offset + range.length);
   }
 
-  // Drop the member's line when only whitespace is left (LF, CRLF or CR endings).
+  // Decision: Drop the member's line when only whitespace is left (LF, CRLF or CR endings).
   // `cursor` is the member's start in the spliced text.
   const cursor = comma && comma.offset < start ? start - comma.length : start;
   let lineStart = cursor;
@@ -1999,7 +1994,7 @@ function readTrailingComment(
     }
   }
   if (text[i] === '/' && text[i + 1] === '/') {
-    // End at CR or LF, so a CR-only file cannot swallow the closing brace.
+    // Decision: End at CR or LF, so a CR-only file cannot swallow the closing brace.
     let end = i;
     while (end < text.length && text[end] !== '\n' && text[end] !== '\r') {
       end++;
@@ -2012,7 +2007,7 @@ function readTrailingComment(
       return undefined;
     }
     const end = close + 2;
-    // Only a single-line block comment can be relocated.
+    // Decision: Only a single-line block comment can be relocated.
     const slice = text.slice(i, end);
     if (slice.includes('\n') || slice.includes('\r')) {
       return undefined;
@@ -2202,7 +2197,7 @@ function collectWorkerBindingNames(config: Record<string, unknown>): Map<string,
       claim(name, friendly);
     }
   }
-  // Wrangler also counts `secrets.required` as binding names, under "Secret".
+  // Decision: Wrangler also counts `secrets.required` as binding names, under "Secret".
   const secrets = assertObjectContainer(config.secrets, 'secrets');
   if (secrets && secrets.required !== undefined) {
     if (!Array.isArray(secrets.required)) {
@@ -2224,7 +2219,6 @@ function collectWorkerBindingNames(config: Record<string, unknown>): Map<string,
   return owners;
 }
 
-/** A shallow copy of `config` without `field`. */
 function configWithoutField(
   config: Record<string, unknown>,
   field: string,
@@ -2375,11 +2369,11 @@ const BINDING_FIELD_SHAPES: Record<string, BindingFieldShape> = {
   media: { kind: 'singleton', bindingRequired: true },
   websearch: { kind: 'singleton', bindingRequired: true },
   version_metadata: { kind: 'singleton', bindingRequired: true },
-  // An assets directory without a binding is valid.
+  // Decision: An assets directory without a binding is valid.
   assets: { kind: 'singleton', bindingRequired: false },
   durable_objects: { kind: 'binding-list', bindingsRequired: true },
   logfwdr: { kind: 'binding-list', bindingsRequired: true },
-  // `unsafe` may carry only `metadata`.
+  // Decision: `unsafe` may carry only `metadata`.
   unsafe: { kind: 'binding-list', bindingsRequired: false },
 };
 

@@ -4,12 +4,9 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 import { loadUserEnvFile } from '../../src/host/load-user-env.ts';
 
-/**
- * Coverage for the env.ts loader. The loader uses Node's native `import()`,
- * so only relative + bare-package imports resolve. tsconfig path aliases
- * are intentionally unsupported — they get detected and produce a friendly
- * error with a pointer to the offending specifier.
- */
+// Decision: The loader uses Node's native `import()`, so only relative and bare-package imports resolve.
+// tsconfig path aliases are intentionally unsupported: they're detected and give an error that
+// points at the offending specifier.
 
 const roots: Array<string> = [];
 
@@ -78,8 +75,8 @@ describe('loadUserEnvFile', () => {
   it('gives a targeted hint when env.ts imports through a tsconfig path alias', async () => {
     const root = createTempProject();
     const envPath = join(root, 'env.ts');
-    // `@/shared/env-keys` is the classic tsconfig-paths shape: starts with
-    // `@` but has no scope segment, so it isn't a valid bare package.
+    // Decision: `@/shared/env-keys` is the usual tsconfig-paths shape: it starts with `@` but has no scope
+    // segment, so it isn't a valid bare package.
     writeFileSync(envPath, 'import { X } from "@/shared/env-keys";\nconsole.log(X);\n');
 
     await expect(loadUserEnvFile(envPath)).rejects.toThrow(
@@ -90,9 +87,8 @@ describe('loadUserEnvFile', () => {
   it('does not add the alias hint for a genuine missing bare package', async () => {
     const root = createTempProject();
     const envPath = join(root, 'env.ts');
-    // `@scope/name` is scoped-package-shaped — a missing module of this
-    // form is a real dependency problem, not an alias, so we shouldn't
-    // mislead the user with alias guidance.
+    // Decision: `@scope/name` is scoped-package-shaped: a missing module of this form is a real dependency
+    // problem, not an alias, so alias guidance would mislead the user.
     writeFileSync(envPath, 'import "@definitely-not-installed/pkg";\n');
 
     await expect(loadUserEnvFile(envPath)).rejects.toThrow(/Failed to load.*env\.ts/s);

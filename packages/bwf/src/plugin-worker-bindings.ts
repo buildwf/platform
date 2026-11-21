@@ -117,7 +117,7 @@ export function mergeWorkerBindings(
   );
   const result: Record<string, unknown> = { ...workerConfig };
 
-  // The Cloudflare plugin defu-merges this patch over resolved, concatenating arrays.
+  // Decision: The Cloudflare plugin defu-merges this patch over resolved, concatenating arrays.
   // Flags read from the root config therefore occur in both inputs. Emit their union
   // once and clear only the in-memory fallback so uploads never repeat a flag.
   result.compatibility_flags = [
@@ -157,7 +157,7 @@ export function mergeWorkerBindings(
     }
   }
 
-  // bwf owns the generated asset routing policy. Replace stale root
+  // Decision: bwf owns the generated asset routing policy. Replace stale root
   // wrangler settings instead of letting the Cloudflare plugin concatenate
   // them with generated rules. This preserves static-first behavior for
   // API-only apps while avoiding asset-served HTML bypassing middleware.
@@ -166,7 +166,6 @@ export function mergeWorkerBindings(
     delete (resolved.assets as Record<string, unknown>).run_worker_first;
   }
 
-  // D1 — auth requires the app DB only for sqlite apps
   const d1Name = bindingNames?.d1 ?? 'DB';
   const d1: Array<Record<string, unknown>> = [];
   if (
@@ -189,13 +188,12 @@ export function mergeWorkerBindings(
     result.kv_namespaces = kv;
   }
 
-  // R2
   const r2Name = bindingNames?.r2 ?? 'STORAGE';
   if (bindings.needsR2 && !hasBinding(resolved.r2_buckets, r2Name)) {
     result.r2_buckets = [{ binding: r2Name, bucket_name: 'default' }];
   }
 
-  // Workers Analytics Engine: procedures record one event per call. A dataset is
+  // Decision: Workers Analytics Engine: procedures record one event per call. A dataset is
   // created on its first write, so nothing is provisioned for it.
   const analyticsDatasets = (resolved as { analytics_engine_datasets?: Array<{ binding: string }> })
     .analytics_engine_datasets;
@@ -207,7 +205,7 @@ export function mergeWorkerBindings(
     ];
   }
 
-  // Workers AI has no local simulator, so direct Cloudflare dev uses the remote
+  // Decision: Workers AI has no local simulator, so direct Cloudflare dev uses the remote
   // binding; an authored root binding only gains `remote: true`. Managed and
   // unsaved dev projects use the bwf proxy below.
   const resolvedAi = (resolved as { ai?: unknown }).ai;
@@ -237,7 +235,7 @@ export function mergeWorkerBindings(
     };
   }
 
-  // AI binding name / Gateway id → runtime vars (harmless in serve; only read
+  // Decision: AI binding name / Gateway id → runtime vars (harmless in serve; only read
   // by the direct backend). The default binding needs no extra variable.
   if (aiBindingName !== 'AI' || config.ai?.gateway) {
     const vars = (result.vars as Record<string, string>) ?? {};
@@ -250,7 +248,7 @@ export function mergeWorkerBindings(
     result.vars = vars;
   }
 
-  // This patch never adds a send binding. In dev, the inbox buffer lives in the
+  // Decision: This patch never adds a send binding. In dev, the inbox buffer lives in the
   // Vite process, so `sendEmail` loops back through the assets binding and
   // sends the dev-trigger token the inbox requires.
   const emailDevInboxBinding =
@@ -263,7 +261,7 @@ export function mergeWorkerBindings(
     result.vars = vars;
   }
 
-  // Serve with `@builtbyfriends/bwf/email`: drop only the reserved SEND_EMAIL entry so the dev
+  // Decision: Serve with `@builtbyfriends/bwf/email`: drop only the reserved SEND_EMAIL entry so the dev
   // inbox stays the only sink; other send_email bindings are the user's. The
   // patch is defu-merged over `resolved`, so mutating it is the only removal.
   if (viteCommand === 'serve' && bindings.needsEmail) {
@@ -280,7 +278,7 @@ export function mergeWorkerBindings(
     }
   }
 
-  // Serve only: on build the root wrangler config owns __PLATFORM_EMAIL_FROM, which
+  // Decision: Serve only: on build the root wrangler config owns __PLATFORM_EMAIL_FROM, which
   // `bwf deploy --platform cloudflare` writes once the domain is ready.
   if (viteCommand === 'serve' && config.email?.from) {
     const vars = (result.vars as Record<string, string>) ?? {};
@@ -288,7 +286,7 @@ export function mergeWorkerBindings(
     result.vars = vars;
   }
 
-  // Queues — producer + consumer bindings. `bwf deploy` picks the Cloudflare names; every
+  // Decision: Queues — producer + consumer bindings. `bwf deploy` picks the Cloudflare names; every
   // other run uses the plain names.
   if (queues.length > 0) {
     const cloudflareNames = viteCommand === 'build' ? readDeployBuildQueueNames() : undefined;
@@ -405,7 +403,7 @@ export function mergeWorkerBindings(
   if (bindings.needsSandbox && sandboxConfig) {
     assertSandboxNamespaceConfig({ ...resolved, ...result }, sandboxConfig);
     const existingDurableObjectBindings = currentDurableObjectBindings(result, resolved);
-    // An attached container belongs to the app's own Durable Object, which already has its
+    // Decision: An attached container belongs to the app's own Durable Object, which already has its
     // binding and SQLite migration.
     if (
       !isSandboxAttached(sandboxConfig) &&
@@ -432,7 +430,7 @@ export function mergeWorkerBindings(
       ...existingContainers.filter((container) => container.class_name !== sandboxConfig.className),
       sandboxContainerConfig(sandboxConfig),
     ];
-    // Cloudflare concatenates callback arrays with the resolved config. This
+    // Decision: Cloudflare concatenates callback arrays with the resolved config. This
     // patch already contains every existing Container, so emit the list once.
     (resolved as Record<string, unknown>).containers = [];
 
@@ -477,12 +475,11 @@ export function mergeWorkerBindings(
     }
   }
 
-  // AI — in local dev, inject bwf credentials for the HTTPS proxy path.
+  // Decision: AI — in local dev, inject bwf credentials for the HTTPS proxy path.
   // In production, the platform adds a __PLATFORM_PROXY service binding instead.
   if (viteCommand === 'serve' && bindings.needsAI && !directCloudflareDestination) {
     const credentials = readBwfDevCredentials(root);
     if (credentials.status === 'ok') {
-      // Prefer HTTPS proxy — inject credentials, skip direct AI binding
       const vars = (result.vars as Record<string, string>) ?? {};
       vars.__PLATFORM_TOKEN = credentials.token;
       vars.__PLATFORM_PROJECT_ID = credentials.projectId;
@@ -494,7 +491,7 @@ export function mergeWorkerBindings(
     }
   }
 
-  // Remote bindings — inject proxy credentials when remote mode is enabled.
+  // Decision: Remote bindings — inject proxy credentials when remote mode is enabled.
   // In remote mode, D1/KV/R2 bindings are replaced with proxy-backed versions
   // that forward operations to the platform proxy over HTTPS.
   if (

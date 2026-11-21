@@ -8,20 +8,14 @@ import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
 
-// Claim a PRIVATE work dir before the agent module is imported anywhere in this
-// file — `WORK_DIR` is read once, at import. build-manager.test.ts wipes and
-// rewrites the default `/tmp/build/src` in its own `beforeEach`, and vitest runs
-// the two files in parallel workers, so sharing that path is a cross-file race.
+// Decision: Claim a private work dir before the agent module is imported, because `WORK_DIR` is read once at
+// import. build-manager.test.ts wipes and rewrites the default `/tmp/build/src` in its own
+// `beforeEach`, and vitest runs the two files in parallel workers, so sharing that path races.
 process.env.PLATFORM_BUILD_WORK_DIR = join(tmpdir(), `platform-source-download-${process.pid}`);
 
-// The source download needs its own deadlines: a GitHub tarball stream can
-// degrade to short bursts separated by dead minutes, and undici's `bodyTimeout`
-// resets on every chunk, so a trickle defeats it.
-//
-// These tests pin the retry POLICY, which is the part that has to be right:
-// what retries, what does not, that a retry starts from an empty tree, and that
-// the whole phase is bounded. Timers are real, so every value here is in
-// milliseconds and tiny.
+// Decision: The source download needs its own deadlines: a GitHub tarball stream can degrade to short bursts
+// separated by dead minutes, and undici's `bodyTimeout` resets on each chunk, so a trickle defeats
+// it. Timers are real here, so the values are tiny and in milliseconds.
 describe('build-agent source download bounds', () => {
   let agent: typeof import('../../container/build-agent.mjs');
 
@@ -37,11 +31,9 @@ describe('build-agent source download bounds', () => {
     delete process.env.SOURCE_TOKEN;
   });
 
-  /** Log lines recorded so far, agent prefix stripped. */
   const lines = () =>
     agent.getBufferedLogLines().map((entry) => entry.line.replace('[build-agent] ', ''));
 
-  /** A fetch stub that answers `statuses[n]` for attempt n, then 200 forever. */
   const fetchStub = (statuses: Array<number>) => {
     let call = 0;
     return (() => {
@@ -56,7 +48,6 @@ describe('build-agent source download bounds', () => {
 
   const okFetch = fetchStub([]);
 
-  /** Like `fetchStub`, but the first answer carries headers. */
   const fetchStubWithHeaders = (status: number, headers: Record<string, string>) => {
     let call = 0;
     return (() => {
@@ -84,9 +75,6 @@ describe('build-agent source download bounds', () => {
       extract: (_body, options) => {
         attempts++;
         if (attempts === 1) {
-          // A dead stream: never delivers a byte, never settles on its own.
-          // If broken: with no stall guard this promise hangs forever and
-          // the test times out.
           return new Promise((_resolve, reject) => {
             options?.signal?.addEventListener('abort', () => reject(new Error('stream aborted')));
           });
@@ -116,9 +104,8 @@ describe('build-agent source download bounds', () => {
       maxAttempts: 2,
       extract: async (_body, options) => {
         attempts++;
-        // Ten chunks, each well inside the stall window but slow overall. A
-        // per-attempt wall clock or a throughput floor would kill this; the stall
-        // guard must not, or every large repo on a slow link starts failing.
+        // Decision: Ten chunks, each inside the stall window but slow overall. A per-attempt wall clock or a
+        // throughput floor would kill this. The stall guard mustn't, or large repos on slow links fail.
         for (let i = 0; i < 10; i++) {
           await new Promise((resolve) => setTimeout(resolve, 20));
           options?.onBytes?.(4096);
@@ -130,10 +117,8 @@ describe('build-agent source download bounds', () => {
   });
 
   it('retries a raw network failure from fetch', async () => {
-    // `fetch` rejecting with `TypeError: fetch failed` is the most ordinary
-    // transient failure there is. It carries no classification of its own, so an
-    // untagged error MUST default to retryable — otherwise the retry loop breaks
-    // on the single most common thing it exists to survive.
+    // Decision: `fetch` rejecting with `TypeError: fetch failed` is the most common transient failure, and it
+    // carries no classification, so an untagged error defaults to retryable.
     let calls = 0;
     const flakyFetch = (() => {
       calls++;
@@ -163,7 +148,7 @@ describe('build-agent source download bounds', () => {
   });
 
   it('retries a body stream that errors mid-transfer', async () => {
-    // Bytes flow, then the socket errors. `pipeline` rejects with the raw stream error, not an abort.
+    // Decision: Bytes flow, then the socket errors. `pipeline` rejects with the raw stream error, not an abort.
     let attempts = 0;
 
     await agent.downloadSource({
@@ -204,8 +189,8 @@ describe('build-agent source download bounds', () => {
       }),
     ).rejects.toThrow('source download failed: HTTP 404');
 
-    // 401/403/404/410 mean a bad token or a missing ref. Retrying cannot change
-    // that, and each retry costs budget the build still needs.
+    // Decision: 401/403/404/410 mean a bad token or a missing ref. Retrying can't change that, and each retry
+    // spends budget the build still needs.
     expect(attempts).toBe(0);
     expect(lines()).not.toContainEqual(expect.stringContaining('retrying in'));
   });
@@ -254,8 +239,8 @@ describe('build-agent source download bounds', () => {
       },
     });
 
-    // A stalled attempt leaves a half-extracted archive behind; the reset keeps the
-    // next `tar` from unpacking on top of it.
+    // Decision: A stalled attempt leaves a half-extracted archive behind. The reset keeps the next `tar` from
+    // unpacking on top of it.
     expect(order).toEqual(['reset', 'reset', 'extract']);
   });
 
@@ -280,8 +265,6 @@ describe('build-agent source download bounds', () => {
       }),
     ).rejects.toThrow(/source download/);
 
-    // The point of the budget: a stream that never quite looks dead still cannot
-    // hold the build. Far fewer than 10 attempts fit in 120ms.
     expect(attempts).toBeGreaterThan(0);
     expect(attempts).toBeLessThan(10);
   });
@@ -326,8 +309,8 @@ describe('build-agent source download bounds', () => {
       },
     });
 
-    // Periodic progress lines keep a stall distinguishable from a busy build in
-    // both the live tail and the check-run tail.
+    // Decision: Periodic progress lines tell a stall apart from a busy build in both the live tail and the
+    // check-run tail.
     const progress = lines().filter((line) => line.startsWith('downloading source:'));
     expect(progress.length).toBeGreaterThanOrEqual(2);
     expect(progress[0]).toMatch(/downloading source: [\d.]+ (B|KB|MB) in \d+m?s \(.+\/s\)/);
@@ -337,15 +320,13 @@ describe('build-agent source download bounds', () => {
   });
 
   it('counts a slow WORK_DIR reset against the phase budget', async () => {
-    // The reset is real I/O on the timed path. Checking the deadline only BEFORE it
-    // let a slow cleanup hand the next attempt a budget that was already spent, so
-    // the phase quietly overran the ceiling it advertises.
+    // Decision: The reset is real I/O on the timed path. Checking the deadline only before it let a slow cleanup
+    // hand the next attempt a budget that was already spent, so the phase overran its ceiling.
     let attempts = 0;
 
     await expect(
       agent.downloadSource({
         fetchImpl: okFetch,
-        // Slower than the whole budget.
         resetWorkDir: () => new Promise((resolve) => setTimeout(resolve, 80)),
         sleep: () => Promise.resolve(),
         stallTimeoutMs: 5000,
@@ -360,8 +341,6 @@ describe('build-agent source download bounds', () => {
       }),
     ).rejects.toThrow(/budget/);
 
-    // If broken: with the deadline checked only before the reset, the first
-    // attempt runs after the budget is gone and the download "succeeds" late.
     expect(attempts).toBe(0);
   });
 
@@ -376,18 +355,15 @@ describe('build-agent source download bounds', () => {
     expect(agent.isRetryableSourceStatus(410)).toBe(false);
   });
 
-  // GitHub answers 403 for a permission failure AND for both kinds of rate limit.
-  // Only the headers separate them, so status alone must not settle a 403.
+  // Decision: GitHub answers 403 for a permission failure and for both kinds of rate limit. Only the headers
+  // tell them apart, so the status alone can't settle a 403.
   it('retries a rate-limited 403 but not a permission 403', () => {
     expect(agent.isRetryableSourceStatus(403)).toBe(false);
     expect(agent.isRetryableSourceStatus(403, new Headers())).toBe(false);
-    // Secondary rate limit.
     expect(agent.isRetryableSourceStatus(403, new Headers({ 'retry-after': '60' }))).toBe(true);
-    // Primary rate limit.
     expect(agent.isRetryableSourceStatus(403, new Headers({ 'x-ratelimit-remaining': '0' }))).toBe(
       true,
     );
-    // Secondary rate limit, named only in the body.
     expect(
       agent.isRetryableSourceStatus(
         403,
@@ -395,7 +371,6 @@ describe('build-agent source download bounds', () => {
         '{"message":"You have exceeded a secondary rate limit."}',
       ),
     ).toBe(true);
-    // Quota left, no delay asked for: a real permission failure.
     expect(
       agent.isRetryableSourceStatus(403, new Headers({ 'x-ratelimit-remaining': '4999' })),
     ).toBe(false);
@@ -407,7 +382,7 @@ describe('build-agent source download bounds', () => {
     expect(
       agent.parseRetryAfterMs(new Headers({ 'retry-after': 'Thu, 20 Aug 2026 12:01:00 GMT' }), now),
     ).toBe(60_000);
-    // Epoch SECONDS, not ms — and ONLY when the quota is actually spent.
+    // Decision: GitHub's reset header is in epoch seconds, not ms, and counts only when the quota is spent.
     expect(
       agent.parseRetryAfterMs(
         new Headers({
@@ -417,8 +392,8 @@ describe('build-agent source download bounds', () => {
         now,
       ),
     ).toBe(45_000);
-    // Quota left: a routine reset riding along on an ordinary error is NOT a
-    // delay. If broken: this returns an hour and kills the retry.
+    // Decision: With quota left, a routine reset header on an ordinary error isn't a delay. Reading it as one
+    // would return an hour and kill the retry.
     expect(
       agent.parseRetryAfterMs(
         new Headers({
@@ -428,7 +403,6 @@ describe('build-agent source download bounds', () => {
         now,
       ),
     ).toBe(null);
-    // A reset already in the past means retry now, never a negative sleep.
     expect(
       agent.parseRetryAfterMs(
         new Headers({
@@ -465,8 +439,8 @@ describe('build-agent source download bounds', () => {
     });
 
     expect(extracts).toBe(1);
-    // The server's 3s, NOT the 50ms fixed backoff. Retrying sooner deepens a
-    // secondary rate limit rather than clearing it.
+    // Decision: Use the server's 3s, not the 50ms fixed backoff. Retrying sooner deepens a secondary rate limit
+    // instead of clearing it.
     expect(slept).toEqual([3000]);
   });
 
@@ -489,15 +463,13 @@ describe('build-agent source download bounds', () => {
       }),
     ).rejects.toThrow('source download failed: HTTP 403');
 
-    // A ten-minute wait does not fit a five-second phase; the build fails fast
-    // instead of parking a container on a rate limit it cannot outlast.
     expect(slept).toEqual([]);
   });
 
   it('does not let a routine rate-limit header turn a 500 into a fatal error', async () => {
-    // GitHub sends x-ratelimit-* on EVERY response, quota spent or not. Honouring
-    // a reset an hour out makes the backoff overshoot the phase budget, so the
-    // loop breaks — failing a plainly retryable 500 on its first attempt.
+    // Decision: GitHub sends x-ratelimit-* on each response, whether the quota is spent or not. Honoring a reset
+    // an hour out makes the backoff overshoot the phase budget, so a retryable 500 fails on its first
+    // attempt.
     let calls = 0;
     const slept: Array<number> = [];
     const now = Date.now();
@@ -534,13 +506,12 @@ describe('build-agent source download bounds', () => {
     });
 
     expect(calls).toBe(2);
-    // The FIXED backoff, not the hour-away routine reset.
     expect(slept).toEqual([50]);
   });
 
   it('retries a secondary rate limit that carries no rate-limit headers', async () => {
-    // Documented GitHub behaviour: a 403 whose BODY names the secondary limit,
-    // with neither retry-after nor remaining: 0.
+    // Decision: Documented GitHub behavior: a 403 whose body names the secondary limit, with neither
+    // retry-after nor remaining: 0.
     const message =
       '{"message":"You have exceeded a secondary rate limit. Please wait a few minutes."}';
     let calls = 0;
@@ -580,16 +551,14 @@ describe('build-agent source download bounds', () => {
     });
 
     expect(calls).toBe(2);
-    // GitHub advises at least a minute when it names no delay itself.
+    // Decision: GitHub advises waiting at least a minute when it names no delay itself.
     expect(slept).toEqual([agent.SECONDARY_RATE_LIMIT_DELAY_MS]);
   });
 
   it('reads only a bounded prefix of a huge 403 body', async () => {
-    // The marker sits PAST the sniff window, in ONE enormous chunk. If the reader
-    // decodes the whole chunk instead of the sliced prefix, it finds the marker,
-    // classifies the 403 as a secondary rate limit, and retries — so this asserts
-    // the bound behaviourally instead of asserting the fixture's own size.
-    // If broken: `decode(value)` makes calls 2 and the delay 60s.
+    // Decision: The marker sits past the sniff window, in one huge chunk. If the reader decodes the whole chunk
+    // instead of the sliced prefix, it finds the marker and retries, so this checks the bound by
+    // behavior instead of by the fixture's size.
     const filler = 'x'.repeat(agent.ERROR_BODY_SNIFF_BYTES * 4);
     const payload = `${filler}You have exceeded a secondary rate limit.`;
     let calls = 0;
@@ -629,8 +598,8 @@ describe('build-agent source download bounds', () => {
   });
 
   it('applies the documented minimum wait to a 429 that names no delay', async () => {
-    // A 429 IS a rate limit. Retrying in two seconds is what escalates a
-    // recoverable limit into a banned integration.
+    // Decision: A 429 is a rate limit. Retrying in two seconds is what turns a recoverable limit into a banned
+    // integration.
     let calls = 0;
     const slept: Array<number> = [];
     const fetchImpl = (() => {
@@ -663,7 +632,6 @@ describe('build-agent source download bounds', () => {
     });
 
     expect(calls).toBe(2);
-    // Not the configured 50ms backoff.
     expect(slept).toEqual([agent.SECONDARY_RATE_LIMIT_DELAY_MS]);
   });
 
@@ -698,13 +666,12 @@ describe('build-agent source download bounds', () => {
         extract: () => Promise.resolve(),
       }),
     ).rejects.toThrow('source download failed: HTTP 403');
-    // Body sniffing must not make every 403 retryable.
     expect(calls).toBe(1);
   });
 
   it('waits the documented minimum for a header-only primary rate limit', async () => {
-    // 403 + remaining: 0 with NO usable reset. Retryable, but the fixed 2s backoff
-    // is exactly the behaviour GitHub warns gets an integration banned.
+    // Decision: 403 with remaining: 0 and no usable reset. It's retryable, but GitHub warns that a fixed 2s
+    // backoff gets an integration banned.
     let calls = 0;
     const slept: Array<number> = [];
     const fetchImpl = (() => {
@@ -737,13 +704,12 @@ describe('build-agent source download bounds', () => {
     });
 
     expect(calls).toBe(2);
-    // If broken: 50ms.
     expect(slept).toEqual([agent.SECONDARY_RATE_LIMIT_DELAY_MS]);
   });
 
   it('cancels the body of an error response it does not read', async () => {
-    // undici keeps the socket for a body that is neither consumed NOR cancelled,
-    // so an abandoned 5xx would compete with its own retry for the pool.
+    // Decision: undici keeps the socket for a body that's neither consumed nor cancelled, so an abandoned 5xx
+    // would compete with its own retry for the pool.
     const cancelled: Array<string> = [];
     let calls = 0;
     const fetchImpl = (() => {
@@ -779,14 +745,13 @@ describe('build-agent source download bounds', () => {
       },
     });
 
-    // If broken: the 5xx body is thrown past, never released.
     expect(cancelled).toEqual(['503']);
   });
 
   it('keeps a header-named delay when the error body stalls', async () => {
-    // Headers already said `retry-after: 1`. Reading the body can only LOSE that:
-    // a body that stalls trips the stall watchdog, and the abort would replace a
-    // known rate-limit delay with a generic retryable error.
+    // Decision: The headers already said `retry-after: 1`. Reading the body can only lose that: a stalled body
+    // trips the stall watchdog, and the abort would replace a known rate-limit delay with a generic
+    // retryable error.
     let calls = 0;
     const slept: Array<number> = [];
     const fetchImpl = (() => {
@@ -795,7 +760,6 @@ describe('build-agent source download bounds', () => {
           ok: false,
           status: 429,
           headers: new Headers({ 'retry-after': '1' }),
-          // Never enqueues, never closes.
           body: new ReadableStream({ start() {} }),
         });
       }
@@ -820,13 +784,12 @@ describe('build-agent source download bounds', () => {
     });
 
     expect(calls).toBe(2);
-    // If broken: the stalled sniff aborts and this is the 50ms backoff.
     expect(slept).toEqual([1000]);
   });
 
   it('keeps the shipped bounds inside the smallest plan build budget', () => {
-    // Free tier is 10 minutes (tiers.ts buildTimeoutMinutes). The download phase
-    // must leave most of that for the build it exists to feed.
+    // Decision: The free tier allows 10 minutes (tiers.ts buildTimeoutMinutes). The download phase has to leave
+    // most of that for the build.
     expect(agent.SOURCE_PHASE_BUDGET_MS).toBeLessThanOrEqual(4 * 60 * 1000);
     expect(agent.SOURCE_STALL_TIMEOUT_MS).toBeLessThan(agent.SOURCE_PHASE_BUDGET_MS);
     expect(agent.SOURCE_RETRY_BACKOFF_MS.length).toBeGreaterThanOrEqual(
@@ -835,42 +798,29 @@ describe('build-agent source download bounds', () => {
   });
 });
 
-// The unit tests above pin the retry POLICY with `extract` injected. This one runs
-// the REAL wiring — real `fetch`, real `Readable.fromWeb`, the real metering
-// pipeline stage, a real `tar` child, and the real WORK_DIR reset — against a
-// server that hands over a few KB and then simply stops writing without closing
-// the socket.
-//
-// That combination is what has to work. A stall guard that never reaches the
-// stream, or an abort that leaves `pipeline` hanging or crashes the process with
-// an unhandled 'error', would pass every injected-dep test above and still let a
-// build hang.
+// Decision: The tests above pin the retry policy with `extract` injected. This one runs the real wiring (real
+// `fetch`, `Readable.fromWeb`, the metering stage, a real `tar` child and the WORK_DIR reset) against
+// a server that sends a few KB and then stops writing without closing the socket. A stall guard
+// that doesn't reach the stream, or an abort that leaves `pipeline` hanging or crashes on an
+// unhandled 'error', would pass the injected tests and still let a build hang.
 describe('build-agent source download, real stream + tar', () => {
   const WORK_DIR = process.env.PLATFORM_BUILD_WORK_DIR!;
   const fixtureRoot = join(tmpdir(), 'platform-source-download-fixture');
-  /** Bytes the stalling first response hands over before going silent. */
   const TRUNCATE_AT = 2048;
   let archive: Buffer;
   let server: Server;
   let origin = '';
   let requests = 0;
-  /**
-   * How the server should break the FIRST response.
-   *  - 'stall'  : write a prefix and then go silent (no FIN, no error)
-   *  - 'destroy': write a prefix and then kill the socket (a real stream error)
-   * Every later response is the complete archive.
-   */
   let firstResponse: 'stall' | 'destroy' = 'stall';
 
   beforeAll(async () => {
-    // `--strip-components=1` expects a single top-level `<repo>-<sha>/` directory,
-    // which is what GitHub's tarball endpoint produces.
+    // Decision: `--strip-components=1` expects a single top-level `<repo>-<sha>/` directory, which is what
+    // GitHub's tarball endpoint produces.
     rmSync(fixtureRoot, { recursive: true, force: true });
     mkdirSync(join(fixtureRoot, 'acme-site-deadbeef'), { recursive: true });
     writeFileSync(join(fixtureRoot, 'acme-site-deadbeef', 'package.json'), '{"name":"acme"}\n');
-    // INCOMPRESSIBLE padding. Repeated bytes gzip down to a few hundred, so the
-    // "truncated" first response would carry the whole archive and the test would
-    // prove nothing about a partial stream.
+    // Decision: Incompressible padding. Repeated bytes gzip down to a few hundred, so the truncated first
+    // response would carry the whole archive and prove nothing about a partial stream.
     writeFileSync(join(fixtureRoot, 'acme-site-deadbeef', 'big.bin'), randomBytes(2 * 1024 * 1024));
     execFileSync('tar', [
       'czf',
@@ -887,13 +837,9 @@ describe('build-agent source download, real stream + tar', () => {
       if (requests === 1) {
         res.write(archive.subarray(0, TRUNCATE_AT));
         if (firstResponse === 'stall') {
-          // Some bytes, then silence. No FIN, no error — the socket
-          // just goes quiet, which is precisely what undici's chunk-resetting
-          // `bodyTimeout` cannot see.
+          // Decision: Some bytes, then silence: no FIN, no error. undici's chunk-resetting `bodyTimeout` can't see this.
           return;
         }
-        // A real mid-body connection reset: `pipeline` rejects with a stream
-        // error while `tar` is still alive and writing into WORK_DIR.
         res.socket?.destroy();
         return;
       }
@@ -931,12 +877,9 @@ describe('build-agent source download, real stream + tar', () => {
     });
 
     expect(requests).toBe(2);
-    // Guard the fixture itself: if the archive ever shrinks below the truncation
-    // point, the first response carries the whole thing and this test silently
-    // stops exercising a partial stream.
+    // Decision: If the archive shrinks below the truncation point, the first response carries all of it and the
+    // test stops exercising a partial stream.
     expect(archive.length).toBeGreaterThan(TRUNCATE_AT * 4);
-    // Extracted, and from the SECOND attempt's complete archive — the reset means
-    // the truncated first attempt left nothing behind to mix in.
     expect(existsSync(join(WORK_DIR, 'package.json'))).toBe(true);
     expect(readFileSync(join(WORK_DIR, 'package.json'), 'utf8')).toBe('{"name":"acme"}\n');
     expect(readFileSync(join(WORK_DIR, 'big.bin'))).toHaveLength(2 * 1024 * 1024);
@@ -949,11 +892,9 @@ describe('build-agent source download, real stream + tar', () => {
   }, 30000);
 
   it("reaps the failed attempt's tar before resetting, leaving no mixed tree", async () => {
-    // A mid-body reset makes `pipeline` reject while `tar` is STILL RUNNING and
-    // writing into WORK_DIR. If the attempt settles on that rejection instead of
-    // on the child's 'close', the retry loop deletes WORK_DIR under a live
-    // extraction and the old child's later 'close' clears `activeChild` out from
-    // under the new attempt's child.
+    // Decision: A mid-body reset makes `pipeline` reject while `tar` is still writing into WORK_DIR. If the
+    // attempt settles on that rejection instead of the child's 'close', the retry deletes WORK_DIR under
+    // a live extraction, and the old child's later 'close' clears `activeChild` under the new child.
     firstResponse = 'destroy';
     process.env.SOURCE_TARBALL_URL = `${origin}/tarball/deadbeef`;
     process.env.SOURCE_TOKEN = 'ghs_test_token';
@@ -969,12 +910,9 @@ describe('build-agent source download, real stream + tar', () => {
     });
 
     expect(requests).toBe(2);
-    // Exactly the fixture, nothing else: a zombie tar writing after the reset
-    // would leave extra or truncated entries behind.
     expect(readdirSync(WORK_DIR).sort()).toEqual(['big.bin', 'package.json']);
     expect(readFileSync(join(WORK_DIR, 'big.bin'))).toHaveLength(2 * 1024 * 1024);
 
-    // Give any surviving child a window to write; the tree must not move.
     const before = readdirSync(WORK_DIR).sort();
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(readdirSync(WORK_DIR).sort()).toEqual(before);
@@ -982,17 +920,13 @@ describe('build-agent source download, real stream + tar', () => {
   }, 30000);
 });
 
-// The child's LIFECYCLE, which the harness test above cannot pin. A real `tar`
-// dies on SIGTERM far too promptly to distinguish "settles on the pipeline's
-// rejection" from "settles on the child's close" — restoring the old
-// `.catch(reject)` still passed every assertion there. So these tests supply a
-// child that deliberately outlives the rejection.
+// Decision: A real `tar` dies on SIGTERM too fast to tell "settles on the pipeline's rejection" from "settles
+// on the child's close", so these tests use a child that outlives the rejection.
 describe('build-agent extractTarball child lifecycle', () => {
   let agent: typeof import('../../container/build-agent.mjs');
 
-  // `downloadSource` calls `requireEnv` for both of these. Setting them HERE
-  // rather than relying on an earlier describe having left them behind is what
-  // makes this block runnable on its own (`-t 'child lifecycle'`).
+  // Decision: Set these here, not through an earlier describe, so this block runs on its own
+  // (`-t 'child lifecycle'`).
   beforeEach(async () => {
     process.env.SOURCE_TARBALL_URL = 'https://api.github.com/repos/acme/site/tarball/deadbeef';
     process.env.SOURCE_TOKEN = 'ghs_test_token';
@@ -1005,11 +939,8 @@ describe('build-agent extractTarball child lifecycle', () => {
     delete process.env.SOURCE_TOKEN;
   });
 
-  /**
-   * Deliberately NOT `ChildProcess`: the real type pins `signalCode`/`kill` to
-   * Node's signal union, and this stand-in only needs the handful of members
-   * `extractTarball` touches. It is cast at the `spawnImpl` boundary.
-   */
+  // Decision: Not `ChildProcess`: the real type pins `signalCode`/`kill` to Node's signal union, and this
+  // stand-in only needs the members `extractTarball` uses. It's cast at the `spawnImpl` boundary.
   interface FakeTar {
     pid: number;
     exitCode: number | null;
@@ -1023,10 +954,6 @@ describe('build-agent extractTarball child lifecycle', () => {
     emit: (event: string, ...args: Array<unknown>) => boolean;
   }
 
-  /**
-   * A `tar` stand-in. It exits only when told to: on a delayed SIGTERM, on
-   * SIGKILL, or when its stdin finishes cleanly (a successful extraction).
-   */
   function createFakeTar(opts: { sigtermDelayMs?: number; onClose?: () => void } = {}): FakeTar {
     const child = new EventEmitter() as unknown as FakeTar;
     child.pid = 4242;
@@ -1034,7 +961,7 @@ describe('build-agent extractTarball child lifecycle', () => {
     child.signalCode = null;
     child.stdin = new PassThrough();
     child.stderr = new PassThrough();
-    // Discard whatever the pipeline writes; an unread destination would stall it.
+    // Decision: Discard what the pipeline writes. An unread destination would stall it.
     child.stdin.resume();
     child.signals = [];
     child.settle = (code: number, signal: string | null = null) => {
@@ -1056,12 +983,10 @@ describe('build-agent extractTarball child lifecycle', () => {
       }
       return true;
     };
-    // A clean extraction: the writer finished, so the child exits 0.
     child.stdin.on('finish', () => child.settle(0));
     return child;
   }
 
-  /** A web stream that delivers one chunk and then fails, like a reset socket. */
   const brokenBody = () =>
     new ReadableStream({
       start(controller) {
@@ -1070,7 +995,6 @@ describe('build-agent extractTarball child lifecycle', () => {
       },
     });
 
-  /** A web stream that delivers one chunk and ends cleanly. */
   const goodBody = () =>
     new ReadableStream({
       start(controller) {
@@ -1102,7 +1026,6 @@ describe('build-agent extractTarball child lifecycle', () => {
       (err: Error) => err,
     );
 
-    // If broken: `.catch(reject)` settles here, while the child still runs.
     expect(await settled(promise)).toBe(null);
     expect(child.signals).toEqual(['SIGTERM']);
 
@@ -1123,7 +1046,6 @@ describe('build-agent extractTarball child lifecycle', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 80));
     expect(child.signals).toEqual(['SIGTERM', 'SIGKILL']);
-    // The fake exits on SIGKILL, which is what finally settles the promise.
     expect((await rejected)?.message).toBe('connection reset');
   });
 
@@ -1135,7 +1057,6 @@ describe('build-agent extractTarball child lifecycle', () => {
     });
     await promise.catch(() => {});
 
-    // Past the grace: a timer left armed would have fired by now.
     await new Promise((resolve) => setTimeout(resolve, 60));
     expect(child.signals).toEqual(['SIGTERM']);
   });
@@ -1165,8 +1086,8 @@ describe('build-agent extractTarball child lifecycle', () => {
       extract: (body, options) =>
         agent.extractTarball(body, {
           ...options,
-          // 25ms of deliberate overlap: long enough that a promise settling on
-          // the pipeline's rejection would reach the reset first.
+          // Decision: 25ms of overlap: long enough that a promise settling on the pipeline's rejection would reach the
+          // reset first.
           spawnImpl: () =>
             createFakeTar({
               sigtermDelayMs: 25,
@@ -1176,8 +1097,6 @@ describe('build-agent extractTarball child lifecycle', () => {
         }),
     });
 
-    // If broken: early settlement gives ['reset', 'reset', 'close'] —
-    // WORK_DIR wiped under a live extraction.
     expect(order).toEqual(['reset', 'close', 'reset', 'close']);
   });
 });

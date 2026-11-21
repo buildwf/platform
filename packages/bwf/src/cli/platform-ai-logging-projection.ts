@@ -53,7 +53,7 @@ async function readInputs(client: QueryConnection): Promise<Inputs> {
   let catalog: AiLoggingPlanCatalog;
   let settings: PlanAiLoggingSettings;
   try {
-    // Installed platforms start with the custom plan as the default (see the API's
+    // Decision: Installed platforms start with the custom plan as the default (see the API's
     // initialPlanDefaultFor).
     const savedCatalog = saved.get(PLAN_CATALOG_SETTING);
     catalog =
@@ -120,7 +120,7 @@ export async function projectPlatformAiLoggingConnection(
     `SELECT to_regclass('public.project_ai_logging') IS NOT NULL AS "present"`,
   );
   if (tables.rows[0]?.present !== true) {
-    // Older schema (or a rollback runtime before 1.8.0): nothing is saved yet.
+    // Decision: Older schema (or a rollback runtime before 1.8.0): nothing is saved yet.
     return { skipped: true };
   }
   const listed = new Map<string, CloudflareKvKey>();
@@ -133,7 +133,7 @@ export async function projectPlatformAiLoggingConnection(
   await client.query('BEGIN');
   try {
     await client.query(`SET LOCAL lock_timeout = '${LOCK_TIMEOUT}'`);
-    // Pick candidates: projects with an override, projects whose plan has a default,
+    // Decision: Pick candidates: projects with an override, projects whose plan has a default,
     // and projects that already have a key (so stale keys are removed).
     const before = await readInputs(client);
     const rows = (await client.query<ProjectRow>(PROJECT_ROWS)).rows;
@@ -144,7 +144,7 @@ export async function projectPlatformAiLoggingConnection(
       )
       .map((row) => row.id);
     options.onProgress?.(`Publishing AI logging settings (${candidates.length} projects)`);
-    // Same lock as the API publisher's no-op UPDATE (so rows that reference a project
+    // Decision: Same lock as the API publisher's no-op UPDATE (so rows that reference a project
     // can still be inserted), taken in id order. Inputs are read again after the
     // locks are held, so a change the API committed meanwhile is the one written.
     if (candidates.length > 0) {
@@ -172,14 +172,14 @@ export async function projectPlatformAiLoggingConnection(
         continue;
       }
       if (row.status !== 'active') {
-        // Deletion is in progress; its cleanup job removes the key.
+        // Decision: Deletion is in progress; its cleanup job removes the key.
         continue;
       }
       const mode = effectiveMode(row, inputs);
       if (mode !== 'inherit') {
         writes.push({ key: aiLoggingKey(id), value: mode, metadata: { mode, at } });
       } else if (listed.has(id)) {
-        // The marker lets readback report `pending` while the old value may linger.
+        // Decision: The marker lets readback report `pending` while the old value may linger.
         const marker = aiLoggingClearedMarker(at);
         writes.push({
           key: aiLoggingClearedKey(id),
@@ -196,7 +196,7 @@ export async function projectPlatformAiLoggingConnection(
       if (existing.has(id) || current.has(id)) {
         continue;
       }
-      // No project row: the project is gone, unless it was created moments ago.
+      // Decision: No project row: the project is gone, unless it was created moments ago.
       const metadata = parseAiLoggingKeyMetadata(key.metadata);
       if (!metadata || at - metadata.at >= AI_LOGGING_ORPHAN_GRACE_MS) {
         deletes.push(key.name);

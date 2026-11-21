@@ -114,7 +114,7 @@ export async function prepareInstallationAuthentication(input: {
     if (!credentials || typeof credentials !== 'object' || Array.isArray(credentials)) {
       throw new Error('platform: Invalid saved Access credentials.');
     }
-    // Lifecycle HTTP calls use API/proxy origins. Retain optional dashboard credentials
+    // Decision: Lifecycle HTTP calls use API/proxy origins. Retain optional dashboard credentials
     // in recovery storage without activating them, including after protection removal.
     const origins = [state.plan.apiUrl, state.plan.proxyUrl];
     activatePlatformAccessCredentials(
@@ -152,7 +152,7 @@ export async function prepareInstallationAuthentication(input: {
     (state.manifest.deploymentExecution === 1 ||
       dependencies.databaseRollbackSource?.manifest.deploymentExecution === 1)
   ) {
-    // Admission takes a shared row lock on this authoritative checkpoint in the
+    // Decision: Admission takes a shared row lock on this authoritative checkpoint in the
     // transaction that creates its deployment job. This update closes admission
     // before the probe counts jobs, and before a Queue consumer can be removed.
     if (!releaseDatabaseLock.checkpoint) {
@@ -175,7 +175,7 @@ export async function prepareInstallationAuthentication(input: {
         ...(await dependencies.prepareAuthentication(state.manifest, state.secrets)),
       };
     } catch (error) {
-      // Preserve provider secrets/ambiguous-create intents written while the preparation
+      // Decision: Preserve provider secrets/ambiguous-create intents written while the preparation
       // hook was running; the outer failure checkpoint must not erase that recovery data.
       const latest = readPendingInstallationSecrets(state.manifest) ?? {};
       state.secrets = {

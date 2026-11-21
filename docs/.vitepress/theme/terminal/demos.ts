@@ -67,9 +67,9 @@ const boxRow = (at: number, id: string, width: number, ...segments: Array<Termin
 const boxBottom = (at: number, id: string, width: number) =>
   write(at, id, s('╰' + '─'.repeat(width - 2) + '╯', 'muted'));
 
-// Sample values, accelerated timing, and prepared credentials. Wording and transient
-// spinner replacement follow deploy.ts, platform-lifecycle.ts, platform-installer.ts,
-// logs.ts, rollback.ts, and the shared Vite+ renderer. See README.md when refreshing.
+// Decision: Sample values, accelerated timing and prepared credentials. Wording and transient spinner
+// replacement follow deploy.ts, platform-lifecycle.ts, platform-installer.ts, logs.ts,
+// rollback.ts and the shared Vite+ renderer. See README.md when refreshing.
 const deploy: TerminalDemo = {
   id: 'deploy',
   label: 'Deploy an app',

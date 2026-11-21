@@ -6,8 +6,6 @@ import { users, projects, emailDestinations, emailDestinationCleanups } from '..
 import type { EmailDestination } from '../types.ts';
 import { type DbOrTx, type Db, type Tx } from './client.ts';
 
-// --- Email destinations ---
-
 /**
  * The human whose CF-side consent an owner-relaxed row inherits, captured
  * at insert-time. See `emailDestinations.verified_by_*` in `schema.ts`.
@@ -132,8 +130,8 @@ export async function tryCreateEmailDestination(
   if (outcome) {
     return { row: outcome, inserted: true };
   }
-  // A concurrent insert may have won, or cleanup retired the provider tag.
-  // Return an existing project row if present; otherwise the caller retries.
+  // Decision: A concurrent insert may have won, or cleanup retired the provider tag. Return an existing project
+  // row if there is one; otherwise the caller retries.
   const existing = await getEmailDestinationByAddress(db, projectId, address);
   return { row: existing, inserted: false };
 }
@@ -170,9 +168,9 @@ export async function revokeOwnerVerifiedDestinationsForUserChange(
   oldEmail: string,
 ): Promise<void> {
   const lowered = oldEmail.toLowerCase();
-  // The caller holds the policy lock in its surrounding profile transaction.
-  // Lock affected projects before changing consent so admission cannot read
-  // their old verified destinations after this revocation commits.
+  // Decision: The caller holds the policy lock in its profile transaction. Lock the affected projects before
+  // changing consent so admission can't read their old verified destinations after this revocation
+  // commits.
   const affected = await db
     .selectDistinct({ project_id: emailDestinations.project_id })
     .from(emailDestinations)
@@ -197,22 +195,13 @@ export async function revokeOwnerVerifiedDestinationsForUserChange(
       verified_at: null,
       verified_by_user_id: null,
       verified_by_email_snapshot: null,
-      // Re-sourcing the row to 'platform' is what makes the demotion
-      // STICK. The destinations GET in `routes/email.ts` refreshes every
-      // row matching `status = 'pending' && verification_source !== 'platform'`
-      // against CF's account-level list — and nothing deleted the address
-      // on CF's side, so CF still reports it verified. A row left as 'cf'
-      // therefore drops straight back into that filter and the very next
-      // `bwf email destinations` re-promotes it to 'verified', undoing
-      // this revoke entirely. 'platform' is also the correct state on the
-      // merits: the account-level CF flag is exactly the consent we just
-      // decided we can no longer inherit, so the only thing that may
-      // re-verify the row is a per-recipient click on our own confirmation
-      // link (a repeat `bwf email allow <address>` re-sends it).
-      //
-      // Safe inside this statement: Postgres evaluates the WHERE predicate
-      // against the PRE-update row, so narrowing `verification_source` to
-      // 'platform' here cannot de-select the `= 'cf'` clause below.
+      // Decision: Re-sourcing the row to 'platform' is what makes the demotion stick. The destinations GET in
+      // `routes/email.ts` refreshes rows with `status = 'pending'` and `verification_source !== 'platform'`
+      // against CF's account-level list, and CF still reports the address verified. A row left as 'cf'
+      // would be re-promoted by the next `bwf email destinations`. 'platform' is also right on the
+      // merits: only a click on our own confirmation link may re-verify it.
+      // Safe in this statement: Postgres evaluates WHERE against the pre-update row, so setting
+      // `verification_source` here doesn't de-select the `= 'cf'` clause below.
       verification_source: 'platform',
     })
     .where(

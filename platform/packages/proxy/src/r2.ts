@@ -22,7 +22,6 @@ r2.post('/get', async (context) => {
     return context.json({ error: 'binding and key required' }, 400);
   }
 
-  // Try WfP dispatch first
   const dispatchRes = await dispatchToWorker(context.env, projectId, '/r2/get', body, {
     fallbackOnDispatchError: true,
   });
@@ -30,7 +29,6 @@ r2.post('/get', async (context) => {
     return dispatchRes;
   }
 
-  // Fallback: CF REST API
   let bucket: string;
   try {
     bucket = await resolveResource(
@@ -57,7 +55,6 @@ r2.post('/get', async (context) => {
     return context.json({ error: 'R2 get failed', status: cfRes.status }, 502);
   }
 
-  // Stream the object body back, preserve metadata in headers
   const headers = new Headers();
   headers.set('content-type', cfRes.headers.get('content-type') ?? 'application/octet-stream');
   if (cfRes.headers.has('content-length')) {
@@ -84,7 +81,6 @@ r2.on('POST', ['/put', '/put-conditional'], async (context) => {
     return context.json({ error: 'binding and key required' }, 400);
   }
 
-  // Try WfP dispatch first
   const conditional = body.onlyIf !== undefined || context.req.path.endsWith('/put-conditional');
   const dispatchRes = await dispatchToWorker(
     context.env,
@@ -106,7 +102,6 @@ r2.on('POST', ['/put', '/put-conditional'], async (context) => {
     );
   }
 
-  // Fallback: CF REST API
   let bucket: string;
   try {
     bucket = await resolveResource(
@@ -120,7 +115,6 @@ r2.on('POST', ['/put', '/put-conditional'], async (context) => {
     return context.json({ error: `unknown binding "${binding}"` }, 404);
   }
 
-  // Decode base64 value from JSON body, or use text value
   const data = base64
     ? Uint8Array.from(atob(base64), (ch) => ch.charCodeAt(0))
     : new TextEncoder().encode((body.value as string) ?? '');
@@ -164,13 +158,11 @@ r2.post('/delete', async (context) => {
     return context.json({ error: 'key or keys required' }, 400);
   }
 
-  // Try WfP dispatch first
   const dispatchRes = await dispatchToWorker(context.env, projectId, '/r2/delete', body);
   if (dispatchRes) {
     return dispatchRes;
   }
 
-  // Fallback: CF REST API
   let bucket: string;
   try {
     bucket = await resolveResource(
@@ -209,7 +201,6 @@ r2.post('/list', async (context) => {
     return context.json({ error: 'binding required' }, 400);
   }
 
-  // Try WfP dispatch first
   const dispatchRes = await dispatchToWorker(context.env, projectId, '/r2/list', body, {
     fallbackOnDispatchError: true,
   });
@@ -217,7 +208,6 @@ r2.post('/list', async (context) => {
     return dispatchRes;
   }
 
-  // Fallback: CF REST API
   let bucket: string;
   try {
     bucket = await resolveResource(
@@ -284,7 +274,6 @@ r2.post('/head', async (context) => {
     return context.json({ error: 'binding and key required' }, 400);
   }
 
-  // Try WfP dispatch first
   const dispatchRes = await dispatchToWorker(context.env, projectId, '/r2/head', body, {
     fallbackOnDispatchError: true,
   });
@@ -292,7 +281,6 @@ r2.post('/head', async (context) => {
     return dispatchRes;
   }
 
-  // Fallback: CF REST API
   let bucket: string;
   try {
     bucket = await resolveResource(

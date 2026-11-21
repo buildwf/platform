@@ -118,11 +118,10 @@ describe('project secrets API', () => {
     expect(res.status).toBe(401);
   });
 
-  // Reserved-binding guard. Only names that also pass `isValidSecretName`
-  // (`^[A-Z][A-Z0-9_]*$`) can reach it — the `__PLATFORM_*` bindings are already
-  // rejected one step earlier as invalid names. Without this check the row is
-  // encrypted and persisted, then silently shadowed by the platform binding at
-  // the next deploy, with no clean error anywhere near the PUT that caused it.
+  // Decision: Only names that also pass `isValidSecretName` (`^[A-Z][A-Z0-9_]*$`) reach this guard; the
+  // `__PLATFORM_*` bindings are rejected a step earlier. Without it the row is encrypted and
+  // persisted, then silently shadowed by the platform binding at the next deploy, with no clear error
+  // near the PUT that caused it.
   it.each(['SEND_EMAIL', 'USAGE_EVENTS_QUEUE', 'ASSETS'])(
     'returns 400 for reserved binding name: %s',
     async (name) => {
@@ -147,9 +146,8 @@ describe('project secrets API', () => {
     },
   );
 
-  // Not reserved: there is exactly one project-slug binding and it is
-  // `__PLATFORM_PROJECT_SLUG`. Reserving an undotted twin nothing injects would
-  // take a usable name away for no benefit.
+  // Decision: Not reserved: the one project-slug binding is `__PLATFORM_PROJECT_SLUG`. Reserving an undotted
+  // twin nothing injects would take a usable name away for no benefit.
   it('allows a secret named BWF_PROJECT_SLUG', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'secret-bare-slug');

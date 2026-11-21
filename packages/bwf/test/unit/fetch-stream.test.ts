@@ -1,6 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vite-plus/test';
 
-// Mock ofetch before importing the module
 vi.mock('ofetch', () => {
   return {
     ofetch: Object.assign(vi.fn(), {
@@ -166,12 +165,13 @@ describe('fetchStream', () => {
       headers: new Headers(),
     } as unknown as Awaited<ReturnType<typeof ofetch.raw>>);
 
-    for await (const _ of fetchStream('/api/chat', {
+    const chunks = [];
+    for await (const chunk of fetchStream('/api/chat', {
       method: 'POST',
       body: { messages: [] },
       headers: { 'x-custom': 'value' },
     })) {
-      // Consume the generator to exhaust the mocked stream.
+      chunks.push(chunk);
     }
 
     expect(ofetch.raw).toHaveBeenCalledWith('/api/chat', {

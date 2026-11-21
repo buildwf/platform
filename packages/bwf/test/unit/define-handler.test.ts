@@ -11,7 +11,6 @@ import { convertReturnValue } from '../../src/runtime/response.ts';
 import { createHttpRouteHandler } from '../../src/runtime/routing.ts';
 import type { StandardSchemaV1 } from '../../src/standard-schema.ts';
 
-/** Encode nested values with bracket keys, as browser form libraries do. */
 function objectToFormData(
   source: Record<string, unknown>,
   form = new FormData(),
@@ -46,7 +45,7 @@ type ValidationIssueBody = {
   }>;
 };
 
-/** Wraps the handler the way createHttpRouteHandler in runtime/routing.ts does. */
+// Decision: Wraps the handler the way createHttpRouteHandler in runtime/routing.ts does.
 function createApp(handler: (c: CloudContext) => unknown) {
   const app = new Hono();
   app.get('/test', async (c) => {
@@ -59,7 +58,6 @@ function req(init?: RequestInit) {
   return new Request('http://localhost/test', init);
 }
 
-/** Create a mock Standard Schema that passes through the input. */
 function passSchema(): StandardSchemaV1 {
   return {
     '~standard': {
@@ -72,7 +70,6 @@ function passSchema(): StandardSchemaV1 {
   };
 }
 
-/** Create a mock Standard Schema that always fails. */
 function failSchema(message: string): StandardSchemaV1 {
   return {
     '~standard': {
@@ -207,7 +204,6 @@ describe('defineHandler', () => {
     });
 
     const app = createApp(handler);
-    // Hono catches thrown errors and returns a 500 response
     const res = await app.request(req());
     expect(res.status).toBe(500);
   });
@@ -538,12 +534,12 @@ describe('defineHandler.withValidator', () => {
       const app = createValidatedApp('post', '/test', handler);
       const form = new FormData();
       if (kind === 'indexed') {
-        // Few containers, but each inner array allocates 1,001 slots.
+        // Decision: Few containers, but each inner array allocates 1,001 slots.
         for (let i = 0; i < 20; i++) {
           form.append(`items[${i}][1000]`, 'value');
         }
       } else {
-        // Append syntax must share the same allocation budget across arrays.
+        // Decision: Append syntax has to share the same allocation budget across arrays.
         for (let i = 0; i < 6_000; i++) {
           form.append('first[]', 'value');
           form.append('second[]', 'value');

@@ -5,8 +5,6 @@ import { domains } from '../schema.ts';
 import type { Domain } from '../types.ts';
 import { type Db } from './client.ts';
 
-// --- Domains ---
-
 export async function createDomain(
   db: Db,
   projectId: string,
@@ -81,11 +79,9 @@ export async function getDomain(db: Db, id: string): Promise<Domain | null> {
   return row ?? null;
 }
 
-// Stale custom hostnames that never verified — for the cleanup janitor. Only
-// `pending` rows are eligible; `created_at` is a string-mode timestamp so the
-// cutoff is compared as an ISO string. Capped at `limit` and ordered
-// oldest-first (most overdue cleaned first) so a large stale backlog cannot
-// starve later hourly maintenance.
+// Decision: Stale custom hostnames that never verified, for the cleanup janitor. Only `pending` rows qualify;
+// `created_at` is a string-mode timestamp, so the cutoff is compared as an ISO string. Capped and
+// ordered oldest-first so a large backlog can't starve later hourly maintenance.
 export async function getPendingDomainsOlderThan(
   db: Db,
   isoCutoff: string,
@@ -99,9 +95,8 @@ export async function getPendingDomainsOlderThan(
     .limit(limit);
 }
 
-// All pending custom-hostname rows (cron hourly reconciliation tier). Capped
-// at `limit` and ordered oldest-first so domains nearest the 7-day cleanup are
-// reconciled before the per-run cap truncates the batch.
+// Decision: All pending custom-hostname rows (hourly reconciliation tier). Ordered oldest-first so domains
+// nearest the 7-day cleanup are reconciled before the per-run cap truncates the batch.
 export async function getPendingDomains(db: Db, limit: number): Promise<ReadonlyArray<Domain>> {
   return db
     .select()
@@ -111,10 +106,9 @@ export async function getPendingDomains(db: Db, limit: number): Promise<Readonly
     .limit(limit);
 }
 
-// Recently-created pending rows (cron fast reconciliation tier).
-// `created_at` is a string-mode timestamp, compared as an ISO string. Capped at
-// `limit` and ordered oldest-first so the per-run cap truncates the newest
-// (least urgent) domains rather than starving older ones.
+// Decision: Recently created pending rows (fast reconciliation tier). `created_at` is a string-mode timestamp,
+// compared as an ISO string. Ordered oldest-first so the per-run cap drops the newest, least urgent
+// domains instead of starving older ones.
 export async function getPendingDomainsNewerThan(
   db: Db,
   isoCutoff: string,

@@ -34,7 +34,7 @@ function isStoredSecretError(error: unknown, name: string): boolean {
   }
 }
 
-/** Fill only missing staging fixture values; never import a developer's .env. */
+// Decision: Fills only missing staging fixture values and doesn't import a developer's .env.
 export async function initializeStagingEnv(
   client: Client,
   validate: (entries: Array<Secret>) => Promise<void>,
@@ -72,7 +72,6 @@ export async function initializeStagingEnv(
   if (entries.length === 0) {
     return [];
   }
-  // Validate the whole batch before any write, like `bwf secret sync`.
   onStep('validating env.ts');
   await validate(entries);
   for (const { name, value } of entries) {
@@ -83,9 +82,9 @@ export async function initializeStagingEnv(
       if (!isStoredSecretError(error, name)) {
         throw error;
       }
-      // The API persisted the value before attempting to update the old worker.
-      // This fixture is deployed immediately afterward with all stored secrets.
-      // Verify persistence without retrying the write or logging its response.
+      // Decision: The API persists the value before updating the old worker, and this fixture deploys right
+      // after with all stored secrets. So persistence is checked without retrying the write or logging
+      // its response.
       onStep(`verifying stored ${name}`);
       if (!(await client.listSecrets(projectId)).some((secret) => secret.name === name)) {
         throw error;

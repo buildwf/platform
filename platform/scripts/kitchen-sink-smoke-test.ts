@@ -1,15 +1,8 @@
-/**
- * Kitchen Sink Playwright Smoke Test
- *
- * Standalone smoke tests against a deployed kitchen-sink app.
- * Uses node:test + node:assert — no vitest needed.
- *
- * Usage:
- *   SMOKE_URL=https://kitchen-sink.apps.example.com node platform/scripts/kitchen-sink-smoke-test.ts
- *
- * The target must be a disposable kitchen-sink deployment: this suite resets
- * its database, KV, and storage before exercising mutations.
- */
+// Decision: Usage:
+//   SMOKE_URL=https://kitchen-sink.apps.example.com \
+//     node platform/scripts/kitchen-sink-smoke-test.ts
+// The target has to be a disposable kitchen-sink deployment: the suite resets its database, KV and
+// storage before testing mutations.
 
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
@@ -46,8 +39,6 @@ const testSandbox = process.env.SMOKE_SANDBOX === '1';
 const acceptanceToken = process.env.SMOKE_E2E_TOKEN;
 const testRuntime = process.env.SMOKE_RUNTIME === '1';
 
-// Supply a Cloudflare Access service-token pair if the selected test app is
-// protected by Access. These credentials belong to the explicit SMOKE_URL target.
 const CF_ACCESS: Record<string, string> =
   process.env.CF_ACCESS_CLIENT_ID && process.env.CF_ACCESS_CLIENT_SECRET
     ? {
@@ -61,10 +52,6 @@ type StampedNav = HTMLElement & { __stamp?: number };
 
 let browser: Browser;
 let resetCompletedAt = 0;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 async function waitForHydration(page: Page) {
   await page.waitForSelector('#app[data-hydrated="true"]', { timeout: TIMEOUT });
@@ -90,7 +77,6 @@ function readTimestamp(page: Page, label: string): Promise<string | null> {
   }, label);
 }
 
-/** Wait for rendered app text to include `text`, polling with page reloads. */
 async function pollForText(page: Page, path: string, text: string, timeoutMs = 30_000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -104,17 +90,14 @@ async function pollForText(page: Page, path: string, text: string, timeoutMs = 3
   throw new Error(`Timed out after ${timeoutMs}ms waiting for "${text}" on ${path}`);
 }
 
-/** Wait for rendered app text to stop including `text`, without reloading. */
 async function waitForTextGone(page: Page, text: string, timeoutMs = TIMEOUT) {
   await waitForRenderedText(page, text, false, timeoutMs);
 }
 
-/** Wait for rendered app text to include `text`, without reloading. */
 async function waitForText(page: Page, text: string, timeoutMs = TIMEOUT) {
   await waitForRenderedText(page, text, true, timeoutMs);
 }
 
-/** Click the Delete button in the table row containing `needle`. */
 async function deleteRowContaining(page: Page, needle: string) {
   await page.evaluate((needleText) => {
     const row = Array.from(document.querySelectorAll('tr')).find((row) =>
@@ -131,10 +114,6 @@ async function deleteRowContaining(page: Page, needle: string) {
   }, needle);
 }
 
-// ---------------------------------------------------------------------------
-// Test suite
-// ---------------------------------------------------------------------------
-
 void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
   before(async () => {
     resetCompletedAt = await resetKitchenSink(BASE, CF_ACCESS);
@@ -145,7 +124,6 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
     await browser?.close();
   });
 
-  /** Create an isolated browser context + page. Caller must close ctx when done. */
   async function freshPage(): Promise<{ ctx: BrowserContext; page: Page }> {
     const ctx = await browser.newContext({ extraHTTPHeaders: CF_ACCESS });
     const page = await ctx.newPage();
@@ -161,18 +139,15 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
       assert.ok(body?.includes('Kitchen Sink'), "page contains 'Kitchen Sink'");
       assert.ok(body?.includes('Auth'), "page contains 'Auth'");
 
-      // Find a hashed asset URL in the HTML source (hashes are base64url-like, e.g. DOjtQvIZ)
       const html = await page.content();
       const assetMatch = html.match(/\/(assets\/[^"']+[-._][A-Za-z0-9_-]{6,}\.(js|css))/);
       assert.ok(assetMatch, 'found hashed asset URL in HTML');
 
       const assetUrl = `${BASE}/${assetMatch![1]}?smoke=${uid}`;
 
-      // A unique URL forces a fresh network GET without sending cache-bypass
-      // directives to the origin. Omit application/Access session cookies too.
-      // Cookie-bearing requests deliberately bypass the shared asset cache.
-      // The browser context still supplies Access service-token headers when
-      // configured; those protected requests exercise the private cache policy.
+      // Decision: A unique URL forces a fresh GET without sending cache-bypass directives to the origin. Cookies
+      // are left out because cookie-bearing requests bypass the shared asset cache. Access service-token
+      // headers still apply when set, so protected requests exercise the private cache policy.
       const asset = await page.evaluate(async (url) => {
         const res = await fetch(url, { credentials: 'omit' });
         return {
@@ -211,7 +186,6 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
     try {
       await goto(page, '/');
 
-      // Set a marker on window — survives SPA nav, lost on full reload
       await page.evaluate(() => {
         (window as MarkerWindow).__SPA_MARKER = true;
       });
@@ -222,7 +196,6 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
       });
       assert.ok(page.url().endsWith('/db'), `URL is /db (got: ${page.url()})`);
 
-      // Marker must still be present (no full reload)
       const marker = await page.evaluate(() => (window as MarkerWindow).__SPA_MARKER);
       assert.strictEqual(marker, true, 'SPA marker survived navigation');
 
@@ -253,7 +226,6 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
         timeout: TIMEOUT,
       });
 
-      // Nav stamp must survive (layout DOM not recreated)
       const stamp = await page.evaluate(() => {
         const nav = document.querySelector('nav') as StampedNav | null;
         return nav?.__stamp;
@@ -282,9 +254,7 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
       try {
         await deleteRowContaining(page, title);
         await waitForTextGone(page, title);
-      } catch {
-        // Cleanup on best-effort basis
-      }
+      } catch {}
     } finally {
       await ctx.close();
     }
@@ -297,8 +267,8 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
 
       await goto(page, '/kv');
 
-      // Set key — wait for the POST response before navigating away,
-      // otherwise the navigation cancels the in-flight form submission
+      // Decision: Waits for the POST response before navigating, because navigation cancels the in-flight form
+      // submission.
       await page.fill('input[placeholder="my-key"]', key);
       await page.fill('input[placeholder="my-value"]', 'hello');
       await Promise.all([
@@ -308,12 +278,10 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
         page.click('button:has-text("Set")'),
       ]);
 
-      // Lookup the key we just set (kv.get is strongly consistent)
       await goto(page, `/kv?lookup=${encodeURIComponent(key)}`);
       const body = await page.textContent('body');
       assert.ok(body?.includes('hello'), 'lookup shows value');
 
-      // Cleanup: delete via JSON POST (same as useForm.post())
       await page.evaluate(
         (keyToDelete) =>
           fetch('/kv', {
@@ -349,9 +317,7 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
       try {
         await deleteRowContaining(page, 'smoke-test.txt');
         await waitForTextGone(page, 'smoke-test.txt');
-      } catch {
-        // Cleanup on best-effort basis
-      }
+      } catch {}
     } finally {
       await ctx.close();
     }
@@ -377,7 +343,6 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
 
       await goto(page, '/queues');
 
-      // Send message — wait for the POST response to confirm the queue write completed
       await page.fill('input[placeholder="my-key"]', key);
       await page.fill('input[placeholder="my-value"]', 'queued');
       await Promise.all([
@@ -388,7 +353,6 @@ void describe(`kitchen-sink smoke (${BASE})`, { concurrency: true }, () => {
         page.click('button:has-text("Send to Queue")'),
       ]);
 
-      // Submission alone does not establish end-to-end queue delivery.
       await pollForText(page, '/queues', key, 60_000).catch(() => {
         throw new Error(
           'Queue consumer did not process the submitted message within 60s; check queue registration and dispatch logs, then the fixture D1 queue_results table.',

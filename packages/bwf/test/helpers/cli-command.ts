@@ -5,7 +5,6 @@ import { vi } from 'vite-plus/test';
 import { Buffer } from '../../src/cli/node-buffer.ts';
 import { savePlatformConnection } from '../../src/cli/platform-registry.ts';
 
-/** Collects stdout writes and `console.log` lines until `restore()` is called. */
 export function captureOutput(): { output: () => string; restore: () => void } {
   const chunks: Array<string> = [];
   const writeMock = vi
@@ -31,10 +30,6 @@ export function captureOutput(): { output: () => string; restore: () => void } {
   };
 }
 
-/**
- * Points HOME and the platform registry at a new temp directory that holds one
- * connected platform. Returns the directory so the caller can remove it.
- */
 export function setIsolatedHome(): string {
   const dir = mkdtempSync(join(tmpdir(), 'platform-home-'));
   process.env.HOME = dir;

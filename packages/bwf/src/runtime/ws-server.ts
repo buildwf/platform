@@ -133,7 +133,7 @@ export function buildWebSocketInstanceId(
   }
   const entries = route.params.map((name) => [name, params[name] ?? ''] as const);
   if (entries.length > 1 && entries.some(([, value]) => value.includes('&'))) {
-    // Keep unambiguous legacy identities. Ambiguous tuples must not adopt the
+    // Decision: Keep unambiguous legacy identities. Ambiguous tuples must not adopt the
     // old shared object's data, or collide with literal percent-encoded values.
     return `v2:${JSON.stringify(entries)}`;
   }
@@ -349,7 +349,7 @@ export function createWebSocketDurableObject(
     readonly state: DurableObjectState;
 
     constructor(state: DurableObjectState, env: Record<string, unknown>) {
-      // Extending `DurableObject` enables RPC, which is how `getRoom()` reaches actions.
+      // Decision: Extending `DurableObject` enables RPC, which is how `getRoom()` reaches actions.
       // Every other method stays `#`-private so it never joins that RPC surface.
       super(state, env);
       this.state = state;

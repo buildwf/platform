@@ -122,8 +122,8 @@ export function EmailProjectPage({ path, platformName, username }: AdminPageProp
       <SectionStack>
         <h2>Controls</h2>
         <SectionStack as="form" method="post" action={`/admin/email/${projectId}/suspend`}>
-          {/* Post the desired terminal state rather than a "toggle" intent, so a
-            double-click cannot race two toggles and flip the switch back on. */}
+          {/* Decision: Post the desired terminal state rather than a "toggle" intent, so a double-click can't race
+             two toggles and flip the switch back on. */}
           <input type="hidden" name="state" defaultValue={isSuspended ? 'active' : 'suspended'} />
           <Button
             type="submit"
@@ -301,7 +301,7 @@ export function EmailProjectPage({ path, platformName, username }: AdminPageProp
                       >
                         <Button type="submit" label="Rotate secret" size="sm" />
                       </form>
-                      {/* The typed slug is the real confirmation; the server checks it. */}
+                      {/* Decision: The typed slug is the real confirmation; the server checks it. */}
                       <SectionStack
                         as="form"
                         gap={2}

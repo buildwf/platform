@@ -78,8 +78,8 @@ export async function ensurePlatformAccessHealthChecks(input: {
   checkpoint: Readonly<Record<string, string>>;
   save: (encoded: string) => void;
 }): Promise<void> {
-  // The server owns ongoing app access after setup. Its token may have been
-  // rotated or its settings changed by an administrator since installation.
+  // Decision: The server owns ongoing app access after setup. An administrator may have rotated its token or
+  // changed its settings since installation.
   const appAccess =
     !input.manifest.steps.some((step) => step.key === 'app-access-initialized:v1') &&
     input.checkpoint.appAccessSetupJson
@@ -166,7 +166,7 @@ export async function ensurePlatformAccessHealthChecks(input: {
         `platform: Multiple Access applications cover ${destination}. Reconcile them before resuming.`,
       );
     }
-    // A manually configured or project-managed exact exception is verified without taking ownership.
+    // Decision: A manually configured or project-managed exact exception is verified without taking ownership.
     if (!recorded && matching.length === 1) {
       await verifyHealthException(access, matching[0]!, destination);
       continue;

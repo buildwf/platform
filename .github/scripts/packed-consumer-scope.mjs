@@ -11,7 +11,6 @@ const fullSuitePaths = [
   /^\.github\/workflows\/(?:packed-consumers|prepublish-test|publish)\.yml$/,
 ];
 
-/** Cheap default coverage, with the full acceptance matrix at packaging boundaries. */
 export function selectPackedSuite(paths) {
   if (paths === null) {
     return 'full';
@@ -69,7 +68,7 @@ export async function resolvePackedSuite({ eventName, event, requested = 'auto',
           return selectPackedSuite(paths);
         }
       }
-      // GitHub caps this endpoint at 3,000 files; an incomplete list must not skip tests.
+      // Decision: GitHub caps this endpoint at 3,000 files. An incomplete list mustn't skip tests.
       return 'full';
     }
     if (
@@ -83,14 +82,13 @@ export async function resolvePackedSuite({ eventName, event, requested = 'auto',
       const comparison = await request(
         `/repos/${repository}/compare/${event.before}...${event.after}?per_page=1`,
       );
-      // Compare responses contain at most 300 changed files, regardless of commit pagination.
+      // Decision: Compare responses hold at most 300 changed files, whatever the commit pagination.
       if (!Array.isArray(comparison.files) || comparison.files.length >= 300) {
         return 'full';
       }
       return selectPackedSuite(pathsFromFiles(comparison.files));
     }
   } catch {
-    // API outages, inaccessible history, or malformed data retain full coverage.
     console.warn('Could not inspect changed files; keeping the full packed suite.');
     return 'full';
   }

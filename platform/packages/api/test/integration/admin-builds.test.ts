@@ -26,8 +26,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  // `builds` references projects/users without ON DELETE cascade, so clear it
-  // before `clearTables` (which deletes projects/users) to avoid FK violations.
+  // Decision: `builds` references projects and users without ON DELETE cascade, so clear it before
+  // `clearTables` (which deletes projects and users) to avoid FK violations.
   await env.db.delete(builds);
   await clearTables(env.db);
 });
@@ -40,11 +40,6 @@ function req(path: string, cookie?: string): Response | Promise<Response> {
   return app.fetch(new Request(`http://localhost${path}`, { headers, redirect: 'manual' }), env);
 }
 
-/**
- * A spy DurableObjectNamespace whose `get().fetch()` records the path it was
- * called with and returns a fixed `/logs` payload. Lets a test assert WHICH
- * namespace (`BUILD_MANAGER` vs `BUILD_MANAGER_LARGE`) the route resolved.
- */
 function spyNamespace(payload: unknown): {
   ns: DurableObjectNamespace;
   calls: Array<string>;
@@ -267,7 +262,6 @@ describe('project detail Builds section', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
 
-    // An ongoing (ACTIVE) build and a terminal build.
     const ongoing = await createTestBuild(env.db, {
       projectId: project.id,
       userId: user.id,
@@ -291,17 +285,13 @@ describe('project detail Builds section', () => {
     const html = await adminHtml(res);
 
     expect(html).toContain('Builds');
-    // Both builds link to their build pages.
     expect(html).toContain(`/admin/builds/${ongoing.id}`);
     expect(html).toContain(`/admin/builds/${done.id}`);
-    // Short commit shown, not the full sha.
     expect(html).toContain('abc1234');
     expect(html).toContain('building');
     expect(html).toContain('complete');
     expect(html).toContain('github_actions');
 
-    // The ongoing row carries the active-build highlight class; the terminal
-    // row does not.
     const ongoingRow = tableRowContaining(html, `/admin/builds/${ongoing.id}`);
     const doneRow = tableRowContaining(html, `/admin/builds/${done.id}`);
     expect(ongoingRow).toContain('build-active');
@@ -344,7 +334,6 @@ describe('GET /admin/builds/:id (build page)', () => {
     expect(html).toContain('container');
     expect(html).toContain('building');
     expect(html).toContain('cafebab');
-    // The React log panel receives the build ID and starts with its loading state.
     expect(html).toContain('id="build-log"');
     expect(
       JSON.parse(
@@ -354,7 +343,6 @@ describe('GET /admin/builds/:id (build page)', () => {
       ),
     ).toMatchObject({ component: 'buildDetail' });
     expect(html).toContain('Loading logs...');
-    // No external GitHub link for a container build.
     expect(html).not.toContain('View logs on GitHub');
   });
 
@@ -377,7 +365,6 @@ describe('GET /admin/builds/:id (build page)', () => {
     expect(res.status).toBe(200);
     const html = await adminHtml(res);
 
-    // External link present; no live log panel.
     expect(html).toContain('View logs on GitHub');
     expect(html).toContain(logsUrl);
     expect(html).not.toContain('id="build-log"');

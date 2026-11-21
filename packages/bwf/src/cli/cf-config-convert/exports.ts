@@ -140,8 +140,8 @@ export function convertExports(
   const configuredExports = inferDurableObjectExports(source, sourcePrefix, report);
 
   const properties: Array<OutputProperty> = [];
-  // Workflow exports render last, once every `workflows` binding has had the
-  // chance to merge its settings into them; each keeps its place in order.
+  // Decision: Workflow exports render last, once each `workflows` binding has had the chance to merge its
+  // settings into them. Each keeps its place in order.
   const workflowExports = new Map<string, UnknownRecord>();
   const pendingWorkflows: Array<[OutputProperty, UnknownRecord]> = [];
   function addWorkflowExport(key: string, record: UnknownRecord): void {
@@ -213,10 +213,9 @@ export function convertExports(
       }),
     );
   }
-  // A `workflows` binding to a Workflow this Worker defines becomes an export
-  // here, carrying the Workflow's settings. When the Wrangler `exports` table
-  // already declares the same Workflow, the two merge, with the binding's
-  // settings winning.
+  // Decision: A `workflows` binding to a Workflow this Worker defines becomes an export here, carrying the
+  // Workflow's settings. When the Wrangler `exports` table already declares the same Workflow, the
+  // two merge, and the binding's settings win.
   for (const [index, entry] of getRecords(source, 'workflows').entries()) {
     if (
       !isLocalWorkflow(entry, source) ||
@@ -239,8 +238,8 @@ export function convertExports(
       }
       continue;
     }
-    // The new config declares one Workflow per exported class, so a second
-    // Workflow on the same class keeps its binding and loses its settings.
+    // Decision: The new config declares one Workflow per exported class, so a second Workflow on the same class
+    // keeps its binding and loses its settings.
     const lost = WORKFLOW_SETTINGS.filter((key) => hasOwn(entry, key));
     if (lost.length > 0) {
       const sourcePath = `${sourcePrefix ? `${sourcePrefix}.` : ''}workflows.${index}`;

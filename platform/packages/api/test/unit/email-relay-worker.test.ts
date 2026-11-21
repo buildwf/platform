@@ -10,13 +10,11 @@ import {
   RELAY_VERSION,
 } from '../../src/email/relay-worker.ts';
 
-// Dummy stand-ins — never real secret material.
 const RELAY_SECRET = 'relay-secret-dummy';
 const MIME_BODY = 'MIME-DUMMY-BODY';
 
-// Node lacks the Workers-only FixedLengthStream global the relay source
-// pipes through — mirror workerd's semantics (same shape as the
-// integration harness's polyfill) so the evaluated source runs as-is.
+// Decision: Node doesn't have the Workers-only FixedLengthStream the relay source pipes through. This
+// mirrors workerd's behavior (like the integration harness's polyfill) so the source runs as is.
 if ((globalThis as { FixedLengthStream?: unknown }).FixedLengthStream === undefined) {
   class NodeFixedLengthStream extends TransformStream<Uint8Array, Uint8Array> {
     constructor(expectedLength: number) {
@@ -50,10 +48,7 @@ type RelayMessage = {
   setReject: (reason: string) => void;
 };
 
-/**
- * Evaluate the embedded module-syntax source as-is and return its default
- * export, so the wire test exercises the exact code the api deploys.
- */
+// Decision: The embedded source is evaluated as is, so the test runs the exact code the api deploys.
 function loadRelayWorker(): {
   fetch: (request: Request, env: RelayEnv) => Promise<Response>;
   email: (
@@ -107,7 +102,6 @@ describe('RELAY_SOURCE', () => {
     expect(Number.isInteger(RELAY_VERSION)).toBe(true);
     expect(RELAY_SOURCE).toContain('export default');
     expect(RELAY_SOURCE).toContain('async email(message, env, ctx)');
-    // No parsing, no buffering, no third-party imports.
     expect(RELAY_SOURCE).not.toMatch(/^\s*import\s/m);
   });
 
@@ -139,9 +133,8 @@ describe('RELAY_SOURCE', () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://gateway.example.test/email/ingress');
     expect(init.method).toBe('POST');
-    // No hand-set Content-Length: the runtime ignores one on a stream body
-    // and derives it from the FixedLengthStream instead — a plain stream
-    // would go out chunked, and the proxy refuses a length-less body.
+    // Decision: No hand-set Content-Length: the runtime ignores one on a stream body and takes it from the
+    // FixedLengthStream. A plain stream would go out chunked, and the proxy refuses a body with no length.
     expect(init.headers).toEqual({
       Authorization: `Bearer ${RELAY_SECRET}`,
       'X-Platform-Email-Account': 'acct_1',
@@ -151,9 +144,6 @@ describe('RELAY_SOURCE', () => {
       'X-Platform-Email-From': 'sender@example.org',
       'X-Platform-Email-To': 'support@acme.com',
     });
-    // Streamed straight through — no base64, no JSON envelope. The body is
-    // the fixed-length transform's readable side, not the raw stream, and
-    // draining it yields exactly rawSize bytes of the raw MIME.
     expect(RELAY_SOURCE).toContain('FixedLengthStream');
     const body = init.body as ReadableStream<Uint8Array>;
     expect(body).toBeInstanceOf(ReadableStream);
@@ -161,7 +151,6 @@ describe('RELAY_SOURCE', () => {
     expect(uploaded.byteLength).toBe(message.rawSize);
     expect(new TextDecoder().decode(uploaded)).toBe(MIME_BODY);
     expect(init.signal?.aborted).toBe(true);
-    // The pump and the POST both ride waitUntil.
     expect(ctx.waitUntil).toHaveBeenCalledTimes(2);
     expect(message.setReject).not.toHaveBeenCalled();
   });
@@ -205,7 +194,6 @@ describe('RELAY_SOURCE', () => {
     const reason = (message.setReject as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
     expect(typeof reason).toBe('string');
     expect(reason.length).toBeLessThanOrEqual(64);
-    // The bounce goes back to the original sender — no internals leak.
     expect(reason).not.toContain(RELAY_SECRET);
     expect(reason).not.toContain('gateway.example.test');
     expect(reason).not.toContain('502');

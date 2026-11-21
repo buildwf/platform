@@ -45,8 +45,8 @@ export async function renderDashboardFatePage(context: Context<ApiEnv>): Promise
     username: context.get('user').login,
     healthCheckNames: systemHealthCheckNames(Boolean(context.env.PLATFORM_INSTALLATION_ID)),
   };
-  // Page-object navigations carry a cheap route shell. The persistent browser
-  // Fate client resolves it from cache or requests the missing view.
+  // Decision: Page-object navigations carry a cheap route shell. The persistent browser Fate client
+  // resolves it from cache or requests the missing view.
   if (context.req.header('X-PlatformPages') === 'true') {
     return renderAdminPage(context, 'dashboard', 'Dashboard', props);
   }

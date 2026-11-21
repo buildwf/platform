@@ -35,7 +35,7 @@ function keyringDelete(account: string): boolean {
   return deleteKeyringPassword(KEYRING_SERVICE, account);
 }
 
-// Legacy origin-scoped tokens, moved to the keychain when read.
+// Decision: Legacy origin-scoped tokens, moved to the keychain when read.
 type Config = {
   tokens?: Record<string, string>;
 };
@@ -73,7 +73,7 @@ function readOriginScopedToken(apiUrl: string, config: Config): string | null {
     try {
       writeConfig(config);
     } catch {
-      // Migration is best-effort; the file remains a usable fallback.
+      // Decision: The keychain migration can fail. The file stays a usable fallback.
     }
   }
   return fileToken;
@@ -193,9 +193,7 @@ export function removeToken(root: string = process.cwd()): boolean {
     if (configChanged) {
       writeConfig(config);
     }
-  } catch {
-    // ignore
-  }
+  } catch {}
 
   return removed;
 }
@@ -268,10 +266,9 @@ export function getApiUrl(root: string = process.cwd()): string {
 }
 
 export function getProxyUrl(root: string = process.cwd()): string {
-  // The project file is repository-controlled and therefore cannot be trusted
-  // to choose the origin that receives a user's platform credential. Resolve
-  // the proxy from the selected API's trusted local registry entry instead.
-  // PLATFORM_PROXY_URL remains an explicit operator override for CI and recovery.
+  // Decision: The project file is repository-controlled, so it can't be trusted to choose the origin that gets a
+  // user's platform credential. Resolve the proxy from the selected API's trusted local registry entry
+  // instead. PLATFORM_PROXY_URL stays an explicit operator override for CI and recovery.
   const apiUrl = getApiUrl(root);
   if (process.env.PLATFORM_PROXY_URL) {
     return normalizePlatformApiUrl(process.env.PLATFORM_PROXY_URL);
@@ -298,11 +295,11 @@ function page(title: string, message: string): string {
 }
 
 export function openBrowser(url: string, run: typeof execFile = execFile): void {
-  // Launch via argv (execFile), never a shell: the URL is passed as a single
-  // argument so shell metacharacters in it can't be interpreted as commands.
+  // Decision: Launch through argv (execFile), not a shell: the URL is passed as one argument, so shell
+  // metacharacters in it can't run as commands.
   const ignore = (): void => {};
   if (process.platform === 'win32') {
-    // Avoid cmd.exe interpreting URL query separators such as & as shell commands.
+    // Decision: Avoid cmd.exe reading URL query separators such as & as shell commands.
     run('rundll32.exe', ['url.dll,FileProtocolHandler', url], ignore);
     return;
   }
@@ -310,7 +307,7 @@ export function openBrowser(url: string, run: typeof execFile = execFile): void 
     run('open', [url], ignore);
     return;
   }
-  // Linux — including WSL2 where `xdg-open` typically has no usable handler.
+  // Decision: Linux, including WSL2, where `xdg-open` usually has no usable handler.
   // Try `wslview` (wslu), then fall back to the Windows URL handler.
   if (process.env.WSL_DISTRO_NAME || process.env.WSL_INTEROP) {
     run('wslview', [url], (error) => {
@@ -404,7 +401,7 @@ export async function awaitBrowserCallback<T>(options: {
         return;
       }
 
-      // The timeout may settle while finalize is in flight.
+      // Decision: The timeout may settle while finalize is in flight.
       let result: T;
       try {
         result = await finalize(url.searchParams);
@@ -431,7 +428,7 @@ export async function awaitBrowserCallback<T>(options: {
       succeed(result);
     });
 
-    // Close immediately after callback — don't wait for keep-alive timeout
+    // Decision: Close right after the callback, without waiting for the keep-alive timeout.
     server.on('connection', (socket) => socket.unref());
 
     server.listen(0, '127.0.0.1', async () => {

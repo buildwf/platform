@@ -43,7 +43,7 @@ if (accountId && token) {
     }
     console.log(`Hosted void AI Gateway collect_logs: ${gateway.result.collect_logs}`);
   } catch {
-    // Deployment tokens need not have AI Gateway Read permission.
+    // Decision: Deployment tokens need not have AI Gateway Read permission.
     console.warn(
       'Could not read AI Gateway logging with the deployment token; check it in Cloudflare.',
     );

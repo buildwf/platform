@@ -100,8 +100,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  // builds reference projects via FK and clearTables() does not touch them, so
-  // clear builds first (mirrors deploy-token-scope.test.ts).
+  // Decision: builds reference projects by FK and clearTables() doesn't touch them, so clear builds first.
   await env.db.delete(builds);
   await clearTables(env.db);
 });
@@ -158,12 +157,8 @@ function injectLostGoLiveCommitAcknowledgement(projectId: string): {
   };
 }
 
-/**
- * Build a JSON-mode (direct-to-R2) deploy request body that mirrors the
- * shape the production CLI sends. Pre-uploads each asset's bytes into
- * `env.STATIC_ASSETS_R2` under the `assets/${projectId}/${blake3}` key so the
- * JSON-mode handler's parallel R2.head verification finds them.
- */
+// Decision: Pre-uploads each asset under `assets/${projectId}/${blake3}` so the JSON-mode handler's R2.head
+// check finds it.
 async function buildDeployRequest(
   env: TestEnv,
   projectId: string,
@@ -172,27 +167,20 @@ async function buildDeployRequest(
     manifest?: Record<string, unknown>;
     workers?: Record<string, string>;
     assets?: Record<string, string | Uint8Array>;
-    /** Carried through for tests that pass an explicit assetManifest body field. */
     assetManifest?: Record<string, { hash: string; size: number }>;
-    /** When 'true', appended to the JSON body. */
     preflight?: 'true' | null;
-    /** Skip the default `index.js` worker module. */
     omitDefaultWorker?: boolean;
   },
 ): Promise<Request> {
   const baseManifest = opts?.manifest ?? { version: 3, bindings: {} };
-  // JSON-mode requires assetManifestVersion: 2.
   const manifest: Record<string, unknown> = {
     assetManifestVersion: 2,
     ...baseManifest,
   };
 
-  // Decide whether worker files are appropriate for this manifest type.
   const manifestType = (manifest as { type?: unknown }).type;
   const isStaticManifest = manifestType === 'spa' || manifestType === 'static';
 
-  // Default worker file for non-static manifests so callers can use the
-  // simple `buildDeployRequest()` shape.
   const workers =
     opts?.workers ??
     (isStaticManifest || opts?.omitDefaultWorker
@@ -209,18 +197,15 @@ async function buildDeployRequest(
         )
       : undefined;
 
-  // Build the asset manifest in v2 shape, pre-uploading each asset to R2.
   const assetManifest: Record<string, { blake3: string; md5: string; size: number }> = {};
   if (opts?.assets) {
     for (const [path, content] of Object.entries(opts.assets)) {
       const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content;
       const blake3 = computeAssetHash(bytes.buffer as ArrayBuffer, '/' + path);
-      // md5 is required by the v2 wire shape but never re-checked when bytes
-      // are pre-uploaded out-of-band (R2.head only checks size). Stub with
-      // a deterministic 32-hex value so manifest validation accepts it.
+      // Decision: md5 is required by the v2 wire shape but not re-checked when bytes are pre-uploaded (R2.head only
+      // checks size), so a deterministic 32-hex stub passes manifest validation.
       const md5 = blake3;
       assetManifest['/' + path] = { blake3, md5, size: bytes.length };
-      // Pre-upload to R2 under the content-addressed key the handler checks.
       await env.STATIC_ASSETS_R2.put(
         `assets/${projectId}/${blake3}`,
         bytes as unknown as ArrayBuffer,
@@ -228,10 +213,8 @@ async function buildDeployRequest(
     }
   }
 
-  // Allow callers to provide an explicit assetManifest (for dedupe/preflight
-  // tests). When provided, override the auto-generated entries — but pre-upload
-  // happens above based on `opts.assets`, so callers passing both must keep
-  // them aligned.
+  // Decision: An explicit assetManifest overrides the generated entries, but the pre-upload above follows
+  // `opts.assets`, so callers passing both have to keep them aligned.
   const declaredAssetManifest: Record<string, { blake3: string; md5: string; size: number }> = {};
   if (opts?.assetManifest) {
     for (const [path, entry] of Object.entries(opts.assetManifest)) {
@@ -314,13 +297,9 @@ function mockSetTimeout() {
   ) => nativeSetTimeout(fn, 0, ...args)) as typeof setTimeout);
 }
 
-/**
- * Builds an ExecutionContext that captures every `waitUntil` promise into
- * `pending` so tests can `await Promise.all(pending)` after `app.fetch`.
- * Real Workers awaits these on response close; Hono passes the ctx through
- * to handlers but does not await it. Without this, deferred work (e.g. the
- * post-routing cron sync in deploy.ts step 5c) never runs in tests.
- */
+// Decision: Real Workers await waitUntil promises on response close; Hono passes the ctx through but doesn't
+// await it. Capture them in `pending` so tests can await deferred work (like the post-routing cron
+// sync in deploy.ts step 5c), which otherwise never runs.
 function createWaitUntilTrackingCtx(): {
   ctx: ExecutionContext;
   pending: Array<Promise<unknown>>;
@@ -456,7 +435,7 @@ describe('POST /projects/:id/deploy', () => {
               if (changePlan) {
                 await updateUserPlan(env.db, user.id, 'team');
               }
-              // The completed update is already published before this deployment takes its cutover fence.
+              // Decision: The completed update is already published before this deployment takes its cutover fence.
               await env.ROUTING.put(
                 project.slug,
                 JSON.stringify({
@@ -792,7 +771,6 @@ describe('POST /projects/:id/deploy', () => {
     expect(done.deployment).toMatch(/^dpl_/);
     expect(done.url).toBe('https://minimal-app.buildwf.dev');
 
-    // Verify deployment is marked live in DB
     const [dpl] = await env.db
       .select({ status: deployments.status })
       .from(deployments)
@@ -854,8 +832,8 @@ describe('POST /projects/:id/deploy', () => {
         key: 'zeroTrust.configuration',
         value: configuration('stale-audience', 1),
       });
-      // Deploy admission requires settled protection; the audience then
-      // changes while the deploy runs, before its cutover lock.
+      // Decision: Deploy admission requires settled protection; the audience then changes while the deploy runs,
+      // before its cutover lock.
       await env.db.insert(projectZeroTrust).values({
         project_id: project.id,
         desired_protected: true,
@@ -910,8 +888,8 @@ describe('POST /projects/:id/deploy', () => {
       const cf = mockCfApi();
       const put = vi.spyOn(env.STATIC_ASSETS_R2, 'put');
 
-      // Omitted type and workerMain are accepted on the wire. Persist the
-      // Worker identity so asset fallback settings cannot make rollback static.
+      // Decision: Omitted type and workerMain are accepted on the wire. The Worker identity is persisted so asset
+      // fallback settings can't make a rollback static.
       const first = await app.fetch(
         await buildDeployRequest(env, project.id, user.jwt, {
           manifest: {
@@ -1002,7 +980,6 @@ describe('POST /projects/:id/deploy', () => {
     expect(res.status).toBe(200);
     await res.text();
 
-    // Find the worker upload call
     const uploadCall = fetchMock.mock.calls.find((call: Array<unknown>) => {
       const url = typeof call[0] === 'string' ? call[0] : String(call[0]);
       return url.includes('/workers/dispatch/') && (call[1] as RequestInit)?.method === 'PUT';
@@ -1020,7 +997,6 @@ describe('POST /projects/:id/deploy', () => {
     const project = await createTestProject(env.db, user.id, 'cron-app');
     mockCfApi();
 
-    // Track DO fetch calls
     const cronDoFetches: Array<{ url: string; body: string }> = [];
     const cronSchedulerMock = {
       idFromName: (name: string) => ({ toString: () => name }),
@@ -1033,7 +1009,7 @@ describe('POST /projects/:id/deploy', () => {
       }),
     } as unknown as DurableObjectNamespace;
     const testEnv = { ...env, CRON_SCHEDULER: cronSchedulerMock };
-    // Cron sync runs in waitUntil — capture and await it before assertions.
+    // Decision: Cron sync runs in waitUntil, so capture it and await it before the assertions.
     const { ctx, pending } = createWaitUntilTrackingCtx();
 
     const res = await app.fetch(
@@ -1051,7 +1027,6 @@ describe('POST /projects/:id/deploy', () => {
     await res.text();
     await Promise.all(pending);
 
-    // Verify DO received /sync with correct payload
     const syncCall = cronDoFetches.find((f) => f.url.includes('/sync'));
     expect(syncCall).toBeDefined();
     const payload = JSON.parse(syncCall!.body);
@@ -1128,8 +1103,6 @@ describe('POST /projects/:id/deploy', () => {
     expect(events.some((event) => (event as DeployEvent).event === 'done')).toBe(false);
     expect(events.some((event) => (event as DeployEvent).event === 'error')).toBe(true);
     expect(domainRestoreFailed).toBe(true);
-    // The failed custom-domain undo is first in reverse order. The slug
-    // restoration must still run instead of being skipped after that error.
     expect(await env.ROUTING.get(project.slug)).toBe(previousRouting);
     expect(syncedStates.at(-1)).toEqual(previousCronState);
   });
@@ -1139,7 +1112,6 @@ describe('POST /projects/:id/deploy', () => {
     const project = await createTestProject(env.db, user.id, 'no-cron-app');
     mockCfApi();
 
-    // Simulate previous deploy having crons by setting hasCrons in routing entry
     await env.ROUTING.put(
       project.slug,
       JSON.stringify({ workerName: `user-${project.slug}`, hasCrons: true }),
@@ -1167,22 +1139,18 @@ describe('POST /projects/:id/deploy', () => {
     expect(res.status).toBe(200);
     await res.text();
 
-    // Verify DO received /clear
     const clearCall = cronDoFetches.find((f) => f.url.includes('/clear'));
     expect(clearCall).toBeDefined();
   });
 
   it('static deploy clears CronScheduler DO when previous PG manifest had schedules even if KV hasCrons is missing', async () => {
-    // KV's `hasCrons` flag is only written when true, so KV entries from
-    // older code paths or pre-`hasCrons` deploys have it missing. Gating the
-    // static-only deploy's /clear on it would leave the cron DO firing
-    // against a script we just deleted. PG's previous live manifest is the
-    // authoritative source, as on the rollback path in `routes/projects.ts`.
+    // Decision: KV's `hasCrons` flag is written only when true, so entries from older deploys lack it. Gating the
+    // static-only deploy's /clear on it would leave the cron DO firing against a deleted script. PG's
+    // previous live manifest is the authoritative source, as on the rollback path.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'static-from-cron');
     mockCfApi();
 
-    // Pre-seed a live deployment whose PG manifest carries cron schedules…
     const liveDeployId = 'dpl_live_cronsched';
     const liveManifest = {
       version: 3,
@@ -1201,8 +1169,6 @@ describe('POST /projects/:id/deploy', () => {
       .set({ active_deployment_id: liveDeployId })
       .where(eq(projects.id, project.id));
 
-    // …but the KV routing entry pre-dates the `hasCrons` flag, so it's
-    // missing.
     await env.ROUTING.put(project.slug, JSON.stringify({ workerName: `user-${project.slug}` }));
 
     const cronDoFetches: Array<{ url: string }> = [];
@@ -1218,8 +1184,6 @@ describe('POST /projects/:id/deploy', () => {
 
     const testEnv = { ...env, CRON_SCHEDULER: cronSchedulerMock };
 
-    // Static deploy: no worker files, manifest.type='spa' to take the
-    // static branch.
     const res = await app.fetch(
       await buildStaticDeployRequest(env, project.id, user.jwt, {
         type: 'spa',
@@ -1235,13 +1199,8 @@ describe('POST /projects/:id/deploy', () => {
   });
 
   it('pre-routing failure does not disable previous deployment crons', async () => {
-    // Cron sync runs AFTER the routing switch. A failure before cutover
-    // (e.g. worker upload) must NOT touch the cron DO, or the failure-cleanup
-    // `/clear` would wipe the still-live previous deployment's crons even
-    // though routing never moved.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'cron-pre-fail');
-    // Force a pre-routing failure: the worker upload is rejected.
     mockCfApi({
       uploadWorker: () =>
         Response.json(
@@ -1250,8 +1209,6 @@ describe('POST /projects/:id/deploy', () => {
         ),
     });
 
-    // Pre-seed a live deployment with cron schedules — the previous live
-    // deploy whose CronScheduler DO state must remain intact.
     const liveDeployId = 'dpl_live_pre_fail';
     await env.db.insert(deployments).values({
       id: liveDeployId,
@@ -1291,8 +1248,6 @@ describe('POST /projects/:id/deploy', () => {
         manifest: {
           version: 3,
           bindings: {},
-          // The new deploy also declares schedules — we want to be sure
-          // we didn't /sync to the new (failing) worker either.
           schedules: [{ name: 'new', cron: '*/5 * * * *' }],
         },
       }),
@@ -1301,8 +1256,6 @@ describe('POST /projects/:id/deploy', () => {
     expect(res.status).toBe(200);
     await res.text();
 
-    // Deploy must be marked failed (pre-routing throw → catch's
-    // !routingSwitched branch).
     const [dpl] = await env.db
       .select({ status: deployments.status })
       .from(deployments)
@@ -1311,18 +1264,10 @@ describe('POST /projects/:id/deploy', () => {
       .limit(1);
     expect(dpl?.status).toBe('failed');
 
-    // The cron DO MUST NOT have been touched — neither /sync nor /clear.
-    // The previous deployment's cron state is still in the DO untouched.
     expect(cronDoFetches).toEqual([]);
   });
 
   it('clears CronScheduler DO unconditionally when no crons present (KV hasCrons gate is unreliable)', async () => {
-    // The previous-deploy KV `hasCrons` flag is unreliable as a gate — it's
-    // only written when true, so older entries or paths that didn't
-    // propagate it have it missing. `/clear` is idempotent (deleteAll +
-    // deleteAlarm, both no-ops on empty DOs) so we call it unconditionally
-    // for no-cron deploys; this matches the static-only deploy and the
-    // project-deletion path.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'plain-app');
     mockCfApi();
@@ -1339,7 +1284,7 @@ describe('POST /projects/:id/deploy', () => {
     } as unknown as DurableObjectNamespace;
 
     const testEnv = { ...env, CRON_SCHEDULER: cronSchedulerMock };
-    // Cron clear runs in waitUntil — capture and await it before assertions.
+    // Decision: Cron clear runs in waitUntil, so capture it and await it before the assertions.
     const { ctx, pending } = createWaitUntilTrackingCtx();
 
     const res = await app.fetch(
@@ -1353,10 +1298,8 @@ describe('POST /projects/:id/deploy', () => {
     await res.text();
     await Promise.all(pending);
 
-    // /clear was called even though there's no prior live deploy with crons.
     const clearCall = cronDoFetches.find((f) => f.url.includes('/clear'));
     expect(clearCall).toBeDefined();
-    // No /sync — there are no schedules to register.
     expect(cronDoFetches.find((f) => f.url.includes('/sync'))).toBeUndefined();
   });
 
@@ -1407,7 +1350,6 @@ describe('POST /projects/:id/deploy', () => {
     expect(res.status).toBe(200);
     await res.text();
 
-    // Verify resource row was created in DB
     const [resource] = await env.db
       .select({ cf_id: resources.cf_id, binding_name: resources.binding_name })
       .from(resources)
@@ -1422,7 +1364,6 @@ describe('POST /projects/:id/deploy', () => {
     const project = await createTestProject(env.db, user.id, 'existing-d1');
     const fetchMock = mockCfApi();
 
-    // Pre-insert a resource
     await env.db.insert(resources).values({
       id: 'res_existing',
       project_id: project.id,
@@ -1440,7 +1381,6 @@ describe('POST /projects/:id/deploy', () => {
     expect(res.status).toBe(200);
     await res.text();
 
-    // Verify no D1 creation call was made
     const createD1Call = fetchMock.mock.calls.find((call: Array<unknown>) => {
       const url = typeof call[0] === 'string' ? call[0] : String(call[0]);
       return (
@@ -1564,8 +1504,6 @@ describe('POST /projects/:id/deploy', () => {
       createD1: () => cfSuccess({ uuid: 'd1-migrate-uuid', name: 'test-db' }),
     });
 
-    // Mock the DISPATCH namespace so the deploy route can call the worker's
-    // readiness probe and migration endpoint
     const originalDispatch = env.DISPATCH;
     env.DISPATCH = {
       get: () => ({
@@ -1621,7 +1559,6 @@ describe('POST /projects/:id/deploy', () => {
     const project = await createTestProject(env.db, user.id, 'domain-deploy');
     mockCfApi();
 
-    // Insert an active domain
     await env.db.insert(domains).values({
       id: 'dom_deploy',
       project_id: project.id,
@@ -1630,7 +1567,6 @@ describe('POST /projects/:id/deploy', () => {
       status: 'active',
     });
 
-    // Insert a pending domain (should NOT get KV routing)
     await env.db.insert(domains).values({
       id: 'dom_pending',
       project_id: project.id,
@@ -1647,7 +1583,6 @@ describe('POST /projects/:id/deploy', () => {
     expect(done.urls).toContain('https://deploy.example.com');
     expect(done.urls).toContain('https://domain-deploy.buildwf.dev');
 
-    // Verify domain KV routing was written
     const domainRouting = await env.ROUTING.get('domain:deploy.example.com', 'json');
     expect(domainRouting).toEqual({
       workerName: expect.stringMatching(/^user-domain-deploy-dpl_/),
@@ -1658,7 +1593,6 @@ describe('POST /projects/:id/deploy', () => {
       limits: { cpuMs: 10, subRequests: 50 },
     });
 
-    // Verify pending domain was NOT written
     const pendingRouting = await env.ROUTING.get('domain:pending.example.com');
     expect(pendingRouting).toBeNull();
   });
@@ -1668,7 +1602,6 @@ describe('POST /projects/:id/deploy', () => {
     const project = await createTestProject(env.db, user.id, 'limit-app');
     mockCfApi();
 
-    // Insert 100 deployments created today (free tier limit)
     for (let i = 0; i < 100; i++) {
       await env.db.insert(deployments).values({
         id: `dpl_limit_${i}`,
@@ -1696,7 +1629,6 @@ describe('POST /projects/:id/deploy', () => {
     const project = await createTestProject(env.db, user.id, 'under-limit-app');
     mockCfApi();
 
-    // Insert 99 deployments (under free tier limit of 100)
     for (let i = 0; i < 99; i++) {
       await env.db.insert(deployments).values({
         id: `dpl_under_${i}`,
@@ -1714,8 +1646,8 @@ describe('POST /projects/:id/deploy', () => {
 
     const res = await app.fetch(await buildDeployRequest(env, project.id, user.jwt), env);
     expect(res.status).toBe(200);
-    // Drain the NDJSON stream so the deploy IIFE (which holds deployments-table
-    // writes) finishes before the next beforeEach runs clearTables.
+    // Decision: Drain the NDJSON stream so the deploy IIFE (which holds deployments-table writes) finishes before
+    // the next beforeEach runs clearTables.
     await readAllEvents(res);
   });
 
@@ -1763,7 +1695,6 @@ describe('POST /projects/:id/deploy', () => {
     expect(body.event).toBe('error');
     expect(body.message).toBe('limits.cpuMs 60000 exceeds your plan maximum of 30000');
 
-    // Rejected before the claim transaction — no deployment row was created.
     const rows = await env.db
       .select({ id: deployments.id })
       .from(deployments)
@@ -1868,7 +1799,6 @@ describe('POST /projects/:id/deploy', () => {
     const routing = (await env.ROUTING.get('custom-ceiling-app', 'json')) as {
       limits: { cpuMs: number };
     };
-    // subRequests stays absent (custom plan value is 0 = unlimited).
     expect(routing.limits).toEqual({ cpuMs: 300_000 });
   });
 
@@ -2019,7 +1949,6 @@ describe('POST /projects/:id/deploy', () => {
       expect(res.status).toBe(200);
       await res.text();
 
-      // Verify queue resource was created in DB with queue_id (UUID), not queue_name
       const [resource] = await env.db
         .select({ cf_id: resources.cf_id, binding_name: resources.binding_name })
         .from(resources)
@@ -2028,7 +1957,6 @@ describe('POST /projects/:id/deploy', () => {
       expect(resource!.cf_id).toBe('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
       expect(resource!.binding_name).toBe('emails');
 
-      // Verify addQueueConsumer was called with queue_id (UUID), not queue_name
       const consumerCall = fetchMock.mock.calls.find((call: Array<unknown>) => {
         const url = typeof call[0] === 'string' ? call[0] : String(call[0]);
         return (
@@ -2078,7 +2006,6 @@ describe('POST /projects/:id/deploy', () => {
       bindings?: Array<{ type: string; name: string; queue_name?: string; queue_id?: string }>;
     };
 
-    // queue_name is the deterministic name (for CF producer binding), queue_id is the UUID
     const expectedQueueName = `${project.id}-emails`.toLowerCase().replaceAll('_', '-');
     const queueBindings = (metadata.bindings ?? []).filter((b) => b.type === 'queue');
     expect(queueBindings).toEqual([
@@ -2109,9 +2036,8 @@ describe('POST /projects/:id/deploy', () => {
     expect(res.status).toBe(200);
     await res.text();
 
-    // Verify queue routing KV entry (key uses deterministic queue name).
-    // proxyToken must be present so platform-dispatch can authenticate the relay
-    // against the user worker's framework-generated /__platform/queue endpoint.
+    // Decision: The queue routing key uses the deterministic queue name. proxyToken has to be present so
+    // platform-dispatch can authenticate the relay to the worker's /__platform/queue endpoint.
     const expectedQueueName = `${project.id}-emails`.toLowerCase().replaceAll('_', '-');
     const queueRouting = (await env.ROUTING.get(`queue:${expectedQueueName}`, 'json')) as {
       workerName: string;
@@ -2173,7 +2099,6 @@ describe('POST /projects/:id/deploy', () => {
       .from(projects)
       .where(eq(projects.id, project.id));
     expect(row!.gen).toBe(1);
-    // The deployment records the generation its Worker was uploaded with.
     expect(
       await env.db
         .select({ gen: deployments.proxy_token_gen })
@@ -2201,7 +2126,6 @@ describe('POST /projects/:id/deploy', () => {
       await res.text();
     };
     await deploy();
-    // A project whose Workers predate token generations.
     await env.db.update(projects).set({ proxy_token_gen: 0 }).where(eq(projects.id, project.id));
 
     await deploy();
@@ -2297,7 +2221,6 @@ describe('POST /projects/:id/deploy', () => {
     const expectedQueueName = `${project.id}-emails`.toLowerCase().replaceAll('_', '-');
     const routingKey = `queue:${expectedQueueName}`;
 
-    // Seed: a previously-successful deploy already owns this route.
     await env.ROUTING.put(
       routingKey,
       JSON.stringify({
@@ -2332,9 +2255,6 @@ describe('POST /projects/:id/deploy', () => {
     const events = await readAllEvents(res);
     expect(events.some((e: unknown) => (e as { event: string }).event === 'error')).toBe(true);
 
-    // The live queue route must still point at the previously-live worker —
-    // the failed deploy must not overwrite it with a pointer to a new
-    // worker that is about to be torn down.
     const routing = (await env.ROUTING.get(routingKey, 'json')) as {
       workerName: string;
       proxyToken: string;
@@ -2375,9 +2295,8 @@ describe('POST /projects/:id/deploy', () => {
     expect(conflict).toBeDefined();
     expect(conflict!.queue).toBe('emails');
     expect(conflict!.ownerScript).toBe('other-dispatch');
-    // Conflict is fatal: CI/automation clients must see a non-success
-    // signal instead of a `done` event, otherwise a partially broken
-    // deploy is indistinguishable from a healthy one.
+    // Decision: A conflict is fatal: CI clients need a non-success signal instead of a `done` event, or a partly
+    // broken deploy looks like a healthy one.
     expect(events.some((e: unknown) => (e as { event: string }).event === 'done')).toBe(false);
     const errorEvent = events.find((e: unknown) => (e as { event: string }).event === 'error') as
       | { event: string; message: string }
@@ -2498,7 +2417,6 @@ describe('POST /projects/:id/deploy', () => {
       async () => {
         const user = await createTestUser(env.db);
         const project = await createTestProject(env.db, user.id, 'cleanup-pre-routing-test');
-        // Worker upload always returns the plain-text bug → exhausts retries → fails before routing
         const fetchMock = mockCfApi({
           uploadWorker: () => new Response('Assets have already been uploaded.'),
         });
@@ -2509,10 +2427,8 @@ describe('POST /projects/:id/deploy', () => {
           }),
           env,
         );
-        // Consume the stream to drive the deploy handler to completion (including the catch block)
         await res.text();
 
-        // The outer catch should have called deleteDispatchScript (DELETE to workers/dispatch/...scripts/)
         const deleteCalls = fetchMock.mock.calls.filter((args: Array<unknown>) => {
           const url = typeof args[0] === 'string' ? args[0] : '';
           const init = args[1] as RequestInit | undefined;
@@ -2523,7 +2439,6 @@ describe('POST /projects/:id/deploy', () => {
           );
         });
         expect(deleteCalls.length).toBeGreaterThanOrEqual(1);
-        // At least one delete should target the new worker name
         const targetedNewWorker = deleteCalls.some((args: Array<unknown>) => {
           const url = args[0] as string;
           return url.includes(`user-${project.slug}-`);
@@ -2585,7 +2500,6 @@ describe('POST /projects/:id/deploy', () => {
           step: 'worker_upload',
           message: 'worker upload returned an unexpected Cloudflare response',
         });
-        // A plain-text reply never checks for a saved script.
         expect(dispatchScriptReads(cf)).toBe(0);
       },
     );
@@ -2620,7 +2534,6 @@ describe('POST /projects/:id/deploy', () => {
         );
       }).length;
 
-    // Collects the deploy log records written for a saved upload.
     const captureSavedUploadLogs = () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       return () =>
@@ -2634,7 +2547,6 @@ describe('POST /projects/:id/deploy', () => {
         });
     };
 
-    // Collects the worker upload attempt records, at any level.
     const captureUploadAttemptLogs = () => {
       const spies = [
         vi.spyOn(console, 'log').mockImplementation(() => {}),
@@ -2675,7 +2587,6 @@ describe('POST /projects/:id/deploy', () => {
       expect(uploadCalls).toBe(4);
       expect(dispatchScriptReads(cf)).toBe(1);
 
-      // Verify deployment is marked failed with error message
       const [dpl] = await env.db
         .select({ status: deployments.status, error_message: deployments.error_message })
         .from(deployments)
@@ -2707,7 +2618,6 @@ describe('POST /projects/:id/deploy', () => {
       expect(res.status).toBe(200);
       const events = parseDeployStream(await res.text());
       expect(events.at(-1)).toMatchObject({ event: 'done' });
-      // The second attempt sent the whole module again.
       expect(received).toEqual([worker, worker]);
     });
 
@@ -2735,7 +2645,6 @@ describe('POST /projects/:id/deploy', () => {
       expect(dispatchScriptReads(cf)).toBe(1);
     });
 
-    // The headers arrive, then the connection drops while the body is read.
     const brokenBodyResponse = (status: number) =>
       new Response(
         new ReadableStream({
@@ -2863,7 +2772,6 @@ describe('POST /projects/:id/deploy', () => {
       expect(signals).toHaveLength(2);
       expect(signals[0]).toBeInstanceOf(AbortSignal);
       expect(signals[1]).toBeInstanceOf(AbortSignal);
-      // Each attempt has its own timer.
       expect(signals[1]).not.toBe(signals[0]);
     });
 
@@ -2889,7 +2797,7 @@ describe('POST /projects/:id/deploy', () => {
       expect(dispatchScriptReads(cf)).toBe(1);
     });
 
-    // Cloudflare stores the script, but the platform never sees its answer.
+    // Decision: Cloudflare stores the script, but the platform never sees its answer.
     async function saveScript(
       cf: MockCfApiHandle,
       url: string,
@@ -2967,7 +2875,6 @@ describe('POST /projects/:id/deploy', () => {
           bodyPreview: expect.stringContaining('100312'),
         }),
       ]);
-      // `code` names the failure kind; Cloudflare's number has its own field.
       expect(logs[0]).not.toHaveProperty('code');
     });
 
@@ -3161,7 +3068,7 @@ describe('POST /projects/:id/deploy', () => {
       const cf = mockCfApi({
         uploadWorker: () => {
           uploadCalls++;
-          // The first attempt took most of the budget.
+          // Decision: Move the clock so the first attempt appears to have used most of the budget.
           vi.spyOn(Date, 'now').mockImplementation(() => now() + 450_000);
           throw timeoutError();
         },
@@ -3214,7 +3121,6 @@ describe('POST /projects/:id/deploy', () => {
       const logs = captureUploadAttemptLogs();
       let stalls = 0;
       const cf = mockCfApi({
-        // The body has been read in full; no answer comes until the signal aborts.
         uploadWorker: (_url, init) =>
           new Promise<Response>((_resolve, reject) => {
             const signal = init!.signal!;
@@ -3227,9 +3133,8 @@ describe('POST /projects/:id/deploy', () => {
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
       try {
         const body = Promise.resolve(app.fetch(request, env)).then((res) => res.text());
-        // Each step passes one response limit and the backoff after it. The
-        // fourth attempt would get its answer past the budget, so the
-        // deadline cuts it.
+        // Decision: Each step passes one response limit plus the backoff after it. The fourth attempt would get its
+        // answer past the budget, so the deadline cuts it.
         for (let attempt = 1; attempt <= 4; attempt++) {
           await vi.waitFor(() => expect(stalls).toBe(attempt));
           await vi.advanceTimersByTimeAsync(128_000);
@@ -3467,7 +3372,6 @@ describe('POST /projects/:id/deploy', () => {
               }
               return Response.json({ ready: true });
             }
-            // /__platform/migrate/app
             migrateCalls++;
             return Response.json({
               ok: true,
@@ -3491,9 +3395,7 @@ describe('POST /projects/:id/deploy', () => {
         expect(res.status).toBe(200);
         const events = parseDeployStream(await res.text());
         expect(events.at(-1)).toMatchObject({ event: 'done' });
-        // Readiness probe polled 4 times (3 failures + 1 success)
         expect(readyCalls).toBe(4);
-        // Migration dispatched once (worker already confirmed live)
         expect(migrateCalls).toBe(1);
       } finally {
         env.DISPATCH = originalDispatch;
@@ -3876,7 +3778,6 @@ describe('POST /projects/:id/deploy', () => {
               return Response.json({ ready: true });
             }
             if (url.pathname === '/__platform/migrate/capabilities') {
-              // worker build reports a different classifierVersion than the manifest (2 vs 1)
               return Response.json({
                 protocolVersion: 2,
                 endpoints: {
@@ -3944,7 +3845,6 @@ describe('POST /projects/:id/deploy', () => {
               return Response.json({ ready: true });
             }
             if (url.pathname === '/__platform/migrate/capabilities') {
-              // worker rejects the probe with a rich error body and a non-2xx status
               return Response.json(
                 {
                   ok: false,
@@ -4083,7 +3983,6 @@ describe('POST /projects/:id/deploy', () => {
             message:
               'worker readiness probe failed: new worker not reachable after retries (last readiness response was a Cloudflare asset propagation stub)',
           });
-          // Migration dispatch should never be attempted
           expect(migrateCalls).toBe(0);
         } finally {
           env.DISPATCH = originalDispatch;
@@ -4108,8 +4007,6 @@ describe('POST /projects/:id/deploy', () => {
     const events = parseDeployStream(await res.text());
     expect(events.at(-1)).toMatchObject({ event: 'done' });
 
-    // Check DELETEs to dispatch scripts — the newly deployed versioned worker
-    // (user-{slug}-{deploymentId}) must NOT be deleted
     const deleteCalls = fetchMock.mock.calls.filter((args: Array<unknown>) => {
       const url = typeof args[0] === 'string' ? args[0] : '';
       const init = args[1] as RequestInit | undefined;
@@ -4119,14 +4016,7 @@ describe('POST /projects/:id/deploy', () => {
     });
     for (const args of deleteCalls) {
       const url = args[0] as string;
-      // Retention may delete older versioned Workers. The new deployment's
-      // Worker must not be deleted.
-      // New deployment IDs start with "dpl_test" from createTestDeployment,
-      // but deploy route creates its own ID. Just verify no delete targets a
-      // versioned worker for this project (no previous deploys exist).
       if (url.includes(`user-${project.slug}-`)) {
-        // This would be a versioned worker delete — shouldn't happen for a
-        // project with no previous deployments
         expect(url).toBe('should not delete versioned worker');
       }
     }
@@ -4134,9 +4024,8 @@ describe('POST /projects/:id/deploy', () => {
 });
 
 describe('Deploy deduplication (skip identical deploys)', () => {
-  // assetManifestVersion: 2 mirrors what `buildDeployRequest` injects so the
-  // stored live-deploy manifest matches the incoming request manifest byte-
-  // for-byte (the dedupe-skip path compares the persisted JSON strings).
+  // Decision: assetManifestVersion: 2 matches what `buildDeployRequest` injects, so the stored live manifest
+  // equals the incoming one byte for byte (the dedupe-skip path compares the stored JSON strings).
   const manifest = { assetManifestVersion: 2, version: 3, bindings: {} };
   const assetContent = '<h1>hi</h1>';
   let assetManifest: Record<string, { hash: string; size: number; store: 'r2'; scope: 'project' }>;
@@ -4157,7 +4046,6 @@ describe('Deploy deduplication (skip identical deploys)', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'dedupe-app');
 
-    // Insert a live deployment with known manifest and asset_hashes
     const liveDeployId = 'dpl_live_dedupe';
     await env.db.insert(deployments).values({
       id: liveDeployId,
@@ -4172,7 +4060,6 @@ describe('Deploy deduplication (skip identical deploys)', () => {
       .set({ active_deployment_id: liveDeployId })
       .where(eq(projects.id, project.id));
 
-    // Deploy with the same manifest and assetManifest
     const res = await app.fetch(
       await buildDeployRequest(env, project.id, user.jwt, {
         manifest,
@@ -4186,7 +4073,7 @@ describe('Deploy deduplication (skip identical deploys)', () => {
 
     expect(res.status).toBe(200);
     const events = parseDeployStream(await res.text());
-    expect(events).toHaveLength(2); // start + done only
+    expect(events).toHaveLength(2);
     expect(events[0]).toMatchObject({ event: 'start', deploymentId: liveDeployId });
     expect(events[1]).toMatchObject({ event: 'done', deployment: liveDeployId });
   });
@@ -4207,8 +4094,8 @@ describe('Deploy deduplication (skip identical deploys)', () => {
     const indexHash = computeAssetHash(new TextEncoder().encode(indexBody).buffer, '/index.html');
     const appHash = computeAssetHash(new TextEncoder().encode(appBody).buffer, '/assets/app.js');
 
-    // Simulate a previously stored merged manifest whose insertion order no
-    // longer matches the raw JSON string the client sends on retry.
+    // Decision: Simulate a stored merged manifest whose key order no longer matches the raw JSON the client sends
+    // on retry.
     const liveAssetManifest = {
       '/assets/app.js': { hash: appHash, size: appBody.length, store: 'r2', scope: 'project' },
       '/index.html': { hash: indexHash, size: indexBody.length, store: 'r2', scope: 'project' },
@@ -4261,7 +4148,6 @@ describe('Deploy deduplication (skip identical deploys)', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'dedupe-secret-app');
 
-    // Insert a live deployment created in the past
     const liveDeployId = 'dpl_live_secret';
     await env.db.insert(deployments).values({
       id: liveDeployId,
@@ -4276,10 +4162,8 @@ describe('Deploy deduplication (skip identical deploys)', () => {
       .set({ active_deployment_id: liveDeployId })
       .where(eq(projects.id, project.id));
 
-    // Add a secret AFTER the deployment — identical static assets should still skip
     await createTestProjectSecret(env.db, env, project.id, 'API_KEY', 'secret-value');
 
-    // Deploy with the same manifest — should still be skipped
     const res = await app.fetch(
       await buildDeployRequest(env, project.id, user.jwt, {
         manifest,
@@ -4293,7 +4177,7 @@ describe('Deploy deduplication (skip identical deploys)', () => {
 
     expect(res.status).toBe(200);
     const events = parseDeployStream(await res.text());
-    expect(events).toHaveLength(2); // start + done only
+    expect(events).toHaveLength(2);
     expect(events[0]).toMatchObject({ event: 'start', deploymentId: liveDeployId });
     expect(events[1]).toMatchObject({ event: 'done', deployment: liveDeployId });
   });
@@ -4341,7 +4225,6 @@ describe('Deploy deduplication (skip identical deploys)', () => {
     const project = await createTestProject(env.db, user.id, 'dedupe-manifest-app');
     mockCfApi();
 
-    // Insert a live deployment with a different manifest
     const liveDeployId = 'dpl_live_diff';
     await env.db.insert(deployments).values({
       id: liveDeployId,
@@ -4356,7 +4239,6 @@ describe('Deploy deduplication (skip identical deploys)', () => {
       .set({ active_deployment_id: liveDeployId })
       .where(eq(projects.id, project.id));
 
-    // Deploy with a different manifest (no d1 binding)
     const res = await app.fetch(
       await buildDeployRequest(env, project.id, user.jwt, {
         manifest,
@@ -4380,7 +4262,6 @@ describe('Deploy serialization (concurrent deploy guard)', () => {
     const project = await createTestProject(env.db, user.id, 'concurrent-app');
     mockCfApi();
 
-    // Insert an active (non-terminal) deployment
     await env.db.insert(deployments).values({
       id: 'dpl_active',
       project_id: project.id,
@@ -4422,7 +4303,6 @@ describe('Deploy serialization (concurrent deploy guard)', () => {
     const project = await createTestProject(env.db, user.id, 'stale-app');
     mockCfApi();
 
-    // Insert a stale active deployment whose handler may still be running.
     const staleTime = new Date(Date.now() - 15 * 60 * 1000).toISOString();
     await env.db.insert(deployments).values({
       id: 'dpl_stale',
@@ -4439,8 +4319,6 @@ describe('Deploy serialization (concurrent deploy guard)', () => {
       deployment: 'dpl_stale',
     });
 
-    // The first request only fences the old handler; it does not admit a
-    // concurrent pipeline that could still mutate routing or triggers.
     const [stale] = await env.db
       .select({ status: deployments.status, error_message: deployments.error_message })
       .from(deployments)
@@ -4451,8 +4329,6 @@ describe('Deploy serialization (concurrent deploy guard)', () => {
     const retry = await app.fetch(await buildDeployRequest(env, project.id, user.jwt), env);
     expect(retry.status).toBe(409);
 
-    // Once the old handler acknowledges cancellation, a retry may claim and
-    // complete the deployment normally.
     await updateDeploymentStatus(env.db, 'dpl_stale', 'canceled', 'timed out', { force: true });
     const replacement = await app.fetch(await buildDeployRequest(env, project.id, user.jwt), env);
     expect(replacement.status).toBe(200);
@@ -4587,7 +4463,6 @@ describe('Deploy serialization (concurrent deploy guard)', () => {
     const project = await createTestProject(env.db, user.id, 'terminal-app');
     mockCfApi();
 
-    // Insert a completed deployment
     await env.db.insert(deployments).values({
       id: 'dpl_done',
       project_id: project.id,
@@ -4602,8 +4477,8 @@ describe('Deploy serialization (concurrent deploy guard)', () => {
 
     const res = await app.fetch(await buildDeployRequest(env, project.id, user.jwt), env);
     expect(res.status).toBe(200);
-    // Drain the NDJSON stream so the deploy IIFE (which holds deployments-table
-    // writes) finishes before the next beforeEach runs clearTables.
+    // Decision: Drain the NDJSON stream so the deploy IIFE (which holds deployments-table writes) finishes before
+    // the next beforeEach runs clearTables.
     await readAllEvents(res);
   });
 
@@ -4632,7 +4507,6 @@ describe('Deploy serialization (concurrent deploy guard)', () => {
   });
 });
 
-/** Build a JSON-mode static (SPA or 404-page) deploy request with no worker. */
 async function buildStaticDeployRequest(
   env: TestEnv,
   projectId: string,
@@ -4754,7 +4628,7 @@ describe('POST /projects/:id/deploy (static)', () => {
         version: source.id,
       }),
     );
-    // Legacy WfP deployments predate serving-manifest mirroring.
+    // Decision: Legacy WfP deployments predate serving-manifest mirroring, so there's no manifest key.
     expect(await env.ROUTING.get(`manifest:${source.id}`)).toBeNull();
 
     const preflight = await app.fetch(
@@ -5039,7 +4913,7 @@ describe('POST /projects/:id/deploy (static)', () => {
       .set({ active_deployment_id: rollbackTarget.id, type: 'platform' })
       .where(eq(projects.id, project.id));
 
-    // Model rollback after cutover commits, before the retention inventory.
+    // Decision: Model a rollback after cutover commits, before the retention inventory.
     const fetchMock = mockCfApi();
     const originalDelete = env.ROUTING.delete.bind(env.ROUTING);
     let rolledBack = false;
@@ -5121,9 +4995,8 @@ describe('ambiguous go-live commit outcomes', () => {
       `cutover-intent:${abandoned.id}`,
       JSON.stringify({ projectId: project.id, ownerId: 'dead-owner', buildId: null }),
     );
-    // Model a crash after only the slug route changed: there is no ready
-    // marker, so recovery must replay the abandoned manifest rather than
-    // promoting it blindly or wedging the project forever.
+    // Decision: Model a crash after only the slug route changed: there's no ready marker, so recovery has to replay
+    // the abandoned manifest instead of promoting it blindly or wedging the project.
     await env.ROUTING.put(
       project.slug,
       JSON.stringify({ projectId: project.id, deploymentId: abandoned.id }),
@@ -5266,7 +5139,7 @@ describe('ambiguous go-live commit outcomes', () => {
       .update(deployments)
       .set({
         retained: true,
-        // Legacy Worker rows predate both manifest.type and bundle_stored.
+        // Decision: Legacy Worker rows predate both manifest.type and bundle_stored.
         manifest: JSON.stringify({ version: 3, bindings: {} }),
       })
       .where(eq(deployments.id, source.id));
@@ -5280,10 +5153,9 @@ describe('ambiguous go-live commit outcomes', () => {
       }),
     );
 
-    // Legacy projects can have a valid live route while their nullable active
-    // pointer is still unset. Model an interrupted compensation on top of that
-    // state, then make the fresh deploy fail after precheck so the recovered
-    // pointer and route remain directly observable.
+    // Decision: Legacy projects can have a valid live route while their nullable active pointer is unset. Model an
+    // interrupted compensation on top of that, then make the fresh deploy fail after precheck so the
+    // recovered pointer and route stay observable.
     const abandoned = await createTestDeployment(env.db, project.id, 'pending');
     await env.db
       .update(deployments)
@@ -5376,8 +5248,7 @@ describe('ambiguous go-live commit outcomes', () => {
     );
     mockCfApi();
 
-    // Fail the fresh request after recovery so the committed source restored
-    // by compensation remains observable.
+    // Decision: Fail the fresh request after recovery so the source restored by compensation stays observable.
     const response = await app.fetch(
       await buildDeployRequest(env, project.id, user.jwt, {
         manifest: { version: 3, type: 'static', bindings: {} },
@@ -5506,8 +5377,6 @@ describe('ambiguous go-live commit outcomes', () => {
       setTestDb(realDb);
     }
 
-    // Neither background timeouts nor explicit cancellation may terminalize
-    // a deployment whose external cutover is already authoritative.
     await realDb
       .update(deployments)
       .set({ updated_at: '2020-01-01T00:00:00.000Z' })
@@ -5516,8 +5385,6 @@ describe('ambiguous go-live commit outcomes', () => {
     expect((await getDeployment(realDb, cutoverDeploymentId!))?.status).toBe('cutover');
     expect(await cancelDeployment(realDb, cutoverDeploymentId!)).toBeNull();
 
-    // The next deploy claims the project only after atomically rolling the
-    // protected cutover forward in PostgreSQL.
     const second = await app.fetch(
       await buildStaticDeployRequest(env, project.id, user.jwt, {
         type: 'static',
@@ -5667,9 +5534,8 @@ describe('failed deploy compensation provenance', () => {
     ) => {
       const result = await originalPut(key, value as never, options as never);
       if (key === project.slug && !overtakePromise) {
-        // Queue a newer cutover behind the failed deploy's project lock.
-        // Once the lock releases, it becomes authoritative before the catch
-        // path takes the compensation lock.
+        // Decision: Queue a newer cutover behind the failed deploy's project lock. Once the lock releases, it becomes
+        // authoritative before the catch path takes the compensation lock.
         overtakePromise = env.db
           .update(projects)
           .set({ active_deployment_id: newer.id })
@@ -5730,9 +5596,8 @@ describe('failed deploy compensation provenance', () => {
     ) => {
       if (key.startsWith('cutover-ready:') && !activated) {
         activated = true;
-        // Model tryActivateDomain acquiring the project lock after the routing
-        // switch fence released: it copies the new (doomed) slug route into a
-        // domain that was absent from the deploy's earlier snapshot.
+        // Decision: Model tryActivateDomain taking the project lock after the routing-switch fence released: it copies
+        // the new (doomed) slug route into a domain that wasn't in the deploy's earlier snapshot.
         await env.db.transaction(async (tx) => {
           await tx.execute(sql`SELECT id FROM projects WHERE id = ${project.id} FOR UPDATE`);
           await tx.insert(domains).values({
@@ -5767,21 +5632,17 @@ describe('failed deploy compensation provenance', () => {
   });
 });
 
-// The deploy handler constructs a TransformStream and returns
-// `new Response(readable, ...)` BEFORE parsing / asset uploads begin, so CF
-// edge / intermediaries see the 200 + NDJSON content-type within milliseconds
-// instead of blocking for 30–60s of sequential KV/R2 puts and dropping the
-// connection.
+// Decision: The deploy handler returns `new Response(readable)` before parsing and asset uploads start, so CF
+// edge and intermediaries see the 200 and NDJSON content type within milliseconds instead of waiting
+// 30 to 60 seconds of KV and R2 puts and dropping the connection.
 describe('POST /projects/:id/deploy (streaming response headers / heartbeat)', () => {
   it('returns application/x-ndjson and streams events incrementally (start first, done last)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'stream-headers-flush');
     mockCfApi();
 
-    // Build a deploy with a decent number of asset parts so parse + streamed
-    // KV puts take non-trivial time — long enough to block the response
-    // headers if they were not flushed first. Each asset hashes to a unique key via
-    // path-prefixed BLAKE3, so 40 parts means 40 KV puts.
+    // Decision: Use enough asset parts (40 unique KV puts) that parsing and uploads take long enough to block the
+    // response headers if they weren't flushed first.
     const assets: Record<string, string> = {};
     for (let i = 0; i < 40; i++) {
       assets[`assets/file-${i}.js`] = `/* file ${i} */ export const x = ${i};`;
@@ -5796,17 +5657,10 @@ describe('POST /projects/:id/deploy (streaming response headers / heartbeat)', (
       env,
     );
 
-    // Structural guard: the deploy route always answers with NDJSON,
-    // including 4xx-like validation failures.
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('application/x-ndjson');
     expect(res.body).not.toBeNull();
 
-    // Read the stream incrementally. If the parse/upload work were moved
-    // back into the handler body (before `new Response(readable)`), the
-    // ordering of NDJSON lines would be unchanged, but this reader-based
-    // approach mirrors what the CLI does and is the correct client-side
-    // contract for a streaming deploy response.
     const reader = res.body!.getReader();
     const decoder = new TextDecoder();
     const events: Array<{ event: string } & Record<string, unknown>> = [];
@@ -5831,22 +5685,16 @@ describe('POST /projects/:id/deploy (streaming response headers / heartbeat)', (
       events.push(JSON.parse(buffer));
     }
 
-    // Filter out heartbeats — timing-dependent in CI, not what this test guards.
+    // Decision: Leave out heartbeats: their timing varies in CI and isn't what this test guards.
     const nonHeartbeat = events.filter((e) => e.event !== 'heartbeat');
 
-    // The very first non-heartbeat event consumed from the incremental
-    // reader must be `start`. This proves the IIFE began emitting before
-    // the stream closed — i.e. events were produced progressively, not
-    // accumulated after a fully-synchronous parse.
     expect(nonHeartbeat[0]?.event).toBe('start');
 
-    // The stream must contain the expected downstream events in order.
     const order = nonHeartbeat.map((e) => e.event);
     expect(order).toContain('asset_upload');
     expect(order).toContain('asset_upload_done');
     expect(order[order.length - 1]).toBe('done');
 
-    // Sanity: the deploy actually succeeded with the right asset count.
     const doneEvent = nonHeartbeat.find((e) => e.event === 'done') as {
       event: 'done';
       deployment: string;
@@ -5889,11 +5737,9 @@ describe('asset_hashes storage', () => {
   });
 
   it('persists asset_hashes on a failed deployment when the failure is past asset upload', async () => {
-    // A first-ever deploy fails at migrations AFTER assets were accepted by
-    // CF. asset_hashes is persisted as soon as CF accepts the bytes, so the
-    // deployment row left behind is a valid corroboration baseline for
-    // retries; without it the session-dedupe guard would lock the project
-    // out permanently.
+    // Decision: A first deploy fails at migrations after CF accepted the assets. asset_hashes is stored as soon as
+    // CF accepts the bytes, so the row left behind is a valid baseline for retries; without it the
+    // session-dedupe guard would lock the project out.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'first-deploy-migrate-fail');
     mockCfApi({ createD1: () => cfSuccess({ uuid: 'd1-recovery-uuid', name: 'fail-db' }) });
@@ -5955,9 +5801,6 @@ describe('asset_hashes storage', () => {
         .where(eq(deployments.project_id, project.id));
       expect(dpl?.status).toBe('failed');
       expect(dpl?.error_message).toContain('D1_ERROR: near "broken": syntax error');
-      // Retention claim happens after migrations succeed, so retained stays
-      // false — but asset_hashes MUST survive so the next deploy can
-      // corroborate against it.
       expect(dpl?.retained).toBe(false);
       expect(dpl?.asset_hashes).toBeTruthy();
       const persisted = JSON.parse(dpl!.asset_hashes!);
@@ -5967,10 +5810,9 @@ describe('asset_hashes storage', () => {
     }
   });
 
-  // Contract: in JSON-mode, the CLI always sends the FULL assetManifest
-  // (new uploads + preflight-skipped carry-forwards); the server does not
-  // fill in paths from the prior live manifest. Every path the CLI declared must end up in the persisted asset_hashes,
-  // regardless of whether each entry was a new upload or a preflight skip.
+  // Decision: In JSON mode the CLI sends the full assetManifest (new uploads and preflight-skipped
+  // carry-forwards); the server doesn't fill paths from the earlier live manifest. Each declared path
+  // has to end up in the stored asset_hashes.
   it('JSON-mode deploy with preflight=true preserves preflight-skipped paths in saved manifest', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'preflight-fullmanifest');
@@ -5981,9 +5823,6 @@ describe('asset_hashes storage', () => {
     const newBytes = new TextEncoder().encode('body { color: blue }');
     const newHash = computeAssetHash(newBytes.buffer as ArrayBuffer, '/style.css');
 
-    // Pre-upload BOTH paths to R2 — the carry-forward (preflight-skipped)
-    // path's bytes are already present from a hypothetical earlier deploy,
-    // and the new path's bytes were just uploaded direct-to-R2 by the CLI.
     await env.STATIC_ASSETS_R2.put(
       `assets/${project.id}/${carriedHash}`,
       carriedBytes as unknown as ArrayBuffer,
@@ -6001,9 +5840,6 @@ describe('asset_hashes storage', () => {
           bindings: {},
           assetConfig: { not_found_handling: 'single-page-application' },
         },
-        // Provide an explicit assetManifest with BOTH paths — mirroring
-        // what the JSON-mode CLI sends after preflight when one path was
-        // skipped (already in R2) and one was newly uploaded.
         assetManifest: {
           '/index.html': { hash: carriedHash, size: carriedBytes.byteLength },
           '/style.css': { hash: newHash, size: newBytes.byteLength },
@@ -6081,7 +5917,6 @@ describe('POST /projects/:id/deploy/preflight', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
 
-    // Create a previous deployment with known asset hashes
     const prevManifest = {
       '/index.html': { hash: 'a'.repeat(32), size: 100 },
       '/app.js': { hash: 'b'.repeat(32), size: 200 },
@@ -6092,9 +5927,8 @@ describe('POST /projects/:id/deploy/preflight', () => {
       .update(deployments)
       .set({ asset_hashes: JSON.stringify(prevManifest) })
       .where(eq(deployments.id, prevDeploy.id));
-    // Simulate a live static KV/R2 deployment: the preflight handler
-    // reads the routing entry under `project.slug` and treats presence of
-    // `staticDeploymentId` as the static-backend signal.
+    // Decision: Simulate a live static KV/R2 deployment: preflight reads the routing entry under `project.slug`
+    // and treats `staticDeploymentId` as the static-backend signal.
     await env.ROUTING.put(
       project.slug,
       JSON.stringify({
@@ -6121,10 +5955,9 @@ describe('POST /projects/:id/deploy/preflight', () => {
         body: JSON.stringify({
           projectId: project.id,
           assetManifest: {
-            '/index.html': { hash: 'a'.repeat(32), size: 100 }, // unchanged
-            '/app.js': { hash: 'f'.repeat(32), size: 250 }, // changed
-            '/new.js': { hash: 'd'.repeat(32), size: 400 }, // new
-            // style.css removed
+            '/index.html': { hash: 'a'.repeat(32), size: 100 },
+            '/app.js': { hash: 'f'.repeat(32), size: 250 },
+            '/new.js': { hash: 'd'.repeat(32), size: 400 },
           },
         }),
       }),
@@ -6170,8 +6003,6 @@ describe('POST /projects/:id/deploy/preflight', () => {
         manifest: JSON.stringify({ version: 3, type: 'static', bindings: {} }),
       })
       .where(eq(deployments.id, newerHistory.id));
-    // Model rollback to the older deployment while the newer deployment
-    // remains a retained live history row.
     await env.db
       .update(projects)
       .set({ active_deployment_id: active.id, type: 'static' })
@@ -6236,9 +6067,8 @@ describe('POST /projects/:id/deploy/preflight', () => {
       .set({ active_deployment_id: null, type: 'static' })
       .where(eq(projects.id, project.id));
 
-    // The route records a legacy rollback to the older deployment while the
-    // project pointer is still null. History ordering alone would choose the
-    // newer manifest and incorrectly skip this upload.
+    // Decision: The route records a legacy rollback to the older deployment while the project pointer is still
+    // null. History order alone would pick the newer manifest and wrongly skip this upload.
     await env.ROUTING.put(
       project.slug,
       JSON.stringify({
@@ -6463,7 +6293,6 @@ describe('POST /projects/:id/deploy/preflight', () => {
       const user = await createTestUser(env.db);
       const project = await createTestProject(env.db, user.id);
 
-      // Create a previous STATIC deployment with known asset hashes
       const prevManifest = {
         '/index.html': { hash: 'a'.repeat(32), size: 100 },
         '/app.js': { hash: 'b'.repeat(32), size: 200 },
@@ -6483,14 +6312,12 @@ describe('POST /projects/:id/deploy/preflight', () => {
         }),
       );
 
-      // Static deploys store a serving manifest in ROUTING KV
       const servingManifest: Record<string, string> = {};
       for (const [path, entry] of Object.entries(prevManifest)) {
         servingManifest[path] = entry.hash;
       }
       await env.ROUTING.put(`manifest:${prevDeploy.id}`, JSON.stringify(servingManifest));
 
-      // Historical serving metadata alone cannot prove scoped R2 availability.
       const res = await app.fetch(
         new Request(`http://localhost/rpc/deploy.preflight`, {
           method: 'POST',
@@ -6501,9 +6328,9 @@ describe('POST /projects/:id/deploy/preflight', () => {
           body: JSON.stringify({
             projectId: project.id,
             assetManifest: {
-              '/index.html': { hash: 'a'.repeat(32), size: 100 }, // unchanged
-              '/app.js': { hash: 'b'.repeat(32), size: 200 }, // unchanged
-              '/style.css': { hash: 'c'.repeat(32), size: 300 }, // unchanged
+              '/index.html': { hash: 'a'.repeat(32), size: 100 },
+              '/app.js': { hash: 'b'.repeat(32), size: 200 },
+              '/style.css': { hash: 'c'.repeat(32), size: 300 },
             },
             hasWorker: true,
           }),
@@ -6517,7 +6344,6 @@ describe('POST /projects/:id/deploy/preflight', () => {
         total: number;
         skipped: number;
       };
-      // Every asset is absent from the scoped R2 store.
       expect(data.needed.sort()).toEqual(['/app.js', '/index.html', '/style.css']);
       expect(data.total).toBe(3);
       expect(data.skipped).toBe(0);
@@ -6527,7 +6353,6 @@ describe('POST /projects/:id/deploy/preflight', () => {
       const user = await createTestUser(env.db);
       const project = await createTestProject(env.db, user.id);
 
-      // Create a previous STATIC deployment
       const prevManifest = {
         '/index.html': { hash: 'a'.repeat(32), size: 100 },
         '/app.js': { hash: 'b'.repeat(32), size: 200 },
@@ -6551,7 +6376,6 @@ describe('POST /projects/:id/deploy/preflight', () => {
       }
       await env.ROUTING.put(`manifest:${prevDeploy.id}`, JSON.stringify(servingManifest));
 
-      // Preflight WITHOUT hasWorker (staying as static deploy)
       await env.STATIC_ASSETS_R2.put(`assets/${project.id}/${'a'.repeat(32)}`, new Uint8Array(100));
 
       const res = await app.fetch(
@@ -6564,8 +6388,8 @@ describe('POST /projects/:id/deploy/preflight', () => {
           body: JSON.stringify({
             projectId: project.id,
             assetManifest: {
-              '/index.html': { hash: 'a'.repeat(32), size: 100 }, // unchanged
-              '/app.js': { hash: 'f'.repeat(32), size: 250 }, // changed
+              '/index.html': { hash: 'a'.repeat(32), size: 100 },
+              '/app.js': { hash: 'f'.repeat(32), size: 250 },
             },
           }),
         }),
@@ -6578,7 +6402,6 @@ describe('POST /projects/:id/deploy/preflight', () => {
         total: number;
         skipped: number;
       };
-      // static→static should still dedup
       expect(data.needed.sort()).toEqual(['/app.js']);
       expect(data.total).toBe(2);
       expect(data.skipped).toBe(1);
@@ -6588,7 +6411,6 @@ describe('POST /projects/:id/deploy/preflight', () => {
       const user = await createTestUser(env.db);
       const project = await createTestProject(env.db, user.id, 'static-to-platform');
 
-      // 1. Do an initial static deploy
       mockCfApi();
       const staticRes = await app.fetch(
         await buildStaticDeployRequest(env, project.id, user.jwt, {
@@ -6604,7 +6426,6 @@ describe('POST /projects/:id/deploy/preflight', () => {
       );
       expect(staticDone).toBeDefined();
 
-      // Both deployment modes use the same scoped R2 bytes.
       const indexBytes = new TextEncoder().encode('<h1>hello</h1>');
       const appBytes = new TextEncoder().encode('console.log(1)');
       const preflightRes = await app.fetch(
@@ -6640,7 +6461,6 @@ describe('POST /projects/:id/deploy/preflight', () => {
       expect(pfData.skipped).toBe(2);
       expect(pfData.needed).toEqual([]);
 
-      // Worker finalization hydrates the existing scoped R2 copy for Cloudflare.
       mockCfApi();
       const deployRes = await app.fetch(
         await buildDeployRequest(env, project.id, user.jwt, {
@@ -6654,7 +6474,6 @@ describe('POST /projects/:id/deploy/preflight', () => {
         (event): event is DoneEvent => isDeployEvent(event) && event.event === 'done',
       );
       expect(done).toBeDefined();
-      // Should not have errored with AssetHashMissError
       const error = events.find(
         (event): event is ErrorEvent => isDeployEvent(event) && event.event === 'error',
       );

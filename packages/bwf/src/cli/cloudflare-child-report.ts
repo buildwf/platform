@@ -10,14 +10,14 @@ import { isCleanCloudflareExit } from './cloudflare-process.ts';
 import type { DeployWranglerRun } from './deploy-types.ts';
 import type { CliLogger } from './log-file.ts';
 
-// Emails and the Access client id identify an account; they are not secrets, and
-// scrubbing them would mangle ordinary messages.
+// Decision: Emails and the Access client id identify an account. They aren't secrets, and scrubbing them
+// would mangle ordinary messages.
 const NOT_SECRET = new Set<string>(['CLOUDFLARE_EMAIL', 'CF_EMAIL', 'CLOUDFLARE_ACCESS_CLIENT_ID']);
 const CREDENTIAL_ENV_VARS: ReadonlyArray<string> = [
   ...WRANGLER_AUTH_CREDENTIAL_ENV_VARS.filter((name) => !NOT_SECRET.has(name)),
   'CF_ACCESS_CLIENT_SECRET',
 ];
-// Shorter values would match ordinary words.
+// Decision: Shorter values would match ordinary words.
 const MIN_SECRET_LENGTH = 8;
 
 /** Exact-value scrubber for the credentials this deploy holds. */
@@ -37,7 +37,7 @@ export function createCredentialRedactor(env: NodeJS.ProcessEnv = process.env): 
     for (const candidate of [value, value.trim()]) {
       if (candidate.length >= MIN_SECRET_LENGTH && !values.has(candidate)) {
         values.add(candidate);
-        // Longer first, so a value that contains another is removed whole.
+        // Decision: Longer first, so a value that contains another is removed whole.
         ordered = [...values].sort((a, b) => b.length - a.length);
       }
     }
@@ -183,7 +183,7 @@ function logCloudflareOp(
       : {
           diagnostic: cloudflareCommandDiagnostic({
             ...result,
-            // auth.token stdout is the credential envelope; never format it.
+            // Decision: auth.token stdout is the credential envelope, so don't format it.
             stdout: op === 'auth.token' ? '' : result.stdout,
           }),
         }),

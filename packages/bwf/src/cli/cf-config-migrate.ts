@@ -35,7 +35,7 @@ function normalizeQueueConcurrency(raw: JsonObject): JsonObject {
       ...queues,
       consumers: queues.consumers.map((value) => {
         const consumer = record(value);
-        // Wrangler's null and cf's omitted limit both mean automatic concurrency.
+        // Decision: Wrangler's null and cf's omitted limit both mean automatic concurrency.
         if (consumer?.max_concurrency !== null) {
           return value;
         }
@@ -96,9 +96,9 @@ function migrationInput(raw: JsonObject): JsonObject {
 }
 
 function applyPreservationFlags(raw: JsonObject, worker: JsonObject): void {
-  // cf forwards unsafe.metadata to the Worker upload metadata, including these API flags.
-  // A written keep_bindings replaces cf's default, which keeps secrets. Wrangler always adds the
-  // secret types next to keep_vars, so keep_vars alone must not drop secrets either.
+  // Decision: cf forwards unsafe.metadata to the Worker upload metadata, including these API flags.
+  // A written keep_bindings replaces cf's default, which keeps secrets. Wrangler adds the secret types
+  // next to keep_vars, so keep_vars alone mustn't drop secrets either.
   const keepBindings =
     raw.keep_vars === true || raw.keep_secrets === true
       ? [...(raw.keep_vars === true ? ['plain_text', 'json'] : []), 'secret_text', 'secret_key']
@@ -211,8 +211,8 @@ function assertHandledFollowUps(followUps: Array<MigrationFollowUp>): void {
     if (!item.blocking) {
       continue;
     }
-    // We consume only Worker settings for prebuilt output, never the generated Vite config.
-    // Upgrading that unused config's plugin is unnecessary; keep other follow-ups blocking.
+    // Decision: We use only Worker settings for prebuilt output, not the generated Vite config.
+    // Upgrading that unused config's plugin isn't needed; keep other follow-ups blocking.
     if (item.code === 'vite-plugin-install-disabled' && item.sourcePath === undefined) {
       continue;
     }
@@ -406,15 +406,15 @@ export function translateWranglerConfig(
   raw: JsonObject,
   mode: string,
 ): { config: unknown; followUps: Array<MigrationFollowUp> } {
-  // Settings are JSON: a key without a value is absent. The copy also keeps the converter from
-  // sharing objects with the caller.
+  // Decision: Settings are JSON: a key without a value is absent. The copy also keeps the converter from sharing
+  // objects with the caller.
   const converted = convertWranglerConfig(JSON.parse(JSON.stringify(raw)), 'vite', []);
   const branch = converted.environments.get(mode) ?? converted.base;
   const input = record(outputValue(branch.config));
   const worker = record(input?.worker);
   const env = record(worker?.env);
   if (input && worker && env) {
-    // A binding that is switched off is absent from the parsed configuration.
+    // Decision: A binding that's switched off is absent from the parsed configuration.
     input.worker = {
       ...worker,
       env: Object.fromEntries(
@@ -428,7 +428,7 @@ export function translateWranglerConfig(
   if (!parsed.success) {
     throw new Error('cf could not translate the built Cloudflare configuration.');
   }
-  // Only JSON values, as the settings will be written to a file.
+  // Decision: Only JSON values, because the settings will be written to a file.
   return { config: JSON.parse(JSON.stringify(parsed.data)), followUps: converted.followUps };
 }
 
@@ -473,9 +473,8 @@ export function migrateBuiltWranglerConfig(raw: JsonObject, mode = 'production')
       ) {
         throw new Error(`Container ${container.name} must use a local Durable Object binding.`);
       }
-      // cf's typed Durable Object binding currently serializes even a self
-      // reference with script_name. Its Container uploader interprets any
-      // script_name as an external Worker. The unsafe binding is the same
+      // Decision: cf's typed Durable Object binding serializes even a self reference with script_name, and its
+      // Container uploader reads any script_name as an external Worker. The unsafe binding is the same
       // upload metadata without that external-script marker.
       envBindings[binding.name] = {
         type: 'unsafe:durable_object_namespace',

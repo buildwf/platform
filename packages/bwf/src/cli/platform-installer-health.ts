@@ -84,7 +84,7 @@ export async function verifyPlatformHealth(
             'X-Platform-Probe': healthProbeToken,
             ...cfAccessHeaders(process.env, url),
           },
-          // A login redirect must not forward the installation's probe credential.
+          // Decision: A login redirect must not forward the installation's probe credential.
           redirect: 'manual',
           signal: AbortSignal.timeout(30_000),
         });
@@ -98,7 +98,7 @@ export async function verifyPlatformHealth(
       }
     }
   };
-  // Project Zero Trust leaves only this application-domain hostname outside Access.
+  // Decision: Project Zero Trust leaves only this application-domain hostname outside Access.
   const dispatchUrl =
     dispatchOrigin ?? `https://${PLATFORM_HEALTH_HOSTNAME_LABEL}.${applicationBaseDomain}`;
   const [health, discovery, proxy, dispatch, emailGateway] = await Promise.all([
@@ -285,7 +285,7 @@ export async function verifyPlatformDeploymentExecutionDrain(
   }
 }
 
-// The Cloudflare permission that each shared email step uses with the runtime
+// Decision: The Cloudflare permission that each shared email step uses with the runtime
 // token: Email Routing DNS and settings need Zone Settings, and the sender
 // onboarding needs Email Sending.
 const sharedEmailStepPermissions: ReadonlyMap<string, string> = new Map([
@@ -300,7 +300,7 @@ export async function bootstrapPlatformSharedEmail(
   healthProbeToken: string,
   fetcher: typeof fetch = fetch,
 ): Promise<string> {
-  // One bootstrap request drives several durable PostgreSQL/provider steps.
+  // Decision: One bootstrap request drives several durable PostgreSQL/provider steps.
   // A timeout does not cancel its recorded operation; replay the same endpoint
   // so its idempotency key and step leases reconcile rather than repeat writes.
   const deadline = Date.now() + 5 * 60_000;
@@ -418,7 +418,7 @@ export async function bootstrapPlatformSharedEmail(
       try {
         domain = normalizeApplicationDomain(status.domain);
       } catch {
-        // Provider bodies are not diagnostic authority; show only a valid domain.
+        // Decision: Provider bodies are not diagnostic authority; show only a valid domain.
       }
     }
     const inboundStatus = code(status?.inboundStatus);
@@ -447,7 +447,7 @@ export async function bootstrapPlatformSharedEmail(
       currentStep &&
       sharedEmailStepPermissions.has(currentStep)
     ) {
-      // A blocked step got a definite 4xx answer, often a missing permission.
+      // Decision: A blocked step got a definite 4xx answer, often a missing permission.
       // The API does not return provider text, so name the permission that the
       // step uses.
       const permission = sharedEmailStepPermissions.get(currentStep);

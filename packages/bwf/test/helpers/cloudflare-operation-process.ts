@@ -10,7 +10,6 @@ import { afterEach } from 'vite-plus/test';
 import { encodeCloudflareOperation } from '../../src/cli/cloudflare-process.ts';
 import { resolveCloudflareOperationArgv } from '../../src/cli/preset.ts';
 
-/** Cleanups run after each test, last registered first. Tests may push their own. */
 export const cleanups: Array<() => unknown> = [];
 afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) {
@@ -24,7 +23,6 @@ export function temporaryDirectory(prefix: string): string {
   return directory;
 }
 
-/** Serve on a random local port until the test ends and return the origin. */
 export async function listen(server: Server): Promise<string> {
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   cleanups.push(
@@ -37,7 +35,7 @@ export async function listen(server: Server): Promise<string> {
   return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 }
 
-// Children get only what Node needs, so host credentials cannot leak into a test.
+// Decision: Children get only what Node needs, so host credentials cannot leak into a test.
 export const systemEnv: NodeJS.ProcessEnv = {
   PATH: process.env.PATH,
   SYSTEMROOT: process.env.SYSTEMROOT,
@@ -61,10 +59,6 @@ export function tokenEnv(
   };
 }
 
-/**
- * Run the operation process the CLI spawns. `preload` is imported first to stub cf, and `input`,
- * when given, is written to its stdin.
- */
 export function runOperation(
   cwd: string,
   request: CloudflareOperation | Array<string>,

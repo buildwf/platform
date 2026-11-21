@@ -1,6 +1,6 @@
-// Windows file durations measured in https://github.com/voidzero-dev/void/actions/runs/36572350995.
-// Edited suites use conservative estimates adjusted for removed browser cases and duplicate builds.
-// These values schedule shards only; every discovered test is still included.
+// Decision: Windows file durations measured in
+// https://github.com/voidzero-dev/void/actions/runs/36572350995. Edited suites use conservative
+// estimates. These values only schedule shards; each discovered test is still included.
 export const integrationTimings: Readonly<Record<string, number>> = {
   'packages/bwf/test/e2e/cloudflare-deploy-live.test.ts': 6,
   'packages/bwf/test/integration/cli-help.test.ts': 1718,

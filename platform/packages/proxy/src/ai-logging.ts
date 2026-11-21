@@ -44,7 +44,7 @@ export async function readAiLoggingMode(context: Context<ProxyEnv>): Promise<AiL
   }
   const mode = parsePublishedAiLogging(value);
   if (mode === undefined) {
-    // Log the length only: the value is operator data and never echoed.
+    // Decision: Only the length is logged: the value is operator data and isn't echoed.
     console.error('[ai] logging setting unavailable', {
       projectId,
       reason: 'invalid_value',

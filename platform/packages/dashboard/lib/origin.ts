@@ -12,7 +12,7 @@ export function isLocalDashboardHost(host: string): boolean {
   }
 }
 
-/** Only the configured public origin may replace an Assets-internal loopback URL. */
+// Decision: Only the configured public origin may replace an Assets-internal loopback URL.
 export function dashboardRequestOrigin(context: Context): string {
   const request = new URL(context.req.url);
   const configured = (context.env as { DASHBOARD_URL?: string }).DASHBOARD_URL;

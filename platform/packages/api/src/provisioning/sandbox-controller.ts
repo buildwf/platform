@@ -144,8 +144,8 @@ function assertConfiguration(
       throw new Error(`Sandbox controller binding ${name} differs from this deployment.`);
     }
   }
-  // Cloudflare does not return service binding `props` from `/settings`. The
-  // plain-text bindings checked above come from the same upload as the props.
+  // Decision: Cloudflare doesn't return service binding `props` from `/settings`. The plain-text bindings checked
+  // above come from the same upload as the props.
   const control = settings.bindings.find(
     (binding) => binding.type === 'service' && binding.name === '__PLATFORM_SANDBOX_CONTROL',
   );
@@ -434,7 +434,7 @@ export async function retrySandboxControllerCleanup(
         db,
       );
     } catch (error) {
-      // Move a persistent provider failure behind other pending work.
+      // Decision: Move a persistent provider failure behind other pending work.
       await db
         .update(deployments)
         .set({ updated_at: sql`now()` })

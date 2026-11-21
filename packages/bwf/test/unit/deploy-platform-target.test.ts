@@ -136,7 +136,6 @@ beforeEach(() => {
         ) {
           if (expirePreflight) {
             expirePreflight = false;
-            // The auth middleware in front of /rpc answers before any procedure runs.
             return Response.json({ error: 'invalid or expired token' }, { status: 401 });
           }
           return Response.json({ data: { needed: [], total: 1, skipped: 1 } });

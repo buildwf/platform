@@ -70,14 +70,13 @@ function inferPersistedAssetStore(
   if (typeof entry.size !== 'number' || !Number.isFinite(entry.size) || entry.size < 0) {
     return null;
   }
-  // New JSON/direct-upload cutovers persist placement before publishing the
-  // ready marker. A v2 row without it is incomplete/corrupt: it may contain a
-  // small legacy KV carry-forward, so guessing R2 would publish a broken path.
+  // Decision: New JSON/direct-upload cutovers persist placement before publishing the ready marker. A v2 row
+  // without it is incomplete or corrupt: it may hold a small legacy KV carry-forward, so guessing R2
+  // would publish a broken path.
   if (manifest?.assetManifestVersion === 2) {
     return null;
   }
-  // Older multipart deployments did not persist placement and deterministically
-  // used the static uploader's 2 MiB size split.
+  // Decision: Older multipart deployments didn't persist placement and used the static uploader's 2 MiB split.
   return entry.size >= KV_THRESHOLD ? 'r2' : 'kv';
 }
 
@@ -151,17 +150,15 @@ export async function assertPersistedDeploymentServingAssetsExist(
   if (servingManifestRaw) {
     servingManifest = JSON.parse(servingManifestRaw) as Record<string, string>;
   } else {
-    // The ready marker and serving manifest are separate KV keys and can
-    // propagate at different speeds. Reconstruct a missing read from the
-    // durable path/hash manifest instead of compensating a healthy cutover
-    // merely because this colo saw `ready` first. New rows persist placement;
-    // legacy multipart rows deterministically used the 2 MiB KV/R2 split.
+    // Decision: The ready marker and the serving manifest are separate KV keys and can propagate at different
+    // speeds. Rebuild a missing read from the durable path/hash manifest instead of compensating a
+    // healthy cutover because this colo saw `ready` first. New rows persist placement; legacy multipart
+    // rows used the 2 MiB KV/R2 split.
     servingManifest = reconstructPersistedServingManifest(deployment, assetManifest);
     await env.ROUTING.put(servingManifestKey, JSON.stringify(servingManifest));
   }
-  // Verify metadata coherence, not object-store presence. Platform GC is
-  // serialized on the project row and protects every nonterminal deployment;
-  // legacy unscoped keys are never collected. Out-of-band bucket deletion
-  // cannot be diagnosed with bounded per-request probes for a 5,000-file app.
+  // Decision: Check metadata coherence, not object-store presence. Platform GC is serialized on the project row
+  // and protects each nonterminal deployment, and legacy unscoped keys aren't collected. Out-of-band
+  // bucket deletion can't be found with bounded per-request probes for a 5,000-file app.
   attachServingStoreMetadata(assetManifest as Record<string, AssetManifestEntry>, servingManifest);
 }

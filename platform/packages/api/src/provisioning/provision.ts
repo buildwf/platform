@@ -164,17 +164,15 @@ export async function provisionBindings(
 
   const bindings = await Promise.all(tasks);
 
-  // Always inject proxy bindings — used by AI, revalidation, email, and future
-  // platform features. The AI-specific usage limit check stays in the proxy
-  // (/ai/* middleware).
+  // Decision: Always inject the proxy bindings: AI, revalidation, email and other platform features use them. The
+  // AI usage limit check stays in the proxy (/ai/* middleware).
   bindings.push({ type: 'service', name: '__PLATFORM_PROXY', service: aiProxyService });
   bindings.push({ type: 'plain_text', name: '__PROJECT_ID', text: projectId });
   bindings.push({ type: 'plain_text', name: '__PLATFORM_PROXY_TOKEN', text: platform.proxyToken });
-  // Project slug — the SINGLE producer of `__PLATFORM_PROJECT_SLUG`. `@builtbyfriends/bwf/email`
-  // needs it on every worker to default an outbound `from` to
-  // `<slug>+noreply@<domain>`, and the sandbox runtime reads the same name.
-  // Emitted after the user's vars in the upload array, so it cannot be
-  // shadowed — see `reserved-bindings.ts`.
+  // Decision: The single producer of `__PLATFORM_PROJECT_SLUG`. `@builtbyfriends/bwf/email` needs it on each
+  // worker to default an outbound `from` to `<slug>+noreply@<domain>`, and the sandbox runtime reads
+  // the same name. It's emitted after the user's vars in the upload array, so it can't be shadowed;
+  // see `reserved-bindings.ts`.
   bindings.push({
     type: 'plain_text',
     name: '__PLATFORM_PROJECT_SLUG',
@@ -211,7 +209,7 @@ async function ensureResource(
   existing: ReadonlyArray<Resource>,
   options: { locationHint?: R2LocationHint; readReplication?: boolean } = {},
 ): Promise<Resource> {
-  // Normalize: R2 bucket names only allow lowercase alphanumeric + hyphens
+  // Decision: R2 bucket names allow only lowercase alphanumerics and hyphens.
   const resourceName = `${projectId}-${bindingName}`.toLowerCase().replaceAll('_', '-');
 
   const found = existing.find((r) => r.type === type && r.binding_name === bindingName);
@@ -222,9 +220,8 @@ async function ensureResource(
     return found;
   }
   let cfId: string;
-  // Track whether WE created the CF object. Only a self-created object is safe to
-  // roll back below — an already-exists lookup may be adopting a pre-existing
-  // resource we don't own.
+  // Decision: Track whether we created the CF object. Only a self-created object is safe to roll back below; the
+  // already-exists lookup may be adopting a resource we don't own.
   let createdByUs = false;
 
   try {
@@ -244,14 +241,11 @@ async function ensureResource(
   try {
     return await createResource(db, projectId, type, cfId, bindingName);
   } catch (err) {
-    // The CF object exists but its `resources` row did not persist — most often a
-    // FK violation because teardown deleted the project concurrently (the project
-    // FOR UPDATE in deleteProjectCascade serializes against this INSERT's FK FOR
-    // KEY SHARE). Without the row there is no durable handle, and teardown's
-    // cascade-capture sweep can't see it, so it would orphan the CF object. Delete
-    // what we just created before rethrowing. Best-effort: a failure here only
-    // falls back to the same orphan we're trying to avoid. (Pre-existing objects
-    // adopted via the already-exists lookup are left alone — not ours to delete.)
+    // Decision: The CF object exists but its `resources` row didn't persist, usually an FK violation because
+    // teardown deleted the project concurrently (deleteProjectCascade's project FOR UPDATE serializes
+    // with this INSERT's FK FOR KEY SHARE). Without the row there's no durable handle and teardown's
+    // sweep can't see it, so delete what we just created before rethrowing. If that delete fails, we're
+    // left with the same orphan. Adopted pre-existing objects are left alone.
     if (createdByUs) {
       await deleteCfResource(type, accountId, apiToken, cfId).catch(() => {});
     }
@@ -278,8 +272,8 @@ function deleteCfResource(
     case 'durable-object':
     case 'hyperdrive':
     case 'container':
-      // ensureResource never creates these (createCfResource throws first), so a
-      // rollback can't reach here. Resolve so the type switch stays exhaustive.
+      // Decision: ensureResource doesn't create these (createCfResource throws first), so a rollback can't get here.
+      // Resolve so the type switch stays exhaustive.
       return Promise.resolve();
   }
 }
@@ -337,7 +331,7 @@ async function lookupCfResource(
       return result.id;
     }
     case 'r2':
-      // R2 bucket name IS the cf_id — no lookup API needed
+      // Decision: The R2 bucket name is the cf_id, so no lookup is needed.
       return resourceName;
     case 'queue': {
       const result = await getQueueByName(accountId, apiToken, resourceName);

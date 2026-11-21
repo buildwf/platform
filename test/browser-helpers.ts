@@ -1,6 +1,5 @@
 import type { Page } from 'playwright';
 
-/** Retain the events that distinguish hydration errors, native navigation, and Vite reloads. */
 export function collectBrowserDiagnostics(page: Page): () => string {
   const events: Array<string> = [];
   const record = (message: string) => {

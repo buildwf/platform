@@ -1,9 +1,6 @@
-/** Inbound router validation and action execution with gateway-resolved routes. */
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-// This suite exercises router validation against a fake tenant. The gateway
-// wire framing has its own tests; preserve direct access to malformed action
-// fixtures that the production decoder now rejects before the router.
+// Decision: The gateway wire framing has its own tests. Mocking tenant dispatch keeps direct access to
+// malformed action fixtures that the production decoder now rejects before the router.
 vi.mock('../../src/tenant-dispatch.ts', () => ({
   dispatchBoundedEmailToTenant: async (
     stub: { email: (envelope: unknown) => Promise<unknown> },
@@ -49,28 +46,14 @@ async function routeInbound(
   );
 }
 
-// -----------------------------------------------------------------------
-// Fixtures
-// -----------------------------------------------------------------------
-
 const PROD_DOMAIN = 'mail.buildwf.dev';
 
-/**
- * Reply bytes the way `replyEmail()` renders them: a `From:` header naming
- * the envelope sender, then a body. The router pins the MIME `From:` to
- * `action.from`, so a fixture without one is dropped before enaction.
- */
+// Decision: The router pins the MIME `From:` to `action.from`, so a fixture without one is dropped before
+// enaction.
 function replyRaw(from: string, body = 'reply body'): Uint8Array {
   return new TextEncoder().encode(`From: ${from}\r\n\r\n${body}\r\n`);
 }
-/** Frozen clock for deterministic log timestamps. */
 const FIXED_NOW = new Date('2026-04-29T12:34:56.000Z');
-
-// -----------------------------------------------------------------------
-// Fake ForwardableEmailMessage. Records every method call — and their
-// interleaved ORDER — so tests can assert on action enaction sequencing
-// as well as side effects.
-// -----------------------------------------------------------------------
 
 interface RecordedForward {
   to: string;
@@ -88,7 +71,6 @@ interface FakeMessage {
   rejectCalls: Array<string>;
   forwardCalls: Array<RecordedForward>;
   replyCalls: Array<RecordedReply>;
-  /** Interleaved log across reject/forward/reply, in call order. */
   order: Array<string>;
 }
 
@@ -98,21 +80,11 @@ function createFakeMessage(opts: {
   rawBytes?: Uint8Array;
   rawSize?: number;
   subject?: string;
-  /** When set, throws this error from every `forward()` call. */
   forwardError?: Error;
-  /** When set, throws this error from every `reply()` call. */
   replyError?: Error;
-  /**
-   * When set, `message.headers` iterates these pairs instead of being a
-   * real `Headers`. Shaped after workerd, where `entries()` snapshots the
-   * bag into a `kj::Array` in C++ memory (`Headers::getDisplayedHeaders`)
-   * that the V8 heap limit never sees. Node's undici `Headers` instead
-   * caches a sorted copy of the WHOLE bag on the V8 heap on first
-   * iteration (measured ~70 B per entry retained, 103 MB at 1.5M), so a
-   * heap assertion through a real `Headers` here would measure undici,
-   * not the router. Only what the router touches is modelled: iteration
-   * and `get()`.
-   */
+  // Decision: Shaped after workerd, where entries() snapshots the bag into C++ memory that the V8 heap limit
+  // doesn't see. Node's undici Headers caches a sorted copy on the V8 heap (about 70 B per entry), so
+  // a heap check through a real Headers would measure undici, not the router.
   headerEntries?: Iterable<[string, string]>;
 }): FakeMessage {
   const rawBytes = opts.rawBytes ?? new TextEncoder().encode('Subject: hi\r\n\r\nbody\r\n');
@@ -171,11 +143,6 @@ function createFakeMessage(opts: {
   };
 }
 
-// -----------------------------------------------------------------------
-// ExecutionContext fake — captures `waitUntil` promises so we can assert
-// log-recv was scheduled.
-// -----------------------------------------------------------------------
-
 function createCtx() {
   const waited: Array<Promise<unknown>> = [];
   const ctx: ExecutionContext = {
@@ -188,22 +155,10 @@ function createCtx() {
   return { ctx, waited };
 }
 
-// -----------------------------------------------------------------------
-// Env factory.
-// -----------------------------------------------------------------------
-
 interface MakeEnvOptions {
-  /** When provided, the dispatch stub's `email()` returns this value. */
   emailReturn?: unknown;
-  /** When provided, the dispatch stub's `email()` throws this. */
   emailThrow?: unknown;
-  /** When provided, env.DISPATCH.get itself throws. */
   dispatchGetThrow?: Error;
-  /**
-   * `EMAIL_SENDER_DOMAIN`. Defaults to the production zone. Pass `null` to
-   * omit the var entirely (the router must still route — see the
-   * "sender domain is configuration" describe block).
-   */
   senderDomain?: string | null;
 }
 
@@ -300,17 +255,13 @@ function apiBodies(
     .map(([, init]) => JSON.parse(String((init as RequestInit).body)) as Record<string, unknown>);
 }
 
-// -----------------------------------------------------------------------
-// Console spies + frozen clock. Every test runs under these.
-// -----------------------------------------------------------------------
-
 let errorSpy: ReturnType<typeof vi.spyOn>;
 let warnSpy: ReturnType<typeof vi.spyOn>;
 let logSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
-  // Only `Date` is faked — setTimeout/queueMicrotask stay real so stream
-  // reads and vitest's own timeouts are unaffected.
+  // Decision: Only Date is faked. setTimeout and queueMicrotask stay real, so stream reads and vitest's own
+  // timeouts work.
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(FIXED_NOW);
   errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -325,10 +276,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
-
-// -----------------------------------------------------------------------
-// Shared-address parsing
-// -----------------------------------------------------------------------
 
 describe('routeInbound — shared-address parsing', () => {
   it('rejects when recipient has no slug (bare +tag@…)', async () => {
@@ -348,7 +295,6 @@ describe('routeInbound — shared-address parsing', () => {
     await routeInbound(message, env, ctx);
     expect(rejectCalls).toHaveLength(0);
     expect(emailFn).toHaveBeenCalledTimes(1);
-    // The user worker sees the full, untruncated recipient.
     const envelope = emailFn.mock.calls[0]?.[0] as { to: string };
     expect(envelope.to).toBe(`myslug@${PROD_DOMAIN}`);
     expect(apiBodies(apiFetch, '/receipts')[0]?.route).toEqual({
@@ -368,10 +314,6 @@ describe('routeInbound — shared-address parsing', () => {
     expect(emailFn).toHaveBeenCalledTimes(1);
   });
 });
-
-// -----------------------------------------------------------------------
-// Gateway-resolved routing and delivery limits.
-// -----------------------------------------------------------------------
 
 describe('routeInbound — authoritative routing', () => {
   it('rejects a route for another domain before dispatch', async () => {
@@ -420,12 +362,7 @@ describe('routeInbound — authoritative routing', () => {
   });
 });
 
-// -----------------------------------------------------------------------
-// Project email alias: the shared-domain name may be the slug or the alias.
-// -----------------------------------------------------------------------
-
 describe('routeInbound — project email alias', () => {
-  /** The gateway route for project `proj` reached through `mailbox`. */
   function aliasRoute(mailbox?: string): Parameters<typeof routeInboundWithRoute>[3] {
     return {
       ...ROUTE_FENCE,
@@ -446,7 +383,6 @@ describe('routeInbound — project email alias', () => {
     await routeInbound(message, env, ctx, aliasRoute('alias'));
     expect(rejectCalls).toHaveLength(0);
     expect(emailFn).toHaveBeenCalledTimes(1);
-    // The user worker sees the recipient as sent; the framework strips the name.
     const envelope = emailFn.mock.calls[0]?.[0] as { to: string };
     expect(envelope.to).toBe(`alias+x@${PROD_DOMAIN}`);
   });
@@ -559,7 +495,6 @@ describe('routeInbound — message size guards', () => {
     const { message, rejectCalls } = createFakeMessage({
       to: `myslug+tag@${PROD_DOMAIN}`,
       rawBytes: new Uint8Array(0),
-      // Lie about size: pre-stream rawSize > cap.
       rawSize: 11 * 1024 * 1024,
     });
     const { ctx } = createCtx();
@@ -571,7 +506,6 @@ describe('routeInbound — message size guards', () => {
 
   it('rejects when stream overflow exceeds cap (rawSize lied)', async () => {
     const { env, emailFn } = makeEnv();
-    // rawSize claims 1KB but the stream actually carries 11MB.
     const big = new Uint8Array(11 * 1024 * 1024);
     const { message, rejectCalls } = createFakeMessage({
       to: `myslug+tag@${PROD_DOMAIN}`,
@@ -626,13 +560,9 @@ describe('routeInbound — message size guards', () => {
   });
 });
 
-// -----------------------------------------------------------------------
-// Header count cap. The byte cap bounds the bag's bytes, not its count,
-// and `Object.fromEntries` pays ~75–110 B of V8 heap per distinct name
-// against 7 wire bytes per line — so a 10 MiB message of short distinct
-// headers (~1.5M of them) is an OOM in the 128 MB proxy isolate before
-// dispatch. The router counts first and refuses over the cap.
-// -----------------------------------------------------------------------
+// Decision: The byte cap bounds bytes, not count, and Object.fromEntries costs about 75-110 B of V8 heap per
+// distinct name against 7 wire bytes per line. So 10 MiB of short distinct headers (about 1.5M)
+// exhausts the 128 MB proxy isolate before dispatch. The router counts first.
 
 describe('routeInbound — inbound header count cap', () => {
   const MAX_INBOUND_HEADERS = 1024;
@@ -654,7 +584,6 @@ describe('routeInbound — inbound header count cap', () => {
     expect(rejectCalls).toHaveLength(1);
     expect(rejectCalls[0]).toBe(`${PROD_DOMAIN}: too many headers (max ${MAX_INBOUND_HEADERS})`);
     expect(emailFn).not.toHaveBeenCalled();
-    // Same shape as the byte-cap refusal: no dispatch, no recv log.
     expect(waited).toHaveLength(0);
   });
 
@@ -675,12 +604,6 @@ describe('routeInbound — inbound header count cap', () => {
   });
 
   it('a 1.5M-header bag — what the byte cap admits — is refused in bounded time and heap', async () => {
-    // 1.5M distinct names at 7 wire bytes each (`abcd:\r\n`) fits the
-    // 10 MiB byte cap. Materializing them measured 158 MB retained and
-    // ~580 ms in Node, ~1.2 s of CPU in workerd, and a hard OOM under a
-    // 128 MB heap. The bag is a workerd-shaped iterable (see
-    // `headerEntries`), so the heap read below is the router's own cost:
-    // the first `MAX_INBOUND_HEADERS + 1` pairs, then the refusal.
     const { env, emailFn } = makeEnv({ emailReturn: [] });
     const { message, rejectCalls } = createFakeMessage({
       to: `myslug+tag@${PROD_DOMAIN}`,
@@ -701,16 +624,11 @@ describe('routeInbound — inbound header count cap', () => {
   });
 });
 
-// -----------------------------------------------------------------------
-// Dispatch result handling
-// -----------------------------------------------------------------------
-
 describe('routeInbound — action enaction', () => {
   it('drops the WHOLE list when a tenant returns more than 100 actions', async () => {
-    // The tenant worker is not trusted to have capped its own queue: on WfP
-    // it can ship any WorkerEntrypoint whose receipt response contains any array. The
-    // list is walked here, in the shared proxy isolate, before admission
-    // has charged for it — so the count is checked before the loop.
+    // Decision: The tenant worker isn't trusted to cap its own list: on WfP it can return any array. The list
+    // is walked in the shared proxy isolate before admission charges for it, so the count is checked
+    // before the loop.
     const { env, apiFetch } = makeEnv({
       emailReturn: Array.from({ length: 101 }, () => ({
         type: 'forward',
@@ -724,15 +642,12 @@ describe('routeInbound — action enaction', () => {
     await routeInbound(message, env, ctx);
     expect(forwardCalls).toHaveLength(0);
     expect(replyCalls).toHaveLength(0);
-    // Dropping the list is not a bounce — CF still accepted the message.
     expect(rejectCalls).toHaveLength(0);
-    // Nothing was admitted: the list never reached the API.
     expect(apiBodies(apiFetch, '/admit')).toEqual([]);
     expect(errorSpy).toHaveBeenCalled();
   });
 
   it('enacts a list of exactly 100 actions', async () => {
-    // The bound is > MAX_ACTIONS, not >=.
     const { env } = makeEnv({
       emailReturn: Array.from({ length: 100 }, () => ({
         type: 'forward',
@@ -881,9 +796,7 @@ describe('routeInbound — action enaction', () => {
     const { ctx } = createCtx();
     await routeInbound(message, env, ctx);
     expect(rejectCalls).toHaveLength(1);
-    // No CR, LF, or NUL bytes left. Build via RegExp() to satisfy
-    // oxlint's no-control-regex rule (mirrors the production-side
-    // dodge in src/email-router.ts).
+    // Decision: Built with RegExp() to satisfy oxlint's no-control-regex rule, like the production code.
     // oxlint-disable-next-line no-control-regex
     expect(rejectCalls[0]).not.toMatch(new RegExp('[\\r\\n\\u0000]'));
   });
@@ -907,7 +820,6 @@ describe('routeInbound — action enaction', () => {
     const { ctx } = createCtx();
     await routeInbound(message, env, ctx);
     expect(forwardCalls).toHaveLength(0);
-    // The later reply still fires…
     expect(replyCalls).toHaveLength(1);
     expect(errorSpy).toHaveBeenCalled();
   });
@@ -1018,36 +930,19 @@ describe('routeInbound — action enaction', () => {
   });
 });
 
-// -----------------------------------------------------------------------
-// Two-phase validate-then-enact split.
-//
-// Header construction (`new Headers(...)`) throws on CRLF / NUL. Under a
-// single-pass impl an earlier forward/reply would already have fired by
-// the time the bad headers are reached. Validation therefore runs over
-// the WHOLE list first, and any header failure drops everything.
-// -----------------------------------------------------------------------
-
 describe('routeInbound — envelope header bag (prototype pollution guard)', () => {
   it('survives a __proto__ header in the inbound message', async () => {
-    // Inject a __proto__-named header on the inbound side. The router
-    // pre-buffers headers with Object.fromEntries so the framework
-    // sees it as a plain string property, not as a prototype mutation.
     const { env, emailFn } = makeEnv({
       emailReturn: [],
     });
     const { message } = createFakeMessage({ to: `myslug+tag@${PROD_DOMAIN}` });
-    // Force-add a proto-named header.
     message.headers.set('__proto__', 'evil');
     const { ctx } = createCtx();
     await routeInbound(message, env, ctx);
-    // Pull the envelope passed into emailFn; assert the header bag is an
-    // ordinary object and that the __proto__ key is a real own property (not a
-    // prototype mutation that affects {}).
     const envelope = emailFn.mock.calls[0]?.[0] as { headers: Record<string, string> };
     expect(Object.getPrototypeOf(envelope.headers)).toBe(Object.prototype);
     expect(Object.prototype.hasOwnProperty.call(envelope.headers, '__proto__')).toBe(true);
     expect(envelope.headers['__proto__']).toBe('evil');
-    // Nothing leaked onto Object.prototype.
     expect(Object.getPrototypeOf({})).toBe(Object.prototype);
     expect(({} as Record<string, unknown>)['evil']).toBeUndefined();
   });
@@ -1074,18 +969,14 @@ describe('routeInbound — envelope header bag (prototype pollution guard)', () 
     };
     expect(envelope.from).toBe('sender@example.com');
     expect(envelope.to).toBe(`myslug+tag@${PROD_DOMAIN}`);
-    // Pre-buffered bytes, not a stream — the framework must be able to
-    // replay them after parseEmail consumes a copy.
+    // Decision: Pre-buffered bytes, not a stream: the framework has to replay them after parseEmail consumes a
+    // copy.
     expect(envelope.raw).toBeInstanceOf(Uint8Array);
     expect(envelope.raw.byteLength).toBe(body.byteLength);
     expect(envelope.rawSize).toBe(body.byteLength);
     expect(envelope.headers['subject']).toBe('hi');
   });
 });
-
-// -----------------------------------------------------------------------
-// log-recv via ctx.waitUntil
-// -----------------------------------------------------------------------
 
 describe('routeInbound — log-recv via ctx.waitUntil', () => {
   it('schedules log-recv after a successful dispatch', async () => {
@@ -1102,7 +993,6 @@ describe('routeInbound — log-recv via ctx.waitUntil', () => {
     await Promise.all(waited);
   });
 
-  // Invalid action data must not prevent inbound delivery from being logged.
   it('logs the inbound delivery even when the action list carries a non-object entry', async () => {
     const { env } = makeEnv({
       emailReturn: [null, { type: 'forward', to: 'admin@example.com' }],
@@ -1115,8 +1005,6 @@ describe('routeInbound — log-recv via ctx.waitUntil', () => {
     expect(logSpy).toHaveBeenCalled();
   });
 });
-
-// Recipient consent and atomic quotas are covered by the API admission integration tests.
 
 describe('routeInbound — authoritative native custom domain', () => {
   it('dispatches the full custom recipient without KV and enacts native forward and reply', async () => {
@@ -1460,7 +1348,6 @@ describe('routeInbound — reply size limits', () => {
   const MIB = 1024 * 1024;
   const SENDER = `myslug+support@${PROD_DOMAIN}`;
 
-  /** `size` bytes of reply MIME with a valid `From:` naming the sender. */
   function sizedReply(size: number, from = SENDER): Uint8Array {
     const head = new TextEncoder().encode(`From: ${from}\r\n\r\n`);
     const raw = new Uint8Array(size);
@@ -1474,8 +1361,8 @@ describe('routeInbound — reply size limits', () => {
   }
 
   it('drops a reply over 5 MiB before the MIME From scan', async () => {
-    // No `From:` header at all: if the size check ran AFTER the scan, the
-    // drop would be logged as a missing From header instead.
+    // Decision: No `From:` header at all: if the size check ran after the scan, the drop would be logged as a
+    // missing From header instead.
     const raw = new Uint8Array(5 * MIB + 1).fill(0x41);
     const { env } = makeEnv({
       emailReturn: [replyAction(raw)],

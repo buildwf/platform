@@ -1,7 +1,7 @@
 import { describe, expectTypeOf, it } from 'vite-plus/test';
 import type { RewriteDestination, RouteName } from '../../src/routes-stub.ts';
 
-// `@builtbyfriends/bwf/routes` resolves to routes-stub.ts; this augmentation adds a known route.
+// Decision: `@builtbyfriends/bwf/routes` resolves to routes-stub.ts; this augmentation adds a known route.
 declare module '@builtbyfriends/bwf/routes' {
   interface RouteMap {
     '/rewrite-destination-test/known': {
@@ -12,8 +12,8 @@ declare module '@builtbyfriends/bwf/routes' {
 
 describe('RewriteDestination', () => {
   it('still accepts arbitrary strings (dynamic path escape hatch)', () => {
-    // This is what the `(string & {})` trick preserves — without it the
-    // union would collapse to a literal-only type and reject dynamic paths.
+    // Decision: This is what the `(string & {})` trick keeps: without it the union would collapse to a
+    // literal-only type and reject dynamic paths.
     const dynamic: string = `/users/${42}`;
     expectTypeOf(dynamic).toMatchTypeOf<RewriteDestination>();
     expectTypeOf<'/totally/made/up'>().toMatchTypeOf<RewriteDestination>();

@@ -13,13 +13,6 @@ import {
 import { runEmailCloudflareCommand, runEmailCommand } from '../../src/cli/email.ts';
 import * as terminalOutput from '../../src/cli/output.ts';
 
-/**
- * `bwf email setup|status --platform cloudflare` on a sample project:
- * `email/support+[ticket].ts` + `email/_default.ts`, `email.from = noreply@mail.acme.com`,
- * zone `acme.com` (routing ready on the apex, Google MX there), nothing on `mail.acme.com`.
- * Every Cloudflare touch is a fake returning structured account data.
- */
-
 function whoamiResult(): EmailWranglerRunResult {
   return {
     status: 0,
@@ -88,7 +81,6 @@ function fakeRunner(table: Record<string, EmailWranglerRunResult>, calls: Array<
   return (operation: CloudflareOperation, opts: { capture: boolean }): EmailWranglerRunResult => {
     const args = operationWords(operation);
     calls.push({ args, operation, capture: opts.capture });
-    // Key the table on command words; config context is asserted separately.
     const configIndex = args.indexOf('-c');
     const envIndex = args.indexOf('--env=');
     const suffixIndex = configIndex >= 0 ? configIndex : envIndex >= 0 ? envIndex : args.length;
@@ -147,7 +139,6 @@ function fakeDns(mx: Record<string, Array<string>>): EmailDns {
   };
 }
 
-/** Capture progress and the final verdict separately from checklist blocks. */
 function captureLog(): { lines: Array<string>; restore: () => void } {
   const lines: Array<string> = [];
   const spies = (['message', 'info', 'warn', 'error', 'success', 'step'] as const).map((level) =>
@@ -175,7 +166,6 @@ class ExitSignal extends Error {
   }
 }
 
-/** Run the command; resolve the exit code (0 when it returned without exiting). */
 async function run(
   root: string,
   subcommand: 'setup' | 'status',
@@ -222,7 +212,6 @@ function makeProject(overrides: { from?: string; wrangler?: string } = {}): stri
   return root;
 }
 
-/** The sample project's fakes, with the apply-side entries overridable. */
 function transcriptDeps(
   extra: {
     runnerTable?: Record<string, EmailWranglerRunResult>;
@@ -264,7 +253,6 @@ function transcriptDeps(
 }
 
 function readJsonc(path: string): Record<string, unknown> {
-  // The writer preserves the comment; strip it for the structural assertion.
   const text = readFileSync(path, 'utf-8')
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
@@ -280,14 +268,11 @@ afterEach(() => {
   }
 });
 
-/**
- * Workers Free AFTER a `setup` that was refused Email Sending: the binding, `addresses`
- * and the sender var are committed, routing + subaddressing are on, the rule exists, and
- * `sending settings` still answers not-found — the same answer a Paid account that never
- * onboarded gives. The committed binding is the memory of the refusal (`preflightEmail`),
- * so every row reads ready; the onboarding is the one retry `setup` offers on its own
- * prompt, and the state `status` must call set up.
- */
+// Decision: Workers Free after a `setup` that was refused Email Sending: the binding, `addresses` and
+// the sender var are committed, routing and subaddressing are on, the rule exists, and
+// `sending settings` still answers not-found, the same answer a Paid account that never
+// onboarded gives. The committed binding records the refusal (`preflightEmail`), so each row
+// reads ready; onboarding is the one retry `setup` offers on its own prompt.
 function freeAfterSetup(extra: { runnerTable?: Record<string, EmailWranglerRunResult> } = {}) {
   const root = makeProject({
     wrangler: `{
@@ -342,7 +327,7 @@ const sendingOnboarded: EmailWranglerRunResult = {
   data: { name: 'mail.acme.com', enabled: true, tag: ZONE_ID },
   stderr: BETA_WARNING,
 };
-/** Sending-only apps read and onboard Email Sending through the bearer on the resolved zone. */
+// Decision: Sending-only apps read and onboard Email Sending through the bearer on the resolved zone.
 const SENDING_SUBDOMAINS = `/zones/${ZONE_ID}/email/sending/subdomains`;
 const subdomainsListed = (names: Array<string>) => () =>
   jsonResponse(200, {
@@ -396,7 +381,6 @@ describe('sending-only email setup and status', () => {
     },
   );
 
-  /** A sending-only app set up earlier (binding saved) whose domain is not onboarded. */
   function savedSendingOnly(extra: { fetchTable?: Record<string, () => Response> } = {}) {
     const root = makeProject({
       wrangler: JSON.stringify({
@@ -482,7 +466,6 @@ describe('sending-only email setup and status', () => {
     expect(output).toContain('Zone Read + Email Sending Edit');
     expect(output).not.toContain('verified destinations only');
     expect(logged.lines.join('\n')).toContain('Follow the Workers Paid steps above.');
-    // The saved binding and sender stay as they were.
     expect(readFileSync(configPath, 'utf-8')).toBe(before);
   });
 });
@@ -515,7 +498,6 @@ describe('bwf email setup --platform cloudflare', () => {
     expect(code).toBe(0);
     expect(confirms).toEqual(['Set up email on mail.acme.com?']);
 
-    // Every provider operation carries the deploy's config pin; the writes come after the reads.
     expect(calls.map((c) => c.args)).toEqual([
       ['whoami', '--json'],
       ['email', 'routing', 'settings', 'mail.acme.com'],
@@ -537,7 +519,6 @@ describe('bwf email setup --platform cloudflare', () => {
       expect(call.url).not.toContain(BEARER);
     }
 
-    // The root config: binding + addresses + sender var, comment and siblings intact.
     const written = readFileSync(configPath, 'utf-8');
     expect(written).toContain('// the pinned account');
     expect(readJsonc(configPath)).toEqual({
@@ -549,7 +530,6 @@ describe('bwf email setup --platform cloudflare', () => {
       vars: { __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' },
     });
 
-    // The checklist came before the prompt; the ✔ rows and the address map after.
     const output = printed.join('\n');
     expect(printed[0]).toContain('Email in use   email/support+[ticket].ts · email/_default.ts');
     expect(printed[0]).toContain('+ enable Email Routing on mail.acme.com');
@@ -629,11 +609,11 @@ describe('bwf email setup --platform cloudflare', () => {
   });
 
   it('routing came up but the subaddressing PATCH was refused: exit 1, subaddressing named, addresses withheld', async () => {
-    // The apex path: `wrangler email routing enable acme.com` succeeds, then the bearer
-    // PATCH `{ support_subaddress: true }` is refused. `addresses` is withheld (no bearer
-    // call may fail, decision 11), so the next deploy creates NO rule, and until the flag
-    // is on `support+T-42@` matches no rule for `support@` either. Routing alone is not
-    // "set up": the exit and the verdict line must say what is missing and to rerun.
+    // Decision: The apex path: `wrangler email routing enable acme.com` succeeds, then the bearer PATCH
+    // `{ support_subaddress: true }` is refused. `addresses` is withheld (no bearer call may fail),
+    // so the next deploy creates no rule, and until the flag is on `support+T-42@` matches no rule
+    // for `support@` either. Routing alone isn't "set up": the exit and the verdict line say what's
+    // missing and to rerun.
     const root = makeProject({ from: 'noreply@acme.com' });
     roots.push(root);
     const configPath = join(root, 'wrangler.jsonc');
@@ -680,12 +660,10 @@ describe('bwf email setup --platform cloudflare', () => {
       '✘ routing   subaddressing on acme.com: Cloudflare answered 403 [code: 10000] — Authentication error',
     );
     expect(output).toContain('addresses withheld this run (session-bearer step failed)');
-    // Routing DID come up, so the binding + sender var are written; `addresses` is not.
     const config = readJsonc(configPath);
     expect(config.send_email).toEqual([{ name: 'SEND_EMAIL' }]);
     expect(config.vars).toEqual({ __PLATFORM_EMAIL_FROM: 'noreply@acme.com' });
     expect(config.addresses).toBeUndefined();
-    // The verdict: not "set up" — what is missing, and the rerun.
     const verdict = logged.lines.join('\n');
     expect(verdict).not.toContain('Email set up on');
     expect(verdict).toContain('subaddressing');
@@ -693,9 +671,9 @@ describe('bwf email setup --platform cloudflare', () => {
   });
 
   it('Workers Free: routing + subaddressing on, sending refused → exit 0 with the plan hint, addresses written', async () => {
-    // Sending onboarding needs Workers Paid, which bwf cannot buy; inbound is complete and
-    // `addresses` is committed, which is all `setup` exists to do (CI commits the file).
-    // The plan hint and the `(verified destinations only)` marker are the warning.
+    // Decision: Sending onboarding needs Workers Paid, which bwf can't buy; inbound is complete and
+    // `addresses` is committed, which is all `setup` is for (CI commits the file). The plan hint
+    // and the `(verified destinations only)` marker are the warning.
     const root = makeProject();
     roots.push(root);
     const configPath = join(root, 'wrangler.jsonc');
@@ -762,14 +740,12 @@ describe('bwf email setup --platform cloudflare', () => {
 
     expect(code).toBe(0);
     expect(confirms).toEqual([RETRY_PROMPT]);
-    // The checklist before the prompt: the row says what works, the retry is the one change.
     expect(printed[0]).toContain(
       '    sending   mail.acme.com  not onboarded — verified destinations only; after upgrading to Workers Paid run bwf email setup --platform cloudflare',
     );
     expect(printed[0]).toContain('    + onboard mail.acme.com for Email Sending');
     expect(printed[0]).not.toContain('+ enable Email Routing');
     expect(printed[0]).not.toContain('+ wrangler.jsonc');
-    // ONE account write — the onboarding — and no bearer write.
     expect(calls.filter((c) => c.args.includes('enable')).map((c) => c.args.slice(0, 4))).toEqual([
       ['email', 'sending', 'enable', 'mail.acme.com'],
     ]);
@@ -866,7 +842,6 @@ describe('bwf email setup --platform cloudflare', () => {
     expect(calls.some((c) => c.args.includes('enable'))).toBe(false);
     expect(fetchCalls.every((c) => c.method === 'GET')).toBe(true);
     expect(readFileSync(configPath, 'utf-8')).toBe(before);
-    // Every row reads ready; the only remaining line is the `!` for the refused catch-all.
     expect(printed[0]).toContain('    rules     support@mail.acme.com → acme-support   (ready)');
     expect(printed[0]).not.toContain('\n    + ');
   });
@@ -1033,9 +1008,9 @@ describe('bwf email status --platform cloudflare', () => {
         'whoami --json': { status: 0, stdout: '', data: { loggedIn: false }, stderr: '' },
       },
     });
-    // The default block printer is clack's `log.message`, straight from the renderer — this
-    // path has no `formatCloudflareUserMessage` in front of it, so the text pinned here is
-    // exactly what the developer reads.
+    // Decision: The default block printer is clack's `log.message`, straight from the renderer. This path
+    // has no `formatCloudflareUserMessage` in front of it, so the text pinned here is what the
+    // developer reads.
     const { print: _print, ...withoutPrint } = deps;
     const logged = captureLog();
     let code: number;
@@ -1087,7 +1062,6 @@ describe('bwf email setup|status without --platform cloudflare', () => {
     for (const subcommand of ['setup', 'status'] as const) {
       await expect(runEmailCommand(root, { subcommand })).rejects.toBeInstanceOf(ExitSignal);
       expect(exitSpy).toHaveBeenLastCalledWith(1);
-      // `--platform bwf` is that default spelled out: the same exit, still no platform call.
       await expect(
         runEmailCommand(root, { subcommand, platform: 'platform' }),
       ).rejects.toBeInstanceOf(ExitSignal);

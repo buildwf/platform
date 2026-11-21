@@ -7,8 +7,6 @@ import type { PlanId } from '../tiers.ts';
 import type { OAuthAccount, User } from '../types.ts';
 import { type Db, type Tx } from './client.ts';
 
-// --- Users ---
-
 export async function createUser(
   db: Db,
   provider: string,
@@ -103,8 +101,8 @@ export async function bootstrapPlatformAdmin(
   return db.transaction(async (tx) => {
     let user: User;
     try {
-      // Share the first-user lock and identity check with normal signup. Keep
-      // the user and OAuth identity in one transaction so neither can be orphaned.
+      // Decision: Share the first-user lock and identity check with normal signup. Keep the user and the OAuth
+      // identity in one transaction so neither can be orphaned.
       user = await createUserForPlatform(tx, provider, providerId, login, email, installationId, {
         additionalSignupAllowed: false,
         bootstrapGitHubId,
@@ -113,8 +111,8 @@ export async function bootstrapPlatformAdmin(
       if (!(error instanceof SelfHostedSignupRestrictedError)) {
         throw error;
       }
-      // A concurrent dashboard/CLI login may have created the owner after the
-      // callback's initial lookup. Re-read under the lock, never promote a user.
+      // Decision: A concurrent dashboard or CLI login may have created the owner after the callback's first lookup.
+      // Re-read under the lock; don't promote a user here.
       return getUserByOAuthAccount(tx, provider, providerId);
     }
     await createOAuthAccount(tx, user.id, provider, providerId);
@@ -162,8 +160,6 @@ export async function updateUser(
 ): Promise<void> {
   await db.update(users).set({ login, email }).where(eq(users.id, id));
 }
-
-// --- OAuth Accounts ---
 
 export async function getUserByOAuthAccount(
   db: Db,
@@ -259,8 +255,7 @@ export async function linkGitHubIdentity(
 ): Promise<'linked' | 'already_linked'> {
   try {
     return await db.transaction(async (tx) => {
-      // Serialize concurrent same-user links (see doc comment). Mirrors the
-      // deploy/build per-user FOR UPDATE pattern.
+      // Decision: Serialize concurrent links for the same user (see the doc comment).
       await tx
         .select({ id: users.id })
         .from(users)
@@ -276,9 +271,8 @@ export async function linkGitHubIdentity(
         throw new GitHubIdentityConflictError();
       }
 
-      // Enforce one github identity per Platform account: a pre-existing github row
-      // for this user must be a DIFFERENT provider_id (the same-id case is the
-      // `owner.id === userId` short-circuit above), so reject.
+      // Decision: One GitHub identity per Platform account: an existing github row for this user has a different
+      // provider_id (the same-id case returned above), so reject.
       if ((await getGitHubAccountIdForUser(tx, userId)) !== null) {
         throw new GitHubIdentityAlreadyLinkedError();
       }
@@ -290,10 +284,9 @@ export async function linkGitHubIdentity(
     if (!isUniqueViolation(error)) {
       throw error;
     }
-    // Lost the `(provider, provider_id)` insert race to a concurrent
-    // DIFFERENT-user link of the same github id (the per-user FOR UPDATE lock
-    // does not serialize across users). The transaction rolled back; re-resolve
-    // ownership outside it.
+    // Decision: Lost the `(provider, provider_id)` insert race to another user's link of the same GitHub id (the
+    // per-user lock doesn't serialize across users). The transaction rolled back; re-resolve ownership
+    // outside it.
     const winner = await getUserByOAuthAccount(db, 'github', providerId);
     if (winner?.id === userId) {
       return 'already_linked';
@@ -329,20 +322,15 @@ export async function updateUserPlan(
 }
 
 export async function countUserDeploymentsToday(db: Db, userId: string): Promise<number> {
-  // Excludes precheck placeholder rows (manifest IS NULL). Those represent
-  // in-flight deploys that have passed serialization but not yet validated
-  // against quota; counting them would charge a deploy against quota BEFORE
-  // the quota check fires for that same request, dropping the effective
-  // daily limit by one for both streamed-static and worker-backed paths.
+  // Decision: Leave out precheck placeholder rows (manifest IS NULL). They're in-flight deploys that passed
+  // serialization but not the quota check; counting them would charge a deploy before its own quota
+  // check and cut the daily limit by one.
   const [result] = await db
     .select({ count: count() })
     .from(deployments)
     .innerJoin(projects, eq(deployments.project_id, projects.id))
     .where(
       and(
-        // billing_user_id is authoritative after the team migration. Keep the
-        // owner fallback during the additive rollout for a placeholder created
-        // by an older API revision before the backfill converges.
         sql`COALESCE(${deployments.billing_user_id}, ${projects.user_id}) = ${userId}`,
         sql`${deployments.created_at} >= CURRENT_DATE`,
         isNotNull(deployments.manifest),

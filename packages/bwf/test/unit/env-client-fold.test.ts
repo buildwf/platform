@@ -162,8 +162,8 @@ describe('envClientFoldPlugin', () => {
   it('does NOT fold server-only keys (no prefix match)', async () => {
     const code = `import { env } from "@builtbyfriends/bwf/env";\nconst v = env.STRIPE_KEY;\n`;
     const { result } = await runFold(code, `${ROOT}/src/page.ts`, {
-      // Server keys aren't in config.env (Vite filters them out), but even
-      // if a user somehow passes one, prefix enforcement keeps us honest.
+      // Decision: Server keys aren't in config.env (Vite filters them out), but if a user passes one anyway,
+      // prefix enforcement still keeps it out.
       env: { STRIPE_KEY: 'sk_live_secret' },
     });
     expect(result).toBeFalsy();

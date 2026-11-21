@@ -92,10 +92,8 @@ describe('generateEnvTypes', () => {
       expect(dts).toContain('declare module "@builtbyfriends/bwf/handler"');
       expect(dts).toContain('interface ValidatedEnv extends _PlatformEnvShape');
       expect(dts).toContain('interface CloudBindings extends _PlatformEnvShape');
-      // Path is relative to outDir and keeps the source extension for NodeNext.
+      // Decision: The path is relative to outDir and keeps the source extension for NodeNext.
       expect(dts).toContain('typeof import("../env.ts")');
-      // Resolves both `export default defineEnv(...)` and
-      // `export const env = defineEnv(...)` source forms.
       expect(dts).toContain(
         'type _PlatformEnvShape = _PlatformEnvSchema extends { default: infer D } ? D : _PlatformEnvSchema extends { env: infer E } ? E : {};',
       );

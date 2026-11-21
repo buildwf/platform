@@ -65,7 +65,7 @@ export class LiveStreamError extends Error {
   }
 }
 
-// Codes that say the connection is gone or the server failed, not that it refused the subscribe.
+// Decision: Codes that say the connection is gone or the server failed, not that it refused the subscribe.
 const RETRYABLE_CODES: ReadonlySet<LiveControlErrorCode> = new Set([
   'CONNECTION_NOT_FOUND',
   'CONNECTION_CLOSED',
@@ -114,9 +114,9 @@ export function connectLiveStream(
   let nextSubscriptionVersion = 0;
   let sourceOpen = false;
   let reconnectAttempts = 0;
-  // Subscribes waiting to be tried again. Calling one tries it now.
+  // Decision: Subscribes waiting to be tried again. Calling one tries it now.
   const retryWaiters = new Set<() => void>();
-  // An unsubscribe of an id nothing uses: it only asks whether the server still knows this connection.
+  // Decision: An unsubscribe of an id nothing uses: it only asks whether the server still knows this connection.
   const probeId = `bwf-probe:${connectionId}`;
   const retryDelay = options.retryDelay ?? 1_000;
   if (!Number.isFinite(retryDelay) || retryDelay < 0) {
@@ -191,7 +191,7 @@ export function connectLiveStream(
       }
       return error.status === undefined || error.status >= 500 || error.status === 429;
     }
-    // A fetch that never reached the server, or a gateway page in place of JSON.
+    // Decision: A fetch that never reached the server, or a gateway page in place of JSON.
     return error instanceof TypeError || error instanceof SyntaxError;
   }
 
@@ -315,7 +315,7 @@ export function connectLiveStream(
       return;
     }
     resubscribeOnNextOpen = true;
-    // An outage waits longer between tries; an open stream or a wake starts the waits over.
+    // Decision: An outage waits longer between tries; an open stream or a wake starts the waits over.
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
       resubscribeOnNextOpen = false;
@@ -511,7 +511,7 @@ export function connectLiveStream(
         }
         queueMicrotask(closeIfIdle);
       };
-      // A subscribe that can't reach a working server (the stream didn't open, the network is down,
+      // Decision: A subscribe that can't reach a working server (the stream didn't open, the network is down,
       // a deploy restarted the server) is tried again with growing waits, and at once when the
       // network comes back or the page gets focus. A refusal ends it.
       for (let attempt = 0; !subscription.confirmed; attempt++) {

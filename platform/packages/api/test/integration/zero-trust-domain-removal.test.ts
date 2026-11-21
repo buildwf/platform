@@ -69,7 +69,6 @@ function cloudflareApi() {
       if (init?.method === 'DELETE') {
         return Response.json({ success: true, result: { id } });
       }
-      // Hostnames that never finished validation.
       return Response.json({
         success: true,
         result: { id, status: 'pending', ssl: { status: 'pending_validation', method: 'http' } },
@@ -165,8 +164,6 @@ describe('Zero Trust custom domain removal', () => {
       };
     expect(customDomainApplication().destinations.map((entry) => entry.uri)).toEqual(hostnames);
 
-    // The request stops after the domain deletion commits, before the
-    // reconciliation that would rewrite the custom domain application.
     vi.mocked(reconcileProjectZeroTrustDomains).mockRejectedValueOnce(new Error('Worker stopped'));
     const removed = await app.fetch(
       rpcRequest('domains.remove', owner.jwt, { projectId: project.id, domainId: 'dom_removal_1' }),
@@ -216,8 +213,6 @@ describe('Zero Trust custom domain removal', () => {
         JSON.stringify({ workerName: 'user-stale-domain', projectId: project.id }),
       );
     }
-    // Configuring protects every hostname of the project, including one still
-    // waiting for validation.
     await configurePlatformZeroTrust(bindings(), env.db, {
       apiToken: 'access-management-token',
       identityProviderIds: ['idp-1'],

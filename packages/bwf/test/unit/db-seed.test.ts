@@ -18,7 +18,7 @@ const mockLog = {
 const pgQueries = vi.hoisted((): Array<string> => []);
 
 vi.mock('pg', async (importOriginal) => {
-  // Keep pg's own connection-string parsing; record the queries instead of sending them.
+  // Decision: Keep pg's own connection-string parsing; record the queries instead of sending them.
   class Client extends (await importOriginal<typeof import('pg')>()).Client {}
   Object.assign(Client.prototype, {
     async connect() {},
@@ -68,7 +68,6 @@ function createProjectRoot(options: {
   if (options.config) {
     writeFileSync(join(root, 'bwf.json'), JSON.stringify(options.config));
   }
-  // Keep the journal coherent with the migration file above.
   writeFileSync(
     join(migrationsDir, 'meta', '_journal.json'),
     JSON.stringify(
@@ -237,7 +236,7 @@ export const messages = sqliteTable("messages", {
     );
     const dbModule = pathToFileURL(join(import.meta.dirname, '../../src/cli/db.ts')).href;
 
-    // Plain Node, because Vitest's module runner resolves extensionless imports.
+    // Decision: Plain Node, because Vitest's module runner resolves extensionless imports.
     const result = spawnSync(
       process.execPath,
       [
@@ -300,10 +299,8 @@ export default async function seed() {}
       await expect(runDbCommand(root, { action: 'seed' })).rejects.toThrow('process.exit:0');
       expect(mockConfirm).toHaveBeenCalledOnce();
       expect(existsSync(marker)).toBe(false);
-      // Nothing reached the database.
       expect(pgQueries).toEqual([]);
 
-      // One answer covers the reset too.
       mockConfirm.mockResolvedValue(true);
       await runDbCommand(root, { action: 'seed' });
       expect(mockConfirm).toHaveBeenCalledTimes(2);

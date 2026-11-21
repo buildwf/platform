@@ -209,7 +209,6 @@ describe('Access-protected platform requests', () => {
     expect(confirmation.status).toBe(400);
     expect(confirmation.headers.get('cache-control')).toBe('no-store');
     expect(confirmation.headers.get('referrer-policy')).toBe('no-referrer');
-    // The Confirm button on that page posts back to the same route.
     const consent = await request(
       '/email/destinations/confirm?token=invalid.signature',
       undefined,

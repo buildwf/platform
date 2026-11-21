@@ -315,7 +315,6 @@ describe('platform installation planning', () => {
       'Runtime logs: minimal',
     );
     expect(formatPlatformInstallPlan(full)).not.toContain('Runtime logs');
-    // An upgrade shows a change in both directions.
     expect(stripVTControlCharacters(formatPlatformInstallPlan(full, minimal.deployment))).toContain(
       'Runtime logs: full (was minimal)',
     );
@@ -326,14 +325,12 @@ describe('platform installation planning', () => {
 
     const recordedFull = manifestFor(full);
     const recordedMinimal = manifestFor(minimal);
-    // Omitted keeps the recorded value.
     expect(
       (await createPlatformInstallPlan(client(), input, recordedMinimal)).deployment.runtimeLogs,
     ).toBe('minimal');
     expect(
       (await createPlatformInstallPlan(client(), input, recordedFull)).deployment,
     ).not.toHaveProperty('runtimeLogs');
-    // Upgrade switches it on and off.
     const on = await createPlatformInstallPlan(
       client(),
       { ...input, runtimeLogs: 'minimal' },
@@ -348,7 +345,6 @@ describe('platform installation planning', () => {
       { allowRuntimeLogsChange: true },
     );
     expect(off.deployment).toEqual(full.deployment);
-    // Other drift still throws on upgrade.
     await expect(
       createPlatformInstallPlan(
         client(),
@@ -357,7 +353,6 @@ describe('platform installation planning', () => {
         { allowRuntimeLogsChange: true },
       ),
     ).rejects.toThrow('--resume inputs do not match');
-    // An install resume with a different value throws.
     await expect(
       createPlatformInstallPlan(client(), { ...input, runtimeLogs: 'minimal' }, recordedFull),
     ).rejects.toThrow('--resume inputs do not match');
@@ -968,7 +963,7 @@ describe('platform installation planning', () => {
         fetcher: async (url, init) => {
           requests.push(String(url));
           expect(init?.method ?? 'GET').toBe('GET');
-          // These valid credential kinds cannot use the user API-token endpoint.
+          // Decision: These valid credential kinds can't use the user API-token endpoint.
           if (String(url).includes('/user/tokens/verify')) {
             return Response.json(
               { success: false, errors: [{ code: 1000, message: 'Invalid API Token' }] },
@@ -1371,8 +1366,8 @@ describe('platform installation planning', () => {
       action,
       '2026-09-14T00:00:01.000Z',
     );
-    // Gateways carry no ownership marker, so a creation time just after the
-    // intent does not show who created this one.
+    // Decision: Gateways carry no ownership marker, so a creation time just after the intent doesn't show
+    // who created this one.
     const withGateway = client({
       listAiGateways: async () => [{ createdAt: '2026-09-14T00:00:03.000Z', id: name, name }],
     });

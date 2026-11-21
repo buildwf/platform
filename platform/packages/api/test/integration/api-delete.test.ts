@@ -89,9 +89,9 @@ describe('DELETE /projects/:id', () => {
     const project = await createTestProject(env.db, formerOwner.id, 'transferred-delete');
     const cf = mockCfApi();
 
-    // Drive the transfer after the route's fast authorization snapshot but
-    // before teardown takes the project lock. The stale snapshot still says
-    // owner; the locked recheck must observe the former owner's new admin role.
+    // Decision: Drive the transfer after the route's fast authorization snapshot but before teardown takes the
+    // project lock. The stale snapshot still says owner; the locked recheck has to see the former
+    // owner's new admin role.
     const requireCapability = projectAccess.requireProjectCapability;
     let transferred = false;
     vi.spyOn(projectAccess, 'requireProjectCapability').mockImplementation(async (...args) => {
@@ -374,9 +374,6 @@ describe('DELETE /projects/:id', () => {
     const project = await createTestProject(env.db, user.id, 'building-app');
     mockCfApi();
 
-    // Two in-flight builds: a container build (has a live DO) and a
-    // github_actions build (no DO — token revoked purely by terminalizing the
-    // row). Both must be gone after delete, and the container DO torn down.
     const containerBuild = await createTestBuild(env.db, {
       projectId: project.id,
       userId: user.id,
@@ -400,12 +397,9 @@ describe('DELETE /projects/:id', () => {
     );
     expect(res.status).toBe(200);
 
-    // The container build's DO got a cancelBuild RPC; github_actions has no DO.
     expect(cancelledIds).toContain(containerBuild.id);
     expect(cancelledIds).not.toContain(actionsBuild.id);
 
-    // Both build rows are gone — their deploy tokens are dead (the auth guard
-    // rejects any token whose bound build row is missing / not ACTIVE).
     const remaining = await env.db.select().from(builds).where(eq(builds.project_id, project.id));
     expect(remaining).toHaveLength(0);
   });
@@ -413,16 +407,13 @@ describe('DELETE /projects/:id', () => {
   it('deletes the CF object for a resource that raced the teardown snapshot', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'race-orphan-app');
-    // A real D1 resource row exists at cascade time.
     await addResource(project.id, 'd1', 'd1-raced-uuid', 'DB');
 
     const cf = mockCfApi();
-    // Simulate the orphan-on-concurrent-create race: teardown's one-time resource
-    // snapshot MISSES this row (modelled here as a row inserted after the snapshot
-    // read). With getProjectResources returning [], cleanupBestEffortResources
-    // cleans nothing — so the ONLY path that can delete the CF D1 object is the
-    // post-cascade race-window sweep (deleteProjectCascade RETURNs the row →
-    // cleanupRaceWindowResourceOrphans).
+    // Decision: Simulate the orphan-on-concurrent-create race: teardown's one-time resource snapshot misses this
+    // row. With getProjectResources returning [], cleanupBestEffortResources cleans nothing, so only the
+    // post-cascade race-window sweep (deleteProjectCascade returns the row to
+    // cleanupRaceWindowResourceOrphans) can delete the CF D1 object.
     vi.spyOn(db, 'getProjectResources').mockResolvedValue([]);
 
     const res = await app.fetch(
@@ -434,7 +425,6 @@ describe('DELETE /projects/:id', () => {
     );
     expect(res.status).toBe(200);
 
-    // The race-window sweep deleted the CF D1 object behind the missed row.
     const d1Deletes = cf.mock.calls.filter(
       ([url, init]) =>
         (init as RequestInit | undefined)?.method === 'DELETE' &&
@@ -442,7 +432,6 @@ describe('DELETE /projects/:id', () => {
     );
     expect(d1Deletes.length).toBeGreaterThan(0);
 
-    // And the row is gone.
     const remaining = await env.db
       .select()
       .from(resources)
@@ -537,7 +526,6 @@ describe('DELETE /projects/:id', () => {
     expect(body.ok).toBe(true);
     expect(body.warnings).toBeUndefined();
 
-    // Retrying a partially completed teardown must not get stuck on a 404.
     const [dbProject] = await env.db.select().from(projects).where(eq(projects.id, project.id));
     expect(dbProject).toBeUndefined();
   });
@@ -647,8 +635,6 @@ describe('DELETE /projects/:id', () => {
         env,
       );
 
-    // Teardown stops with the row still there; a token can still make AI calls, so
-    // the `off` setting must stay published.
     expect((await request()).status).toBe(500);
     expect(await db.getProject(env.db, project.id)).toMatchObject({ status: 'deleting' });
     expect(await env.ROUTING.get(aiLoggingKey(project.id))).toBe('off');
@@ -763,7 +749,6 @@ describe('DELETE /projects/:id', () => {
         env,
       );
 
-    // The retried project keeps routing, so it must keep its Access bypass.
     expect((await request()).status).toBe(500);
     expect(cleanupZeroTrust).not.toHaveBeenCalled();
 
@@ -780,7 +765,6 @@ describe('DELETE /projects/:id', () => {
   it('does not warn when worker 404s (static project)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'static-app');
-    // Set type to spa (static project — no worker deployed)
     await env.db.update(projects).set({ type: 'spa' }).where(eq(projects.id, project.id));
     mockCfApi({
       deleteWorker: () => new Response('not found', { status: 404 }),
@@ -823,7 +807,6 @@ describe('DELETE /projects/:id', () => {
       .set({ active_deployment_id: 'dpl_active' })
       .where(eq(projects.id, project.id));
 
-    // Add queue routing KV entry (as deploy would)
     await env.ROUTING.put(
       queueRoutingKey,
       JSON.stringify({
@@ -913,11 +896,6 @@ describe('DELETE /projects/:id', () => {
     expect(deleteWorkerCall).toBeDefined();
   });
 
-  // Bytes uploaded via direct-to-R2 presigned PUTs that never finalized into a
-  // live deploy (e.g. upload-urls / teardown TOCTOU race, abandoned upload) live durably under
-  // `assets/{projectId}/{blake3}` keys. Retention cleanup only walks hashes
-  // referenced by retained manifests, so without a teardown sweep these would
-  // leak permanently. Project teardown must clear the entire prefix.
   it('sweeps R2 assets/{projectId}/* on teardown', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'asset-sweep');
@@ -931,7 +909,6 @@ describe('DELETE /projects/:id', () => {
     for (const key of ownKeys) {
       await env.STATIC_ASSETS_R2.put(key, new Uint8Array([1, 2, 3]).buffer as ArrayBuffer);
     }
-    // Sibling project's bytes must NOT be touched.
     const otherKey = 'assets/proj_otherproject/dddddddddddddddddddddddddddddddd';
     await env.STATIC_ASSETS_R2.put(otherKey, new Uint8Array([4, 5, 6]).buffer as ArrayBuffer);
 
@@ -951,24 +928,11 @@ describe('DELETE /projects/:id', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// CF Email Routing destination cleanup.
-//
-// Destinations are ACCOUNT-level on Cloudflare: one address added for project
-// A is a valid `send_email` recipient for every worker in the account. The
-// `email_destinations` rows are the only thing that maps them back to
-// projects, and `deleteProjectCascade` deletes those rows — so the cleanup
-// MUST run before the cascade. If it runs after (or not at all) the
-// destination leaks onto the account forever with nothing left to compute the
-// reference count from. These tests fail if the call is dropped or reordered.
-// ---------------------------------------------------------------------------
+// Decision: Email Routing destinations are account-level on Cloudflare, and `email_destinations` rows are the
+// only map back to projects. `deleteProjectCascade` deletes those rows, so cleanup has to run before
+// the cascade or the destination leaks with nothing left to count references from. These tests fail
+// if the call is dropped or reordered.
 
-/**
- * Wrap the fetch stub `mockCfApi()` installed so `/email/routing/addresses`
- * calls are recorded and answered here. Kept local rather than pushed into
- * `mockCfApi` — the only thing under test is which destinations teardown
- * decides to delete.
- */
 function captureEmailRoutingCalls(): Array<{ method: string; url: string }> {
   const calls: Array<{ method: string; url: string }> = [];
   const inner = globalThis.fetch;
@@ -1017,8 +981,6 @@ describe('DELETE /projects/:id — CF email destination cleanup', () => {
     );
     expect(res.status).toBe(200);
 
-    // The account-level address is gone from Cloudflare. A cleanup that ran AFTER `deleteProjectCascade` would see no rows and
-    // make no call here.
     expect(emailCalls).toEqual([
       {
         method: 'DELETE',
@@ -1034,8 +996,6 @@ describe('DELETE /projects/:id — CF email destination cleanup', () => {
     mockCfApi();
     const emailCalls = captureEmailRoutingCalls();
 
-    // Same CF tag on both projects — deleting it would silently break the
-    // surviving project's ability to mail that recipient.
     await addEmailDestination(doomed.id, 'shared@example.com', 'cf-tag-shared');
     await addEmailDestination(survivor.id, 'shared@example.com', 'cf-tag-shared');
 
@@ -1049,7 +1009,6 @@ describe('DELETE /projects/:id — CF email destination cleanup', () => {
     expect(res.status).toBe(200);
     expect(emailCalls).toEqual([]);
 
-    // The survivor keeps its row.
     const rows = await env.db
       .select()
       .from(emailDestinations)
@@ -1090,10 +1049,6 @@ describe('DELETE /projects/:id — CF email destination cleanup', () => {
     ]);
   });
 });
-
-// ---------------------------------------------------------------------------
-// A destination created while project teardown commits must be discarded.
-// ---------------------------------------------------------------------------
 
 describe('POST /projects/:id/email/destinations — losing the teardown race', () => {
   function addDestinationRequest(projectId: string, jwt: string, address: string): Request {
@@ -1160,9 +1115,8 @@ describe('POST /projects/:id/email/destinations — losing the teardown race', (
     const project = await createTestProject(env.db, user.id, 'mail-race');
 
     const fetchMock = mockCfApi({
-      // Teardown commits its cascade while we are out at CF. The project row
-      // — and, by ON DELETE CASCADE, every email_destinations row — is gone
-      // before the INSERT below runs, so the FK has nothing to point at.
+      // Decision: Teardown commits its cascade while we are out at CF. The project row, and by ON DELETE CASCADE its
+      // email_destinations rows, are gone before the INSERT runs, so the FK has nothing to point at.
       addEmailDestination: async (_url: string, init?: RequestInit) => {
         const body = typeof init?.body === 'string' ? JSON.parse(init.body) : {};
         await db.deleteProjectCascade(env.db, project.id);
@@ -1181,23 +1135,18 @@ describe('POST /projects/:id/email/destinations — losing the teardown race', (
       env,
     );
 
-    // The INSERT raised `23503`. Uncaught it reaches the app's `onError` as a
-    // generic 500 — this is the same "not inserted" answer the sibling-DELETE
-    // race already gives, not a new code.
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: 'destination concurrently modified, try again' });
 
-    // And the account-level address is handed back rather than burning a slot
-    // of the shared 200-destination cap forever.
     expect(cfDeleteCalls(fetchMock)).toEqual([
       expect.stringContaining('/email/routing/addresses/cf-tag-race') as unknown as string,
     ]);
   });
 
   it('leaves a CF destination a surviving project still references', async () => {
-    // Same race, but the tag came from the already-exists recovery and a live
-    // sibling project points at it. The count must be ZERO to delete — our own
-    // row does not exist, so `<= 1` would revoke the sibling's recipient.
+    // Decision: Same race, but the tag came from the already-exists recovery and a live sibling project uses it.
+    // The count has to be zero to delete: our own row doesn't exist, so `<= 1` would revoke the
+    // sibling's recipient.
     const user = await createTestUser(env.db);
     const doomed = await createTestProject(env.db, user.id, 'mail-race-shared');
     const survivor = await createTestProject(env.db, user.id, 'mail-race-survivor');
@@ -1227,7 +1176,6 @@ describe('POST /projects/:id/email/destinations — losing the teardown race', (
     expect(res.status).toBe(409);
     expect(cfDeleteCalls(fetchMock)).toEqual([]);
 
-    // The survivor keeps both its row and its recipient.
     const rows = await env.db
       .select()
       .from(emailDestinations)

@@ -33,9 +33,9 @@ import {
 
 let env: TestEnv;
 
-// Self-contained app mirroring how index.ts mounts githubRoutes: auth is applied
-// per-route inside githubRoutes (link-url + link/complete are authed; the public
-// link-callback is not), so the only outer middleware is the db setter.
+// Decision: Mirrors how index.ts mounts githubRoutes. Auth is applied per route inside githubRoutes
+// (link-url and link/complete are authed, the public link-callback isn't), so the only outer
+// middleware sets the db.
 const app = new Hono<ApiEnv>()
   .use('*', async (context, next) => {
     context.set('db', env.db);
@@ -43,17 +43,15 @@ const app = new Hono<ApiEnv>()
   })
   .route('/github', githubRoutes);
 
-// The App's user-to-server OAuth credentials. Present only when the App is
-// configured for "Request user authorization (OAuth)" — the link flow is inert
-// (503) without them.
+// Decision: The App's user-to-server OAuth credentials. They're present only when the App is configured for
+// "Request user authorization (OAuth)". Without them the link flow returns 503.
 const GITHUB_APP_USER_OAUTH_ENV = {
   GITHUB_APP_CLIENT_ID: 'Iv1.testappclientid',
   GITHUB_APP_CLIENT_SECRET: 'test-app-client-secret',
 } as const;
 
-// A valid 43-char RFC 7636 code_verifier and a second, mismatched one.
-const CODE_VERIFIER = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ'; // 43 chars
-const WRONG_VERIFIER = 'ZYXWVUTSRQPONMLKJIHGFEDCBA0123456789._~-abcd'; // 44 chars, well-formed
+const CODE_VERIFIER = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ';
+const WRONG_VERIFIER = 'ZYXWVUTSRQPONMLKJIHGFEDCBA0123456789._~-abcd';
 
 beforeAll(async () => {
   env = await setupEnv();
@@ -64,8 +62,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  // github_* tables aren't known to the shared clearTables helper; clear them
-  // before it removes the users they reference.
+  // Decision: The shared clearTables helper doesn't know the github_* tables. Clear them before it removes
+  // the users they reference.
   await env.db.delete(githubInstallations);
   await clearTables(env.db);
 });
@@ -87,9 +85,6 @@ function authedPost(jwt: string, body: unknown): RequestInit {
   };
 }
 
-// Stub global fetch for the App user-OAuth exchange used by the callback:
-//   - POST login/oauth/access_token -> user token (unless `acceptCode === false`)
-//   - GET /user -> the authorizing user's numeric account id (`providerId`)
 function mockUserOAuth(opts: { providerId: string; acceptCode?: boolean }): {
   calls: { tokenExchange: boolean; user: boolean };
   tokenExchangeBody: { current: Record<string, unknown> | null };
@@ -120,7 +115,6 @@ function mockUserOAuth(opts: { providerId: string; acceptCode?: boolean }): {
   return { calls, tokenExchangeBody };
 }
 
-// Decode the signed `state` out of a github.com/login/oauth/authorize URL.
 function decodeStateFromAuthorizeUrl(url: string): Record<string, unknown> {
   const parsed = new URL(url);
   const state = parsed.searchParams.get('state');
@@ -131,8 +125,6 @@ function decodeStateFromAuthorizeUrl(url: string): Record<string, unknown> {
   return JSON.parse(atob(encoded)) as Record<string, unknown>;
 }
 
-// Mint a signed `state` exactly the way GET /link-url does — used to drive the
-// callback directly and to forge expired/altered states.
 async function mintState(payload: {
   redirect: string;
   purpose?: string;
@@ -152,18 +144,14 @@ async function mintState(payload: {
   return `${encoded}.${signature}`;
 }
 
-// Extract the JS-redirect target URL from the 200 HTML body the callback returns.
-// The callback uses 200 + `location.replace("<target>")` (not a 302) because
-// `wrangler dev` mangles `Location: http://localhost:*` headers (see meta/lessons.md
-// and src/html-redirect.ts). The target carries the signed `link_code`.
+// Decision: The callback returns 200 with `location.replace("<target>")`, not a 302, because `wrangler dev`
+// mangles `Location: http://localhost:*` headers (see meta/lessons.md and src/html-redirect.ts).
+// The target carries the signed `link_code`.
 function extractRedirectTarget(body: string): string | null {
   const match = /location\.replace\("([^"]+)"\)/.exec(body);
   return match ? match[1]! : null;
 }
 
-// Drive the callback for a freshly-minted valid state + a stubbed exchange, and
-// return the `link_code` it redirected to localhost with (parsed out of the
-// 200 HTML body's `location.replace(...)` target, not a Location header).
 async function runCallback(opts: {
   redirect: string;
   codeChallenge: string;
@@ -221,7 +209,7 @@ describe('GET /github/link-url', () => {
     expect(state.redirect).toBe(redirect);
     expect(typeof state.exp).toBe('number');
     expect((state.exp as number) > Date.now()).toBe(true);
-    // The crux: state carries NO Platform user id.
+    // Decision: The state carries no Platform user id.
     expect('userId' in state).toBe(false);
   });
 
@@ -246,7 +234,6 @@ describe('GET /github/link-url', () => {
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'http://localhost:9999/callback';
 
-    // No GITHUB_APP_CLIENT_ID/SECRET on env.
     const res = await app.fetch(
       new Request(
         `http://localhost/github/link-url?redirect=${encodeURIComponent(redirect)}&code_challenge=${challenge}`,
@@ -280,9 +267,6 @@ describe('GET /github/link-callback', () => {
       providerId,
     });
 
-    // 200 + JS `location.replace`, NOT a 302 — `wrangler dev` mangles
-    // `Location: http://localhost:*` headers (see meta/lessons.md). The
-    // link_code-bearing localhost target is embedded in the HTML body.
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');
     expect(res.headers.get('location')).toBeNull();
@@ -291,7 +275,6 @@ describe('GET /github/link-callback', () => {
     expect(linkCode).not.toBeNull();
     expect(body).toContain('location.replace(');
 
-    // The callback must NOT have created any oauth_accounts row for this id.
     expect(await countOAuthRows(env.db, providerId)).toBe(0);
   });
 
@@ -303,11 +286,9 @@ describe('GET /github/link-callback', () => {
       codeChallenge: challenge,
       exp: Date.now() + 10 * 60 * 1000,
     });
-    // Flip the FIRST character of the signature. The signature is a 43-char
-    // base64url encoding of 32 HMAC bytes; its LAST char carries only 2
-    // significant bits, so flipping it decodes to the same bytes ~1/4 of the
-    // time (the tamper becomes a no-op → 200, a flaky pass). The first char
-    // carries a full 6 bits, so flipping it always changes the decoded bytes.
+    // Decision: Flip the first char of the signature. It's a 43-char base64url encoding of 32 HMAC bytes, and
+    // its last char carries only 2 significant bits, so flipping that one decodes to the same bytes
+    // about 1 time in 4 (a flaky pass). The first char carries a full 6 bits.
     const dot = state.lastIndexOf('.');
     const sig = state.slice(dot + 1);
     const first = sig[0] === 'A' ? 'B' : 'A';
@@ -329,7 +310,7 @@ describe('GET /github/link-callback', () => {
     const state = await mintState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
-      exp: Date.now() - 1000, // already expired
+      exp: Date.now() - 1000,
     });
 
     const res = await app.fetch(
@@ -358,9 +339,8 @@ describe('GET /github/link-callback', () => {
       { ...env, ...GITHUB_APP_USER_OAUTH_ENV },
     );
 
-    // State + redirect are validated, so the error is bounced to the CLI's
-    // localhost listener (200 + JS redirect) rather than JSON on the API host —
-    // otherwise `bwf github link` hangs until its 5-min timeout.
+    // Decision: State and redirect are valid, so the error goes to the CLI's localhost listener (200 and a JS
+    // redirect), not JSON on the API host. Otherwise `bwf github link` hangs until its 5-minute timeout.
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');
     const target = extractRedirectTarget(await res.text());
@@ -379,8 +359,6 @@ describe('GET /github/link-callback', () => {
       exp: Date.now() + 10 * 60 * 1000,
     });
 
-    // GitHub denial: no `code`, an `error` query param. State is valid, so the
-    // denial is propagated to the CLI's localhost listener.
     const res = await app.fetch(
       new Request(
         `http://localhost/github/link-callback?state=${encodeURIComponent(state)}&error=access_denied`,
@@ -413,8 +391,8 @@ describe('GET /github/link-callback', () => {
       { ...env, ...GITHUB_APP_USER_OAUTH_ENV },
     );
     expect(res.status).toBe(200);
-    // redirect_uri is derived from the link-callback request origin (NOT state.redirect,
-    // which is the CLI's localhost). Both link-url and link-callback derive the same value.
+    // Decision: redirect_uri comes from the link-callback request origin, not state.redirect (the CLI's
+    // localhost). link-url and link-callback derive the same value.
     expect(tokenExchangeBody.current?.redirect_uri).toBe('http://localhost/github/link-callback');
   });
 
@@ -429,8 +407,6 @@ describe('GET /github/link-callback', () => {
         exp: Date.now() + 60_000,
       }),
     );
-    // `*` is outside the base64 alphabet → atob() throws inside hmacVerifyState.
-    // The route must fail closed with 400, not surface a 500.
     const malformed = `${encoded}.*`;
     const res = await app.fetch(
       new Request(
@@ -490,7 +466,6 @@ describe('POST /github/link/complete', () => {
     expect(firstComplete.status).toBe(200);
     expect(((await firstComplete.json()) as { status: string }).status).toBe('linked');
 
-    // A second, independent link_code for the same provider id.
     const second = await runCallback({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -535,7 +510,6 @@ describe('POST /github/link/complete', () => {
     const userA = await createTestUser(env.db, 'alice', 'google', 'google-alice');
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const providerId = '900000013';
-    // Mint an already-expired link_code directly with the same signer scheme.
     const encoded = btoa(
       JSON.stringify({
         providerId,
@@ -563,7 +537,6 @@ describe('POST /github/link/complete', () => {
     const userB = await createTestUser(env.db, 'bob', 'github', '900000014');
     const userA = await createTestUser(env.db, 'alice', 'google', 'google-alice');
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
-    // B already owns this github provider id (seeded by createTestUser above).
     const providerId = '900000014';
 
     const { linkCode } = await runCallback({
@@ -582,23 +555,17 @@ describe('POST /github/link/complete', () => {
 
     expect(res.status).toBe(409);
     expect(((await res.json()) as { error: string }).error).toBe('github_identity_conflict');
-    // The row is still owned by B.
     const owner = await getUserByOAuthAccount(env.db, 'github', providerId);
     expect(owner?.id).toBe(userB.id);
   });
 
-  // A link_code minted in a callback (for providerId P) is completed by a
-  // DIFFERENT authed user than the one who would phish the flow. The bind follows
-  // the COMPLETING bearer token, never a state/initiator notion — so an attacker
-  // can only ever link their own id.
+  // Decision: The bind follows the completing bearer token, not the state or the user who started the flow,
+  // so an attacker can only link their own id.
   it('binds the link_code to the COMPLETING token-holder, not the flow initiator', async () => {
-    // Two distinct Platform accounts, both logged in via a non-github provider so
-    // neither has a github oauth row yet.
+    // Decision: Both accounts sign in with a non-github provider, so neither has a github oauth row yet.
     const attacker = await createTestUser(env.db, 'attacker', 'google', 'google-attacker');
     const completer = await createTestUser(env.db, 'completer', 'google', 'google-completer');
 
-    // The flow runs to a link_code (the victim's GitHub id P authorized in a
-    // callback). There is NO user id anywhere in state/link_code.
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const providerId = '900000015';
     const { linkCode } = await runCallback({
@@ -608,8 +575,6 @@ describe('POST /github/link/complete', () => {
     });
     expect(linkCode).not.toBeNull();
 
-    // The `completer` (the bearer-token holder whose machine the link_code
-    // landed on) redeems it. The bind MUST go to `completer`, never `attacker`.
     const res = await app.fetch(
       new Request(
         'http://localhost/github/link/complete',
@@ -627,16 +592,14 @@ describe('POST /github/link/complete', () => {
     expect(await countOAuthRows(env.db, providerId)).toBe(1);
   });
 
-  // The caller already has a DIFFERENT github identity. RFC 0074
-  // allows one github identity per Platform account, so this is github_already_linked
-  // (a DISTINCT 409 code from the other-user github_identity_conflict).
+  // Decision: RFC 0074 allows one GitHub identity per Platform account, so this is github_already_linked, a
+  // 409 code distinct from github_identity_conflict (another user owns the id).
   it('returns 409 github_already_linked when the caller already linked a different github id', async () => {
-    // Alice signed in via google, then already linked github id 'A'.
     const userA = await createTestUser(env.db, 'alice', 'google', 'google-alice');
     await createOAuthAccount(env.db, userA.id, 'github', '900000020');
 
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
-    const providerId = '900000021'; // a DIFFERENT github id
+    const providerId = '900000021';
 
     const { linkCode } = await runCallback({
       redirect: 'http://localhost:9999/callback',
@@ -654,20 +617,14 @@ describe('POST /github/link/complete', () => {
 
     expect(res.status).toBe(409);
     expect(((await res.json()) as { error: string }).error).toBe('github_already_linked');
-    // No second github row was created for Alice.
     expect(await countOAuthRows(env.db, providerId)).toBe(0);
   });
 
-  // A successful link backfills the caller's pre-existing,
-  // unowned installation (created before sign-in). A google user who links
-  // should then see/connect that installation.
   it('backfills pre-existing unowned installations to the completing user on link', async () => {
     const userA = await createTestUser(env.db, 'alice', 'google', 'google-alice');
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const providerId = '900000030';
 
-    // An installation created BEFORE Alice linked — user_id is null and
-    // account_id is Alice's (about-to-be-linked) github account id.
     await upsertGitHubInstallation(env.db, {
       installationId: '500',
       userId: null,
@@ -694,14 +651,12 @@ describe('POST /github/link/complete', () => {
     expect(res.status).toBe(200);
     expect(((await res.json()) as { status: string }).status).toBe('linked');
 
-    // The installation is now owned by Alice...
     const [row] = await env.db
       .select({ userId: githubInstallations.user_id })
       .from(githubInstallations)
       .where(eq(githubInstallations.installation_id, '500'));
     expect(row?.userId).toBe(userA.id);
 
-    // ...and therefore visible via the by-user lookup.
     const installs = await getGitHubInstallationsByUser(env.db, userA.id);
     expect(installs.map((i) => i.installation_id)).toContain('500');
   });

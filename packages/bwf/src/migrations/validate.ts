@@ -64,7 +64,7 @@ function hasTopLevelKeyword(statement: string, keyword: string): boolean {
 }
 
 function hasUnboundedWrite(statement: string): boolean {
-  // Referential actions in table definitions are not UPDATE/DELETE statements.
+  // Decision: Referential actions in table definitions are not UPDATE/DELETE statements.
   // ALTER TABLE ADD ... REFERENCES may declare them outside parentheses, too.
   if (/^(?:CREATE\s+(?:(?:TEMP|TEMPORARY|UNLOGGED)\s+)?|ALTER\s+)TABLE\b/i.test(statement)) {
     return false;
@@ -78,9 +78,6 @@ function hasUnboundedWrite(statement: string): boolean {
   return false;
 }
 
-/**
- * Check if a SQL migration contains destructive operations.
- */
 export function isDestructive(sql: string): boolean {
   const executable = getExecutableSql(sql.replace(/\r\n?/g, '\n'));
   return splitExecutableStatements(executable).some((statement) => {
@@ -173,10 +170,10 @@ export function assertJournalCoherence(
   const journal = readJournal(migrationsDir, sourceRelative);
   const drizzleArtifacts = listDrizzleArtifacts(migrationsDir, sourceRelative);
 
-  // `undefined` means the file is absent. Parseable scalars such as `null` or
+  // Decision: `undefined` means the file is absent. Parseable scalars such as `null` or
   // `false` are malformed journals, not missing ones, so avoid a falsy check.
   if (journal === undefined) {
-    // Leftover snapshots or `migrations.js` mean a half-deleted drizzle-kit
+    // Decision: Leftover snapshots or `migrations.js` mean a half-deleted drizzle-kit
     // state, not a hand-written project.
     if (drizzleArtifacts.length > 0) {
       throw new Error(
@@ -191,7 +188,7 @@ export function assertJournalCoherence(
     return;
   }
 
-  // `readJournal` only guarantees valid JSON. `version` and `dialect` are
+  // Decision: `readJournal` only guarantees valid JSON. `version` and `dialect` are
   // required because `bwf db rename-migrations` writes them back verbatim.
   if (
     journal === null ||
@@ -206,7 +203,7 @@ export function assertJournalCoherence(
     );
   }
 
-  // `bwf gen migration` and `bwf db rename-migrations` read these entry
+  // Decision: `bwf gen migration` and `bwf db rename-migrations` read these entry
   // fields back when rewriting the journal (next `idx`, inherited `version`
   // and `breakpoints`, `tag` as the key).
   for (let i = 0; i < journal.entries.length; i++) {
@@ -225,7 +222,7 @@ export function assertJournalCoherence(
     }
   }
 
-  // An empty placeholder journal with no drizzle-kit artifacts is treated like
+  // Decision: An empty placeholder journal with no drizzle-kit artifacts is treated like
   // a missing journal (hand-written `.sql` files, as in the kitchen-sink
   // playground). With artifacts left over, it is a half-deleted state.
   if (journal.entries.length === 0) {
@@ -242,7 +239,7 @@ export function assertJournalCoherence(
     );
   }
 
-  // The Set-based diff below would hide duplicate tags, and
+  // Decision: The Set-based diff below would hide duplicate tags, and
   // `rename-migrations` would rewrite both copies to the same new tag.
   const tagCounts = new Map<string, number>();
   for (const entry of journal.entries) {

@@ -24,7 +24,7 @@ import {
   type WranglerCallContext,
 } from '../../src/cli/provision.ts';
 
-/** proper-lockfile's callback-style fs seam. Tests override single calls on top of it. */
+// Decision: proper-lockfile's callback-style fs seam. Tests override single calls on top of it.
 export const passthruFs: {
   mkdir: typeof mkdir;
   stat: typeof stat;
@@ -34,26 +34,18 @@ export const passthruFs: {
   rmdirSync: typeof rmdirSync;
 } = { mkdir, stat, utimes, rmdir, realpath, rmdirSync };
 
-/**
- * Remote work needs a resolvable account, as in a real deploy, so every test runs with this
- * ambient account. Tests of the no-account and mismatch paths stub it themselves.
- */
+// Decision: Remote work needs a resolvable account, as in a real deploy, so each test runs with this
+// ambient account. Tests of the no-account and mismatch paths stub it themselves.
 export const AMBIENT_ACCOUNT = 'ambient-test-account';
 
 export interface ProvisionTestDir {
   tmpDir: string;
   wranglerPath: string;
-  /** Recreate the project with `content` as its `wrangler.jsonc`. */
   setup: (content: string) => void;
   readConfig: () => Record<string, unknown>;
-  /** Mimic `wrangler <res> create --update-config`: upsert a binding entry by binding. */
   simulateUpdateConfig: (field: string, entry: Record<string, unknown>, path?: string) => void;
 }
 
-/**
- * A temp project for one test file. Registers hooks that pin the ambient account before each
- * test and remove the project, env stubs and global stubs after it.
- */
 export function useProvisionTestDir(name: string): ProvisionTestDir {
   const tmpDir = join(import.meta.dirname, `.tmp-provision-test-${name}`);
   const wranglerPath = toSlash(join(tmpDir, 'wrangler.jsonc'));
@@ -94,28 +86,21 @@ export function useProvisionTestDir(name: string): ProvisionTestDir {
   };
 }
 
-/** The shared operation fixture, with the provision call context passed to `callback`. */
 export function provisionOperationFixture(
   callback: (
     args: Array<string>,
     options: WranglerCallContext,
   ) => RunWranglerResult | Promise<RunWranglerResult>,
 ): RunWrangler {
-  // The shared fixture forwards the runner's call context unchanged.
   return operationFixture((args, options) =>
     callback(args, options as unknown as WranglerCallContext),
   );
 }
 
-/** A logger that swallows output (the default one prints to console). */
 export const silentLog: ProvisionLogger = { info: () => {}, warn: () => {} };
 
 type Handler = { match: RegExp; reply: (sub: string) => RunWranglerResult };
 
-/**
- * A runWrangler stub that records each operation as fixture argv. Handlers match on the
- * space-joined argv; unmatched operations succeed with empty output.
- */
 export function makeRunner(handlers: Array<Handler>): {
   run: RunWrangler;
   calls: Array<Array<string>>;
@@ -134,7 +119,6 @@ export function makeRunner(handlers: Array<Handler>): {
   return { run, calls };
 }
 
-/** Stub `fetch` with an empty Hyperdrive config list and record every requested URL. */
 export function stubEmptyHyperdriveList(): Array<string> {
   const urls: Array<string> = [];
   vi.stubGlobal('fetch', async (url: string | URL) => {
@@ -147,7 +131,6 @@ export function stubEmptyHyperdriveList(): Array<string> {
   return urls;
 }
 
-/** True when an argv array is a `wrangler <a> <b> …` invocation of a given kind. */
 export function isCall(argv: Array<string>, ...prefix: Array<string>): boolean {
   return prefix.every((token, i) => argv[i] === token);
 }
@@ -160,7 +143,7 @@ export function fail(stdout: string, stderr: string = ''): RunWranglerResult {
   return { stdout, stderr, status: 1 };
 }
 
-// Synthetic ids in the real formats: KV and Hyperdrive ids are 32 lowercase hex characters,
+// Decision: Synthetic ids in the real formats: KV and Hyperdrive ids are 32 lowercase hex characters,
 // D1 ids are UUIDs. Equal-length seeds keep their order, so tie-break tests stay valid.
 export function hex32(seed: string): string {
   const raw = Buffer.from(seed, 'utf8').toString('hex').slice(0, 32);
@@ -176,7 +159,6 @@ export const emptyDesired: DesiredResourceSet = { kvNamespaces: [], queues: [] }
 
 export { provisionCloudflareResources } from '../../src/cli/provision.ts';
 
-/** Poll until `pid` no longer exists, or `timeoutMs` passes. */
 export async function waitForDead(pid: number, timeoutMs: number): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -190,7 +172,6 @@ export async function waitForDead(pid: number, timeoutMs: number): Promise<boole
   return false;
 }
 
-/** A detached process group that hangs until killed. */
 export function spawnHang(): ChildProcess {
   return spawn(process.execPath, ['-e', 'setInterval(() => {}, 1 << 30)'], {
     detached: true,
@@ -198,15 +179,12 @@ export function spawnHang(): ChildProcess {
   });
 }
 
-/** SIGKILL the child's process group, or the child alone where groups are unsupported. */
 export function reap(child: ChildProcess): void {
   try {
     process.kill(-child.pid!, 'SIGKILL');
   } catch {
     try {
       child.kill('SIGKILL');
-    } catch {
-      // already gone
-    }
+    } catch {}
   }
 }

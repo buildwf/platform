@@ -1,17 +1,18 @@
 #!/usr/bin/env node
-// Brings new upstream Void commits into this fork, one commit at a time.
+// Decision: Brings new upstream Void commits into this fork, one commit at a time.
 //
 //   vp run upstream:sync status        fetch upstream and list commits since the last sync
 //   vp run upstream:sync apply <sha>   merge one upstream commit, renamed to our names, file by file
 //   vp run upstream:sync mark <sha>    record <sha> as the last synced upstream commit
 //   vp run upstream:sync rename [text] show what the rename table turns text (or stdin) into
 //
-// The script does the mechanical part. The judgment (port or skip, conflict fixes, names the
-// rename table misses) is left to whoever runs it, usually an agent following
+// The script does the mechanical part. Judgment (port or skip, conflict fixes, names the rename
+// table misses) is left to whoever runs it, usually an agent following
 // .agents/skills/upstream-sync/SKILL.md.
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { stripComments } from './comments.ts';
 
 const UPSTREAM_URL = 'https://github.com/voidzero-dev/void';
 const UPSTREAM_REMOTE = 'upstream';
@@ -19,16 +20,14 @@ const UPSTREAM_BRANCH = 'main';
 const STATE_FILE = 'UPSTREAM';
 const WORK_DIR = '.git/upstream-sync';
 
-// Path renames, from upstream paths to ours.
 const pathRenames: Array<[RegExp, string]> = [
   [/^packages\/void\//, 'packages/bwf/'],
   [/^packages\/create-void\//, 'packages/create-bwf/'],
   [/(^|\/)void\.config\.ts$/, '$1bwf.config.ts'],
 ];
 
-// Name renames, applied to upstream file contents before they are merged into ours.
-// Order matters: specific names come before general ones. Bare `void` is left alone because
-// it's a TypeScript keyword.
+// Decision: Applied to upstream contents before merging. Order matters: specific names come before general
+// ones. Bare `void` is left alone because it's a TypeScript keyword.
 const textRenames: Array<[RegExp, string]> = [
   [/@voidcloud\//g, '@platform-service/'],
   [/@void\//g, '@builtbyfriends/'],
@@ -87,9 +86,9 @@ function fetchUpstream(): void {
   git(['fetch', '--quiet', UPSTREAM_REMOTE, UPSTREAM_BRANCH]);
 }
 
-// The fork keeps the runtime as flat files where upstream moved it into folders:
-// runtime/routing/index.ts is runtime/routing.ts here, runtime/ws/room.ts is runtime/ws-room.ts,
-// and runtime/env/runtime.ts is runtime/env.ts. A flat name is used when only it exists here.
+// Decision: The fork keeps the runtime as flat files where upstream moved it into folders
+// (runtime/routing/index.ts is runtime/routing.ts here, runtime/ws/room.ts is runtime/ws-room.ts,
+// runtime/env/runtime.ts is runtime/env.ts). The flat name is used when only it exists here.
 function flatRuntimePath(path: string): string | undefined {
   const match = path.match(/^(.*\/src\/runtime\/)([\w-]+)\/([\w-]+)\.(tsx?)$/);
   if (!match) {
@@ -112,7 +111,6 @@ function renameText(line: string): string {
   return textRenames.reduce((value, [from, to]) => value.replace(from, to), line);
 }
 
-// A path is gone from the fork when the package or playground it belongs to doesn't exist here.
 function isRemovedHere(path: string): boolean {
   const parts = path.split('/');
   if (['packages', 'playground'].includes(parts[0]) && parts.length > 2) {
@@ -124,8 +122,8 @@ function isRemovedHere(path: string): boolean {
   return false;
 }
 
-// Used by status only: a file upstream changed but this fork doesn't have was most likely removed
-// here on purpose, along with the feature it belongs to.
+// Decision: Used by status only: a file upstream changed that this fork doesn't have was most likely
+// removed here on purpose, along with its feature.
 function isGoneHere(path: string, added: Set<string>): boolean {
   return isRemovedHere(path) || (!added.has(path) && !existsSync(path));
 }
@@ -183,14 +181,16 @@ function status(): void {
   }
 }
 
+// Decision: upstream code comes with comments, which the bwf/no-comments lint rule bans. Stripping
+// them from both the upstream base and the upstream change keeps the three-way merge clean: only
+// real code differences, and our own Decision: records, show up against our files.
 function upstreamText(sha: string, path: string): string {
-  return renameText(git(['show', `${sha}:${path}`]));
+  return stripComments(renamePath(path), renameText(git(['show', `${sha}:${path}`])));
 }
 
-// Applies one upstream commit file by file. For a changed file it runs a three-way merge where
-// the base is the upstream file before the commit and "theirs" is the file after it, both put
-// through the rename table. Because both sides carry our names, only real differences between
-// this fork and upstream show up as conflicts.
+// Decision: Three-way merge per file: the base is the upstream file before the commit and "theirs" is the
+// file after it, both put through the rename table. Both sides carry our names, so only real
+// differences between the fork and upstream show up as conflicts.
 function apply(sha: string): void {
   const full = git(['rev-parse', sha]).trim();
   const changes = git([

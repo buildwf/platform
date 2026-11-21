@@ -9,7 +9,7 @@ import type { CloudBindings } from './handler.ts';
  */
 const builders: ReturnType<typeof createProcedures<CloudBindings>> =
   createProcedures<CloudBindings>();
-// bwf names each procedure from its file and export, so the name is optional here (core wants one).
+// Decision: bwf names each procedure from its file and export, so the name is optional here (core wants one).
 export const procedure: (name?: string) => ReturnType<typeof builders.procedure<string>> = (name) =>
   builders.procedure(name as string);
 export const profile: typeof builders.profile = builders.profile;

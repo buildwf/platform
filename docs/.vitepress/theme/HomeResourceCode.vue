@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { TabsContent, TabsList, TabsRoot, TabsTrigger } from 'reka-ui';
 
-// These fixed examples share their source text with the rendered, selectable code.
 const files = [
   {
     name: 'blog.server.ts',
@@ -56,7 +55,7 @@ export const POST = defineHandler(async (c) => {
   },
 ].map((file) => ({ ...file, tokens: highlight(file.source) }));
 
-// A small display-only palette for these two snippets keeps a code highlighter
+// Decision: A small display-only palette for these two snippets keeps a code highlighter
 // and its language grammars out of the homepage bundle.
 function highlight(source: string) {
   const pattern =

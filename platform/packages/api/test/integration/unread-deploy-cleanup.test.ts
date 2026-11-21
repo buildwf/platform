@@ -16,16 +16,14 @@ import {
 } from './helpers.ts';
 import { setGetProjectOverride } from './setup.ts';
 
-// A JSON deploy keeps running after its response is returned until the NDJSON
-// body is read. A test that only checks the status leaves that work running
-// into the next test. On PostgreSQL, the deploy locks the project row and then
-// the deployment row, while clearTables deletes deployments before projects:
-// opposite orders, so the two transactions deadlock. PGlite has one connection,
-// so only a real PostgreSQL database can show this.
+// Decision: A JSON deploy keeps running after its response is returned, until the NDJSON body is read. On
+// PostgreSQL the deploy locks the project row and then the deployment row, while clearTables
+// deletes deployments before projects, so the two deadlock. PGlite has one connection, so only real
+// PostgreSQL shows this.
 //
-// deploy.finalize reads the inline stream to the end before it answers, so it
-// can't leave one unread. The test calls the admission handler the procedure
-// wraps, the way a caller that stops at the status would.
+// deploy.finalize reads the inline stream to the end before it answers, so it can't leave one
+// unread. The test calls the admission handler the procedure wraps, as a caller that stops at the
+// status would.
 const postgres = it.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL));
 const HASH = (n: number) => n.toString(16).padStart(32, '0');
 
@@ -41,7 +39,6 @@ beforeEach(async () => {
   await clearTables(env.db);
 });
 
-/** Resolves once another backend of this database waits on a lock, or after `limitMs`. */
 async function lockWaitOrTimeout(limitMs: number): Promise<void> {
   const deadline = Date.now() + limitMs;
   while (Date.now() < deadline) {
@@ -71,8 +68,8 @@ describe('fixture cleanup after an unread deploy stream', () => {
     setGetProjectOverride(async ({ original, argsList }) => {
       const [db, id] = argsList;
       if (db !== env.db) {
-        // A saved placeholder row means this is the manifest transaction, which
-        // already holds `SELECT ... FROM projects ... FOR UPDATE`.
+        // Decision: A saved placeholder row means this is the manifest transaction, which already holds
+        // `SELECT ... FROM projects ... FOR UPDATE`.
         const { rows } = (await env.db.execute(
           sql`select count(*)::int as n from deployments where project_id = ${id}`,
         )) as unknown as { rows: Array<{ n: number }> };
@@ -117,15 +114,14 @@ describe('fixture cleanup after an unread deploy stream', () => {
     );
     expect(res.status).toBe(200);
     await locked;
-    // Let the deploy continue once the next cleanup waits on its lock, or after
-    // a short bound when the harness finishes the deploy before cleanup.
+    // Decision: Let the deploy continue once the next cleanup waits on its lock, or after a short bound when the
+    // harness finishes the deploy before cleanup.
     void lockWaitOrTimeout(1_000).then(release);
-    // Return without reading `res`, as a status-only test does.
   });
 
   postgres('starts the next test only after that deploy finished', async () => {
-    // The harness drains the unread deploy before beforeEach(clearTables), which
-    // would otherwise deadlock with it (40P01).
+    // Decision: The harness drains the unread deploy before beforeEach(clearTables), which would otherwise
+    // deadlock with it (40P01).
     expect(await env.db.select().from(deployments)).toEqual([]);
   });
 });

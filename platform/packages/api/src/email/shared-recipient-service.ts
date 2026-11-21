@@ -24,7 +24,7 @@ import { projectMailbox, projectMailboxNames } from './mailbox.ts';
 type Bindings = ApiEnv['Bindings'];
 type Recipient = typeof emailSharedRecipients.$inferSelect;
 const LEASE_MS = 15 * 60_000;
-// Canonical deployment manifests already distinguish handlers from send-only apps.
+// Decision: Canonical deployment manifests already tell handlers apart from send-only apps.
 const inboundManifest = sql`${deployments.manifest}::jsonb -> 'emailProtocolVersion' = '1'::jsonb`;
 
 async function hasActiveEmailHandlers(db: DbOrTx, projectId: string) {
@@ -359,7 +359,7 @@ export async function checkSharedEmailAliasRoutable(
       409,
     );
   }
-  // A project that does not receive mail yet will need a slug rule too.
+  // Decision: A project that doesn't receive mail yet will need a slug rule too.
   const slugRecipient = `${slug}@${shared.route.domain}`;
   const needed = rules.some((rule) => rule.addresses.includes(slugRecipient)) ? 1 : 2;
   if (
@@ -440,8 +440,8 @@ export async function reconcileSharedEmailRecipient(
   projectId: string,
   incomingManifest?: Pick<DeployManifest, 'emailProtocolVersion'>,
 ): Promise<void> {
-  // Admission supplies its validated incoming manifest so a first receiving
-  // deployment can provision before it has an active deployment pointer.
+  // Decision: Admission passes its validated incoming manifest so a first receiving deployment can provision
+  // before it has an active deployment pointer.
   if (
     incomingManifest
       ? incomingManifest.emailProtocolVersion !== 1
@@ -457,12 +457,11 @@ export async function reconcileSharedEmailRecipient(
   if (!project || project.status !== 'active') {
     return;
   }
-  // One exact rule per mailbox name: the slug, plus the email alias once set.
   const recipients = projectMailboxNames(project).map((name) => `${name}@${shared.route.domain}`);
   await removeSharedEmailRecipients(db, env, projectId, recipients);
-  // Try every name before failing: a slug rule that keeps failing must not
-  // stop the alias row from being created, or the cron, which orders by the
-  // alias row, would pick this project first on every run.
+  // Decision: Try each name before failing: a slug rule that keeps failing must not stop the alias row from
+  // being created, or the cron (which orders by the alias row) would pick this project first on each
+  // run.
   let failure: { error: unknown } | undefined;
   for (const recipient of recipients) {
     try {
@@ -523,8 +522,8 @@ async function reconcileProjectRecipient(
         ),
       )
       .for('update');
-    // A removed row for a wanted address comes back: an older runtime, after a
-    // platform rollback, removes the alias rule it does not know about.
+    // Decision: A removed row for a wanted address comes back: after a platform rollback, an older runtime removes
+    // the alias rule it doesn't know about.
     if (row?.status === 'removed') {
       const [restored] = await tx
         .update(emailSharedRecipients)
@@ -546,9 +545,9 @@ async function reconcileProjectRecipient(
         Date.parse(row.lease_started_at ?? '') > Date.now() - LEASE_MS
       )
     ) {
-      // A removal that stopped part way, also from an older runtime. Keep the
-      // recorded rule and creation intent: the checks below adopt a rule that
-      // still exists and refuse to guess about an unclear creation.
+      // Decision: A removal that stopped partway, also from an older runtime. Keep the recorded rule and creation
+      // intent: the checks below adopt a rule that still exists and refuse to guess about an unclear
+      // creation.
       const [restored] = await tx
         .update(emailSharedRecipients)
         .set({ status: 'pending', removing: false, reason: null, updated_at: sql`now()` })
@@ -581,7 +580,7 @@ async function reconcileProjectRecipient(
   }
   let row = claimed;
   try {
-    // Record the refusal so scheduled repair remains fair even for long names.
+    // Decision: Record the refusal so scheduled repair stays fair even for long names.
     if (recipient.length > 90) {
       throw new EmailOperationError(
         'Shared email address exceeds Cloudflare’s 90-character routing-rule limit; use a shorter project slug or shared mail domain',
@@ -652,8 +651,8 @@ async function reconcileProjectRecipient(
           'Shared mail domain reached Cloudflare’s 200 routing-rule limit; remove unused rules or request a higher limit at https://developers.cloudflare.com/email-service/platform/limits/',
         );
       }
-      // Persist creation intent before POST. A lost response is recovered only
-      // by exact deterministic ownership; absence never authorizes another POST.
+      // Decision: Persist creation intent before POST. A lost response is recovered only by exact deterministic
+      // ownership; absence doesn't authorize another POST.
       const intent = new Date().toISOString();
       if (!(await renewClaim(db, row, { create_started_at: intent }))) {
         return;
@@ -889,8 +888,8 @@ export async function removeSharedEmailRecipients(
           'Shared recipient cleanup ownership changed; restore the recorded rule before deleting this project',
         );
       }
-      // Listing can be stale. A retained ID must be absent from an exact GET
-      // before its reusable address can be released.
+      // Decision: Listing can be stale. A retained ID must be absent from an exact GET before its reusable address
+      // can be released.
       const rule =
         owned[0] ??
         (row.rule_id ? await client.getRoutingRule(connection.zone_id, row.rule_id) : null);
@@ -949,8 +948,8 @@ export async function reconcileSharedEmailRecipients(db: Db, env: Bindings, limi
         eq(deployments.status, 'live'),
       ),
     )
-    // Order by the shown name's row, so a project whose new alias has no rule
-    // yet comes first. Each run reconciles every name of the project.
+    // Decision: Order by the shown name's row, so a project whose new alias has no rule yet comes first. Each run
+    // reconciles all names of the project.
     .leftJoin(
       emailSharedRecipients,
       and(

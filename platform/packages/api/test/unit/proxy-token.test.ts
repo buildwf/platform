@@ -254,7 +254,7 @@ describe('verifyProxyToken', () => {
     const jwt = await signJwt({ sub: 'user_1', login: 'octocat', aud: 'api' }, SECRET);
     const [header, body, signature] = jwt.split('.');
     const projectId = `${header}.${body}`;
-    // The JWT signature is the legacy MAC over this string.
+    // Decision: The JWT signature is the legacy MAC over this string.
     expect(await hmacSignState(projectId, SECRET)).toBe(signature);
     expect(await proxyTokenGeneration(SECRET, projectId, signature)).toBeNull();
     const readState = vi.fn(async () => LEGACY_PROXY_TOKEN_STATE);

@@ -29,11 +29,10 @@ export function isWithinLimit(limit: number, current: number): boolean {
  * months (e.g. signup Jan 31 → Feb 28 in non-leap years).
  */
 export function getCurrentBillingPeriodStart(billingCycleStart: string | null | undefined): Date {
-  // Handle missing or invalid billing_cycle_start (e.g. legacy rows before column existed)
   if (!billingCycleStart) {
     return new Date();
   }
-  // Normalize timestamp format (also handles legacy rows with space separator, no Z)
+  // Decision: Legacy rows use a space separator and no Z, so normalize them to ISO UTC.
   const normalized = billingCycleStart.includes('T')
     ? billingCycleStart
     : billingCycleStart.replace(' ', 'T') + 'Z';

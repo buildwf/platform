@@ -33,7 +33,7 @@ export function guardHumanStream(
         return !closed;
       }
     } catch {
-      /* Failed authority reads must close the stream. */
+      // Decision: A failed authority read has to close the stream.
     }
     stop();
     return false;

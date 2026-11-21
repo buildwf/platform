@@ -92,12 +92,11 @@ import {
 } from '../../src/cli/wrangler.ts';
 import { readConfig } from '../../src/config.ts';
 
-/** A static app whose build writes `dist/client`. */
 const staticBuild = {
   inference: { appType: 'static', outputDir: 'dist/client', build: 'vite build' },
 };
 
-// `runDeploy` calls `runCloudflareDeploy` without deps. A test that starts from `runDeploy` sets
+// Decision: `runDeploy` calls `runCloudflareDeploy` without deps. A test that starts from `runDeploy` sets
 // these deps. Calls that pass their own deps are unchanged.
 // Deploy-log tests point homedir() at a temp folder; every other caller keeps the real one.
 const logHome = vi.hoisted(() => ({ dir: '' }));
@@ -121,11 +120,10 @@ vi.mock('../../src/cli/deploy-cloudflare.ts', async (importOriginal) => {
 const tmpDir = join(import.meta.dirname, '.tmp-cf-deploy-test');
 
 function removeProjectFixture(): void {
-  // Windows can briefly retain handles opened by the real env-schema probe subprocesses.
+  // Decision: Windows can briefly retain handles opened by the real env-schema probe subprocesses.
   rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 }
 
-/** Write a project fixture: a map of relative path → file contents. */
 function makeProject(files: Record<string, string>): string {
   removeProjectFixture();
   mkdirSync(tmpDir, { recursive: true });
@@ -151,7 +149,6 @@ const silentCliLog: CliLogger = {
   close: async () => {},
 };
 
-/** Capture the real renderer so successful native deploys must emit an enclosed summary. */
 async function captureDeployOutput(run: () => Promise<void>): Promise<string> {
   const chunks: Array<string> = [];
   const write = vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
@@ -166,12 +163,9 @@ async function captureDeployOutput(run: () => Promise<void>): Promise<string> {
   return stripVTControlCharacters(chunks.join(''));
 }
 
-/** Synthetic real ids (shape-valid) for drift/provision fixtures. */
 const REAL_D1_ID = '52b3bbc7-c473-4b26-9486-1345f5de61c4';
-/** A second shape-valid D1 id, so a tampered config can point at a DIFFERENT database. */
 const OTHER_D1_ID = '11111111-2222-3333-4444-555555555555';
 const REAL_KV_ID = '7c07b54c9f2a4d1e8b3f6a0c153aa11a';
-/** A second shape-valid KV id, so a two-namespace config can be distinct. */
 const OTHER_KV_ID = '3f9a1c2d4e5b6a7c8d9e0f1a2b3c4d5e';
 
 class ExitError extends Error {
@@ -188,7 +182,7 @@ const cleanExit: DeployWranglerRunResult = {
   error: null,
 };
 
-// Most native deploy failures leave through exit(1), which skips the deploy_end that runDeploy
+// Decision: Most native deploy failures leave through exit(1), which skips the deploy_end that runDeploy
 // writes on a throw. These tests read the JSONL file back from a temp home folder.
 describe('Cloudflare deploy log end record', () => {
   beforeEach(() => {
@@ -229,7 +223,7 @@ describe('Cloudflare deploy log end record', () => {
       await expect(
         runCloudflareDeploy(root, { reuseExistingWorker: true }, cliLog, deps),
       ).rejects.toBeInstanceOf(ExitError);
-      // Read before close(): each record must already be on disk when exit() runs.
+      // Decision: Read before close(): each record must already be on disk when exit() runs.
       const ends = readRecords().filter((record) => record.msg === 'deploy_end');
       expect(exitCalls).toEqual([1]);
       expect(ends).toEqual([expect.objectContaining({ lvl: 'error', ok: false, exitCode: 1 })]);
@@ -253,7 +247,7 @@ describe('Cloudflare deploy log end record', () => {
           compatibility_date: '2026-02-24',
         }),
       });
-      // The --debug mirror prints every record it accepts, even after close().
+      // Decision: The --debug mirror prints every record it accepts, even after close().
       const stderrLines: Array<string> = [];
       const stderr = vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
         stderrLines.push(String(chunk));
@@ -333,7 +327,7 @@ describe('Cloudflare activation diagnostics', () => {
         await expect(
           runCloudflareDeploy(root, kind === 'static' ? { dir: 'public' } : {}, logger, deps),
         ).rejects.toBeInstanceOf(ExitError);
-        // cloudflare_deploy_failed, then deploy_end, both flushed before exit. The exit wrapper
+        // Decision: cloudflare_deploy_failed, then deploy_end, both flushed before exit. The exit wrapper
         // repeats deploy_end; the real logger drops it (see 'writes deploy_end once' below).
         expect(order).toEqual(['error', 'error', 'close', 'error', 'exit']);
         expect(error).toHaveBeenCalledWith(
@@ -381,7 +375,7 @@ describe('Cloudflare activation diagnostics', () => {
           lvl,
           msg,
           fields,
-          // Error objects serialize to {}, so keep their text explicitly.
+          // Decision: Error objects serialize to {}, so keep their text explicitly.
           text: JSON.stringify([
             msg,
             fields,
@@ -483,7 +477,7 @@ describe('Cloudflare activation diagnostics', () => {
       expect(withVersion).toContain('CLOUDFLARE_WORKERS_SUBDOMAIN');
       expect(withVersion).toContain('"my-team.fed" for FedRAMP High');
       expect(withVersion).not.toContain('did not report');
-      // The non-atomic retry stages the next version on workers.dev, which
+      // Decision: The non-atomic retry stages the next version on workers.dev, which
       // trigger synchronization never turned on.
       if (reason === 'bootstrap-output-invalid') {
         expect(withVersion).toContain('enable workers.dev for this Worker');
@@ -555,7 +549,6 @@ describe('Cloudflare activation diagnostics', () => {
     expect(atomic).not.toContain('enable workers.dev');
   });
 
-  /** A project whose root and upload configs are separate files. */
   function lookupProject(rootRegion: string | undefined) {
     const root = makeProject({
       'wrangler.jsonc': JSON.stringify({
@@ -596,7 +589,7 @@ describe('Cloudflare activation diagnostics', () => {
     });
   }
 
-  // The root config names the other region: project code can edit it after
+  // Decision: The root config names the other region: project code can edit it after
   // the API base and the region are pinned.
   it.each([
     { region: 'public', rootRegion: 'fedramp_high', subdomain: 'team' },
@@ -808,7 +801,6 @@ describe('Cloudflare activation diagnostics', () => {
         diagnostic: reason,
         ...fields,
       });
-    // The hint must name a command the CLI accepts, not only a string that looks right.
     const expectRunnableStatusHint = (message: string) => {
       const start = message.indexOf('`bwf project status');
       expect(start).toBeGreaterThanOrEqual(0);
@@ -884,7 +876,7 @@ describe('Cloudflare activation diagnostics', () => {
     it.each(['failed', 'unsafe'] as const)(
       'says the previous version is live without its triggers (rollback %s)',
       (rollback) => {
-        // 'unsafe' includes a restore skipped because another operation already moved traffic.
+        // Decision: 'unsafe' includes a restore skipped because another operation already moved traffic.
         const message = failure({ activeVersionId: P, triggersRestored: 'no', rollback });
         expect(message).toContain(`Live now: ${P} (the previous version).`);
         expect(message).toContain('so they may be partly updated');
@@ -942,36 +934,29 @@ describe('Cloudflare activation diagnostics', () => {
   });
 });
 
-/** No-schema (nothing-to-gate) env-insensitive facts. */
 const NO_SCHEMA_FACTS: SelfHostSchemaFacts = { hasSchema: false, serverKeys: [], requiredKeys: [] };
 
-/** A default-passing env-schema probe result (no schema → nothing to gate). */
 function okSchemaFacts(overrides: Partial<SelfHostSchemaFacts> = {}): EnvSchemaProbeResult {
   return { kind: 'ok', facts: { ...NO_SCHEMA_FACTS, ...overrides } };
 }
 
-/** A default emitted-vars read (empty vars — a worker that ships no plaintext vars). */
 function emittedVars(vars: Record<string, unknown> = {}): EmittedWorkerVarsResult {
   return { ok: true, vars };
 }
 
-/**
- * `file://` URLs for the runtime imports inside spawned-child env.ts fixtures. These are ESM
- * SPECIFIERS, not filesystem paths: an absolute Windows path (`D:/…`, as `pathslash` spells it)
- * parses as a URL whose protocol is `d:`, so Node rejects it with
- * ERR_UNSUPPORTED_ESM_URL_SCHEME and the child's env.ts never evaluates — the probe then
- * reports `schema-error` for reasons that have nothing to do with the schema.
- * `pathToFileURL` is the same form `loadUserEnvFile` uses for real user env files.
- */
+// Decision: `file://` URLs for the runtime imports inside spawned-child env.ts fixtures. These are ESM
+// SPECIFIERS, not filesystem paths: an absolute Windows path (`D:/…`, as `pathslash` spells it)
+// parses as a URL whose protocol is `d:`, so Node rejects it with
+// ERR_UNSUPPORTED_ESM_URL_SCHEME and the child's env.ts never evaluates — the probe then
+// reports `schema-error` for reasons that have nothing to do with the schema.
+// `pathToFileURL` is the same form `loadUserEnvFile` uses for real user env files.
 const srcFileUrl = (...segments: Array<string>): string =>
   pathToFileURL(join(import.meta.dirname, '..', '..', 'src', ...segments)).href;
 const srcEnvPublic = srcFileUrl('runtime', 'env-public.ts');
 const srcEnvHelpers = srcFileUrl('runtime', 'env-helpers.ts');
 
-/**
- * Cloudflare credentials the parent may hold: Wrangler's names, their `CF_*` aliases and bwf's
- * readiness JWT. Children that run project code must see none of them.
- */
+// Decision: Cloudflare credentials the parent may hold: Wrangler's names, their `CF_*` aliases and bwf's
+// readiness JWT. Children that run project code must see none of them.
 const WRANGLER_AUTH_VARS = [
   'CLOUDFLARE_API_TOKEN',
   'CF_API_TOKEN',
@@ -987,17 +972,12 @@ const WRANGLER_AUTH_VARS = [
   'CF_ACCESS_TOKEN',
 ];
 
-/** Set every Cloudflare credential on the parent; the top-level `afterEach` restores them. */
 function stubWranglerCredentials(): void {
   for (const name of WRANGLER_AUTH_VARS) {
     vi.stubEnv(name, `secret-${name}`);
   }
 }
 
-/**
- * A field of the emitted auth schema: a bare name, or the `required` / `unique` / `references`
- * metadata the real build emits. `required` defaults to true, as it does for most build fields.
- */
 type AuthSchemaField =
   | string
   | {
@@ -1007,10 +987,6 @@ type AuthSchemaField =
       references?: { table: string; field: string; onDelete?: string };
     };
 
-/**
- * Write a `.bwf/better-auth-schema.ts` fixture in the shape the build emits, so the post-build
- * auth check reads it as it would after a real build.
- */
 function writeAuthSchemaArtifact(
   root: string,
   tables: Array<{ name: string; fields: Array<AuthSchemaField> }>,
@@ -1047,7 +1023,6 @@ function writeAuthSchemaArtifact(
   );
 }
 
-/** Deploy seams that all pass by default and record a call trace; tests override single seams. */
 function harness(overrides: Partial<CloudflareDeployDeps> = {}): {
   deps: CloudflareDeployDeps;
   trace: Array<string>;
@@ -1063,11 +1038,10 @@ function harness(overrides: Partial<CloudflareDeployDeps> = {}): {
     if (args[0] === 'whoami') {
       return { ...cleanExit, stdout: '{"loggedIn":true,"accounts":[]}' };
     }
-    // The post-apply pending check requires this affirmative "no pending" marker.
+    // Decision: The post-apply pending check requires this affirmative "no pending" marker.
     if (args[0] === 'd1' && args[1] === 'migrations' && args[2] === 'list') {
       return { ...cleanExit, stdout: '✅ No migrations to apply!\n' };
     }
-    // Every queue exists and has no consumer yet.
     if (args[0] === 'queues' && args[1] === 'info') {
       return { ...cleanExit, stdout: `Queue Name: ${args[2]}\n` };
     }
@@ -1082,7 +1056,7 @@ function harness(overrides: Partial<CloudflareDeployDeps> = {}): {
     runBuild: () => {
       trace.push('build');
     },
-    // One `deploy` call through the runner the deploy passed in, so a test that swaps the runner
+    // Decision: One `deploy` call through the runner the deploy passed in, so a test that swaps the runner
     // still sees whether the upload happened. packages/deploy-cloudflare tests the real activation.
     activateVersion: async (options) => {
       if (!options.verifyUploader()) {
@@ -1114,7 +1088,6 @@ function harness(overrides: Partial<CloudflareDeployDeps> = {}): {
         previousVersionId: null,
       };
     },
-    // A constant hash: the uploader never changes unless a test says so.
     hashWranglerUploader: () => 'uploader-hash-unchanged',
     provision: (async (_root, configPath): Promise<ProvisionResult> => {
       trace.push('provision');
@@ -1134,7 +1107,7 @@ function harness(overrides: Partial<CloudflareDeployDeps> = {}): {
       return { created: false };
     }) as CloudflareDeployDeps['ensureAuthSecret'],
     assertDurableObjectLifecycle: async () => {},
-    // The stubbed build writes no generated config, so the real verifier would have nothing to read.
+    // Decision: The stubbed build writes no generated config, so the real verifier would have nothing to read.
     verifyDeployConfig: () => ({ ok: true }),
     resolveGeneratedConfigPath: (root) => join(root, 'dist/ssr/wrangler.json'),
     assertMigrationsDeployable: () => {
@@ -1171,7 +1144,6 @@ describe('existing Cloudflare site handoff', () => {
       }),
     });
   }
-  /** The site after the deploy target moved its settings into bwf.config.ts. */
   function migratedSite() {
     const root = site();
     migrateLegacyBwfConfig(root);
@@ -1198,7 +1170,7 @@ describe('existing Cloudflare site handoff', () => {
     const stdout = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY');
     Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: interactive });
     Object.defineProperty(process.stdout, 'isTTY', { configurable: true, value: interactive });
-    // A real TTY stdin has setRawMode, and the Vite+ 1.7 spinner calls it once it sees a TTY.
+    // Decision: A real TTY stdin has setRawMode, and the Vite+ 1.7 spinner calls it once it sees a TTY.
     const rawMode = Object.getOwnPropertyDescriptor(process.stdin, 'setRawMode');
     if (
       interactive &&
@@ -1572,7 +1544,6 @@ describe('existing Cloudflare site handoff', () => {
     const { deps } = harness({
       runBuild: () => {
         build(root);
-        // Project build code removes the region from the root config.
         const { compliance_region: _region, ...config } = parseRootWranglerConfig(configPath);
         writeFileSync(configPath, JSON.stringify(config));
       },
@@ -1937,7 +1908,6 @@ describe('ensureCloudflareAuthSecret', () => {
   });
 });
 
-/** A worker-bearing D1 app fixture with a fully-provisioned wrangler.jsonc. */
 function d1Project(
   wrangler: Record<string, unknown>,
   extraFiles: Record<string, string> = {},
@@ -1951,7 +1921,6 @@ function d1Project(
   });
 }
 
-/** A minimal worker-bearing app whose source inference enables `@builtbyfriends/bwf/sandbox`. */
 function sandboxProject(): string {
   return makeProject({
     'package.json': JSON.stringify({ name: 'sandbox-app' }),
@@ -1964,7 +1933,6 @@ function sandboxProject(): string {
   });
 }
 
-/** One non-destructive checked-in migration so the remote migrate path runs. */
 const INIT_MIGRATION = {
   'db/migrations/0000_init.sql': `CREATE TABLE notes (id integer primary key);`,
 };
@@ -2079,14 +2047,12 @@ describe('native deployment migration opt-out', () => {
   );
 });
 
-/**
- * The non-id bindings a real Class-A build emits into `dist/ssr/wrangler.json` (see
- * `playground/kitchen-sink/dist/ssr/wrangler.json`): `ai`, `queues`, `durable_objects`,
- * `migrations`, `new_sqlite_classes`, `containers`, `vars`, `assets`, `triggers`, `rules`,
- * `observability`, `main`, `compatibility_date/flags`, plus the ~20 empty arrays wrangler
- * always materializes. The binding-identity check MUST ignore every one of these and inspect
- * ONLY the four id-bearing arrays (`d1_databases`/`kv_namespaces`/`r2_buckets`/`hyperdrive`).
- */
+// Decision: The non-id bindings a real Class-A build emits into `dist/ssr/wrangler.json` (see
+// `playground/kitchen-sink/dist/ssr/wrangler.json`): `ai`, `queues`, `durable_objects`,
+// `migrations`, `new_sqlite_classes`, `containers`, `vars`, `assets`, `triggers`, `rules`,
+// `observability`, `main`, `compatibility_date/flags`, plus the ~20 empty arrays wrangler
+// always materializes. The binding-identity check MUST ignore every one of these and inspect
+// ONLY the four id-bearing arrays (`d1_databases`/`kv_namespaces`/`r2_buckets`/`hyperdrive`).
 const KITCHEN_SINK_NON_ID_BINDINGS = {
   ai: { binding: 'AI' },
   queues: {
@@ -2116,10 +2082,6 @@ const KITCHEN_SINK_NON_ID_BINDINGS = {
   analytics_engine_datasets: [],
   hyperdrive: [],
 };
-
-// ---------------------------------------------------------------------------
-// Desired set (from source, pre-build)
-// ---------------------------------------------------------------------------
 
 describe('computeDesiredCloudflareResources — desired set from source', () => {
   it('passes the configured storage location to native R2 provisioning', async () => {
@@ -2274,7 +2236,7 @@ describe('computeDesiredCloudflareResources — desired set from source', () => 
   });
 
   it('ignores a synced placeholder database_name paired with the local id', async () => {
-    // A not-yet-provisioned entry: `database_id: "local"` with a placeholder name.
+    // Decision: A not-yet-provisioned entry: `database_id: "local"` with a placeholder name.
     // The stored name must NOT become the prod DB identity — derive the worker name.
     const root = d1Project({
       d1_databases: [{ binding: 'DB', database_name: 'default', database_id: 'local' }],
@@ -2302,7 +2264,7 @@ describe('computeDesiredCloudflareResources — desired set from source', () => 
   });
 
   it('honors inference.bindings overrides (disabled D1, custom KV, forced R2)', async () => {
-    // Route uses env.DB/KV/STORAGE, but bwf.json disables D1 and renames KV — the
+    // Decision: Route uses env.DB/KV/STORAGE, but bwf.json disables D1 and renames KV — the
     // desired set must match the build (which consumes the same overrides), so D1 is
     // absent and KV uses the custom binding name.
     const root = makeProject({
@@ -2395,13 +2357,7 @@ describe('computeDesiredCloudflareResources — desired set from source', () => 
   });
 });
 
-// ---------------------------------------------------------------------------
-// PostgreSQL checked-in migrations: direct Cloudflare deploy validates and applies
-// them transactionally before uploading the Worker.
-// ---------------------------------------------------------------------------
-
 describe('runCloudflareDeploy — PostgreSQL checked-in migrations', () => {
-  /** A worker-bearing pg app with a provisioned Hyperdrive config (drift-clean). */
   function pgProject(extraFiles: Record<string, string> = {}): string {
     return makeProject({
       'package.json': JSON.stringify({ name: 'pgapp' }),
@@ -2466,7 +2422,6 @@ describe('runCloudflareDeploy — PostgreSQL checked-in migrations', () => {
     const { deps, wranglerArgs, exitCalls } = harness();
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
     expect(exitCalls).toEqual([]);
-    // Reached the upload, and no D1 command ran (a pg app has no desired.d1).
     expect(wranglerArgs.some((a) => a[0] === 'deploy')).toBe(true);
     expect(wranglerArgs.some((a) => a[0] === 'd1')).toBe(false);
   });
@@ -2491,7 +2446,6 @@ describe('runCloudflareDeploy — PostgreSQL checked-in migrations', () => {
   });
 
   it('leaves a D1/SQLite app with checked-in migrations on the remote-D1 migrate path', async () => {
-    // The guard keys on the postgresql dialect, so a SQLite app with migrations is untouched.
     const root = d1Project(PROVISIONED_D1, INIT_MIGRATION);
     const { deps, wranglerArgs, exitCalls } = harness();
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
@@ -2501,21 +2455,13 @@ describe('runCloudflareDeploy — PostgreSQL checked-in migrations', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Suffixed resource names: the 63-char cap must eat the worker name, never the
-// suffix.
-// ---------------------------------------------------------------------------
-
-/** A deterministic worker name of `length` chars from the repeating [a-z0-9] alphabet. */
 function workerNameOfLength(length: number): string {
   const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
   return Array.from({ length }, (_, i) => alphabet[i % alphabet.length]).join('');
 }
 
-/** Cloudflare's rule for these names: lowercase [a-z0-9-], no leading/trailing dash, ≤63. */
 const CF_NAME_RULE = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
-/** A KV app whose root config pins `workerName`. */
 function kvProject(workerName: string, wrangler: Record<string, unknown> = {}): string {
   return makeProject({
     'package.json': JSON.stringify({ name: 'longapp' }),
@@ -2595,8 +2541,6 @@ describe('computeDesiredCloudflareResources — suffixed names survive the 63-ch
 
 describe('computeDesiredCloudflareResources — provisioned resources are never re-created', () => {
   it('reuses the ids/names already in the config for a long-named app (no wrangler call)', async () => {
-    // The derivation changed for long worker names, so prove the renamed desired set
-    // still resolves to the SAME resources through the provisioner's read-first.
     const workerName = workerNameOfLength(70);
     const root = kvProject(workerName, {
       d1_databases: [
@@ -2620,7 +2564,6 @@ describe('computeDesiredCloudflareResources — provisioned resources are never 
     );
     const configPath = join(root, 'wrangler.jsonc');
     const { desired } = await computeDesiredCloudflareResources(root, readConfig(root), configPath);
-    // Stored names win over the derivation, so nothing points at a new resource.
     expect(desired.d1?.name).toBe('legacy-db');
     expect(desired.r2?.bucketName).toBe('legacy-bucket');
 
@@ -2632,7 +2575,6 @@ describe('computeDesiredCloudflareResources — provisioned resources are never 
       }),
       log: { info: () => {}, warn: () => {} },
     });
-    // Read-first everywhere: no list, no create — the recorded resources are kept.
     expect(calls).toEqual([]);
     expect(result.resources).toEqual([
       { kind: 'd1', binding: 'DB', name: 'legacy-db', action: 'reused', id: REAL_D1_ID },
@@ -2647,10 +2589,6 @@ describe('computeDesiredCloudflareResources — provisioned resources are never 
     ]);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Orchestration flow
-// ---------------------------------------------------------------------------
 
 describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
   const generatedStaticConfig = (root: string) =>
@@ -2996,8 +2934,6 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
   it.each([undefined, 'https://dashboard.example.com'] as const)(
     'ignores a readiness Access origin that bwf.config.ts assigns before runCloudflareDeploy starts (operator value %s)',
     async (operatorOrigin) => {
-      // A generated bwf.config.ts next to a legacy bwf.json makes the Cloudflare target migrate
-      // the settings. The migration evaluates bwf.config.ts before runCloudflareDeploy runs.
       const root = makeProject({
         'package.json': JSON.stringify({ name: 'site' }),
         'bwf.json': '{}',
@@ -3009,7 +2945,6 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
         'routes/index.ts': 'export const GET = () => "site";',
       });
       vi.stubEnv('CF_ACCESS_READINESS_ORIGIN', operatorOrigin);
-      // runDeploy writes its log under the home directory.
       vi.stubEnv('HOME', join(root, 'home'));
       vi.stubEnv('USERPROFILE', join(root, 'home'));
       let readinessHeadersOrigin: string | undefined = 'not called';
@@ -3471,7 +3406,7 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
   });
 
   it('rejects a PRESENT-but-EMPTY migrations_pattern ("") before any account op', async () => {
-    // Wrangler treats any pattern other than `undefined` as custom, so an empty one diverges from
+    // Decision: Wrangler treats any pattern other than `undefined` as custom, so an empty one diverges from
     // the flat `*.sql` set this backend validates.
     const root = d1Project({
       ...PROVISIONED_D1,
@@ -3490,7 +3425,6 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // Reached NO whoami / provision / migration / build seam — rejected pre-account.
     expect(trace).toEqual([]);
     expect(wranglerArgs).toEqual([]);
   });
@@ -3564,7 +3498,6 @@ describe('runCloudflareDeploy — static, SPA, and SSG apps', () => {
   });
 
   it('does not reject a dev-only WebSocket route (.dev.ws.ts) — it never reaches production', async () => {
-    // The production scan ignores a dev-only route, so no Durable Object is emitted.
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'wsapp' }),
       'bwf.json': JSON.stringify({}),
@@ -3605,7 +3538,7 @@ describe('runCloudflareDeploy — preflight', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    expect(trace).toEqual(['wrangler:whoami']); // stopped right after the auth probe
+    expect(trace).toEqual(['wrangler:whoami']);
   });
 
   it('exits when no account is pinned (no account_id, no CLOUDFLARE_ACCOUNT_ID)', async () => {
@@ -3857,23 +3790,18 @@ describe('runCloudflareDeploy — resource provisioning', () => {
     );
     expect(output).toContain('D1 migrations up to date');
     expect(output).not.toMatch(/\d+ migrations? applied/);
-    // The BUILD runs BEFORE the secret gate (ground-truth validation reads the real emitted
-    // artifact); the LOCAL migration gate runs AFTER the build (against the post-build files),
-    // and the REMOTE D1 apply runs after that (a failed gate never mutates D1).
     expect(trace).toEqual([
       'wrangler:whoami',
       'provision',
       'build',
       'gate',
       'migrate-gate',
-      'wrangler:d1', // migrations list (is a restore point needed?)
-      'wrangler:d1', // migrations apply (after the gate)
-      'wrangler:d1', // migrations list (pending verify)
+      'wrangler:d1',
+      'wrangler:d1',
+      'wrangler:d1',
       'wrangler:deploy',
     ]);
-    // migrate targets the stored db name with --remote + pinned config
     const d1Calls = wranglerArgs.filter((a) => a[0] === 'd1');
-    // the pre-apply list reads the pending set of the same target
     expect(d1Calls.shift()).toEqual([
       'd1',
       'migrations',
@@ -3894,7 +3822,6 @@ describe('runCloudflareDeploy — resource provisioning', () => {
       toSlash(join(root, 'wrangler.jsonc')),
       '--env=',
     ]);
-    // the post-apply pending verification lists remote migrations for the same target
     expect(d1Calls[1]).toEqual([
       'd1',
       'migrations',
@@ -3905,8 +3832,6 @@ describe('runCloudflareDeploy — resource provisioning', () => {
       toSlash(join(root, 'wrangler.jsonc')),
       '--env=',
     ]);
-    // Upload and trigger synchronization use the exact generated config that was
-    // verified above, rather than letting triggers fall back to the root config.
     expect(wranglerArgs.find((a) => a[0] === 'deploy')).toEqual([
       'deploy',
       '-c',
@@ -4003,8 +3928,6 @@ describe('runCloudflareDeploy — secrets gate', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // The build ran BEFORE the gate (ground truth), but the gate failing blocks the REMOTE D1
-    // apply AND the deploy — no account mutation past the build.
     expect(trace).toContain('build');
     expect(trace).not.toContain('wrangler:deploy');
     expect(wranglerArgs.some((a) => a[0] === 'd1')).toBe(false);
@@ -4183,7 +4106,6 @@ describe('runCloudflareDeploy — D1 migrations_dir gate', () => {
     expect(trace).toContain('wrangler:deploy');
   });
 
-  /** A D1 app whose wrangler.jsonc sets `migrations_dir`; `<root>` becomes the project path. */
   function d1ProjectWithDir(migrationsDir: string, sourceDir?: string, pattern?: string): string {
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'myapp' }),
@@ -4229,7 +4151,6 @@ describe('runCloudflareDeploy — D1 migrations_dir gate', () => {
     expect(trace).toContain('wrangler:deploy');
   });
 
-  /** Run a deploy that must stop on the migrations_dir check; returns the logged errors. */
   async function rejectedDeployMessages(root: string): Promise<Array<string>> {
     const messages: Array<string> = [];
     const restore = log.error;
@@ -4317,7 +4238,7 @@ describe('runCloudflareDeploy — D1 migrations_dir gate', () => {
     for (const expectedProvisions of [1, 0]) {
       let provisions = 0;
       const { deps, trace, exitCalls, wranglerArgs } = harness({
-        // Adopt the database the way the provisioner does; the writer keeps the spelling.
+        // Decision: Adopt the database the way the provisioner does; the writer keeps the spelling.
         provision: (async (_root, configPath): Promise<ProvisionResult> => {
           provisions++;
           writeProvisionedWranglerConfig(
@@ -4360,7 +4281,6 @@ describe('runCloudflareDeploy — full bwf app queues', () => {
 });
 
 describe('runCloudflareDeploy — Cloudflare queue names', () => {
-  /** A worker-bearing app with one queue (`jobs`), deployed as Worker `name`. */
   function queueProject(name = 'qapp', files: Record<string, string> = {}): string {
     return makeProject({
       'package.json': JSON.stringify({ name: 'qapp' }),
@@ -4372,7 +4292,6 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
     });
   }
 
-  /** `queues info` output for a queue that exists, with its consumer Workers. */
   const queueExists = (name: string, ...consumers: Array<string>): DeployWranglerRunResult => ({
     ...cleanExit,
     stdout: `Queue Name: ${name}\nConsumers: ${consumers.join(', ')}\n`,
@@ -4383,11 +4302,6 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
     stderr: `✘ [ERROR] Queue "${name}" does not exist.\n`,
   });
 
-  /**
-   * The default harness plus a scripted `queues info` reply, so a test drives the
-   * REAL classifier with the exact output wrangler would print. The build records the
-   * queue names it was given.
-   */
   function queueHarness(
     probe: (name: string) => DeployWranglerRunResult,
     overrides: Partial<CloudflareDeployDeps> = {},
@@ -4408,7 +4322,6 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
     return { ...h, builtQueueNames };
   }
 
-  /** Run the deploy capturing `log.error` and `log.info`, restoring the real logger after. */
   async function runCapturing(
     root: string,
     deps: CloudflareDeployDeps,
@@ -4445,10 +4358,8 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
     const root = queueProject();
     const { deps, wranglerArgs, trace, builtQueueNames } = queueHarness(queueAbsent);
     await runCapturing(root, deps);
-    // The scoped name, then the plain name an older deploy would have used.
     expect(queueInfoArgs(wranglerArgs)).toEqual(['qapp-jobs', 'jobs']);
     expect(trace.indexOf('wrangler:queues')).toBeLessThan(trace.indexOf('build'));
-    // A confirmed not-found provisions the scoped queue.
     expect(trace).toContain('provision');
     expect(builtQueueNames).toEqual([{ jobs: 'qapp-jobs' }]);
     expect(trace).toContain('wrangler:deploy');
@@ -4460,7 +4371,6 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
       name === 'qapp-jobs' ? queueExists(name, 'qapp') : queueExists(name, 'qapp'),
     );
     await runCapturing(root, deps);
-    // The plain queue is not read once the Worker is known to consume the scoped one.
     expect(queueInfoArgs(wranglerArgs)).toEqual(['qapp-jobs']);
     expect(trace).not.toContain('provision');
     expect(builtQueueNames).toEqual([{ jobs: 'qapp-jobs' }]);
@@ -4480,7 +4390,7 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
   });
 
   it('gives staging and production separate queues in one account (#547)', async () => {
-    // Production deployed before queues were named after the Worker and consumes `jobs`.
+    // Decision: Production deployed before queues were named after the Worker and consumes `jobs`.
     const account = (name: string) =>
       name === 'jobs' ? queueExists(name, 'app-production') : queueAbsent(name);
 
@@ -4507,12 +4417,12 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
   });
 
   it('names queues after a Worker name with "_" in resource-name form', async () => {
-    // Wrangler accepts `my_app`; queue names allow only letters, digits and "-".
+    // Decision: Wrangler accepts `my_app`; queue names allow only letters, digits and "-".
     const fresh = queueHarness(queueAbsent);
     await runCapturing(queueProject('my_app'), fresh.deps);
     expect(fresh.builtQueueNames).toEqual([{ jobs: 'my-app-jobs' }]);
 
-    // Consumers are listed by the Worker's real script name.
+    // Decision: Consumers are listed by the Worker's real script name.
     const deployed = queueHarness((name) =>
       name === 'jobs' ? queueExists(name, 'my_app') : queueAbsent(name),
     );
@@ -4533,7 +4443,7 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
   });
 
   it('refuses a queue that another Worker consumes, before the build', async () => {
-    // Worker `app` with queues/staging-jobs.ts and Worker `app-staging` with queues/jobs.ts
+    // Decision: Worker `app` with queues/staging-jobs.ts and Worker `app-staging` with queues/jobs.ts
     // both name a queue `app-staging-jobs`.
     const root = queueProject('app-staging');
     const { deps, trace, exitCalls } = queueHarness((name) =>
@@ -4562,7 +4472,6 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
     const { deps, wranglerArgs, trace } = queueHarness(queueAbsent);
     const { errors } = await runCapturing(root, deps, { fails: true });
     expect(errors.join('\n')).toContain(`  • ${worker}-jobs (64 characters)`);
-    // The scoped name is never read; the plain name is, in case an older deploy used it.
     expect(queueInfoArgs(wranglerArgs)).toEqual(['jobs']);
     expect(trace).not.toContain('provision');
     expect(trace).not.toContain('build');
@@ -4570,7 +4479,6 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
 
   it('stops before the build when a queue cannot be read', async () => {
     const root = queueProject();
-    // An auth failure is not absence. Without the consumer list the name cannot be chosen.
     const { deps, trace, exitCalls } = queueHarness(() => ({
       ...cleanExit,
       status: 1,
@@ -4585,7 +4493,6 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
 
   it('stops when a killed probe merely buffered a not-found line', async () => {
     const root = queueProject();
-    // A signal-killed child never ran to completion, so its buffered text is not proof.
     const { deps, trace } = queueHarness((name) => ({
       ...queueAbsent(name),
       signal: 'SIGKILL',
@@ -4633,11 +4540,6 @@ describe('runCloudflareDeploy — Cloudflare queue names', () => {
 });
 
 describe('runCloudflareDeploy — pre-build queue name validation', () => {
-  /**
-   * A worker-bearing app whose desired queues come from the given `queues/` filenames.
-   * Queue names are derived from those paths (`queues/scan.ts` strips the extension and joins
-   * nested segments with `-`), so this fixture is how an adversarial name actually reaches deploy.
-   */
   function queueNameProject(...fileNames: Array<string>): string {
     return makeProject({
       'package.json': JSON.stringify({ name: 'qapp' }),
@@ -4648,7 +4550,6 @@ describe('runCloudflareDeploy — pre-build queue name validation', () => {
     });
   }
 
-  /** Run the deploy capturing `log.error` output, restoring the real logger after. */
   async function runCapturingErrors(
     root: string,
     deps: CloudflareDeployDeps,
@@ -4669,7 +4570,7 @@ describe('runCloudflareDeploy — pre-build queue name validation', () => {
   }
 
   it('fails closed on a leading-dash name before the build, the D1 apply, or the probe', async () => {
-    // `queues/--help.ts` yields the literal name `--help`, which wrangler would parse as a
+    // Decision: `queues/--help.ts` yields the literal name `--help`, which wrangler would parse as a
     // FLAG: `queues info --help` exits 0 printing usage, which the probe reads as
     // inconclusive and waves through. The name gate must stop it before that.
     const root = queueNameProject('--help.ts');
@@ -4681,14 +4582,13 @@ describe('runCloudflareDeploy — pre-build queue name validation', () => {
     expect(joined).toContain('--help');
     expect(joined).toContain('queues/');
     expect(joined).toContain('begin and end with a letter or digit');
-    // Nothing past the gate ran: no probe, no build, no remote D1 apply, no upload.
     expect(wranglerArgs.some((a) => a[0] === 'queues')).toBe(false);
     expect(wranglerArgs.some((a) => a[0] === 'd1')).toBe(false);
     expect(trace).toEqual(['wrangler:whoami']);
   });
 
   it('rejects a shell-significant name by the grammar', async () => {
-    // The runner uses `spawnSync` with `shell: false`, so `$(touch marker)` was never
+    // Decision: The runner uses `spawnSync` with `shell: false`, so `$(touch marker)` was never
     // executable — the point is that an invalid name can no longer reach wrangler's argv
     // or the printed `wrangler queues create <name>` guidance at all.
     const root = queueNameProject('$(touch marker).ts');
@@ -4698,11 +4598,9 @@ describe('runCloudflareDeploy — pre-build queue name validation', () => {
     expect(exitCalls).toEqual([1]);
     const joined = messages.join('\n');
     expect(joined).toContain('$(touch marker)');
-    // The absent-queue branch's `wrangler queues create <name>` guidance is never reached.
     expect(joined).not.toContain('wrangler queues create');
     expect(wranglerArgs.some((a) => a[0] === 'queues')).toBe(false);
     expect(trace).toEqual(['wrangler:whoami']);
-    // Belt and braces: no subshell ever ran.
     expect(existsSync(join(root, 'marker'))).toBe(false);
   });
 
@@ -4712,7 +4610,6 @@ describe('runCloudflareDeploy — pre-build queue name validation', () => {
     const messages = await runCapturingErrors(root, deps);
 
     expect(exitCalls).toEqual([1]);
-    // ONE batched message naming BOTH offenders — and not the valid sibling.
     expect(messages).toHaveLength(1);
     const [message] = messages;
     expect(message).toContain('  • --help (queue)');
@@ -4725,7 +4622,6 @@ describe('runCloudflareDeploy — pre-build queue name validation', () => {
     const root = queueNameProject('jobs.ts');
     const { deps, wranglerArgs, trace } = harness();
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-    // The gate is transparent to a legal name: the probe still runs, pre-build, for `jobs`.
     expect(wranglerArgs.find((a) => a[0] === 'queues')).toEqual([
       'queues',
       'info',
@@ -4806,14 +4702,11 @@ describe('runCloudflareDeploy — worker-name override (WRANGLER_CI_OVERRIDE_NAM
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // Fenced during preflight (before whoami) — nothing ran.
     expect(trace).toEqual([]);
   });
 
   it('ignores an ambient WRANGLER_CI_OVERRIDE_NAME — deploys the derived (non-override) name', async () => {
     vi.stubEnv('WRANGLER_CI_OVERRIDE_NAME', 'evil-name');
-    // Root config has NO top-level name → the worker name is derived from package.json,
-    // NOT the ambient override.
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'myapp' }),
       'bwf.json': JSON.stringify({}),
@@ -4847,7 +4740,6 @@ describe('runCloudflareDeploy — worker-name override (WRANGLER_CI_OVERRIDE_NAM
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, cliLog, deps);
     expect(trace).toContain('wrangler:deploy');
     expect(deployedWorker).toBe('myapp');
-    // The pinned root config name is the derived name, never the override.
     const written = JSON.parse(readFileSync(join(root, 'wrangler.jsonc'), 'utf-8')) as {
       name?: string;
     };
@@ -4943,7 +4835,7 @@ describe('assertNoConfigOverrideInProjectDotenv', () => {
 
 describe('runCloudflareDeploy — D1 migrate targets the unique validated entry', () => {
   it('fails closed when an earlier alias entry shares the migrate token', async () => {
-    // Two D1 entries share database_name "myapp-db" with DIFFERENT migrations_dir. The
+    // Decision: Two D1 entries share database_name "myapp-db" with DIFFERENT migrations_dir. The
     // gate validated binding DB, but wrangler would first-match the earlier OLD entry.
     const root = d1Project(
       {
@@ -4971,7 +4863,6 @@ describe('runCloudflareDeploy — D1 migrate targets the unique validated entry'
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // The migrate-target gate runs post-build, before any `d1 migrations apply` or deploy.
     expect(wranglerArgs.some((a) => a[0] === 'd1')).toBe(false);
     expect(trace).toContain('build');
     expect(trace).not.toContain('wrangler:deploy');
@@ -5001,7 +4892,6 @@ describe('runCloudflareDeploy — D1 migrate targets the unique validated entry'
     );
     const { deps, wranglerArgs, trace } = harness();
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-    // Targets the validated entry's own unique database_name (resolves to DB, not OLD).
     expect(wranglerArgs.filter((a) => a[0] === 'd1').every((a) => a[3] === 'myapp-db')).toBe(true);
     expect(wranglerArgs.find((a) => a[0] === 'd1' && a[2] === 'apply')).toEqual([
       'd1',
@@ -5019,8 +4909,6 @@ describe('runCloudflareDeploy — D1 migrate targets the unique validated entry'
 
 describe('runCloudflareDeploy — wrangler implicit provisioning disabled on deploy', () => {
   it('passes both disable-flags for an R2 app that passes local drift (no auto-create)', async () => {
-    // R2 bucket_name present locally (drift passes) but may be absent remotely — deploy
-    // must NOT let wrangler auto-create it.
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'r2app' }),
       'bwf.json': JSON.stringify({}),
@@ -5049,7 +4937,7 @@ describe('runCloudflareDeploy — wrangler implicit provisioning disabled on dep
   });
 });
 
-// The pass-through assert-set is every registry field minus these exclusions, so a typo here
+// Decision: The pass-through assert-set is every registry field minus these exclusions, so a typo here
 // would silently assert a field bwf emits.
 describe('DEPLOY_PASSTHROUGH_EXCLUDE_FIELDS', () => {
   it('every excluded field is a REAL registry key (no typos)', () => {
@@ -5151,7 +5039,7 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails when the generated binding identity differs from the pinned snapshot', () => {
-    // Same account_id + name, but the generated D1 database_id differs from the identity
+    // Decision: Same account_id + name, but the generated D1 database_id differs from the identity
     // pinned before the build — a flattened named-env / alternate-config binding set, OR a
     // build that rewrote the id. The snapshot (not a root re-read) is the ground truth.
     const desired = { d1: { binding: 'DB', name: 'myapp-db' }, kvNamespaces: [], queues: [] };
@@ -5215,8 +5103,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails when a non-D1 binding identity (R2 / Hyperdrive) differs from the snapshot', () => {
-    // R2 (bucket_name) and Hyperdrive (id) are pinned the same way D1 is — the snapshot +
-    // verify logic is uniform across kinds, so both must be caught.
     const r2Desired = {
       r2: { binding: 'STORAGE', bucketName: 'myapp-storage' },
       kvNamespaces: [],
@@ -5263,8 +5149,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('passes with the full non-id binding set a real build emits (allow-list is exercised)', () => {
-    // Every id-bearing binding matches the snapshot, and the artifact also carries the non-id
-    // bindings a real Class-A build emits. None of those is in the snapshot; none may be rejected.
     const snapshot = snapshotBindingIdentities({
       d1_databases: [{ binding: 'DB', database_name: 'myapp-db', database_id: REAL_D1_ID }],
       kv_namespaces: [{ binding: 'KV', id: REAL_KV_ID }],
@@ -5293,8 +5177,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails when the artifact declares an id-bearing binding absent from the snapshot (build ADD)', () => {
-    // Only DB was pinned pre-build; the artifact ADDS an EXTRA_KV the snapshot never saw. The
-    // per-desired loop only walks {DB}, so completeness is what rejects this.
     const snapshot = snapshotBindingIdentities({
       d1_databases: [{ binding: 'DB', database_name: 'myapp-db', database_id: REAL_D1_ID }],
     });
@@ -5315,8 +5197,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails when a NON-desired binding id in the artifact diverges from the snapshot', () => {
-    // A hand-declared, non-desired EXTRA_DB is pinned pre-build; the artifact rewrites its id.
-    // The desired loop never inspects EXTRA_DB — completeness catches the divergence.
     const snapshot = snapshotBindingIdentities({
       d1_databases: [
         { binding: 'DB', database_name: 'myapp-db', database_id: REAL_D1_ID },
@@ -5342,8 +5222,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('passes when a NON-desired binding present in the snapshot is unchanged in the artifact', () => {
-    // The legitimate-extra case: a user hand-declared EXTRA_DB, it was pinned pre-build, and the
-    // build left it untouched — completeness must NOT false-positive on a legitimate extra.
     const snapshot = snapshotBindingIdentities({
       d1_databases: [
         { binding: 'DB', database_name: 'myapp-db', database_id: REAL_D1_ID },
@@ -5368,10 +5246,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails closed when the build DROPS a non-desired root id-bearing binding (EXTRA_DB)', () => {
-    // A hand-declared, NON-desired EXTRA_DB is pinned pre-build; the emitted artifact keeps the
-    // desired DB but no longer declares EXTRA_DB. The desired loop only inspects DB, and the
-    // completeness loop only walks what the artifact declares — neither sees the omission. The
-    // reverse-presence loop must reject it (a dropped id-binding silently strips a capability).
     const snapshot = snapshotBindingIdentities({
       d1_databases: [
         { binding: 'DB', database_name: 'myapp-db', database_id: REAL_D1_ID },
@@ -5395,9 +5269,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails closed when the build drops a pinned id-bearing binding by removing the whole field', () => {
-    // The KV field is present pre-build (one pinned namespace) but the emitted artifact omits the
-    // `kv_namespaces` field entirely. A removed field means every pinned binding in it is missing —
-    // the reverse-presence loop rejects it while the D1 binding still passes.
     const snapshot = snapshotBindingIdentities({
       d1_databases: [{ binding: 'DB', database_name: 'myapp-db', database_id: REAL_D1_ID }],
       kv_namespaces: [{ binding: 'EXTRA_KV', id: REAL_KV_ID }],
@@ -5417,11 +5288,7 @@ describe('verifyGeneratedDeployConfig', () => {
     expect(result.reason).toMatch(/EXTRA_KV/);
   });
 
-  // --- Pass-through bindings (fields bwf never emits) and queues ---
-
   it('fails closed when the build injects a services binding absent from the root snapshot', () => {
-    // Root had no `services` pre-build; the artifact adds one binding to another same-account
-    // worker — a capability the source never asked for.
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -5456,12 +5323,7 @@ describe('verifyGeneratedDeployConfig', () => {
     }
   });
 
-  // --- Reverse-presence: a root-declared pass-through binding the build DROPPED is rejected ---
-
   it('fails closed when the build DROPS a root-declared services binding from the emitted config', () => {
-    // The source declared a `services` binding pre-build; the emitted artifact no longer carries it
-    // (the build removed it). The forward loop only walks emitted entries, so it cannot see the
-    // omission — the reverse-presence loop must reject it.
     const rootConfig = { services: [{ binding: 'MY_SVC', service: 'my-other-worker' }] };
     const root = deployConfigProject({ account_id: 'acc123', name: 'myapp' });
     const result = verifyGeneratedDeployConfig(root, {
@@ -5476,9 +5338,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails closed when the build drops one of several pinned passthrough bindings', () => {
-    // Two root-declared bindings across two fields; the emitted config keeps `mtls_certificates` but
-    // drops the `services` one. The surviving binding passes the forward loop, but the reverse loop
-    // catches the dropped one.
     const rootConfig = {
       services: [{ binding: 'SVC', service: 'worker-a' }],
       mtls_certificates: [{ binding: 'CERT', certificate_id: 'cert-1' }],
@@ -5500,7 +5359,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('passes when every pinned passthrough binding is still present in the emitted config', () => {
-    // Every root-declared pass-through binding survives the build byte-identical.
     const rootConfig = {
       services: [{ binding: 'SVC', service: 'worker-a' }],
       mtls_certificates: [{ binding: 'CERT', certificate_id: 'cert-1' }],
@@ -5551,10 +5409,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails closed when a desired queue is DROPPED (the emitted queues field is absent)', () => {
-    // `mergeBindings` emits every desired queue as both a producer AND a consumer, so a desired
-    // queue with NO emitted `queues` field at all is a queue binding the build dropped — the worker
-    // would lose message processing and leave `QUEUE_jobs` undefined. The emitted ⊆ desired check
-    // waves this through (nothing emitted); the per-group presence check must reject it.
     const root = deployConfigProject({ account_id: 'acc123', name: 'myapp' });
     const result = verifyGeneratedDeployConfig(root, {
       accountId: 'acc123',
@@ -5567,9 +5421,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails closed when a desired queue keeps only the producer (consumer dropped)', () => {
-    // The artifact retains the producer but drops the consumer — the worker can still enqueue but
-    // never processes. Per-group presence is why the merged reader cannot catch this: `jobs` is
-    // still in the merged name set, so only checking each group separately rejects it.
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -5586,8 +5437,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('does NOT reject an unknown/future resource field the emitted artifact declares (fail-open)', () => {
-    // A field not in the assert-set must never false-positive — a future wrangler resource field
-    // bwf does not know about is simply not asserted.
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -5619,11 +5468,7 @@ describe('verifyGeneratedDeployConfig', () => {
     expect(result).toEqual({ ok: true });
   });
 
-  // --- Pass-through TARGET pin: same binding name, rewritten target/config ---
-
   it('fails closed when the build keeps a services binding NAME but rewrites its target service', () => {
-    // Root pinned MY_SVC → my-worker; the build kept the name but retargeted it to evil-worker.
-    // Name-only pinning would pass this; the exact entry pin catches the rewrite.
     const rootConfig = { services: [{ binding: 'MY_SVC', service: 'my-worker' }] };
     const root = deployConfigProject({
       account_id: 'acc123',
@@ -5643,7 +5488,7 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails closed when the build ADDS an entrypoint/environment to a pinned services entry', () => {
-    // A real `vite build` adds NOTHING to a present pass-through entry (verified against the real
+    // Decision: A real `vite build` adds NOTHING to a present pass-through entry (verified against the real
     // toolchain), so an added `entrypoint`/`environment` — which wrangler uploads, retargeting the
     // service to a named entrypoint/environment — is a build rewrite the exact entry pin catches.
     const rootConfig = { services: [{ binding: 'MY_SVC', service: 'my-worker' }] };
@@ -5665,8 +5510,6 @@ describe('verifyGeneratedDeployConfig', () => {
       expect(result.reason).toMatch(/rewrote|differs/);
     }
   });
-
-  // --- Capability singletons + the `unsafe` escape hatch ---
 
   it('fails closed when the build injects a capability singleton absent from the root', () => {
     for (const field of ['browser', 'images', 'stream', 'media', 'websearch'] as const) {
@@ -5698,8 +5541,6 @@ describe('verifyGeneratedDeployConfig', () => {
     });
     expect(result).toEqual({ ok: true });
   });
-
-  // --- Normalizer defaults that must keep passing ---
 
   it('passes empty-array assert fields the normalizer default-fills (services:[] / vectorize:[] / …)', () => {
     const root = deployConfigProject({
@@ -5734,9 +5575,6 @@ describe('verifyGeneratedDeployConfig', () => {
     });
     expect(result).toEqual({ ok: true });
   });
-
-  // --- Whole-object fields: `unsafe` (wrangler applies its metadata over every uploaded binding),
-  // the traffic attachment and tail consumers. None is an entry the binding pin can see. ---
 
   it.each<{
     change: string;
@@ -5777,7 +5615,7 @@ describe('verifyGeneratedDeployConfig', () => {
       reason: /route/,
     },
     {
-      // `false` is a declared value, so flipping it is compared, not treated as empty.
+      // Decision: `false` is a declared value, so flipping it is compared, not treated as empty.
       change: 'flips a root-declared workers_dev from false to true',
       rootConfig: { workers_dev: false },
       emitted: { workers_dev: true },
@@ -5808,7 +5646,7 @@ describe('verifyGeneratedDeployConfig', () => {
       reason: /streaming_tail_consumers/,
     },
     {
-      // An emitted `[]` is uploaded as-is, which would silently disable the forwarding.
+      // Decision: An emitted `[]` is uploaded as-is, which would silently disable the forwarding.
       change: 'empties a root-declared tail_consumers',
       rootConfig: { tail_consumers: [{ service: 'audit-collector' }] },
       emitted: { tail_consumers: [] },
@@ -5891,8 +5729,6 @@ describe('verifyGeneratedDeployConfig', () => {
     expect(result).toEqual({ ok: true });
   });
 
-  // --- External Durable Object (`script_name` targets another worker's DOs) ---
-
   it('fails closed when the build injects an external durable_object (script_name) absent from root', () => {
     const root = deployConfigProject({
       account_id: 'acc123',
@@ -5914,7 +5750,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails closed when the build adds an `environment` to a durable_object binding', () => {
-    // `environment` narrows a cross-script DO to a named environment — external-targeting.
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -5971,8 +5806,6 @@ describe('verifyGeneratedDeployConfig', () => {
     expect(result).toEqual({ ok: true });
   });
 
-  // --- AI binding (must be bwf's own {binding:'AI'}, the root's, or absent) ---
-
   it("passes bwf's own emitted ai binding {binding:'AI'} with none in root when the source uses AI", () => {
     const root = deployConfigProject({
       account_id: 'acc123',
@@ -6009,8 +5842,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it("fails closed when the build injects bwf's own {binding:'AI'} but the source does not use AI", () => {
-    // No root ai + needsAI false: a real build never emits `{binding:'AI'}` here, so an emitted one
-    // is a build-injected billable Workers AI binding.
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -6042,9 +5873,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails closed when the build rewrites a custom root ai binding down to the default', () => {
-    // The root declared a custom ai binding; the emitted one must equal it EXACTLY. Rewriting it
-    // to `{binding:'AI'}` (or any other shape) is a build tampering with the ai target — reject
-    // even when needsAI is true, since the root's own binding is the ground truth.
     const rootConfig = { ai: { binding: 'AI', gateway: { id: 'my-own-gateway' } } };
     const root = deployConfigProject({
       account_id: 'acc123',
@@ -6081,9 +5909,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails closed when the build REMOVES a root-declared ai binding (emitted ai absent)', () => {
-    // The source declared its own `ai` binding pre-build; the emitted config drops it entirely. The
-    // check reads the root ai FIRST, so a removed root ai — not just a rewrite — is rejected. Without
-    // this, the deploy would ship a worker missing the configured AI binding.
     const rootConfig = { ai: { binding: 'CUSTOM_AI' } };
     const root = deployConfigProject({ account_id: 'acc123', name: 'myapp' });
     const result = verifyGeneratedDeployConfig(root, {
@@ -6096,8 +5921,6 @@ describe('verifyGeneratedDeployConfig', () => {
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/ai binding/);
   });
-
-  // --- Complete Durable Object and migration pins ---
 
   it('rejects a build-injected local Durable Object binding', () => {
     const root = deployConfigProject({
@@ -6238,11 +6061,7 @@ describe('verifyGeneratedDeployConfig', () => {
     expect(state.migrations).toEqual(rootConfig.migrations);
   });
 
-  // --- Destructive Durable Object migrations (a build-injected delete/rename/transfer) ---
-
   it('fails closed when the build injects a migration with deleted_classes absent from root', () => {
-    // A build appends a `{tag, deleted_classes:["ProdDO"]}` migration; `wrangler deploy` would run it
-    // and DELETE the production Durable Object's data. The root declared no such migration.
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -6288,8 +6107,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it("passes bwf's own creation-only migrations (new_sqlite_classes) — never inspected", () => {
-    // bwf emits migrations carrying only creation keys; those are never checked against root, so an
-    // app whose root declared no `migrations` still deploys cleanly.
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -6306,8 +6123,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('passes a root-declared destructive migration emitted byte-identical (a legit rename)', () => {
-    // A user's own checked-in destructive migration is pinned from the pre-build root and survives
-    // the build byte-for-byte, so it passes — only an entry ABSENT from root is rejected.
     const rootConfig = {
       migrations: [
         { tag: 'v1', new_sqlite_classes: ['Room'] },
@@ -6324,8 +6139,6 @@ describe('verifyGeneratedDeployConfig', () => {
     });
     expect(result).toEqual({ ok: true });
   });
-
-  // --- FALSE-POSITIVE LOCK: the full kitchen-sink shape passes WITH the raw-field pin active ---
 
   it('passes the full kitchen-sink shape with the whole-object + DO + ai pins active', () => {
     const root = deployConfigProject({
@@ -6347,10 +6160,6 @@ describe('verifyGeneratedDeployConfig', () => {
     expect(result).toEqual({ ok: true });
   });
 
-  // --- Container applications: a bare `wrangler deploy` PROVISIONS a container application from the
-  // emitted `containers` array (billable, runs the image), so an injected / dropped / retargeted
-  // container must fail closed. The expected set is reconstructed pre-build and passed in. ---
-
   const SANDBOX_CONTAINER = {
     name: 'platform-sandbox',
     class_name: 'Sandbox',
@@ -6358,8 +6167,6 @@ describe('verifyGeneratedDeployConfig', () => {
   };
 
   it('fails closed when the build RETARGETS the sandbox container image', () => {
-    // The bwf `Sandbox` DO + migration are legit, but the emitted container's `image` was rewritten
-    // to an attacker image — `wrangler deploy` would roll out the attacker image.
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -6376,8 +6183,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails closed when the build INJECTS a container into a no-sandbox app', () => {
-    // The source needs no sandbox (expected set empty), yet the artifact injects a container
-    // application alongside an otherwise-accepted local DO + creation-only migration.
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -6394,8 +6199,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails closed when the build DROPS the expected sandbox container', () => {
-    // The source needs the sandbox (expected set has one container), but the emitted `containers`
-    // field is absent — read defensively as empty, so the drop is caught.
     const root = deployConfigProject({ account_id: 'acc123', name: 'myapp' });
     const result = verifyGeneratedDeployConfig(root, {
       accountId: 'acc123',
@@ -6432,8 +6235,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('passes a root-declared container preserved verbatim in the emitted config', () => {
-    // A user's own container (present in the root wrangler config, spread verbatim by the build)
-    // survives — including an optional field — while the drift checks stay quiet.
     const rootContainer = {
       name: 'my-app',
       class_name: 'MyApp',
@@ -6453,14 +6254,7 @@ describe('verifyGeneratedDeployConfig', () => {
     expect(result).toEqual({ ok: true });
   });
 
-  // --- Cron Triggers: a bare `wrangler deploy` reading `dist/ssr/wrangler.json` INSTALLS the
-  // worker's Cron Triggers from the emitted `triggers.crons` array, so an injected / dropped /
-  // retargeted schedule must fail closed. The expected schedules are reconstructed pre-build from
-  // the SAME `scanJobsSync` scan and compared as an order-independent, count-aware multiset. ---
-
   it('fails closed when the build INJECTS a cron trigger schedule the source never declared', () => {
-    // A no-cron app (expected empty) whose emitted config carries a schedule — attacker code would
-    // run on a billable schedule the credentialed `wrangler deploy` installs.
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -6477,8 +6271,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails closed when the build DROPS a cron trigger schedule the source declared', () => {
-    // The source declares a schedule (expected has one), but the emitted `triggers` is absent — the
-    // worker would silently lose the scheduled behavior the source asked for.
     const root = deployConfigProject({ account_id: 'acc123', name: 'myapp' });
     const result = verifyGeneratedDeployConfig(root, {
       accountId: 'acc123',
@@ -6491,8 +6283,6 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('fails closed when the build RETARGETS a cron trigger schedule', () => {
-    // The source declares `0 0 * * *` (daily), but the emitted schedule is `* * * * *` (every
-    // minute) — caught as a drop of the old string plus an injection of the new one.
     const root = deployConfigProject({
       account_id: 'acc123',
       name: 'myapp',
@@ -6504,7 +6294,6 @@ describe('verifyGeneratedDeployConfig', () => {
       expectedCrons: ['0 0 * * *'],
     });
     expect(result.ok).toBe(false);
-    // The unexpected new schedule is reported first (the injection check runs before the drop check).
     expect(result.reason).toMatch(/injected/);
   });
 
@@ -6533,7 +6322,7 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 
   it('passes a no-cron app whose emitted triggers is the empty object the CF plugin materializes', () => {
-    // A real no-cron build emits `triggers: {}` (the CF plugin materializes the empty object) rather
+    // Decision: A real no-cron build emits `triggers: {}` (the CF plugin materializes the empty object) rather
     // than omitting the field — the defensive read treats a `crons`-less object as no schedules, so
     // it stays symmetric-empty instead of false-positiving.
     const root = deployConfigProject({
@@ -6550,12 +6339,7 @@ describe('verifyGeneratedDeployConfig', () => {
   });
 });
 
-// The id-bearing binding identities are pinned after provisioning and before the untrusted
-// build. A build can only edit files, so the remote migrate and the emitted-config check
-// compare against that pre-build snapshot rather than the (rewritable) root config.
-
 describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
-  /** The deploy pointer + emitted top-level config the CF plugin leaves behind after a build. */
   function writeEmittedDeployArtifact(root: string, generated: Record<string, unknown>): void {
     mkdirSync(join(root, '.wrangler', 'deploy'), { recursive: true });
     mkdirSync(join(root, 'dist', 'ssr'), { recursive: true });
@@ -6566,7 +6350,6 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
     writeFileSync(join(root, 'dist', 'ssr', 'wrangler.json'), JSON.stringify(generated));
   }
 
-  /** Read → mutate → rewrite the root wrangler.jsonc, standing in for a tampering build plugin. */
   function rewriteRootConfig(
     root: string,
     mutate: (config: Record<string, unknown>) => void,
@@ -6577,7 +6360,6 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
     writeFileSync(configPath, JSON.stringify(config, null, 2));
   }
 
-  /** The emitted top-level config a non-tampered build of PROVISIONED_D1 would leave. */
   const EMITTED_D1 = {
     account_id: 'acc123',
     name: 'myapp',
@@ -6588,7 +6370,7 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
     const root = d1Project(PROVISIONED_D1, INIT_MIGRATION);
     const { deps, wranglerArgs, exitCalls } = harness({
       runBuild: () => {
-        // Keep binding + database_name + migrations_dir; swap ONLY the id — the token still
+        // Decision: Keep binding + database_name + migrations_dir; swap ONLY the id — the token still
         // resolves, so wrangler would migrate a DIFFERENT same-account database.
         rewriteRootConfig(root, (c) => {
           (c.d1_databases as Array<Record<string, unknown>>)[0].database_id = OTHER_D1_ID;
@@ -6604,13 +6386,12 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // No `d1 migrations apply` / `list` ran against the swapped database, and nothing deployed.
     expect(wranglerArgs.some((a) => a[0] === 'd1')).toBe(false);
     expect(wranglerArgs.some((a) => a[0] === 'deploy')).toBe(false);
   });
 
   it('fails closed at the emitted-config check when the build rewrites the D1 id in BOTH the root config and the artifact', async () => {
-    // No checked-in migrations, so only the emitted-config check can catch it. A consistent
+    // Decision: No checked-in migrations, so only the emitted-config check can catch it. A consistent
     // rewrite would fool a post-build root re-read; the pre-build snapshot still catches it.
     const root = d1Project(PROVISIONED_D1);
     const { deps, wranglerArgs, exitCalls } = harness({
@@ -6633,7 +6414,6 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
   });
 
   it('fails closed at the emitted-config check when the build consistently rewrites a KV namespace id', async () => {
-    // KV is pinned the same way as D1.
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'myapp' }),
       'bwf.json': JSON.stringify({}),
@@ -6691,7 +6471,7 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
   });
 
   it('passes a normal deploy whose artifact carries supported non-id bindings', async () => {
-    // The pinned DB id is unchanged and the artifact carries the non-id bindings this source emits.
+    // Decision: The pinned DB id is unchanged and the artifact carries the non-id bindings this source emits.
     // `queues/jobs.ts` makes `myapp-jobs` a derived queue, and `routes/ai.ts` authorizes the AI
     // binding.
     const root = d1Project(PROVISIONED_D1, {
@@ -6702,7 +6482,6 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
     });
     const { deps, wranglerArgs, exitCalls } = harness({
       runBuild: () =>
-        // No sandbox, Durable Objects or crons in this source, so drop those fixture fields.
         writeEmittedDeployArtifact(root, {
           ...KITCHEN_SINK_NON_ID_BINDINGS,
           queues: {
@@ -6724,8 +6503,6 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
   });
 
   it('passes when a user-declared EXTRA id-bearing binding is present pre-build and unchanged', async () => {
-    // A hand-declared, non-desired EXTRA_KV is in the root config BEFORE the build (so the widened
-    // snapshot pins it) and the build leaves it untouched — the deploy must NOT be blocked.
     const root = d1Project({
       ...PROVISIONED_D1,
       kv_namespaces: [{ binding: 'EXTRA_KV', id: REAL_KV_ID }],
@@ -6744,7 +6521,6 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
   });
 
   it('fails closed at the emitted-config check when the build ADDS an id-bearing binding absent from the snapshot', async () => {
-    // The snapshot has only DB; the build injects an EXTRA_KV the deployed worker would gain.
     const root = d1Project(PROVISIONED_D1);
     const { deps, wranglerArgs, exitCalls } = harness({
       runBuild: () =>
@@ -6758,12 +6534,10 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // The deploy seam was NOT invoked — the injected binding never reached `wrangler deploy`.
     expect(wranglerArgs.some((a) => a[0] === 'deploy')).toBe(false);
   });
 
   it('fails closed at the emitted-config check when the build injects a services binding', async () => {
-    // The root has no services; the build injects a binding to another same-account worker.
     const root = d1Project(PROVISIONED_D1);
     const { deps, wranglerArgs, exitCalls } = harness({
       runBuild: () =>
@@ -6777,12 +6551,10 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // The deploy seam was NOT invoked — the injected binding never reached `wrangler deploy`.
     expect(wranglerArgs.some((a) => a[0] === 'deploy')).toBe(false);
   });
 
   it('fails closed at the emitted-config check when the build injects a queue not in the desired set', async () => {
-    // No queues/ source, so desired.queues is empty.
     const root = d1Project(PROVISIONED_D1);
     const { deps, wranglerArgs, exitCalls } = harness({
       runBuild: () =>
@@ -6818,7 +6590,6 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
   });
 
   it('fails closed at the emitted-config check when the build injects an unsafe object', async () => {
-    // Proves the whole-object pin is wired end to end from the pre-build root config.
     const root = d1Project(PROVISIONED_D1);
     const { deps, wranglerArgs, exitCalls } = harness({
       runBuild: () =>
@@ -6836,7 +6607,6 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
   });
 
   it('fails closed when the build modifies the wrangler uploader (before any credentialed run)', async () => {
-    // The post-build uploader hash differs from the pre-build one, so no credentialed run happens.
     const root = d1Project(PROVISIONED_D1, INIT_MIGRATION);
     let built = false;
     const { deps, wranglerArgs, exitCalls } = harness({
@@ -6869,8 +6639,6 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
   });
 
   it('fails closed BEFORE the remote D1 migrate when a post-build step mutates the uploader', async () => {
-    // Project code after the build (modelled by the migration gate) overwrites the uploader; the
-    // re-check right before `d1 migrations apply` catches it.
     const root = d1Project(PROVISIONED_D1, INIT_MIGRATION);
     let uploaderTampered = false;
     const { deps, wranglerArgs, exitCalls } = harness({
@@ -6883,13 +6651,11 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // Neither the credentialed remote migrate nor the deploy ran.
     expect(wranglerArgs.some((a) => a[0] === 'd1')).toBe(false);
     expect(wranglerArgs.some((a) => a[0] === 'deploy')).toBe(false);
   });
 
   it('fails closed BEFORE the deploy when a post-build step mutates the uploader (no-migration app)', async () => {
-    // Without migrations the upload is the first credentialed run after the build.
     const root = d1Project(PROVISIONED_D1);
     let uploaderTampered = false;
     const { deps, wranglerArgs, exitCalls } = harness({
@@ -6919,12 +6685,9 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
   });
 
   it('fails closed BEFORE whoami when the pre-build env-schema probe mutates the uploader', async () => {
-    // The uploader baseline is taken before the env-schema probe runs project code, so a probe
-    // that overwrites the uploader is caught before `whoami`, the first credentialed run.
     const root = d1Project(PROVISIONED_D1, INIT_MIGRATION);
     let probed = false;
     const { deps, trace, wranglerArgs, exitCalls } = harness({
-      // The env-schema probe stands in for pre-build project code overwriting the bundle.
       resolveSchemaFacts: (() => {
         probed = true;
         return okSchemaFacts();
@@ -6935,18 +6698,16 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // whoami never ran — the deploy refused before the first credentialed call.
     expect(trace).not.toContain('wrangler:whoami');
     expect(wranglerArgs.some((a) => a[0] === 'whoami')).toBe(false);
   });
 
   it('fails closed BEFORE the provisioner when the uploader changes after whoami (--provision)', async () => {
-    // The uploader changes after `whoami`; the re-check right before provisioning catches it.
     const root = d1Project(PROVISIONED_D1, INIT_MIGRATION);
     let tampered = false;
     const { deps, trace, exitCalls } = harness({
       hashWranglerUploader: () => (tampered ? 'tampered' : 'clean'),
-      // whoami is the last step before provision; flip the bundle as it returns so the assert
+      // Decision: whoami is the last step before provision; flip the bundle as it returns so the assert
       // immediately before the provision call catches it.
       runWrangler: operationFixture((args) => {
         trace.push(`wrangler:${args[0]}`);
@@ -6961,18 +6722,12 @@ describe('runCloudflareDeploy — id-bearing binding identity pin', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare', provision: true }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // Reached whoami, but refused before provisioning ran.
     expect(trace).toContain('wrangler:whoami');
     expect(trace).not.toContain('provision');
   });
 });
 
-// Probes that run project code around the build may rewrite the root config: the pre-build
-// env-schema probe before any credentialed command, and the post-build emitted-var probe before
-// the secrets gate resolves the worker name.
-
 describe('runCloudflareDeploy — config laundering by a build-adjacent probe', () => {
-  /** Read → mutate → rewrite the root wrangler.jsonc, standing in for a tampering probe. */
   function rewriteRootConfig(
     root: string,
     mutate: (config: Record<string, unknown>) => void,
@@ -6983,11 +6738,7 @@ describe('runCloudflareDeploy — config laundering by a build-adjacent probe', 
     writeFileSync(configPath, JSON.stringify(config, null, 2));
   }
 
-  // --- The pre-build probe rewrites the root config ---
-
   it('fails closed before whoami when the pre-build probe SWAPS a binding id', async () => {
-    // The env-schema probe rewrites the provisioned DB id in the root config. Reject it before the
-    // config reaches any authenticated Cloudflare command or becomes a trusted build baseline.
     const root = d1Project(PROVISIONED_D1);
     const { deps, trace, wranglerArgs, exitCalls } = harness({
       resolveSchemaFacts: (() => {
@@ -7025,9 +6776,7 @@ describe('runCloudflareDeploy — config laundering by a build-adjacent probe', 
     expect(wranglerArgs.some((a) => a[0] === 'deploy')).toBe(false);
   });
 
-  // --- The post-build probe rewrites the pinned worker name ---
-
-  // One required secret absent from the emitted vars, so the real gate reaches the remote list.
+  // Decision: One required secret absent from the emitted vars, so the real gate reaches the remote list.
   function requiredSecretFacts(): EnvSchemaProbeResult {
     return okSchemaFacts({
       hasSchema: true,
@@ -7036,7 +6785,7 @@ describe('runCloudflareDeploy — config laundering by a build-adjacent probe', 
     });
   }
 
-  // The real gate with a remote secret list that reports the secret present for any worker, so
+  // Decision: The real gate with a remote secret list that reports the secret present for any worker, so
   // only the worker-name check can stop a deploy against the wrong worker.
   const dischargeWithSecretPresent = ((
     ctx: SelfHostEnvContext,
@@ -7052,7 +6801,6 @@ describe('runCloudflareDeploy — config laundering by a build-adjacent probe', 
     })) as CloudflareDeployDeps['dischargeSelfHostEnv'];
 
   it('fails closed BEFORE deploy when the post-build probe rewrites the pinned worker name', async () => {
-    // The deploy pinned "myapp"; the probe renames the root config worker to "evil-worker".
     const root = d1Project(PROVISIONED_D1);
     const { deps, trace, wranglerArgs, exitCalls } = harness({
       resolveSchemaFacts: (() =>
@@ -7069,7 +6817,6 @@ describe('runCloudflareDeploy — config laundering by a build-adjacent probe', 
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // The build ran (the rewrite is post-build) but nothing deployed.
     expect(trace).toContain('build');
     expect(wranglerArgs.some((a) => a[0] === 'deploy')).toBe(false);
   });
@@ -7094,7 +6841,7 @@ describe('runCloudflareDeploy — env-schema probe loads lazily', () => {
     .join('\n');
 
   it('loads the env-schema probe via a dynamic import() (never a static module-scope import)', () => {
-    // deploy.ts must only `import type` from the probe at module scope; the runtime helper
+    // Decision: deploy.ts must only `import type` from the probe at module scope; the runtime helper
     // loads via dynamic import() inside the fork, so a managed deploy never pulls the probe in.
     const staticImports = [
       ...deploySource.matchAll(/^import\s+([^']*?)\s+from\s+'\.\/env-schema-probe\.ts';/gm),
@@ -7106,22 +6853,16 @@ describe('runCloudflareDeploy — env-schema probe loads lazily', () => {
   });
 
   it('the env-schema probe imports env-validation only dynamically and no backend statically', () => {
-    // The probe is imported (dynamically) during a self-host deploy, but a plain LIBRARY import of
-    // it (the parent-side helper) must not eagerly evaluate env-validation (which pulls Vite / the
-    // env stack), and it must never statically pull Vite / provision / Better Auth / proper-lockfile
-    // into any bundle.
     const probeSource = readFileSync(
       join(import.meta.dirname, '../../src/cli/env-schema-probe.ts'),
       'utf-8',
     );
-    // env-validation is loaded dynamically only — its static import is TYPE-only.
     const staticEnvValidation = new RegExp(
       "^import\\s+(?!type\\b)[^;]*?\\s+from\\s+'\\./env-validation\\.ts';",
       'gm',
     );
     expect(probeSource).not.toMatch(staticEnvValidation);
     expect(probeSource).toContain("await import('./env-validation.ts')");
-    // No static backend imports at all (Vite / provision / Better Auth / proper-lockfile).
     expect(probeSource).not.toMatch(/from\s+'vite'/);
     expect(probeSource).not.toMatch(/from\s+'\.\/provision\.ts'/);
     expect(probeSource).not.toMatch(/better-auth/);
@@ -7129,22 +6870,9 @@ describe('runCloudflareDeploy — env-schema probe loads lazily', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Framework-class guard: only Class-A framework SSR coheres with
-// this backend (full bwf plugin stack + CF Vite plugin). Class B/C get a
-// lighter bwf composition that emits no worker artifact here — reject early.
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Stale deploy pointer: the pointer is deleted before building, so a
-// build that emits no fresh one (auto-static / Class B/C) can never upload old
-// code — the verification fails closed on the missing pointer.
-// ---------------------------------------------------------------------------
-
 describe('runCloudflareDeploy — stale deploy pointer', () => {
   it('fails closed (no deploy) when the build emits no fresh pointer over a stale one', async () => {
     const root = d1Project(PROVISIONED_D1);
-    // Plant a STALE pointer + target that WOULD pass the account/name identity check.
     mkdirSync(join(root, '.wrangler', 'deploy'), { recursive: true });
     mkdirSync(join(root, 'dist', 'ssr'), { recursive: true });
     writeFileSync(
@@ -7155,12 +6883,10 @@ describe('runCloudflareDeploy — stale deploy pointer', () => {
       join(root, '.wrangler', 'deploy', 'config.json'),
       JSON.stringify({ configPath: '../../dist/ssr/wrangler.json' }),
     );
-    // A build that does NOT re-create the pointer (a non-CF/static build class).
     const { deps, trace, exitCalls } = harness({
       runBuild: () => {
         trace.push('build');
       },
-      // Use the REAL verifier so the deleted-then-not-recreated pointer fails closed.
       verifyDeployConfig: verifyGeneratedDeployConfig,
     });
     await expect(
@@ -7171,12 +6897,6 @@ describe('runCloudflareDeploy — stale deploy pointer', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Env-only account pin: the CF plugin copies account_id only from the
-// root config, so the reconciled account is persisted there before the build —
-// making the documented CLOUDFLARE_ACCOUNT_ID pin actually reach deploy.
-// ---------------------------------------------------------------------------
-
 describe('runCloudflareDeploy — env-only account pin', () => {
   it('persists CLOUDFLARE_ACCOUNT_ID into the root config and reaches deploy without --provision', async () => {
     vi.stubEnv('CLOUDFLARE_ACCOUNT_ID', 'env-acc-999');
@@ -7184,7 +6904,6 @@ describe('runCloudflareDeploy — env-only account pin', () => {
       'package.json': JSON.stringify({ name: 'myapp' }),
       'bwf.json': JSON.stringify({}),
       'routes/index.ts': `export const GET = (c) => c.env.DB.prepare('SELECT 1').first();`,
-      // Root config has NO account_id — only the env var pins the account.
       'wrangler.jsonc': JSON.stringify(
         {
           name: 'myapp',
@@ -7203,19 +6922,13 @@ describe('runCloudflareDeploy — env-only account pin', () => {
     });
     const { deps, trace } = harness();
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-    // Reaches deploy (does not false-stop on a missing generated account_id)...
     expect(trace).toContain('wrangler:deploy');
-    // ...because the env pin was persisted into the root config the build reads.
     const written = JSON.parse(readFileSync(join(root, 'wrangler.jsonc'), 'utf-8')) as {
       account_id?: string;
     };
     expect(written.account_id).toBe('env-acc-999');
   });
 });
-
-// ---------------------------------------------------------------------------
-// Migrations dir/intent + auth tables
-// ---------------------------------------------------------------------------
 
 describe('runCloudflareDeploy — migrations dir / count / auth', () => {
   it('carries the sourceDir-aware config-relative migrations_dir into the desired set', async () => {
@@ -7234,11 +6947,9 @@ describe('runCloudflareDeploy — migrations dir / count / auth', () => {
   });
 
   it('runs the drift/journal gate but skips the wrangler apply when a D1 app has no migrations', async () => {
-    const root = d1Project(PROVISIONED_D1); // migrations_dir set, but NO .sql files
+    const root = d1Project(PROVISIONED_D1);
     const { deps, wranglerArgs, trace } = harness();
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-    // The drift/journal gate runs for every D1 app, but wrangler fails on an empty or absent
-    // migrations folder, so the apply/list is skipped.
     expect(trace).toContain('migrate-gate');
     expect(wranglerArgs.some((a) => a[0] === 'd1')).toBe(false);
     expect(trace).toContain('wrangler:deploy');
@@ -7266,9 +6977,6 @@ describe('runCloudflareDeploy — migrations dir / count / auth', () => {
         2,
       ),
     });
-    // Simulate the build's generated auth schema (ground truth) requiring a `user` table, with
-    // NO checked-in migration to create it → the REAL post-build auth check fails closed
-    // (applying the migrations to in-memory SQLite leaves `user` absent).
     writeAuthSchemaArtifact(root, [{ name: 'user', fields: ['email'] }]);
     const { deps, trace, wranglerArgs, exitCalls } = harness({
       validateAuthMigrations: validateAuthMigrationSchema,
@@ -7277,7 +6985,6 @@ describe('runCloudflareDeploy — migrations dir / count / auth', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // The auth check runs POST-build (against ground truth); it blocks the remote migrate + deploy.
     expect(trace).toContain('build');
     expect(wranglerArgs.some((a) => a[0] === 'd1')).toBe(false);
     expect(trace).not.toContain('wrangler:deploy');
@@ -7306,8 +7013,6 @@ describe('runCloudflareDeploy — migrations dir / count / auth', () => {
         2,
       ),
     });
-    // The schema validator is stubbed (harness default) — dedicated tests exercise the real
-    // schema check; here we assert the guard lets a satisfied auth app proceed to deploy.
     const { deps, trace } = harness();
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
     expect(trace).toContain('auth-secret');
@@ -7396,10 +7101,7 @@ describe('runCloudflareDeploy — migrations dir / count / auth', () => {
   });
 });
 
-// The auth schema is checked by applying the migrations to an in-memory SQLite database.
-
 describe('assertMigrationsProduceAuthSchema', () => {
-  /** A required column with no constraint attached — presence is all that is asserted. */
   const col = (column: string): { column: string; unique: boolean } => ({ column, unique: false });
 
   const required = [
@@ -7417,7 +7119,6 @@ describe('assertMigrationsProduceAuthSchema', () => {
       ],
       required,
     );
-    // no throw
   });
 
   it('rejects when a required table is missing (token search would miss a renamed/commented one)', async () => {
@@ -7466,13 +7167,6 @@ describe('assertMigrationsProduceAuthSchema', () => {
     ).rejects.toThrow(/could not be applied/);
   });
 
-  // -------------------------------------------------------------------------
-  // Constraints, not just names. bwf ships no auth migration scaffolder, so a
-  // hand-written `db/schema.ts` + `bwf db generate` can produce every correct
-  // NAME while omitting Drizzle's opt-in `.unique()` / `.references()`.
-  // -------------------------------------------------------------------------
-
-  /** `user.email` unique + `session.userId` → `user.id`, as the real build emits them. */
   const constrained = [
     {
       table: 'user',
@@ -7672,14 +7366,6 @@ describe('assertMigrationsProduceAuthSchema', () => {
     ).rejects.toThrow(/user.*email[\s\S]*session.*userId|session.*userId[\s\S]*user.*email/);
   });
 
-  // -------------------------------------------------------------------------
-  // Identifier CASING. SQLite resolves identifiers case-insensitively, but
-  // `sqlite_master.name` and every PRAGMA echo back the casing the migration
-  // DECLARED. A migration written as `CREATE TABLE "User" ("Email" TEXT UNIQUE)`
-  // is fully functional — lowercase SELECTs resolve, the UNIQUE constraint
-  // enforces — so the gate must not reject it as missing.
-  // -------------------------------------------------------------------------
-
   const CASED_USER = 'CREATE TABLE "User" ("Id" text primary key, "Email" text, "Name" text);';
   const CASED_USER_UNIQUE_EMAIL =
     'CREATE TABLE "User" ("Id" text primary key, "Email" text UNIQUE, "Name" text);';
@@ -7721,7 +7407,7 @@ describe('assertMigrationsProduceAuthSchema', () => {
   });
 
   it('accepts a differently-cased single-column PRIMARY KEY as satisfying UNIQUE', async () => {
-    // `Email` carries the PRIMARY KEY here — that is what makes it satisfy the `unique`
+    // Decision: `Email` carries the PRIMARY KEY here — that is what makes it satisfy the `unique`
     // requirement, and it is the point of this test. `Id` is then declared UNIQUE so the
     // session foreign key still has a valid parent key to point at; without that the
     // migration would produce a schema SQLite rejects at runtime, which is a different
@@ -7786,11 +7472,10 @@ describe('assertMigrationsProduceAuthSchema', () => {
     );
   });
 
-  // A parent key must be a PRIMARY KEY or a UNIQUE index matching the reference (collation
+  // Decision: A parent key must be a PRIMARY KEY or a UNIQUE index matching the reference (collation
   // included). Otherwise `CREATE TABLE` accepts the foreign key, but every statement on the child
   // fails at prepare time under `foreign_keys=ON`. SQLite itself decides (`foreign_key_check`).
 
-  /** The parent key is a UNIQUE index, but declared under a DIFFERENT collation. */
   it('fails closed when the parent id is only unique under a differing COLLATE', async () => {
     await expect(
       assertMigrationsProduceAuthSchema(
@@ -7866,7 +7551,7 @@ describe('assertMigrationsProduceAuthSchema', () => {
     );
   });
 
-  // An auth reference must be its own single-column foreign key: under MATCH SIMPLE a composite
+  // Decision: An auth reference must be its own single-column foreign key: under MATCH SIMPLE a composite
   // key is skipped whenever any child column is NULL. `foreign_key_list` lists one row per column
   // and `foreign_key_check` only finds orphaned rows, so neither catches it on an empty database.
 
@@ -7913,8 +7598,6 @@ describe('assertMigrationsProduceAuthSchema', () => {
   });
 
   it('accepts a single-column foreign key on a table that also declares a composite one', async () => {
-    // The composite constraint is unrelated to the auth reference; the single-column foreign
-    // key on `userId` is what satisfies it, and grouping by constraint id must not lose it.
     await assertMigrationsProduceAuthSchema(
       [
         {
@@ -7931,8 +7614,6 @@ describe('assertMigrationsProduceAuthSchema', () => {
   });
 
   it('does not fail on an unrelated application table with its own broken foreign key', async () => {
-    // The gate is scoped to the auth tables; a user's own schema problem elsewhere is not
-    // this check's business and must not block a deploy on the auth path.
     await assertMigrationsProduceAuthSchema(
       [
         {
@@ -7948,14 +7629,8 @@ describe('assertMigrationsProduceAuthSchema', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// The post-build auth-schema check reads the schema the BUILD generated
-// (`.bwf/better-auth-schema.ts`, ground truth) and asserts the checked-in
-// migrations produce it — applied to in-memory SQLite, not a token search.
-// ---------------------------------------------------------------------------
-
 describe("validateAuthMigrationSchema — reads the build's generated auth schema", () => {
-  // The real build emits every auth column NOT NULL except a handful of optional ones (see
+  // Decision: The real build emits every auth column NOT NULL except a handful of optional ones (see
   // `playground/kitchen-sink/.bwf/better-auth-schema.ts`), and always
   // `.primaryKey().notNull()` for `id` — so these fixtures spell that out.
   const USER =
@@ -7968,8 +7643,6 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
   it('passes when the checked-in migrations produce the emitted schema', async () => {
     const root = makeProject({ 'package.json': JSON.stringify({ name: 'authapp' }) });
     writeAuthSchemaArtifact(root, [{ name: 'user', fields: ['email', 'name'] }]);
-    // Applying the migration to in-memory SQLite yields `user(id, email, name)` — the exact
-    // emitted schema — so the check resolves (no throw).
     await validateAuthMigrationSchema(root, [
       {
         name: '0000.sql',
@@ -7982,7 +7655,6 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
     const root = makeProject({ 'package.json': JSON.stringify({ name: 'authapp' }) });
     writeAuthSchemaArtifact(root, [{ name: 'user', fields: ['email', 'name'] }]);
     await expect(
-      // Creates `user` WITHOUT the required `name` column → fails closed against ground truth.
       validateAuthMigrationSchema(root, [
         {
           name: '0000.sql',
@@ -7994,13 +7666,11 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
 
   it('fails closed when the build did not emit the auth-schema artifact', async () => {
     const root = makeProject({ 'package.json': JSON.stringify({ name: 'authapp' }) });
-    // No writeAuthSchemaArtifact — the build produced no schema to read as ground truth.
     await expect(validateAuthMigrationSchema(root, [])).rejects.toThrow(
       /did not emit|better-auth-schema/,
     );
   });
 
-  /** The emitted artifact as the real build writes it: unique email + session → user FK. */
   function writeConstrainedAuthArtifact(root: string): void {
     writeAuthSchemaArtifact(root, [
       { name: 'user', fields: [{ name: 'email', unique: true }, 'name'] },
@@ -8020,7 +7690,6 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
       validateAuthMigrationSchema(root, [
         {
           name: '0000.sql',
-          // Every table and column name is correct — only `.unique()` was never applied.
           sql:
             'CREATE TABLE "user" (id text primary key not null, email text not null, name text not null);\n' +
             SESSION_EXPLICIT_FK,
@@ -8028,16 +7697,6 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
       ]),
     ).rejects.toThrow(/table "user" is missing a UNIQUE constraint on column\(s\): email/);
   });
-
-  // -------------------------------------------------------------------------
-  // The implicit `id`. It is absent from the emitted artifact's `fields` (see
-  // `playground/kitchen-sink/.bwf/better-auth-schema.ts` — `user` starts at `name`),
-  // so the synthesized descriptor is the only thing representing it. SQLite only
-  // accepts a UNIQUELY CONSTRAINED parent key: point a foreign key at an ordinary
-  // column and `CREATE TABLE` succeeds, `PRAGMA foreign_key_list` still reports the
-  // constraint, and then every statement touching the child fails at prepare time
-  // with `foreign key mismatch` under `foreign_keys=ON` — which D1 always enforces.
-  // -------------------------------------------------------------------------
 
   const ID_MUST_BE_UNIQUE = /table "user" column "id" must be the PRIMARY KEY/;
 
@@ -8048,9 +7707,6 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
       validateAuthMigrationSchema(root, [
         {
           name: '0000.sql',
-          // Every name, the unique email and the session FK are all present — only `user.id`
-          // was never marked `.primaryKey()`, which SQLite accepts at DDL time and rejects
-          // at runtime.
           sql:
             'CREATE TABLE "user" (id text not null, email text not null UNIQUE, name text not null);\n' +
             SESSION_EXPLICIT_FK,
@@ -8159,15 +7815,6 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
     ]);
   });
 
-  // -------------------------------------------------------------------------
-  // An omitted foreign-key target column (`REFERENCES "user"`). SQLite resolves it
-  // ONLY to the parent's single-column PRIMARY KEY — a merely UNIQUE parent key works
-  // for an EXPLICIT `REFERENCES "user"(id)` but not for the shorthand, and a composite
-  // PRIMARY KEY cannot serve as the target either. `PRAGMA foreign_key_list` reports
-  // `to: null` in every one of those cases with no indication that anything is wrong,
-  // so the parent's own `table_info` is the only place the answer lives.
-  // -------------------------------------------------------------------------
-
   const IMPLICIT_FK_NOT_PK = /references "user" without naming a target column/;
 
   it('fails closed on an implicit REFERENCES when the parent id is UNIQUE but not the PRIMARY KEY', async () => {
@@ -8177,8 +7824,6 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
       validateAuthMigrationSchema(root, [
         {
           name: '0000.sql',
-          // `user.id` is a perfectly good parent key for an explicit reference, but the
-          // shorthand below resolves to a PRIMARY KEY that does not exist.
           sql:
             'CREATE TABLE "user" (id text not null unique, email text not null UNIQUE, name text not null);\n' +
             SESSION_IMPLICIT_FK,
@@ -8202,8 +7847,6 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
       validateAuthMigrationSchema(root, [
         {
           name: '0000.sql',
-          // `id` carries its own UNIQUE constraint, so it passes the identity check — the
-          // only problem left is that the shorthand cannot resolve to `PRIMARY KEY (id, name)`.
           sql:
             'CREATE TABLE "user" (id text not null unique, email text not null UNIQUE, ' +
             'name text not null, PRIMARY KEY (id, name));\n' +
@@ -8212,13 +7855,6 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
       ]),
     ).rejects.toThrow(IMPLICIT_FK_NOT_PK);
   });
-
-  // -------------------------------------------------------------------------
-  // NOT NULL. SQLite permits NULL in any PRIMARY KEY column that is not the INTEGER
-  // rowid alias — a file-format compatibility quirk — so `id text primary key` alone
-  // accepts rows with no identity, and more than one of them, because NULLs never
-  // collide under a unique constraint.
-  // -------------------------------------------------------------------------
 
   const ID_MUST_BE_NOT_NULL = /table "user" column "id" must be declared NOT NULL/;
 
@@ -8249,7 +7885,7 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
   it('accepts `id integer primary key asc` — also a true rowid alias', async () => {
     const root = makeProject({ 'package.json': JSON.stringify({ name: 'authapp' }) });
     writeAuthSchemaArtifact(root, [{ name: 'user', fields: ['name'] }]);
-    // `ASC` on an INTEGER PRIMARY KEY is the plain alias spelled out; SQLite materializes no
+    // Decision: `ASC` on an INTEGER PRIMARY KEY is the plain alias spelled out; SQLite materializes no
     // primary-key index for it and assigns a rowid on a NULL insert.
     await validateAuthMigrationSchema(root, [
       {
@@ -8262,7 +7898,7 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
   it('fails closed on `id integer primary key desc` — declared INTEGER, but not the rowid alias', async () => {
     const root = makeProject({ 'package.json': JSON.stringify({ name: 'authapp' }) });
     writeAuthSchemaArtifact(root, [{ name: 'user', fields: ['name'] }]);
-    // A SQLite quirk: `DESC` makes this an ORDINARY primary key, so a NULL insert stores NULL
+    // Decision: A SQLite quirk: `DESC` makes this an ORDINARY primary key, so a NULL insert stores NULL
     // and the table accepts rows with no identity. `PRAGMA table_info` reports it exactly like
     // the real alias (`type = INTEGER`, `pk = 1`, `notnull = 0`) — only the `origin = 'pk'`
     // row SQLite materializes in `PRAGMA index_list` tells them apart.
@@ -8279,7 +7915,7 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
   it('does not extend the rowid-alias exception to `int primary key` (which really does store NULL)', async () => {
     const root = makeProject({ 'package.json': JSON.stringify({ name: 'authapp' }) });
     writeAuthSchemaArtifact(root, [{ name: 'user', fields: ['name'] }]);
-    // Only an exact `INTEGER` declared type makes a primary key the rowid alias.
+    // Decision: Only an exact `INTEGER` declared type makes a primary key the rowid alias.
     await expect(
       validateAuthMigrationSchema(root, [
         { name: '0000.sql', sql: 'CREATE TABLE "user" (id int primary key, name text not null);' },
@@ -8305,7 +7941,7 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
     writeAuthSchemaArtifact(root, [
       { name: 'user', fields: [{ name: 'email', unique: true }, 'name'] },
     ]);
-    // The discriminator is the index ORIGIN, not the index COUNT: a column-level UNIQUE adds an
+    // Decision: The discriminator is the index ORIGIN, not the index COUNT: a column-level UNIQUE adds an
     // `origin = 'u'` row and a `CREATE UNIQUE INDEX` an `origin = 'c'` row, neither of which
     // stops the primary key from being the rowid alias.
     await validateAuthMigrationSchema(root, [
@@ -8327,7 +7963,6 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
       validateAuthMigrationSchema(root, [
         {
           name: '0000.sql',
-          // `email` keeps its UNIQUE constraint and its name — only NOT NULL was dropped.
           sql: 'CREATE TABLE "user" (id text primary key not null, email text UNIQUE, name text not null);',
         },
       ]),
@@ -8338,7 +7973,6 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
 
   it('does not require NOT NULL for a field the emitted schema marks optional', async () => {
     const root = makeProject({ 'package.json': JSON.stringify({ name: 'authapp' }) });
-    // `user.image` is `required: false` in the real artifact.
     writeAuthSchemaArtifact(root, [
       { name: 'user', fields: ['name', { name: 'image', required: false }] },
     ]);
@@ -8350,10 +7984,6 @@ describe("validateAuthMigrationSchema — reads the build's generated auth schem
     ]);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Remote D1 migration safety gates
-// ---------------------------------------------------------------------------
 
 describe('runCloudflareDeploy — remote migration gates', () => {
   it('fails closed before applying when the deploy migration gate throws (drift/journal/destructive)', async () => {
@@ -8367,7 +7997,6 @@ describe('runCloudflareDeploy — remote migration gates', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // The gate runs post-build against the live files, before the remote apply.
     expect(wranglerArgs.some((a) => a[0] === 'd1')).toBe(false);
     expect(trace).toContain('build');
     expect(trace).not.toContain('wrangler:deploy');
@@ -8382,7 +8011,6 @@ describe('runCloudflareDeploy — remote migration gates', () => {
         if (args[0] === 'whoami') {
           return { ...cleanExit, stdout: '{"loggedIn":true,"accounts":[]}' };
         }
-        // `apply` exits 0 (a declined no-op); `list` still reports pending.
         if (args[0] === 'd1' && args[2] === 'list') {
           return { ...cleanExit, stdout: 'Migrations to be applied:\n0000_init' };
         }
@@ -8402,7 +8030,6 @@ describe('runCloudflareDeploy — remote migration gates', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // Reached the post-apply list, then failed closed before the deploy.
     expect(localTrace).toContain('wrangler:d1:apply');
     expect(localTrace).toContain('wrangler:d1:list');
     expect(localTrace).toContain('build');
@@ -8418,14 +8045,13 @@ describe('runCloudflareDeploy — remote migration gates', () => {
         if (args[0] === 'whoami') {
           return { ...cleanExit, stdout: '{"loggedIn":true,"accounts":[]}' };
         }
-        // The pre-apply list sees the pending migration, so a restore point is saved.
         if (args[0] === 'd1' && args[2] === 'list' && !localTrace.includes('wrangler:d1:apply')) {
           return { ...cleanExit, stdout: 'Migrations to be applied:\n0000_init' };
         }
         if (args[0] === 'd1' && args[1] === 'time-travel') {
           return { ...cleanExit, stdout: JSON.stringify({ bookmark: '00000085-0000024c' }) };
         }
-        // `apply` and the post-apply `list` exit 0 with EMPTY stdout — the failure mode when an
+        // Decision: `apply` and the post-apply `list` exit 0 with EMPTY stdout — the failure mode when an
         // ambient WRANGLER_LOG suppressed the sentinel. Require the affirmative marker.
         return cleanExit;
       }),
@@ -8437,7 +8063,6 @@ describe('runCloudflareDeploy — remote migration gates', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // Never trusts an absent marker — fails closed before DEPLOY (the build already ran).
     expect(localTrace.filter((entry) => entry.startsWith('wrangler:d1:'))).toEqual([
       'wrangler:d1:list',
       'wrangler:d1:info',
@@ -8452,7 +8077,6 @@ describe('runCloudflareDeploy — remote migration gates', () => {
   describe('a failure after the D1 migrations were applied', () => {
     const bookmark = '00000085-0000024c';
 
-    // Pending until the apply runs, then current.
     function migratingWrangler(pending: boolean): DeployWranglerRun {
       let applied = false;
       return operationFixture((args) => {
@@ -8495,7 +8119,6 @@ describe('runCloudflareDeploy — remote migration gates', () => {
       const { deps } = harness({
         runWrangler: migratingWrangler(true),
         activateVersion: async () => ({ ok: false, reason: 'upload-failed', status: 1 }),
-        // process.exit never returns, so the restore point must be named before it.
         exit: (code) => {
           order.push('exit');
           throw new ExitError(code);
@@ -8509,7 +8132,6 @@ describe('runCloudflareDeploy — remote migration gates', () => {
         expect(order).toEqual(['restore', 'exit']);
         expect(reported).toHaveLength(1);
         expect(reported[0]).toContain('Fix the error and deploy again.');
-        // The test project saves no platform, so the command names it.
         expect(reported[0]).toContain(
           `bwf db restore --platform cloudflare --bookmark=${bookmark}`,
         );
@@ -8574,12 +8196,10 @@ describe('runCloudflareDeploy — remote migration gates', () => {
   });
 });
 
-// The exact set wrangler will apply must equal the gated source set.
-
 describe('checkWranglerMigrationApplySet', () => {
   function configFor(dir: string, pattern?: string): Record<string, unknown> {
     const entry: Record<string, unknown> = { binding: 'DB', migrations_dir: dir };
-    // `!== undefined` (not truthiness) so an explicit EMPTY pattern (`""`) is set —
+    // Decision: `!== undefined` (not truthiness) so an explicit EMPTY pattern (`""`) is set —
     // a present-but-empty pattern is still custom and must be rejected.
     if (pattern !== undefined) {
       entry.migrations_pattern = pattern;
@@ -8659,7 +8279,7 @@ describe('checkWranglerMigrationApplySet', () => {
   });
 
   it('rejects when wrangler would apply in a DIFFERENT order (unpadded numeric prefix)', async () => {
-    // `2_*.sql` and `10_*.sql` sort DIFFERENTLY for wrangler (numeric: 2 < 10) than for bwf's
+    // Decision: `2_*.sql` and `10_*.sql` sort DIFFERENTLY for wrangler (numeric: 2 < 10) than for bwf's
     // collectMigrations (lexicographic: "10" < "2"). The set is equal but the apply ORDER
     // diverges, so remote D1 would receive them out of the validated order — reject.
     const root = makeProject({
@@ -8672,7 +8292,6 @@ describe('checkWranglerMigrationApplySet', () => {
       configFor('./db/migrations'),
       'DB',
       './db/migrations',
-      // collectMigrations' lexicographic order: 10_late before 2_early.
       [
         { name: '10_late.sql', sql: 'CREATE TABLE b (id integer);' },
         { name: '2_early.sql', sql: 'CREATE TABLE a (id integer);' },
@@ -8814,13 +8433,6 @@ describe('compareWranglerMigrationPaths (wrangler numeric-prefix comparator)', (
   });
 });
 
-// ---------------------------------------------------------------------------
-// Post-build ground-truth secret gate: the parent builds the values-free context
-// from the REAL emitted `vars` + the env-insensitive required names, then
-// discharges it. A server key shipped as a plaintext var fails closed post-build; a
-// pre-build schema-probe failure fails closed before any account op.
-// ---------------------------------------------------------------------------
-
 describe('runCloudflareDeploy — post-build ground-truth secret gate', () => {
   it('rejects a pending Durable Object class migration before database or secret mutation', async () => {
     const root = d1Project(PROVISIONED_D1, INIT_MIGRATION);
@@ -8850,7 +8462,6 @@ describe('runCloudflareDeploy — post-build ground-truth secret gate', () => {
     'rejects a schema-declared server key emitted as a plaintext Worker var with $shipped',
     async ({ value }) => {
       const root = d1Project(PROVISIONED_D1);
-      // The plaintext server-key gate checks presence, so empty and null values fail closed too.
       const { deps, trace, wranglerArgs, exitCalls } = harness({
         resolveSchemaFacts: (() =>
           okSchemaFacts({
@@ -8977,8 +8588,6 @@ describe('runCloudflareDeploy — post-build ground-truth secret gate', () => {
       }) as CloudflareDeployDeps['dischargeSelfHostEnv'],
     });
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-    // STRIPE_KEY is absent from the emitted vars → the gate sees it as absentRequired (the
-    // remote secret discharges it); nothing is invalid.
     expect(captured).toEqual({
       hasSchema: true,
       absentRequired: ['STRIPE_KEY'],
@@ -8990,7 +8599,6 @@ describe('runCloudflareDeploy — post-build ground-truth secret gate', () => {
   it('fails closed when the build emits a MALFORMED vars field (array/scalar)', async () => {
     const root = d1Project(PROVISIONED_D1);
     const { deps, trace, exitCalls } = harness({
-      // A present-but-non-object `vars` must fail closed, never normalize to an empty map.
       readEmittedWorkerVars: (() => ({
         ok: false,
         reason: 'the generated wrangler config has a malformed "vars" field (expected an object).',
@@ -9014,7 +8622,6 @@ describe('runCloudflareDeploy — post-build ground-truth secret gate', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // Derived pre-build — before whoami / provision / build.
     expect(trace).toEqual([]);
   });
 
@@ -9034,12 +8641,6 @@ describe('runCloudflareDeploy — post-build ground-truth secret gate', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// NODE_ENV pin — the facts probe evaluates env.ts under the build's environment
-// (NODE_ENV=production), so a required set conditioned on NODE_ENV matches the
-// built worker's, and the parent passes that pinned env to the probe.
-// ---------------------------------------------------------------------------
-
 describe('runCloudflareDeploy — schema probe runs under the build NODE_ENV', () => {
   it('passes NODE_ENV=production to the probe env', async () => {
     const root = d1Project(PROVISIONED_D1);
@@ -9051,13 +8652,11 @@ describe('runCloudflareDeploy — schema probe runs under the build NODE_ENV', (
       }) as CloudflareDeployDeps['resolveSchemaFacts'],
     });
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
-    // The build sets NODE_ENV=production; the probe env is pinned to match so a schema
-    // conditioned on NODE_ENV derives the SAME required set the build would.
     expect(capturedNodeEnv).toBe('production');
   });
 
   it('pins NODE_ENV=production for the BUILD too (vite only defaults it when unset)', async () => {
-    // An ambient NODE_ENV=development would otherwise make `vite build` evaluate a development
+    // Decision: An ambient NODE_ENV=development would otherwise make `vite build` evaluate a development
     // schema while the probe (pinned production) derives a production one.
     vi.stubEnv('NODE_ENV', 'development');
     let buildNodeEnv: string | undefined = 'UNSET';
@@ -9116,13 +8715,6 @@ describe('runCloudflareDeploy — schema probe runs under the build NODE_ENV', (
   });
 });
 
-// ---------------------------------------------------------------------------
-// `vite build` runs UNTRUSTED project code (the user's config, every plugin, env.ts)
-// and authenticates against nothing, so it gets the same credential scrub as the
-// isolated probes. The wrangler runner must keep them — whoami / d1 migrations apply
-// / deploy are the calls that actually need an account credential.
-// ---------------------------------------------------------------------------
-
 describe('runCloudflareDeploy — wrangler credentials reach only the wrangler runner', () => {
   it('the BUILD child env carries none of the wrangler auth credentials', async () => {
     let buildEnvSeen: NodeJS.ProcessEnv = {};
@@ -9156,12 +8748,6 @@ describe('runCloudflareDeploy — wrangler credentials reach only the wrangler r
   });
 });
 
-// ---------------------------------------------------------------------------
-// Emitted-value validation (invalid required value) — a required var shipped with
-// a MALFORMED value fails the deploy closed BEFORE any remote mutation, not only at
-// worker boot.
-// ---------------------------------------------------------------------------
-
 describe('runCloudflareDeploy — invalid emitted value fails closed pre-remote', () => {
   const invalidPortHarness = (overrides: Partial<CloudflareDeployDeps> = {}) =>
     harness({
@@ -9175,7 +8761,6 @@ describe('runCloudflareDeploy — invalid emitted value fails closed pre-remote'
         emittedVars({
           VITE_PORT: 'not-a-number',
         })) as CloudflareDeployDeps['readEmittedWorkerVars'],
-      // Use the REAL discharge so the invalidKeys folded in by the probe actually fail closed.
       dischargeSelfHostEnv: undefined,
       ...overrides,
     });
@@ -9183,7 +8768,6 @@ describe('runCloudflareDeploy — invalid emitted value fails closed pre-remote'
   it('fails closed (no remote apply / deploy) when a required emitted value is schema-invalid', async () => {
     const root = d1Project(PROVISIONED_D1, INIT_MIGRATION);
     const { deps, trace, wranglerArgs, exitCalls } = invalidPortHarness({
-      // The probe reports the client build value invalid.
       validateEmittedVars: (async () => ({
         kind: 'invalid-keys',
         invalidKeys: ['VITE_PORT'],
@@ -9193,7 +8777,6 @@ describe('runCloudflareDeploy — invalid emitted value fails closed pre-remote'
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // Caught POST-build (ground truth) but BEFORE any remote D1 apply, secret list, or deploy.
     expect(trace).toContain('build');
     expect(wranglerArgs.some((a) => a[0] === 'd1')).toBe(false);
     expect(wranglerArgs.some((a) => a[0] === 'secret')).toBe(false);
@@ -9205,7 +8788,6 @@ describe('runCloudflareDeploy — invalid emitted value fails closed pre-remote'
     const { deps, trace } = invalidPortHarness({
       readEmittedWorkerVars: (() =>
         emittedVars({ VITE_PORT: '8080' })) as CloudflareDeployDeps['readEmittedWorkerVars'],
-      // No key is invalid, so the gate makes no wrangler call.
       validateEmittedVars: (async () => ({
         kind: 'invalid-keys',
         invalidKeys: [],
@@ -9231,26 +8813,17 @@ describe('runCloudflareDeploy — invalid emitted value fails closed pre-remote'
   });
 });
 
-// ---------------------------------------------------------------------------
-// Post-build migration re-check — the local migration gates run AFTER the build,
-// against the LIVE post-build files, so a build that adds/rewrites migration SQL
-// can never reach remote D1 ungated.
-// ---------------------------------------------------------------------------
-
 describe('runCloudflareDeploy — migration gates re-checked post-build', () => {
   it('catches a migration the build REWRITES to be destructive (fails closed before remote apply)', async () => {
     const root = d1Project(PROVISIONED_D1, {
-      // Pre-build the migration is a clean, non-destructive CREATE TABLE — it would pass a
+      // Decision: Pre-build the migration is a clean, non-destructive CREATE TABLE — it would pass a
       // pre-build gate. No db/schema.ts, so the drift check short-circuits (no drizzle-kit).
       'db/migrations/0000_init.sql': `CREATE TABLE notes (id integer primary key);`,
     });
-    // Use the REAL migration gate (not the harness stub) so the post-build destructive check runs.
     const { deps, wranglerArgs, trace, exitCalls } = harness({
       assertMigrationsDeployable: undefined,
       runBuild: () => {
         trace.push('build');
-        // A build plugin rewrites the migration to a destructive, un-pragma'd DROP AFTER the
-        // pre-build point — exactly the window the post-build re-check closes.
         writeFileSync(join(root, 'db/migrations/0000_init.sql'), 'DROP TABLE notes;');
       },
     });
@@ -9258,8 +8831,6 @@ describe('runCloudflareDeploy — migration gates re-checked post-build', () => 
       runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // The build ran, but the post-build gate rejected the destructive migration before the
-    // remote D1 apply and before the deploy.
     expect(trace).toContain('build');
     expect(wranglerArgs.some((a) => a[0] === 'd1')).toBe(false);
     expect(trace).not.toContain('wrangler:deploy');
@@ -9269,12 +8840,11 @@ describe('runCloudflareDeploy — migration gates re-checked post-build', () => 
     const root = d1Project(PROVISIONED_D1, {
       'db/migrations/0000_init.sql': `CREATE TABLE notes (id integer primary key);`,
     });
-    // Use the REAL apply-set gate so it enumerates the LIVE dir after the build.
     const { deps, wranglerArgs, trace, exitCalls } = harness({
       checkMigrationApplySet: checkWranglerMigrationApplySet,
       runBuild: () => {
         trace.push('build');
-        // The build adds a stray seed.sql: collectMigrations skips it but wrangler's *.sql glob
+        // Decision: The build adds a stray seed.sql: collectMigrations skips it but wrangler's *.sql glob
         // would apply it — the post-build apply-set check catches the extra file.
         writeFileSync(join(root, 'db/migrations/seed.sql'), 'INSERT INTO notes VALUES (1);');
       },
@@ -9290,7 +8860,6 @@ describe('runCloudflareDeploy — migration gates re-checked post-build', () => 
 
   it('applies the post-build migrations in the normal case (build leaves them untouched)', async () => {
     const root = d1Project(PROVISIONED_D1, INIT_MIGRATION);
-    // REAL migration gate; the untouched migration passes post-build and is applied.
     const { deps, wranglerArgs, trace } = harness({ assertMigrationsDeployable: undefined });
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
     expect(trace).toContain('build');
@@ -9300,15 +8869,8 @@ describe('runCloudflareDeploy — migration gates re-checked post-build', () => 
   });
 });
 
-// ---------------------------------------------------------------------------
-// The REAL env-schema probe subprocess. The parent runs NO project code —
-// importing the user's env.ts happens in the child, whose framed result is
-// written to a DEDICATED fd (fd 3) so noisy stdout can't truncate it, and the
-// child sees ONLY the passed (scrubbed) env — never the parent's credentials.
-// ---------------------------------------------------------------------------
-
 describe('env-schema probe (real subprocess)', () => {
-  // The probe spawns a plain `node` on this repo's source `.ts`, so its runtime imports must use
+  // Decision: The probe spawns a plain `node` on this repo's source `.ts`, so its runtime imports must use
   // type-strippable syntax supported by Node without extra NODE_OPTIONS flags.
 
   it('does not start a child when no schema exists', async () => {
@@ -9348,7 +8910,7 @@ describe('env-schema probe (real subprocess)', () => {
       'env.ts': [
         `import { defineEnv } from ${JSON.stringify(srcEnvPublic)};`,
         `import { string } from ${JSON.stringify(srcEnvHelpers)};`,
-        // A huge stdout write proves the fd-3 result channel is not truncated by env.ts noise.
+        // Decision: A huge stdout write proves the fd-3 result channel is not truncated by env.ts noise.
         `console.log('x'.repeat(200000));`,
         `export default defineEnv({ STRIPE_KEY: string(), API_URL: string(), VITE_TITLE: string() });`,
       ].join('\n'),
@@ -9386,7 +8948,6 @@ describe('env-schema probe (real subprocess)', () => {
       token: string | null;
       id: string | null;
     };
-    // The child only ever sees the PASSED env — the scrubbed keys read as null.
     expect(leaked.token).toBeNull();
     expect(leaked.id).toBeNull();
   });
@@ -9396,8 +8957,6 @@ describe('env-schema probe (real subprocess)', () => {
     vi.stubEnv('CF_ACCESS_CLIENT_ID', 'super-secret-id');
     vi.stubEnv('CF_ACCESS_CLIENT_SECRET', 'super-secret-secret');
     const leakFile = join(tmpDir, 'orchestrator-leak.json');
-    // The env.ts LEAKS the three parent creds to a file; the orchestrator spawns the REAL
-    // probe (resolveSchemaFacts undefined → default subprocess seam) under a scrubbed env.
     const root = d1Project(PROVISIONED_D1, {
       'package.json': JSON.stringify({ name: 'myapp', type: 'module' }),
       'env.ts': [
@@ -9423,7 +8982,6 @@ describe('env-schema probe (real subprocess)', () => {
       id: string | null;
       secret: string | null;
     };
-    // The child (project env.ts) ran under the scrubbed env — none of the parent's creds.
     expect(leaked.token).toBeNull();
     expect(leaked.id).toBeNull();
     expect(leaked.secret).toBeNull();
@@ -9436,7 +8994,6 @@ describe('env-schema probe (real subprocess)', () => {
     });
     const r = await resolveEnvSchemaFactsViaSubprocess({ root }, { ...process.env });
     expect(r.kind).toBe('schema-error');
-    // The values-free boundary drops the original message, so the leak never reaches the result.
     expect(JSON.stringify(r)).not.toContain('SUPER_SECRET_LEAK_9999');
   });
 
@@ -9454,7 +9011,6 @@ describe('env-schema probe (real subprocess)', () => {
     if (r.kind === 'ok') {
       expect(r.facts).toEqual(facts);
     }
-    // A nonzero child exit fails closed (values-free) — the parent never trusts a partial result.
     const failSpawn = (): EnvSchemaProbeSpawnResult => ({
       status: 1,
       fd3: '',
@@ -9485,8 +9041,6 @@ describe('env-schema probe (real subprocess)', () => {
       'env.ts': [
         `import { defineEnv } from ${JSON.stringify(srcEnvPublic)};`,
         `import { string } from ${JSON.stringify(srcEnvHelpers)};`,
-        // PROD_SECRET is required only when NODE_ENV === 'production' — exactly the vector the
-        // pinned probe env closes.
         `const prod = process.env.NODE_ENV === 'production' ? { PROD_SECRET: string() } : {};`,
         `export default defineEnv({ API_URL: string(), ...prod });`,
       ].join('\n'),
@@ -9496,9 +9050,7 @@ describe('env-schema probe (real subprocess)', () => {
       const r = await resolveEnvSchemaFactsViaSubprocess({ root }, env);
       return r.kind === 'ok' ? [...r.facts.requiredKeys].sort() : [`<${r.kind}>`];
     };
-    // Under production (the pinned build env), PROD_SECRET is required — matching the worker.
     expect(await under('production')).toEqual(['API_URL', 'PROD_SECRET']);
-    // Under a non-production env it would NOT be — proving the pin is what makes them agree.
     expect(await under('development')).toEqual(['API_URL']);
   });
 
@@ -9510,7 +9062,6 @@ describe('env-schema probe (real subprocess)', () => {
         `import { number, string } from ${JSON.stringify(srcEnvHelpers)};`,
         `export default defineEnv({ PORT: number(), API_URL: string() });`,
       ].join('\n'),
-      // The build's emitted worker vars: PORT is present but malformed, API_URL is fine.
       '.wrangler/deploy/config.json': JSON.stringify({
         configPath: '../../dist/ssr/wrangler.json',
       }),
@@ -9546,7 +9097,6 @@ describe('env-schema probe (real subprocess)', () => {
   });
 
   it('the child env carries NONE of the full wrangler-auth credential set (all aliases scrubbed)', async () => {
-    // Every Cloudflare credential is set on the parent; the app's env.ts leaks what it sees.
     stubWranglerCredentials();
     const authVars = WRANGLER_AUTH_VARS;
     const leakFile = join(tmpDir, 'auth-scrub-leak.json');
@@ -9569,7 +9119,6 @@ describe('env-schema probe (real subprocess)', () => {
       harness({ resolveSchemaFacts: undefined }).deps,
     );
     const leaked = JSON.parse(readFileSync(leakFile, 'utf-8')) as Record<string, string | null>;
-    // The probe needs no credentials — the child sees none of them, canonical OR alias.
     for (const name of authVars) {
       expect(leaked[name]).toBeNull();
     }
@@ -9581,29 +9130,20 @@ describe('env-schema probe (real subprocess)', () => {
       'env.ts': [
         `import { defineEnv } from ${JSON.stringify(srcEnvPublic)};`,
         `import { string } from ${JSON.stringify(srcEnvHelpers)};`,
-        // Both channels are IGNORED by the parent (stdio fds 1+2), so this noise reaches nothing.
         `console.log('STDOUT_SECRET_7777');`,
         `console.error('STDERR_SECRET_8888');`,
         `export default defineEnv({ API_URL: string() });`,
       ].join('\n'),
     });
     const r = await resolveEnvSchemaFactsViaSubprocess({ root }, { ...process.env });
-    // fd 3 is a separate pipe, so the result parses cleanly despite the stdout/stderr noise…
     expect(r.kind).toBe('ok');
     if (r.kind === 'ok') {
       expect(r.facts.requiredKeys).toContain('API_URL');
     }
-    // …and neither printed secret rides along in the framed result.
     expect(JSON.stringify(r)).not.toContain('STDOUT_SECRET_7777');
     expect(JSON.stringify(r)).not.toContain('STDERR_SECRET_8888');
   });
 });
-
-// ---------------------------------------------------------------------------
-// `--skip-build` — every gate on this path reads the artifact `vite build`
-// emits, so there is nothing to validate without a build. Reject the combination
-// instead of silently ignoring the flag.
-// ---------------------------------------------------------------------------
 
 describe('runCloudflareDeploy — --skip-build is rejected', () => {
   it('rejects --skip-build pre-account — no whoami / provision / build / migrate / deploy', async () => {
@@ -9613,7 +9153,6 @@ describe('runCloudflareDeploy — --skip-build is rejected', () => {
       runCloudflareDeploy(root, { platform: 'cloudflare', skipBuild: true }, silentCliLog, deps),
     ).rejects.toBeInstanceOf(ExitError);
     expect(exitCalls).toEqual([1]);
-    // Pre-account: no seam ran at all.
     expect(trace).toEqual([]);
     expect(wranglerArgs).toEqual([]);
   });
@@ -9662,7 +9201,7 @@ describe('runCloudflareDeploy — wrangler autoconfig disabled', () => {
       'package.json': JSON.stringify({ name: 'onext' }),
       'bwf.json': JSON.stringify({}),
       'routes/index.ts': `export const GET = () => new Response('ok');`,
-      // An OpenNext-style marker: wrangler's autoconfig would otherwise delegate the
+      // Decision: An OpenNext-style marker: wrangler's autoconfig would otherwise delegate the
       // deploy to another tool. --autoconfig=false makes that impossible.
       'open-next.config.ts': `export default {};`,
       'wrangler.jsonc': JSON.stringify({ account_id: 'acc123', name: 'onext' }, null, 2),
@@ -9674,18 +9213,9 @@ describe('runCloudflareDeploy — wrangler autoconfig disabled', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Wrangler-uploader hash pin: the credentialed remote migrate / deploy execute the
-// resolved `wrangler-dist/cli.js` bundle (plus the sibling chunks it loads). The build
-// runs untrusted project code that can only edit FILES — including that bundle — so the
-// deploy snapshots its content hash before the build and re-checks it after, failing
-// closed if it changed or cannot be verified.
-// ---------------------------------------------------------------------------
-
 describe('hashWranglerUploader — content hash of the wrangler uploader bundle dir', () => {
   const distDir = join(tmpDir, 'fake-wrangler-dist');
 
-  /** Build a fake `wrangler-dist` dir and a resolver whose LAST argv element is its cli.js. */
   function makeFakeUploader(files: Record<string, string>): (root: string) => Array<string> {
     rmSync(distDir, { recursive: true, force: true });
     mkdirSync(distDir, { recursive: true });
@@ -9714,7 +9244,6 @@ describe('hashWranglerUploader — content hash of the wrangler uploader bundle 
   it('changes when a SIBLING chunk cli.js loads is overwritten (whole-dir surface)', () => {
     const resolveArgv = makeFakeUploader({ 'cli.js': 'entry', 'ProxyWorker.js': 'sibling' });
     const before = hashWranglerUploader(tmpDir, resolveArgv);
-    // cli.js is untouched; only the sibling changes — still caught.
     writeFileSync(join(distDir, 'ProxyWorker.js'), 'tampered-sibling');
     expect(hashWranglerUploader(tmpDir, resolveArgv)).not.toBe(before);
   });
@@ -9776,18 +9305,11 @@ describe('assertWranglerUploaderUnchanged', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Native Cloudflare email step. The email module itself is unit-tested in
-// email-cloudflare.test.ts on fakes; these tests pin the ORCHESTRATION: where the step sits,
-// what it spawns, what it writes, what it prints, and what it never leaks.
-// ---------------------------------------------------------------------------
-
 describe('runCloudflareDeploy — native Cloudflare email step', () => {
   const ZONE_ID = '5b66f5cb84fd7dcfdd0170515e622181';
   const BEARER = 'cfoa-SECRET-BEARER-TOKEN-0123456789abcdef';
   const BETA_WARNING = '▲ [WARNING] 🚧 `wrangler email x` is an open beta command.\n';
 
-  /** A worker-bearing D1 app with one inbound handler and `email.from` on a subdomain. */
   function emailProject(
     wrangler: Record<string, unknown> = PROVISIONED_D1,
     extraFiles: Record<string, string> = {},
@@ -9868,11 +9390,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
 
   type Spawn = { args: Array<string>; opts: { capture: boolean } };
 
-  /**
-   * A deploy runner keyed on the wrangler argv WITHOUT the `-c <cfg> --env=` context (asserted
-   * separately): the `whoami` / `auth token` / `email …` table for a first deploy,
-   * overridable per test. Unknown commands exit clean, as the base harness does.
-   */
   function emailRunner(
     overrides: Record<string, DeployWranglerRunResult>,
     spawns: Array<Spawn>,
@@ -9918,7 +9435,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
 
   type FetchCall = { method: string; path: string; body: string | undefined; auth: string };
 
-  /** The two bearer calls (+ the two preflight GETs), keyed `METHOD /zones…`; 200s by default. */
   function emailFetch(
     calls: Array<FetchCall>,
     overrides: Record<string, () => Response> = {},
@@ -9937,8 +9453,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
       }),
       [`POST /zones/${ZONE_ID}/email/routing/dns`]: ok({ enabled: true }),
       [`PATCH /zones/${ZONE_ID}/email/routing`]: ok({ support_subaddress: true }),
-      // Sending-only apps read and onboard Email Sending through the bearer: not onboarded
-      // yet, and onboarding succeeds (the inbound runner defaults above say the same).
       [`GET /zones/${ZONE_ID}/email/sending/subdomains`]: ok([]),
       [`POST /zones/${ZONE_ID}/email/sending/subdomains`]: ok({
         name: 'mail.acme.com',
@@ -9966,7 +9480,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     }) as typeof fetch;
   }
 
-  /** Public DNS for a first deploy: Google MX on the apex, nothing on the subdomain yet. */
   function emailDns(mx: Record<string, Array<string>> = {}): EmailDns {
     const noData = (): Error => Object.assign(new Error('ENODATA'), { code: 'ENODATA' });
     const records: Record<string, Array<string>> = {
@@ -9987,7 +9500,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     };
   }
 
-  /** Capture EVERYTHING the deploy prints (clack log + raw stdio) for leak / message asserts. */
   function captureOutput(): { lines: Array<string>; restore: () => void } {
     const lines: Array<string> = [];
     const spies = (['message', 'info', 'warn', 'error', 'success', 'step'] as const).map((level) =>
@@ -10015,7 +9527,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     };
   }
 
-  /** The harness, with the email seams wired to these fakes. */
   function emailHarness(
     options: {
       runner?: Record<string, DeployWranglerRunResult>;
@@ -10178,8 +9689,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     },
   );
 
-  // A sending-only app set up before (binding committed) on an account that cannot onboard
-  // Email Sending: each deploy says why once, never asks again, and never retries onboarding.
   it.each([
     [false, false],
     [false, true],
@@ -10201,13 +9710,12 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
       rmSync(join(root, 'email'), { recursive: true });
       const { deps, spawns, fetchCalls, confirms, exitCalls, trace } = emailHarness({
         isCI,
-        // Retrying onboarding would answer 10105; the deploy must not try.
+        // Decision: Retrying onboarding would answer 10105; the deploy must not try.
         fetchOverrides: {
           [`POST /zones/${ZONE_ID}/email/sending/subdomains`]: () => {
             throw new Error('a saved sending-only setup must not retry onboarding');
           },
         },
-        // Record a prompt instead of answering it, so the assertion names the failure.
         confirm: undefined,
       });
       const output = captureOutput();
@@ -10245,7 +9753,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
           'outbound  sendEmail() from noreply@mail.acme.com   (Email Sending not onboarded)',
         );
       }
-      // The saved setup ships as-is, with the sender brought up to date.
       const written = readRootConfig(root);
       expect(written.send_email).toEqual([{ name: 'SEND_EMAIL' }]);
       expect(written.vars).toEqual({ __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' });
@@ -10264,11 +9771,8 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     }
     expect(exitCalls).toEqual([]);
 
-    // ONE prompt, default-Yes wording, naming the mail domain.
     expect(confirms).toEqual(['Set up email on mail.acme.com?']);
 
-    // Exact argv per branch — every email call carries the SAME `-c <cfg> --env=` context as
-    // whoami / migrate / deploy, and is captured (its JSON is read, never streamed).
     const emailSpawns = spawns.filter((s) => s.args[0] === 'email');
     expect(emailSpawns.map((s) => s.args)).toEqual([
       ['email', 'routing', 'settings', 'mail.acme.com', ...configArgs(root)],
@@ -10280,7 +9784,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     for (const spawn of emailSpawns) {
       expect(spawn.opts.capture).toBe(true);
     }
-    // The two bearer writes wrangler has no command for (subdomain routing + subaddressing).
     expect(fetchCalls.filter((c) => c.method !== 'GET')).toEqual([
       {
         method: 'POST',
@@ -10296,19 +9799,15 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
       },
     ]);
 
-    // The root config now carries the binding, the owned addresses array, and the sender var.
     const written = readRootConfig(root);
     expect(written.send_email).toEqual([{ name: 'SEND_EMAIL' }]);
     expect(written.addresses).toEqual(['support@mail.acme.com']);
     expect((written.vars as Record<string, string>).__PLATFORM_EMAIL_FROM).toBe(
       'noreply@mail.acme.com',
     );
-    // …and the deploy went through: `rootConfig` was re-parsed after the write, or the
-    // laundering guard (6a) would have rejected `send_email` / `addresses` as probe-injected.
     expect(trace).toContain('build');
     expect(spawns.some((s) => s.args[0] === 'deploy')).toBe(true);
 
-    // The checklist, the apply rows, and the post-deploy address map were printed.
     const printed = output.lines.join('\n');
     expect(printed).toContain(
       'This changes YOUR Cloudflare account. acme.com itself is not touched.',
@@ -10333,7 +9832,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(trace[firstEmailCall]).toBe('wrangler:whoami --json');
     expect(trace.indexOf('hash')).toBeLessThan(firstEmailCall);
     expect(lastEmailCall).toBeGreaterThan(firstEmailCall);
-    // The probe (3c) — the first project-code execution — comes only after the whole step.
     expect(trace.indexOf('probe')).toBeGreaterThan(lastEmailCall);
     expect(trace.indexOf('probe')).toBeLessThan(trace.indexOf('build'));
   });
@@ -10353,7 +9851,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
       expect(spawn.args).toEqual(['auth', 'token', '--json', ...configArgs(root)]);
       expect(spawn.opts).toEqual({ capture: true });
     }
-    // The token reached the Authorization header — and NOTHING else.
     expect(fetchCalls.some((c) => c.auth === `Bearer ${BEARER}`)).toBe(true);
     expect(output.lines.join('\n')).not.toContain(BEARER);
     for (const spawn of spawns) {
@@ -10385,7 +9882,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     const printed = output.lines.join('\n');
     expect(printed).toContain('Email → Settings → Subdomains');
     expect(printed).toContain('addresses withheld this run');
-    // Sending still onboarded, so the binding + sender var are written; the key is NOT.
     const written = readRootConfig(root);
     expect(written.send_email).toEqual([{ name: 'SEND_EMAIL' }]);
     expect(written.addresses).toBeUndefined();
@@ -10393,9 +9889,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
   });
 
   it('--require-email fails when the apply wrote the binding but routing failed and addresses were withheld', async () => {
-    // The SAME run as the test above, with the flag: `auth token` fails, so the subdomain
-    // routing POST is never made and `addresses` is withheld. The worker would ship a
-    // SEND_EMAIL binding with NO inbound rule behind it — binding presence is not "set up".
     const root = emailProject();
     const { deps, spawns, exitCalls, trace } = emailHarness({
       runner: {
@@ -10423,7 +9916,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     const printed = output.lines.join('\n');
     expect(printed).toContain('addresses withheld this run');
     expect(printed).toContain('--require-email');
-    // Nothing was built or uploaded; the config still records what the apply did manage.
     expect(trace).not.toContain('probe');
     expect(trace).not.toContain('build');
     expect(spawns.some((s) => s.args[0] === 'deploy')).toBe(false);
@@ -10453,16 +9945,13 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(printed).toContain(
       'Run `bwf email setup --platform cloudflare` once locally, commit bwf.lock.json, then redeploy',
     );
-    // No apply: no bearer writes, no `sending enable`, no config write.
     expect(fetchCalls.filter((c) => c.method !== 'GET')).toEqual([]);
     expect(spawns.some((s) => s.args[0] === 'email' && s.args[2] === 'enable')).toBe(false);
-    // The deploy still pins name/account_id in the config, so compare the email keys, not the bytes.
     const after = readRootConfig(root);
     expect(after.send_email).toBeUndefined();
     expect(after.addresses).toBeUndefined();
     expect(after.vars).toBeUndefined();
     expect(JSON.parse(before)).toMatchObject({ name: 'myapp', account_id: 'acc123' });
-    // The deploy itself went on.
     expect(trace).toContain('build');
     expect(spawns.some((s) => s.args[0] === 'deploy')).toBe(true);
     expect(printed).not.toContain('inbound   support@mail.acme.com');
@@ -10537,13 +10026,9 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(confirms).toEqual([]);
     const printed = output.lines.join('\n');
     expect(printed).toContain('email_routing:write + email_sending:write');
-    // The checklist goes through `formatCloudflareUserMessage` on this path, which turns a
-    // `wrangler …` command into "the underlying Cloudflare operation" — so the guidance must
-    // already be a bwf command at the source to survive as guidance.
     expect(printed).toContain('run `bwf cloudflare logout`, then `bwf cloudflare login`');
     expect(printed).not.toContain('underlying Cloudflare operation');
     expect(printed).toContain('deploying without email');
-    // Nothing past whoami was asked of wrangler for email, and nothing was written.
     expect(spawns.some((s) => s.args[0] === 'email')).toBe(false);
     expect(readRootConfig(root).send_email).toBeUndefined();
     expect(spawns.some((s) => s.args[0] === 'deploy')).toBe(true);
@@ -10713,14 +10198,12 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(spawns.some((s) => s.args[0] === 'deploy')).toBe(true);
   });
 
-  /** The committed email config a first deploy leaves behind. */
   const COMMITTED_EMAIL = {
     ...PROVISIONED_D1,
     send_email: [{ name: 'SEND_EMAIL' }],
     addresses: ['support@mail.acme.com'],
     vars: { __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' },
   };
-  /** Every account row ready: routing on the subdomain, subaddressing on, sending onboarded. */
   const readyRows = {
     runner: { 'email sending settings mail.acme.com': sendingEnabled },
     subaddressing: true,
@@ -10779,7 +10262,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
       },
     ];
     for (const dnsCase of dnsCases) {
-      // The setup calls returned success, but this process still cannot verify the new MX.
       const { deps, spawns, exitCalls, trace } = emailHarness({
         subaddressing: true,
         dns: dnsCase.dns,
@@ -10815,7 +10297,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
   });
 
   it('an API-token session (CLOUDFLARE_API_TOKEN) in CI with a committed config: --require-email passes, no prompt, map printed', async () => {
-    // The CI credential. wrangler reports no `tokenPermissions` for it (they come from the
+    // Decision: The CI credential. wrangler reports no `tokenPermissions` for it (they come from the
     // stored login file), so gating on them would fail every CI deploy before the build.
     const root = emailProject(COMMITTED_EMAIL);
     const { deps, spawns, fetchCalls, exitCalls, trace } = emailHarness({
@@ -10885,7 +10367,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(readRootConfig(root).addresses).toEqual(['support@mail.acme.com']);
   });
 
-  /** wrangler's `sending enable` on Workers Free: the documented not-entitled code. */
   const sendingRefused: DeployWranglerRunResult = {
     ...cleanExit,
     status: 1,
@@ -10893,12 +10374,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
   };
 
   it('--require-email passes on Workers Free: routing is up, `sending enable` answers 10105, the binding written alongside remembers it', async () => {
-    // Every other row is ready; only Email Sending is refused (no entitlement). Inbound is
-    // complete — replies go through the native `message.reply()`, never the binding — and
-    // the apply writes the binding, which is what the NEXT preflight reads as the memory of
-    // this refusal (binding present + sending pending is settled; the memory rule in
-    // `preflightEmail`). So `satisfied` carries no sending term of its own: the deploy
-    // proceeds, the hint is printed once, and the map says what sending can do.
     const root = emailProject();
     const { deps, spawns, exitCalls, trace } = emailHarness({
       ...readyRows,
@@ -10926,18 +10401,12 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     );
     expect(trace).toContain('build');
     expect(spawns.some((s) => s.args[0] === 'deploy')).toBe(true);
-    // Inbound DID come up, and the config records it — with the binding that remembers.
     const written = readRootConfig(root);
     expect(written.send_email).toEqual([{ name: 'SEND_EMAIL' }]);
     expect(written.addresses).toEqual(['support@mail.acme.com']);
     expect(written.vars).toEqual({ __PLATFORM_EMAIL_FROM: 'noreply@mail.acme.com' });
   });
 
-  /**
-   * A Workers Free account after the deploy above: the email config is committed and sending
-   * still answers not-found. The committed binding records the refusal, so later deploys read
-   * ready and never retry the onboarding; `bwf email setup` offers that retry.
-   */
   const COMMITTED_ON_FREE = {
     ...readyRows,
     runner: {
@@ -10956,7 +10425,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
       const { deps, spawns, fetchCalls, confirms, exitCalls, trace } = emailHarness({
         ...COMMITTED_ON_FREE,
         isCI,
-        // Record the prompt instead of throwing on it, so the assertion names the failure.
         confirm: undefined,
       });
       const output = captureOutput();
@@ -10972,7 +10440,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
       }
       expect(exitCalls).toEqual([]);
       expect(confirms).toEqual([]);
-      // The probe of sending still runs (read-only); the onboarding is NOT retried.
       expect(spawns.some((s) => s.args[0] === 'email' && s.args[1] === 'sending')).toBe(true);
       expect(spawns.some((s) => s.args[0] === 'email' && s.args[2] === 'enable')).toBe(false);
       expect(fetchCalls.filter((c) => c.method !== 'GET')).toEqual([]);
@@ -10988,7 +10455,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
       );
       expect(trace).toContain('build');
       expect(spawns.some((s) => s.args[0] === 'deploy')).toBe(true);
-      // The committed config is left exactly as the refused run wrote it.
       const after = readRootConfig(root);
       expect(after.send_email).toEqual(before.send_email);
       expect(after.addresses).toEqual(before.addresses);
@@ -10997,7 +10463,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
   }
 
   it('--require-email passes on a fully ready second deploy: nothing to apply, zero keystrokes', async () => {
-    // The headline flow. No apply runs, so readiness comes from the PREFLIGHT result.
     const root = emailProject(COMMITTED_EMAIL);
     const { deps, spawns, fetchCalls, confirms, exitCalls, trace } = emailHarness({
       ...readyRows,
@@ -11024,7 +10489,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
   });
 
   it('ready path: a committed `addresses` entry no longer in the pruned set is rewritten BEFORE `wrangler deploy`, without a prompt', async () => {
-    // Deploy 1 wrote [support, billing]; billing@ was later re-pointed at a forward in the
+    // Decision: Deploy 1 wrote [support, billing]; billing@ was later re-pointed at a forward in the
     // dashboard. Left in the array it reaches wrangler's plan as a takeover `conflict`.
     const forwardedBilling: DeployWranglerRunResult = {
       ...myRule,
@@ -11064,7 +10529,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(exitCalls).toEqual([]);
     expect(fetchCalls.filter((c) => c.method !== 'GET')).toEqual([]);
     expect(spawns.some((s) => s.args[0] === 'email' && s.args[2] === 'enable')).toBe(false);
-    // Rewritten to the pruned set, and already so when `wrangler deploy` read the config.
     expect(atDeploy).toEqual([['support@mail.acme.com']]);
     const after = readRootConfig(root);
     expect(after.addresses).toEqual(['support@mail.acme.com']);
@@ -11097,8 +10561,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
   });
 
   it('ready path: a changed `email.from` on the same domain rewrites `__PLATFORM_EMAIL_FROM` without a prompt', async () => {
-    // Only the root var reaches the worker on build; without the rewrite the worker keeps
-    // sending as the old address while the map advertises the new one.
     const root = emailProject(COMMITTED_EMAIL, {}, { email: { from: 'hello@mail.acme.com' } });
     const { deps, spawns, fetchCalls, exitCalls } = emailHarness({
       ...readyRows,
@@ -11128,12 +10590,10 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
   });
 
   it('a committed `addresses` array is still withdrawn when a separate blocker proves setup cannot proceed', async () => {
-    // Left in place, wrangler's plan on it 400s (2062) AFTER the upload, on every deploy.
+    // Decision: Left in place, wrangler's plan on it 400s (2062) AFTER the upload, on every deploy.
     // Deleting the KEY changes no rule (wrangler skips the plan on `undefined`).
     const root = emailProject(COMMITTED_EMAIL);
     const baseDns = emailDns();
-    // Even with an unreadable MX, `unlocked` is independent evidence that this is not only a
-    // propagating DNS answer, so the preservation exception must not hide the stable blocker.
     const { deps, spawns, fetchCalls, confirms, exitCalls, trace } = emailHarness({
       runner: { 'email routing settings acme.com': routingSettings('acme.com', 'unlocked') },
       dns: {
@@ -11167,7 +10627,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     const printed = output.lines.join('\n');
     expect(printed).toContain('addresses removed from wrangler.jsonc');
     expect(printed).toContain('support@mail.acme.com');
-    // The binding is committed, so the deploy is WITH email — the wording and the map say so.
     expect(printed).not.toContain('deploying without email');
     expect(printed).toContain('deploying with the email setup wrangler.jsonc already carries');
     expect(printed).toContain('outbound  sendEmail() from noreply@mail.acme.com');
@@ -11189,7 +10648,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
   });
 
   it('refuses a config the writer could not update BEFORE the account is touched (binding-name collision)', async () => {
-    // `vars.SEND_EMAIL` already exists: the write after the apply would fail, so the step is
+    // Decision: `vars.SEND_EMAIL` already exists: the write after the apply would fail, so the step is
     // blocked up front — no prompt, no bearer write, no `sending enable`.
     const root = emailProject({ ...PROVISIONED_D1, vars: { SEND_EMAIL: 'x' } });
     const { deps, spawns, fetchCalls, confirms, exitCalls } = emailHarness();
@@ -11211,8 +10670,9 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
   });
 
   it('an app that stopped using email warns about the setup wrangler.jsonc still carries, and deploys as-is', async () => {
-    // No `email/` directory and no `@builtbyfriends/bwf/email` import, but the root still has what an earlier
-    // email deploy wrote: wrangler keeps routing support@ to a worker with no `email()` export.
+    // Decision: No `email/` directory and no `@builtbyfriends/bwf/email` import, but the root still has what
+    // an earlier email deploy wrote: wrangler keeps routing support@ to a worker with no `email()`
+    // export.
     const root = d1Project(COMMITTED_EMAIL, INIT_MIGRATION);
     const { deps, spawns, exitCalls } = emailHarness({
       confirm: async () => {
@@ -11233,7 +10693,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     expect(printed).toContain('no longer declares email handlers');
     expect(printed).toContain('support@mail.acme.com — still routed to worker "myapp"');
     expect(printed).toContain('send_email SEND_EMAIL binding');
-    // The detach guidance names the checked-in config and dashboard path.
     expect(printed).toContain(
       'remove `addresses`, `send_email`, and `vars.__PLATFORM_EMAIL_FROM` from `resolved` in bwf.lock.json',
     );
@@ -11241,9 +10700,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
   });
 
   it('last inbound handler removed, outbound `@builtbyfriends/bwf/email` kept: the committed entry is a decision-13 blocker, the array stays, and the trigger snapshot still carries it (the ready-path `null` write is never reached)', async () => {
-    // The inbound handler that produced COMMITTED_EMAIL is gone, but `@builtbyfriends/bwf/email` is still
-    // imported, so the email step runs with an empty derived set. The committed entry is one bwf
-    // did not derive, so the step skips and leaves the array, and the annotation replays it.
     const root = makeProject({
       'package.json': JSON.stringify({ name: 'myapp' }),
       'bwf.json': JSON.stringify({ email: { from: 'noreply@mail.acme.com' } }),
@@ -11262,7 +10718,7 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
       ...readyRows,
       runner: { ...readyRows.runner, 'email routing rules list acme.com': myRule },
       deps: {
-        // The real build passes the root's `addresses` through verbatim (whole-object pinned);
+        // Decision: The real build passes the root's `addresses` through verbatim (whole-object pinned);
         // mirror that so the annotation `activateVersion` receives is the one a deploy carries.
         runBuild: () => {
           const rootConfig = readRootConfig(root);
@@ -11291,14 +10747,12 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     }
     expect(exitCalls).toEqual([]);
     expect(confirms).toEqual([]);
-    // Sending-only preflight still flags stale configured addresses without probing routing.
     expect(spawns.some((s) => s.args[0] === 'email')).toBe(false);
     expect(fetchCalls.some(({ path }) => path.endsWith('/email/sending/subdomains'))).toBe(true);
     expect(readRootConfig(root).addresses).toEqual(['support@mail.acme.com']);
     const printed = output.lines.join('\n');
     expect(printed).toContain('addresses holds entries bwf did not derive (support@mail.acme.com)');
     expect(printed).not.toContain('addresses removed');
-    // The snapshot replays the stale entry: `addresses` reaches wrangler's plan as-is.
     expect(spawns.some((s) => s.args[0] === 'deploy')).toBe(true);
     expect(snapshots).toEqual([
       expect.objectContaining({
@@ -11317,7 +10771,6 @@ describe('runCloudflareDeploy — native Cloudflare email step', () => {
     });
     await runCloudflareDeploy(root, { platform: 'cloudflare' }, silentCliLog, deps);
     expect(spawns.some((s) => s.args[0] === 'auth' || s.args[0] === 'email')).toBe(false);
-    // The only whoami is the deploy's own, after the env-schema probe.
     expect(trace.filter((t) => t === 'wrangler:whoami --json')).toHaveLength(1);
     expect(trace.indexOf('probe')).toBeLessThan(trace.indexOf('wrangler:whoami --json'));
   });
@@ -11474,7 +10927,7 @@ describe('runCloudflareDeploy — `addresses` is whole-object pinned across the 
   };
 
   it('fails closed when the build injects an `addresses` array the root never declared', async () => {
-    // wrangler ≥ 4.113 would turn this into a routing rule sending the account's inbound mail for
+    // Decision: wrangler ≥ 4.113 would turn this into a routing rule sending the account's inbound mail for
     // `ceo@acme.com` to the deployed worker. No email step runs (no email use), so the pin alone
     // must catch it.
     const root = d1Project(PROVISIONED_D1, INIT_MIGRATION);
@@ -11543,7 +10996,6 @@ describe('runCloudflareDeploy — `addresses` is whole-object pinned across the 
     });
     expect(injected.ok).toBe(false);
     expect(injected.reason).toMatch(/addresses/);
-    // A hand-written root `[]` passed through verbatim is the developer's own choice.
     expect(
       verifyGeneratedDeployConfig(emptyRoot, {
         accountId: 'acc123',

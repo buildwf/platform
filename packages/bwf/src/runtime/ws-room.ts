@@ -38,7 +38,7 @@ export type RoomPath = {
   [P in keyof WebSocketRouteMap]: WebSocketRouteMap[P] extends { actions: unknown } ? P : never;
 }[keyof WebSocketRouteMap];
 
-// Preserve unions of callable signatures so calls must work in every route environment.
+// Decision: Preserve unions of callable signatures so calls must work in every route environment.
 type ActionHandle<T> = T extends (context: RoomActionContext, ...args: infer A) => infer R
   ? (...args: A) => Promise<Awaited<R>>
   : never;
@@ -96,7 +96,7 @@ function createActionProxy(
 ): Record<string, (...args: Array<unknown>) => Promise<unknown>> {
   return new Proxy({} as Record<string, (...args: Array<unknown>) => Promise<unknown>>, {
     get(_target, property) {
-      // `await` and `Promise.resolve` read `then`. Returning a function there would
+      // Decision: `await` and `Promise.resolve` read `then`. Returning a function there would
       // dispatch an action named "then" with resolver callbacks it cannot clone.
       if (typeof property !== 'string' || property === 'then') {
         return undefined;

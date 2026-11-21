@@ -1,4 +1,3 @@
-/** EventSource stand-in that records every instance and lets tests dispatch events. */
 export class MockEventSource {
   static instances: Array<MockEventSource> = [];
 
@@ -22,7 +21,6 @@ export class MockEventSource {
     this.listeners.get(type)?.delete(listener);
   }
 
-  /** Dispatches `event`; a string is sent as the `data` of a message event. */
   emit(type: string, event: Event | string, lastEventId = ''): void {
     const payload =
       typeof event === 'string' ? ({ data: event, lastEventId } as MessageEvent) : event;

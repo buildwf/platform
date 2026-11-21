@@ -1,6 +1,5 @@
 import { type RouteEnvironment } from './router/parse-filename.ts';
 
-/** Check whether a binding name already exists in a resolved bindings array. */
 export function hasBinding(list: Array<{ binding: string }> | undefined, name: string): boolean {
   return Array.isArray(list) && list.some((b) => b.binding === name);
 }

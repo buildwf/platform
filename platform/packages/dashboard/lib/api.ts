@@ -9,7 +9,6 @@ export type ApiResponse = Pick<
   'headers' | 'json' | 'ok' | 'status' | 'statusText' | 'text'
 >;
 
-/** The signed in user, as `me.get` returns it. */
 export type CurrentUser = OutputOf<NonNullable<PlatformRegistry['~procedures']>['me.get']>;
 
 const API_URL = 'https://platform.buildwithfriends.dev';
@@ -19,18 +18,14 @@ export function getPublicApiUrl(context: Context): string {
   return (context.env as Record<string, string | undefined>).API_URL ?? API_URL;
 }
 
-/**
- * Use service binding in deployed dashboard workers. In local dev, always use
- * HTTP so production-backed dashboard testing cannot accidentally route to a
- * local or unresolved service binding.
- */
+// Decision: Deployed dashboard workers use the service binding. Local dev uses HTTP so testing against
+// production can't route to a local or unresolved service binding.
 function getApiFetch(context: Context): typeof fetch {
   const binding = (context.env as { API?: Fetcher }).API;
   if (binding && !isLocalDashboardHost(context.req.header('host') ?? '')) {
     return ((input: RequestInfo | URL, init?: RequestInit) => {
-      // The service binding is internal. Preserve the browser's actual protected origin so
-      // the API verifies the dashboard application's audience, not the API application's.
-      // No forwarded-host header participates in this choice.
+      // Decision: The service binding is internal. The browser's real protected origin is kept so the API checks
+      // the dashboard application's audience, not the API's. No forwarded-host header takes part.
       const url = new URL(input instanceof Request ? input.url : String(input));
       if (context.req.header('Cf-Access-Jwt-Assertion')) {
         const source = new URL(dashboardRequestOrigin(context));
@@ -69,8 +64,8 @@ function getTimedApiFetch(context: Context): typeof fetch {
 
 function getCfAccessHeaders(context: Context): Record<string, string> {
   const env = context.env as Record<string, string | undefined>;
-  // The API independently checks the application audience and bound company subject.
-  // Prefer this browser's proof; a dashboard service token cannot represent a human.
+  // Decision: The API checks the application audience and bound company subject on its own. The browser's
+  // proof comes first, because a dashboard service token can't stand for a human.
   const assertion = context.req.header('Cf-Access-Jwt-Assertion');
   const browserToken = getCookie(context, 'CF_Authorization');
   if (assertion || browserToken) {
@@ -147,7 +142,7 @@ function readableApiError(value: unknown): string | undefined {
     return;
   }
   const message = value.trim();
-  // Show the API's public explanation, never serialized bodies, markup or stack traces.
+  // Decision: Only the API's public explanation is shown, not serialized bodies, markup or stack traces.
   if (!message || message.length > 500 || /^[{["]/.test(message) || /[<>\r\n]/.test(message)) {
     return;
   }

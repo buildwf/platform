@@ -152,7 +152,6 @@ export async function publishWorkerDeployment(input: {
     input.currentStatus = 'cutover';
   }
 
-  // Queue setup
   input.currentStep = 'queue_setup';
   markPhase('queue_setup');
   const queueNames = (manifest.queues ?? []).map((q) => q.name);
@@ -259,7 +258,6 @@ export async function publishWorkerDeployment(input: {
 
   const hasCrons = manifest.schedules && manifest.schedules.length > 0;
 
-  // Routing switch
   await snapshotCronState();
   await assertDeploymentCanProceed(context.get('db'), deployment.id, projectId);
   markPhase('routing_switch');
@@ -347,7 +345,7 @@ export async function publishWorkerDeployment(input: {
     context.env.ROUTING.delete(cutoverIntentKey(deployment.id)),
     context.env.ROUTING.delete(cutoverReadyKey(deployment.id)),
   ]).catch(() => {
-    // Stale markers are harmless once PostgreSQL is live.
+    // Decision: Stale markers are harmless once PostgreSQL is live.
   });
 
   markPhase('retention_cleanup');
@@ -360,12 +358,9 @@ export async function publishWorkerDeployment(input: {
     );
     const toEvict = retained.slice(retentionLimit - 1);
 
-    // Build the union of hashes that must remain in R2 after this deploy:
-    // this deploy's manifest plus every kept retained deployment's
-    // manifest. Always built (independent of `toEvict.length`) because
-    // the post-eviction R2 keyspace sweep below uses it to opportunistically
-    // GC direct-to-R2 orphans (bytes uploaded via presigned PUTs that
-    // never finalized into a live deploy).
+    // Decision: The union of hashes that must stay in R2 after this deploy: this deploy's manifest plus each kept
+    // retained deployment's. It's built even when nothing is evicted, because the R2 sweep below uses it
+    // to collect direct-to-R2 orphans (presigned uploads that never became part of a live deploy).
     const retainedHashes = new Set<string>();
     for (const [, entry] of Object.entries(assetManifest)) {
       retainedHashes.add(entry.hash);
@@ -379,9 +374,7 @@ export async function publishWorkerDeployment(input: {
             retainedHashes.add(entry.hash);
           }
         } catch (e) {
-          // A single corrupt asset_hashes blob must not poison the
-          // sweep — skip the bad row and keep walking. The orphan sweep
-          // is best-effort either way.
+          // Decision: One corrupt asset_hashes blob must not spoil the sweep: skip the bad row and keep going.
           input.logger.warn('retention_cleanup', 'retained_asset_hashes_parse_failed', {
             retainedDeploymentId: kept.id,
             err: e instanceof Error ? e.message : String(e),
@@ -527,9 +520,8 @@ export async function publishWorkerDeployment(input: {
       }
     }
 
-    // Presigned uploads without a finalized manifest become orphans.
-    // Sweep after the terminal event so R2 history does not delay a
-    // successful deploy. The project fence still protects live hashes.
+    // Decision: Presigned uploads without a finalized manifest become orphans. Sweep after the terminal event so
+    // R2 history doesn't delay a successful deploy. The project fence still protects live hashes.
     if (assetCleanupSafe) {
       input.orphanSweepAfterResponse = async () => {
         try {

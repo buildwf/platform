@@ -130,7 +130,7 @@ export const GET = defineHandler(c => c.html(${jsxImportSource === 'react' ? `re
       expect(serverGraph).not.toContain(`/routes/${ext}/environment.dev.${ext}`);
       expect(serverGraph).not.toContain(`/routes/${ext}/debug.dev.${ext}`);
     }
-    // The Worker bundles its dependencies, so the graph holds resolved package files.
+    // Decision: The Worker bundles its dependencies, so the graph holds resolved package files.
     expect(serverGraph).toContain(
       jsxImportSource === 'react' ? 'react/jsx-runtime' : 'hono/dist/jsx/jsx-runtime',
     );

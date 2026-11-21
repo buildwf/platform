@@ -32,8 +32,8 @@ import {
 const { tmpDir, wranglerPath, setup, simulateUpdateConfig } = useProvisionTestDir('locking');
 
 describe('provisionCloudflareResources — whole-provision cross-process lock (proper-lockfile)', () => {
-  // proper-lockfile uses a synthetic adjacent identity without creating that pathname;
-  // the actual mutex is a `${target}.lock` DIRECTORY and is removed on release.
+  // Decision: proper-lockfile uses a synthetic adjacent identity without creating that pathname; the
+  // actual mutex is a `${target}.lock` directory and is removed on release.
   const lockTarget = `${wranglerPath}.bwf-provision.lock`;
   const recoveryTarget = `${lockTarget}.recovery`;
   const lockMutex = `${lockTarget}.lock`;
@@ -60,23 +60,20 @@ describe('provisionCloudflareResources — whole-provision cross-process lock (p
     const opts = {
       runWrangler: run,
       log: silentLog,
-      // Keep the first provision ACTIVE long enough that the second demonstrably starts
-      // while it runs (the guard is taken synchronously at entry regardless).
+      // Decision: Keep the first provision active long enough that the second clearly starts while it runs
+      // (the guard is taken synchronously at entry anyway).
       listHyperdriveConfigs: async (): Promise<Array<never>> => {
         await delay(60);
         return [];
       },
     };
     const first = provisionCloudflareResources(tmpDir, wranglerPath, desired, opts);
-    // The second provision starts while the first is active → the process-wide guard
-    // rejects it OUTRIGHT (no lock contention, no wrangler work, no config read).
     await expect(provisionCloudflareResources(tmpDir, wranglerPath, desired, opts)).rejects.toThrow(
       /a provision is already active in this process.*run provisions sequentially/s,
     );
     const result = await first;
     expect(result.resources.find((r) => r.kind === 'hyperdrive')?.action).toBe('created');
     expect(createCalls).toBe(1);
-    // Mutex always released — no leak; and the slot freed: a THIRD (sequential) run works.
     expect(existsSync(lockMutex)).toBe(false);
     const third = await provisionCloudflareResources(tmpDir, wranglerPath, desired, opts);
     expect(third.resources.find((r) => r.kind === 'hyperdrive')?.action).toBe('reused');
@@ -95,10 +92,8 @@ describe('provisionCloudflareResources — whole-provision cross-process lock (p
     const first = await acquireProvisionLock(wranglerPath, { retries: 0 });
     const second = await acquireProvisionLock(otherConfig, { retries: 0 });
     try {
-      // Both are held at once: lock identity is per canonical config, not machine-global.
       expect(existsSync(lockMutex)).toBe(true);
       expect(existsSync(`${otherLockTarget}.lock`)).toBe(true);
-      // Synthetic identities never materialize as empty files in either project.
       expect(existsSync(lockTarget)).toBe(false);
       expect(existsSync(recoveryTarget)).toBe(false);
       expect(existsSync(otherLockTarget)).toBe(false);
@@ -114,7 +109,7 @@ describe('provisionCloudflareResources — whole-provision cross-process lock (p
   });
 
   it('two concurrent provisions in SEPARATE processes race — exactly ONE create, the other reuses, mutex released', async () => {
-    // One provision runs per process, so a race needs two real processes.
+    // Decision: One provision runs per process, so a race needs two real processes.
     setup(
       JSON.stringify({ account_id: 'acct', hyperdrive: [{ binding: 'HYPERDRIVE', id: 'local' }] }),
     );
@@ -166,9 +161,7 @@ describe('provisionCloudflareResources — whole-provision cross-process lock (p
     expect(a.code).toBe(0);
     expect(b.code).toBe(0);
     const actions = [a.stdout, b.stdout].map((s) => s.match(/ACTION:(\w+)/)?.[1]).sort();
-    // Exactly one create; the loser's read-first (under the lock) reused the winner's id.
     expect(actions).toEqual(['created', 'reused']);
-    // Mutex always released — no leak.
     expect(existsSync(lockMutex)).toBe(false);
   }, 30_000);
 
@@ -176,8 +169,8 @@ describe('provisionCloudflareResources — whole-provision cross-process lock (p
     setup(
       JSON.stringify({ account_id: 'acct', hyperdrive: [{ binding: 'HYPERDRIVE', id: 'local' }] }),
     );
-    // Simulate a crashed owner's abandoned mutex dir whose mtime is well past the 120s
-    // stale window, so proper-lockfile compromises + steals it.
+    // Decision: Simulate a crashed owner's abandoned mutex dir whose mtime is well past the 120s stale
+    // window, so proper-lockfile compromises and steals it.
     mkdirSync(lockMutex);
     const old = new Date(Date.now() - 300_000);
     utimesSync(lockMutex, old, old);
@@ -231,27 +224,24 @@ describe('provisionCloudflareResources — whole-provision cross-process lock (p
       secondAcquired = true;
       return lock;
     });
-    // While the first holds the lock the second cannot acquire (it retries/blocks).
     await delay(60);
     expect(secondAcquired).toBe(false);
     await first.release();
     const second = await secondPromise;
     expect(secondAcquired).toBe(true);
-    // Release is idempotent and always frees the mutex.
     await second.release();
     await second.release();
     expect(existsSync(lockMutex)).toBe(false);
   });
 
   it('a provision via a SYMLINK ALIAS contends on the SAME canonical lock and reuses the id written via the real path', async () => {
-    // Without realpath canonicalization each lexical path would get its own mutex,
-    // and an alias provision could create a duplicate.
+    // Decision: Without realpath canonicalization each lexical path would get its own mutex, and an alias
+    // provision could create a duplicate.
     setup(
       JSON.stringify({ account_id: 'acct', hyperdrive: [{ binding: 'HYPERDRIVE', id: 'local' }] }),
     );
     const aliasName = 'wrangler.alias.jsonc';
     symlinkSync(wranglerPath, join(tmpDir, aliasName));
-    // Sanity: the alias and the real config canonicalize to the same real file.
     expect(realpathSync(join(tmpDir, aliasName))).toBe(realpathSync(wranglerPath));
     let createCalls = 0;
     const run: RunWrangler = provisionOperationFixture((args) => {
@@ -283,17 +273,14 @@ describe('provisionCloudflareResources — whole-provision cross-process lock (p
           ...(retries !== undefined ? { lockOptions: { retries } } : {}),
         },
       ) as Promise<{ resources: Array<{ kind: string; action: string }> }>;
-    // While the canonical lock is held, an alias-path provision cannot acquire it.
     const held = await acquireProvisionLock(realpathSync(wranglerPath));
     await expect(makeProv(aliasName, 0)).rejects.toThrow(/already being held/);
     await held.release();
-    // One underlying file: a create via the REAL path is read-first-REUSED via the alias.
     const a = await makeProv(wranglerPath);
     const b = await makeProv(aliasName);
     expect(a.resources.find((r) => r.kind === 'hyperdrive')?.action).toBe('created');
     expect(b.resources.find((r) => r.kind === 'hyperdrive')?.action).toBe('reused');
     expect(createCalls).toBe(1);
-    // The single canonical mutex was released.
     expect(existsSync(`${realpathSync(wranglerPath)}.bwf-provision.lock.lock`)).toBe(false);
   });
 
@@ -301,7 +288,6 @@ describe('provisionCloudflareResources — whole-provision cross-process lock (p
     setup(JSON.stringify({ account_id: 'acct', kv_namespaces: [{ binding: 'KV', id: 'local' }] }));
     const run: RunWrangler = provisionOperationFixture(async (args) => {
       if (isCall(args, 'kv', 'namespace', 'list')) {
-        // blocks (async) longer than the probe below, which is past the 2s stale window
         await delay(2400);
         return ok(JSON.stringify([{ id: hex32('kv'), title: 'myapp-kv' }]));
       }
@@ -313,10 +299,9 @@ describe('provisionCloudflareResources — whole-provision cross-process lock (p
       { ...emptyDesired, kvNamespaces: [{ binding: 'KV', title: 'myapp-kv' }] },
       { runWrangler: run, log: silentLog, lockOptions: { stale: 2000, update: 1000, retries: 0 } },
     );
-    // 2.2s into the block — PAST the 2s stale window (proper-lockfile floors stale at 2000
-    // and update at 1000, so 2.2s is the minimum that proves freshness). If the async
-    // heartbeat did not keep the mutex fresh, a retries:0 acquire would STEAL it; it must
-    // be REFUSED instead.
+    // Decision: 2.2s into the block, past the 2s stale window (proper-lockfile floors stale at 2000 and
+    // update at 1000, so 2.2s is the minimum that proves freshness). If the async heartbeat didn't
+    // keep the mutex fresh, a retries:0 acquire would steal it; it has to be refused instead.
     await delay(2200);
     await expect(acquireProvisionLock(wranglerPath, { stale: 2000, retries: 0 })).rejects.toThrow();
     const result = await prov;
@@ -343,7 +328,6 @@ describe('provisionCloudflareResources — whole-provision cross-process lock (p
     setup(
       JSON.stringify({ account_id: 'acct', hyperdrive: [{ binding: 'HYPERDRIVE', id: 'local' }] }),
     );
-    // rmdir fails → the mutex leaks on release; the body also fails (hyperdrive create).
     const failingFs = {
       ...passthruFs,
       rmdir: (_p: string, cb: (e: Error | null) => void) =>
@@ -376,10 +360,8 @@ describe('provisionCloudflareResources — whole-provision cross-process lock (p
     const messages = agg.errors
       .map((e) => (e instanceof Error ? e.message : String(e)))
       .join(' || ');
-    // BOTH the body (hyperdrive create) error AND the leaked-mutex release error surface.
     expect(messages).toMatch(/hyperdrive create myapp-hd.*failed.*boom-body/s);
     expect(messages).toMatch(/failed to release the cross-process provision lock/);
-    // The primary body error is also preserved as `cause` for cause-walking loggers.
     expect((agg.cause as Error).message).toMatch(/hyperdrive create/);
   });
 });
@@ -389,9 +371,9 @@ describe('provisionCloudflareResources — quarantine retains the whole-provisio
 
   it('a quarantine rejection RETAINS the mutex (not released) and surfaces the quarantine error', async () => {
     setup(JSON.stringify({ account_id: 'acct', name: 'app' }));
-    // A runner whose child could not be confirmed dead — the default runner rejects
-    // with a quarantine error in that state; injecting the same rejection exercises the
-    // provision-level contract: NO release, mutex retained, error surfaced verbatim.
+    // Decision: A runner whose child couldn't be confirmed dead: the default runner rejects with a quarantine
+    // error in that state, so injecting the same rejection tests the provision-level contract: no
+    // release, mutex retained, error surfaced verbatim.
     const quarantineError = new WranglerQuarantineError(43210, 'test: child unconfirmed');
     const run: RunWrangler = provisionOperationFixture(() => Promise.reject(quarantineError));
     let thrown: unknown;
@@ -408,15 +390,14 @@ describe('provisionCloudflareResources — quarantine retains the whole-provisio
     expect(thrown).toBe(quarantineError);
     expect((thrown as Error).message).toMatch(/pid 43210/);
     expect((thrown as Error).message).toMatch(/intentionally RETAINED/);
-    // The lock is not released while the wrangler child may still be alive.
+    // Decision: The lock isn't released while the wrangler child may still be alive.
     expect(existsSync(lockMutex)).toBe(true);
-    // Later acquisitions gate on the recorded group instead of stealing the lock by age.
     const sidecar = `${wranglerPath}.bwf-provision.lock.quarantine.json`;
     expect(existsSync(sidecar)).toBe(true);
     const recorded = JSON.parse(readFileSync(sidecar, 'utf-8')) as Record<string, unknown>;
     expect(recorded.pid).toBe(43210);
     expect(String(recorded.reason)).toMatch(/pid 43210/);
-    // quarantine() detached the lock from proper-lockfile, so removing it fires no callback.
+    // Decision: quarantine() detached the lock from proper-lockfile, so removing it fires no callback.
     rmSync(lockMutex, { recursive: true, force: true });
     rmSync(sidecar, { force: true });
   });
@@ -424,22 +405,21 @@ describe('provisionCloudflareResources — quarantine retains the whole-provisio
 
 describe('provisionCloudflareResources — dangling-symlink lock identity', () => {
   it('provisions via dangling-symlink aliases to the SAME not-yet-created target share ONE lock identity (one create)', async () => {
-    // Two dangling symlinks point at the same not-yet-created config. Each must resolve to
-    // the target's lock, not its own lexical path.
+    // Decision: Two dangling symlinks point at the same not-yet-created config. Each has to resolve to the
+    // target's lock, not its own lexical path.
     const sharedDir = join(tmpDir, 'shared');
     mkdirSync(sharedDir, { recursive: true });
-    const target = join(sharedDir, 'wrangler.jsonc'); // NOT created yet — dangling
+    const target = join(sharedDir, 'wrangler.jsonc');
     const aliasA = join(tmpDir, 'aliasA.jsonc');
     const aliasB = join(tmpDir, 'aliasB.jsonc');
     symlinkSync(target, aliasA);
     symlinkSync(target, aliasB);
-    expect(existsSync(target)).toBe(false); // both aliases are dangling at start
+    expect(existsSync(target)).toBe(false);
 
     let createCalls = 0;
     const run: RunWrangler = provisionOperationFixture((args) => {
       if (isCall(args, 'hyperdrive', 'create')) {
         createCalls++;
-        // --update-config writes to the CANONICAL target (both aliases resolve to it).
         simulateUpdateConfig(
           'hyperdrive',
           { binding: 'HYPERDRIVE', id: hex32('hd-' + createCalls) },
@@ -467,24 +447,20 @@ describe('provisionCloudflareResources — dangling-symlink lock identity', () =
           ...(retries !== undefined ? { lockOptions: { retries } } : {}),
         },
       ) as Promise<{ resources: Array<{ kind: string; action: string }> }>;
-    // While the real-target lock is held, a dangling-alias provision cannot acquire it.
     const canonicalTarget = join(realpathSync(sharedDir), 'wrangler.jsonc');
     const held = await acquireProvisionLock(canonicalTarget);
     await expect(makeProv(aliasA, 0)).rejects.toThrow(/already being held/);
     await held.release();
-    // One underlying (initially not-yet-created) file: a create via alias A is
-    // read-first-REUSED via alias B.
     const a = await makeProv(aliasA);
     const b = await makeProv(aliasB);
     expect(a.resources.find((r) => r.kind === 'hyperdrive')?.action).toBe('created');
     expect(b.resources.find((r) => r.kind === 'hyperdrive')?.action).toBe('reused');
     expect(createCalls).toBe(1);
-    // The ONE canonical mutex (keyed on the real target) is released.
     expect(existsSync(`${realpathSync(target)}.bwf-provision.lock.lock`)).toBe(false);
   }, 15_000);
 
   it('a non-ENOENT realpath error (a self-referential symlink cycle → ELOOP) SURFACES, not swallowed', async () => {
-    // A symlink cycle makes realpath throw ELOOP, which must not fall back to the lexical path.
+    // Decision: A symlink cycle makes realpath throw ELOOP, which mustn't fall back to the lexical path.
     mkdirSync(tmpDir, { recursive: true });
     const loop = join(tmpDir, 'loop.jsonc');
     symlinkSync(loop, loop);

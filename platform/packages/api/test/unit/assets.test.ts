@@ -185,7 +185,6 @@ async function readBodyText(body: unknown): Promise<string> {
   throw new Error('unsupported body type');
 }
 
-/** Create a JWT with the given expiration time (Unix seconds). */
 function makeJwt(exp: number): string {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const payload = btoa(JSON.stringify({ exp }));
@@ -243,9 +242,7 @@ describe('deleteUnreferencedAssets', () => {
   it('only deletes project-scoped keys, not legacy shared keys', async () => {
     const kv = createMockKV();
     const r2 = createMockR2();
-    // Legacy key exists for the same hash
     kv.store.set('assets/hash_a', new ArrayBuffer(0));
-    // Scoped key also exists
     kv.store.set('assets/proj_test/hash_a', new ArrayBuffer(0));
 
     const evictedHashes = ['hash_a'];
@@ -253,9 +250,7 @@ describe('deleteUnreferencedAssets', () => {
 
     await deleteUnreferencedAssets(kv, r2, evictedHashes, retainedHashes, 'proj_test');
 
-    // Scoped key deleted
     expect(kv.store.has('assets/proj_test/hash_a')).toBe(false);
-    // Legacy key untouched
     expect(kv.store.has('assets/hash_a')).toBe(true);
   });
 
@@ -312,8 +307,6 @@ describe('scanProjectAssetOrphanCandidates', () => {
     const r2 = createAssetScanR2Mock([
       { key: 'assets/proj_test/hash_old', uploaded: new Date(now - 3_600_001) },
       { key: 'assets/proj_test/hash_fresh', uploaded: new Date(now - 3_599_000) },
-      // Self-healing: a prefix-only key is
-      // malformed and remains a candidate even when it was uploaded recently.
       { key: 'assets/proj_test/', uploaded: new Date(now) },
       { key: 'assets/proj_other/hash_old', uploaded: new Date(now - 3_600_001) },
     ]);
@@ -496,11 +489,11 @@ describe('uploadAssetBuckets', () => {
     let calls = 0;
     const fetchMock = vi.fn(async () => {
       calls++;
-      // First bucket (non-final): 202 with no JWT
+      // Decision: A non-final bucket answers 202 with no JWT.
       if (calls === 1) {
         return Response.json({ result: {} }, { status: 202 });
       }
-      // Second bucket (final): 200 with completion JWT
+      // Decision: The final bucket answers 200 with the completion JWT.
       return Response.json({ result: { jwt: 'completion-jwt' } });
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -537,7 +530,6 @@ describe('uploadAssetBuckets', () => {
       opts,
     );
 
-    // Both calls should use session JWT, not the response JWT from bucket 1
     for (const call of fetchMock.mock.calls) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const options = (call as any)[1] as { headers: { Authorization: string } };
@@ -576,7 +568,6 @@ describe('uploadAssetBuckets', () => {
       uploadAssetBuckets('acct', 'session-jwt', [['hash1']], singleAssetMap, opts),
     ).rejects.toThrow('no completion JWT received');
 
-    // Valid response — no retries burned, just 1 call
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -588,7 +579,7 @@ describe('uploadAssetBuckets', () => {
       uploadAssetBuckets('acct', 'session-jwt', [['hash1']], singleAssetMap, opts),
     ).rejects.toThrow('asset upload failed (401)');
 
-    // 4xx errors are retried just like 5xx (matching Wrangler's behavior)
+    // Decision: 4xx errors are retried like 5xx, to match Wrangler.
     expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
@@ -596,7 +587,6 @@ describe('uploadAssetBuckets', () => {
     let calls = 0;
     const fetchMock = vi.fn(async () => {
       calls++;
-      // Return 524 for the first 6 calls, then succeed
       if (calls <= 6) {
         return new Response('A timeout occurred', { status: 524 });
       }
@@ -613,25 +603,21 @@ describe('uploadAssetBuckets', () => {
     );
 
     expect(completionJwt).toBe('completion-jwt');
-    // 6 failures + 1 success = 7 calls. The first 4 gateway errors are free
-    // (gwErr 1-4, attempts stays 0). The 5th (gwErr=5 >= MAX=5) increments
-    // attempts to 1, the 6th increments to 2. Call 7 succeeds.
+    // Decision: 6 failures and 1 success make 7 calls. The first 4 gateway errors are free (attempts stays 0).
+    // The 5th (gwErr=5 >= MAX=5) raises attempts to 1, the 6th to 2, and call 7 succeeds.
     expect(fetchMock).toHaveBeenCalledTimes(7);
   });
 
   it('throws after exhausting gateway + regular retries', async () => {
-    // Always return 524 — eventually should exhaust all retries
     const fetchMock = vi.fn(async () => new Response('A timeout occurred', { status: 524 }));
     vi.stubGlobal('fetch', fetchMock);
 
-    // Rethrows the original AssetUploadError (matching Wrangler's `throw e;`)
+    // Decision: Rethrows the original AssetUploadError, to match Wrangler's `throw e;`.
     await expect(
       uploadAssetBuckets('acct', 'session-jwt', [['hash1']], singleAssetMap, opts),
     ).rejects.toThrow('asset upload failed (524)');
 
-    // 4 free gateway errors (gwErr 1-4, attempts stays 0)
-    // + 6 counted (gwErr 5-10, each increments attempts 1→2→3→4→5→check fails)
-    // = 10 total calls
+    // Decision: 4 free gateway errors (attempts stays 0) plus 6 counted ones (gwErr 5-10) make 10 calls.
     expect(fetchMock).toHaveBeenCalledTimes(10);
   });
 
@@ -642,7 +628,6 @@ describe('uploadAssetBuckets', () => {
     const fetchMock = vi.fn(async () => {
       currentConcurrent++;
       maxConcurrent = Math.max(maxConcurrent, currentConcurrent);
-      // Yield to let other concurrent tasks start
       await new Promise((r) => setTimeout(r, 1));
       currentConcurrent--;
       return Response.json({ result: { jwt: 'completion-jwt' } });
@@ -662,12 +647,10 @@ describe('uploadAssetBuckets', () => {
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    // All 3 should run concurrently since UPLOAD_CONCURRENCY=3
     expect(maxConcurrent).toBe(3);
   });
 
   it('JWT expiration gives specific error message when retries exhausted', async () => {
-    // JWT that expired 1 hour ago
     const expiredJwt = makeJwt(Math.floor(Date.now() / 1000) - 3600);
     const fetchMock = vi.fn(async () => new Response('Server Error', { status: 500 }));
     vi.stubGlobal('fetch', fetchMock);
@@ -678,12 +661,10 @@ describe('uploadAssetBuckets', () => {
   });
 
   it('rethrows original error when retries exhausted and JWT valid', async () => {
-    // JWT that expires in 1 hour
     const validJwt = makeJwt(Math.floor(Date.now() / 1000) + 3600);
     const fetchMock = vi.fn(async () => new Response('Server Error', { status: 500 }));
     vi.stubGlobal('fetch', fetchMock);
 
-    // Original AssetUploadError is rethrown (matching Wrangler's `throw e;`)
     await expect(
       uploadAssetBuckets('acct', validJwt, [['hash1']], singleAssetMap, opts),
     ).rejects.toThrow('asset upload failed (500)');
@@ -734,7 +715,6 @@ describe('createAssetUploadSession', () => {
       createAssetUploadSession('acct', 'token', 'ns', 'worker', manifest, { retryDelayMs: 0 }),
     ).rejects.toThrow('asset upload session returned invalid response');
 
-    // 1 initial + 3 retries = 4 total
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
@@ -768,7 +748,6 @@ describe('createAssetUploadSession', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  // The headers arrive, then the connection drops while the body is read.
   const droppedResponse = (status = 200) =>
     new Response(
       new ReadableStream({
@@ -853,7 +832,6 @@ describe('createAssetUploadSession', () => {
       createAssetUploadSession('acct', 'token', 'ns', 'worker', manifest, { retryDelayMs: 0 }),
     ).rejects.toThrow('asset upload session failed: Bad Gateway');
 
-    // 1 initial + 3 retries = 4 total
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
@@ -884,7 +862,6 @@ describe('normalizeForCfAssetSession', () => {
   it('strips v2 manifest extras (blake3, md5) and keeps only {hash, size}', () => {
     const v2Manifest = {
       '/index.html': {
-        // v2 wire shape from the framework CLI
         blake3: 'a'.repeat(32),
         md5: 'b'.repeat(32),
         size: 100,
@@ -915,7 +892,6 @@ describe('normalizeForCfAssetSession', () => {
     const out = normalizeForCfAssetSession(input);
     expect(out).not.toBe(input);
     expect(out['/a.js']).not.toBe(input['/a.js']);
-    // mutating input post-normalize must not leak through
     (input['/a.js'] as { extra?: string }).extra = 'leaked';
     expect(out['/a.js']).not.toHaveProperty('extra');
   });
@@ -999,7 +975,7 @@ describe('deleteWorkerBundle', () => {
 
     expect(r2.store.size).toBe(0);
     const deleteCalls = vi.mocked(r2.delete).mock.calls;
-    // 1500 keys → at most 1000 + 500 in two batches; never a batch larger than 1000.
+    // Decision: KV bulk delete takes at most 1000 keys, so 1500 keys go in two batches.
     for (const [arg] of deleteCalls) {
       const arr = Array.isArray(arg) ? arg : [arg];
       expect(arr.length).toBeLessThanOrEqual(1000);

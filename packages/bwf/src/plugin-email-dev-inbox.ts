@@ -1,4 +1,4 @@
-// Dev-only Vite plugin: owns the in-memory email buffer and serves
+// Decision: Dev-only Vite plugin: owns the in-memory email buffer and serves
 // `/__platform/inbox` routes for browsing captured messages. Activated when
 // binding inference detected `@builtbyfriends/bwf/email` usage.
 //
@@ -37,7 +37,7 @@ const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'no-referrer',
-  // The detail page already escapes HTML and renders the email body inside a
+  // Decision: The detail page already escapes HTML and renders the email body inside a
   // sandboxed iframe (no allow-scripts). CSP enforces it for everything else.
   'Content-Security-Policy':
     "default-src 'none'; style-src 'unsafe-inline'; frame-src data:; img-src data:; connect-src 'none'",
@@ -63,7 +63,7 @@ export function emailDevInboxPlugin(options: EmailDevInboxPluginOptions): Plugin
     name: 'platform:email-dev-inbox',
     apply: 'serve',
     configureServer(server) {
-      // The browser cannot add a header, so the inbox URL is printed with the
+      // Decision: The browser cannot add a header, so the inbox URL is printed with the
       // token in its query, the same way the cron/queue hint prints its curl.
       const printInboxUrl = () => {
         const address = server.httpServer?.address();
@@ -80,7 +80,7 @@ export function emailDevInboxPlugin(options: EmailDevInboxPluginOptions): Plugin
         const path = url.pathname;
 
         if (!isAuthorized(req.headers[DEV_INBOX_TOKEN_HEADER], url, devTriggerToken)) {
-          // No ack header here: the worker must not read a refusal as a capture.
+          // Decision: No ack header here: the worker must not read a refusal as a capture.
           res.writeHead(401, { ...SECURITY_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
           res.end(
             `Unauthorized: the bwf dev inbox requires the dev-trigger token — send it as the ${DEV_INBOX_TOKEN_HEADER} header or the ?${DEV_INBOX_TOKEN_QUERY}= query (printed as the inbox URL when bwf dev starts; stored in .bwf/dev-trigger-token).`,
@@ -124,7 +124,7 @@ export function emailDevInboxPlugin(options: EmailDevInboxPluginOptions): Plugin
           return;
         }
         if (wantsRaw) {
-          // The id arrives in the capture payload; strip quotes and line
+          // Decision: The id arrives in the capture payload; strip quotes and line
           // breaks before it goes into a header value.
           const safeId = id.replace(/["\r\n]/g, '');
           res.writeHead(200, {
@@ -161,7 +161,7 @@ function isAuthorized(
   return a.byteLength === b.byteLength && timingSafeEqual(a, b);
 }
 
-// Structural shapes rather than `node:http` classes: the same handler is
+// Decision: Structural shapes rather than `node:http` classes: the same handler is
 // exercised in unit tests against a synthesized req/res pair.
 interface CaptureRequest extends AsyncIterable<Uint8Array | string> {
   headers: Record<string, string | Array<string> | undefined>;

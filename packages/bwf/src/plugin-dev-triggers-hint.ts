@@ -40,7 +40,7 @@ export function devTriggersHintPlugin(root: string, devTriggerToken: string): Pl
 
         console.log();
         bwfLog(`Detected ${summary.join(' and ')}. Trigger locally:`);
-        // Dev dispatchers accept only this header (see the serve branch in
+        // Decision: Dev dispatchers accept only this header (see the serve branch in
         // router/compile.ts and the framework triggers dispatcher).
         const authHeader = `x-platform-dev-trigger: ${devTriggerToken}`;
 

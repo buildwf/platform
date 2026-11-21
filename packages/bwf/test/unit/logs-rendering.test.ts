@@ -71,7 +71,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** Runs `bwf logs` with a stdout of the given width and returns the printed lines. */
 async function printLogs(columns: number): Promise<Array<string>> {
   const output = Object.assign(
     new Writable({
@@ -325,7 +324,6 @@ it('notes minimal runtime logs and prints entries without a URL cleanly', async 
   expect(lines[1]).toBe(
     'Log messages, exception messages and URLs are not recorded on this platform.',
   );
-  // One space between each part: time, method, status.
   expect(lines[2]!.split(' ').slice(1)).toEqual(['GET', '500']);
   expect(lines.slice(3)).toEqual(['  [warn]', '  [exception] TypeError']);
 });

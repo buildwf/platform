@@ -17,7 +17,7 @@ export const emailSubcommands: Array<SubcommandDef> = [
     arg: '[name]',
     description: 'Show the shared mail address, or set a shorter permanent name for it',
   },
-  // The verb is collected as the arg so `domain list` completes in the interactive prompt;
+  // Decision: The verb is collected as the arg so `domain list` completes in the interactive prompt;
   // `domain add` then errors naming the missing <domain>, like a typed invocation.
   {
     name: 'domain',
@@ -98,8 +98,8 @@ export function parseEmailArgs(args: Array<string>): EmailArgs {
   }
 
   let limit: number | undefined;
-  // One raw value per occurrence, so a repeated flag is an error even when its last value
-  // is valid (the same rule as `bwf deploy`).
+  // Decision: One raw value per occurrence, so a repeated flag is an error even when its last value is valid
+  // (the same rule as `bwf deploy`).
   const projectValues: Array<string> = [];
   const platformValues: Array<string> = [];
   const positional: Array<string> = [];
@@ -107,12 +107,11 @@ export function parseEmailArgs(args: Array<string>): EmailArgs {
 
   const rest = args.slice(1);
   for (let i = 0; i < rest.length; i++) {
-    // A bare flag must not fall through as a positional, which the read-only subcommands
-    // never reject.
+    // Decision: A bare flag mustn't fall through as a positional, which the read-only subcommands don't reject.
     if (rest[i] === '--project' || rest[i]?.startsWith('--project=')) {
       const { value, next } = readFlagValue(rest, i, '--project');
-      // An empty value (`--project=`, an empty shell variable) is missing: `''` is not
-      // nullish, so `runEmailCommand` would skip `BWF_PROJECT` and use the linked project.
+      // Decision: An empty value (`--project=`, an empty shell variable) counts as missing: `''` isn't nullish, so
+      // `runEmailCommand` would skip `BWF_PROJECT` and use the linked project.
       if (value === undefined || value.trim() === '') {
         throw new Error('email: --project requires a value (a project name).');
       }
@@ -165,8 +164,8 @@ export function parseEmailArgs(args: Array<string>): EmailArgs {
     platform = platformValue;
   }
 
-  // The `domain` group parses its own positionals (verb + domain); the one-positional
-  // rule below would read the verb as the address.
+  // Decision: The `domain` group parses its own positionals (verb and domain); the one-positional rule below
+  // would read the verb as the address.
   if (subcommand === 'domain') {
     if (platform === 'cloudflare') {
       throw new Error(
@@ -188,8 +187,8 @@ export function parseEmailArgs(args: Array<string>): EmailArgs {
     throw new Error(`email: Usage: bwf email ${subcommand} <address> [--project <name>].`);
   }
 
-  // `--platform cloudflare` reads the local project and the developer's own Cloudflare
-  // session, never a bwf project, so `--project` has nothing to select.
+  // Decision: `--platform cloudflare` reads the local project and the developer's own Cloudflare session, not
+  // a bwf project, so `--project` has nothing to select.
   if (platform === 'cloudflare') {
     if (subcommand !== 'status' && subcommand !== 'setup') {
       throw new Error(

@@ -172,7 +172,6 @@ function accessApi() {
   };
 }
 
-/** Save a running operation owned by another request, as its runner would. */
 async function startForeignOperation(): Promise<void> {
   const saved = (await readZeroTrustConfigurationStrict(env.db))!;
   await env.db
@@ -195,7 +194,6 @@ async function startForeignOperation(): Promise<void> {
     .where(eq(platformSettings.key, 'zeroTrust.configuration'));
 }
 
-/** Advance the saved revision after the next unlocked read, as an operation heartbeat does. */
 function heartbeatAfterFirstRead(): void {
   const read = zeroTrustConfiguration.readZeroTrustConfigurationStrict;
   let bumped = false;
@@ -311,7 +309,6 @@ describe('Zero Trust operation failures', () => {
       status: 'error',
       last_error: expect.stringContaining('at most 100 custom domains'),
     });
-    // The skipped project wants protection, so every route writer denies it.
     await expect(resolveProjectZeroTrustRouting(env.db, large.id)).rejects.toThrow(
       'still reconciling',
     );
@@ -347,8 +344,6 @@ describe('Zero Trust operation failures', () => {
         throw error;
       }
     });
-    // Between the failed step and the skip, this operation's lease expires. A
-    // newer operation claims the installation and reconciles the project.
     vi.spyOn(zeroTrustLock, 'withProjectZeroTrustLock').mockImplementation(async (...args) => {
       if (stepFailed && !replaced && args[1] === large.id) {
         replaced = true;
@@ -470,13 +465,11 @@ describe('Zero Trust operation failures', () => {
       env.db,
       configurationInput({ existingProjects: 'protected', protectNewProjects: true }),
     );
-    // Its initialization failed after the project was created.
     const missing = await createTestProject(env.db, owner.id, 'missing-first-new');
     await expect(resolveProjectZeroTrustRouting(env.db, missing.id)).rejects.toThrow(
       'still being initialized',
     );
 
-    // The failing project keeps failing, so every run records a newer attempt.
     for (let run = 0; run < 2; run += 1) {
       await reconcilePendingProjectZeroTrust(platform, env.db, 1);
     }
@@ -524,7 +517,6 @@ describe('Zero Trust operation failures', () => {
       status: 'error',
       last_error: expect.stringContaining('at most 100 custom domains'),
     });
-    // The recorded failure still blocks its deploys.
     await expect(resolveProjectZeroTrustRouting(env.db, missing.id)).rejects.toThrow(
       'still reconciling',
     );
@@ -688,7 +680,6 @@ describe('Zero Trust operation failures', () => {
     cloudflare.revoke(false);
     const moved = bindings({ AUTH_REDIRECT_URI: 'https://api.apps.example.com/auth/callback' });
 
-    // A disable does not choose protection for existing projects.
     const { existingProjects: _existingProjects, ...replacement } = configurationInput();
     await configurePlatformZeroTrust(moved, env.db, {
       ...replacement,

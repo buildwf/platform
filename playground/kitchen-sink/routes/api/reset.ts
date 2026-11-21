@@ -12,8 +12,6 @@ const D1_TABLES_TO_CLEAR = [
 ] as const;
 
 export const POST = defineHandler(async (c) => {
-  // Clear all app + auth D1 tables, but tolerate fresh environments where
-  // some tables may not exist yet.
   const existingTableRows =
     (
       await c.env.DB.prepare(
@@ -30,7 +28,6 @@ export const POST = defineHandler(async (c) => {
     await c.env.DB.batch(deleteStatements);
   }
 
-  // Clear all KV keys (paginated)
   let kvComplete = false;
   let kvCursor: string | undefined;
   while (!kvComplete) {
@@ -40,7 +37,6 @@ export const POST = defineHandler(async (c) => {
     kvCursor = result.cursor;
   }
 
-  // Clear all R2 objects (paginated)
   let r2Cursor: string | undefined;
   for (;;) {
     const result = await storage.list({ limit: 1000, cursor: r2Cursor });

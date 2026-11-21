@@ -386,15 +386,14 @@ describe('provisionCloudflareResources — config discovery (fail closed, single
       { ...emptyDesired, d1: { binding: 'DB', name: 'myapp-db' } },
       { runWrangler: run, log: silentLog },
     );
-    // A BOM must NOT defeat read-first (a fail-open-to-{} parse would re-provision).
+    // Decision: A BOM mustn't defeat read-first (a fail-open-to-{} parse would re-provision).
     expect(calls.some((c) => c[0] === 'd1')).toBe(false);
     expect(result.resources[0]).toMatchObject({ kind: 'd1', action: 'reused', id: uuid('db1') });
-    // BOM survives the writer's migrations_dir fill.
     expect(readFileSync(wranglerPath, 'utf-8').charCodeAt(0)).toBe(0xfeff);
   });
 
   it('fails closed on a malformed root config — throws, no wrangler calls, no write', async () => {
-    const malformed = '{ "name": "x" "d1_databases": [] }'; // missing comma
+    const malformed = '{ "name": "x" "d1_databases": [] }';
     setup(malformed);
     const { run, calls } = makeRunner([{ match: /.*/, reply: () => ok() }]);
     await expect(
@@ -414,7 +413,7 @@ describe('provisionCloudflareResources — config discovery (fail closed, single
     mkdirSync(tmpDir, { recursive: true });
     const jsoncPath = join(tmpDir, 'wrangler.jsonc');
     const jsonPath = join(tmpDir, 'wrangler.json');
-    // The caller pins wrangler.json; the writer must not rediscover .jsonc.
+    // Decision: The caller pins wrangler.json; the writer mustn't rediscover .jsonc.
     writeFileSync(jsonPath, JSON.stringify({ kv_namespaces: [{ binding: 'KV', id: 'local' }] }));
     writeFileSync(jsoncPath, JSON.stringify({ kv_namespaces: [{ binding: 'KV', id: 'local' }] }));
     const { run } = makeRunner([
@@ -430,10 +429,8 @@ describe('provisionCloudflareResources — config discovery (fail closed, single
       { runWrangler: run, log: silentLog },
     );
     expect(result.configPath).toBe(toSlash(jsonPath));
-    // The adopted id landed in the passed file (wrangler.json) — NOT split into .jsonc.
     const jsonAfter = parseJsoncRaw(readFileSync(jsonPath, 'utf-8')) as Record<string, unknown>;
     expect((jsonAfter.kv_namespaces as Array<Record<string, unknown>>)[0].id).toBe(hex32('kv'));
-    // wrangler.jsonc is untouched (still the placeholder).
     const jsoncAfter = parseJsoncRaw(readFileSync(jsoncPath, 'utf-8')) as Record<string, unknown>;
     expect((jsoncAfter.kv_namespaces as Array<Record<string, unknown>>)[0].id).toBe('local');
   });
@@ -491,9 +488,9 @@ describe('provisionCloudflareResources — D1', () => {
   });
 
   it('repairs a missing migrations_dir on the read-first reused path (retry convergence, no duplicate D1)', async () => {
-    // Simulates a prior run that created the D1 (real id written) then crashed
-    // before migrations_dir. The retry takes read-first → reused and must still
-    // fill migrations_dir — without re-creating (no duplicate D1).
+    // Decision: Simulates a prior run that created the D1 (real id written) then crashed before
+    // migrations_dir. The retry takes read-first and reuses it, and still has to fill
+    // migrations_dir without re-creating (no duplicate D1).
     setup(
       JSON.stringify({
         d1_databases: [{ binding: 'DB', database_name: 'myapp-db', database_id: uuid('db1') }],
@@ -506,9 +503,9 @@ describe('provisionCloudflareResources — D1', () => {
       { ...emptyDesired, d1: { binding: 'DB', name: 'myapp-db' } },
       { runWrangler: run, log: silentLog },
     );
-    expect(calls).toEqual([]); // read-first — no create, no list
+    expect(calls).toEqual([]);
     const d1 = readConfig().d1_databases as Array<Record<string, unknown>>;
-    expect(d1).toHaveLength(1); // no duplicate D1 minted
+    expect(d1).toHaveLength(1);
     expect(d1[0]).toEqual({
       binding: 'DB',
       database_name: 'myapp-db',
@@ -662,8 +659,8 @@ describe('provisionCloudflareResources — D1 discovery gate + strict validation
   });
 
   it('fails closed (no create) when a `d1 list` member is malformed — even when it IS the target name', async () => {
-    // The target-named member carries NO id → it must NOT be filtered to a false
-    // "absent" that mints a duplicate D1.
+    // Decision: The target-named member carries no id, so it mustn't be filtered to a false "absent" that
+    // mints a duplicate D1.
     setup(JSON.stringify({ name: 'app' }));
     const { run, calls } = makeRunner([
       { match: /^d1 list --json/, reply: () => ok(JSON.stringify([{ name: 'myapp-db' }])) },
@@ -693,7 +690,6 @@ describe('provisionCloudflareResources — D1 discovery gate + strict validation
         log: silentLog,
       }),
     ).rejects.toThrow(/d1 info myapp-db.*failed/s);
-    // The 7502 create wrote nothing, and the failed info produced no adopt/write.
     expect(readConfig().d1_databases).toBeUndefined();
   });
 });
@@ -852,7 +848,7 @@ describe('provisionCloudflareResources — KV', () => {
       { ...emptyDesired, kvNamespaces: [{ binding: 'KV', title: 'myapp-kv' }] },
       { runWrangler: run, log: { info: () => {}, warn: (m) => warnings.push(m) } },
     );
-    // hex32 is order-preserving on equal-length seeds, so hex32('aaa') < hex32('zzz').
+    // Decision: hex32 is order-preserving on equal-length seeds, so hex32('aaa') < hex32('zzz').
     expect(result.resources[0]).toMatchObject({ action: 'adopted', id: hex32('aaa') });
     expect((readConfig().kv_namespaces as Array<Record<string, unknown>>)[0].id).toBe(hex32('aaa'));
     expect(
@@ -907,7 +903,7 @@ describe('provisionCloudflareResources — account_id', () => {
 
   it('does not write account_id when not provided (and none resolvable)', async () => {
     setup(JSON.stringify({ name: 'app' }));
-    // No account anywhere; with no remote work the account fence does not fire.
+    // Decision: No account anywhere; with no remote work the account fence doesn't fire.
     vi.stubEnv('CLOUDFLARE_ACCOUNT_ID', undefined);
     const { run } = makeRunner([]);
     const result = await provisionCloudflareResources(tmpDir, wranglerPath, emptyDesired, {
@@ -1075,8 +1071,8 @@ describe('provisionCloudflareResources — R2', () => {
   });
 
   it('does NOT create on an R2 info failure that is not a confirmed not-found (auth/metrics) — surfaces the error', async () => {
-    // `r2 bucket info` also runs a metrics query, so an existing bucket can exit
-    // non-zero on an auth or metrics failure.
+    // Decision: `r2 bucket info` also runs a metrics query, so an existing bucket can exit non-zero on an
+    // auth or metrics failure.
     setup(JSON.stringify({ name: 'app' }));
     const { run, calls } = makeRunner([
       {
@@ -1092,7 +1088,6 @@ describe('provisionCloudflareResources — R2', () => {
         { runWrangler: run, log: silentLog },
       ),
     ).rejects.toThrow(/r2 bucket info myapp-uploads.*(failed|refusing)/s);
-    // No create attempted (the existing bucket must not be duplicated/errored on).
     expect(calls).toEqual([
       ['r2', 'bucket', 'info', 'myapp-uploads', '--json', '-c', wranglerPath, '--env='],
     ]);
@@ -1119,7 +1114,6 @@ describe('provisionCloudflareResources — Hyperdrive', () => {
         ],
       },
     );
-    // No wrangler create — existence via the injected REST seam, id via the writer.
     expect(calls.some((c) => isCall(c, 'hyperdrive', 'create'))).toBe(false);
     const hd = readConfig().hyperdrive as Array<Record<string, unknown>>;
     expect(hd).toEqual([{ binding: 'HYPERDRIVE', id: hex32('existing') }]);
@@ -1204,9 +1198,9 @@ describe('provisionCloudflareResources — Hyperdrive', () => {
   });
 
   it('still skips (structured, never creates) when a lister can look but finds nothing', async () => {
-    // A lister IS available, so this run COULD have adopted a same-named config; it
-    // just did not find one. Nothing can be minted without a connection string, so the
-    // structured skip — not a throw — remains the right report for that outcome.
+    // Decision: A lister is available, so this run could have adopted a same-named config; it just didn't
+    // find one. Nothing can be minted without a connection string, so the structured skip, not a
+    // throw, is the right report for that outcome.
     setup(JSON.stringify({ name: 'app' }));
     const warnings: Array<string> = [];
     const { run, calls } = makeRunner([]);
@@ -1238,8 +1232,8 @@ describe('provisionCloudflareResources — Hyperdrive', () => {
   });
 
   it('adopts a same-named config with NO connection string (adoption never needs one)', async () => {
-    // Guards the stringless fail-closed fence from over-reaching: a run with no
-    // connection string whose lister DOES find a match must still adopt, not throw.
+    // Decision: Keeps the stringless fail-closed fence from over-reaching: a run with no connection string
+    // whose lister finds a match still has to adopt, not throw.
     setup(JSON.stringify({ hyperdrive: [{ binding: 'HYPERDRIVE', id: 'local' }] }));
     const { run, calls } = makeRunner([]);
     const result = await provisionCloudflareResources(
@@ -1269,8 +1263,8 @@ describe('provisionCloudflareResources — Hyperdrive', () => {
   });
 });
 
-// The Hyperdrive existence check uses the Cloudflare API and needs an API token, so a
-// missing token must be reported before any other resource is created.
+// Decision: The Hyperdrive existence check uses the Cloudflare API and needs an API token, so a missing
+// token has to be reported before any other resource is created.
 describe('provisionCloudflareResources — Hyperdrive API token requirement', () => {
   beforeEach(() => {
     vi.stubEnv('CLOUDFLARE_API_TOKEN', undefined);
@@ -1295,9 +1289,7 @@ describe('provisionCloudflareResources — Hyperdrive API token requirement', ()
         { runWrangler: run, log: silentLog },
       ),
     ).rejects.toThrow(/CLOUDFLARE_API_TOKEN/);
-    // Nothing ran: no `d1 create`, no Hyperdrive call — the account is untouched.
     expect(calls).toEqual([]);
-    // The config was not touched either (no account_id pin, no new entries).
     expect(readConfig()).toEqual({ name: 'app' });
   });
 
@@ -1321,13 +1313,10 @@ describe('provisionCloudflareResources — Hyperdrive API token requirement', ()
     const message = (error as Error).message;
     expect(message).toContain('CLOUDFLARE_API_TOKEN');
     expect(message).toContain('Hyperdrive');
-    // Explains WHY a token is needed where a browser login suffices elsewhere.
     expect(message).toMatch(/API token/);
     expect(message).toMatch(/browser login/);
-    // Remedy 2: create the config in Cloudflare and add its id to bwf.config.ts.
     expect(message).toContain('cloudflare.hyperdrive');
     expect(message).not.toContain('wrangler');
-    // The connection string is never echoed into the error.
     expect(message).not.toContain('postgres://');
   });
 
@@ -1429,9 +1418,9 @@ describe('provisionCloudflareResources — Hyperdrive API token requirement', ()
   });
 
   it('fails closed on a MISSING connection string when nothing can look the account up', async () => {
-    // No connection string AND no token/lister → this run can neither create nor adopt,
-    // so its only reachable outcome is the structured `skipped`, which deploy treats as
-    // FATAL. Reaching that costs the user a half-provisioned account, so it stops here.
+    // Decision: No connection string and no token or lister: this run can neither create nor adopt, so its
+    // only reachable outcome is the structured `skipped`, which deploy treats as fatal. Reaching
+    // that costs the user a half-provisioned account, so it stops here.
     setup(JSON.stringify({ name: 'app' }));
     const { run, calls } = makeRunner([]);
     await expect(
@@ -1445,7 +1434,6 @@ describe('provisionCloudflareResources — Hyperdrive API token requirement', ()
         { runWrangler: run, log: silentLog },
       ),
     ).rejects.toThrow(/no DATABASE_URL to create it from/);
-    // Nothing ran: no wrangler call, so no resource was created before the rejection.
     expect(calls).toEqual([]);
   });
 
@@ -1467,15 +1455,15 @@ describe('provisionCloudflareResources — Hyperdrive API token requirement', ()
     expect(message).toContain('cloudflare.hyperdrive');
     expect(message).not.toContain('wrangler');
     expect(message).toContain('HYPERDRIVE');
-    // The remedy must point at the shell, never at a dotenv file — project-derived env
-    // is read only inside the build subprocess, and a shipped .env value would leak.
+    // Decision: The remedy points at the shell, not a dotenv file: project-derived env is read only inside
+    // the build subprocess, and a shipped .env value would leak.
     expect(message).toMatch(/shell/);
     expect(message).toMatch(/NOT used here/);
   });
 
   it('fails closed BEFORE the account pin and before any other resource is created', async () => {
-    // The whole point of fencing early: a run that also wants KV/R2 must not create
-    // them (and must not stamp account_id) only to abort at the Hyperdrive block.
+    // Decision: The point of fencing early: a run that also wants KV or R2 mustn't create them (or stamp
+    // account_id) only to abort at the Hyperdrive block.
     setup(JSON.stringify({ name: 'app' }));
     const { run, calls } = makeRunner([{ match: /.*/, reply: () => ok() }]);
     await expect(
@@ -1491,14 +1479,13 @@ describe('provisionCloudflareResources — Hyperdrive API token requirement', ()
         { runWrangler: run, accountId: 'acct-A', log: silentLog },
       ),
     ).rejects.toThrow(/no DATABASE_URL to create it from/);
-    // No create seam was invoked at all — KV and R2 were never touched.
     expect(calls).toEqual([]);
-    // …and the account was never pinned, so a retry under a different account is still free.
+    // Decision: The account was never pinned, so a retry under a different account is still free.
     expect(readConfig().account_id).toBeUndefined();
   });
 
   it('a hyperdrive already provisioned with a real id needs neither a string nor a token', async () => {
-    // The read-first path is pure config I/O — the stringless fence must not touch it.
+    // Decision: The read-first path is pure config I/O; the stringless fence mustn't touch it.
     setup(JSON.stringify({ hyperdrive: [{ binding: 'HYPERDRIVE', id: hex32('hd') }] }));
     const { run, calls } = makeRunner([]);
     const result = await provisionCloudflareResources(
@@ -1537,14 +1524,13 @@ describe('provisionCloudflareResources — Queues (resource only)', () => {
     );
     expect(calls).toEqual([['queues', 'info', 'jobs', '-c', wranglerPath, '--env=']]);
     expect(result.resources).toEqual([{ kind: 'queue', name: 'jobs', action: 'reused' }]);
-    // Provisioning writes no queue producer or consumer entries.
     expect(readConfig().queues).toBeUndefined();
   });
 
   it('creates a queue that `queues info` reports missing; verifies with a follow-up info probe', async () => {
     setup(JSON.stringify({ name: 'app' }));
-    // Queues write no config, so a follow-up `queues info` is the only check that the
-    // create really happened.
+    // Decision: Queues write no config, so a follow-up `queues info` is the only check that the create
+    // really happened.
     let created = false;
     const { run, calls } = makeRunner([
       {
@@ -1631,19 +1617,17 @@ describe('provisionCloudflareResources — Queues (resource only)', () => {
   });
 
   it('fails closed when a masked-signal `queues create` (wrapper exit 0) did NOT create the queue', async () => {
-    // wrangler's bin wrapper maps a signal-killed inner CLI to exit 0. Queues write
-    // no config, so the ONLY backstop is the post-create verify probe: a create that
-    // reports clean 0 but whose follow-up `queues info` still does not confirm the
-    // queue must fail closed (never a false `created`).
+    // Decision: wrangler's bin wrapper maps a signal-killed inner CLI to exit 0. Queues write no config, so
+    // the only backstop is the post-create verify probe: a create that reports a clean 0 but whose
+    // follow-up `queues info` still doesn't confirm the queue has to fail closed (no false
+    // `created`).
     setup(JSON.stringify({ name: 'app' }));
     const { run, calls } = makeRunner([
       {
-        // Both the initial probe AND the verify probe report the queue absent — the
-        // masked-kill create never actually created it.
         match: /^queues info jobs/,
         reply: () => fail('', 'X [ERROR] Queue "jobs" does not exist.'),
       },
-      // A signal-killed inner CLI surfaced as a clean exit 0 by the wrapper.
+      // Decision: A signal-killed inner CLI surfaced as a clean exit 0 by the wrapper.
       { match: /^queues create jobs/, reply: () => ok('') },
     ]);
     await expect(
@@ -1654,7 +1638,6 @@ describe('provisionCloudflareResources — Queues (resource only)', () => {
         { runWrangler: run, log: silentLog },
       ),
     ).rejects.toThrow(/did not confirm the queue exists afterward/);
-    // The verify probe ran (info, create, info) but the queue was never recorded.
     expect(calls).toEqual([
       ['queues', 'info', 'jobs', '-c', wranglerPath, '--env='],
       ['queues', 'create', 'jobs', '-c', wranglerPath, '--env='],
@@ -1684,7 +1667,6 @@ describe('provisionCloudflareResources — account reconciliation + config pin',
         },
       ),
     ).rejects.toThrow(/account mismatch.*config-acct.*requested-acct/s);
-    // No wrangler call and no REST call happened before the fail-closed throw.
     expect(calls).toEqual([]);
     expect(restCalled).toBe(false);
   });
@@ -1702,7 +1684,6 @@ describe('provisionCloudflareResources — account reconciliation + config pin',
     async ({ ambient, accountId, pinned }) => {
       vi.stubEnv('CLOUDFLARE_ACCOUNT_ID', ambient);
       setup(JSON.stringify({ name: 'app' }));
-      // Run 1: D1 create writes a real id, then a later op fails.
       const run1 = makeRunner([
         { match: /^d1 list --json/, reply: () => ok('[]') },
         {
@@ -1729,14 +1710,12 @@ describe('provisionCloudflareResources — account reconciliation + config pin',
           { runWrangler: run1.run, accountId, log: silentLog },
         ),
       ).rejects.toThrow(/queues info jobs.*failed/s);
-      // The account was pinned before D1, alongside the real D1 id.
       const after1 = readConfig();
       expect(after1.account_id).toBe(pinned);
       expect((after1.d1_databases as Array<Record<string, unknown>>)[0].database_id).toBe(
         uuid('createdA'),
       );
 
-      // Run 2 under account B fails closed with no wrangler or REST call.
       let restCalled = false;
       const run2 = makeRunner([{ match: /.*/, reply: () => ok() }]);
       await expect(
@@ -1843,7 +1822,6 @@ describe('provisionCloudflareResources — account reconciliation + config pin',
       wranglerPath,
       {
         ...emptyDesired,
-        // No connection string: only the existence check runs, never a create.
         hyperdrive: { binding: 'HYPERDRIVE', name: 'myapp-hd', connectionString: '' },
       },
       { runWrangler: run, apiToken: 'tok', log: silentLog },
@@ -1860,7 +1838,7 @@ describe('provisionCloudflareResources — pinned transport (one base for wrangl
     expect(resolvePinnedApiBaseUrl({ CLOUDFLARE_API_BASE_URL: 'https://api.example/v9' })).toBe(
       'https://api.example/v9',
     );
-    // Deprecated alias honored when the primary is absent.
+    // Decision: The deprecated alias is honored when the primary is absent.
     expect(resolvePinnedApiBaseUrl({ CF_API_BASE_URL: 'https://cf.example/v4' })).toBe(
       'https://cf.example/v4',
     );
@@ -1896,8 +1874,8 @@ describe('provisionCloudflareResources — pinned transport (one base for wrangl
   });
 
   it('the lister URL uses the pinned base with wrangler-EXACT concatenation (no trailing-slash trim)', async () => {
-    // Wrangler appends the resource path to the base verbatim, so a trailing slash gives
-    // `//accounts/`. The lister must request the same URL as the create.
+    // Decision: Wrangler appends the resource path to the base verbatim, so a trailing slash gives
+    // `//accounts/`. The lister has to request the same URL as the create.
     const pinnedBase = 'https://proxy.example/api/';
     vi.stubEnv('CLOUDFLARE_API_BASE_URL', pinnedBase);
     setup(JSON.stringify({ account_id: 'config-acct', name: 'app' }));
@@ -1940,13 +1918,12 @@ describe('provisionCloudflareResources — pinned transport (one base for wrangl
     );
     expect(seen?.accountId).toBe('config-acct');
     expect(seen?.apiBaseUrl).toBe('https://api.cloudflare.com/client/v4');
-    // The lister is handed the overall-deadline signal to thread into every fetch.
     expect(seen?.signal).toBeInstanceOf(AbortSignal);
   });
 
   it('FAILS CLOSED when a project .env sets a transport-redirect var (no wrangler/REST)', async () => {
     setup(JSON.stringify({ account_id: 'config-acct', name: 'app' }));
-    // A repo .env that would redirect wrangler's transport on every command.
+    // Decision: A repo .env that would redirect wrangler's transport on each command.
     writeFileSync(
       join(tmpDir, '.env'),
       'CLOUDFLARE_API_BASE_URL=https://api.staging.cloudflare.com/client/v4\n',
@@ -1972,14 +1949,12 @@ describe('provisionCloudflareResources — pinned transport (one base for wrangl
         },
       ),
     ).rejects.toThrow(/refusing to provision.*\.env.*CLOUDFLARE_API_BASE_URL.*redirect/s);
-    // Failed closed BEFORE any remote work.
     expect(calls.length).toBe(0);
     expect(listerCalled).toBe(false);
   });
 });
 
 describe('provisionCloudflareResources — Hyperdrive discovery (pagination + fail closed)', () => {
-  /** Serve `pages` in order (repeating the last) and record every requested URL. */
   function stubFetch(pages: Array<{ status?: number; body: unknown }>): Array<string> {
     const urls: Array<string> = [];
     vi.stubGlobal('fetch', async (url: string | URL) => {
@@ -2099,12 +2074,10 @@ describe('provisionCloudflareResources — Hyperdrive discovery (pagination + fa
   });
 
   it('fails closed on malformed pagination (missing/premature-empty/duplicate/inconsistent) — never declares absence, no create', async () => {
-    // A same-named config could sit on an unread page, so incomplete listings never
-    // count as absence.
+    // Decision: A same-named config could sit on an unread page, so incomplete listings don't count as
+    // absence.
     const cases: Array<Array<{ status?: number; body: unknown }>> = [
-      // 1. missing result_info.total_count metadata (cannot prove completeness)
       [{ body: { success: true, result: [{ id: 'a', name: 'other' }] } }],
-      // 2. premature empty page before all configs are listed
       [
         {
           body: {
@@ -2115,7 +2088,6 @@ describe('provisionCloudflareResources — Hyperdrive discovery (pagination + fa
         },
         { body: { success: true, result: [], result_info: { total_count: 3 } } },
       ],
-      // 3. repeated/duplicate id across pages (padding to satisfy a count)
       [
         {
           body: {
@@ -2132,7 +2104,6 @@ describe('provisionCloudflareResources — Hyperdrive discovery (pagination + fa
           },
         },
       ],
-      // 4. inconsistent total_count between pages
       [
         {
           body: {
@@ -2192,7 +2163,7 @@ describe('provisionCloudflareResources — KV/R2 fail closed on schema-valid amb
   });
 
   it('KV: fails closed (no create) when the list has a malformed member (null) — never filtered away', async () => {
-    // Filtering out the malformed member would turn the list into a false "absent".
+    // Decision: Filtering out the malformed member would turn the list into a false "absent".
     setup(JSON.stringify({ name: 'app' }));
     const { run, calls } = makeRunner([
       {
@@ -2227,7 +2198,6 @@ describe('provisionCloudflareResources — KV/R2 fail closed on schema-valid amb
         { runWrangler: run, log: silentLog },
       ),
     ).rejects.toThrow(/did not identify the requested bucket/);
-    // Neither adopted nor created — the config is untouched.
     expect(calls.some((c) => isCall(c, 'r2', 'bucket', 'create'))).toBe(false);
     expect(readConfig().r2_buckets).toBeUndefined();
   });
@@ -2241,7 +2211,7 @@ describe('provisionEnv — scrubbed and pinned keys', () => {
     vi.stubEnv('CF_ACCESS_TOKEN', 'short-lived-user-jwt');
     vi.stubEnv('CF_ACCESS_READINESS_ORIGIN', 'https://dashboard.example.com');
     const env = provisionEnv({ accountId: 'acct-X' });
-    // CLOUDFLARE_ENV would let wrangler select an env-specific account block.
+    // Decision: CLOUDFLARE_ENV would let wrangler select an env-specific account block.
     expect(env.CLOUDFLARE_ENV).toBeUndefined();
     expect(env.CF_ACCESS_CLIENT_ID).toBeUndefined();
     expect(env.CF_ACCESS_CLIENT_SECRET).toBeUndefined();
@@ -2273,8 +2243,8 @@ describe('provisionCloudflareResources — resource-name validation', () => {
     desired: (name: string) => DesiredResourceSet;
   }> = [
     {
-      // badNames all start with "-", so the universal option-injection guard fires FIRST
-      // with "refusing to pass an unsafe <label> name", before the grammar check.
+      // Decision: badNames all start with "-", so the universal option-injection guard fires first with
+      // "refusing to pass an unsafe <label> name", before the grammar check.
       label: /unsafe D1 database name/,
       desired: (name) => ({ ...emptyDesired, d1: { binding: 'DB', name } }),
     },
@@ -2364,8 +2334,8 @@ describe('provisionCloudflareResources — create postcondition', () => {
     setup(JSON.stringify({ name: 'app' }));
     const { run, calls } = makeRunner([
       { match: /^kv namespace list/, reply: () => ok('[]') },
-      // Success exit, but nothing written to config (simulates a killed child the
-      // wrapper masked as exit 0, or a silent partial create).
+      // Decision: Success exit, but nothing written to config (simulates a killed child the wrapper masked as
+      // exit 0, or a silent partial create).
       { match: /^kv namespace create /, reply: () => ok() },
     ]);
     await expect(
@@ -2449,7 +2419,7 @@ describe('provisionCloudflareResources — strict D1 identity', () => {
     const { run, calls } = makeRunner([
       {
         match: /^d1 list --json/,
-        // Empty-string uuid must NOT shadow the valid database_id.
+        // Decision: An empty-string uuid mustn't shadow the valid database_id.
         reply: () =>
           ok(JSON.stringify([{ uuid: '', database_id: uuid('realdb'), name: 'myapp-db' }])),
       },
@@ -2551,7 +2521,7 @@ describe('provisionCloudflareResources — boundary account fence', () => {
     expect(error).toBeInstanceOf(Error);
     const message = (error as Error).message;
     expect(message).toMatch(/no Cloudflare account is resolvable/);
-    // The remedy names the bwf setting, not a Wrangler config file.
+    // Decision: The remedy names the bwf setting, not a Wrangler config file.
     expect(message).toContain('cloudflare.account_id');
     expect(message).not.toContain('wrangler');
     expect(calls).toEqual([]);
@@ -2562,10 +2532,10 @@ describe('provisionCloudflareResources — boundary account fence', () => {
 
 describe('provisionCloudflareResources — absolute config path', () => {
   it('resolves a RELATIVE rootWranglerPath against root (not cwd) so reads + wrangler ops target ONE file', async () => {
-    // Node would resolve a relative path against cwd while wrangler resolves `-c` against
-    // root, so the provisioner makes it absolute against root up front.
-    setup(JSON.stringify({ account_id: 'acct', name: 'app' })); // at tmpDir/wrangler.jsonc
-    const relPath = 'wrangler.jsonc'; // relative to root (tmpDir), NOT to process.cwd()
+    // Decision: Node would resolve a relative path against cwd while wrangler resolves `-c` against root, so
+    // the provisioner makes it absolute against root up front.
+    setup(JSON.stringify({ account_id: 'acct', name: 'app' }));
+    const relPath = 'wrangler.jsonc';
     const abs = join(tmpDir, relPath);
     const { run, calls } = makeRunner([
       {
@@ -2574,20 +2544,18 @@ describe('provisionCloudflareResources — absolute config path', () => {
       },
     ]);
     const result = await provisionCloudflareResources(
-      tmpDir, // root — absolute, and different from process.cwd()
-      relPath, // RELATIVE config path
+      tmpDir,
+      relPath,
       { ...emptyDesired, kvNamespaces: [{ binding: 'KV', title: 'myapp-kv' }] },
       { runWrangler: run, log: silentLog },
     );
-    // Returned + threaded config path is the absolute resolution against root.
     expect(result.configPath).toBe(toSlash(abs));
     expect(calls.length).toBeGreaterThan(0);
     for (const argv of calls) {
       const i = argv.indexOf('-c');
       expect(i).toBeGreaterThanOrEqual(0);
-      expect(argv[i + 1]).toBe(toSlash(abs)); // wrangler `-c` is the SAME absolute file
+      expect(argv[i + 1]).toBe(toSlash(abs));
     }
-    // The adopted id landed in root/wrangler.jsonc — the file Node read from too.
     const after = parseJsoncRaw(readFileSync(abs, 'utf-8')) as Record<string, unknown>;
     expect((after.kv_namespaces as Array<Record<string, unknown>>)[0].id).toBe(hex32('kv'));
   });
@@ -2595,7 +2563,6 @@ describe('provisionCloudflareResources — absolute config path', () => {
 
 describe('provisionCloudflareResources — one D1 normalizer', () => {
   it('fails closed on CONFLICTING name aliases (name vs database_name) for the requested database', async () => {
-    // A member claims the requested name via `name` while its `database_name` disagrees.
     setup(JSON.stringify({ name: 'app' }));
     const { run, calls } = makeRunner([
       {
@@ -2671,8 +2638,8 @@ describe('provisionCloudflareResources — one D1 normalizer', () => {
 
 describe('provisionCloudflareResources — transport account context', () => {
   it('threads the reconciled account into EVERY wrangler call AND the Hyperdrive lister', async () => {
-    // Config pins the account → it is the reconciled effective account (config wins
-    // over the ambient CLOUDFLARE_ACCOUNT_ID). Every seam invocation must receive it.
+    // Decision: The config pins the account, so it's the reconciled effective account (config wins over the
+    // ambient CLOUDFLARE_ACCOUNT_ID). Each seam call has to receive it.
     setup(JSON.stringify({ account_id: 'reconciled-acct' }));
     const seenRunAccounts: Array<string> = [];
     const seenListAccounts: Array<string> = [];
@@ -2706,8 +2673,6 @@ describe('provisionCloudflareResources — transport account context', () => {
         ...emptyDesired,
         d1: { binding: 'DB', name: 'myapp-db' },
         kvNamespaces: [{ binding: 'KV', title: 'myapp-kv' }],
-        // Empty connection string → only the existence check runs (no create), so the
-        // lister IS invoked and records the account it was called with.
         hyperdrive: { binding: 'HYPERDRIVE', name: 'myapp-hd', connectionString: '' },
       },
       {
@@ -2729,10 +2694,10 @@ describe('provisionCloudflareResources — transport account context', () => {
 
 describe('provisionCloudflareResources — boundary duplicate-member guard', () => {
   it('fails closed at entry on a config with duplicate kv_namespaces members — NO wrangler/REST calls', async () => {
-    // jsonc-parser.parse() (used by readRootConfig) silently resolves a duplicate to
-    // the LAST member, so without the boundary guard a `kv namespace create` could
-    // orphan or a reuse be false. The SAME strict detector the writer uses runs at the
-    // provisioner boundary — before account persistence, discovery, or any remote work.
+    // Decision: jsonc-parser.parse() (used by readRootConfig) silently resolves a duplicate to the last
+    // member, so without the boundary guard a `kv namespace create` could orphan or a reuse could
+    // be false. The same strict detector the writer uses runs at the provisioner boundary, before
+    // account persistence, discovery or any remote work.
     setup(`{
   "account_id": "acct",
   "kv_namespaces": [{ "binding": "KV", "id": "aaa" }],
@@ -2772,8 +2737,8 @@ describe('provisionCloudflareResources — Hyperdrive list validation at the cal
     return provisionCloudflareResources(tmpDir, wranglerPath, hdDesired, {
       runWrangler: run,
       log: silentLog,
-      // The injected lister LIES about its return type — the caller-side validator must
-      // reject the malformed shape at runtime rather than adopt an empty/garbage id.
+      // Decision: The injected lister lies about its return type: the caller-side validator has to reject the
+      // malformed shape at runtime instead of adopting an empty or garbage id.
       listHyperdriveConfigs: async () => list as never,
     });
   }
@@ -2801,16 +2766,16 @@ describe('provisionCloudflareResources — Hyperdrive list validation at the cal
   });
 
   it('fails closed on a NON-matching member with a malformed id (no create)', async () => {
-    // A member for a different config carries a non-hex id, so the list cannot prove absence.
+    // Decision: A member for a different config carries a non-hex id, so the list can't prove absence.
     await expect(
       provisionWithInjectedList([{ id: 'bogus', name: 'someone-else' }]),
     ).rejects.toThrow(/malformed id "bogus".*32-character hex Hyperdrive id/s);
     expect(readConfig().hyperdrive).toBeUndefined();
   });
 
-  // A runtime null/undefined/non-array OUTER result must be treated as UNKNOWN
-  // (never coerced to "empty" = confirmed absence), so it fails closed BEFORE any
-  // create instead of authorizing a blind `hyperdrive create` on a same-named config.
+  // Decision: A runtime null, undefined or non-array outer result is unknown (not "empty" = confirmed
+  // absence), so it fails closed before any create instead of authorizing a blind
+  // `hyperdrive create` on a same-named config.
   for (const [label, bad] of [
     ['null', null],
     ['undefined', undefined],
@@ -2827,7 +2792,6 @@ describe('provisionCloudflareResources — Hyperdrive list validation at the cal
           listHyperdriveConfigs: async () => bad as never,
         }),
       ).rejects.toThrow(/could not check whether Hyperdrive config "myapp-hd" already exists/);
-      // No blind create, and nothing written to the config.
       expect(calls.some((c) => isCall(c, 'hyperdrive', 'create'))).toBe(false);
       expect(readConfig().hyperdrive).toBeUndefined();
     });
@@ -2838,8 +2802,8 @@ describe('provisionCloudflareResources — whole-list id-format gate (D1 + KV, b
   it('D1: a NON-matching list member with a malformed id fails the whole list closed (no create)', async () => {
     setup(JSON.stringify({ account_id: 'acct' }));
     const { run, calls } = makeRunner([
-      // A different database with a bogus (non-UUID) id. Target "myapp-db" is absent, but
-      // the untrustworthy member must reject the list rather than authorize a create.
+      // Decision: A different database with a bogus (non-UUID) id. Target "myapp-db" is absent, but the
+      // untrustworthy member has to reject the list instead of authorizing a create.
       {
         match: /^d1 list --json/,
         reply: () => ok(JSON.stringify([{ name: 'other', database_id: 'bogus' }])),
@@ -2908,7 +2872,6 @@ describe('provisionCloudflareResources — whole-list id-format gate (D1 + KV, b
 
 describe('provisionCloudflareResources — strict duplicate-safe binding reader', () => {
   it('read-first fails closed on DUPLICATE same-binding entries in the target field (not reused)', async () => {
-    // Two d1_databases entries share binding "DB".
     setup(
       JSON.stringify({
         account_id: 'acct',
@@ -2927,13 +2890,12 @@ describe('provisionCloudflareResources — strict duplicate-safe binding reader'
         { runWrangler: run, log: silentLog },
       ),
     ).rejects.toThrow(/binding "DB" is declared 2 times in "d1_databases"/);
-    // Failed closed before any wrangler call — never reused/created.
     expect(calls.length).toBe(0);
   });
 
   it('read-first fails closed on a CROSS-TYPE collision (binding used by another field) — not reused', async () => {
-    // Binding "DB" is used by a d1_databases entry and a kv_namespaces entry, which
-    // wrangler rejects.
+    // Decision: Binding "DB" is used by a d1_databases entry and a kv_namespaces entry, which wrangler
+    // rejects.
     setup(
       JSON.stringify({
         account_id: 'acct',
@@ -2991,7 +2953,6 @@ describe('provisionCloudflareResources — strict duplicate-safe binding reader'
     expect(result.resources).toEqual([
       { kind: 'd1', binding: 'DB', name: 'myapp-db', action: 'reused', id: uuid('db') },
     ]);
-    // Reused via read-first — no discovery/create.
     expect(calls.some((c) => isCall(c, 'd1', 'list'))).toBe(false);
     expect(calls.some((c) => isCall(c, 'd1', 'create'))).toBe(false);
   });
@@ -3008,8 +2969,8 @@ describe('provisionCloudflareResources — resource-specific create postconditio
       {
         match: /^r2 bucket create /,
         reply: () => {
-          // create "succeeds" but writes a DIFFERENT bucket than requested (a race /
-          // stale --update-config / wrong-account write). bucket_name IS the identity.
+          // Decision: The create "succeeds" but writes a different bucket than requested (a race, stale
+          // --update-config or wrong-account write). bucket_name is the identity.
           simulateUpdateConfig('r2_buckets', { binding: 'STORAGE', bucket_name: 'other-bucket' });
           return ok();
         },
@@ -3157,7 +3118,8 @@ describe('provisionCloudflareResources — KV title grammar vs option-injection 
 });
 
 describe('provisionCloudflareResources — queue name grammar (Cloudflare Queues)', () => {
-  // Underscores are NOT allowed; a trailing separator is NOT allowed; > 63 chars rejected.
+  // Decision: Underscores aren't allowed, a trailing separator isn't allowed, and over 63 characters is
+  // rejected.
   for (const bad of ['jobs_v2', 'jobs_', 'jobs-', '_jobs', '-jobs', 'a'.repeat(64)]) {
     it(`rejects the invalid queue name ${JSON.stringify(bad)} before any wrangler call`, async () => {
       setup(JSON.stringify({ account_id: 'acct' }));
@@ -3174,7 +3136,6 @@ describe('provisionCloudflareResources — queue name grammar (Cloudflare Queues
     });
   }
 
-  // Valid: single alphanumeric, 63 chars, and internal dashes.
   for (const good of ['a', 'Q9', 'a'.repeat(63), 'jobs-v2', 'my-queue-1']) {
     it(`accepts the valid queue name ${JSON.stringify(good)} (reaches wrangler)`, async () => {
       setup(JSON.stringify({ account_id: 'acct' }));
@@ -3195,11 +3156,11 @@ describe('provisionCloudflareResources — queue name grammar (Cloudflare Queues
 
 describe('provisionCloudflareResources — config compliance_region pins the transport', () => {
   it('resolvePinnedApiBaseUrl honors the config compliance_region (fedramp) with no ambient override', () => {
-    // Config says fedramp_high, no CLOUDFLARE_COMPLIANCE_REGION ambient → the FedRAMP base.
+    // Decision: Config says fedramp_high and there's no CLOUDFLARE_COMPLIANCE_REGION ambient, so the FedRAMP
+    // base.
     expect(resolvePinnedApiBaseUrl({}, 'fedramp_high')).toBe(
       'https://api.fed.cloudflare.com/client/v4',
     );
-    // Config "public" → public base; absent config → public base.
     expect(resolvePinnedApiBaseUrl({}, 'public')).toBe('https://api.cloudflare.com/client/v4');
     expect(resolvePinnedApiBaseUrl({}, undefined)).toBe('https://api.cloudflare.com/client/v4');
   });
@@ -3208,7 +3169,6 @@ describe('provisionCloudflareResources — config compliance_region pins the tra
     expect(() =>
       resolvePinnedApiBaseUrl({ CLOUDFLARE_COMPLIANCE_REGION: 'public' }, 'fedramp_high'),
     ).toThrow(/conflicting values/);
-    // Equal on both sides is fine (no conflict).
     expect(
       resolvePinnedApiBaseUrl({ CLOUDFLARE_COMPLIANCE_REGION: 'fedramp_high' }, 'fedramp_high'),
     ).toBe('https://api.fed.cloudflare.com/client/v4');
@@ -3288,22 +3248,22 @@ describe('provisionCloudflareResources — config compliance_region pins the tra
 
 describe('provisionCloudflareResources — wrangler-exact base resolution order', () => {
   it('an INVALID WRANGLER_API_ENVIRONMENT fails closed (wrangler assertOneOf) instead of pinning prod', () => {
-    // wrangler's env factory has choices ["production","staging"]; a present out-of-choices
-    // value (typo'd "stagng", or an empty string) throws — never silently public production.
+    // Decision: wrangler's env factory has choices ["production","staging"]; a present out-of-choices value
+    // (a typo like "stagng", or an empty string) throws instead of silently using public
+    // production.
     expect(() => resolvePinnedApiBaseUrl({ WRANGLER_API_ENVIRONMENT: 'stagng' })).toThrow(
       /WRANGLER_API_ENVIRONMENT.*"production" or "staging".*"stagng"/s,
     );
     expect(() => resolvePinnedApiBaseUrl({ WRANGLER_API_ENVIRONMENT: '' })).toThrow(
       /WRANGLER_API_ENVIRONMENT/,
     );
-    // An explicit "production" is a valid choice → the public base.
     expect(resolvePinnedApiBaseUrl({ WRANGLER_API_ENVIRONMENT: 'production' })).toBe(
       'https://api.cloudflare.com/client/v4',
     );
   });
 
   it('an empty direct base override is honored AS-IS (presence + nullish semantics, like wrangler)', () => {
-    // wrangler: `getCloudflareApiBaseUrlFromEnv() ?? derived` — a PRESENT empty string is
+    // Decision: wrangler does `getCloudflareApiBaseUrlFromEnv() ?? derived`: a present empty string is
     // returned (nullish, not falsy, coalescing) and CLOUDFLARE_* presence beats CF_*.
     expect(resolvePinnedApiBaseUrl({ CLOUDFLARE_API_BASE_URL: '' })).toBe('');
     expect(
@@ -3317,14 +3277,14 @@ describe('provisionCloudflareResources — wrangler-exact base resolution order'
 
   it('provisionEnv pins a resolved EMPTY base into the child env (presence, not truthiness)', () => {
     const env = provisionEnv({ accountId: 'acct', apiBaseUrl: '' });
-    // The child wrangler must see the SAME (empty) override the ambient env carried — never
-    // a scrubbed env that would silently re-derive the default endpoint (split-brain).
+    // Decision: The child wrangler has to see the same (empty) override the ambient env carried, not a
+    // scrubbed env that would silently re-derive the default endpoint (split-brain).
     expect(env.CLOUDFLARE_API_BASE_URL).toBe('');
   });
 
   it('a direct base + CONFLICTING compliance settings resolves to the direct base (no false reject)', () => {
-    // wrangler's `??` short-circuits past getComplianceRegionSubdomain when a direct base is
-    // present, so the env-vs-config conflict is never evaluated there.
+    // Decision: wrangler's `??` short-circuits past getComplianceRegionSubdomain when a direct base is
+    // present, so the env-vs-config conflict isn't evaluated there.
     expect(
       resolvePinnedApiBaseUrl(
         {
@@ -3334,7 +3294,7 @@ describe('provisionCloudflareResources — wrangler-exact base resolution order'
         'fedramp_high',
       ),
     ).toBe('https://direct.example');
-    // Same for an invalid STAGING selector — unread on the direct branch.
+    // Decision: Same for an invalid STAGING selector: it's unread on the direct branch.
     expect(
       resolvePinnedApiBaseUrl({
         CLOUDFLARE_API_BASE_URL: 'https://direct.example',
@@ -3355,7 +3315,7 @@ describe('provisionCloudflareResources — wrangler-exact base resolution order'
     expect(
       resolveWorkersDevComplianceRegion({ CLOUDFLARE_COMPLIANCE_REGION: 'fedramp_high' }),
     ).toBe('fedramp_high');
-    // A direct base does not name the workers.dev host, so the region still counts.
+    // Decision: A direct base doesn't name the workers.dev host, so the region still counts.
     expect(
       resolveWorkersDevComplianceRegion({
         CLOUDFLARE_API_BASE_URL: 'https://api.fed.cloudflare.com/client/v4',
@@ -3365,8 +3325,8 @@ describe('provisionCloudflareResources — wrangler-exact base resolution order'
   });
 
   it('returns no workers.dev region for a direct base with conflicting or invalid regions', () => {
-    // The deploy accepts this input (see the direct-base test above), but Wrangler refuses to
-    // name a workers.dev host for it. The lookup then reports no URL instead of guessing.
+    // Decision: The deploy accepts this input (see the direct-base test above), but Wrangler refuses to name
+    // a workers.dev host for it. The lookup then reports no URL instead of guessing.
     const env = {
       CLOUDFLARE_API_BASE_URL: 'https://direct.example',
       CLOUDFLARE_COMPLIANCE_REGION: 'public',
@@ -3388,7 +3348,7 @@ describe('provisionCloudflareResources — Hyperdrive password never reaches wra
     vi.stubEnv('WRANGLER_OUTPUT_FILE_DIRECTORY', '/tmp/wrangler-output');
     vi.stubEnv('WRANGLER_LOG_SANITIZE', 'false');
     const env = provisionEnv({ accountId: 'acct' });
-    // Output sinks would write the child's diagnostics to disk.
+    // Decision: Output sinks would write the child's diagnostics to disk.
     expect(env.WRANGLER_OUTPUT_FILE_PATH).toBeUndefined();
     expect(env.WRANGLER_OUTPUT_FILE_DIRECTORY).toBeUndefined();
     expect(env.WRANGLER_LOG_SANITIZE).toBe('true');
@@ -3399,7 +3359,6 @@ describe('provisionCloudflareResources — Hyperdrive password never reaches wra
     const conn = 'postgres://dbuser:sup3r-secret@db.example.com:5432/app';
     const { run } = makeRunner([
       {
-        // The create fails, ECHOING the connection string (verbatim AND re-rendered).
         match: /^hyperdrive create /,
         reply: () =>
           fail(
@@ -3424,7 +3383,6 @@ describe('provisionCloudflareResources — Hyperdrive password never reaches wra
       thrown = error as Error;
     }
     expect(thrown).toBeDefined();
-    // The password never appears — neither via the verbatim echo nor the re-rendered URL.
     expect(thrown!.message).not.toContain('sup3r-secret');
     expect(thrown!.message).not.toContain(conn);
     expect(thrown!.message).toContain('[REDACTED]');
@@ -3480,13 +3438,12 @@ describe('provisionCloudflareResources — Hyperdrive password never reaches wra
     } catch (error) {
       thrown = error;
     }
-    // The same object propagates, so the provision still recognizes it and retains the lock.
+    // Decision: The same object propagates, so the provision still recognizes it and retains the lock.
     expect(thrown).toBe(quarantineError);
     expect((thrown as WranglerQuarantineError).pid).toBe(54321);
     expect((thrown as Error).message).not.toContain('sup3r-secret');
     expect((thrown as Error).message).toContain('[REDACTED]');
     expect(existsSync(lockMutex)).toBe(true);
-    // Cleanup the retained mutex + sidecar for later tests.
     rmSync(lockMutex, { recursive: true, force: true });
     rmSync(sidecar, { force: true });
   });
@@ -3611,9 +3568,9 @@ describe('assertNoTransportRedirectInProjectDotenv — the files and keys wrangl
       name: 'a .env with only unrelated vars',
       files: { '.env': 'export DATABASE_URL=postgres://localhost/app\nFOO=bar\n' },
     },
-    // Wrangler never loads `.dev.vars.local`.
+    // Decision: Wrangler doesn't load `.dev.vars.local`.
     { name: 'a redirect in .dev.vars.local', files: { '.dev.vars.local': redirect } },
-    // Wrangler reads `.dev.vars` only when `.dev.vars.` is absent.
+    // Decision: Wrangler reads `.dev.vars` only when `.dev.vars.` is absent.
     {
       name: 'a redirect in .dev.vars when .dev.vars. exists',
       files: { '.dev.vars.': 'SOME_APP_SECRET=benign\n', '.dev.vars': redirect },
@@ -3624,14 +3581,13 @@ describe('assertNoTransportRedirectInProjectDotenv — the files and keys wrangl
   });
 
   it('dev-vars keys are case-SENSITIVE on every platform — a mixed-case spelling never trips the fence', () => {
-    // `tryLoadDotDevDotVars` parses via `dotenv.parse` into a PLAIN object;
-    // `caseInsensitiveEnv` applies only to wrangler's `loadDotEnv` (.env family). A
-    // mixed-case key in dev-vars is a DIFFERENT key for wrangler even on win32.
+    // Decision: `tryLoadDotDevDotVars` parses through `dotenv.parse` into a plain object;
+    // `caseInsensitiveEnv` applies only to wrangler's `loadDotEnv` (.env family). A mixed-case key
+    // in dev-vars is a different key for wrangler even on win32.
     setup(JSON.stringify({ name: 'app' }));
     writeFileSync(join(tmpDir, '.dev.vars'), 'cloudflare_api_base_url=https://evil.example\n');
     expect(() => assertNoTransportRedirectInProjectDotenv(tmpDir, 'win32')).not.toThrow();
     expect(() => assertNoTransportRedirectInProjectDotenv(tmpDir, 'darwin')).not.toThrow();
-    // The EXACT spelling still trips it everywhere.
     writeFileSync(join(tmpDir, '.dev.vars'), 'CLOUDFLARE_API_BASE_URL=https://evil.example\n');
     expect(() => assertNoTransportRedirectInProjectDotenv(tmpDir, 'win32')).toThrow(/\.dev\.vars/);
     expect(() => assertNoTransportRedirectInProjectDotenv(tmpDir, 'darwin')).toThrow(/\.dev\.vars/);
@@ -3640,11 +3596,11 @@ describe('assertNoTransportRedirectInProjectDotenv — the files and keys wrangl
   it('compares variable names case-insensitively on win32 (wrangler loads dotenv into a caseInsensitiveEnv there)', () => {
     setup(JSON.stringify({ name: 'app' }));
     writeFileSync(join(tmpDir, '.env'), 'cloudflare_api_base_url=https://evil.example\n');
-    // Simulated win32: the mixed-case key IS the transport var (case-insensitive env).
+    // Decision: Simulated win32: the mixed-case key is the transport var (case-insensitive env).
     expect(() => assertNoTransportRedirectInProjectDotenv(tmpDir, 'win32')).toThrow(
       /refusing to provision.*\.env/s,
     );
-    // POSIX: env vars are case-sensitive — the lowercase key is a different variable.
+    // Decision: POSIX env vars are case-sensitive, so the lowercase key is a different variable.
     expect(() => assertNoTransportRedirectInProjectDotenv(tmpDir, 'darwin')).not.toThrow();
     expect(() => assertNoTransportRedirectInProjectDotenv(tmpDir, 'linux')).not.toThrow();
   });
@@ -3668,7 +3624,7 @@ describe('provisionEnv — win32 case-insensitive credential scrub', () => {
     'Cloudflare_Env',
     'cf_access_client_id',
     'Cf_Access_Client_Secret',
-    // A mixed-case 'false' must not shadow the pinned value.
+    // Decision: A mixed-case 'false' mustn't shadow the pinned value.
     'Wrangler_Log_Sanitize',
   ] as const;
 
@@ -3684,7 +3640,7 @@ describe('provisionEnv — win32 case-insensitive credential scrub', () => {
       apiBaseUrl: 'https://api.cloudflare.com/client/v4',
       platform: 'win32',
     });
-    // A win32 child reads environment keys case-insensitively.
+    // Decision: A win32 child reads environment keys case-insensitively.
     for (const key of MIXED_CASE_KEYS) {
       expect(env[key]).toBeUndefined();
     }
@@ -3719,7 +3675,6 @@ describe('provisionCloudflareResources — read-first stored-name identity', () 
     ).rejects.toThrow(
       /D1 binding "DB".*stores database_name "other-db".*wants database "myapp-db".*contradicts the desired name/s,
     );
-    // Fail closed — no discovery/create, config untouched.
     expect(calls).toEqual([]);
     expect((readConfig().d1_databases as Array<Record<string, unknown>>)[0].database_id).toBe(
       uuid('other'),
@@ -3799,7 +3754,7 @@ describe('provisionCloudflareResources — read-first stored-name identity', () 
 
 describe('provisionCloudflareResources — per-resource placeholder rules', () => {
   it('R2: a stored bucket_name of "local" is a REAL name — a different desired bucket fails closed (no silent rewrite)', async () => {
-    // Only "default" is R2's placeholder; "local" is a real bucket name.
+    // Decision: Only "default" is R2's placeholder; "local" is a real bucket name.
     setup(
       JSON.stringify({
         account_id: 'acct',
@@ -3819,7 +3774,6 @@ describe('provisionCloudflareResources — per-resource placeholder rules', () =
     ).rejects.toThrow(
       /R2 binding "STORAGE".*stores.*bucket_name "local".*wants bucket "myapp-storage".*contradicts/s,
     );
-    // Fail closed: no discovery/create, stored entry untouched.
     expect(calls).toEqual([]);
     expect((readConfig().r2_buckets as Array<Record<string, unknown>>)[0].bucket_name).toBe(
       'local',
@@ -3875,7 +3829,7 @@ describe('provisionCloudflareResources — per-resource placeholder rules', () =
       { ...emptyDesired, r2: { binding: 'STORAGE', bucketName: 'default' } },
       { runWrangler: run, log: silentLog },
     );
-    // A created `default` bucket is verified by the remote probe, not the placeholder rule.
+    // Decision: A created `default` bucket is verified by the remote probe, not the placeholder rule.
     expect(result.resources[0]).toEqual({
       kind: 'r2',
       binding: 'STORAGE',
@@ -3883,20 +3837,19 @@ describe('provisionCloudflareResources — per-resource placeholder rules', () =
       action: 'created',
     });
     const infoCalls = calls.filter((c) => isCall(c, 'r2', 'bucket', 'info'));
-    expect(infoCalls.length).toBe(2); // the absence probe + the post-create verify probe
+    expect(infoCalls.length).toBe(2);
   });
 
   it('R2: a masked-killed create of a bucket named "default" fails closed when the verify probe cannot confirm it', async () => {
     setup(JSON.stringify({ account_id: 'acct', name: 'app' }));
     const { run } = makeRunner([
       {
-        // Absence first, and STILL absent on the verify probe (the create was masked).
         match: /^r2 bucket info /,
         reply: () => fail('', 'X [ERROR] The specified bucket does not exist. [code: 10006]'),
       },
       {
-        // The create "succeeds" (exit 0) and even writes the entry — but for the name
-        // `default` that entry is indistinguishable from the local-dev placeholder.
+        // Decision: The create "succeeds" (exit 0) and even writes the entry, but for the name `default` that
+        // entry can't be told apart from the local-dev placeholder.
         match: /^r2 bucket create /,
         reply: () => {
           simulateUpdateConfig('r2_buckets', { binding: 'STORAGE', bucket_name: 'default' });
@@ -3920,7 +3873,7 @@ describe('provisionCloudflareResources — D1 whole-list alias reconciliation', 
     setup(JSON.stringify({ account_id: 'acct', name: 'app' }));
     const { run, calls } = makeRunner([
       {
-        // A member whose `uuid` alone is valid must not count as proof of absence.
+        // Decision: A member whose `uuid` alone is valid mustn't count as proof of absence.
         match: /^d1 list --json/,
         reply: () =>
           ok(JSON.stringify([{ name: 'other-db', uuid: uuid('other'), database_id: 'bogus' }])),
@@ -4026,7 +3979,7 @@ describe('checkCloudflareProvisionDrift — id-drift vs the committed wrangler c
       queues: ['jobs'],
       hyperdrive: { binding: 'HYPERDRIVE', name: 'myapp-hyperdrive', connectionString: '' },
     });
-    // Queues are name-bearing, not id-bearing → excluded from the id-drift check.
+    // Decision: Queues are name-bearing, not id-bearing, so they're excluded from the id-drift check.
     expect(missing.map((m) => m.binding).sort()).toEqual([
       'DB',
       'HYPERDRIVE',
@@ -4091,7 +4044,6 @@ describe('checkCloudflareProvisionDrift — id-drift vs the committed wrangler c
     setup(
       JSON.stringify({
         d1_databases: [{ binding: 'DB', database_name: 'myapp-db', database_id: uuid('db') }],
-        // ISR_CACHE not yet declared — routes just started using `revalidate`.
       }),
     );
     const { missing } = checkCloudflareProvisionDrift(wranglerPath, {

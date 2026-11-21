@@ -110,9 +110,8 @@ export const authMiddleware: MiddlewareHandler<ApiEnv> = async (context, next) =
   }
 
   const token = header.slice(7);
-  // Accept full `api` tokens and short-lived project-scoped `deploy` tokens
-  // (minted for remote builds). Verify the signature/expiry without pinning the
-  // audience, then accept only these two audiences.
+  // Decision: Accept full `api` tokens and the short-lived scoped token audiences. Verify signature and expiry
+  // without pinning the audience, then accept only the listed audiences.
   const payload = await verifyJwt(token, context.env.JWT_SECRET);
   if (!payload || !['api', 'deploy', 'oauth-deploy', 'oauth-preview'].includes(payload.aud)) {
     return context.json(
@@ -229,9 +228,9 @@ export const authMiddleware: MiddlewareHandler<ApiEnv> = async (context, next) =
   }
 
   if (payload.aud === 'deploy') {
-    // Every deploy token names its project and is bound to either one build
-    // (remote builds) or one revocable CI credential. A token with neither
-    // would skip both the build-state and the revocation checks below.
+    // Decision: Each deploy token names its project and is bound to either one build (remote builds) or one
+    // revocable CI credential. A token with neither would skip both the build-state and revocation
+    // checks below.
     if (!payload.project || (!payload.build && !payload.credential)) {
       return context.json(
         {
@@ -243,9 +242,9 @@ export const authMiddleware: MiddlewareHandler<ApiEnv> = async (context, next) =
       );
     }
     context.set('deployScope', payload.project);
-    // Bind the token to its build. The deploy endpoint rejects a token whose
-    // build is no longer active so a stale/superseded runner can't deploy.
-    // Undefined for CI credential tokens, which are checked for revocation below.
+    // Decision: Bind the token to its build. The deploy endpoint rejects a token whose build is no longer active
+    // so a stale runner can't deploy. Undefined for CI credential tokens, which are checked for
+    // revocation below.
     context.set('deployBuild', payload.build);
     context.set('deployTokenExpiresAt', payload.exp);
     if (payload.credential) {
@@ -278,9 +277,8 @@ export const authMiddleware: MiddlewareHandler<ApiEnv> = async (context, next) =
       }
       context.set('deployCredential', payload.credential);
     }
-    // Default-deny: a deploy token may only reach the handful of endpoints the
-    // real `bwf deploy` flow needs, and only for its own project. The
-    // deploy.ts cross-project guard remains as defense-in-depth.
+    // Decision: Default deny: a deploy token may only reach the endpoints the real `bwf deploy` flow needs, and
+    // only for its own project. The deploy.ts cross-project guard stays as defense in depth.
     if (!isDeployTokenAllowed(context.req.method, context.req.path, payload.project)) {
       return context.json(
         {
@@ -291,15 +289,11 @@ export const authMiddleware: MiddlewareHandler<ApiEnv> = async (context, next) =
         403,
       );
     }
-    // A deploy token bound to a build is only valid while that build is in
-    // flight. Once the build is superseded/cancelled/failed/complete the token
-    // must not be able to mutate project state (e.g. POST /projects/:id/database
-    // provisions Hyperdrive, /deploy/{preflight,upload-urls} stage assets) — so
-    // revoke centrally here, before ANY allowlisted route runs. The /deploy
-    // handler keeps its own up-front guard and final-transaction re-check (the
-    // latter still matters for a mid-flight supersede during the long deploy);
-    // this gates the other allowlisted endpoints too. CI credential tokens carry
-    // no `build` claim and were checked for revocation above.
+    // Decision: A deploy token bound to a build is valid only while that build is in flight. After that it must
+    // not change project state (POST /projects/:id/database provisions Hyperdrive,
+    // /deploy/{preflight,upload-urls} stage assets), so revoke it here before any allowlisted route
+    // runs. The /deploy handler keeps its own guard and final-transaction re-check for a mid-flight
+    // supersede. CI credential tokens have no `build` claim and were checked for revocation above.
     if (payload.build) {
       const boundBuild = await getBuild(context.get('db'), payload.build);
       if (

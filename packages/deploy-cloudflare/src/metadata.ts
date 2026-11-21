@@ -59,8 +59,8 @@ export function createCloudflareMetadataRunner(options: {
     ) {
       return fallback(operation, runOptions);
     }
-    // Node's global fetch does not reliably honor both upper- and lower-case
-    // proxy variables. Keep the CLI transport in charge of proxy routing.
+    // Decision: Node's global fetch doesn't reliably honor both upper- and lower-case proxy variables.
+    // Keep the CLI transport in charge of proxy routing.
     if (requiresProxyTransport) {
       return fallback(operation, runOptions);
     }
@@ -77,7 +77,7 @@ export function createCloudflareMetadataRunner(options: {
           signal: AbortSignal.timeout(10_000),
         });
         if (response.status === 401 || response.status === 403) {
-          // The CLI can retry with its current session on the fallback path.
+          // Decision: The CLI can retry with its current session on the fallback path.
           tokenPromise = undefined;
         }
         if (response.ok) {
@@ -111,7 +111,7 @@ export function createCloudflareMetadataRunner(options: {
                     typeof item.metadata.created_on === 'string',
                 )
               ) {
-                // Preserve the oldest-first, ten-most-recent JSON contract.
+                // Decision: Preserve the oldest-first, ten-most-recent JSON contract.
                 const sorted = (items as Array<{ metadata: { created_on: string } }>)
                   .sort((a, b) => a.metadata.created_on.localeCompare(b.metadata.created_on))
                   .slice(-10);
@@ -122,8 +122,8 @@ export function createCloudflareMetadataRunner(options: {
         }
       }
     } catch {
-      // Read-only fallback retains the CLI's retry/error/auth behavior. Never
-      // include token responses or provider payloads in a diagnostic here.
+      // Decision: The read-only fallback keeps the CLI's retry, error and auth behavior. Don't include token
+      // responses or provider payloads in a diagnostic here.
       tokenPromise = undefined;
     } finally {
       if (response && !response.bodyUsed) {

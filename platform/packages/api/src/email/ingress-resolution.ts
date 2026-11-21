@@ -202,7 +202,7 @@ app.post('/resolve-ingress', async (context) => {
   }
   let projectId = route.project_id;
   let slug: string;
-  // The shared-domain name the recipient used: the project's slug or its email alias.
+  // Decision: The shared-domain name the recipient used: the project's slug or its email alias.
   let mailbox: string | undefined;
   let alias: string | null = null;
   if (route.addressing === 'shared') {
@@ -211,7 +211,7 @@ app.post('/resolve-ingress', async (context) => {
     if (!namePart) {
       return context.json({ error: 'unknown shared recipient' }, 404);
     }
-    // Slugs and aliases share one namespace, so at most one project matches.
+    // Decision: Slugs and aliases share one namespace, so at most one project matches.
     const project = (
       await db
         .select({ id: projects.id, slug: projects.slug, alias: projects.email_alias })
@@ -304,7 +304,7 @@ app.post('/resolve-ingress', async (context) => {
     projectId,
     slug,
     ...(mailbox ? { mailbox } : {}),
-    // Replies may come from either name, whichever one the mail arrived at.
+    // Decision: Replies may come from either name, whichever the mail arrived at.
     ...(alias ? { alias } : {}),
     deploymentId,
     workerName: getProjectDeploymentWorkerName(slug, deploymentId),

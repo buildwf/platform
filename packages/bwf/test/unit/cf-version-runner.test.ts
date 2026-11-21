@@ -157,7 +157,7 @@ it.each([false, true])(
     });
     try {
       const apiBaseUrl = await listen(server);
-      // The fake response need only acknowledge the upload, not cf's subsequent presentation.
+      // Decision: The fake response need only acknowledge the upload, not cf's subsequent presentation.
       const result = await pinnedCf(apiBaseUrl)(['workers', 'versions', 'create', '--prebuilt'], {
         cwd: prepared!.directory,
         capture: true,
@@ -249,7 +249,7 @@ it(
         timeoutMs: REAL_CF_TIMEOUT_MS,
       });
       expect(uploads, `${result.stdout}\n${result.stderr}`).toHaveLength(1);
-      // A keep_bindings without the secret types would make Cloudflare drop the live secrets.
+      // Decision: A keep_bindings without the secret types would make Cloudflare drop the live secrets.
       expect(uploads[0]!.keep_bindings).toEqual([
         'plain_text',
         'json',
@@ -496,7 +496,7 @@ async function verifyPinnedUpload(atomic: boolean): Promise<void> {
       ]),
     );
     expect(body.modules).toEqual([expect.objectContaining({ name: 'index.js' })]);
-    // cf's key order: Worker entrypoints, Durable Objects, then Workflows.
+    // Decision: cf's key order: Worker entrypoints, Durable Objects, then Workflows.
     expectSameJson(body.exports, {
       Rpc: { type: 'worker', cache: { enabled: false } },
       Departed: { type: 'durable-object', state: 'transferred', transferred_to: 'target-worker' },
@@ -599,7 +599,7 @@ it('converts Container and transfer exports as cf does', () => {
     },
     Entry: { type: 'worker' },
   };
-  // Order and field names must match cf's wire format, including Workflow settings.
+  // Decision: Order and field names must match cf's wire format, including Workflow settings.
   expectSameJson(exportsFromOutput(exports, []), {
     Entry: { type: 'worker' },
     Box: { type: 'durable-object', storage: 'sqlite', container: 'box' },
@@ -629,7 +629,7 @@ it('converts Container and transfer exports as cf does', () => {
   ).toThrow('has an unsupported state');
 });
 
-// Cloudflare stages a 0% candidate only when its exports equal the live version's,
+// Decision: Cloudflare stages a 0% candidate only when its exports equal the live version's,
 // and the live version may come from cf. Compare against the real pinned cf upload.
 it(
   'uploads the same exports as cf for the same Build Output',
@@ -708,7 +708,7 @@ it(
     });
     const apiBaseUrl = await listen(server);
     try {
-      // cf reports a local error after this upload because the fake result is incomplete.
+      // Decision: cf reports a local error after this upload because the fake result is incomplete.
       await pinnedCf(apiBaseUrl)(['workers', 'versions', 'create', '--prebuilt'], {
         cwd: prepared.directory,
         capture: true,
@@ -1000,7 +1000,6 @@ it('uploads Worker limits, placement and cache with pinned secrets', async () =>
   }
 });
 
-/** Upload with pinned secrets to a fake API whose upload reply carries `replyPlacement`. */
 async function uploadTargeted(
   placement: Record<string, string>,
   replyPlacement: unknown,
@@ -1072,7 +1071,7 @@ it.each([
   [{ host: 'db.example.test:5432' }, false],
   [{ hostname: 'api.example.test' }, true],
 ])('uploads targeted placement %j with pinned secrets (atomic=%s)', async (placement, atomic) => {
-  // Cloudflare replies with the target alone, as observed on the live API.
+  // Decision: Cloudflare replies with the target alone, as observed on the live API.
   const { result, uploads } = await uploadTargeted(placement, placement, atomic);
 
   expect(result).toEqual({ value: { id: '22222222-2222-4222-8222-222222222222', urls: [] } });
@@ -1454,7 +1453,6 @@ type ContainerMode =
   | 'readiness-failure'
   | 'key-order';
 
-/** A pinned Sandbox output and a fake Containers and Workers API that records each request. */
 async function containerApi(mode: ContainerMode) {
   const prepared = await containerOutput();
   const built = await readBuildOutput(prepared.directory);
@@ -1728,7 +1726,7 @@ it.each([
 ] as const)('preserves pinned Sandbox image and application lifecycle: %s', async (mode) => {
   const { prepared, requests, counts, existing, expectedImages, apiBaseUrl } =
     await containerApi(mode);
-  // Only this fake API's two fixed polling waits are scheduled immediately.
+  // Decision: Only this fake API's two fixed polling waits are scheduled immediately.
   // Real HTTP, subprocess deadlines and the separate timeout regressions retain
   // their clocks. Assert the requested waits as well as both polling attempts.
   const delay = timers.setTimeout;
@@ -1739,7 +1737,7 @@ it.each([
           return delay(0, value, options);
         })
       : undefined;
-  // cf 1.0.0-beta.21 and later print the pushed image on stderr.
+  // Decision: cf 1.0.0-beta.21 and later print the pushed image on stderr.
   const runCf = vi.fn(() => ({
     status: 0,
     stdout: '',
@@ -1807,7 +1805,7 @@ it.each([
       expect(post.body.containers).toEqual([
         { name: 'sandbox', class_name: 'Sandbox', images: expectedImages },
       ]);
-      // Live classes carry no state, as in cf's upload of the same Build Output.
+      // Decision: Live classes carry no state, as in cf's upload of the same Build Output.
       expectSameJson(post.body.exports, {
         OldRoom: { type: 'durable-object', state: 'renamed', renamed_to: 'Room' },
         Removed: { type: 'durable-object', state: 'deleted' },
@@ -1933,7 +1931,7 @@ it.each([false, true])(
         handoffPending: false,
         requiredNames: ['AUTH_SECRET'],
       })!;
-      // A secret-only first Worker can already require version-pinned inheritance.
+      // Decision: A secret-only first Worker can already require version-pinned inheritance.
       await pinActiveSecrets(current, [{ name: 'AUTH_SECRET', type: 'secret_text' }]);
       const runCf = async (args: Array<string>, options: { cwd: string }) => {
         if (args.slice(0, 3).join(' ') === 'workers deployments list') {
@@ -2102,7 +2100,7 @@ it.each([
       }),
     });
     const spawn = childProcess.spawn;
-    // Windows does not report a signal when a process kills itself. Terminate
+    // Decision: Windows does not report a signal when a process kills itself. Terminate
     // the real child from its parent after the diagnostic is buffered instead.
     const spawnSpy = vi.spyOn(childProcess, 'spawn').mockImplementation((...args) => {
       const child = spawn(...args);
@@ -2188,7 +2186,7 @@ it('uses the configured HTTP proxy for direct cf activation reads', async () => 
   });
   await listen(api);
   const proxyUrl = new URL(await listen(proxy)).origin;
-  // Open tunnels keep the servers from closing.
+  // Decision: Open tunnels keep the servers from closing.
   cleanups.push(() => {
     for (const tunnel of tunnels) {
       tunnel.destroy();
@@ -2280,7 +2278,6 @@ it('preserves activation metadata and sorts cf version history for the existing 
       '--preview-alias',
       'platform-ready',
     ]);
-    // A leading "-" stays part of the message, not a cf flag.
     await runner({ type: 'worker.deploy', ...target, message: '-platform' }, { capture: true });
     expect(calls.at(-1)).toEqual(['deploy', '--prebuilt', '--message=-platform']);
     await runner(
@@ -2986,7 +2983,6 @@ it('uploads when existing R2 and Queue bindings are verified by exact identity',
 describe('session credential failures', () => {
   const nodeCrash =
     "file:///platform/dist/cli/cloudflare-operation-process.mjs:4\nimport { setGlobalProxyFromEnv } from 'node:http';\n         ^^^^^^^^^^^^^^^^^^^^^\nSyntaxError: The requested module 'node:http' does not provide an export named 'setGlobalProxyFromEnv'\n\nNode.js v22.23.4";
-  /** The deploy's getToken bridge over a fake helper child. */
   const tokenFrom =
     (child: CloudflareCommandResult) => (): ReturnType<typeof readWranglerAuthToken> =>
       readWranglerAuthToken(() => child, '/p/wrangler.jsonc');
@@ -3025,7 +3021,7 @@ describe('session credential failures', () => {
       );
       expect(upload.status).toBe(7);
       expect(upload.error).toBeUndefined();
-      // version.ts formats the upload failure the same way.
+      // Decision: version.ts formats the upload failure the same way.
       const diagnostic = cloudflareCommandDiagnostic(upload)!;
       expect(diagnostic).toContain(
         'Could not get the Cloudflare session credential for the upload: the bwf CLI helper process exited with code 7.',
@@ -3053,7 +3049,7 @@ describe('session credential failures', () => {
       );
       const text =
         'Could not get the Cloudflare session credential for the upload: the bwf CLI helper process could not run: spawn EACCES.';
-      // version.ts runs the formatter a second time over this result.
+      // Decision: version.ts runs the formatter a second time over this result.
       expect(cloudflareCommandDiagnostic(upload)).toBe(text);
       expect(cloudflareCommandDiagnostic({ status: 1, stdout: '', stderr: text })).toBe(text);
     } finally {
@@ -3179,7 +3175,6 @@ describe('settings credential before activation', () => {
       }),
       '/p/wrangler.jsonc',
     );
-  /** A staged deploy over a live Worker whose fake cf records every command. */
   const stagedDeploy = async (
     triggerConfig: Parameters<typeof encodeCloudflareVersionMessage>[1],
     getToken: () => ReturnType<typeof readWranglerAuthToken>,
@@ -3213,7 +3208,6 @@ describe('settings credential before activation', () => {
               stdout: JSON.stringify({ versionId: next, previewUrl: 'https://ready.example.com' }),
             };
           }
-          // Fail the first traffic change.
           return { status: 1, stdout: '', stderr: 'Test stopped here.' };
         },
         pinnedUpload: {
@@ -3339,7 +3333,7 @@ describe('settings credential before activation', () => {
         { capture: true },
       );
       expect(published.status, published.stderr).toBe(0);
-      // The bearer read before upload may have expired while traffic moved.
+      // Decision: The bearer read before upload may have expired while traffic moved.
       expect(getToken).toHaveBeenCalledTimes(2);
       expect(authorization).toEqual([bearer]);
     } finally {

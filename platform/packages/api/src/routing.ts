@@ -175,18 +175,18 @@ export async function applyRoutingSuspension(
     }
     if (update.op === 'suspend') {
       if (entry.suspended === update.reason) {
-        continue; // already carries this reason
+        continue;
       }
       if (!update.force && entry.suspended) {
-        continue; // usage suspend must not overwrite a stronger (admin) reason
+        continue;
       }
       entry.suspended = update.reason;
     } else {
       if (!('suspended' in entry)) {
-        continue; // nothing to clear
+        continue;
       }
       if (update.matchReason !== null && entry.suspended !== update.matchReason) {
-        continue; // usage clear must not lift a different (admin) reason
+        continue;
       }
       delete entry.suspended;
     }
@@ -244,15 +244,14 @@ export async function setProjectsRoutingSuspension(
       .transaction(async (tx) => {
         await tx.execute(drizzleSql`SELECT id FROM projects WHERE id = ${project.id} FOR UPDATE`);
         const current = await getProject(tx, project.id);
-        // If ownership changed before this lock, transfer convergence owns the
-        // route and this stale fan-out must stand down.
+        // Decision: If ownership changed before this lock, transfer convergence owns the route and this stale
+        // fan-out stands down.
         if (!current || current.user_id !== project.user_id || current.status === 'deleting') {
           return;
         }
-        // Resolve domains only after the project lock. Domain activation takes
-        // the same lock before publishing a route, so this read must happen
-        // behind it or a domain activated between the eager read and this lock
-        // could escape the suspension entirely.
+        // Decision: Read domains only after taking the project lock. Domain activation takes the same lock before
+        // publishing a route, so a domain activated between an earlier read and this lock would escape the
+        // suspension.
         const domainMap = await getDomainsByProjectIds(tx, [project.id]);
         const protection = await resolveProjectZeroTrustRoutingForPublication(tx, project.id);
         const domainKeys = (domainMap.get(project.id) ?? []).map(

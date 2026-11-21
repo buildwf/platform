@@ -7,7 +7,6 @@ import {
   redeliverWebhookDelivery,
 } from '../../src/github/webhook-deliveries.ts';
 
-// Real RS256 PKCS#8 key so the REAL createAppJwt -> importPKCS8/sign path runs.
 let PRIVATE_KEY_PEM: string;
 
 beforeAll(async () => {
@@ -41,7 +40,6 @@ function headersOf(input: string | URL | Request, init?: RequestInit): Headers {
   return new Headers(init?.headers as HeadersInit | undefined);
 }
 
-// A GitHub delivery-log item (only the fields we map).
 function deliveryItem(overrides: Record<string, unknown>): Record<string, unknown> {
   return {
     id: 100,
@@ -63,7 +61,6 @@ function pageResponse(items: Array<Record<string, unknown>>, nextUrl?: string): 
   return new Response(JSON.stringify(items), { status: 200, headers });
 }
 
-/** Keep every retry attempt but run its backoff timer at once. */
 function skipRetryDelay(): void {
   const schedule = globalThis.setTimeout;
   vi.spyOn(globalThis, 'setTimeout').mockImplementation((callback, delay, ...args) =>
@@ -128,10 +125,8 @@ describe('listFailedWebhookDeliveries', () => {
         const url = urlOf(input);
         requestedUrls.push(url);
         if (!url.includes('cursor=')) {
-          // Page 1 -> hands back a rel="next" cursor url.
           return pageResponse([deliveryItem({ id: 1, guid: 'g1' })], nextUrl);
         }
-        // Page 2 -> no Link header, iteration stops.
         return pageResponse([deliveryItem({ id: 2, guid: 'g2' })]);
       }),
     );
@@ -240,8 +235,6 @@ describe('listFailedWebhookDeliveries', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  // Secrets PRESENT but the key is malformed: createAppJwt -> importPKCS8 throws.
-  // Presence != validity — the never-throws contract must still hold.
   it('returns [] (never throws) when the app-JWT mint fails on a bad private key', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const fetchSpy = vi.fn();
@@ -335,8 +328,6 @@ describe('redeliverWebhookDelivery', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  // Secrets PRESENT but the key is malformed: createAppJwt -> importPKCS8 throws.
-  // Presence != validity — the never-throws contract must still hold.
   it('returns false (never throws) when the app-JWT mint fails on a bad private key', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const fetchSpy = vi.fn();

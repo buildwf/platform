@@ -25,11 +25,11 @@ import { presignAssetPut } from '../../r2-presign.ts';
 import { canOnProject, grantedAccess } from '../access.ts';
 import { member, procedure, type Caller } from '../procedure.ts';
 
-// 30 minutes. On a slow uplink a tail asset can wait in the upload pool for more than 10 minutes
+// Decision: 30 minutes. On a slow uplink a tail asset can wait in the upload pool for more than 10 minutes
 // before its first PUT, and the CLI treats R2's 403 SignatureExpired as terminal.
 const UPLOAD_URL_TTL_SECONDS = 1800;
 
-// Presigning is CPU-light; 50 in flight keeps tail latency bounded without 5000 async tasks.
+// Decision: Presigning is CPU-light; 50 in flight keeps tail latency bounded without 5000 async tasks.
 const PRESIGN_BATCH_CONCURRENCY = 50;
 
 /** Why a deploy-side procedure refuses a project it otherwise reaches. */
@@ -49,8 +49,8 @@ async function admit(caller: Caller, request: Request): Promise<Refusal | null> 
   if (project.status === 'deleting') {
     return { code: 'PROJECT_DELETING' };
   }
-  // After authz and the deleting check: a stale CLI on a missing, foreign or deleting project
-  // should see that more specific answer, not an upgrade notice.
+  // Decision: Run this after authz and the deleting check, so a stale CLI on a missing, foreign or deleting
+  // project sees that more specific answer, not an upgrade notice.
   const outdated = cliVersionProblem(
     request.headers.get('content-type'),
     request.headers.get('x-platform-cli-version'),
@@ -82,14 +82,14 @@ async function presignUnderProjectLock(
   try {
     await caller.db.transaction(async (tx) => {
       await tx.execute(sql`SELECT id FROM projects WHERE id = ${projectId} FOR SHARE`);
-      // A teardown may have committed between the unlocked admission and this lock.
+      // Decision: A teardown may have committed between the unlocked admission and this lock.
       const locked = await getProject(tx, projectId);
       if (!locked || locked.status === 'deleting') {
         throw new ProjectDeleting();
       }
       await requireActiveDeployAccess(tx, projectId, caller.user.id);
       await requireNormalizedProject(tx, locked);
-      // Derived signing keys are identical within this request; release them with the batch.
+      // Decision: Derived signing keys are the same within this request; release them with the batch.
       await presign(tx, new Map());
     });
   } catch (error) {
@@ -136,8 +136,8 @@ export const preflight = procedure('deploy.preflight')
     const { project } = grantedAccess(ctx);
     const manifest = input.assetManifest as Record<string, { hash: string; size: number }>;
     const total = Object.keys(manifest).length;
-    // Both static and Worker deployments need the platform-owned scoped R2 copy. Provider asset
-    // deduplication and historical KV placement are not evidence that it holds these bytes.
+    // Decision: Both static and Worker deployments need the platform-owned scoped R2 copy. Provider asset dedup
+    // and historical KV placement don't prove it holds these bytes.
     const valid =
       total <= MAX_UPLOAD_URLS_BATCH &&
       Object.values(manifest).every(
@@ -193,14 +193,12 @@ export const uploadUrls = procedure('deploy.uploadUrls')
       userId: ctx.user.id,
       branch: null,
     });
-    // TODO(orphan-gc): uploads that never finalize leave durable orphans. Teardown cleans them
-    // up; for active projects they wait for a future deploy's retention cleanup to walk over them.
     const urls: Record<string, { url: string; headers: Record<string, string> }> = {};
     const failed = await presignUnderProjectLock(ctx, project.id, async (tx, signingKeyCache) => {
       if (approvalId) {
         const { approval } = await activeOAuthApproval(tx, approvalId, ctx.companyIdentity, true);
-        // JSON keeps tuple boundaries and field types, so malformed approval metadata cannot
-        // match a valid upload through coercion.
+        // Decision: JSON keeps tuple boundaries and field types, so malformed approval metadata can't match a valid
+        // upload through coercion.
         const key = (a: Pick<UploadUrlsRequestAsset, 'blake3' | 'md5' | 'size'>) =>
           JSON.stringify([a.blake3, a.md5, a.size]);
         const approved = new Set(Object.values(approval.data.artifact!.assetManifest).map(key));
@@ -216,7 +214,7 @@ export const uploadUrls = procedure('deploy.uploadUrls')
         }
       }
       await uploadPool(input.assets, PRESIGN_BATCH_CONCURRENCY, async (a) => {
-        // Last write wins when two paths share a blake3: both point at the same key.
+        // Decision: Last write wins when two paths share a blake3: both point at the same key.
         urls[a.blake3] = await presignAssetPut(
           {
             accountId: env.CF_ACCOUNT_ID,
@@ -276,7 +274,7 @@ export const workerUploadUrls = procedure('deploy.workerUploadUrls')
     const id = crypto.randomUUID();
     const prefix = deploymentInputPrefix(project.id, id);
     const urls: Array<{ url: string; headers: Record<string, string> }> = [];
-    // Module `i` is stored at `deployment-inputs/<project>/<id>/<i>`, a prefix operation cleanup,
+    // Decision: Module `i` is stored at `deployment-inputs/<project>/<id>/<i>`, a prefix that operation cleanup,
     // the stale-input sweep and project teardown already cover.
     const failed = await presignUnderProjectLock(ctx, project.id, async (_tx, signingKeyCache) => {
       await uploadPool([...modules.keys()], PRESIGN_BATCH_CONCURRENCY, async (index) => {

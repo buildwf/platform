@@ -88,7 +88,7 @@ describe('bwf project rollback --platform cloudflare', () => {
       expect.objectContaining({ id: 'old-version' }),
       expect.objectContaining({ id: 'new-version' }),
     );
-    // The bare restore command would follow the saved bwf platform.
+    // Decision: The bare restore command would follow the saved bwf platform.
     expect(messages()).toContain('`bwf db restore --platform cloudflare --bookmark <bookmark>`');
     expect(output.printSuccess).toHaveBeenCalledWith('Rolled back to old-version.');
   });

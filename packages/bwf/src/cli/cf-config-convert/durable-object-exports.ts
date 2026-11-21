@@ -86,8 +86,8 @@ function applyRenamedClasses(
     }
     const previous = inferred.get(rename.from);
     const location = locations.get(rename.from);
-    // Rename tombstones must point directly to a live class, even after
-    // multiple renames of the same namespace.
+    // Decision: Rename tombstones have to point straight at a live class, even after several renames of the same
+    // namespace.
     for (const value of inferred.values()) {
       if (value.state === 'renamed' && value.renamed_to === rename.from) {
         value.renamed_to = rename.to;

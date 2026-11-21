@@ -67,7 +67,7 @@ app.use('*', async (context, next) => {
     try {
       reader.releaseLock();
     } catch {
-      // A timed-out read may still be settling after cancellation.
+      // Decision: releaseLock can throw while a timed-out read is still settling after cancel.
     }
   }
   const bytes = new Uint8Array(size);

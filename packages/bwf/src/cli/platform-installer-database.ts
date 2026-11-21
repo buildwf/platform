@@ -36,7 +36,7 @@ import {
   type QueryConnection,
 } from './platform-zero-trust-uninstall.ts';
 
-// onManifestChange keeps migration checkpoints visible to the outer failure handler.
+// Decision: onManifestChange keeps migration checkpoints visible to the outer failure handler.
 export async function preparePlatformDatabaseSchema(
   manifest: PlatformInstallationManifest,
   runtime: PlatformRuntimeManifest,
@@ -137,7 +137,7 @@ function databaseInteger(value: unknown): number | null {
  * only, so it cannot honor a private CA that the local database client would trust.
  */
 export function assertBwfCreatedHyperdriveTrustsDatabase(databaseUrl: string): void {
-  // Same last-value-wins rule as the local client; pg ignores an empty value.
+  // Decision: Same last-value-wins rule as the local client; pg ignores an empty value.
   const sslrootcert = new URL(databaseUrl).searchParams.getAll('sslrootcert').at(-1);
   if (sslrootcert && sslrootcert !== 'system') {
     throw new Error(
@@ -157,7 +157,7 @@ export function platformDatabaseClientUrl(databaseUrl: string): string {
   if (url.protocol !== 'postgres:' && url.protocol !== 'postgresql:') {
     return databaseUrl;
   }
-  // Match pg's last-value-wins query parsing. libpq reads `sslrootcert=system` as the system
+  // Decision: Match pg's last-value-wins query parsing. libpq reads `sslrootcert=system` as the system
   // trust store and requires verify-full with it, while pg would open it as a file path. Node's
   // default CAs with hostname verification give pg the same policy.
   if (url.searchParams.getAll('sslrootcert').at(-1) === 'system') {
@@ -165,7 +165,7 @@ export function platformDatabaseClientUrl(databaseUrl: string): string {
     url.searchParams.set('sslmode', 'verify-full');
     return url.toString();
   }
-  // Respect explicit libpq compatibility.
+  // Decision: Leave the URL as is when it asks for libpq compatibility explicitly.
   if (
     url.searchParams.getAll('sslmode').at(-1) !== 'require' ||
     url.searchParams.getAll('uselibpqcompat').at(-1) === 'true'
@@ -226,7 +226,7 @@ export async function acquirePlatformDatabaseLifecycleLock(
         await pool.end();
       }
     };
-    // Keep the complete session-lock contract when adding pool cleanup. Safety
+    // Decision: Keep the complete session-lock contract when adding pool cleanup. Safety
     // and verification hooks must not disappear at this wrapper boundary.
     return Object.assign(release, releaseConnectionLock);
   } catch (error) {
@@ -275,7 +275,6 @@ async function readClaimedPlatformDatabase<T>(
   });
 }
 
-/** Read project Zero Trust state for a plan. */
 export function readPlatformProjectZeroTrustState(
   databaseUrl: string,
   installationId: string,
@@ -767,7 +766,7 @@ export async function preparePlatformSandboxDrainConnection(
     return existingState;
   }
   if (requiredAdmissionProtocol >= 2) {
-    // Protocol 2 already drained tenant-owned containers. Advancing authority
+    // Decision: Protocol 2 already drained tenant-owned containers. Advancing authority
     // must not restart that drain against the new platform-owned controllers.
     if (existingState && existingState.admissionProtocol >= 2) {
       await client.query('BEGIN');
@@ -972,7 +971,7 @@ async function claimPlatformDatabaseConnection(
     );
     const claim = result.rows[0];
     if (!claim) {
-      // Migration history lives outside search_path. Leftover history would be
+      // Decision: Migration history lives outside search_path. Leftover history would be
       // read as already-applied migrations only after the claim, so check it
       // here. Other provider-owned schemas stay out of scope.
       const contents = await client.query<{ schemaname: string; tablename: string }>(

@@ -8,8 +8,6 @@ import type { Env } from '../../src/types.ts';
 
 const JWT_SECRET = 'test-secret-key';
 
-// --- HMAC helper ---
-
 function base64urlEncode(data: Uint8Array): string {
   let binary = '';
   for (const byte of data) {
@@ -31,8 +29,6 @@ async function signAiToken(projectId: string, secret: string): Promise<string> {
   return base64urlEncode(sig);
 }
 
-// --- Mock factories ---
-
 function createMockApi(workerNames: Record<string, string> = {}) {
   return {
     fetch: vi.fn(async (url: string) => {
@@ -46,7 +42,6 @@ function createMockApi(workerNames: Record<string, string> = {}) {
         }
         return Response.json({ error: 'not found' }, { status: 404 });
       }
-      // Default: return 404 for resolve-resource (not needed for dispatch tests)
       return Response.json({ error: 'not found' }, { status: 404 });
     }),
   };
@@ -59,7 +54,6 @@ function createMockDispatch(handler?: (url: string, init: RequestInit) => Promis
         if (handler) {
           return handler(url, init);
         }
-        // Default: 404 (old deploy without /__platform handler)
         return new Response('Not Found', { status: 404 });
       }),
     })),
@@ -154,8 +148,6 @@ function attachNativeBindingHandler(
   })) as unknown as typeof env.DISPATCH.get;
 }
 
-// --- Tests ---
-
 describe('WfP dispatch path', () => {
   let token: string;
 
@@ -199,7 +191,6 @@ describe('WfP dispatch path', () => {
       expect(data.results).toEqual([{ id: 1, name: 'Alice' }]);
       expect(data.success).toBe(true);
 
-      // Verify dispatch was called with correct worker name
       expect(env.DISPATCH.get).toHaveBeenCalledWith('user-my-app');
     });
 
@@ -449,9 +440,7 @@ describe('WfP dispatch path', () => {
 
   describe('fallback to REST API', () => {
     it('falls back when worker name resolution fails', async () => {
-      // No worker names configured — resolveWorkerName returns null
       const env = createEnv({});
-      // Need globalThis.fetch for the REST API fallback
       const rows = [{ id: 1, name: 'Alice' }];
       const originalFetch = globalThis.fetch;
       globalThis.fetch = asFetchMock(
@@ -463,13 +452,11 @@ describe('WfP dispatch path', () => {
         ),
       );
 
-      // Also need resource resolution to succeed
       env.API.fetch = vi.fn(async (url: string, init?: RequestInit) => {
         const path = new URL(url).pathname;
         if (path.includes('/internal/resolve-worker/')) {
           return Response.json({ error: 'not found' }, { status: 404 });
         }
-        // resolve-resource
         const body = JSON.parse(init?.body as string) as { type?: string; binding?: string };
         if (body.type === 'd1' && body.binding === 'DB') {
           return Response.json({ cf_id: 'd1-uuid-abc' });
@@ -496,7 +483,6 @@ describe('WfP dispatch path', () => {
       };
       expect(data.results).toEqual(rows);
 
-      // Verify CF REST API was called
       expect(globalThis.fetch).toHaveBeenCalledWith(
         expect.stringContaining('api.cloudflare.com'),
         expect.any(Object),
@@ -506,7 +492,6 @@ describe('WfP dispatch path', () => {
     });
 
     it('falls back when dispatch returns 404 (old deploy)', async () => {
-      // Worker resolved but returns 404 for /__platform
       const env = createEnv(
         { proj_000000000001: 'user-my-app' },
         async () => new Response('Not Found', { status: 404 }),
@@ -566,7 +551,6 @@ describe('WfP dispatch path', () => {
         });
       }) as unknown as typeof env.API.fetch;
 
-      // First call
       await worker.fetch(
         post('/d1/query', {
           binding: 'DB',
@@ -578,7 +562,6 @@ describe('WfP dispatch path', () => {
         env,
       );
 
-      // A rollback changes the active deployment between operations.
       await worker.fetch(
         post('/d1/query', {
           binding: 'DB',
@@ -652,11 +635,6 @@ describe('proxy token generations', () => {
 
   type Sent = { token: string | null; body: unknown };
 
-  /**
-   * `resolution` is the resolve-worker response body. `floor` is the raw
-   * ROUTING value of the project's accept floor. `respond` answers each
-   * dispatched request; by default a real binding handler holding `held`.
-   */
   function setup(
     options: Readonly<{
       resolution?: Record<string, unknown>;
@@ -758,7 +736,6 @@ describe('proxy token generations', () => {
   );
 
   it('sends the generation the Worker holds when a higher one is issued', async () => {
-    // Issued generation 2 and floor 0; the active deployment still holds the legacy token.
     const legacy = await tok(0);
     const { env, sent, floorReads } = setup({
       resolution: { workerName: 'user-my-app', deploymentId: 'dpl_active', proxyTokenGen: 0 },

@@ -89,7 +89,7 @@ function readRecordedResources(
         }
         const identity = deriveDurableResourceIdentity(name);
         const matchesMigration = migrations.some((migration) => {
-          // Apps made before the rename keep their void-durable-* tags.
+          // Decision: Apps made before the rename keep their void-durable-* tags.
           const legacyTag = identity.migrationTag.replace(/^platform-/, 'void-');
           if (
             !isRecord(migration) ||

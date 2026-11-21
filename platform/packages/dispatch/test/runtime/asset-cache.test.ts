@@ -20,8 +20,8 @@ beforeAll(async () => {
     convertV4MiniflareOptions(options: Record<string, unknown>): Record<string, unknown>;
   };
   const dispatchPath = fileURLToPath(new URL('../../src/index.ts', import.meta.url));
-  // Use the real Workers Cache API: Map-backed Response mocks have writable
-  // headers and cannot catch mutations of an immutable cache-hit response.
+  // Decision: Uses the real Workers Cache API: Map-backed Response mocks have writable headers, so they can't
+  // catch a change to an immutable cache-hit response.
   const fixture = `
     import dispatch from ${JSON.stringify(dispatchPath)};
     let originCalls = 0;

@@ -8,11 +8,9 @@ import { renderFateDetailPage } from '../fate/render.ts';
 
 const app = new Hono<ApiEnv>();
 
-// GET /admin/builds/:id/logs?since=N
-//
-// JSON log page. Container builds read the BuildManager DO that ran the build
-// (chosen by `instance_type`); github_actions builds have no DO log store and
-// return an empty page plus the external `logs_url`.
+// Decision: JSON log page. Container builds read the BuildManager DO that ran the build (chosen by
+// `instance_type`); github_actions builds have no DO log store and return an empty page plus
+// the external `logs_url`.
 app.get('/:id/logs', async (context) => {
   const raw = Number(context.req.query('since'));
   const since = Number.isSafeInteger(raw) && raw >= 0 ? raw : 0;
@@ -28,10 +26,8 @@ app.get('/:id/logs', async (context) => {
   }
 });
 
-// GET /admin/builds/:id
-//
-// Build detail page. `?status=1` instead returns a JSON `{ status, terminal }`
-// probe that reads only the build row.
+// Decision: `?status=1` returns a JSON `{ status, terminal }` probe that reads only the build row,
+// instead of the detail page.
 app.get('/:id', async (context) => {
   if (context.req.query('status') === undefined) {
     return renderFateDetailPage(context, 'buildDetail');

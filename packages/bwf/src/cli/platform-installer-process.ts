@@ -70,7 +70,7 @@ export async function runPlatformWranglerAtApiBase(
   writePlatformTiming(`Cloudflare ${operation.type}`, startedAt);
   const stdout = result.stdout || '';
   const stderr = result.stderr || '';
-  // bwf owns progress output. Successful commands may still emit banners and
+  // Decision: bwf owns progress output. Successful commands may still emit banners and
   // warnings; keep those captured, but retain diagnostics for failed commands.
   if (!capture && result.status !== 0) {
     if (stdout) {
@@ -142,7 +142,7 @@ async function startConditionalWorkerCreateProxy(
         outgoing.end('{"success":false,"errors":[{"message":"Invalid API proxy path"}]}');
         return;
       }
-      // Wrangler omits script content from the response and requests strict
+      // Decision: Wrangler omits script content from the response and requests strict
       // binding inheritance. These are the only accepted create-query options.
       const createQuery = [...incomingUrl.searchParams];
       const supportedCreateQuery =
@@ -161,7 +161,7 @@ async function startConditionalWorkerCreateProxy(
         ).test(incomingUrl.pathname);
       const isReadOnly =
         incoming.method === 'GET' || incoming.method === 'HEAD' || incoming.method === 'OPTIONS';
-      // A Worker with static assets must register its asset manifest and upload
+      // Decision: A Worker with static assets must register its asset manifest and upload
       // the missing files before the script PUT that references them. Neither
       // step attaches anything to a Worker; only the guarded create does.
       const isAssetUploadSession =

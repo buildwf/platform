@@ -30,9 +30,7 @@ function record(raw: string | null, label: string): Record<string, unknown> {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       return value as Record<string, unknown>;
     }
-  } catch {
-    /* Report the same actionable error for malformed persisted data. */
-  }
+  } catch {}
   return invalid(`${label} is invalid; investigate this deployment before migrating assets.`);
 }
 
@@ -90,8 +88,8 @@ async function snapshot(context: Context<ApiEnv>, deploymentId: string, db = con
       if (route !== entry.hash && route !== `!${entry.hash}`) {
         invalid(`Serving path ${path} disagrees with its persisted content hash.`);
       }
-      // The serving manifest is authoritative. Keeping both originals lets a
-      // retry reconcile a DB/KV acknowledgement interrupted during publication.
+      // Decision: The serving manifest is authoritative. Keeping both originals lets a retry reconcile a DB/KV
+      // acknowledgement interrupted during publication.
       store = route === entry.hash ? 'kv' : 'r2';
     } else if (entry.store === 'kv' || entry.store === 'r2') {
       store = entry.store;
@@ -111,10 +109,9 @@ async function snapshot(context: Context<ApiEnv>, deploymentId: string, db = con
     } else {
       assets.set(entry.hash, { hash: entry.hash, size: entry.size, store, paths: [path] });
     }
-    // Reconstruct the whole manifest before publishing any bounded page. A
-    // missing historical manifest must not hide the untouched later pages.
-    // KV can return an older manifest on the next page. Durable scope proof
-    // from a verified page must keep that page on R2 when publishing again.
+    // Decision: Rebuild the whole manifest before publishing any bounded page, so a missing historical manifest
+    // can't hide the untouched later pages. KV can return an older manifest on the next page; durable
+    // scope proof from a verified page must keep that page on R2 when publishing again.
     if (entry.store === 'r2' && entry.scope === 'project') {
       serving[path] = `!${entry.hash}`;
     } else {
@@ -253,8 +250,8 @@ async function copyAsset(context: Context<ApiEnv>, projectId: string, asset: Ass
     httpMetadata = { contentType: legacy.metadata?.ct ?? getContentType(asset.paths[0]!) };
     verify(bytes, asset);
   }
-  // Never overwrite a concurrently uploaded object. Its bytes must be checked
-  // even when this create-only write loses the race or acknowledgement.
+  // Decision: Don't overwrite a concurrently uploaded object. Its bytes must be checked even when this
+  // create-only write loses the race or its acknowledgement.
   await r2.put(key, bytes, { onlyIf: { etagDoesNotMatch: '*' }, httpMetadata });
   const written = await r2.get(key);
   if (!written) {
@@ -302,8 +299,8 @@ export async function migrateOperatorDeploymentAssets(
     );
   }
   let copied = 0;
-  // Serial processing bounds memory and requests. An oversized R2 object gets
-  // its own streaming page, without holding a database connection during copy.
+  // Decision: Serial processing bounds memory and requests. An oversized R2 object gets its own streaming page,
+  // without holding a database connection during the copy.
   for (const asset of page.batch) {
     if (await copyAsset(context, initial.project.id, asset)) {
       copied++;

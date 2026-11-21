@@ -205,15 +205,15 @@ describe('generateRouteTypes', () => {
 
     const { dts } = generateRouteTypes(scan, '/project/routes', '/project/.bwf');
 
-    // Both exports must live inside the `declare module "@builtbyfriends/bwf/routes"` block so
+    // Decision: Both exports have to live inside the `declare module "@builtbyfriends/bwf/routes"` block so
     // consumers importing from `@builtbyfriends/bwf/routes` pick them up after codegen.
     const moduleBlockStart = dts.indexOf('declare module "@builtbyfriends/bwf/routes"');
     expect(moduleBlockStart).toBeGreaterThan(-1);
     const moduleBlock = dts.slice(moduleBlockStart);
 
     expect(moduleBlock).toContain('export type RouteName = keyof RouteMap;');
-    // The `(string & {})` trick is load-bearing: it keeps route-name
-    // autocomplete while still accepting dynamic paths like `/users/${id}`.
+    // Decision: The `(string & {})` trick keeps route-name autocomplete while still accepting dynamic paths
+    // like `/users/${id}`.
     expect(moduleBlock).toContain('export type RewriteDestination = RouteName | (string & {});');
   });
 

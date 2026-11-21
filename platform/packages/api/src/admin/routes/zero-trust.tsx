@@ -15,8 +15,8 @@ import { renderFateListPage } from '../fate/render.ts';
 import { renderOperationError } from '../operation-error.tsx';
 
 const app = new Hono<ApiEnv>();
-// Set on the final response: admin pages and error pages return their own
-// Response objects, which would drop headers prepared with context.header().
+// Decision: Set on the final response: admin pages and error pages return their own Response objects,
+// which would drop headers prepared with context.header().
 app.use('*', async (context, next) => {
   await next();
   context.res.headers.set('Cache-Control', 'no-store');

@@ -9,11 +9,11 @@ import { isRecord } from '@builtbyfriends/deploy-core';
  * while anything remains to clean up or the state cannot be read.
  */
 
-// Mirrors the platform setting key in platform/packages/api/src/zero-trust/configuration.ts.
+// Decision: Mirrors the platform setting key in platform/packages/api/src/zero-trust/configuration.ts.
 const ZERO_TRUST_SETTING = 'zeroTrust.configuration';
-// Mirrors lockZeroTrustConfiguration in platform/packages/api/src/zero-trust/lock.ts.
+// Decision: Mirrors lockZeroTrustConfiguration in platform/packages/api/src/zero-trust/lock.ts.
 const ZERO_TRUST_LOCK = "hashtext('zero-trust:configuration')";
-// Mirrors PLATFORM_UNINSTALL_SETTING in platform/packages/api/src/zero-trust/lock.ts.
+// Decision: Mirrors PLATFORM_UNINSTALL_SETTING in platform/packages/api/src/zero-trust/lock.ts.
 const UNINSTALL_SETTING = 'platform.uninstall';
 const LISTED_APPLICATIONS = 20;
 
@@ -122,7 +122,7 @@ export function projectZeroTrustUninstallState(
     active = setting.enabled || operation !== null;
     const wildcard = savedApplication(setting.wildcardApplication, 'shared project application');
     const health = savedApplication(setting.healthApplication, 'health check exception');
-    // Names are saved before the application is created, so an unfinished
+    // Decision: Names are saved before the application is created, so an unfinished
     // operation may own an application whose id was never recorded.
     const wildcardName = optionalText(setting.wildcardApplicationName, 'application name');
     const healthName = optionalText(setting.healthApplicationName, 'application name');
@@ -169,7 +169,6 @@ export function projectZeroTrustUninstallState(
   return { active, destinations, applications, unfinishedDeletions };
 }
 
-/** Read the project Zero Trust state from the platform database. */
 export async function readPlatformProjectZeroTrustStateConnection(
   client: QueryConnection,
 ): Promise<PlatformProjectZeroTrustState> {
@@ -297,7 +296,7 @@ export function formatZeroTrustApplications(
 const DASHBOARD_HINT =
   'To lift sign-in right away, delete these applications in the Cloudflare dashboard under Zero Trust → Access → Applications.';
 
-// Hourly maintenance skips projects being deleted, so only finishing the
+// Decision: Hourly maintenance skips projects being deleted, so only finishing the
 // deletion removes their applications and records.
 function unfinishedDeletionLines(state: PlatformProjectZeroTrustState): ReadonlyArray<string> {
   if (!state.unfinishedDeletions.length) {
@@ -336,7 +335,7 @@ export async function assertProjectZeroTrustAllowsUninstall(
       [
         'platform: Refusing to uninstall while project Zero Trust is enabled or still changing.',
         `Uninstall turns off the platform API, so bwf could no longer remove its Cloudflare Access applications, and Access would keep asking for sign-in${covered}, including hostnames bwf does not serve.`,
-        // Without a user there is no administrator to run zero-trust disable.
+        // Decision: Without a user there is no administrator to run zero-trust disable.
         state.usersExist === false
           ? 'No platform user exists yet. Run this command on the computer that installed the platform; it keeps the authority to turn off project Zero Trust.'
           : 'Run `bwf platform zero-trust disable`, rerun it until `bwf platform zero-trust status` reports Zero Trust disabled with no operation running, then retry the uninstall.',

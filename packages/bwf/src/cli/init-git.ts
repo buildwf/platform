@@ -9,8 +9,8 @@ export async function setupGit(root: string, git?: boolean): Promise<boolean> {
     return false;
   }
 
-  // Init also configures existing apps. Preserve their repository, including
-  // parent repositories and the .git files used by worktrees and submodules.
+  // Decision: Init also configures existing apps. Keep their repository, including parent repositories and the
+  // .git files used by worktrees and submodules.
   let directory = resolve(root);
   while (true) {
     if (existsSync(join(directory, '.git'))) {
@@ -24,8 +24,8 @@ export async function setupGit(root: string, git?: boolean): Promise<boolean> {
   }
 
   if (git === undefined) {
-    // Match vp create: prompt with Yes selected in a terminal, but require an
-    // explicit --git in CI or when stdin is not a terminal.
+    // Decision: Match vp create: prompt with Yes selected in a terminal, but require an explicit --git in CI or
+    // when stdin isn't a terminal.
     if (process.env.CI || !process.stdin.isTTY) {
       return false;
     }
@@ -59,7 +59,7 @@ export async function setupGit(root: string, git?: boolean): Promise<boolean> {
 }
 
 export function initialCommitCommand(root: string): string {
-  // Use the absolute path because init can create a subfolder.
+  // Decision: Use the absolute path because init can create a subfolder.
   const directory = resolve(root);
   const git = directory === shellDirectory() ? 'git' : `git -C ${quoteShellPath(directory)}`;
   return `${git} add -A && ${git} commit -m "chore: initial commit"`;

@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
 
-/** Bundle independently so the API can upload identical trusted code for every app. */
+// Decision: Bundle independently so the API can upload identical trusted code for each app.
 export function buildSandboxController(outputDirectory = join(packageRoot, 'dist')) {
   const temporary = mkdtempSync(join(tmpdir(), 'platform-sandbox-controller-'));
   try {

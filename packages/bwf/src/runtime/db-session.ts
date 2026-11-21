@@ -53,7 +53,7 @@ export function createD1SessionAccess(bindingName: string): DbSessionAccess {
       const current = getRuntimeRequestResource<DbRequestSession>(
         key,
         () => ({ start: 'first-unconstrained' }),
-        // Outside bwf's request scope, sessions are not shared between operations.
+        // Decision: Outside bwf's request scope, sessions are not shared between operations.
         // Start each session on primary to preserve fresh reads.
         () => ({ start: 'first-primary' }),
       );
@@ -65,13 +65,13 @@ export function createD1SessionAccess(bindingName: string): DbSessionAccess {
     setSession(start) {
       const current = state('setSession');
       const value = resolveD1SessionStart(start, 'setSession');
-      // Nested middleware may have no bookmark of its own. Its fallback must
+      // Decision: Nested middleware may have no bookmark of its own. Its fallback must
       // not discard the outer requirement, even before the first DB access.
       if (start === 'first-unconstrained') {
         return;
       }
       if (current.session) {
-        // Middleware runs again on local server-side fetches. Repeated inputs
+        // Decision: Middleware runs again on local server-side fetches. Repeated inputs
         // must preserve the existing session and any progress made by queries.
         const original = typeof current.start === 'object' ? current.start.bookmark : current.start;
         if (typeof start === typeof current.start && value === original) {
@@ -99,7 +99,7 @@ export function createD1SessionAccess(bindingName: string): DbSessionAccess {
 
         return session.getBookmark();
       }
-      // Inspect only: middleware on a route without database queries must not open a session.
+      // Decision: Inspect only: middleware on a route without database queries must not open a session.
       return state('getBookmark').session?.getBookmark() ?? null;
     },
   };

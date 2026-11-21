@@ -36,8 +36,8 @@ vi.mock('@voidzero-dev/vite-plus-prompts', () => ({
 }));
 const roots: Array<string> = [];
 beforeAll(async () => {
-  // Load PostgreSQL once: Windows' cold WASM startup belongs to the hook budget,
-  // while each export assertion retains its normal short test deadline.
+  // Decision: Load PostgreSQL once: Windows' cold WASM startup belongs to the hook budget, while each
+  // export assertion keeps its normal short test deadline.
   state.pg = new PGlite();
   await state.pg.waitReady;
 }, 30_000);

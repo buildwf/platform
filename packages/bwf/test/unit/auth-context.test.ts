@@ -46,7 +46,7 @@ describe('authContext', () => {
   });
 
   it('returns the same ALS instance across module re-evaluations', async () => {
-    // resetModules re-evaluates auth.ts, like a second module load.
+    // Decision: resetModules re-evaluates auth.ts, like a second module load.
     vi.resetModules();
     const first = await import('../../src/runtime/auth.ts');
     vi.resetModules();

@@ -51,8 +51,7 @@ import {
   rpcData,
 } from './helpers.ts';
 
-// Hosted Platform does not set PLATFORM_AUTH_DATABASE_UNCACHED. Nothing here may
-// depend on it.
+// Decision: Hosted Platform doesn't set PLATFORM_AUTH_DATABASE_UNCACHED, so nothing here can depend on it.
 let env: TestEnv;
 let token: string;
 
@@ -112,7 +111,6 @@ async function seedProject(plan = 'free') {
   return createTestProject(env.db, owner.id);
 }
 
-/** Skips the real 1 s / 2 s / 4 s waits between KV 429 retries. */
 function skipRetryWaits() {
   const realSetTimeout = globalThis.setTimeout;
   return vi
@@ -185,8 +183,8 @@ describe('operator project override', () => {
     expect((await published(project.id)).value).toBe('full');
   });
 
-  // A loosen, or any change with inherit, commits first and publishes after it
-  // (publishOrder is unit tested; these cover the put and the delete).
+  // Decision: A loosen, or any change with inherit, commits first and publishes after (publishOrder has unit
+  // tests; these cover the put and the delete).
   test.each([
     ['inherit', 'full', 'put'],
     ['full', 'inherit', 'delete'],
@@ -220,8 +218,8 @@ describe('operator project override', () => {
       error: 'ai_logging_publish_pending',
       message: expect.stringContaining('hourly repair publishes it'),
     });
-    // The retry runs as "same" in one transaction and fails again. The first call's
-    // save stays, and the hourly sweep will publish it, so "nothing changed" would mislead.
+    // Decision: The retry runs as "same" in one transaction and fails again. The first call's save stays and the
+    // hourly sweep publishes it, so "nothing changed" would mislead.
     const retry = await setMode(project.id, 'full');
     expect(retry.status).toBe(503);
     const body = (await retry.json()) as { error: string; message: string };
@@ -235,13 +233,11 @@ describe('operator project override', () => {
   test('a late loosen publish re-reads under the lock and cannot undo a newer tighten', async () => {
     const project = await seedProject();
     expect((await setMode(project.id, 'off')).status).toBe(200);
-    // A: off -> full commits its first transaction, then stalls before publishing.
     const options = { initialPlanDefault: 'free' as const, dryRun: false };
     const a = await saveProjectAiLogging(env.db, env.ROUTING, project.id, 'full', options);
     expect(a).toMatchObject({ publishAfterCommit: true });
-    // B: full -> off runs to completion.
     expect((await setMode(project.id, 'off')).status).toBe(200);
-    // A publishes now: it must write what the row holds, not its own value.
+    // Decision: A publishes now. It has to write what the row holds, not its own value.
     await publishAfterAiLoggingSave(env.db, env.ROUTING, project.id, {
       initialPlanDefault: 'free',
       previous: 'off',
@@ -291,8 +287,8 @@ describe('operator project override', () => {
     );
     const verbs = expectNoCacheableReads(queries);
     expect(verbs.filter((verb) => verb === 'update')).toHaveLength(2);
-    // The lock comes first, on its own: a statement that waits for the lock keeps
-    // the joined rows it read before the wait, so the inputs are read after it.
+    // Decision: The lock comes first, on its own. A statement that waits for the lock keeps the joined rows it
+    // read before the wait, so the inputs are read after it.
     const [lock, inputs] = queries.filter((query) =>
       query.trim().toLowerCase().startsWith('update'),
     );
@@ -302,7 +298,7 @@ describe('operator project override', () => {
     expect((await published(project.id)).value).toBe('metadata');
   });
 
-  // Needs real PostgreSQL: PGlite runs one connection, so nothing ever waits on a lock.
+  // Decision: Needs real PostgreSQL. PGlite runs one connection, so nothing waits on a lock.
   test.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))(
     'a publisher that waited for the lock writes the change committed during its wait',
     async () => {
@@ -316,16 +312,14 @@ describe('operator project override', () => {
       const holding = new Promise<void>((resolve) => {
         locked = resolve;
       });
-      // B: full -> off holds the project lock while it saves.
       const b = env.db.transaction(async (tx) => {
         await tx.execute(lockAiLoggingProjectStatement(project.id));
         await writeProjectAiLogging(tx, project.id, 'off');
         locked();
         await mayCommit;
       });
-      // Racing B shows its own error at once if it fails before it signals.
+      // Decision: Racing B shows its own error at once if it fails before it signals.
       await Promise.race([holding, b]);
-      // A: a late publish that has to wait for B's lock.
       let done = false;
       const a = publishAfterAiLoggingSave(env.db, env.ROUTING, project.id, {
         initialPlanDefault: 'free',
@@ -338,7 +332,7 @@ describe('operator project override', () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
         expect(done).toBe(false);
       } finally {
-        // Never leave the lock held for the tests that follow.
+        // Decision: Don't leave the lock held for the tests that follow.
         release();
         await b;
       }
@@ -348,8 +342,6 @@ describe('operator project override', () => {
   );
 });
 
-// Which mode wins is unit tested (resolveAiLogging, planAiLogging); these cover where the
-// API finds the plan default and that the publish follows it.
 describe('plan defaults', () => {
   async function setPlanDefaults(modes: Record<string, string>) {
     await setPlatformSetting(env.db, PLAN_AI_LOGGING_SETTING, { modes, publish: null });
@@ -404,14 +396,13 @@ describe('plan defaults', () => {
     expect(response.status).toBe(500);
     expect(await response.json()).toMatchObject({
       error: 'invalid_saved_plan_ai_logging',
-      // Plan commands read the same value first, so the message must not send the operator there.
+      // Decision: Plan commands read the same value first, so the message mustn't send the operator there.
       message: expect.not.stringContaining('plan default again'),
     });
     expect((await published(project.id)).value).toBeNull();
   });
 });
 
-// The state rules are unit tested in ai-logging-state.test.ts; these check the wiring.
 describe('readback', () => {
   test('project show and the ai-logging route add the published state', async () => {
     const project = await seedProject();
@@ -436,7 +427,7 @@ describe('readback', () => {
   test('a change to inherit reads its cleared marker as pending', async () => {
     const project = await seedProject();
     expect((await setMode(project.id, 'off')).status).toBe(200);
-    // Past the settle time of the 'off' write, so only the marker can make it pending.
+    // Decision: Past the settle time of the 'off' write, so only the marker can make it pending.
     vi.spyOn(Date, 'now').mockReturnValue(Date.now() + AI_LOGGING_SETTLE_MS + 1);
     const change = (await (await setMode(project.id, 'inherit')).json()) as {
       expectedBy: string;
@@ -463,9 +454,9 @@ describe('readback', () => {
     expect((await published(project.id)).value).toBe('off');
   });
 
-  // Hosted Hyperdrive can answer a plain read from a copy up to a minute old, while
-  // the key read is fresh. A cached row from before a change next to the new key
-  // would read as drift, so readback must not use a cacheable read for its inputs.
+  // Decision: Hosted Hyperdrive can answer a plain read from a copy up to a minute old, while the key read is
+  // fresh. A cached row from before a change next to the new key would read as drift, so readback
+  // mustn't use a cacheable read for its inputs.
   test('reads its inputs through write statements and the key under the project lock', async () => {
     const project = await seedProject();
     expect((await setMode(project.id, 'off')).status).toBe(200);
@@ -523,7 +514,7 @@ describe('project create', () => {
     expect(writes()).toEqual([]);
   });
 
-  // Needs real PostgreSQL: PGlite runs one connection, so nothing ever waits on a lock.
+  // Decision: Needs real PostgreSQL. PGlite runs one connection, so nothing waits on a lock.
   test.runIf(Boolean(process.env.BWF_TEST_DATABASE_URL))(
     'a user plan change waits for a project create and then publishes it',
     async () => {
@@ -545,13 +536,12 @@ describe('project create', () => {
           initialPlanDefault: 'free',
           creating: true,
         });
-        // free inherits, so the create writes nothing.
         expect(result).toMatchObject({ effective: 'inherit', at: null });
         read();
         await mayCommit;
         return created;
       });
-      // Racing the create shows its own error at once if it fails before it signals.
+      // Decision: Racing the create shows its own error at once if it fails before it signals.
       await Promise.race([planRead, creating]);
       let changed = false;
       const change = Promise.resolve(operator(`/users/${owner.id}/plan`, { plan: 'pro' })).then(
@@ -565,7 +555,7 @@ describe('project create', () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
         expect(changed).toBe(false);
       } finally {
-        // Never leave the lock held for the tests that follow.
+        // Decision: Don't leave the lock held for the tests that follow.
         release();
         created = await creating;
       }

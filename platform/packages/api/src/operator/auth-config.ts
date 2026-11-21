@@ -254,7 +254,7 @@ authenticationConfigRoutes.post('/config/auth/protection', async (context) => {
   const revision = revisionField(body.revision)!;
   let protection;
   try {
-    // Missing protection must never accidentally mean disable.
+    // Decision: Missing protection must not be read as disable.
     if (!Object.hasOwn(body, 'protection')) {
       throw new Error('A protection configuration or explicit null is required.');
     }

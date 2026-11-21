@@ -65,8 +65,8 @@ export const operatorAuth: MiddlewareHandler<ApiEnv> = async (context, next) => 
 
 export const operatorSessionRoutes = new Hono<ApiEnv>();
 
-// Explicit elevation exchanges only a full application session. Browser admin
-// cookies, deploy tokens, and existing operator tokens cannot bootstrap access.
+// Decision: Explicit elevation exchanges only a full application session. Browser admin cookies, deploy tokens
+// and existing operator tokens can't bootstrap access.
 operatorSessionRoutes.post('/session', async (context) => {
   await readBody(context);
   const authorization = context.req.header('Authorization');
@@ -117,12 +117,10 @@ operatorSessionRoutes.post('/session', async (context) => {
 export const authenticatedSessionRoutes = new Hono<ApiEnv>();
 authenticatedSessionRoutes.get('/session', (context) => {
   const user = context.get('user');
-  // operator_sessions.expires_at is a timestamp without time zone whose wall
-  // time is UTC by convention: the POST above inserts a UTC ISO string. The
-  // string-mode column mapping returns it in SQL text form
-  // ("YYYY-MM-DD HH:MM:SS.sss"), so parse it explicitly as UTC and serialize
-  // with toISOString() — the response then carries the same instant and the
-  // same ISO text the POST returned.
+  // Decision: operator_sessions.expires_at is a timestamp without time zone holding UTC wall time (the POST above
+  // inserts a UTC ISO string). The string-mode column returns SQL text ("YYYY-MM-DD HH:MM:SS.sss"), so
+  // parse it as UTC and serialize with toISOString(); the response then carries the same instant and
+  // ISO text the POST returned.
   const storedExpiry: string = context.get('operatorSession').expiresAt;
   const expiresAt = new Date(`${storedExpiry.replace(' ', 'T')}+00:00`).toISOString();
   return context.json({

@@ -38,7 +38,7 @@ async function goto(page: Page, url: string) {
       if (!isTransientWindowsSocketExhaustion || attempt === attempts) {
         throw error;
       }
-      // Windows can keep recently closed browser sockets in rundown long enough for Chromium's
+      // Decision: Windows can keep recently closed browser sockets in rundown long enough for Chromium's
       // next navigation to fail before it reaches the dev server. Retry only that OS error.
       await new Promise((resolve) => setTimeout(resolve, attempt * 500));
     }

@@ -1,4 +1,4 @@
-// Frameworks and hover colors from 640_x_320_vite_frameworks_diamond.riv.
+// Decision: Frameworks and hover colors come from 640_x_320_vite_frameworks_diamond.riv.
 export const frameworks = [
   { id: 'react', name: 'React', color: '#61dafb' },
   { id: 'vue', name: 'Vue', color: '#42b883' },

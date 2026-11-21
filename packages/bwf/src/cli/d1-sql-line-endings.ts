@@ -18,7 +18,7 @@ export function normalizeD1SqlLineEndings(sql: string): string {
     const char = sql[index]!;
     const next = sql[index + 1];
     if (char === "'" || char === '"' || char === '`' || char === '[') {
-      // Copy the quoted text as is. A doubled quote is an escape, except in [brackets].
+      // Decision: Copy the quoted text as is. A doubled quote is an escape, except in [brackets].
       const close = char === '[' ? ']' : char;
       let end = index + 1;
       for (;;) {
@@ -36,7 +36,7 @@ export function normalizeD1SqlLineEndings(sql: string): string {
       out += sql.slice(index, end);
       index = end;
     } else if (char === '-' && next === '-') {
-      // A line comment runs to the end of the line; its line ending is structural.
+      // Decision: A line comment runs to the end of the line; its line ending is structural.
       let end = index + 2;
       while (end < sql.length && sql[end] !== '\n' && !crlfAt(end)) {
         end++;

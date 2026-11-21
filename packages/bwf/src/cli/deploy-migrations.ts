@@ -40,10 +40,10 @@ export async function assertMigrationsProduceAuthSchema(
 ): Promise<void> {
   const db = await openMigrationValidationDatabase(migrations);
   const quote = (identifier: string): string => `"${identifier.replace(/"/g, '""')}"`;
-  // SQLite matches identifiers case-insensitively, but PRAGMAs echo the declared casing.
+  // Decision: SQLite matches identifiers case-insensitively, but PRAGMAs echo the declared casing.
   const foldIdentifier = (identifier: string): string => identifier.toLowerCase();
   const sameIdentifier = (a: string, b: string): boolean => foldIdentifier(a) === foldIdentifier(b);
-  // Foreign keys need the parent table's info too. A table no migration created yields `[]`.
+  // Decision: Foreign keys need the parent table's info too. A table no migration created yields `[]`.
   const tableInfoCache = new Map<string, Array<TableInfoRow>>();
   const tableInfoFor = (table: string): Array<TableInfoRow> => {
     const key = foldIdentifier(table);
@@ -55,7 +55,7 @@ export async function assertMigrationsProduceAuthSchema(
     tableInfoCache.set(key, rows);
     return rows;
   };
-  // SQLite resolves an omitted foreign key target only to a single-column PRIMARY KEY.
+  // Decision: SQLite resolves an omitted foreign key target only to a single-column PRIMARY KEY.
   const singleColumnPrimaryKey = (table: string): string | null => {
     const primaryKey = tableInfoFor(table).filter((row) => Number(row.pk) > 0);
     return primaryKey.length === 1 && primaryKey[0] ? primaryKey[0].name : null;
@@ -83,8 +83,8 @@ export async function assertMigrationsProduceAuthSchema(
         problems.push(`table "${req.table}" is missing column(s): ${missing.join(', ')}`);
       }
 
-      // A column is unique through a single-column PRIMARY KEY (including the rowid alias,
-      // which has no index row) or any single-column, non-partial unique index.
+      // Decision: A column is unique through a single-column PRIMARY KEY (including the rowid alias, which has no
+      // index row) or any single-column, non-partial unique index.
       const uniqueColumns = new Set<string>();
       const primaryKey = tableInfo.filter((row) => Number(row.pk) > 0);
       if (primaryKey.length === 1 && primaryKey[0]) {
@@ -97,14 +97,14 @@ export async function assertMigrationsProduceAuthSchema(
         partial?: number;
       }>;
       for (const index of indexes) {
-        // A partial unique index constrains only the rows matching its WHERE clause.
+        // Decision: A partial unique index constrains only the rows matching its WHERE clause.
         if (Number(index.unique) !== 1 || Number(index.partial ?? 0) !== 0) {
           continue;
         }
         const indexColumns = db.prepare(`PRAGMA index_info(${quote(index.name)})`).all() as Array<{
           name: string | null;
         }>;
-        // A composite unique index constrains the tuple, not this column alone.
+        // Decision: A composite unique index constrains the tuple, not this column alone.
         if (indexColumns.length !== 1) {
           continue;
         }
@@ -113,8 +113,8 @@ export async function assertMigrationsProduceAuthSchema(
           uniqueColumns.add(foldIdentifier(only));
         }
       }
-      // Auth foreign keys point at `id`. SQLite (and D1, which always enforces foreign keys)
-      // rejects a non-unique parent key at runtime with "foreign key mismatch".
+      // Decision: Auth foreign keys point at `id`. SQLite (and D1, which enforces foreign keys) rejects a non-unique
+      // parent key at runtime with "foreign key mismatch".
       const notIdentity = req.columns
         .filter(
           (required) =>
@@ -132,9 +132,9 @@ export async function assertMigrationsProduceAuthSchema(
         );
       }
 
-      // The `INTEGER PRIMARY KEY` rowid alias reports `notnull = 0` but can never hold NULL.
-      // `INTEGER PRIMARY KEY DESC` looks the same in `table_info` yet is not an alias; only a
-      // real alias has no `origin = 'pk'` row in `index_list`.
+      // Decision: The `INTEGER PRIMARY KEY` rowid alias reports `notnull = 0` but can't hold NULL.
+      // `INTEGER PRIMARY KEY DESC` looks the same in `table_info` but isn't an alias; only a real alias
+      // has no `origin = 'pk'` row in `index_list`.
       const hasPrimaryKeyIndex = indexes.some(
         (index) => String(index.origin ?? '').toLowerCase() === 'pk',
       );
@@ -151,8 +151,8 @@ export async function assertMigrationsProduceAuthSchema(
           .map((row) => foldIdentifier(row.name)),
       );
 
-      // SQLite allows NULL in a PRIMARY KEY column other than the rowid alias, so the message
-      // names that quirk.
+      // Decision: SQLite allows NULL in a PRIMARY KEY column other than the rowid alias, so the message names that
+      // quirk.
       const nullableIdentity = req.columns
         .filter(
           (required) =>
@@ -202,7 +202,7 @@ export async function assertMigrationsProduceAuthSchema(
         );
       }
 
-      // `PRAGMA foreign_key_list` returns one row per column; rows of one constraint share `id`.
+      // Decision: `PRAGMA foreign_key_list` returns one row per column; rows of one constraint share `id`.
       const foreignKeys = db
         .prepare(`PRAGMA foreign_key_list(${quote(req.table)})`)
         .all() as Array<{
@@ -231,17 +231,17 @@ export async function assertMigrationsProduceAuthSchema(
           sameIdentifier(fk.from, required.column) &&
           typeof fk.table === 'string' &&
           sameIdentifier(fk.table, reference.table);
-        // Only a single-column foreign key counts: under MATCH SIMPLE, SQLite skips a composite
-        // key whenever any of its child columns is NULL.
+        // Decision: Only a single-column foreign key counts: under MATCH SIMPLE, SQLite skips a composite key
+        // whenever any of its child columns is NULL.
         const matching = constraints.flatMap((group) =>
           group.length === 1 && group[0] && namesReference(group[0]) ? [group[0]] : [],
         );
         const composite = constraints.some(
           (group) => group.length > 1 && group.some(namesReference),
         );
-        // This checks only which column the key names; `foreign_key_check` below decides
-        // whether SQLite accepts the parent key. A null `to` (`REFERENCES "user"`) means the
-        // parent's single-column PRIMARY KEY.
+        // Decision: This checks only which column the key names; `foreign_key_check` below decides whether SQLite
+        // accepts the parent key. A null `to` (`REFERENCES "user"`) means the parent's single-column
+        // PRIMARY KEY.
         const satisfied = matching.some((fk) => {
           if (fk.to != null) {
             return sameIdentifier(String(fk.to), reference.column);
@@ -271,9 +271,9 @@ export async function assertMigrationsProduceAuthSchema(
         }
       }
 
-      // Let SQLite apply its own parent-key rules. `CREATE TABLE` accepts an invalid parent
-      // key, which then fails at runtime; `foreign_key_check` reports it by throwing
-      // "foreign key mismatch". Any other error propagates.
+      // Decision: Let SQLite apply its own parent-key rules. `CREATE TABLE` accepts an invalid parent key, which
+      // then fails at runtime; `foreign_key_check` reports it by throwing "foreign key mismatch". Any
+      // other error propagates.
       try {
         const violations = db
           .prepare(`PRAGMA foreign_key_check(${quote(req.table)})`)
@@ -349,7 +349,7 @@ function readEmittedAuthMigrationSchema(root: string): Array<RequiredAuthTable> 
   return migrationSchema.tables.map((table) => ({
     table: table.name,
     columns: [
-      // `id` is the implicit primary key and is absent from `fields`.
+      // Decision: `id` is the implicit primary key and is absent from `fields`.
       { column: 'id', unique: false, required: true, primaryKey: true },
       ...Object.entries(table.fields).map(([column, field]) => ({
         column,
@@ -606,7 +606,7 @@ export async function checkWranglerMigrationApplySet(
 }
 
 function cloudflareReason(result: DeployWranglerRunResult): string {
-  // stdout can hold binding values, so only the error output is shown.
+  // Decision: stdout can hold binding values, so only the error output is shown.
   const detail = cloudflareCommandDiagnostic({ ...result, stdout: '' });
   return detail ? `\nCloudflare: ${sanitizeTerminalLogText(detail)}` : '';
 }
@@ -633,15 +633,15 @@ export async function applyAndVerifyRemoteD1Migrations(
   restorePlatformFlag = false,
 ): Promise<false | { restoreCommand: string | undefined }> {
   let restoreCommand: string | undefined;
-  // Runs only after every local gate passes, so a failed gate never changes remote D1.
+  // Decision: Runs only after all local gates pass, so a failed gate doesn't change remote D1.
   if (d1MigrateToken) {
     log.step('Applying D1 migrations...');
-    // The local gates ran project code, which could have replaced the pinned uploader.
+    // Decision: The local gates ran project code, which could have replaced the pinned uploader.
     if (!assertUploaderStillPinned()) {
       return false;
     }
-    // A Worker rollback does not undo a migration. Time Travel does, and a bookmark taken right
-    // before the apply restores exactly the state the migrations started from.
+    // Decision: A Worker rollback doesn't undo a migration. Time Travel does, and a bookmark taken right before
+    // the apply restores exactly the state the migrations started from.
     const readPending = async (): Promise<Array<unknown> | undefined> => {
       const listed = await Promise.resolve(
         runWrangler(
@@ -685,7 +685,7 @@ export async function applyAndVerifyRemoteD1Migrations(
         );
         return false;
       }
-      // An overlapping deploy may have applied some of them before the bookmark. Whatever is still
+      // Decision: An overlapping deploy may have applied some of them before the bookmark. Whatever is still
       // pending now is applied after it, so the bookmark undoes exactly those.
       const pendingAfterBookmark = await readPending();
       if (!pendingAfterBookmark) {
@@ -720,7 +720,7 @@ export async function applyAndVerifyRemoteD1Migrations(
       return false;
     }
 
-    // A clean exit does not prove the schema is current, so read the pending set.
+    // Decision: A clean exit doesn't prove the schema is current, so read the pending set.
     if (!assertUploaderStillPinned()) {
       if (restoreCommand) {
         logD1RestoreAfterDeployFailure(restoreCommand);

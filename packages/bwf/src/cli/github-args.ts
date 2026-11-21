@@ -145,7 +145,7 @@ export function parseGithubArgs(args: Array<string>): GithubArgs {
   if (subcommand === 'update') {
     const parsed: Extract<GithubArgs, { subcommand: 'update' }> = { subcommand, projectName: '' };
     parsed.projectName = parseProjectArgs(rest, {
-      // Trimmed so the no-op check and the PATCH both use the canonical branch name.
+      // Decision: Trimmed so the no-op check and the PATCH both use the canonical branch name.
       '--branch': (value) => {
         parsed.branch = value.trim();
       },

@@ -228,11 +228,9 @@ describe('Zero Trust routing publication', () => {
         retryable: true,
       }),
     ).resolves.toEqual(deny);
-    // A durable bypass keeps a public project reachable.
     await expect(
       resolveProjectZeroTrustRoutingForPublication(env.db, publicProject.id, { retryable: true }),
     ).resolves.toBeNull();
-    // Unknown protection: a retryable writer waits, any other writer fails closed.
     await expect(
       resolveProjectZeroTrustRoutingForPublication(env.db, unknownProject.id, { retryable: true }),
     ).rejects.toThrow('saved Zero Trust configuration is invalid');

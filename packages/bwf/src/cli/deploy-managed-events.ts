@@ -50,13 +50,12 @@ export function applyDeployEvent(event: DeployEvent, s: SpinnerResult): ApplyDep
       s.message('Waiting for worker to become reachable...');
       return { kind: 'continue' };
     case 'migration_start':
-      // `pending` counts every migration bundled with the build; the server
-      // only learns which are unapplied while running them.
+      // Decision: `pending` counts all migrations bundled with the build; the server only learns which are
+      // unapplied while running them.
       s.message(`Checking ${event.pending} bundled migration${event.pending === 1 ? '' : 's'}...`);
       return { kind: 'continue' };
     case 'migration_warning':
-      // log.warn persists above the spinner; a spinner message would be
-      // overwritten by the next event.
+      // Decision: log.warn persists above the spinner; a spinner message would be overwritten by the next event.
       log.warn(event.message);
       return { kind: 'continue' };
     case 'migration':
@@ -69,9 +68,8 @@ export function applyDeployEvent(event: DeployEvent, s: SpinnerResult): ApplyDep
       s.message(`Configuring queue consumers: ${event.queues.join(', ')}`);
       return { kind: 'continue' };
     case 'queue_consumer_conflict':
-      // log.warn persists above the spinner so the warning survives the
-      // next s.message call — the user needs to see this after deploy
-      // completes, not just as a transient spinner frame.
+      // Decision: log.warn persists above the spinner, so the warning survives the next s.message call. The user
+      // needs to see it after deploy completes, not just as a passing spinner frame.
       log.warn(
         `Queue consumer conflict on "${event.queue}": owned by "${event.ownerScript}". ` +
           `Messages for this queue will not be delivered to this deployment ` +
@@ -80,10 +78,9 @@ export function applyDeployEvent(event: DeployEvent, s: SpinnerResult): ApplyDep
       return { kind: 'continue' };
     case 'done':
       if (event.published === false) {
-        // Committed-live in the DB but routing KV was not published. The
-        // deploy succeeded (do NOT throw / return an error kind) but the
-        // project may be unreachable (first deploy) or still serving the
-        // previous deploy (later deploy). Degrade the message accordingly.
+        // Decision: Committed live in the DB, but routing KV wasn't published. The deploy succeeded (don't throw or
+        // return an error kind), but the project may be unreachable (first deploy) or still serving the
+        // previous deploy (later deploy). Degrade the message to match.
         s.stop(
           'Deployed, but routing was not published — the project may be unreachable or still serving the previous deploy. Re-run `bwf deploy` to publish routing.',
         );
@@ -124,9 +121,8 @@ export async function streamDeployEvents(
       log.info('Deployment id was not received before the interrupt.');
     }
     cliLog?.warn('stream_interrupted', { deploymentId });
-    // The JSONL logger writes each record synchronously, so the warning above
-    // is already on disk; close() only releases the file. Nothing to await
-    // before `process.exit(130)`.
+    // Decision: The JSONL logger writes each record synchronously, so the warning above is already on disk;
+    // close() only releases the file. Nothing to await before `process.exit(130)`.
     cliLog?.close().catch(() => {});
     process.exit(130);
   };
@@ -169,9 +165,8 @@ export async function streamDeployEvents(
         cliLog?.info('stream_deployment_id', { deploymentId });
       } else if (result.kind === 'done') {
         const degraded = result.event.published === false;
-        // Degraded = committed-live but routing KV not published. Still a
-        // `done` outcome (not an error), but logged distinctly so the
-        // degraded result is greppable in the JSONL trace.
+        // Decision: Degraded means committed live but routing KV not published. It's still a `done` outcome, not an
+        // error, but it's logged distinctly so the degraded result is greppable in the JSONL trace.
         cliLog?.info(degraded ? 'deploy_degraded' : 'deploy_success', {
           deploymentId,
           url: result.event.url,
@@ -296,8 +291,7 @@ export async function streamDirectR2Deploy({
   spinner: SpinnerResult;
   cliLog?: CliLogger;
 }): Promise<StreamDeployResult> {
-  // Check before any upload: an older platform would accept the manifest and
-  // leave replication on.
+  // Decision: Check before any upload: an older platform would accept the manifest and leave replication on.
   if (manifest.database?.readReplication !== undefined) {
     await client.requireD1ReadReplicationSupport();
   }
@@ -307,8 +301,7 @@ export async function streamDirectR2Deploy({
       : undefined;
 
   if (needed.length > 0) {
-    // Drop buffers the server already has so peak memory tracks `needed`,
-    // not the full bundle.
+    // Decision: Drop buffers the server already has so peak memory tracks `needed`, not the full bundle.
     const neededPaths = new Set(needed);
     const preBufferCount = assetFiles.size;
     for (const path of assetFiles.keys()) {
@@ -325,11 +318,10 @@ export async function streamDirectR2Deploy({
 
     s.message(`Requesting upload URLs for ${formatCount(needed.length, 'asset')}...`);
 
-    // Dedupe by content hash: identical files (same blake3) get presigned
-    // and PUT once. `assetManifest` still lists every path for the
-    // per-path serving manifest the platform builds in `finalizeDeploy`;
-    // this only collapses the upload phase. Common with prerendered HTML,
-    // duplicated images, and framework-emitted twins.
+    // Decision: Dedupe by content hash: identical files (same blake3) get presigned and PUT once. `assetManifest`
+    // still lists each path for the per-path serving manifest the platform builds in `finalizeDeploy`;
+    // this only collapses the upload phase. Common with prerendered HTML, duplicated images and
+    // framework-emitted twins.
     const seenBlake3 = new Set<string>();
     const uniqueNeeded: Array<string> = [];
     for (const path of needed) {
@@ -350,7 +342,7 @@ export async function streamDirectR2Deploy({
         blake3: entry.blake3,
         md5: entry.md5,
         size: entry.size,
-        // Signed into the presigned PUT; dispatch serves with the same table.
+        // Decision: Signed into the presigned PUT; dispatch serves with the same table.
         contentType: getContentType(path),
       };
     });
@@ -366,8 +358,6 @@ export async function streamDirectR2Deploy({
       durationMs: Date.now() - presignStartedAt,
     });
 
-    // Map unique-by-hash paths → DirectR2PutItem, with the asset bytes
-    // pulled from the in-memory cache (no disk reads here).
     const items: Array<DirectR2PutItem> = uniqueNeeded.map((path) => {
       const entry = assetManifest[path];
       const presigned = urls[entry.blake3];
@@ -393,22 +383,17 @@ export async function streamDirectR2Deploy({
     });
 
     s.message(`Uploading ${formatCount(items.length, 'asset')} to R2...`);
-    // Per-PUT cleanup: once R2 acks the upload, drop the buffer from the
-    // CLI-side cache so peak memory under the bounded upload pool stays
-    // close to `R2_PUT_CONCURRENCY` × asset size, not the full bundle.
+    // Decision: Once R2 acks the upload, drop the buffer from the CLI-side cache so peak memory under the bounded
+    // upload pool stays close to `R2_PUT_CONCURRENCY` × asset size, not the full bundle.
     await uploadAssetsToR2(items, cliLog, undefined, (item) => {
       assetFiles.delete(item.path);
     });
   } else {
-    // Fully reused Worker/static assets need no bytes during finalization.
+    // Decision: Fully reused Worker and static assets need no bytes during finalization.
     assetFiles.clear();
     cliLog?.info('presign_skipped', { reason: 'no_needed_assets' });
   }
 
-  // Build the JSON-mode payload. Uploaded Worker modules are named by
-  // `workerInput`. Otherwise their bytes go in as base64: a temporary
-  // fallback for platforms without direct Worker uploads. Delete it when
-  // MIN_PLATFORM_VERSION reaches the release that ships them.
   let encodedWorkerFiles: Record<string, string> | undefined;
   if (!workerInput && workerFiles && workerFiles.size > 0) {
     encodedWorkerFiles = {};

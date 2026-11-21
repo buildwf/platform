@@ -751,8 +751,6 @@ describe('auth middleware', () => {
         'free',
         'admin',
       );
-      // The same host with a different scheme passes the first guard and reaches the
-      // stricter CSRF middleware; both guards must give browser users a way back.
       const res = await app.fetch(
         new Request('https://localhost/admin/signup-control/toggle', {
           method: 'POST',
@@ -873,7 +871,6 @@ describe('admin Zero Trust', () => {
       pagePolicy: 'strict-origin',
       submission: { origin, referrer: `${origin}/`, status: 400 },
     });
-    // Empty provider IDs fail validation before any Cloudflare request or mutation.
     expect(await env.db.select().from(platformSettings)).toHaveLength(0);
   });
 
@@ -918,7 +915,6 @@ describe('admin Zero Trust', () => {
     expect(html.toLowerCase()).toContain('autocomplete="new-password"');
     expect(checkedValues(html, 'existingProjects')).toEqual(['public']);
     expect(html).toContain('name="protectNewProjects" value="yes"');
-    // Zero Trust always uses the installation account; there is no account field.
     expect(html).not.toContain('name="accountId"');
     expectNoZeroTrustSecrets(html);
     expectNoZeroTrustSecrets(pageSnapshot(html));
@@ -927,7 +923,7 @@ describe('admin Zero Trust', () => {
   test('keeps managed application identifiers out of an enabled installation page', async () => {
     const admin = await createTestUser(env.db, 'zt-enabled', 'github', undefined, 'free', 'admin');
     await env.db.insert(platformSettings).values(zeroTrustSetting());
-    // The seeded credential cannot be decrypted, so the live check reports drift.
+    // Decision: The seeded credential can't be decrypted, so the live check reports drift.
     const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const res = await req('/admin/zero-trust', admin.adminJwt);
@@ -938,11 +934,9 @@ describe('admin Zero Trust', () => {
     expect(visible).toContain('Not checked');
     expect(html).toContain('href="/admin/zero-trust?check=1"');
     expect(visible).toContain('Disable Zero Trust');
-    // Existing projects keep their protection once Zero Trust is enabled.
     expect(html).not.toContain('name="existingProjects"');
     expectNoZeroTrustSecrets(html);
     expectNoZeroTrustSecrets(pageSnapshot(html));
-    // A plain page view reads saved state only.
     expect(logged).not.toHaveBeenCalledWith(
       '[zero-trust] live status check failed',
       expect.anything(),
@@ -1054,7 +1048,7 @@ describe('admin Zero Trust', () => {
       await adminHtml(await req(`/admin/projects/${project.id}`, admin.adminJwt)),
     );
     expect(projectPage).toContain('AI Gateway logging');
-    // Same wording as `bwf platform project show`.
+    // Decision: Same wording as `bwf platform project show`.
     expect(projectPage).toContain(
       'off (set on project; plan &quot;free&quot; default: metadata) — pending (expected by ',
     );
@@ -1090,8 +1084,8 @@ describe('admin Zero Trust', () => {
       status: 'ready',
     });
     const fetched = vi.spyOn(globalThis, 'fetch');
-    // The seeded credential cannot be decrypted, so a live status check would fail before
-    // fetch and only show up as this log line.
+    // Decision: The seeded credential can't be decrypted, so a live status check would fail before fetch and show
+    // up only as this log line.
     const logged = vi.spyOn(console, 'error');
 
     const html = await adminHtml(await req(`/admin/projects/${project.id}`, admin.adminJwt));
@@ -1103,7 +1097,8 @@ describe('admin Zero Trust', () => {
     expect(html).toContain('name="protected" value="false"');
     expect(visible).toContain('Make project public');
     expect(html).toContain(`action="/admin/projects/${project.id}/zero-trust/reconcile"`);
-    // The server-side Fate client calls the local /admin/fate handler.
+    // Decision: The server-side Fate client calls the local /admin/fate handler, so only non-localhost fetches
+    // count as external.
     const external = fetched.mock.calls
       .map(([input]) => (input instanceof Request ? input.url : String(input)))
       .filter((url) => !url.startsWith('http://localhost/'));
@@ -1806,7 +1801,6 @@ describe('GET /admin/users', () => {
 
   test('paginates users', async () => {
     const admin = await createTestUser(env.db, 'admin2b', 'github', undefined, 'free', 'admin');
-    // Create 20 more users to span 2 pages (PAGE_SIZE=20, +1 admin = 21)
     for (let i = 0; i < 20; i++) {
       await createTestUser(env.db, `paguser-${String(i).padStart(2, '0')}`);
     }
@@ -1875,14 +1869,13 @@ describe('GET /admin/users/:id', () => {
     await createTestDeployment(env.db, project.id, 'live');
     await createTestDeployment(env.db, project.id, 'live');
 
-    // Mock CF API — the user detail page calls queryBatchProjectUsageWindows which
-    // fetches from Analytics Engine. Without a mock, the real fetch hangs in CI.
+    // Decision: The user detail page calls queryBatchProjectUsageWindows, which fetches from Analytics Engine.
+    // Without this mock the real fetch hangs in CI.
     mockCfApi();
 
     const res = await req(`/admin/users/${user.id}`, admin.adminJwt);
     expect(res.status).toBe(200);
     const html = await adminHtml(res);
-    // Should show "2 / 100" (2 deploys today, free tier limit 100)
     expect(visibleMarkup(html)).toContain('2 / 100');
 
     vi.restoreAllMocks();
@@ -1952,7 +1945,6 @@ describe('POST /admin/users/:id/plan', () => {
     );
     const user = await createTestUser(env.db, 'planuser-sb', 'github', undefined, 'solo');
 
-    // Pre-seed the suspension state as the UsageCounter DO would have left it.
     await env.ROUTING.put(`sandbox-block:${user.id}`, '1');
     await env.db
       .update(users)
@@ -1976,10 +1968,8 @@ describe('POST /admin/users/:id/plan', () => {
     );
     expect(res.status).toBe(302);
 
-    // KV block key should be deleted.
     expect(await env.ROUTING.get(`sandbox-block:${user.id}`)).toBeNull();
 
-    // DB suspension reason should be cleared.
     const [row] = await env.db
       .select({ suspended_reason: users.suspended_reason })
       .from(users)
@@ -1999,7 +1989,7 @@ describe('POST /admin/users/:id/plan', () => {
     const user = await createTestUser(env.db, 'planuser-req', 'github', undefined, 'solo');
     const project = await createTestProject(env.db, user.id, 'planuser-req-slug');
 
-    // Execute the production counter so this verifies actual quota reevaluation.
+    // Decision: Run the real counter so this checks actual quota reevaluation.
     await env.db
       .update(users)
       .set({ suspended_reason: 'requests_exceeded' })
@@ -2067,7 +2057,6 @@ describe('POST /admin/users/:id/plan', () => {
       .select({ suspended_reason: users.suspended_reason })
       .from(users)
       .where(eq(users.id, user.id));
-    // A plan change is a usage-cap action; it must never lift an admin block.
     expect(row.suspended_reason).toBe('admin_suspended');
     expect(JSON.parse((await env.ROUTING.get(project.slug))!).suspended).toBe('admin_suspended');
   });
@@ -2132,8 +2121,6 @@ describe('POST /admin/users/:id/plan', () => {
     );
     expect(res.status).toBe(500);
 
-    // The plan change is the primary action and IS persisted; only the cleanup
-    // failed, and the plan form is always available for a retry.
     const [row] = await env.db
       .select({ plan: users.plan })
       .from(users)
@@ -2149,7 +2136,6 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
     const project = await createTestProject(env.db, user.id, 'susp-slug');
     await env.ROUTING.put(project.slug, JSON.stringify({ workerName: 'w', projectId: project.id }));
 
-    // Suspend
     const suspBody = new URLSearchParams({ reason: 'test_reason' });
     const suspRes = await req(`/admin/users/${user.id}/suspend`, admin.adminJwt, {
       method: 'POST',
@@ -2161,7 +2147,6 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
     const routingAfter = JSON.parse((await env.ROUTING.get(project.slug))!);
     expect(routingAfter.suspended).toBe('test_reason');
 
-    // Unsuspend
     const unsuspRes = await req(`/admin/users/${user.id}/unsuspend`, admin.adminJwt, {
       method: 'POST',
       body: '',
@@ -2178,7 +2163,6 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
     const user = await createTestUser(env.db, 'suspuser-dom');
     const project = await createTestProject(env.db, user.id, 'susp-dom-slug');
 
-    // Active custom domain → has a `domain:<host>` routing entry dispatch serves.
     await env.db.insert(domains).values({
       id: 'dom_susp_active',
       project_id: project.id,
@@ -2186,7 +2170,6 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
       cf_hostname_id: 'cf_susp_active',
       status: 'active',
     });
-    // Pending domain → no routing entry yet; must be left untouched.
     await env.db.insert(domains).values({
       id: 'dom_susp_pending',
       project_id: project.id,
@@ -2198,11 +2181,8 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
     const slugJson = JSON.stringify({ workerName: 'w', projectId: project.id });
     await env.ROUTING.put(project.slug, slugJson);
     await env.ROUTING.put('domain:susp-custom.example.com', slugJson);
-    // The UsageCounter DO would have left this on a sandbox-runtime suspension.
     await env.ROUTING.put(`sandbox-block:${user.id}`, '1');
 
-    // Suspend stamps slug + active domain. The pending domain has no published
-    // KV route, so the fan-out is a harmless no-op there (no key is created).
     const suspRes = await req(`/admin/users/${user.id}/suspend`, admin.adminJwt, {
       method: 'POST',
       body: new URLSearchParams({ reason: 'admin_suspended' }).toString(),
@@ -2215,7 +2195,6 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
     );
     expect(await env.ROUTING.get('domain:susp-pending.example.com')).toBeNull();
 
-    // Unsuspend clears slug + domain markers and removes the sandbox block.
     const unsuspRes = await req(`/admin/users/${user.id}/unsuspend`, admin.adminJwt, {
       method: 'POST',
       body: '',
@@ -2235,16 +2214,15 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
     const project = await createTestProject(env.db, user.id, 'susp-reserved-slug');
     await env.ROUTING.put(project.slug, JSON.stringify({ workerName: 'w', projectId: project.id }));
 
-    // `requests_exceeded` classifies as a USAGE suspension (isAdminSuspended === false),
-    // and the scheduled reconcile would auto-clear it whenever the DO latch is false —
-    // silently un-blocking an admin-intended block. The route must reject it.
+    // Decision: `requests_exceeded` counts as a usage suspension (isAdminSuspended is false), and the scheduled
+    // reconcile would clear it whenever the DO latch is false, silently lifting an admin block. So the
+    // route rejects it.
     const res = await req(`/admin/users/${user.id}/suspend`, admin.adminJwt, {
       method: 'POST',
       body: new URLSearchParams({ reason: 'requests_exceeded' }).toString(),
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' } as Record<string, string>,
     });
     expect(res.status).toBe(400);
-    // Neither DB nor KV mutated.
     const [row] = await env.db
       .select({ suspended_reason: users.suspended_reason })
       .from(users)
@@ -2257,7 +2235,6 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
     const admin = await createTestUser(env.db, 'admin6c', 'github', undefined, 'free', 'admin');
     const user = await createTestUser(env.db, 'suspuser-overwrite');
     const project = await createTestProject(env.db, user.id, 'susp-overwrite-slug');
-    // The route already carries a usage-driven marker from the request cap.
     await env.ROUTING.put(
       project.slug,
       JSON.stringify({ workerName: 'w', projectId: project.id, suspended: 'requests_exceeded' }),
@@ -2269,12 +2246,10 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' } as Record<string, string>,
     });
     expect(suspRes.status).toBe(302);
-    // Admin reason outranks the usage reason and replaces it.
     expect(JSON.parse((await env.ROUTING.get(project.slug))!).suspended).toBe('admin_suspended');
   });
 
-  // POST the unsuspend form against a custom env (req() uses the fixed env, so
-  // we call app.fetch directly to inject a faulty binding).
+  // Decision: req() uses the fixed env, so call app.fetch directly to inject a faulty binding.
   function unsuspendWith(userId: string, adminJwt: string, overrides: Partial<TestEnv>) {
     return app.fetch(
       new Request(`http://localhost/admin/users/${userId}/unsuspend`, {
@@ -2291,8 +2266,7 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
     );
   }
 
-  // POST the suspend form against a custom env (req() uses the fixed env, so we
-  // call app.fetch directly to inject a faulty binding).
+  // Decision: req() uses the fixed env, so call app.fetch directly to inject a faulty binding.
   function suspendWith(
     userId: string,
     adminJwt: string,
@@ -2319,11 +2293,9 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
     const user = await createTestUser(env.db, 'susp-failopen');
     await createTestProject(env.db, user.id, 'susp-failopen-slug');
 
-    // ROUTING whose reads throw — setProjectsRoutingSuspension rejects, so the
-    // edge stamp fails. The DB write must NOT have happened: a DB-first ordering
-    // would leave `suspended_reason` set while dispatch (which enforces only
-    // `routing.suspended`) keeps serving the unstamped route — a fail-OPEN strand
-    // whose detail view shows Unsuspend, not a retry of the failed suspend.
+    // Decision: ROUTING reads throw, so setProjectsRoutingSuspension rejects and the edge stamp fails. The DB write
+    // mustn't happen: DB-first would leave `suspended_reason` set while dispatch (which enforces only
+    // `routing.suspended`) keeps serving, and the detail view would show Unsuspend instead of a retry.
     const failingRouting = {
       get: async () => {
         throw new Error('KV unavailable');
@@ -2337,8 +2309,6 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
     });
     expect(res.status).toBe(500);
 
-    // DB must stay active so the user-detail view keeps the Suspend form — i.e. the
-    // operator retries the idempotent stamp rather than seeing a false "suspended".
     const [row] = await env.db
       .select({ suspended_reason: users.suspended_reason })
       .from(users)
@@ -2351,8 +2321,8 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
     const user = await createTestUser(env.db, 'unsusp-do-fail');
     await createTestProject(env.db, user.id, 'unsusp-do-fail-slug');
 
-    // DO whose /clear-suspension fails (e.g. storage error) — unchecked, this
-    // would 302 as success while the latch (and next /init re-stamp) persists.
+    // Decision: A DO whose /clear-suspension fails. Unchecked, the route would 302 as success while the latch (and
+    // the next /init re-stamp) stays.
     const failingDo = {
       idFromName: (name: string) => ({ toString: () => name }),
       get: (_id: unknown) => ({
@@ -2369,8 +2339,6 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
     const user = await createTestUser(env.db, 'unsusp-kv-fail');
     await createTestProject(env.db, user.id, 'unsusp-kv-fail-slug');
 
-    // ROUTING whose reads throw — setProjectsRoutingSuspension rejects, so the
-    // cleanup Promise.all rejects and must not redirect as success.
     const failingRouting = {
       get: async () => {
         throw new Error('KV unavailable');
@@ -2400,8 +2368,6 @@ describe('POST /admin/users/:id/suspend + unsuspend', () => {
     const res = await unsuspendWith(user.id, admin.adminJwt, { USAGE_COUNTER: failingDo });
     expect(res.status).toBe(500);
 
-    // DB must stay suspended so the user-detail view keeps the Unsuspend form
-    // (it gates on suspended_reason) — i.e. the operator can retry the cleanup.
     const [row] = await env.db
       .select({ suspended_reason: users.suspended_reason })
       .from(users)
@@ -2415,9 +2381,6 @@ describe('POST /admin/users/:id/delete', () => {
     mockCfApi();
     const admin = await createTestUser(env.db, 'admin-udel', 'github', undefined, 'free', 'admin');
     const user = await createTestUser(env.db, 'gh-linked-user');
-    // A GitHub App installation linked to the user (the backfilled state). The
-    // FK is `on delete set null`, so deleting the owner must orphan the row, not
-    // violate the constraint.
     await env.db.insert(githubInstallations).values({
       id: 'ghi_udel_test',
       installation_id: 'inst-udel-1',
@@ -2434,7 +2397,6 @@ describe('POST /admin/users/:id/delete', () => {
     });
     expect(res.status).toBe(302);
 
-    // User gone; installation orphaned back to the unlinked state.
     expect((await env.db.select().from(users).where(eq(users.id, user.id))).length).toBe(0);
     const [install] = await env.db
       .select()
@@ -2443,7 +2405,8 @@ describe('POST /admin/users/:id/delete', () => {
     expect(install).toBeDefined();
     expect(install.user_id).toBeNull();
 
-    // Keep the suite self-contained (clearTables doesn't cover installations).
+    // Decision: clearTables doesn't cover installations, so remove this row here to keep the suite
+    // self-contained.
     await env.db.delete(githubInstallations).where(eq(githubInstallations.id, 'ghi_udel_test'));
     vi.restoreAllMocks();
   });
@@ -2495,19 +2458,16 @@ describe('GET /admin/projects', () => {
 
   test('paginates projects', async () => {
     const admin = await createTestUser(env.db, 'admin7b', 'github', undefined, 'free', 'admin');
-    // Create 21 projects to span 2 pages (PAGE_SIZE=20)
     for (let i = 0; i < 21; i++) {
       await createTestProject(env.db, admin.id, `pagproj-${String(i).padStart(2, '0')}`);
     }
 
-    // Page 1: should have 20 projects and a Next link
     const res1 = await req('/admin/projects?page=1', admin.adminJwt);
     expect(res1.status).toBe(200);
     const html1 = await adminHtml(res1);
     expect(visibleMarkup(html1)).toContain('1 / 2');
     expect(html1).toContain('?page=2');
 
-    // Page 2: should have 1 project and no Next link
     const res2 = await req('/admin/projects?page=2', admin.adminJwt);
     expect(res2.status).toBe(200);
     const html2 = await adminHtml(res2);
@@ -2663,7 +2623,6 @@ describe('GET /admin/projects/:id', () => {
     );
     expect(removal.status).toBe(302);
     expect(await env.db.select().from(projectMembers)).toEqual([]);
-    // The removed collaborator could deploy: the project's proxy token rotates.
     expect(await env.db.select().from(projectCleanupJobs)).toMatchObject([
       {
         target: `proxy-token-rotation:${project.id}`,
@@ -3120,8 +3079,8 @@ describe('GET /admin/login', () => {
     expect(html).toContain('Google');
   });
 
-  // A tenant app can share a site with the API, so a page that frames the
-  // admin UI would still be sent the admin cookie.
+  // Decision: A tenant app can share a site with the API, so a page that frames the admin UI would still get
+  // the admin cookie.
   test('admin pages refuse framing', async () => {
     const page = await app.fetch(new Request('http://localhost/admin/login'), env);
     expect(page.headers.get('content-type')).toContain('text/html');
@@ -3474,7 +3433,6 @@ describe('POST /admin/projects/:id/delete', () => {
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toBe('/admin/projects');
 
-    // Verify project is gone from DB
     const remaining = await env.db.select().from(projects);
     expect(remaining.find((p) => p.id === project.id)).toBeUndefined();
     vi.restoreAllMocks();
@@ -3522,7 +3480,6 @@ describe('POST /admin/users/:id/delete', () => {
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toBe('/admin/users');
 
-    // Verify user and projects are gone
     const remainingUsers = await env.db.select().from(users);
     expect(remainingUsers.find((u) => u.id === user.id)).toBeUndefined();
     const remainingProjects = await env.db.select().from(projects);
@@ -3855,7 +3812,6 @@ describe('POST /admin/signup-control/toggle', () => {
   test('toggles restriction on and off', async () => {
     const admin = await createTestUser(env.db, 'admin-sc3', 'github', undefined, 'free', 'admin');
 
-    // Toggle ON
     const res1 = await req('/admin/signup-control/toggle', admin.adminJwt, {
       method: 'POST',
       body: '',
@@ -3864,7 +3820,6 @@ describe('POST /admin/signup-control/toggle', () => {
     expect(res1.status).toBe(302);
     expect(await env.ROUTING.get('signup:enabled')).toBe('true');
 
-    // Toggle OFF
     const res2 = await req('/admin/signup-control/toggle', admin.adminJwt, {
       method: 'POST',
       body: '',
@@ -3938,7 +3893,6 @@ describe('POST /admin/signup-control/add + delete', () => {
     const admin = await createTestUser(env.db, 'admin-sc4', 'github', undefined, 'free', 'admin');
     await env.ROUTING.delete('signup:allowlist');
 
-    // Add entry
     const addBody = new URLSearchParams({ type: 'github', pattern: 'testuser', note: 'Test' });
     const addRes = await req('/admin/signup-control/add', admin.adminJwt, {
       method: 'POST',
@@ -3952,7 +3906,6 @@ describe('POST /admin/signup-control/add + delete', () => {
     expect(entries).toHaveLength(1);
     expect(entries[0]).toEqual({ type: 'github', pattern: 'testuser', note: 'Test' });
 
-    // Delete entry
     const delBody = new URLSearchParams({ index: '0' });
     const delRes = await req('/admin/signup-control/delete', admin.adminJwt, {
       method: 'POST',

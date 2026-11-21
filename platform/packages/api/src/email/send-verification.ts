@@ -52,9 +52,8 @@ export async function sendPlatformVerificationEmail(
   address: string,
   token: string,
 ): Promise<void> {
-  // Resolve deployment configuration outside the delivery catch. A missing
-  // binding or identity is a persistent deployment error, not a transient
-  // send failure.
+  // Decision: Resolve deployment configuration outside the delivery catch. A missing binding or identity is a
+  // persistent deployment error, not a transient send failure.
   const from = resolveFromAddress(env);
   const confirmationOrigin = resolveConfirmationOrigin(env);
   if (!env.EMAIL) {

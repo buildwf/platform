@@ -94,15 +94,12 @@ export async function commitCutoverLive(
       throw new Error(SUPERSEDED_BUILD_ERROR_MESSAGE);
     }
     await assertDeploymentNotCanceled(tx, deploymentId);
-    // Re-check the bound build under a row lock before going live. The
-    // up-front guard can pass and then a newer GitHub Actions run
-    // supersede (cancel) this build while we spent minutes building and
-    // uploading; without this re-check a superseded runner would still
-    // go live with stale code. See `assertBoundBuildStillActive`.
+    // Decision: Re-check the bound build under a row lock before going live. A newer GitHub Actions run can cancel
+    // this build after the up-front guard passed, while we spent minutes building and uploading; without
+    // this a superseded runner would go live with stale code. See `assertBoundBuildStillActive`.
     await assertBoundBuildStillActive(tx, input.deployBuild, projectId);
-    // Asset GC takes this same project lock and protects hashes from every
-    // nonterminal deployment. Serving placement was persisted before cutover
-    // began, so no final object-store scan is needed.
+    // Decision: Asset GC takes this same project lock and protects hashes from each nonterminal deployment.
+    // Serving placement was persisted before cutover began, so no final object-store scan is needed.
     await updateDeploymentStatus(tx, deploymentId, 'live', undefined, { force: true });
     await updateProjectType(tx, projectId, input.projectType);
     await requestRotationIfReplacingUntrustedCode(tx, projectId, deploymentId);
@@ -199,11 +196,9 @@ export async function reconcileProjectDomainRoutes(
     if (domain.status === 'active' && routingJson !== null) {
       await env.ROUTING.put(key, routingJson);
     } else {
-      // A hostname can become active at Cloudflare and have its route written
-      // immediately before the PostgreSQL status update is interrupted. Treat
-      // every persisted domain row as an authoritative key inventory so
-      // recovery removes that pending-row/live-KV crash residue as well as
-      // updating currently active domains.
+      // Decision: A hostname can go active at Cloudflare and have its route written just before the PostgreSQL
+      // status update is interrupted. Treat each persisted domain row as part of the key inventory, so
+      // recovery removes that pending-row/live-KV residue as well as updating active domains.
       await env.ROUTING.delete(key);
     }
   }
@@ -219,7 +214,7 @@ async function persistedQueueNames(db: Db, projectId: string): Promise<Set<strin
         names.add(queue.name);
       }
     } catch {
-      // Corrupt historical metadata cannot authorize a queue write.
+      // Decision: Corrupt historical metadata can't authorize a queue write.
     }
   }
   return names;
@@ -271,9 +266,9 @@ export async function replayDeploymentCutover(
   const existingEntry = existingRouting
     ? (JSON.parse(existingRouting) as { suspended?: string })
     : {};
-  // Restoring committed code must not wait for Zero Trust reconciliation. The
-  // publication resolver fails closed, as deploy compensation does. Promoting
-  // a new deployment keeps the strict readiness gate.
+  // Decision: Restoring committed code must not wait for Zero Trust reconciliation. The publication resolver
+  // fails closed, as deploy compensation does. Promoting a new deployment keeps the strict readiness
+  // gate.
   const zeroTrust = options.restoreCommitted
     ? await resolveProjectZeroTrustRoutingForPublication(db, project.id)
     : await resolveProjectZeroTrustRouting(db, project.id);
@@ -312,10 +307,9 @@ export async function replayDeploymentCutover(
         zeroTrust,
       });
 
-  // Complete every PostgreSQL read and validation before the first external
-  // mutation. A failed statement aborts its surrounding recovery transaction;
-  // if it happened after a KV/DO/Queue write, that same transaction could no
-  // longer persist `compensating` or restore the authoritative deployment.
+  // Decision: Finish all PostgreSQL reads and validation before the first external change. A failed statement
+  // aborts the recovery transaction; after a KV, DO or Queue write, that transaction could no longer
+  // persist `compensating` or restore the authoritative deployment.
   const domains = await getDomainsByProjectId(db, project.id);
   const resources = await getProjectResources(db, project.id);
   const historicalQueueNames = await persistedQueueNames(db, project.id);
@@ -332,7 +326,7 @@ export async function replayDeploymentCutover(
     desiredQueueResources.set(queue.name, resource);
   }
   const needsProxyToken = !isStatic && (!!manifest.schedules?.length || desiredQueues.length > 0);
-  // The token the replayed Worker holds, which may be older than the issued one.
+  // Decision: The token the replayed Worker holds, which may be older than the issued one.
   const proxyToken = needsProxyToken
     ? await resolveCutoverProxyToken(env, workerName, project.id)
     : null;
@@ -387,9 +381,8 @@ export async function clearProjectExternalState(
   db: Db,
   project: Project,
 ): Promise<void> {
-  // As in replayDeploymentCutover, finish DB work before any external delete
-  // so a PostgreSQL error cannot strand a partially-cleared project while also
-  // preventing the caller from persisting its compensation fence.
+  // Decision: As in replayDeploymentCutover, finish DB work before any external delete, so a PostgreSQL error
+  // can't strand a partly cleared project and also block the caller from persisting its fence.
   const domains = await getDomainsByProjectId(db, project.id);
   const resources = await getProjectResources(db, project.id);
   const queueNames = await persistedQueueNames(db, project.id);
@@ -598,8 +591,8 @@ export async function settleDeploymentForSandboxDrain(
       ownerId: crypto.randomUUID(),
       buildId: intent?.buildId ?? null,
     };
-    // This durable owner change is the fence checked by the original cutover
-    // and by its compensation path before either may mutate another surface.
+    // Decision: This durable owner change is the fence the original cutover and its compensation path check
+    // before either may change another surface.
     await env.ROUTING.put(cutoverIntentKey(deployment.id), JSON.stringify(recoveryMarker));
 
     const committedActive = committedActiveDeploymentId
@@ -613,8 +606,8 @@ export async function settleDeploymentForSandboxDrain(
       } else {
         await clearProjectExternalState(env, tx, project);
       }
-      // Persist this before the database transition so a lost COMMIT
-      // acknowledgement can be completed safely by the next drain request.
+      // Decision: Persist this before the database transition so the next drain request can safely finish after a
+      // lost COMMIT acknowledgement.
       await env.ROUTING.put(compensatedKey, project.id);
     } catch {
       await updateDeploymentStatus(
@@ -643,8 +636,8 @@ export async function settleDeploymentForSandboxDrain(
 
   for (const markerKey of markerKeys) {
     await env.ROUTING.delete(markerKey).catch(() => {
-      // The acknowledged database transition is authoritative. A later
-      // recovery can safely remove any stale marker left by a failed cleanup.
+      // Decision: The acknowledged database transition is authoritative. A later recovery can remove any stale
+      // marker a failed cleanup left.
     });
   }
   return settlement;

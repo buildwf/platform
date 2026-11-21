@@ -27,8 +27,8 @@ export const list = procedure('deployments.list')
   .handler(async ({ ctx }) => {
     const { project, role } = grantedAccess(ctx);
     const deployments = await getProjectDeployments(ctx.db, project.id, 20);
-    // Deploy tokens run untrusted build code, and readers lack configure access. Strip plaintext
-    // vars while keeping `live`, which the deploy CLI consumes.
+    // Decision: Deploy tokens run untrusted build code, and readers lack configure access. Strip plaintext vars
+    // but keep `live`, which the deploy CLI reads.
     const sanitized =
       ctx.credential.project || role === 'reader'
         ? deployments.map((deployment) => ({

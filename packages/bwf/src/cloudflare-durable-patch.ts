@@ -66,7 +66,7 @@ export function finalizeDurableObjectPatch(
   for (const local of generatedLocalBindings) {
     for (const map of [baselineBindings, pendingBindings]) {
       const existing = map.get(local.name);
-      // SDK classes are exported by this Worker. A same-class remote binding would run another
+      // Decision: SDK classes are exported by this Worker. A same-class remote binding would run another
       // Worker's code; retain unrelated authored remote bindings, but never silently adopt it.
       if (
         existing &&
@@ -113,7 +113,7 @@ export function finalizeDurableObjectPatch(
         additions.push(row);
       }
     }
-    // defu prepends the patch to the fallback. Migrations need the original ordered history
+    // Decision: defu prepends the patch to the fallback. Migrations need the original ordered history
     // followed by additions, so emit that complete sequence once. Only the in-memory fallback
     // is cleared; authored configuration and the lock retain their original history.
     patch.migrations = [...history, ...additions];

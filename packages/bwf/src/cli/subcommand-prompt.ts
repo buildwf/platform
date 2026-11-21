@@ -18,9 +18,9 @@ import { wrapAnsi } from 'fast-wrap-ansi';
 import { pc } from './output.ts';
 
 type FlagDef = {
-  name: string; // e.g. "--output" (include dashes)
+  name: string /* Decision: e.g. "--output" (include dashes) */;
   description: string;
-  arg?: string; // e.g. "<path>" — flag takes a value
+  arg?: string /* Decision: e.g. "<path>" — flag takes a value */;
 };
 
 type FollowUpDef =
@@ -37,8 +37,8 @@ type FollowUpDef =
 export type SubcommandDef = {
   name: string;
   description: string;
-  arg?: string; // e.g. "<name>" — shown as dim hint, enables inline text input
-  hint?: string; // e.g. "login | logout | whoami" — shown dim after name
+  arg?: string /* Decision: e.g. "<name>" — shown as dim hint, enables inline text input */;
+  hint?: string /* Decision: e.g. "login | logout | whoami" — shown dim after name */;
   flags?: Array<FlagDef>;
   followUp?: FollowUpDef;
 };
@@ -81,7 +81,7 @@ export function promptSubcommand(
     const wasRaw = stdin.isRaw;
     stdin.setRawMode(true);
     stdin.resume();
-    stdout.write('\x1B[?25l'); // hide cursor
+    stdout.write('\x1B[?25l'); /* Decision: Hide the cursor. */
 
     function clear() {
       if (previousFrame) {
@@ -145,7 +145,7 @@ export function promptSubcommand(
     function writeFrame(header: string, options: Array<string>, footer: Array<string>) {
       const heading = header.trimEnd().split('\n');
       const end = getGuide() ? [pc.gray(S_BAR_END)] : [];
-      // Keep each option on one row, with focus visible in short terminals.
+      // Decision: Keep each option on one row, with focus visible in short terminals.
       const count = Math.max(
         1,
         Math.min(7, (stdout.rows || 24) - heading.length - footer.length - end.length - 1),
@@ -364,7 +364,6 @@ export function promptSubcommand(
     }
 
     function advancePhase() {
-      // After choosing a command, try flags first.
       if (phase === 'select' && selectedSub!.flags && selectedSub!.flags.length > 0) {
         phase = 'flags';
         cursor = 0;
@@ -373,7 +372,6 @@ export function promptSubcommand(
         return;
       }
 
-      // Then try any follow-up input phase.
       if ((phase === 'select' || phase === 'flags') && selectedSub!.followUp) {
         const followUp = selectedSub!.followUp;
         if (followUp.type === 'multi-select') {
@@ -461,7 +459,7 @@ export function promptSubcommand(
       }
 
       if (isEnterKey(key)) {
-        // An enabled value flag needs a value before advancing.
+        // Decision: An enabled value flag needs a value before advancing.
         for (let i = 0; i < flags.length; i++) {
           if (flagStates[i].enabled && flags[i].arg && flagStates[i].value.length === 0) {
             return;
@@ -484,7 +482,6 @@ export function promptSubcommand(
         return;
       }
 
-      // Typing a value enables its flag.
       if (focused.arg && isPrintableKey(key)) {
         state.enabled = true;
         state.value += key;
@@ -519,7 +516,6 @@ export function promptSubcommand(
     }
 
     function handleRepeatInputKey(key: string) {
-      // Enter adds the typed entry; Enter on empty input finishes.
       if (isEnterKey(key)) {
         if (repeatInput.length > 0) {
           repeatEntries.push(repeatInput);
@@ -567,17 +563,17 @@ export function promptSubcommand(
       }
       const key = data.toString();
 
-      // Ctrl+C
+      // Decision: `\x03` is Ctrl+C.
       if (key === '\x03') {
         submit(null);
         return;
       }
-      // Escape
+      // Decision: A lone `\x1B` is the Escape key; longer sequences are handled below.
       if (key === '\x1B' && data.length === 1) {
         submit(null);
         return;
       }
-      // Arrow keys and other escape sequences need to stay grouped.
+      // Decision: Arrow keys and other escape sequences need to stay grouped.
       if (key.startsWith('\x1B')) {
         handleKey(key);
         return;
@@ -595,7 +591,6 @@ export function promptSubcommand(
     stdin.on('data', onData);
     stdout.on('resize', render);
 
-    // Safety cleanup on exit
     function onExit() {
       if (!resolved) {
         stdout.write('\x1B[?25h');

@@ -49,7 +49,7 @@ export class PlatformOidcProvider {
     this.endpoint(url);
     const signal = AbortSignal.timeout(10_000);
     const response = await this.request(url, { ...options, redirect: 'manual', signal });
-    // Never follow redirects with a client secret, authorization code, or other credentials.
+    // Decision: Don't follow redirects with a client secret, authorization code, or other credentials.
     if (response.redirected || (response.status >= 300 && response.status < 400)) {
       await response.body?.cancel();
       throw new Error('Identity endpoint redirects are not allowed.');
@@ -152,7 +152,7 @@ export class PlatformOidcProvider {
     try {
       const params = oauth.validateAuthResponse(server, client, input.callback, input.state);
       const methods = server.token_endpoint_auth_methods_supported ?? ['client_secret_basic'];
-      // Prefer the form body: Basic credentials are form-encoded first (RFC 6749 §2.3.1), which
+      // Decision: Prefer the form body: Basic credentials are form-encoded first (RFC 6749 §2.3.1), which
       // escapes `-`, `.` and `_`, and providers such as Google compare them without decoding.
       const auth = methods.includes('client_secret_post')
         ? oauth.ClientSecretPost(input.clientSecret)
@@ -185,7 +185,7 @@ export class PlatformOidcProvider {
         );
       }
     } catch (error) {
-      // One code for the whole token step: the provider's error body is never read.
+      // Decision: One code for the whole token step: the provider's error body isn't read.
       throw error instanceof oauth.AuthorizationResponseError && error.error === 'access_denied'
         ? new LoginFailure('login_denied', error.message)
         : new LoginFailure('oidc_token_failed', error instanceof Error ? error.message : undefined);

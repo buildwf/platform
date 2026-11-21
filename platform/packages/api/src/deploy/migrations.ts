@@ -222,6 +222,6 @@ export async function dispatchStableAuthMigration(
   }
 }
 
-// Migration dispatch: propagation lag is handled by the readiness probe,
-// so this only retries genuine transient failures (e.g. network blips).
+// Decision: The readiness probe handles propagation lag, so this only retries real transient failures such
+// as network blips.
 export const CF_MIGRATION_RETRY = { maxRetries: 2, delayMs: 1000 };

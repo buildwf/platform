@@ -2,7 +2,6 @@ import type { BaseSequencer, TestSpecification, Vitest } from 'vite-plus/test/no
 import { integrationTimings } from './integration-timings.ts';
 import { balanceTests, compareKeys, shuffleTests, testFileKey } from './test-sharding.ts';
 
-/** Balance shards and schedule each phase by cost across project boundaries. */
 export class SuiteSequencer {
   private readonly ctx: Vitest;
   private baseSequencer: BaseSequencer | undefined;
@@ -12,8 +11,8 @@ export class SuiteSequencer {
   }
 
   private async base(): Promise<BaseSequencer> {
-    // The config is also loaded by ordinary build commands. Only the test
-    // runner needs to pay the startup cost of importing Vitest's Node API.
+    // Decision: Ordinary build commands load this config too, so only the test runner pays for importing
+    // Vitest's Node API.
     this.baseSequencer ??= new (await import('vite-plus/test/node')).BaseSequencer(this.ctx);
     return this.baseSequencer;
   }
@@ -53,10 +52,9 @@ export class SuiteSequencer {
     const cost = (test: TestSpecification) =>
       results.get(test)?.duration ??
       (test.project.name === 'parallel-integration' ? this.duration(test) : 5000);
-    // BaseSequencer puts project names ahead of duration. That leaves expensive
-    // unit files queued behind integration builds even when they share a phase.
-    // Preserve phase barriers and failure priority, then fill the shared workers
-    // longest-first. Base ordering breaks ties (including cold file-size order).
+    // Decision: BaseSequencer orders by project name before duration, which leaves expensive unit files queued
+    // behind integration builds in the same phase. This keeps phase barriers and failure priority, then
+    // fills shared workers longest-first.
     return sorted.sort(
       (a, b) =>
         a.project.config.sequence.groupOrder - b.project.config.sequence.groupOrder ||

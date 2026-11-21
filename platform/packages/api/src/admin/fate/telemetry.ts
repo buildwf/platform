@@ -68,9 +68,7 @@ function decodeKey(id: string): Array<unknown> {
     if (Array.isArray(value)) {
       return value;
     }
-  } catch {
-    // Invalid client arguments are reported below.
-  }
+  } catch {}
   throw new FateRequestError('BAD_REQUEST', 'Invalid admin log request.');
 }
 

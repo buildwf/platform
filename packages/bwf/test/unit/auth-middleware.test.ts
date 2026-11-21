@@ -369,7 +369,7 @@ describe('cross-origin cookie sessions', () => {
     },
   };
 
-  // Better Auth's context matches origins against `this.trustedOrigins`.
+  // Decision: Better Auth's context matches origins against `this.trustedOrigins`.
   function mockAuth(
     options: Record<string, unknown> = {},
     trustedOrigins: Array<string> = ['https://app.void.app'],
@@ -427,7 +427,7 @@ describe('cross-origin cookie sessions', () => {
   });
 
   it('keeps the cookie when Vite HTTPS hands the upgrade over as http', async () => {
-    // The default base URL follows the request, so Better Auth trusts only http.
+    // Decision: The default base URL follows the request, so Better Auth trusts only http.
     mockAuth({}, ['http://app.void.app']);
     const request = new Request('http://app.void.app/chat/general', {
       headers: { upgrade: 'websocket', cookie: 'session=victim', origin: 'https://app.void.app' },

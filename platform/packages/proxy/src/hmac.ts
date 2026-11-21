@@ -1,4 +1,4 @@
-// Mirrors packages/api/src/auth/hmac.ts: HMAC-SHA256 as unpadded base64url.
+// Decision: Mirrors packages/api/src/auth/hmac.ts: HMAC-SHA256 as unpadded base64url.
 
 const encoder = new TextEncoder();
 let cachedSignKey: CryptoKey | undefined;

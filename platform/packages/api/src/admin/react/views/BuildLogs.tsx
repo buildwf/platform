@@ -41,7 +41,7 @@ export function BuildLogs({ build }: { build: Build }) {
         setLines((current) => [...(current ?? []), ...data.lines]);
         return data;
       } catch {
-        // A later poll can recover from a transient log request failure.
+        // Decision: A later poll can recover from a transient log request failure.
       } finally {
         polling = false;
       }

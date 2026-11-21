@@ -8,8 +8,6 @@ import {
   markSharedCachePolicy,
 } from '../../src/shared-cache.ts';
 
-// Mock caches.default (CF edge cache) with a Map-backed store.
-// Uses full URL as key — callers (isrEdgeCacheKey, hashed asset code) already normalize.
 const edgeCacheStore = new Map<string, Response>();
 
 vi.stubGlobal('caches', {
@@ -134,7 +132,6 @@ function createEnv(options: {
   const analyticsWrites: Array<unknown> = [];
   const logWrites: Array<unknown> = [];
 
-  // Seed initial ISR cache entries
   if (options.assets) {
     for (const [key, entry] of Object.entries(options.assets)) {
       kvStore.set(key, packMockEntry(entry));
@@ -296,19 +293,17 @@ describe('dispatch fetch handler', () => {
       workerResponse: new Response('ok'),
     });
 
-    // Simulate a request whose body was consumed by upstream edge processing
     const request = new Request('https://my-app.void.app/xmlrpc.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Transfer-Encoding': 'chunked' },
       body: 'payload',
     });
-    await request.text(); // consume the body
+    await request.text();
     expect(request.bodyUsed).toBe(true);
 
     const response = await app.fetch(request, env, createCtx());
 
     expect(workerFetch).toHaveBeenCalledOnce();
-    // The forwarded request should have no body and no stale body-size headers
     const forwarded = workerFetch.mock.calls[0]![0] as Request;
     expect(forwarded.method).toBe('POST');
     expect(forwarded.bodyUsed).toBe(false);
@@ -318,16 +313,8 @@ describe('dispatch fetch handler', () => {
   });
 });
 
-/**
- * `request.cf` (country, colo, botManagement, tlsClientAuth, …) is populated
- * by the CF edge and is what user workers read for geolocation, bot scoring,
- * and mTLS info. Plain `new Request(url, { method, headers, body })` drops it
- * — we have to thread it through `cf:` in init when we rebuild.
- *
- * Node's `Request` doesn't accept `cf` in init, so we can't observe it on the
- * resulting Request directly. Instead we wrap `globalThis.Request` and assert
- * the constructor receives `cf` in its init bag.
- */
+// Decision: Node's Request doesn't accept `cf` in init, so the test can't read it off the result. It wraps
+// globalThis.Request and checks the constructor gets `cf` in its init.
 describe('rebuildRequest preserves request.cf', () => {
   let RequestCalls: Array<{ url: unknown; init: RequestInit | undefined }>;
   const OriginalRequest = globalThis.Request;
@@ -337,8 +324,7 @@ describe('rebuildRequest preserves request.cf', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (globalThis as any).Request = class extends OriginalRequest {
       constructor(input: RequestInfo | URL, init?: RequestInit) {
-        // Strip `cf` before delegating — Node would otherwise reject it. We
-        // record the original init for assertion.
+        // Decision: `cf` is removed before delegating because Node would reject it.
         RequestCalls.push({ url: input, init });
         const cleaned = init ? { ...init } : undefined;
         if (cleaned && 'cf' in cleaned) {
@@ -365,7 +351,6 @@ describe('rebuildRequest preserves request.cf', () => {
     const out = rebuildRequest(src, 'https://my-app.void.app/new', () => {});
 
     expect(out).toBeInstanceOf(OriginalRequest);
-    // The last constructor invocation is the rebuilt request.
     const last = RequestCalls.at(-1)!;
     expect(last.url).toBe('https://my-app.void.app/new');
     expect((last.init as { cf?: unknown } | undefined)?.cf).toBe(cf);
@@ -584,20 +569,17 @@ describe('hashed asset caching', () => {
 
     const url = 'https://test.void.app/assets/main-abc123.js';
 
-    // First request — cache miss, hits worker
     const res1 = await app.fetch(new Request(url), env, ctx);
     expect(res1.status).toBe(200);
     expect(workerFetch).toHaveBeenCalledTimes(1);
     expect(res1.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
 
-    // Wait for background cache.put
     await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
 
-    // Second request — cache hit, worker NOT invoked
     const ctx2 = createCtx();
     const res2 = await app.fetch(new Request(url), env, ctx2);
     expect(res2.status).toBe(200);
-    expect(workerFetch).toHaveBeenCalledTimes(1); // still 1
+    expect(workerFetch).toHaveBeenCalledTimes(1);
   });
 
   it('does not serve one project cached asset to the next project on the same host', async () => {
@@ -663,12 +645,10 @@ describe('hashed asset caching', () => {
     const { env, workerFetch } = createEnv({ routing, workerResponse: new Response('page') });
     const ctx = createCtx();
 
-    // Request for a non-hashed path
     const res = await app.fetch(new Request('https://test.void.app/about'), env, ctx);
     expect(res.status).toBe(200);
     expect(workerFetch).toHaveBeenCalledTimes(1);
 
-    // Second request — should still hit worker (no caching)
     const ctx2 = createCtx();
     await app.fetch(new Request('https://test.void.app/about'), env, ctx2);
     expect(workerFetch).toHaveBeenCalledTimes(2);
@@ -690,7 +670,6 @@ describe('hashed asset caching', () => {
     );
     expect(res.status).toBe(200);
     expect(workerFetch).toHaveBeenCalledTimes(1);
-    // Should not write to cache
     expect(edgeCacheStore.size).toBe(0);
   });
 
@@ -715,7 +694,6 @@ describe('hashed asset caching', () => {
     const routing: RoutingEntry = {
       workerName: 'test-worker',
       projectId: 'proj-1',
-      // no hashedAssetsPrefix
     };
     const { env, workerFetch } = createEnv({ routing, workerResponse: new Response('ok') });
     const ctx = createCtx();
@@ -723,7 +701,6 @@ describe('hashed asset caching', () => {
     await app.fetch(new Request('https://test.void.app/assets/main.js'), env, ctx);
     expect(workerFetch).toHaveBeenCalledTimes(1);
 
-    // Second request — still hits worker (no caching)
     const ctx2 = createCtx();
     await app.fetch(new Request('https://test.void.app/assets/main.js'), env, ctx2);
     expect(workerFetch).toHaveBeenCalledTimes(2);
@@ -749,10 +726,6 @@ describe('hashed asset caching', () => {
   });
 
   it('keys cache on post-rewrite hashed URL when a redirect rule rewrites into the hashed prefix', async () => {
-    // Hashed assets are cached `immutable` for a year. The cache key must
-    // track the post-rewrite (hash-bearing) URL, not the source URL — a
-    // future deploy that maps /logo to a different hash would otherwise
-    // keep serving the stale entry under /logo.
     const routing: RoutingEntry = {
       workerName: 'test-worker',
       projectId: 'proj-1',
@@ -781,7 +754,6 @@ describe('hashed asset caching', () => {
     const { env, workerFetch } = createEnv({ routing, workerResponse: new Response('asset-body') });
     const ctx = createCtx();
 
-    // First request with query string — cache miss, hits worker
     const res1 = await app.fetch(
       new Request('https://test.void.app/assets/main-abc.js?v=1'),
       env,
@@ -792,7 +764,6 @@ describe('hashed asset caching', () => {
 
     await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
 
-    // Second request with different query string — should still be a cache hit
     const ctx2 = createCtx();
     const res2 = await app.fetch(
       new Request('https://test.void.app/assets/main-abc.js?v=2'),
@@ -800,7 +771,7 @@ describe('hashed asset caching', () => {
       ctx2,
     );
     expect(res2.status).toBe(200);
-    expect(workerFetch).toHaveBeenCalledTimes(1); // still 1 — cache hit
+    expect(workerFetch).toHaveBeenCalledTimes(1);
   });
 
   it('does not share a hashed-path response that sets a cookie', async () => {
@@ -905,7 +876,6 @@ describe('hashed asset caching', () => {
       hashedAssetsPrefix: 'assets',
     };
     const { env } = createEnv({ routing, workerResponse: new Response('ok') });
-    // Override worker.fetch to throw CPU limit error
     const dispatchGet = env.DISPATCH.get as ReturnType<typeof vi.fn>;
     dispatchGet.mockReturnValue({
       fetch: vi.fn().mockRejectedValue(new Error('Worker exceeded CPU time limit')),
@@ -954,17 +924,13 @@ describe('header rules', () => {
     const { env } = createEnv({ routing, workerResponse: new Response('asset-body') });
     const ctx = createCtx();
 
-    // First request — cache miss, goes through the hashed asset path
     const res1 = await app.fetch(new Request('https://test.void.app/assets/main-abc.js'), env, ctx);
     expect(res1.status).toBe(200);
     expect(res1.headers.get('X-Custom')).toBe('from-rules');
-    // Rules are applied per-serve, not baked into the immutable cache entry, so
-    // the immutable Cache-Control survives alongside the custom header.
     expect(res1.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
 
     await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
 
-    // Second request — cache hit, header rules still apply on the way out
     const ctx2 = createCtx();
     const res2 = await app.fetch(
       new Request('https://test.void.app/assets/main-abc.js'),
@@ -977,10 +943,6 @@ describe('header rules', () => {
   });
 
   it('applies COOP/COEP/CORP to a hashed worker asset across a cache hit (cross-origin isolation)', async () => {
-    // A cross-origin-isolated app (SharedArrayBuffer / wasm threads) must serve its
-    // hashed worker + wasm assets with COEP, or a module worker spawned from the
-    // require-corp document is blocked. Browsers fetch those assets over GET, served
-    // from the immutable hashed-asset cache — so the rules must reach that path.
     const routing: RoutingEntry = {
       workerName: 'test-worker',
       projectId: 'proj-1',
@@ -1012,16 +974,12 @@ describe('header rules', () => {
     const ctx2 = createCtx();
     const hit = await app.fetch(new Request(url), env, ctx2);
     expect(hit.status).toBe(200);
-    expect(workerFetch).toHaveBeenCalledTimes(1); // served from edge cache, not re-fetched
+    expect(workerFetch).toHaveBeenCalledTimes(1);
     expect(hit.headers.get('Cross-Origin-Embedder-Policy')).toBe('require-corp');
     expect(hit.headers.get('Cross-Origin-Resource-Policy')).toBe('same-origin');
   });
 
   it('keeps platform immutable Cache-Control on hashed assets when a rule overrides it', async () => {
-    // A broad `/* -> Cache-Control: no-store` rule must NOT disable immutable
-    // caching for content-addressed URLs. On the hashed-asset path tenant rules
-    // are additive only — the platform-managed Cache-Control is restored after
-    // the rules run, while other (non-managed) headers still apply.
     const routing: RoutingEntry = {
       workerName: 'test-worker',
       projectId: 'proj-1',
@@ -1040,15 +998,13 @@ describe('header rules', () => {
     const ctx = createCtx();
     const url = 'https://test.void.app/assets/main-abc.js';
 
-    // Cache miss — rule tries to clobber Cache-Control, platform value wins.
     const miss = await app.fetch(new Request(url), env, ctx);
     expect(miss.status).toBe(200);
     expect(miss.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
-    expect(miss.headers.get('X-Custom')).toBe('from-rules'); // additive header survives
+    expect(miss.headers.get('X-Custom')).toBe('from-rules');
 
     await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
 
-    // Cache hit — same protection on the way out of the edge cache.
     const ctx2 = createCtx();
     const hit = await app.fetch(new Request(url), env, ctx2);
     expect(hit.status).toBe(200);
@@ -1057,9 +1013,6 @@ describe('header rules', () => {
   });
 
   it('does not let a rule forge Content-Length on hashed assets (metering integrity)', async () => {
-    // meter() bills from Content-Length and clients frame the body by it; a rule
-    // must not be able to set it to 0 on a hashed asset and skew usage accounting
-    // or truncate the response. The real asset length is restored after rules.
     const routing: RoutingEntry = {
       workerName: 'test-worker',
       projectId: 'proj-1',
@@ -1075,17 +1028,11 @@ describe('header rules', () => {
 
     const res = await app.fetch(new Request(url), env, ctx);
     expect(res.status).toBe(200);
-    // The forged 0 is discarded; the real asset length is preserved and the body
-    // is served intact.
     expect(res.headers.get('Content-Length')).not.toBe('0');
     expect(await res.text()).toBe('asset-body');
   });
 
   it('keeps platform representation headers on hashed assets when a rule overrides them', async () => {
-    // A tenant rule must not rewrite how a content-addressed asset is represented:
-    // a forged Content-Encoding makes the browser mis-decode the bytes and a wrong
-    // Content-Type breaks ES-module / WebAssembly loading. These are restored after
-    // rules run, while additive headers (COEP) still apply.
     const routing: RoutingEntry = {
       workerName: 'test-worker',
       projectId: 'proj-1',
@@ -1103,7 +1050,6 @@ describe('header rules', () => {
     };
     const { env } = createEnv({
       routing,
-      // Origin serves real, uncompressed JS — no Content-Encoding.
       workerResponse: new Response('asset-body', {
         headers: { 'Content-Type': 'text/javascript; charset=utf-8' },
       }),
@@ -1113,15 +1059,12 @@ describe('header rules', () => {
 
     const miss = await app.fetch(new Request(url), env, ctx);
     expect(miss.status).toBe(200);
-    // Platform/origin representation preserved...
     expect(miss.headers.get('Content-Type')).toBe('text/javascript; charset=utf-8');
-    expect(miss.headers.get('Content-Encoding')).toBeNull(); // no false `gzip` claim
-    // ...while the additive isolation header still applies.
+    expect(miss.headers.get('Content-Encoding')).toBeNull();
     expect(miss.headers.get('Cross-Origin-Embedder-Policy')).toBe('require-corp');
 
     await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
 
-    // Cache hit — same protection on the way out of the edge cache.
     const ctx2 = createCtx();
     const hit = await app.fetch(new Request(url), env, ctx2);
     expect(hit.status).toBe(200);
@@ -1131,10 +1074,6 @@ describe('header rules', () => {
   });
 
   it('strips the Clear-Site-Data cookies directive on hashed assets (cross-tenant cookie boundary)', async () => {
-    // On the shared *.void.app domain a Clear-Site-Data: "cookies" response would
-    // wipe cookies for the whole registrable domain, across tenants. The cookies
-    // directive is stripped at the header-rule layer, so it must never reach a
-    // served hashed asset — on miss or hit — while additive headers (COEP) still apply.
     const routing: RoutingEntry = {
       workerName: 'test-worker',
       projectId: 'proj-1',
@@ -1539,9 +1478,7 @@ describe('queue relay', () => {
 
     await app.queue(batch, env);
 
-    // Individual ack decision applied
     expect(batch.messages[0].ack).toHaveBeenCalledOnce();
-    // retryAll called for undecided messages (CF preserves individual decisions)
     expect(batch.retryAll).toHaveBeenCalledOnce();
   });
 
@@ -2030,12 +1967,9 @@ describe('rewrite rules', () => {
     expect(forwarded.headers.has('X-Platform-Original-URL')).toBe(false);
   });
 
-  // Host-scoped redirects: dispatch passes `url.hostname` into
-  // `applyRoutingRules`. Confirm the wiring through the full handler so a
-  // future refactor that loses the hostname argument is caught here. The
-  // fixture's ROUTING binding returns the same routing entry for every
-  // hostname, so the only thing distinguishing the two requests below is
-  // `url.hostname`.
+  // Decision: The fixture's ROUTING binding returns the same entry for each hostname, so url.hostname is the
+  // only difference between the two requests. This catches a refactor that drops the hostname
+  // argument to applyRoutingRules.
   it('host-scoped redirect fires when request host matches rule.host', async () => {
     const { env, workerFetch } = createEnv({
       routing: {
@@ -2106,9 +2040,6 @@ describe('rewrite rules', () => {
     expect(new URL(forwarded.url).pathname).toBe('/en/page');
   });
 
-  // Dispatch owns X-Platform-Original-URL. A client-supplied value on a request
-  // with no matching rewrite must not leak through to the user worker —
-  // otherwise a non-Platform worker that trusts the header could be spoofed.
   it('strips client-supplied X-Platform-Original-URL when no rewrite fires', async () => {
     const { env, workerFetch } = createEnv({
       routing: {
@@ -2132,8 +2063,6 @@ describe('rewrite rules', () => {
     expect(forwarded.headers.has('X-Platform-Original-URL')).toBe(false);
   });
 
-  // On a rewrite, dispatch must overwrite any client value with the true
-  // original URL, not concatenate or pass the spoofed value through.
   it('overrides client-supplied X-Platform-Original-URL with the true original URL on rewrite', async () => {
     const { env, workerFetch } = createEnv({
       routing: {
@@ -2157,8 +2086,6 @@ describe('rewrite rules', () => {
     expect(forwarded.headers.get('X-Platform-Original-URL')).toBe('https://test.void.app/docs');
   });
 
-  // Pin the full original URL (including query) on the X-Platform-Original-URL
-  // header after a 200-status redirectRule rewrite — not just its presence.
   it('sets X-Platform-Original-URL to the full original URL (with query) on redirectRules rewrite', async () => {
     const { env, workerFetch } = createEnv({
       routing: {
@@ -2178,11 +2105,6 @@ describe('rewrite rules', () => {
     expect(forwarded.headers.get('X-Platform-Original-URL')).toBe(originalUrl);
   });
 
-  // When the inbound body is already consumed (e.g. middleware upstream of
-  // dispatch drained it), the rewrite-request builder must: avoid throwing
-  // in the Request ctor; forward no body; strip content-length and
-  // transfer-encoding so the downstream worker doesn't see stale framing;
-  // and still set X-Platform-Original-URL on the rewritten URL.
   it('forwards a body-less rewrite request with X-Platform-Original-URL when POST body is consumed', async () => {
     const { env, workerFetch } = createEnv({
       routing: {
@@ -2195,7 +2117,7 @@ describe('rewrite rules', () => {
 
     const originalUrl = 'https://test.void.app/submit';
     const inbound = new Request(originalUrl, { method: 'POST', body: 'payload' });
-    await inbound.text(); // disturb the stream — bodyUsed becomes true
+    await inbound.text();
     expect(inbound.bodyUsed).toBe(true);
 
     const response = await app.fetch(inbound, env, createCtx());
@@ -2210,10 +2132,8 @@ describe('rewrite rules', () => {
     expect(new URL(forwarded.url).pathname).toBe('/en/submit');
   });
 
-  // The `createEnv` helper returns the same routing entry for any KV key, which
-  // hides the `slug ?? domain:${hostname}` branch in dispatch. This test builds
-  // ROUTING manually so the rewrite path is exercised against a custom-domain
-  // routing entry (the `domain:` KV key path) rather than a slug lookup.
+  // Decision: createEnv returns the same entry for any KV key, which hides the `slug ?? domain:${hostname}`
+  // branch. ROUTING is built by hand here so the `domain:` lookup runs.
   it('applies rewrite rules on a custom-domain request (domain: KV key path)', async () => {
     const workerFetch = vi.fn(async (_req: Request) => new Response('rewritten'));
     const routingLookups: Array<string> = [];
@@ -2244,11 +2164,9 @@ describe('rewrite rules', () => {
     expect(response.status).toBe(200);
     expect(await response.text()).toBe('rewritten');
 
-    // Routing entry was looked up under the `domain:` key, not a slug.
     expect(routingLookups).toContain('domain:app.example.com');
     expect(routingLookups.every((k) => !k.startsWith('app'))).toBe(true);
 
-    // Rewrite applied correctly; original URL handed off to the worker.
     expect(workerFetch).toHaveBeenCalledOnce();
     const forwarded = workerFetch.mock.calls[0]![0] as Request;
     expect(new URL(forwarded.url).pathname).toBe('/en/docs/intro');
@@ -2266,16 +2184,13 @@ describe('static asset caching', () => {
     const { env, workerFetch } = createEnv({ routing, workerResponse: new Response('favicon') });
     const ctx = createCtx();
 
-    // First request — cache miss, hits worker
     const res1 = await app.fetch(new Request('https://test.void.app/favicon.ico'), env, ctx);
     expect(res1.status).toBe(200);
     expect(await res1.text()).toBe('favicon');
     expect(workerFetch).toHaveBeenCalledTimes(1);
 
-    // Wait for background cache.put
     await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
 
-    // Second request — cache hit, worker NOT invoked
     const ctx2 = createCtx();
     const res2 = await app.fetch(new Request('https://test.void.app/favicon.ico'), env, ctx2);
     expect(res2.status).toBe(200);
@@ -2532,11 +2447,6 @@ describe('static asset caching', () => {
   });
 
   it('does not write a 206 (Range) worker response to the static edge cache', async () => {
-    // A Range GET on a dotted SSR path bails out of the ISR ladder (Range excluded)
-    // and falls through to the static-candidate write. The origin emits a `206
-    // Partial Content`; the write gate (`status === 200`, not `.ok` which is
-    // 200–299) must refuse it — a partial body persisted under the shared
-    // `<path>?_v=<version>` key would later be served whole to a full request.
     const routing: RoutingEntry = {
       workerName: 'test-worker',
       projectId: 'proj-1',
@@ -2559,11 +2469,9 @@ describe('static asset caching', () => {
     );
     await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
 
-    // The 206 flows through to the client untouched — live render, not cached.
     expect(workerFetch).toHaveBeenCalledOnce();
     expect(res.status).toBe(206);
     expect(await res.text()).toBe('partial-bytes');
-    // Never persisted under the 1-year `?_v=<version>` static edge key.
     expect(edgeCacheStore.get('https://test.void.app/feed.xml?_v=deploy-1')).toBeUndefined();
     expect([...edgeCacheStore.keys()].some((k) => k.includes('?_v='))).toBe(false);
   });
@@ -2612,7 +2520,6 @@ describe('static asset caching', () => {
     expect(wf1).toHaveBeenCalledTimes(1);
     await Promise.all((ctx1.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
 
-    // New deploy with different version
     const routing2: RoutingEntry = {
       workerName: 'test-worker',
       projectId: 'proj-1',
@@ -2626,7 +2533,7 @@ describe('static asset caching', () => {
 
     const res = await app.fetch(new Request('https://test.void.app/favicon.ico'), env2, ctx2);
     expect(res.status).toBe(200);
-    expect(wf2).toHaveBeenCalledTimes(1); // cache miss — different version
+    expect(wf2).toHaveBeenCalledTimes(1);
   });
 
   it('does not cache /api/ routes', async () => {
@@ -2639,7 +2546,7 @@ describe('static asset caching', () => {
 
     await app.fetch(new Request('https://test.void.app/api/data'), env, createCtx());
     await app.fetch(new Request('https://test.void.app/api/data'), env, createCtx());
-    expect(workerFetch).toHaveBeenCalledTimes(2); // no caching
+    expect(workerFetch).toHaveBeenCalledTimes(2);
   });
 
   it('does not cache SSR paths without extension', async () => {
@@ -2653,7 +2560,7 @@ describe('static asset caching', () => {
 
     await app.fetch(new Request('https://test.void.app/about'), env, createCtx());
     await app.fetch(new Request('https://test.void.app/about'), env, createCtx());
-    expect(workerFetch).toHaveBeenCalledTimes(2); // no caching for SSR routes
+    expect(workerFetch).toHaveBeenCalledTimes(2);
   });
 
   it('caches manifest-backed non-hashed asset paths in SSR projects', async () => {
@@ -2678,14 +2585,13 @@ describe('static asset caching', () => {
 
     const ctx2 = createCtx();
     await app.fetch(new Request('https://test.void.app/favicon.ico'), env, ctx2);
-    expect(workerFetch).toHaveBeenCalledTimes(1); // cache hit
+    expect(workerFetch).toHaveBeenCalledTimes(1);
   });
 
   it('does not cache when version is absent', async () => {
     const routing: RoutingEntry = {
       workerName: 'test-worker',
       projectId: 'proj-1',
-      // no version
     };
     const { env, workerFetch } = createEnv({ routing, workerResponse: new Response('ok') });
 
@@ -2724,7 +2630,7 @@ describe('static asset caching', () => {
 
     await app.fetch(new Request('https://test.void.app/avatar.jpg'), env, createCtx());
     await app.fetch(new Request('https://test.void.app/avatar.jpg'), env, createCtx());
-    expect(workerFetch).toHaveBeenCalledTimes(2); // not cached
+    expect(workerFetch).toHaveBeenCalledTimes(2);
   });
 
   it('does not cache when worker sets Cache-Control: no-store', async () => {
@@ -2759,7 +2665,6 @@ describe('static asset caching', () => {
 
     await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
 
-    // Different query string — should still be cache hit (query normalized to ?_v=deploy-1)
     const ctx2 = createCtx();
     await app.fetch(new Request('https://test.void.app/logo.png?width=200'), env, ctx2);
     expect(workerFetch).toHaveBeenCalledTimes(1);
@@ -2779,16 +2684,15 @@ describe('static asset caching', () => {
     expect(workerFetch).toHaveBeenCalledTimes(1);
     await Promise.all((ctx1.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
 
-    // Same allowlisted value, different NON-allowlisted param → same key → HIT.
     const ctx2 = createCtx();
     await app.fetch(new Request('https://test.void.app/badge.png?theme=light&utm=b'), env, ctx2);
     expect(workerFetch).toHaveBeenCalledTimes(1);
   });
 
   it('ignores a wildcard allowlist entry so static candidates cannot fan out', async () => {
-    // A broad `*` allowlist stays ISR-only (bounded there by the variant cap). The
-    // uncapped static-candidate cache must NOT honor it — otherwise a cache-buster
-    // `?theme=<random>` would fan out true static assets. Only an exact path opts in.
+    // Decision: A broad `*` allowlist stays ISR-only, where the variant cap bounds it. The uncapped static
+    // cache ignores it, or a cache-buster like `?theme=<random>` would fan out static assets. Only an
+    // exact path opts in.
     const routing: RoutingEntry = {
       workerName: 'test-worker',
       projectId: 'proj-1',
@@ -2802,7 +2706,6 @@ describe('static asset caching', () => {
     expect(workerFetch).toHaveBeenCalledTimes(1);
     await Promise.all((ctx1.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
 
-    // Different value under the `*` allowlist → still one collapsed slot → HIT.
     const ctx2 = createCtx();
     await app.fetch(new Request('https://test.void.app/logo.png?theme=dark'), env, ctx2);
     expect(workerFetch).toHaveBeenCalledTimes(1);
@@ -3133,7 +3036,6 @@ describe('static deployment caching (KV/R2)', () => {
       });
 
       for (const pathname of [path, path.replace('[', '%5B').replace(']', '%5D')]) {
-        // Check both the initial storage response and the cached response.
         for (let attempt = 0; attempt < 2; attempt++) {
           const ctx = createCtx();
           const response = await app.fetch(
@@ -3153,11 +3055,6 @@ describe('static deployment caching (KV/R2)', () => {
   );
 
   it('serves a hashed asset whose filename contains a space (%20-encoded request)', async () => {
-    // Regression: the oxc.rs hero `.riv` 404'd. The manifest key is the decoded
-    // on-disk path (literal space), but the browser requests it `%20`-encoded and
-    // `url.pathname` never decodes. Routing carries `hashedAssetsPrefix`, so the
-    // request hits the hashed-asset fast path — which must decode before the
-    // manifest lookup.
     const { env } = createStaticDeployEnv({
       routing: {
         workerName: '',
@@ -3181,10 +3078,9 @@ describe('static deployment caching (KV/R2)', () => {
 });
 
 describe('static asset content-type normalization', () => {
-  // Assets uploaded before the CLI's MIME table knew an extension carry a
-  // stored `application/octet-stream` content type (R2 httpMetadata / KV `ct`
-  // metadata). Dispatch must treat that stored default as "unknown" and
-  // re-derive from the path so already-deployed files serve correctly.
+  // Decision: Assets uploaded before the CLI MIME table knew an extension carry a stored
+  // `application/octet-stream` type. Dispatch treats that default as unknown and derives the type
+  // from the path, so files already deployed serve correctly.
   function createContentTypeEnv(options: {
     manifest: Record<string, string>;
     kvAssets?: Record<string, { body: string; ct: string }>;
@@ -3435,14 +3331,9 @@ describe('foreground worker duration', () => {
 });
 
 describe('worker timeout explains itself in the project log stream', () => {
-  // A worker cut at the dispatch budget returns nothing, so it logs nothing and
-  // `bwf project logs` was empty for the one failure users most need
-  // explained. Dispatch now writes the explanation itself, keyed the way the
-  // tail worker keys its rows so the existing read path finds it.
   function createHangingEnv(workerName: string) {
     const { env, logWrites, analyticsWrites } = createEnv({
       routing: { workerName, projectId: 'proj_1', type: 'platform', ssr: true },
-      // Never settles — `withTimeout` wins the race.
       workerFetchImpl: () => new Promise<Response>(() => {}),
     });
     return {
@@ -3474,7 +3365,6 @@ describe('worker timeout explains itself in the project log stream', () => {
     const logs = JSON.parse(dp.blobs[1]) as Array<{ level: string; message: Array<string> }>;
     expect(logs[0].level).toBe('error');
     expect(logs[0].message.join(' ')).toContain('POST /api/slow');
-    // The budget reported must be the one actually enforced, not the default.
     expect(logs[0].message.join(' ')).toContain('20 ms');
   });
 
@@ -3483,7 +3373,6 @@ describe('worker timeout explains itself in the project log stream', () => {
 
     await app.fetch(new Request('https://my-app.void.app/api/slow'), env, createCtx());
 
-    // One `platform_requests` row, unchanged, plus the new `platform_logs` row.
     expect(analyticsWrites).toHaveLength(1);
     expect(logWrites).toHaveLength(1);
     const dp = analyticsWrites[0] as { blobs: Array<string> };
@@ -3561,10 +3450,6 @@ function meteredRequestType(analyticsWrites: Array<unknown>): string | undefined
 }
 
 describe('request type metering for SSR routes with a file extension', () => {
-  // An SSR worker answers both the app's routes and the deploy's static files.
-  // A route such as `routes/sponsors.svg.ts` has a file extension, so its label
-  // comes from the asset manifest or from how the worker answered, never from
-  // the path alone. Platform SSR deploys run the worker first for every path.
   const routing: RoutingEntry = {
     workerName: 'user-app-dpl_1',
     projectId: 'proj_1',
@@ -3608,8 +3493,6 @@ describe('request type metering for SSR routes with a file extension', () => {
     },
   );
 
-  // A plain GET goes through the static cache. The other requests skip it, so
-  // the worker's answer is labeled without the manifest's.
   it.each<[string, RequestInit]>([
     ['a plain GET', {}],
     ['a GET with a cookie', { headers: { Cookie: 'a=1' } }],
@@ -3687,8 +3570,6 @@ describe('request type metering for SSR routes with a file extension', () => {
     expect(meteredRequestType(analyticsWrites)).toBe('static');
   });
 
-  // A deploy that uploaded no static files has no asset layer, so the worker
-  // answered the path.
   it('labels a route server error as ssr when the deploy has no asset manifest', async () => {
     const { env, analyticsWrites } = createEnv({
       routing: routingWithoutManifest,
@@ -3708,7 +3589,6 @@ describe('request type metering for SSR routes with a file extension', () => {
   it('labels a route that runs past the dispatch budget as ssr when the deploy has no asset manifest', async () => {
     const { env, analyticsWrites } = createEnv({
       routing: routingWithoutManifest,
-      // Never settles, so the dispatch budget runs out first.
       workerFetchImpl: () => new Promise<Response>(() => {}),
     });
 
@@ -3784,7 +3664,6 @@ describe('request type metering for SSR routes with a file extension', () => {
     const { env, analyticsWrites } = createEnv({
       routing,
       assetManifest,
-      // Never settles, so the dispatch budget runs out first.
       workerFetchImpl: () => new Promise<Response>(() => {}),
     });
 
@@ -3800,10 +3679,6 @@ describe('request type metering for SSR routes with a file extension', () => {
 });
 
 describe('request type metering when Cloudflare serves assets before the worker', () => {
-  // Unless `run_worker_first` covers every path, Cloudflare's asset layer
-  // serves listed files without running the worker. An unlisted path reaches
-  // the worker only with `not_found_handling: 'none'`; a SPA deploy gets the
-  // shell from the asset layer instead.
   const assetFirstRouting: RoutingEntry = {
     workerName: 'user-app-dpl_1',
     projectId: 'proj_1',
@@ -3852,7 +3727,6 @@ describe('request type metering when Cloudflare serves assets before the worker'
     const { env, analyticsWrites } = createEnv({
       routing: assetFirstRouting,
       assetManifest,
-      // Never settles, so the dispatch budget runs out first.
       workerFetchImpl: () => new Promise<Response>(() => {}),
     });
 
@@ -3866,8 +3740,6 @@ describe('request type metering when Cloudflare serves assets before the worker'
     expect(meteredRequestType(analyticsWrites)).toBe('ssr');
   });
 
-  // Cloudflare's default `html_handling` also serves or redirects a path from
-  // an HTML file the manifest lists under another name.
   it.each([
     ['/docs/v1.2', '/docs/v1.2.html', 200],
     ['/docs/v1.2', '/docs/v1.2/index.html', 307],
@@ -3958,7 +3830,6 @@ describe('request type metering when Cloudflare serves assets before the worker'
       const { env, analyticsWrites } = createEnv({
         routing,
         assetManifest,
-        // Never settles, so the dispatch budget runs out first.
         workerFetchImpl: () => new Promise<Response>(() => {}),
       });
 
@@ -3975,9 +3846,6 @@ describe('request type metering when Cloudflare serves assets before the worker'
 });
 
 describe('request type metering after a fallback rewrite', () => {
-  // The asset manifest answer belongs to the path that was looked up. After a
-  // fallback rewrites `/missing.png` to the shell, it says nothing about the
-  // shell, so the response keeps the default label.
   it('does not apply the manifest answer for the original path to the rewrite target', async () => {
     let calls = 0;
     const { env, workerFetch, analyticsWrites } = createEnv({

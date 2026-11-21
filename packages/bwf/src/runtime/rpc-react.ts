@@ -133,13 +133,12 @@ export function useCallPages<Input extends { cursor?: string | null; numItems: n
   const keyOf = useRef(getKey);
   keyOf.current = getKey;
   const [attempt, setAttempt] = useState(0);
-  // The start cursor of every loaded page. The first is null.
+  // Decision: The start cursor of every loaded page. The first is null.
   const [cursors, setCursors] = useState<Array<string | null>>([null]);
   const [pages, setPages] = useState<Array<Page<Item>>>([]);
   const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<RpcError | undefined>();
 
-  // A different input starts over.
   const [inputKey, setInputKey] = useState(key);
   if (inputKey !== key) {
     setInputKey(key);

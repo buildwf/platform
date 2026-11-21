@@ -5,12 +5,12 @@ import { sanitizeTerminalLogText } from './terminal-log-text.ts';
 
 type Json = Record<string, unknown>;
 
-// Bounds one D1 API request. Like wrangler, the import as a whole has no
-// deadline: a large file may take a long time to upload and ingest.
+// Decision: Bounds one D1 API request. Like wrangler, the import as a whole has no deadline: a large file may
+// take a long time to upload and ingest.
 const D1_IMPORT_REQUEST_TIMEOUT_MS = 2 * 60_000;
 
-// The presigned upload gets the request timeout plus the time to send the file at 1 Mbit/s,
-// so a stalled PUT fails, while a normal CI link sends a 25 MB file well within its 5 minutes.
+// Decision: The presigned upload gets the request timeout plus the time to send the file at 1 Mbit/s, so a
+// stalled PUT fails, while a normal CI link sends a 25 MB file well within its 5 minutes.
 const D1_IMPORT_UPLOAD_MIN_BYTES_PER_SECOND = 128 * 1024;
 
 export function d1ImportUploadTimeoutMs(bytes: number): number {
@@ -88,7 +88,7 @@ export async function importD1SqlFile({
     try {
       data = object(await response.json());
     } catch (error) {
-      // A 4xx refusal is still a refusal when a proxy answers it with HTML.
+      // Decision: A 4xx refusal is still a refusal when a proxy answers it with HTML.
       if (response.ok || response.status >= 500) {
         throw error;
       }
@@ -101,7 +101,7 @@ export async function importD1SqlFile({
         .filter(Boolean)
         .join('; ');
       const message = `D1 import failed (HTTP ${response.status})${detail ? ': ' + sanitizeTerminalLogText(detail) : '.'}`;
-      // A server error does not prove that the request was not acted on.
+      // Decision: A server error doesn't prove that the request wasn't acted on.
       throw response.status < 500 ? new D1ImportRefusedError(message) : new Error(message);
     }
     const state = object(data.result);
@@ -124,8 +124,8 @@ export async function importD1SqlFile({
     );
   }
 
-  // When D1 already has a file with this etag, init itself starts the import, so only an
-  // answer from D1 proves that nothing started.
+  // Decision: When D1 already has a file with this etag, init itself starts the import, so only an answer from
+  // D1 proves that nothing started.
   let initialized: Json;
   try {
     initialized = await request({ action: 'init', etag });
@@ -137,14 +137,14 @@ export async function importD1SqlFile({
   }
   let state = initialized;
   if (!initialized.at_bookmark) {
-    // Like wrangler, a reply without an upload URL means D1 already has the file.
+    // Decision: Like wrangler, a reply without an upload URL means D1 already has the file.
     if (typeof initialized.upload_url !== 'string') {
       throw unknownOutcome(
         new Error('Cloudflare returned an invalid D1 import upload.'),
         undefined,
       );
     }
-    // D1 asked for the file, so it has not started; failures until ingest are plain.
+    // Decision: D1 asked for the file, so it hasn't started; failures until ingest are plain.
     if (typeof initialized.filename !== 'string' || !initialized.filename) {
       throw new Error('Cloudflare returned an invalid D1 import upload.');
     }
@@ -169,7 +169,7 @@ export async function importD1SqlFile({
     const uploadTimeoutMs = d1ImportUploadTimeoutMs(blob.size);
     let upload: Response;
     try {
-      // The presigned URL authorizes this request; never forward the account's credentials.
+      // Decision: The presigned URL authorizes this request. Don't forward the account's credentials.
       upload = await fetch(uploadUrl, {
         method: 'PUT',
         body: blob,
@@ -191,8 +191,8 @@ export async function importD1SqlFile({
     }
   }
 
-  // From here D1 may be ingesting the file. Only a status that D1 reports
-  // tells whether it finished; any other failure leaves the outcome unknown.
+  // Decision: From here D1 may be ingesting the file. Only a status that D1 reports tells whether it finished;
+  // any other failure leaves the outcome unknown.
   let bookmark: string | undefined;
   try {
     if (!initialized.at_bookmark) {

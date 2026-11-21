@@ -100,7 +100,7 @@ export function expandDotenv(
         warned.add(key);
         options.onWarn(`dotenv expansion cycle detected at "${key}" — leaving raw value in place`);
       }
-      // Return the raw literal so the cycle short-circuits instead of
+      // Decision: Return the raw literal so the cycle short-circuits instead of
       // looping; callers see the un-expanded `${...}` text.
       return input[key]!;
     }
@@ -128,7 +128,6 @@ function expandValue(value: string, resolve: (key: string) => string): string {
   while (cursor < value.length) {
     const character = value[cursor]!;
     if (character === '\\' && cursor + 1 < value.length && value[cursor + 1] === '$') {
-      // Literal `$`: consume the backslash and emit `$`.
       result += '$';
       cursor += 2;
       continue;
@@ -138,12 +137,10 @@ function expandValue(value: string, resolve: (key: string) => string): string {
       cursor++;
       continue;
     }
-    // `$` — peek at the next char.
     const next = value[cursor + 1];
     if (next === '{') {
       const endIndex = value.indexOf('}', cursor + 2);
       if (endIndex === -1) {
-        // Unterminated `${...` — treat as literal.
         result += character;
         cursor++;
         continue;
@@ -152,7 +149,6 @@ function expandValue(value: string, resolve: (key: string) => string): string {
       if (VALID_KEY.test(key)) {
         result += resolve(key);
       } else {
-        // Non-identifier inside braces → literal.
         result += value.slice(cursor, endIndex + 1);
       }
       cursor = endIndex + 1;
@@ -168,7 +164,6 @@ function expandValue(value: string, resolve: (key: string) => string): string {
       cursor = keyEndIndex;
       continue;
     }
-    // `$` followed by nothing consumable → literal.
     result += character;
     cursor++;
   }
@@ -200,7 +195,7 @@ export function scanWranglerDotenvKeys(filePath: string): Set<string> {
     if (match[1]) {
       keys.add(match[1]);
     }
-    // Guard against a zero-width match wedging the loop.
+    // Decision: Guard against a zero-width match wedging the loop.
     if (match.index === WRANGLER_DOTENV_LINE.lastIndex) {
       WRANGLER_DOTENV_LINE.lastIndex++;
     }

@@ -29,7 +29,7 @@ describe('playground/kitchen-sink build', () => {
       JSON.stringify({ projectId: 'test-leak-project-id', slug: 'test-leak' }),
     );
 
-    // Build this fixture directly. Other suites create and remove temporary
+    // Decision: Build this fixture directly. Other suites create and remove temporary
     // workspace packages concurrently, so rediscovering the whole task graph
     // adds an unrelated race to a test of Vite's emitted worker artifacts.
     const result = spawn.sync('vp', ['build'], {
@@ -76,7 +76,7 @@ describe('playground/kitchen-sink build', () => {
   it('does not leak __PLATFORM_* credentials into dist/ssr/wrangler.json', () => {
     const wranglerConfig = JSON.parse(readFileSync(join(dist, 'ssr', 'wrangler.json'), 'utf-8'));
     const vars = (wranglerConfig.vars ?? {}) as Record<string, unknown>;
-    // These are legitimate, non-credential runtime routing vars for a custom Workers AI
+    // Decision: These are legitimate, non-credential runtime routing vars for a custom Workers AI
     // binding / AI Gateway. Exclude them from the credential leak filter.
     const allowedRuntimeMarkers = new Set(['__PLATFORM_AI_BINDING', '__PLATFORM_AI_GATEWAY']);
     const leakedKeys = Object.keys(vars).filter(
@@ -87,11 +87,9 @@ describe('playground/kitchen-sink build', () => {
 
   it('binds Workers AI and emits the AI Gateway var for self-host deploys', () => {
     const wranglerConfig = JSON.parse(readFileSync(join(dist, 'ssr', 'wrangler.json'), 'utf-8'));
-    // kitchen-sink imports `@builtbyfriends/bwf/ai` at request time, so the build infers
+    // Decision: kitchen-sink imports `@builtbyfriends/bwf/ai` at request time, so the build infers
     // `needsAI` and injects the Workers AI binding on `command === 'build'`.
     expect(wranglerConfig.ai).toEqual({ binding: 'AI' });
-    // `ai.gateway` in playground/kitchen-sink/bwf.config.ts becomes the runtime var
-    // read by the direct Workers AI backend.
     const vars = (wranglerConfig.vars ?? {}) as Record<string, unknown>;
     expect(vars.__PLATFORM_AI_GATEWAY).toBe('kitchen-sink-gw');
   });

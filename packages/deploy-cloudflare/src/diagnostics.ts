@@ -5,10 +5,9 @@ const MAX_DIAGNOSTIC_LENGTH = 4096;
 const MAX_DIAGNOSTIC_LINES = 24;
 const ERROR_BOX =
   /(?:^|\n)[ \t]*┌[ \t]*(?:APIError|Error)\b[^\n]*\n(?:[ \t]*│[^\n]*\n)*[ \t]*└[^\n]*/i;
-// cf draws upload progress, binding tables, config diffs and upload conflicts as log
-// lines: a guide symbol, or its fallback for terminals without Unicode, then two spaces.
-// These lines can show binding values. cf printed them on stdout before 1.0.0-beta.21,
-// and on stderr since.
+// Decision: cf draws upload progress, binding tables, config diffs and upload conflicts as log lines: a
+// guide symbol, or its fallback for terminals without Unicode, then two spaces. These lines
+// can show binding values. cf printed them on stdout before 1.0.0-beta.21, and on stderr since.
 const LOG_LINE = /^[├│◆◇●▲■└|*o•!x—](?: {2}|$)/;
 const UPLOAD_CONFLICT =
   /^[ \t]*(?:\S[ \t]+)?(Aborting the upload operation because of conflicts\..*)$/m;
@@ -35,8 +34,8 @@ export function cloudflareCommandDiagnostic(result: CloudflareCommandResult): st
     }
   }
   if (message === stderr && !/(?:^|\n)[ \t]*(?:[✘×X][ \t]+)?\[ERROR\]/i.test(stderr)) {
-    // Copy only an error box on stdout, the upload conflict without the config diff
-    // that explains it, or stderr without cf's log lines.
+    // Decision: Copy only an error box on stdout, the upload conflict without the config diff that
+    // explains it, or stderr without cf's log lines.
     const box = ERROR_BOX.exec(stdout);
     const conflict = UPLOAD_CONFLICT.exec(`${stdout}\n${stderr}`);
     if (box) {
@@ -46,7 +45,7 @@ export function cloudflareCommandDiagnostic(result: CloudflareCommandResult): st
         .filter(Boolean)
         .join('\n');
     } else {
-      // Keep an error box on stderr whole: its bars look like log lines.
+      // Decision: Keep an error box on stderr whole: its bars look like log lines.
       const stderrBox = ERROR_BOX.exec(stderr);
       message = stderrBox
         ? withoutLogLines(stderr.slice(0, stderrBox.index)) +
@@ -55,8 +54,8 @@ export function cloudflareCommandDiagnostic(result: CloudflareCommandResult): st
         : withoutLogLines(stderr);
     }
   }
-  // Never echo stdout, or cf's log lines on stderr, when no error block was found,
-  // even when the process failed without stderr.
+  // Decision: Don't echo stdout, or cf's log lines on stderr, when no error block was found, even when
+  // the process failed without stderr.
   message = stripVTControlCharacters(message)
     .split(/\n\s*(?:🪵|Logs (?:were )?written|If you think this is a bug)/)[0]!
     .trim();

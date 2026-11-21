@@ -152,7 +152,7 @@ export type LiveStream = {
 };
 
 let liveBindingName = 'BWF_LIVE';
-// Only the worker entry compiled by the Vite dev server turns this on. Builds
+// Decision: Only the worker entry compiled by the Vite dev server turns this on. Builds
 // never call the setter, so production clients get a fixed internal error.
 let liveDev = false;
 const registeredStreamIds = new Set<string>();
@@ -624,7 +624,7 @@ function errorToResponse(error: unknown): Response {
       { status: error.status },
     );
   }
-  // Hooks, bindings and the Durable Object can fail with internal details; log them
+  // Decision: Hooks, bindings and the Durable Object can fail with internal details; log them
   // on the server and send clients a fixed message. Dev keeps the real message.
   console.error(error);
   const message = liveDev

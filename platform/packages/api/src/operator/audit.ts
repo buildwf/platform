@@ -230,7 +230,7 @@ function auditTarget(
         recoveryFence: boundedString(body.recoveryFence, 64),
       });
     }
-    // Never the credential: `apiToken` rides the add body and stays out.
+    // Decision: Not the credential: `apiToken` rides in the add body and stays out of the audit target.
     const domain = boundedString(segments[2], 253, true);
     if (segments[1] === 'domains' && segments.length === 2) {
       return JSON.stringify({
@@ -386,8 +386,8 @@ async function completeAudit(
       .set({ status: succeeded ? 'success' : 'failed', http_status: httpStatus })
       .where(eq(operatorEvents.id, id));
   } catch (error) {
-    // The mutation may already have completed. Its durable pending intent is
-    // the recovery signal, so preserve the original response or thrown error.
+    // Decision: The mutation may already have completed. Its durable pending intent is the recovery signal, so
+    // keep the original response or thrown error.
     console.error('[operator] audit completion failed', id, error);
     pending = true;
     if (!response) {
@@ -395,9 +395,8 @@ async function completeAudit(
     }
   }
   if (response) {
-    // Redirect responses have immutable headers. Clone all responses so the
-    // audit metadata is applied consistently without changing their body or
-    // status.
+    // Decision: Redirect responses have immutable headers. Clone all responses so the audit metadata is applied the
+    // same way without changing their body or status.
     const headers = new Headers(response.headers);
     headers.set('X-Platform-Audit-Id', id);
     if (pending) {
@@ -424,8 +423,8 @@ export async function executeAuditedMutation(
   intent: OperatorAuditIntent,
   mutation: () => Promise<AuditedMutationResult>,
 ): Promise<Response> {
-  // Deliberately outside the try block: an intent insert failure must prevent
-  // the mutation instead of becoming an unaudited change.
+  // Decision: Outside the try block on purpose: an intent insert failure must stop the mutation instead of
+  // becoming an unaudited change.
   const id = await insertAuditIntent(context, intent);
   try {
     const result = await mutation();
@@ -461,8 +460,8 @@ export const operatorAudit: MiddlewareHandler<ApiEnv> = async (context, next) =>
     return next();
   }
   const path = context.req.path.replace(/^\/operator\/v1\//, '');
-  // Known operations use the canonical allowlist; any other authenticated POST
-  // still records an observable intent with an empty target.
+  // Decision: Known operations use the canonical allowlist; any other authenticated POST still records an
+  // observable intent with an empty target.
   const id = await insertAuditIntent(context, {
     action: path,
     target: auditTarget(path, body, context.env.PLATFORM_ENV) ?? '',

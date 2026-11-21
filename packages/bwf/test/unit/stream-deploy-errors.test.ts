@@ -153,7 +153,6 @@ describe('formatStreamDeployError', () => {
     const formatted = formatStreamDeployError(err, null);
 
     expect(formatted.message).toContain('HTTP 500');
-    // Body snippet should still be present somewhere since there is no parsed error field.
     expect(formatted.message.length).toBeGreaterThan('Deploy failed (HTTP 500): '.length);
   });
 });

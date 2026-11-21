@@ -18,12 +18,10 @@ export function extractSlug(hostname: string, baseHostname: string = SITE_DOMAIN
 
   const slug = hostname.slice(0, -suffix.length);
 
-  // Must be non-empty and contain no dots (no nested subdomains)
   if (!slug || slug.includes('.')) {
     return null;
   }
 
-  // Validate slug format: lowercase alphanumeric + dashes, no leading/trailing dash
   if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug)) {
     return null;
   }

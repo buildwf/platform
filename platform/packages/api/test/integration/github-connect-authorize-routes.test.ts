@@ -26,10 +26,9 @@ import {
 
 let env: TestEnv;
 
-// Self-contained app mirroring how index.ts mounts githubRoutes: auth is applied
-// per-route inside githubRoutes (connect-authorize-url is authed; the public
-// connect-authorize-callback is not), so the only outer middleware is the db
-// setter.
+// Decision: Mirrors how index.ts mounts githubRoutes. Auth is applied per route inside githubRoutes
+// (connect-authorize-url is authed, the public connect-authorize-callback isn't), so the only
+// outer middleware sets the db.
 const app = new Hono<ApiEnv>()
   .use('*', async (context, next) => {
     context.set('db', env.db);
@@ -37,21 +36,19 @@ const app = new Hono<ApiEnv>()
   })
   .route('/github', githubRoutes);
 
-// The App's user-to-server OAuth credentials. Present only when the App is
-// configured for "Request user authorization (OAuth)" — the connect-authorize
-// flow is inert (503) without them.
+// Decision: The App's user-to-server OAuth credentials. They're present only when the App is configured for
+// "Request user authorization (OAuth)". Without them the connect-authorize flow returns 503.
 const GITHUB_APP_USER_OAUTH_ENV = {
   GITHUB_APP_CLIENT_ID: 'Iv1.testappclientid',
   GITHUB_APP_CLIENT_SECRET: 'test-app-client-secret',
 } as const;
 
-// The callback URL both routes derive from the request origin. connect-authorize-url
-// sends it as redirect_uri on authorize; connect-authorize-callback MUST send the
-// byte-identical value on the token exchange.
+// Decision: Both routes derive the callback URL from the request origin. connect-authorize-url sends it as
+// redirect_uri on authorize, and connect-authorize-callback has to send the byte-identical value
+// on the token exchange.
 const CONNECT_CALLBACK_URL = 'http://localhost/github/connect-authorize-callback';
 
-// A valid 43-char RFC 7636 code_verifier.
-const CODE_VERIFIER = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ'; // 43 chars
+const CODE_VERIFIER = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ';
 
 beforeAll(async () => {
   env = await setupEnv();
@@ -74,11 +71,6 @@ function authedGet(jwt: string): RequestInit {
   return { method: 'GET', headers: { Authorization: `Bearer ${jwt}` } };
 }
 
-// Stub global fetch for the App user-OAuth reads the connect-authorize callback
-// performs via `verifyUserRepoAccess`:
-//   - POST login/oauth/access_token                        -> user token (unless acceptCode === false)
-//   - GET  /user/installations/:id/repositories (paginated) -> the repos the caller can reach
-//   - GET  /user                                           -> the caller's numeric github account id
 function mockUserConnect(opts: {
   repositories: Array<{ full_name: string; id: number }>;
   accountId: string;
@@ -98,8 +90,8 @@ function mockUserConnect(opts: {
         }
         return Response.json({ access_token: 'user-to-server-token' });
       }
-      // The repositories read must be matched BEFORE the `/user` id read, since
-      // `/user/installations/:id/repositories` also contains the `/user` substring.
+      // Decision: Match the repositories read before the `/user` id read, since
+      // `/user/installations/:id/repositories` also contains `/user`.
       if (url.includes('/repositories')) {
         return Response.json({
           total_count: opts.repositories.length,
@@ -115,7 +107,6 @@ function mockUserConnect(opts: {
   return { tokenExchangeBody };
 }
 
-// Decode the signed `state` out of a github.com/login/oauth/authorize URL.
 function decodeStateFromAuthorizeUrl(url: string): Record<string, unknown> {
   const parsed = new URL(url);
   const state = parsed.searchParams.get('state');
@@ -126,15 +117,11 @@ function decodeStateFromAuthorizeUrl(url: string): Record<string, unknown> {
   return JSON.parse(atob(encoded)) as Record<string, unknown>;
 }
 
-// Decode a signed HMAC payload (state or grant) back to its JSON object.
 function decodeSignedPayload(token: string): Record<string, unknown> {
   const encoded = token.slice(0, token.lastIndexOf('.'));
   return JSON.parse(atob(encoded)) as Record<string, unknown>;
 }
 
-// Mint a signed connect `state` exactly the way GET /connect-authorize-url does —
-// used to drive the callback directly and to forge expired/altered/wrong-purpose
-// states.
 async function mintConnectState(payload: {
   redirect: string;
   purpose?: string;
@@ -158,16 +145,13 @@ async function mintConnectState(payload: {
   return `${encoded}.${signature}`;
 }
 
-// Extract the JS-redirect target URL from the 200 HTML body the callback returns.
-// The callback uses 200 + `location.replace("<target>")` (not a 302) because
-// `wrangler dev` mangles `Location: http://localhost:*` headers.
+// Decision: The callback returns 200 with `location.replace("<target>")`, not a 302, because `wrangler dev`
+// mangles `Location: http://localhost:*` headers.
 function extractRedirectTarget(body: string): string | null {
   const match = /location\.replace\("([^"]+)"\)/.exec(body);
   return match ? match[1]! : null;
 }
 
-// Drive the callback for a freshly-minted valid state + a stubbed exchange, and
-// return the `connect_grant` it redirected to localhost with.
 async function runConnectCallback(opts: {
   redirect: string;
   codeChallenge: string;
@@ -227,7 +211,6 @@ describe('GET /github/connect-authorize-url', () => {
     expect(url.startsWith('https://github.com/login/oauth/authorize?')).toBe(true);
     expect(url).toContain(`client_id=${GITHUB_APP_USER_OAUTH_ENV.GITHUB_APP_CLIENT_ID}`);
 
-    // The authorize redirect_uri MUST be the same callback URL the exchange uses.
     expect(new URL(url).searchParams.get('redirect_uri')).toBe(CONNECT_CALLBACK_URL);
 
     const state = decodeStateFromAuthorizeUrl(url);
@@ -239,7 +222,7 @@ describe('GET /github/connect-authorize-url', () => {
     expect(state.redirect).toBe(redirect);
     expect(typeof state.exp).toBe('number');
     expect((state.exp as number) > Date.now()).toBe(true);
-    // The crux: state carries NO Platform user id (the bind is deferred to redemption).
+    // Decision: The state carries no Platform user id. The bind waits until redemption.
     expect('userId' in state).toBe(false);
   });
 
@@ -330,7 +313,6 @@ describe('GET /github/connect-authorize-url', () => {
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'http://localhost:9999/callback';
 
-    // No GITHUB_APP_CLIENT_ID/SECRET on env.
     const res = await app.fetch(
       new Request(
         `http://localhost/github/connect-authorize-url?redirect=${encodeURIComponent(redirect)}&installationId=700&repoFullName=${encodeURIComponent('acct/app')}&code_challenge=${challenge}`,
@@ -367,7 +349,6 @@ describe('GET /github/connect-authorize-callback', () => {
       accountId: '5551234',
     });
 
-    // 200 + JS `location.replace`, NOT a 302.
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');
     expect(res.headers.get('location')).toBeNull();
@@ -387,7 +368,6 @@ describe('GET /github/connect-authorize-callback', () => {
     expect(typeof decoded.exp).toBe('number');
     expect((decoded.exp as number) > Date.now()).toBe(true);
 
-    // The callback has no bearer identity, so it writes NO membership row.
     expect(await countAllMemberRows(env.db)).toBe(0);
   });
 
@@ -411,8 +391,6 @@ describe('GET /github/connect-authorize-callback', () => {
       { ...env, ...GITHUB_APP_USER_OAUTH_ENV },
     );
     expect(res.status).toBe(200);
-    // redirect_uri is derived from the connect-authorize-callback request origin,
-    // byte-identical to the one connect-authorize-url sent on authorize.
     expect(tokenExchangeBody.current?.redirect_uri).toBe(CONNECT_CALLBACK_URL);
   });
 
@@ -424,7 +402,6 @@ describe('GET /github/connect-authorize-callback', () => {
       codeChallenge: challenge,
       installationId: '700',
       repoFullName: 'acct/app',
-      // The caller's token reaches a DIFFERENT repo — not acct/app.
       repositories: [{ full_name: 'acct/other', id: 9 }],
       accountId: '5551234',
     });
@@ -461,7 +438,6 @@ describe('GET /github/connect-authorize-callback', () => {
   it('bounces repo_not_accessible when the token exchange fails', async () => {
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
 
-    // acceptCode:false → verifyUserRepoAccess returns { null, null } → refuse.
     const { res, grant, target } = await runConnectCallback({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -514,8 +490,8 @@ describe('GET /github/connect-authorize-callback', () => {
       codeChallenge: challenge,
       exp: Date.now() + 10 * 60 * 1000,
     });
-    // Flip the FIRST char of the signature (a full 6 significant bits, so the
-    // decoded HMAC bytes always change — no flaky no-op tamper).
+    // Decision: Flip the first char of the signature. It carries a full 6 bits, so the decoded HMAC bytes
+    // change each time and the tamper can't be a flaky no-op.
     const dot = state.lastIndexOf('.');
     const sig = state.slice(dot + 1);
     const first = sig[0] === 'A' ? 'B' : 'A';
@@ -537,7 +513,7 @@ describe('GET /github/connect-authorize-callback', () => {
     const state = await mintConnectState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
-      exp: Date.now() - 1000, // already expired
+      exp: Date.now() - 1000,
     });
 
     const res = await app.fetch(
@@ -563,7 +539,6 @@ describe('GET /github/connect-authorize-callback', () => {
         exp: Date.now() + 60_000,
       }),
     );
-    // `*` is outside the base64 alphabet → atob() throws inside hmacVerifyState.
     const malformed = `${encoded}.*`;
     const res = await app.fetch(
       new Request(
@@ -577,8 +552,8 @@ describe('GET /github/connect-authorize-callback', () => {
   it('rejects a join-purpose state (cross-flow replay)', async () => {
     mockUserConnect({ repositories: [{ full_name: 'acct/app', id: 4242 }], accountId: '5551234' });
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
-    // A validly-signed state whose purpose is 'join' must not drive the connect
-    // callback — the purpose discriminator blocks cross-flow replay.
+    // Decision: A validly signed state with purpose 'join' mustn't drive the connect callback. The purpose
+    // field blocks replay across flows.
     const state = await mintConnectState({
       redirect: 'http://localhost:9999/callback',
       purpose: 'join',

@@ -57,7 +57,7 @@ export function createProjectTsconfig(
     const paths: Record<string, Array<string>> = {};
 
     if (options.redirectDbModule !== false) {
-      // moduleResolution "bundler" ignores ambient declarations when a specifier resolves to a
+      // Decision: moduleResolution "bundler" ignores ambient declarations when a specifier resolves to a
       // package file, so bwf/db, bwf/routes and bwf/queues map to .bwf/*.d.ts.
       paths['@builtbyfriends/bwf/db'] = ['./db.d.ts'];
     }
@@ -65,7 +65,7 @@ export function createProjectTsconfig(
     if (hasSchema) {
       const isDir = existsSync(pathsConfig.schemaDir) && !existsSync(pathsConfig.schemaFile);
 
-      // Paths are relative to .bwf/ (where this tsconfig lives), so use ../
+      // Decision: Paths are relative to .bwf/ (where this tsconfig lives), so use ../
       const schemaRel = relative(outDir, pathsConfig.schemaDir);
       const schemaFileRel = relative(outDir, pathsConfig.schemaFile);
       paths['@schema'] = [isDir ? `${schemaRel}/index.ts` : schemaFileRel];

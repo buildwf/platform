@@ -39,8 +39,8 @@ export function getPlatformApiUrl(env: PlatformIdentityEnv, requestUrl?: string)
 export function platformConnectCommand(apiUrl: string): string {
   const url = new URL(apiUrl);
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
-  // Keep an explicit protocol when it differs from the CLI's hostname default.
+  // Decision: Keep an explicit protocol when it differs from the CLI's hostname default.
   const address = url.protocol === (local ? 'http:' : 'https:') ? url.host : url.origin;
-  // Quote even unusual but valid URL hostnames safely when the command is copied into a shell.
+  // Decision: Quote even unusual but valid URL hostnames so the command is safe to paste into a shell.
   return `bwf connect '${address.replaceAll("'", "'\\''")}'`;
 }

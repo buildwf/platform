@@ -23,8 +23,8 @@ const app = new Hono<ApiEnv>();
 const HOME = '/admin/config/auth';
 app.use('*', async (context, next) => {
   await next();
-  // React pages return their own Response; set form-compatible privacy headers
-  // on that final response, keeping callback paths and queries out of referrers.
+  // Decision: React pages return their own Response; set form-compatible privacy headers on that final
+  // response, keeping callback paths and queries out of referrers.
   context.res.headers.set('Cache-Control', 'no-store');
   context.res.headers.set('Referrer-Policy', 'strict-origin');
 });

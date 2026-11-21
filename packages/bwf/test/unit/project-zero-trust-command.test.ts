@@ -201,7 +201,6 @@ describe('project Zero Trust command', () => {
     expect(rendered).toContain(`Platform: ${platformStatus}`);
     expect(rendered).toContain(message);
     expect(rendered).toContain('Effective: protected');
-    // The default for new projects is meaningful only for a readable configuration.
     expect(rendered.includes('Default for new projects: protected')).toBe(
       platformStatus !== 'invalid_configuration',
     );

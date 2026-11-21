@@ -113,9 +113,6 @@ export function deduplicateGeneratedCompatibilityFlags(
 }
 
 /**
- * Check whether bwf contributes worker-side routing rules.
- */
-/**
  * Remove the CF plugin's deploy pointer before building. The plugin rewrites it only when it
  * emits a Worker, so the post-build checks then accept only a pointer this build wrote.
  */
@@ -222,16 +219,15 @@ export function verifyGeneratedDeployConfig(
       };
     }
   }
-  // Id-bearing bindings (D1, KV, R2, Hyperdrive) must match the in-memory pre-build pins, so a
+  // Decision: Id-bearing bindings (D1, KV, R2, Hyperdrive) have to match the in-memory pre-build pins, so a
   // build that rewrote both the root config and the artifact is still caught.
   if (expected.bindingIdentitySnapshot) {
     const snapshot = expected.bindingIdentitySnapshot;
-    // Every desired binding is still emitted with its pinned id.
     if (expected.desired) {
       for (const { kind, binding } of desiredIdentityBindings(expected.desired)) {
         const { field, idField } = DEPLOY_BINDING_IDENTITY_FIELDS[kind];
         const pinnedId = snapshot.get(bindingIdentityKey(field, binding));
-        // Unprovisioned bindings are the drift check's job.
+        // Decision: Unprovisioned bindings are the drift check's job.
         if (pinnedId === undefined) {
           continue;
         }
@@ -250,7 +246,6 @@ export function verifyGeneratedDeployConfig(
         }
       }
     }
-    // Every emitted id-bearing binding was pinned, with the same id.
     const generatedIdentities = collectConfigBindingIdentities(generated);
     for (const { field, binding, id } of generatedIdentities) {
       const pinnedId = snapshot.get(bindingIdentityKey(field, binding));
@@ -267,7 +262,6 @@ export function verifyGeneratedDeployConfig(
         };
       }
     }
-    // Every pinned binding, desired or hand-declared, is still emitted.
     const emittedIdentityKeys = new Set<string>();
     for (const { field, binding } of generatedIdentities) {
       emittedIdentityKeys.add(bindingIdentityKey(field, binding));
@@ -284,8 +278,8 @@ export function verifyGeneratedDeployConfig(
       }
     }
   }
-  // Binding fields bwf never emits: each emitted entry must equal its pre-build entry. Fields
-  // outside the assert set stay unchecked, so a binding type added later cannot fail a valid build.
+  // Decision: Binding fields bwf doesn't emit: each emitted entry has to equal its pre-build entry. Fields
+  // outside the assert set stay unchecked, so a binding type added later can't fail a valid build.
   if (expected.passthroughIdentitySnapshot) {
     const passthrough = expected.passthroughIdentitySnapshot;
     for (const field of DEPLOY_PASSTHROUGH_ASSERT_FIELDS) {
@@ -318,7 +312,7 @@ export function verifyGeneratedDeployConfig(
         }
       }
     }
-    // Every pinned binding is still emitted. Whole-object fields are checked below.
+    // Decision: Whole-object fields are checked below.
     for (const [field, pinnedEntries] of passthrough) {
       if (DEPLOY_WHOLE_OBJECT_PINNED_FIELDS.includes(field) || pinnedEntries.size === 0) {
         continue;
@@ -330,7 +324,7 @@ export function verifyGeneratedDeployConfig(
             emittedNames.add(name);
           }
         } catch {
-          // A malformed field emits no names, so every pinned name is reported missing.
+          // Decision: A malformed field emits no names, so all pinned names are reported missing.
         }
       }
       for (const name of pinnedEntries.keys()) {
@@ -343,9 +337,9 @@ export function verifyGeneratedDeployConfig(
       }
     }
   }
-  // Fields compared as whole values against the pre-build root (`unsafe`, tail consumers, routes,
-  // `addresses`, …). An empty value passes only when the root's is empty too, except `addresses`:
-  // `[]` deletes every email routing rule the Worker owns, so it must match exactly.
+  // Decision: Fields compared as whole values against the pre-build root (`unsafe`, tail consumers, routes,
+  // `addresses` and so on). An empty value passes only when the root's is empty too, except
+  // `addresses`: `[]` deletes all email routing rules the Worker owns, so it has to match exactly.
   if (expected.passthroughRawFields) {
     const raw = expected.passthroughRawFields;
     for (const field of DEPLOY_WHOLE_OBJECT_PINNED_FIELDS) {
@@ -375,7 +369,7 @@ export function verifyGeneratedDeployConfig(
     const emittedAi = generated.ai;
     const rootAi = raw.get('ai');
     if (rootAi !== undefined) {
-      // A root ai binding must survive unchanged; removing it fails too.
+      // Decision: A root ai binding has to survive unchanged; removing it fails too.
       if (!deepEqual(emittedAi, rootAi)) {
         return {
           ok: false,
@@ -383,7 +377,7 @@ export function verifyGeneratedDeployConfig(
         };
       }
     } else if (emittedAi !== undefined) {
-      // Otherwise only bwf's own AI binding, and only when the source uses Workers AI.
+      // Decision: Otherwise only bwf's own AI binding, and only when the source uses Workers AI.
       const expectedAi = { binding: expected.aiBindingName ?? DEFAULT_PLATFORM_AI_BINDING };
       if (!(expected.needsAI === true && deepEqual(emittedAi, expectedAi))) {
         return {
@@ -392,7 +386,7 @@ export function verifyGeneratedDeployConfig(
         };
       }
     }
-    // bwf emits only creation migrations; a destructive one must come from the root config.
+    // Decision: bwf emits only creation migrations; a destructive one has to come from the root config.
     const destructiveMigration = verifyNoInjectedDestructiveMigration(
       generated.migrations,
       raw.get('migrations'),
@@ -441,8 +435,8 @@ export function verifyGeneratedDeployConfig(
       };
     }
   }
-  // Containers must equal the expected set, keyed by `class_name`: an emitted container
-  // provisions a billable application that runs its image.
+  // Decision: Containers have to equal the expected set, keyed by `class_name`: an emitted container provisions
+  // a billable application that runs its image.
   if (expected.expectedContainers) {
     const emittedContainers: Array<unknown> = Array.isArray(generated.containers)
       ? generated.containers
@@ -469,7 +463,6 @@ export function verifyGeneratedDeployConfig(
           emittedByClass.set(className, container);
         }
       }
-      // Injected / retargeted — every emitted container must be expected AND byte-identical.
       for (const [className, container] of emittedByClass) {
         const expectedContainer = expectedByClass.get(className);
         if (expectedContainer === undefined) {
@@ -490,7 +483,6 @@ export function verifyGeneratedDeployConfig(
           };
         }
       }
-      // Dropped — every expected container must still be emitted.
       for (const className of expectedByClass.keys()) {
         if (!emittedByClass.has(className)) {
           return {
@@ -499,7 +491,7 @@ export function verifyGeneratedDeployConfig(
           };
         }
       }
-      // Class-less containers — deepEqual multiset (never a Platform-emitted shape).
+      // Decision: Class-less containers are compared as a deepEqual multiset; bwf doesn't emit this shape.
       for (const emitted of emittedNoClass) {
         const matchIndex = expectedNoClass.findIndex((candidate) => deepEqual(emitted, candidate));
         if (matchIndex === -1) {
@@ -518,7 +510,7 @@ export function verifyGeneratedDeployConfig(
       }
     }
   }
-  // Every emitted queue must be one bwf derived from source.
+  // Decision: Each emitted queue has to be one that bwf derived from source.
   if (expected.desired) {
     const desiredQueues = new Set(expected.desired.queues);
     const emittedProducers = collectEmittedQueueGroupNames(generated.queues, 'producers');
@@ -531,7 +523,7 @@ export function verifyGeneratedDeployConfig(
         };
       }
     }
-    // bwf emits every desired queue as both a producer and a consumer; both must remain.
+    // Decision: bwf emits each desired queue as both a producer and a consumer; both have to remain.
     for (const name of expected.desired.queues) {
       if (!emittedProducers.has(name) || !emittedConsumers.has(name)) {
         return {
@@ -541,7 +533,7 @@ export function verifyGeneratedDeployConfig(
       }
     }
   }
-  // Emitted cron schedules must equal the expected multiset. A missing or non-array
+  // Decision: Emitted cron schedules have to equal the expected multiset. A missing or non-array
   // `triggers.crons` counts as none.
   if (expected.expectedCrons) {
     const triggers = generated.triggers;
@@ -555,7 +547,6 @@ export function verifyGeneratedDeployConfig(
     for (const schedule of expected.expectedCrons) {
       expectedCronCounts.set(schedule, (expectedCronCounts.get(schedule) ?? 0) + 1);
     }
-    // Injected / retargeted — every emitted schedule must have a remaining expected count.
     for (const schedule of emittedCrons) {
       const remaining = typeof schedule === 'string' ? (expectedCronCounts.get(schedule) ?? 0) : 0;
       if (typeof schedule !== 'string' || remaining <= 0) {
@@ -566,7 +557,6 @@ export function verifyGeneratedDeployConfig(
       }
       expectedCronCounts.set(schedule, remaining - 1);
     }
-    // Dropped — any leftover count is a schedule the build removed.
     for (const [schedule, remaining] of expectedCronCounts) {
       if (remaining > 0) {
         return {
@@ -647,7 +637,7 @@ export async function validateCloudflarePostBuildEnv(options: {
     return false;
   }
   const emittedVars = emitted.vars;
-  // Better Auth's signing secret belongs in the secret store, never in plaintext vars.
+  // Decision: Better Auth's signing secret belongs in the secret store, not in plaintext vars.
   if (authEnabled && Object.prototype.hasOwnProperty.call(emittedVars, BETTER_AUTH_SECRET_NAME)) {
     log.error(
       [
@@ -671,7 +661,7 @@ export async function validateCloudflarePostBuildEnv(options: {
     return false;
   }
 
-  // A required key the build did not emit must exist as a remote secret. Value validation runs
+  // Decision: A required key the build didn't emit has to exist as a remote secret. Value validation runs
   // project code, so it stays in the isolated probe.
   const envContext = deriveSelfHostEnvContextFromVars(emittedVars, schemaFacts);
   if (schemaFacts.hasSchema) {
@@ -693,7 +683,7 @@ export async function validateCloudflarePostBuildEnv(options: {
     }
     envContext.invalidKeys = validateResult.invalidKeys;
   }
-  // The deploy provisions the auth secret itself later, so the generic gate must not reject it.
+  // Decision: The deploy provisions the auth secret itself later, so the generic gate mustn't reject it.
   if (authEnabled) {
     envContext.absentRequired = envContext.absentRequired.filter(
       (key) => key !== BETTER_AUTH_SECRET_NAME,
@@ -702,7 +692,7 @@ export async function validateCloudflarePostBuildEnv(options: {
       (key) => key !== BETTER_AUTH_SECRET_NAME,
     );
   }
-  // The probe above ran project code, so re-check the uploader before the credentialed secret list.
+  // Decision: The probe above ran project code, so re-check the uploader before the credentialed secret list.
   if (!assertUploaderStillPinned()) {
     return false;
   }
@@ -711,7 +701,7 @@ export async function validateCloudflarePostBuildEnv(options: {
       root,
       configPath,
       accountId,
-      // The probe could have rewritten the config's `name`; pin the expected Worker.
+      // Decision: The probe could have rewritten the config's `name`; pin the expected Worker.
       workerName,
     });
   } catch (err) {

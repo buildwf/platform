@@ -13,7 +13,6 @@ import {
   type TestEnv,
 } from './helpers.ts';
 
-// DO namespace spy: records fetched URLs and returns a fixed JSON payload.
 function spyNamespace(payload: unknown): { ns: DurableObjectNamespace; calls: Array<string> } {
   const calls: Array<string> = [];
   const ns = {
@@ -67,7 +66,6 @@ describe('user-facing build routes', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { builds: Array<{ id: string }> };
     expect(body.builds.map((b) => b.id)).toEqual([b2.id, b1.id]);
-    // BuildSummary must not leak internal columns.
     expect(body.builds[0]).not.toHaveProperty('user_id');
     expect(body.builds[0]).not.toHaveProperty('instance_type');
   });
@@ -112,17 +110,16 @@ describe('user-facing build routes', () => {
     };
     expect(body.lines).toEqual([{ seq: 1, line: 'hi', stream: 'stdout', ts: 1 }]);
     expect(body.lastSeq).toBe(1);
-    expect(body.terminal).toBe(false); // 'queued' default
+    expect(body.terminal).toBe(false);
     expect(body.external).toBeNull();
     expect(base.calls[0]).toContain('/logs?since=0');
     expect(large.calls).toHaveLength(0);
   });
 
   it('honors the DO-authoritative terminal when the PG row still lags ACTIVE', async () => {
-    // Stale-active window: a completion path set the DO terminal FIRST, then its
-    // Postgres CAS write threw — so the PG build row is still non-terminal
-    // ('queued' default) while the DO/container is already 'complete'. The route
-    // must OR in the DO's terminal so `--follow` can finish after its log drain.
+    // Decision: Stale-active window: a completion path set the DO terminal first, then its Postgres CAS write
+    // threw, so the PG row is still non-terminal while the DO is 'complete'. The route has to OR in the
+    // DO's terminal so `--follow` can finish after its log drain.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
     const build = await createTestBuild(env.db, {
@@ -151,9 +148,9 @@ describe('user-facing build routes', () => {
       terminal: boolean;
       logsComplete: boolean | null;
     };
-    expect(body.terminal).toBe(true); // DO-authoritative terminal closes the window
-    expect(body.status).toBe('complete'); // reflects the DO's terminal status
-    expect(body.logsComplete).toBe(false); // terminal status is not producer completion
+    expect(body.terminal).toBe(true);
+    expect(body.status).toBe('complete');
+    expect(body.logsComplete).toBe(false);
 
     env.BUILD_MANAGER = spyNamespace({
       lines: [{ seq: 1, line: 'final tail', stream: 'stdout', ts: 1 }],
@@ -176,12 +173,10 @@ describe('user-facing build routes', () => {
   });
 
   it('lets fresh Postgres win the status word over a lost-CAS DO terminal', async () => {
-    // A concurrent terminalizer commits `cancelled` to Postgres WHILE the route
-    // is awaiting the DO — and the DO reports its own local terminal status
-    // `complete` (from a path that LOST the PG CAS). `terminal` is correct
-    // either way, but the status WORD must come from the authoritative PG row.
-    // The DO's fetch callback runs DURING the route's await, so we flip the DB
-    // there to make the interleave deterministic.
+    // Decision: A concurrent terminalizer commits `cancelled` while the route awaits the DO, and the DO reports
+    // `complete` from a path that lost the PG CAS. The status word has to come from PG. The DO's fetch
+    // callback runs during the route's await, so flipping the DB there makes the interleave
+    // deterministic.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
     const build = await createTestBuild(env.db, {
@@ -194,7 +189,6 @@ describe('user-facing build routes', () => {
       idFromName: (name: string) => ({ toString: () => name }),
       get: (_id: unknown) => ({
         fetch: async () => {
-          // Concurrent terminalize lands after the route's PG snapshot read.
           await updateBuildStatus(env.db, build.id, 'cancelled');
           return Response.json({
             lines: [],
@@ -220,7 +214,7 @@ describe('user-facing build routes', () => {
       logsComplete: boolean | null;
     };
     expect(body.terminal).toBe(true);
-    expect(body.status).toBe('cancelled'); // fresh PG wins over the DO's 'complete'
+    expect(body.status).toBe('cancelled');
     expect(body.logsComplete).toBe(false);
   });
 

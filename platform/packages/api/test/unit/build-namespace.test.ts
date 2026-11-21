@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vite-plus/test';
 import { buildManagerNamespace } from '../../src/build-namespace.ts';
 import type { ApiEnv } from '../../src/env.ts';
 
-// Two distinct sentinel objects so we can assert WHICH namespace was returned by
-// identity. The picker only reads these two fields, so a partial cast is enough.
 const BASE = { __which: 'base' } as unknown as DurableObjectNamespace;
 const LARGE = { __which: 'large' } as unknown as DurableObjectNamespace;
 const env = {

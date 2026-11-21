@@ -225,7 +225,7 @@ describe('bwfPlugin dev asset routing', () => {
     config({}, { command: 'build', mode: 'production' });
   }
 
-  // The Cloudflare plugin gives each environment it runs in workerd these conditions.
+  // Decision: The Cloudflare plugin gives each environment it runs in workerd these conditions.
   const workerd = { resolve: { conditions: ['workerd', 'worker', 'module', 'browser'] } };
   const node = { resolve: { conditions: ['module', 'node'] } };
 
@@ -264,10 +264,10 @@ describe('bwfPlugin dev asset routing', () => {
     const nodeOptimizer = { optimizeDeps: { exclude: ['@builtbyfriends/bwf'] } };
     const cases = [
       [createApiOnlyProjectRoot, 'platform_worker', workerd, workerdOptimizer],
-      // Default mode never runs Vite's own ssr environment.
+      // Decision: Default mode doesn't run Vite's own ssr environment.
       [createApiOnlyProjectRoot, 'ssr', node, nodeOptimizer],
       [createFrameworkProjectRoot, 'ssr', workerd, workerdOptimizer],
-      // @astrojs/cloudflare runs Astro's ssr environment in workerd.
+      // Decision: @astrojs/cloudflare runs Astro's ssr environment in workerd.
       [createAstroProjectRoot, 'ssr', workerd, workerdOptimizer],
       [createFrameworkOwnedRuntimeProjectRoot, 'ssr', node, nodeOptimizer],
       [createNodeProjectRoot, 'ssr', {}, nodeOptimizer],

@@ -25,7 +25,7 @@ export async function createLimitResponse(
     if (custom?.ok && custom.headers.get('content-type')?.includes('text/html')) {
       headers.set('Content-Type', 'text/html; charset=utf-8');
       headers.set('X-Content-Type-Options', 'nosniff');
-      // The fallback is standalone and remains usable while its app is blocked.
+      // Decision: The fallback page is standalone and stays usable while its app is blocked.
       headers.set(
         'Content-Security-Policy',
         "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'",
@@ -37,7 +37,7 @@ export async function createLimitResponse(
     }
     await custom?.body?.cancel();
   } catch {
-    // The platform's built-in page is available even if custom assets cannot be read.
+    // Decision: The platform's built-in page works even when custom assets can't be read.
   }
   return createErrorResponse(request, 429, limit.message, headers);
 }

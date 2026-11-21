@@ -111,7 +111,7 @@ export function transform() {}`,
   });
 
   it('ignores a type-only export statement', () => {
-    // `export type { GET }` erases at runtime, so it must not register a GET route.
+    // Decision: `export type { GET }` is erased at runtime, so it must not register a GET route.
     const path = writeRoute(
       'hello.ts',
       `type GET = () => Response;

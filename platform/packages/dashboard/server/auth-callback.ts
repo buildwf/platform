@@ -17,7 +17,7 @@ function requestOrigin(context: Context): string {
   return `${isLocal ? 'http' : 'https'}://${host}`;
 }
 
-/** The login page binds the nonce to both a cookie and the callback URL to prevent login CSRF. */
+// Decision: The login page binds the nonce to both a cookie and the callback URL to prevent login CSRF.
 function hasMatchingNonce(context: Context): boolean {
   const nonceCookie = getCookie(context, 'platform_auth_nonce');
   const nonceParam = context.req.query('login_nonce');
@@ -43,7 +43,6 @@ function setSessionCookie(context: Context, token: string, secure: boolean): voi
 export const loader = defineHandler(async (context) => {
   const homeUrl = `${requestOrigin(context)}/`;
 
-  // Exchange the short-lived auth code for a JWT; localhost redeems it with PKCE.
   const code = context.req.query('code');
   if (code) {
     if (!hasMatchingNonce(context)) {
@@ -91,9 +90,9 @@ export const loader = defineHandler(async (context) => {
     return context.redirect(homeUrl);
   }
 
-  // Local dev: token arrives as query param (localhost-only, not available in production)
-  // Use Host header, not context.req.url — Workers Assets internal dispatch can set
-  // context.req.url to localhost even in production.
+  // Decision: Local dev only: the token arrives as a query param. The Host header is used, not
+  // context.req.url, because Workers Assets internal dispatch can set the URL to localhost even in
+  // production.
   const token = context.req.query('token');
   if (token) {
     const host = context.req.header('host') ?? '';

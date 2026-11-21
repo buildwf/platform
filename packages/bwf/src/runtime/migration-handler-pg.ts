@@ -20,7 +20,7 @@ export function createMigrationHandler(
     try {
       const result = await runPgMigrations(env, migrations);
       if (result.ok && runAuthMigrations) {
-        // The files are already committed, so a Better Auth failure still reports them.
+        // Decision: The files are already committed, so a Better Auth failure still reports them.
         try {
           await runAuthMigrations();
         } catch (err) {

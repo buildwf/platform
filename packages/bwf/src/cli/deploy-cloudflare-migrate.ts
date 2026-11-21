@@ -82,10 +82,10 @@ export async function migrateCloudflareWorker(input: {
     expectedCrons,
   };
 
-  // Persistent Better Auth secret: adopted when present, otherwise generated once and verified,
-  // before the first remote migration or upload.
+  // Decision: Persistent Better Auth secret: adopted when present, otherwise generated once and verified, before
+  // the first remote migration or upload.
   if (authEnabled) {
-    // Without `secrets.required`, the next upload could drop a newly written secret.
+    // Decision: Without `secrets.required`, the next upload could drop a newly written secret.
     const inheritance = (deps.verifyDeployConfig ?? verifyGeneratedDeployConfig)(
       root,
       verifyOptions,
@@ -115,7 +115,7 @@ export async function migrateCloudflareWorker(input: {
       cliLog.info('cloudflare_auth_secret_ready', { created: authSecret.created });
     } catch (error) {
       if (error instanceof CloudflareAuthSecretError) {
-        // The uploader check has already logged its own failure.
+        // Decision: The uploader check has already logged its own failure.
         if (error.reason !== 'uploader-changed') {
           log.error(error.message);
         }
@@ -131,10 +131,10 @@ export async function migrateCloudflareWorker(input: {
     cliLog.info('cloudflare_migrations_skipped');
   }
 
-  // Cloudflare never returns the Hyperdrive password, so the deploy environment provides the
-  // production URL. A rerun skips migrations already recorded as finished. A failed PostgreSQL
-  // file rolls back. A failed MySQL file rolls back its data changes, but MySQL commits DDL on
-  // its own, so earlier statements of that file can stay applied.
+  // Decision: Cloudflare doesn't return the Hyperdrive password, so the deploy environment provides the
+  // production URL. A rerun skips migrations already recorded as finished. A failed PostgreSQL file
+  // rolls back. A failed MySQL file rolls back its data changes, but MySQL commits DDL on its own, so
+  // earlier statements of that file can stay applied.
   if (!input.skipMigrations && dialect !== 'sqlite' && migrations.length > 0) {
     const mysql = dialect === 'mysql';
     const label = mysql ? 'MySQL' : 'PostgreSQL';

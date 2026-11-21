@@ -1,12 +1,8 @@
-// Structured request-scoped logger for the API deploy pipeline. Each call
-// emits exactly one JSON line to `console.log/warn/error` so Cloudflare Tail
-// captures one `logs[]` entry per record with the appropriate level.
-//
-// Schema (stable):
-//   { ts, lvl, area: 'deploy', phase, msg, ...context, ...fields, err? }
-//
-// `with(...)` returns a child logger with merged context; the parent is
-// unchanged.
+// Decision: Structured request-scoped logger for the API deploy pipeline. Each call writes one JSON line to
+// `console.log/warn/error`, so Cloudflare Tail captures one `logs[]` entry per record at the right
+// level.
+// Stable schema: { ts, lvl, area: 'deploy', phase, msg, ...context, ...fields, err? }
+// `with(...)` returns a child logger with merged context; the parent is unchanged.
 
 type Level = 'info' | 'warn' | 'error';
 
@@ -38,9 +34,8 @@ type SerializedError = {
 };
 
 function serializeError(input: unknown): SerializedError {
-  // Walk the .cause chain up to MAX_CAUSE_DEPTH levels deep, defensively
-  // tolerating non-Error inputs at every level. A logging call must never
-  // throw because of a malformed error value.
+  // Decision: Walk the .cause chain up to MAX_CAUSE_DEPTH levels, tolerating non-Error values at each level. A
+  // logging call must not throw because of a malformed error value.
   const seen = new WeakSet<object>();
   function step(value: unknown, depth: number): SerializedError {
     if (value && typeof value === 'object') {
@@ -86,9 +81,8 @@ function emit(
   fields?: Record<string, unknown>,
   err?: unknown,
 ): void {
-  // Build the record defensively — a logging call must not throw because of
-  // a non-serializable user field. On stringify failure, fall back to a
-  // minimal record that preserves level + phase + msg.
+  // Decision: Build the record defensively: a logging call must not throw because of a non-serializable field.
+  // If stringify fails, fall back to a minimal record that keeps level, phase and msg.
   let line: string;
   try {
     const record: Record<string, unknown> = {

@@ -130,7 +130,7 @@ export function platformWorkerTrafficCallbacks(input: {
   };
 }
 
-// Restore staged Workers, or retain their rotated credentials, before starting
+// Decision: Restore staged Workers, or retain their rotated credentials, before starting
 // a new guarded generation. Replan any newly created Worker recovery retained.
 export async function recoverInterruptedPlatformWorkerCutover(
   input: Readonly<{
@@ -198,7 +198,7 @@ export async function recoverInterruptedPlatformWorkerCutover(
         preservedRoutes,
       );
       if (retainUpdatedCredentials) {
-        // Recovery may have restored some Workers before Cloudflare refused an
+        // Decision: Recovery may have restored some Workers before Cloudflare refused an
         // old secret version. Accept only this cutover's old or staged version;
         // the next guarded generation reapplies the authorized credentials.
         const directory = mkdtempSync(join(tmpdir(), 'platform-resume-'));
@@ -494,7 +494,7 @@ function platformWorkerApiReadRunner(
         return { status: 0, stderr: '', stdout: '', data: version };
       }
     } catch {
-      // A failed read is not evidence of ownership or deployment lineage.
+      // Decision: A failed read is not evidence of ownership or deployment lineage.
       // Keep the same provider check through the scoped operation runner.
     }
     return fallback(operation, account, cwd, capture);
@@ -537,7 +537,7 @@ export async function deployPlatformWorker(
       runner: typeof runPlatformWrangler,
       deploymentId?: string,
     ): Promise<null> => {
-      // A reused version still needs its mutable traffic state reconciled.
+      // Decision: A reused version still needs its mutable traffic state reconciled.
       try {
         const liveTriggersMatch =
           deploymentId && options.readCloudflare
@@ -667,7 +667,7 @@ export async function deployPlatformWorker(
         if (error instanceof PlatformWorkerOwnershipError) {
           throw error;
         }
-        // A read error is not evidence of equality; use the established upload path.
+        // Decision: A read error is not evidence of equality; use the established upload path.
       }
       if (changedDuringRead) {
         throw new Error(
@@ -833,7 +833,7 @@ export async function deployPlatformWorker(
     const readDeploymentHistory = () =>
       readPlatformWorkerDeployments(configPath, accountId, workerName, readRunner);
     let deploymentsAfterActivation = await readDeploymentHistory();
-    // Cloudflare can list the previous deployment for a minute or more after
+    // Decision: Cloudflare can list the previous deployment for a minute or more after
     // activation. Only wait while the deployment we replaced is still at the head.
     for (const wait of options.deploymentSettleDelaysMs ?? PLATFORM_DEPLOYMENT_SETTLE_DELAYS_MS) {
       if (deploymentsAfterActivation[0]?.id !== previousDeploymentId) {
@@ -851,7 +851,7 @@ export async function deployPlatformWorker(
       }
     }
     if (deploymentsAfterActivation[0]?.id === previousDeploymentId) {
-      // Neither the new deployment nor a competitor has been confirmed.
+      // Decision: Neither the new deployment nor a competitor has been confirmed.
       // Leave the staged cutover for recovery rather than trying to roll it back.
       activatedVersionId = null;
       throw new PlatformWorkerRecoveryIncompleteError(
@@ -1035,7 +1035,7 @@ export async function uploadPlatformWorkerForReview(
     const writeConfig = (value: Record<string, unknown>) =>
       writeFileSync(configPath, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
     writeConfig(withoutPlatformWorkerTrafficAttachments(wranglerConfig));
-    // Like deployPlatformWorker, leave out the Durable Object migrations that
+    // Decision: Like deployPlatformWorker, leave out the Durable Object migrations that
     // the active version already ran.
     const active = await readActivePlatformWorkerSnapshot(
       configPath,
@@ -1279,7 +1279,7 @@ export async function restorePlatformWorkerDeployment(input: {
       `Worker ${input.workerName} changed concurrently before deployment restoration; refusing to overwrite the newer deployment.`,
     );
   }
-  // Not forced: when Cloudflare refuses a version that holds old secrets
+  // Decision: Not forced: when Cloudflare refuses a version that holds old secrets
   // (10220), a credential update rolls forward on retry instead.
   const restored = await input.runner(
     {
@@ -1300,7 +1300,7 @@ export async function restorePlatformWorkerDeployment(input: {
     `restore deployment ${input.restoration.id}`,
     input.accountId,
   );
-  // Cloudflare can list the replaced deployment for a while after the restore.
+  // Decision: Cloudflare can list the replaced deployment for a while after the restore.
   const after = await readSettledPlatformWorkerDeployments(
     input.configPath,
     input.accountId,

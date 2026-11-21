@@ -86,7 +86,7 @@ export async function updatePlatformProtection(
   await db.transaction(async (transaction) => {
     if (input.installationId) {
       await guardAuthenticationLifecycleMutation(transaction);
-      // Read a new statement snapshot after acquiring the lock: maintenance may have committed
+      // Decision: Read a new statement snapshot after acquiring the lock: maintenance may have committed
       // between the advisory-lock statement's snapshot and its successful acquisition.
       const lifecycle = await transaction.execute<{ lifecycle_version: string }>(sql`
         SELECT md5(COALESCE((to_jsonb(installation)->'lifecycle_manifest')::text, 'null')) AS lifecycle_version
@@ -189,7 +189,7 @@ export async function updatePlatformProtection(
     if (dryRun) {
       return;
     }
-    // Revoke rather than silently rebinding older sessions to a new company perimeter.
+    // Decision: Revoke rather than silently rebinding older sessions to a new company perimeter.
     await transaction
       .update(platformHumanSessions)
       .set({ revoked_at: new Date().toISOString() })

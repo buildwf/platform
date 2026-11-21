@@ -58,8 +58,8 @@ export async function promptAndCreateProject(
     inferDefaultSlug(root),
     async (defaultSlug) => promptProjectSlug(defaultSlug),
   );
-  // createProjectWithSlugRetry only returns undefined when the prompt does,
-  // which promptProjectSlug never does (it exits on cancel).
+  // Decision: createProjectWithSlugRetry only returns undefined when the prompt does, and promptProjectSlug
+  // doesn't (it exits on cancel).
   if (!project) {
     throw new Error('Project creation cancelled.');
   }
@@ -68,10 +68,9 @@ export async function promptAndCreateProject(
     writeProjectConfig(root, attachSelectedPlatform(config, client.apiUrl));
   }
   if (project.owner_email_destination) {
-    // The platform registers the owner's address after it has answered, so
-    // the response cannot say whether Cloudflare mailed a verification link
-    // or adopted an address already verified on an earlier project. Say the
-    // one thing that is true either way, and where the outcome shows up.
+    // Decision: The platform registers the owner's address after it has answered, so the response can't say
+    // whether Cloudflare mailed a verification link or adopted an address already verified on an
+    // earlier project. Say the one thing that's true either way, and where the outcome shows up.
     const { address } = project.owner_email_destination;
     log.info(
       `Registering ${address} as a recipient for this project. Cloudflare emails it a verification link unless it is already verified — \`bwf email destinations\` shows the state.`,
@@ -84,9 +83,9 @@ function isRetryableCreateError(error: PlatformApiError): boolean {
   if (error.status === 400 || error.status === 409 || error.status === 422) {
     return true;
   }
-  // 403 is retryable ONLY when it's the slug-length plan rejection — other
-  // 403s (e.g. account suspended from auth middleware) are not fixable by
-  // choosing a different slug and would cause an infinite re-prompt loop.
+  // Decision: 403 is retryable only when it's the slug-length plan rejection. Other 403s (such as an account
+  // suspended by auth middleware) can't be fixed by choosing a different slug and would cause an
+  // endless re-prompt loop.
   if (error.status === 403) {
     return isSlugRelatedError(error);
   }
@@ -94,7 +93,7 @@ function isRetryableCreateError(error: PlatformApiError): boolean {
 }
 
 function isSlugRelatedError(error: PlatformApiError): boolean {
-  // The slug detail may be in either field.
+  // Decision: The slug detail may be in either field.
   const haystack = `${error.code ?? ''} ${error.body ?? ''}`.toLowerCase();
   return haystack.includes('slug');
 }

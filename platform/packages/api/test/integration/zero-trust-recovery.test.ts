@@ -82,7 +82,6 @@ function configurationInput(
   };
 }
 
-/** A token replacement for an operation that does not choose existing-project protection. */
 function replacementInput(
   input: ZeroTrustConfigureInput,
   overrides: Partial<ZeroTrustConfigureInput> = {},
@@ -190,8 +189,6 @@ describe('Zero Trust recovery', () => {
           result.slug === slug &&
           'id' in result
         ) {
-          // The route's project insert is committed, but its initialization
-          // step has not begun. A complete administrator batch runs here.
           interleaved = true;
           await configurePlatformZeroTrust(
             platform,
@@ -267,8 +264,6 @@ describe('Zero Trust recovery', () => {
         }),
       );
       const completed = (await getProjectZeroTrustState(env.db, project.id))!;
-      // Preserve the name intent for an app created before its ID checkpoint
-      // was durable. Initializing again must not replace that recovery handle.
       await env.db
         .update(projectZeroTrust)
         .set({
@@ -341,8 +336,6 @@ describe('Zero Trust recovery', () => {
     const originalTransaction = env.db.transaction.bind(env.db);
     let transactions = 0;
     let bypassId: string | null = null;
-    // Interleave after the first project's checkpoint and provider reconciliation
-    // have committed, before the same batch client begins the second project.
     const transactionSpy = vi.spyOn(env.db, 'transaction').mockImplementation(async (...args) => {
       const result = await originalTransaction(...args);
       transactions += 1;
@@ -389,7 +382,6 @@ describe('Zero Trust recovery', () => {
         JSON.parse(String(init.body)).domain === '*.apps.example.com'
       ) {
         loseWildcardCreate = false;
-        // The provider committed the replacement, but Platform never received its ID.
         return providerError('Gateway timeout', 504);
       }
       return response;
@@ -450,7 +442,6 @@ describe('Zero Trust recovery', () => {
         JSON.parse(String(init.body)).domain === '*.apps.example.com'
       ) {
         oldTokenRevoked = true;
-        // The provider committed the app, but Platform never received its ID.
         return providerError('Authentication error', 403);
       }
       return response;
@@ -482,8 +473,6 @@ describe('Zero Trust recovery', () => {
       .spyOn(env.db, 'transaction')
       .mockImplementationOnce(async (...args) => {
         const result = await originalTransaction(...args);
-        // The replacement claim has committed, and no provider mutation holds a
-        // transaction yet. Observe that checkpoint before reconciliation resumes.
         resumedOperation = (await readZeroTrustConfigurationStrict(env.db))!.operation;
         return result;
       });
@@ -597,8 +586,8 @@ describe('Zero Trust recovery', () => {
     const platform = bindings();
     const input = configurationInput();
     await configurePlatformZeroTrust(platform, env.db, input);
-    // Reconciliation commits its lease before selection validation, so another
-    // request can inspect and reject that lease without waiting on a DB lock.
+    // Decision: Reconciliation commits its lease before selection validation, so another request can inspect and
+    // reject that lease without waiting on a DB lock.
     pauseValidation = true;
     const reconciling = reconcilePlatformZeroTrust(platform, env.db);
     try {
@@ -757,7 +746,6 @@ describe('Zero Trust recovery', () => {
         bypass_application_name: null,
       });
       expect(cloudflare.applications.size).toBe(0);
-      // Enabling again chooses protection for existing projects.
       await configurePlatformZeroTrust(platform, env.db, {
         ...replacement_,
         existingProjects: 'public',
@@ -891,9 +879,9 @@ describe('Zero Trust recovery', () => {
         expect(await getProjectZeroTrustState(env.db, lateProject.id)).toBeNull();
         expect(cloudflare.fetcher).not.toHaveBeenCalled();
       } else {
-        // A prior API version could create and checkpoint a public exception
-        // while wildcard teardown was failed. Preserve this reachable upgrade
-        // state to prove finalization revisits outstanding cleanup handles.
+        // Decision: An earlier API version could create and checkpoint a public exception while wildcard teardown had
+        // failed. Keep this reachable upgrade state, to prove finalization revisits outstanding cleanup
+        // handles.
         const bypassName = 'platform-late-disable-public-checkpoint';
         cloudflare.applications.set('late-bypass', {
           id: 'late-bypass',

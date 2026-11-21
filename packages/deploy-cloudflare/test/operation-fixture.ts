@@ -3,7 +3,6 @@ import { vi } from 'vite-plus/test';
 import type { CloudflareCommandResult } from '../src/execute.ts';
 import type { CloudflareOperation } from '../src/operations.ts';
 
-/** Run an argv-style test callback behind the typed operation runner. */
 export function operationFixture<
   T extends (
     args: Array<string>,
@@ -84,9 +83,7 @@ function operationFixtureResult(result: CloudflareCommandResult): CloudflareComm
   if (data === undefined) {
     try {
       data = JSON.parse(result.stdout);
-    } catch {
-      /* Human diagnostic fixture. */
-    }
+    } catch {}
     const versionId = result.stdout.match(/(?:Worker|Current) Version ID:\s*([0-9a-f-]+)/i)?.[1];
     if (versionId) {
       data = {
@@ -99,7 +96,7 @@ function operationFixtureResult(result: CloudflareCommandResult): CloudflareComm
     }
     const queueName = result.stdout.match(/^Queue Name:\s*(\S+)/m)?.[1];
     if (queueName) {
-      // `Consumers: a, b` lists the consumer Workers; `-` is a non-Worker consumer.
+      // Decision: `Consumers: a, b` lists the consumer Workers; `-` is a non-Worker consumer.
       const consumers =
         result.stdout
           .split('\n')

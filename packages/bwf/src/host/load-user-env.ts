@@ -20,7 +20,7 @@ import { aliasHint } from './alias-hint.ts';
 let loadCounter = 0;
 
 export async function loadUserEnvFile(envFile: string): Promise<void> {
-  // Counter + timestamp so back-to-back HMR reloads in the same millisecond
+  // Decision: Counter + timestamp so back-to-back HMR reloads in the same millisecond
   // still produce distinct URLs (Node's ESM loader caches by URL).
   const url = pathToFileURL(envFile).href + `?t=${Date.now()}-${++loadCounter}`;
   try {

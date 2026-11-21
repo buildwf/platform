@@ -21,9 +21,8 @@ vi.mock('@voidzero-dev/vite-plus-prompts', () => ({
   cancel: vi.fn(),
 }));
 
-// `vi.mock` is hoisted above imports, so its factory can only reach `vi.hoisted` state.
+// Decision: `vi.mock` is hoisted above imports, so its factory can only reach `vi.hoisted` state.
 const spawnMockState = vi.hoisted(() => ({
-  // When set, replaces the default simulated `drizzle-kit generate --custom`.
   handler: null as
     | ((
         command: string,
@@ -66,10 +65,6 @@ vi.mock('node:child_process', async () => {
   };
 });
 
-/**
- * Writes what `drizzle-kit generate --custom --name <name>` writes: an empty
- * `.sql` file, a new journal entry and a snapshot chained to the previous one.
- */
 function simulateDrizzleCustom(
   cwd: string,
   name: string,
@@ -147,7 +142,7 @@ function writePkg(deps: Record<string, string>): void {
   writeFileSync(join(TMP, 'package.json'), JSON.stringify({ dependencies: deps }));
 }
 
-/** `writeDrizzleConfig()` throws when there is no `db/schema.ts`. */
+// Decision: `writeDrizzleConfig()` throws when there's no `db/schema.ts`.
 function seedSchema(): void {
   const schemaPath = join(TMP, 'db', 'schema.ts');
   mkdirSync(dirname(schemaPath), { recursive: true });
@@ -157,7 +152,6 @@ function seedSchema(): void {
   );
 }
 
-/** Runs `bwf gen`, expects it to call `process.exit`, and returns the logged errors. */
 async function expectExit(args: GenArgs): Promise<string> {
   vi.mocked(log.error).mockClear();
   const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
@@ -399,7 +393,6 @@ describe('gen model', () => {
     expect(route).toContain('db.select().from(events)');
     expect(route).toContain('db.insert(events).values(body)');
 
-    // [id] route is still generated even with no columns
     const idRoute = read('routes/api/events/[id].ts');
     expect(idRoute).toContain('params: v.object({ id: v.string() })');
     expect(idRoute).toContain('db.select().from(events)');
@@ -633,17 +626,16 @@ describe('gen model', () => {
 
 describe('formatTimestamp', () => {
   it('produces YYYYMMDDHHMMSS from a UTC date', () => {
-    const date = new Date(Date.UTC(2026, 3, 10, 16, 15, 0)); // April 10, 2026 16:15:00 UTC
+    const date = new Date(Date.UTC(2026, 3, 10, 16, 15, 0));
     expect(formatTimestamp(date)).toBe('20260410161500');
   });
 
   it('pads single-digit months and days', () => {
-    const date = new Date(Date.UTC(2025, 0, 5, 3, 7, 9)); // Jan 5, 2025 03:07:09 UTC
+    const date = new Date(Date.UTC(2025, 0, 5, 3, 7, 9));
     expect(formatTimestamp(date)).toBe('20250105030709');
   });
 });
 
-/** Writes a one-entry journal, its `.sql` file and, by default, its snapshot. */
 function seedJournalBackedProject({
   dialect = 'sqlite',
   tag = '20200101000000_initial',
@@ -744,8 +736,8 @@ describe('gen migration', () => {
     expect(files[1]).toBe('0002_add_email.sql');
     expect(files[2]).toMatch(/^\d{14}_add_avatar\.sql$/);
 
-    // A journal without matching snapshots would break the chain once the
-    // project adopts drizzle-kit.
+    // Decision: A journal without matching snapshots would break the chain once the project adopts
+    // drizzle-kit.
     expect(existsSync(join(migrationsDir, 'meta', '_journal.json'))).toBe(false);
     expect(existsSync(join(migrationsDir, 'meta'))).toBe(false);
 
@@ -755,7 +747,7 @@ describe('gen migration', () => {
   });
 
   it('allows migration on a journal with empty entries (playground placeholder)', async () => {
-    // The kitchen-sink playground ships `entries: []`; it is treated like no journal.
+    // Decision: The kitchen-sink playground ships `entries: []`; it's treated like no journal.
     const migrationsDir = join(TMP, 'db', 'migrations');
     mkdirSync(join(migrationsDir, 'meta'), { recursive: true });
     const journalPath = join(migrationsDir, 'meta', '_journal.json');
@@ -819,7 +811,9 @@ describe('gen migration', () => {
     ).toEqual({ fresh: { name: 'fresh' } });
   });
 
-  // cmd.exe would split `C:\Program Files\nodejs\node.exe` and paths with spaces.
+  // Decision: cmd.exe would split `C:\Program Files
+  // odejs
+  // ode.exe` and paths with spaces.
   it('runs drizzle-kit without a shell on Windows', async () => {
     seedJournalBackedProject();
     const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
@@ -861,7 +855,6 @@ describe('gen migration', () => {
 
   it('refuses when the journal dialect is unsupported', async () => {
     const { journalPath, journal } = seedJournalBackedProject({ dialect: 'mariadb' });
-    // The dialect check runs before the bwf.json cross-check.
     writeFileSync(join(TMP, 'bwf.json'), JSON.stringify({}));
 
     const errors = await expectExit({ subcommand: 'migration', name: 'backfill_users' });
@@ -874,7 +867,7 @@ describe('gen migration', () => {
   });
 
   it('refuses when the journal tag has no matching snapshot (even if unrelated snapshots exist)', async () => {
-    // The previous snapshot is named by the last journal tag, not the newest file in meta/.
+    // Decision: The previous snapshot is named by the last journal tag, not the newest file in meta/.
     const { migrationsDir } = seedJournalBackedProject({
       tag: '20260412171331_initial',
       snapshot: false,
@@ -903,8 +896,8 @@ describe('gen migration', () => {
 
     expect(listSql(migrationsDir)).toEqual([]);
     expect(existsSync(join(migrationsDir, 'migrations.js'))).toBe(true);
-    // Deleting only migrations.js would leave orphan .sql files, so the
-    // bundled-mode advice must not be shown here.
+    // Decision: Deleting only migrations.js would leave orphan .sql files, so the bundled-mode advice
+    // mustn't be shown here.
     expect(errors).toContain('partial drizzle-kit state');
     expect(errors).toContain('db/migrations/migrations.js');
     expect(errors).not.toContain('Either run `drizzle-kit generate`');
@@ -943,8 +936,8 @@ describe('gen migration', () => {
     expect(readFileSync(snapshotPath, 'utf-8')).toBe(snapshotBefore);
   });
 
-  // Under Yarn PnP there is no node_modules, so drizzle-kit needs the PnP
-  // loaders to resolve `@builtbyfriends/bwf/schema-*` imports from db/schema.ts.
+  // Decision: Under Yarn PnP there's no node_modules, so drizzle-kit needs the PnP loaders to resolve
+  // `@builtbyfriends/bwf/schema-*` imports from db/schema.ts.
   describe('Yarn PnP NODE_OPTIONS injection', () => {
     let savedNodeOptions: string | undefined;
     beforeEach(() => {
@@ -972,7 +965,7 @@ describe('gen migration', () => {
       expect(env).toBeDefined();
       expect(typeof env!.NODE_OPTIONS).toBe('string');
       expect(env!.NODE_OPTIONS).toContain('--require');
-      // Quoted so Node's NODE_OPTIONS parser accepts spaces in the path.
+      // Decision: Quoted so Node's NODE_OPTIONS parser accepts spaces in the path.
       expect(env!.NODE_OPTIONS).toContain(JSON.stringify(toSlash(pnpCjsPath)));
       expect(env!.NODE_OPTIONS).not.toContain('--experimental-loader');
     });
@@ -994,7 +987,7 @@ describe('gen migration', () => {
       expect(env!.NODE_OPTIONS).toContain('--require');
       expect(env!.NODE_OPTIONS).toContain(JSON.stringify(toSlash(pnpCjsPath)));
       expect(env!.NODE_OPTIONS).toContain('--experimental-loader');
-      // Node requires a file:// URL for the loader, not a path.
+      // Decision: Node requires a file:// URL for the loader, not a path.
       expect(env!.NODE_OPTIONS).toContain(pathToFileURL(pnpLoaderPath).href);
     });
 
@@ -1021,7 +1014,7 @@ describe('gen migration', () => {
       const env = generateCall!.options.env;
       expect(env).toBeDefined();
       expect(typeof env!.NODE_OPTIONS).toBe('string');
-      // The PnP `--require` must run before anything the user registered.
+      // Decision: The PnP `--require` has to run before anything the user registered.
       expect(env!.NODE_OPTIONS!.startsWith('--require ')).toBe(true);
       expect(env!.NODE_OPTIONS).toContain(JSON.stringify(toSlash(pnpCjsPath)));
       expect(env!.NODE_OPTIONS).toContain('--max-old-space-size=4096');

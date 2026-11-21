@@ -1,16 +1,5 @@
 import { defineEmail, parseEmail, replyEmail } from '@builtbyfriends/bwf/email';
 
-/**
- * Inbound handler for `support+<ticket>@<sender-domain>`.
- *
- * Demonstrates the full inbound lifecycle:
- *   - dynamic param capture (info.params.ticket)
- *   - parseEmail for the parsed body / subject
- *   - replyEmail with threading-aware reply MIME (In-Reply-To / References / Re:)
- *
- * To try it locally, deliver a test message with `createInboundTestHarness`
- * from `@builtbyfriends/bwf/email/testing`.
- */
 export default defineEmail(async (message, _env, _ctx, info) => {
   const ticket = info?.params.ticket ?? 'unknown';
   const parsed = await parseEmail(message);

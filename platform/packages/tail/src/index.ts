@@ -1,7 +1,6 @@
 type Env = Readonly<{
   ANALYTICS: AnalyticsEngineDataset;
   PLATFORM_DISPATCH_WORKER_NAME?: string;
-  // Set by `--runtime-logs minimal`: keep URLs and message text out of rows.
   PLATFORM_RUNTIME_LOGS?: 'minimal';
 }>;
 

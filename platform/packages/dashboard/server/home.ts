@@ -15,7 +15,7 @@ export const loader = defineHandler<Props>(async (context) => {
       platformName = discoveryDisplayName((await response.json()) as { displayName?: unknown });
     }
   } catch {
-    // The user's dashboard remains available when discovery is temporarily unavailable.
+    // Decision: The dashboard stays available when discovery is down for a while.
   }
   return { user: context.get('dashboardUser'), platformName };
 });

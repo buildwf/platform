@@ -32,7 +32,6 @@ type JsonRpcResult = {
   error?: { message: string };
 };
 
-/** One stateless MCP request: the server answers JSON or a single SSE message. */
 async function mcp(token: string | undefined, method: string, params: object = {}) {
   const res = await app.fetch(
     new Request('http://localhost/mcp', {

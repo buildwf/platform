@@ -56,11 +56,9 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-/**
- * The roster is now procedures under `/rpc`. These tests were written against its old REST paths;
- * `request` maps each path onto its procedure and `api.fetch` hands back the old response shapes,
- * so the assertions keep checking the database behavior rather than the transport.
- */
+// Decision: The roster is procedures under `/rpc`. These tests use REST-style paths: `request` maps each path
+// onto its procedure and `api.fetch` hands back the older response shapes, so the assertions keep
+// checking database behavior rather than the transport.
 type Translated = { procedure: string };
 const translated = new WeakMap<Request, Translated>();
 
@@ -138,7 +136,6 @@ function request(
   throw new Error(`no procedure for ${method} ${path}`);
 }
 
-/** Answers like the old routes: bare bodies, 201 for a new invitation, 204 for bare acknowledgements. */
 const api = {
   async fetch(req: Request, bindings: unknown): Promise<Response> {
     const response = await app.fetch(req, bindings as TestEnv);
@@ -223,7 +220,6 @@ describe('project team API', () => {
       env,
     );
     expect(forbidden.status).toBe(403);
-    // Procedures answer a caller without the capability with one generic FORBIDDEN.
     expect(await forbidden.json()).toEqual({ error: 'forbidden', message: expect.any(String) });
   });
 
@@ -744,7 +740,7 @@ describe('project team API', () => {
   });
 
   it('rate-limits create, refresh, and resend delivery while preserving invitations', async () => {
-    // All delivery attempts must stay in the same UTC-minute rate-limit window.
+    // Decision: All delivery attempts have to stay in the same UTC-minute rate-limit window.
     vi.setSystemTime(new Date());
     const owner = await createTestUser(env.db, 'owner');
     const target = await createTestUser(env.db, 'target');

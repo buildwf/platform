@@ -48,8 +48,8 @@ const TEMPLATE_BUNDLE_PATH = join(tmpdir(), `platform-api-pglite-${getTemplateHa
 
 async function buildTemplateBundle(path: string): Promise<void> {
   const tempPath = `${path}.${process.pid}.${Date.now().toString(36)}.tmp`;
-  // Persist a timezone-independent default in the dump, rather than capturing
-  // the creating process's local timezone (including its DST offset).
+  // Decision: Store a default that doesn't depend on the timezone in the dump, instead of the creating
+  // process's local timezone (with its DST offset).
   const db = new PGlite({ postgresqlconf: "timezone = 'UTC'", relaxedDurability: true });
 
   try {

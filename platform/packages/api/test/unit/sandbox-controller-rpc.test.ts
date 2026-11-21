@@ -6,7 +6,6 @@ import { build } from 'vite';
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
 
 const root = join(import.meta.dirname, '..', '..', '..', '..', '..');
-// Reuse the core SDK's declared Miniflare test dependency.
 const require = createRequire(join(root, 'packages/bwf/package.json'));
 const { Miniflare, convertV4MiniflareOptions } = await import(require.resolve('miniflare'));
 const temporary = mkdtempSync(join(tmpdir(), 'platform-controller-rpc-'));

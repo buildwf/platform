@@ -105,7 +105,7 @@ describe('Better Auth D1 consistency', () => {
             .bind(Date.now() + 60_000)
             .run();
         }
-        // Keep the replica stale after revocation to model cross-request replication lag.
+        // Decision: Keep the replica stale after revocation to model cross-request replication lag.
         const binding = {
           withSession: vi.fn((constraint: D1SessionConstraint) =>
             (constraint === 'first-primary' ? primary : replica).withSession(constraint),
@@ -133,7 +133,6 @@ describe('Better Auth D1 consistency', () => {
           'first-unconstrained',
           'first-primary',
         ]);
-        // Framework handlers without a bwf request scope must also read from primary.
         binding.withSession.mockClear();
         expect(await envContext.run({ [bindingName]: binding }, findSession)).toBeNull();
         expect(binding.withSession).toHaveBeenCalled();

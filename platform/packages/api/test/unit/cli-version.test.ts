@@ -37,8 +37,8 @@ describe('compareVersions', () => {
   });
 
   it('accepts SemVer 2.0 build metadata (+suffix)', () => {
-    // CI-built CLIs commonly stamp commit SHAs as `1.2.3+sha.abc`.
-    // The regex must accept these or the gate would 426 a current CLI.
+    // Decision: CI-built CLIs often stamp commit SHAs as `1.2.3+sha.abc`. The regex has to accept these, or
+    // the gate would return 426 to a current CLI.
     expect(compareVersions('1.0.0+build.123', '0.7.0')).toBeGreaterThan(0);
     expect(compareVersions('0.7.0+sha.abcdef', '0.7.0')).toBe(0);
     expect(compareVersions('0.7.0-rc.1+build.456', '0.7.0')).toBe(0);
@@ -130,10 +130,8 @@ describe('checkCliVersionOrRespond', () => {
     expect(res.status).toBe(426);
   });
 
-  // Fail closed: anything the regex rejects (non-semver, two-segment, empty
-  // string, etc.) is treated as a stale CLI — either a buggy client we should surface
-  // or a forged bypass attempt. Pre-release tags like `0.7.0-rc.1` are
-  // explicitly allowed by the regex so legitimate CLIs don't hit this.
+  // Decision: Fail closed: a version the regex rejects is treated as a stale CLI, since it's either a buggy
+  // client or a forged bypass. Pre-release tags like `0.7.0-rc.1` are allowed on purpose.
   describe('rejects malformed version headers (fail closed)', () => {
     it.each([['garbage'], ['0.7'], ['0.7.0.1'], ['v0.7.0'], ['1.x.0'], ['']])(
       'rejects %s with 426',

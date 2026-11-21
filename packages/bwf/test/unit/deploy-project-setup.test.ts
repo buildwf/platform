@@ -152,11 +152,9 @@ describe('promptDeployProjectConfig', () => {
     };
     expect(promptConfig).toMatchObject({ placeholder: 'demo-app', defaultValue: 'demo-app' });
     expect(promptConfig).not.toHaveProperty('initialValue');
-    // Short slugs no longer rejected client-side — plan is checked server-side.
     expect(promptConfig.validate('abc')).toBeUndefined();
     expect(promptConfig.validate('abcde')).toBeUndefined();
     expect(promptConfig.validate('abcdef')).toBeUndefined();
-    // Format check still runs locally.
     expect(promptConfig.validate('ABC')).toBe('Slug must be lowercase alphanumeric with dashes.');
     expect(promptConfig.validate('')).toBeUndefined();
     expect(promptConfig.validate(' ')).toBe('Project slug is required.');

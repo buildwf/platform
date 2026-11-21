@@ -3,7 +3,7 @@ import { translateWranglerConfig } from '../../src/cli/cf-config-migrate.ts';
 import cases from '../fixtures/cf-config-cases.json' with { type: 'json' };
 import { translateWithCodemod, type CodemodTranslation } from './cf-config-codemod.ts';
 
-// The codemod reports what a project must install. bwf's translation has no project.
+// Decision: The codemod reports what a project must install. bwf's translation has no project.
 const projectFollowUp = /^(?:cf-install|vite-plugin-(?:install|upgrade)|wrangler-upgrade)/;
 
 function own(raw: Record<string, unknown>, mode: string) {
@@ -27,7 +27,7 @@ const incomplete = [
   { ...worker, kv_namespaces: [{ binding: 'KV' }] },
 ];
 
-// One codemod process translates every input of this file. It starts with the first test that
+// Decision: One codemod process translates every input of this file. It starts with the first test that
 // asks for a reference, so a filtered run that needs none does not pay for it.
 const inputs = [
   ...(cases as Array<{ raw: Record<string, unknown>; mode: string }>),
@@ -46,7 +46,7 @@ async function reference(raw: Record<string, unknown>): Promise<CodemodTranslati
   return result;
 }
 
-// Each case is Wrangler-format settings and the environment to select. Together they contain
+// Decision: Each case is Wrangler-format settings and the environment to select. Together they contain
 // every setting found in bwf's own test suite and in the configs of Cloudflare's workers-sdk.
 describe.concurrent('bwf translates settings as the installed cf codemod does', () => {
   it.for(
@@ -61,7 +61,7 @@ describe.concurrent('bwf translates settings as the installed cf codemod does', 
     expect(translated.config).toEqual(expected.config);
     expect(raw).toEqual(input);
     if (expected.config !== null) {
-      // Compare as JSON: the reference crossed a process boundary.
+      // Decision: Compare as JSON: the reference crossed a process boundary.
       expect(JSON.parse(JSON.stringify(translated.followUps))).toEqual(
         expected.followUps.filter(({ code }) => !projectFollowUp.test(code)),
       );

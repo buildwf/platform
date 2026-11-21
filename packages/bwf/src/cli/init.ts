@@ -184,9 +184,9 @@ const EMPTY_PROJECT_ALLOWED_ENTRIES = new Set([
   '.zencoder',
 ]);
 
-// better-sqlite3 13 already ships its Node-API binaries; no native build is needed.
-// core-js-pure (from the email dependency mimetext) only prints a message after
-// install, and Vite+'s install stops on a build pnpm has no decision for.
+// Decision: better-sqlite3 13 already ships its Node-API binaries, so no native build is needed.
+// core-js-pure (from the email dependency mimetext) only prints a message after install, and
+// Vite+'s install stops on a build pnpm has no decision for.
 const PNPM_BUILD_DEFAULTS = [
   ['better-sqlite3', false],
   ['core-js-pure', false],
@@ -194,11 +194,11 @@ const PNPM_BUILD_DEFAULTS = [
   ['sharp', true],
   ['workerd', true],
 ] as const;
-// pnpm writes this value for each blocked build it wants a decision on.
+// Decision: pnpm writes this value for each blocked build it wants a decision on.
 const PNPM_BUILD_PLACEHOLDER = 'set this to true or false';
 
-// Packages a previous bwf starter can leave behind, so re-running init
-// after deleting the app files still takes the starter path.
+// Decision: Packages a previous bwf starter can leave behind, so running init again after deleting the app
+// files still takes the starter path.
 const EMPTY_PROJECT_ALLOWED_PACKAGES = new Set([
   '@builtbyfriends/bwf',
   'hono',
@@ -215,8 +215,8 @@ const EMPTY_PROJECT_ALLOWED_PACKAGES = new Set([
   'react-dom',
 ]);
 
-// scaffoldSpaApp() replaces these starter scripts; custom scripts make the
-// package an existing project.
+// Decision: scaffoldSpaApp() replaces these starter scripts; custom scripts make the package an existing
+// project.
 const EMPTY_PROJECT_ALLOWED_SCRIPTS: Record<string, Set<string> | undefined> = {
   test: undefined,
   dev: new Set(['vite', 'vp dev']),
@@ -234,9 +234,10 @@ function isStarterScriptCommand(value: unknown): boolean {
   return typeof value === 'string' && EMPTY_PROJECT_STARTER_SCRIPT_COMMANDS.has(value);
 }
 
-// Only `platform` and the React plugin may be a preinstall (`pnpm add -D void @vitejs/plugin-react`);
-// other starter packages such as `vite` or `react` also require the plugin, which only the
-// starter adds, so an existing Vite app is not mistaken for a deleted starter.
+// Decision: Only bwf and the React plugin may be preinstalled
+// (`pnpm add -D @builtbyfriends/bwf @vitejs/plugin-react`). Other starter packages such as `vite`
+// or `react` also require the plugin, which only the starter adds, so an existing Vite app isn't
+// mistaken for a deleted starter.
 const EMPTY_PROJECT_STARTER_MARKER = '@vitejs/plugin-react';
 
 function hasOnlyBwfStarterDependencies(depNames: Array<string>): boolean {
@@ -665,7 +666,7 @@ function parsePackageManagerField(pkg: unknown): ProjectState['packageManager'] 
   if (typeof raw !== 'string') {
     return undefined;
   }
-  // Corepack spec: "name@version[+sha.<hash>]".
+  // Decision: Corepack spec: "name@version[+sha.<hash>]".
   const name = raw.split('@', 1)[0]?.trim();
   if (name === 'npm' || name === 'pnpm' || name === 'yarn' || name === 'bun') {
     return name;
@@ -725,9 +726,7 @@ function hasAncestorPnpmMarkers(start: string): boolean {
       if (parsePackageManagerField(pkg) === 'pnpm') {
         return true;
       }
-    } catch {
-      // An unreadable root package.json is not a pnpm pin.
-    }
+    } catch {}
   }
   return false;
 }
@@ -748,9 +747,9 @@ export function isBwfResolvableFrom(start: string): boolean {
     }
     dir = parent;
   }
-  // PnP data can be stale (void removed on another branch), so probe under the
-  // loaders drizzle-kit will use. With only `.pnp.loader.mjs`, CJS
-  // `require.resolve` skips the ESM loader, so probe with `import.meta.resolve`.
+  // Decision: PnP data can be stale (bwf removed on another branch), so probe under the loaders drizzle-kit
+  // will use. With only `.pnp.loader.mjs`, CJS `require.resolve` skips the ESM loader, so probe with
+  // `import.meta.resolve`.
   const installed = findInstalledYarnPnpRuntime(start);
   if (installed !== undefined) {
     const probeArgs = installed.pnpCjs
@@ -780,9 +779,7 @@ function findWorkspaceRoot(start: string): string | undefined {
         if (pkg && typeof pkg === 'object' && 'workspaces' in pkg) {
           return dir;
         }
-      } catch {
-        // Keep walking past an unreadable package.json.
-      }
+      } catch {}
     }
     if (existsSync(join(dir, 'pnpm-workspace.yaml'))) {
       return dir;
@@ -895,7 +892,7 @@ export function extractPnpmWorkspacePackages(yaml: string): Array<string> {
     if (!inPackages) {
       continue;
     }
-    // Any other top-level key ends the `packages:` block.
+    // Decision: Any other top-level key ends the `packages:` block.
     if (/^[A-Za-z_][\w-]*\s*:\s*(?:\S.*)?$/.test(line) && !/^\s/.test(line)) {
       inPackages = false;
       continue;
@@ -931,7 +928,7 @@ function expandBraces(pattern: string): Array<string> {
   return results;
 }
 
-// Supports *, **, ./ and {a,b} braces; ?, [...] and extglobs are matched literally.
+// Decision: Supports *, **, ./ and {a,b} braces; ?, [...] and extglobs are matched literally.
 function matchesWorkspacePattern(relPath: string, pattern: string): boolean {
   const expansions = expandBraces(pattern);
   return expansions.some((p) => matchesSingleWorkspacePattern(relPath, p));
@@ -963,7 +960,7 @@ function compilePatternSegment(seg: string): CompiledSegment {
   if (!seg.includes('*')) {
     return { kind: 'literal', value: seg };
   }
-  // Each `*` matches any characters except `/`.
+  // Decision: Each `*` matches any characters except `/`.
   const re = new RegExp(
     '^' +
       seg
@@ -984,7 +981,7 @@ function matchSegments(
   while (qi < pat.length) {
     const seg = pat[qi];
     if (seg.kind === 'globstar') {
-      // A trailing `**` matches any remaining path, including none.
+      // Decision: A trailing `**` matches any remaining path, including none.
       if (qi === pat.length - 1) {
         return true;
       }
@@ -1084,9 +1081,7 @@ export function detectProjectState(root: string): ProjectState {
       ...(asRecord(pkgRecord.devDependencies) ?? {}),
     };
     hasTypescript = 'typescript' in allDeps;
-  } catch {
-    // no package.json
-  }
+  } catch {}
 
   let packageManager: ProjectState['packageManager'] | undefined;
   if (existsSync(join(root, 'pnpm-lock.yaml'))) {
@@ -1096,8 +1091,7 @@ export function detectProjectState(root: string): ProjectState {
   } else if (existsSync(join(root, 'bun.lock')) || existsSync(join(root, 'bun.lockb'))) {
     packageManager = 'bun';
   } else if (existsSync(join(root, 'pnpm-workspace.yaml'))) {
-    // A fresh pnpm workspace has no lockfile yet; npm would reject its
-    // `workspace:` specs.
+    // Decision: A fresh pnpm workspace has no lockfile yet; npm would reject its `workspace:` specs.
     packageManager = 'pnpm';
   } else {
     const field = parsePackageManagerField(pkg);
@@ -1174,7 +1168,6 @@ function setupTsconfig(root: string, state: ProjectState, framework?: ScaffoldFr
   const tsconfigPath = join(root, 'tsconfig.json');
 
   if (state.hasTsconfig) {
-    // Case C: existing tsconfig — check and offer fixes
     let tsconfig: JsonObject;
     try {
       const parsed = parseJsoncFile(tsconfigPath);
@@ -1198,7 +1191,6 @@ function setupTsconfig(root: string, state: ProjectState, framework?: ScaffoldFr
     );
     const bwfPatch = createBwfTsconfigPatch(root, rootPathBaseDir);
 
-    // Check extends
     const extendsValue = tsconfig.extends;
     const target = './.bwf/tsconfig.json';
     const hasCorrectExtends =
@@ -1216,7 +1208,6 @@ function setupTsconfig(root: string, state: ProjectState, framework?: ScaffoldFr
       log.step('Updated tsconfig.json — added extends .bwf/tsconfig.json');
     }
 
-    // Check types
     const compilerOptions = asRecord(tsconfig.compilerOptions) ?? {};
     tsconfig.compilerOptions = compilerOptions;
     const types = Array.isArray(compilerOptions.types)
@@ -1228,7 +1219,7 @@ function setupTsconfig(root: string, state: ProjectState, framework?: ScaffoldFr
       log.step('Updated tsconfig.json — added bwf/env to types');
     }
 
-    // Remove @cloudflare/workers-types — bwf/env includes it
+    // Decision: Remove @cloudflare/workers-types: bwf/env includes it.
     const cfIdx = types.indexOf('@cloudflare/workers-types');
     if (cfIdx !== -1) {
       types.splice(cfIdx, 1);
@@ -1260,7 +1251,7 @@ function setupTsconfig(root: string, state: ProjectState, framework?: ScaffoldFr
     }
 
     if (updated) {
-      // Rebuild with extends first so it appears at the top of the file
+      // Decision: Rebuild with extends first so it appears at the top of the file.
       const { extends: ext, ...rest } = tsconfig;
       const ordered = { extends: ext, ...rest };
       writeFileSync(tsconfigPath, JSON.stringify(ordered, null, 2) + '\n');
@@ -1268,7 +1259,7 @@ function setupTsconfig(root: string, state: ProjectState, framework?: ScaffoldFr
       log.step('tsconfig.json looks good');
     }
 
-    // Remove @cloudflare/workers-types from package.json — bwf/env includes it
+    // Decision: Remove @cloudflare/workers-types from package.json: bwf/env includes it.
     try {
       const pkgPath = join(root, 'package.json');
       const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
@@ -1286,11 +1277,8 @@ function setupTsconfig(root: string, state: ProjectState, framework?: ScaffoldFr
         log.step('Removed @cloudflare/workers-types from package.json (included in bwf/env)');
         log.info(`Re-run ${state.packageManager} install to update your lockfile`);
       }
-    } catch {
-      // no package.json or parse error — skip
-    }
+    } catch {}
   } else {
-    // Case B: no tsconfig — create recommended one
     const tsconfig = {
       extends: './.bwf/tsconfig.json',
       compilerOptions: {
@@ -1325,9 +1313,7 @@ function readProjectWranglerCompatDate(root: string): string | undefined {
     if (errors.length === 0 && typeof parsed?.compatibility_date === 'string') {
       return parsed.compatibility_date;
     }
-  } catch {
-    // Ignore unreadable or invalid wrangler config and fall back to today's date.
-  }
+  } catch {}
   return undefined;
 }
 
@@ -1637,7 +1623,7 @@ export async function ensureBwfPlatformConnection(
     if (!(error instanceof Error) || !error.message.includes('No bwf platform connected')) {
       throw error;
     }
-    // A genuinely new user must identify the company platform before login.
+    // Decision: A new user has to identify the company platform before login.
   }
   if (!selectedApiUrl) {
     promptedForPlatform = true;
@@ -1671,15 +1657,14 @@ async function setupCloudflareDeployment(root: string): Promise<void> {
   }
 }
 
-/** Get the dev command for the project. */
 function getDevCommand(root: string): string {
   return formatProjectCommand(root, 'vite dev');
 }
 
-// Lines for a setup-node `with:` block, indented to match the templates below.
-// Without check-latest, setup-node reuses any cached release that matches a
-// partial version (`lts/*`, or `24` in .node-version), which can be older than
-// the CLI's minimum and then fails its runtime check. An exact pin is unaffected.
+// Decision: Lines for a setup-node `with:` block, indented to match the templates below. Without
+// check-latest, setup-node reuses any cached release that matches a partial version (`lts/*`, or
+// `24` in .node-version), which can be older than the CLI's minimum and then fails its runtime
+// check. An exact pin is unaffected.
 function getNodeVersionLine(root: string): string {
   const version = existsSync(join(root, '.node-version'))
     ? 'node-version-file: .node-version'
@@ -1687,8 +1672,8 @@ function getNodeVersionLine(root: string): string {
   return `${version}\n          check-latest: true`;
 }
 
-// Per-package-manager install + setup steps. `bwf deploy` always runs through
-// the package-manager-appropriate runner in the deploy step below.
+// Decision: Per-package-manager install and setup steps. `bwf deploy` runs through the package manager's own
+// runner in the deploy step below.
 function getWorkflowSetupSteps(
   root: string,
   pm: ProjectState['packageManager'],
@@ -1716,7 +1701,7 @@ function getWorkflowSetupSteps(
       };
     case 'bun':
       return {
-        // bunx runs the CLI with the `node` on PATH, so pin a supported Node too.
+        // Decision: bunx runs the CLI with the `node` on PATH, so pin a supported Node too.
         setup: `      - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-node@v6
         with:
@@ -1788,9 +1773,9 @@ ${install}
       'init: Connect to a bwf platform before generating a deployment workflow. Run `bwf connect <url>` first.',
     );
   }
-  // When the slug is unknown, fall back to a repository variable and prefix the
-  // `BWF_PROJECT` line with a comment (each comment line indented to 2 spaces
-  // so it stays inside the `env:` mapping and the YAML remains valid).
+  // Decision: When the slug is unknown, fall back to a repository variable and prefix the `BWF_PROJECT` line
+  // with a comment (each comment line indented 2 spaces so it stays inside the `env:` mapping and the
+  // YAML stays valid).
   const projectLine = slug
     ? `BWF_PROJECT: ${slug}`
     : `# Set a BWF_PROJECT repository variable to your project slug
@@ -1891,7 +1876,7 @@ function patchWorkflowProjectSlug(root: string, slug: string): boolean {
     return false;
   }
   const yaml = readFileSync(workflowPath, 'utf-8');
-  // The placeholder block that `getWorkflowYaml` emits.
+  // Decision: The placeholder block that `getWorkflowYaml` emits; keep the two in sync.
   const placeholderBlock =
     '  # Set a BWF_PROJECT repository variable to your project slug\n' +
     '  # (Settings → Secrets and variables → Actions → Variables).\n' +
@@ -2014,7 +1999,7 @@ function resolvePnpmConfigRoot(root: string, pkg: JsonObject): string {
     return root;
   }
 
-  // `hasAncestorPnpmMarkers` also verifies `root` is a declared member.
+  // Decision: `hasAncestorPnpmMarkers` also checks that `root` is a declared member.
   const workspaceRoot = findWorkspaceRoot(root);
   if (workspaceRoot !== undefined && hasAncestorPnpmMarkers(root)) {
     return workspaceRoot;
@@ -2028,8 +2013,8 @@ function ensurePnpmAllowBuilds(root: string, pkg: JsonObject): void {
   const workspacePath = join(configRoot, 'pnpm-workspace.yaml');
   const displayPath = configRoot === root ? 'pnpm-workspace.yaml' : relative(root, workspacePath);
   const before = existsSync(workspacePath) ? readFileSync(workspacePath, 'utf-8') : '';
-  // A same-line value such as `allowBuilds: {...}` cannot be merged line by
-  // line, and a second `allowBuilds:` key would make the file invalid.
+  // Decision: A same-line value such as `allowBuilds: {...}` can't be merged line by line, and a second
+  // `allowBuilds:` key would make the file invalid.
   const inline = /^allowBuilds:[ \t]*([^\s#].*)$/m.exec(before)?.[1];
   if (inline !== undefined) {
     const missing = PNPM_BUILD_DEFAULTS.filter(
@@ -2065,8 +2050,8 @@ export function installProjectDependencies(
   const installer = useVitePlus ? 'vp' : packageManager;
   log.step(`Installing dependencies with ${installer}`);
 
-  // Init has just changed the manifest. Refresh the lockfile even when pnpm
-  // detects a CI host; subsequent CI builds can use frozen installs normally.
+  // Decision: Init has just changed the manifest. Refresh the lockfile even when pnpm detects a CI host; later
+  // CI builds can use frozen installs normally.
   let command: string = installer;
   let args =
     useVitePlus || packageManager === 'pnpm' ? ['install', '--no-frozen-lockfile'] : ['install'];
@@ -2076,7 +2061,7 @@ export function installProjectDependencies(
       const require = createRequire(join(root, 'package.json'));
       localBin = join(dirname(require.resolve('vite-plus/package.json')), 'bin/vp');
     } catch {
-      // The starter's Vite+ dependency has not been installed yet.
+      // Decision: The starter's Vite+ dependency hasn't been installed yet.
     }
     if (localBin) {
       command = process.execPath;
@@ -2089,13 +2074,13 @@ export function installProjectDependencies(
         timeout: 5_000,
       });
       if (probe.status !== 0) {
-        // npx bwf init must also work without a globally installed vp. Avoid
-        // asking an older pnpm to switch itself to a pinned native pnpm 12.
+        // Decision: npx bwf init has to work without a globally installed vp. Avoid asking an older pnpm to switch
+        // itself to a pinned native pnpm 12.
         command = 'npx';
         const packageArg = `--package=vite-plus@${SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES['vite-plus']}`;
         args = [
           '--yes',
-          // cmd.exe treats the semver caret as an escape outside quotes.
+          // Decision: cmd.exe treats the semver caret as an escape outside quotes.
           process.platform === 'win32' ? `"${packageArg}"` : packageArg,
           'vp',
           ...args,
@@ -2130,7 +2115,7 @@ export function generateStarterMigration(
   const rollBack = snapshotDrizzleOutputs(readProjectPaths(root).migrationsDir);
 
   log.step('Generating initial Drizzle migration');
-  // Adds the Yarn PnP loaders drizzle-kit needs to resolve `@builtbyfriends/bwf/schema-d1`.
+  // Decision: Adds the Yarn PnP loaders drizzle-kit needs to resolve `@builtbyfriends/bwf/schema-d1`.
   const result = spawnSync(process.execPath, [drizzleKitBin, 'generate', '--config', configPath], {
     cwd: root,
     stdio: 'pipe',
@@ -2236,8 +2221,8 @@ function scaffoldSpaApp(
     ensureDependency('devDependencies', name, version);
   }
 
-  // `detectProjectState` reads only local markers; `isPnpmProject` also covers
-  // pnpm workspace members, which need the root `allowBuilds`.
+  // Decision: `detectProjectState` reads only local markers; `isPnpmProject` also covers pnpm workspace
+  // members, which need the root `allowBuilds`.
   if (packageManager === 'pnpm' || isPnpmProject(root, pkg)) {
     ensurePnpmAllowBuilds(root, pkg);
   }
@@ -2485,7 +2470,6 @@ function scaffoldDemo(root: string, dialect: DatabaseDialect): void {
   writeFileSync(files.schema, demoSchemaSource(dialect));
   log.step('Created db/schema.ts');
 
-  // API route
   mkdirSync(join(paths.routesDir, 'api'), { recursive: true });
   writeFileSync(
     files.route,
@@ -2502,7 +2486,6 @@ export const GET = defineHandler(async () => {
   log.step('Created routes/api/posts.ts');
   ensureProjectTsconfig(root, undefined, true, true, { paths });
 
-  // Frontend demo
   mkdirSync(dirname(files.client), { recursive: true });
   writeFileSync(
     files.client,
@@ -2581,7 +2564,6 @@ async function injectAgentBlock(root: string, newProject: boolean): Promise<void
       writeFileSync(fullPath, updated);
       log.step(`Updated bwf instructions in ${filePath}`);
     } else {
-      // Append block to end of file
       const separator = existing.endsWith('\n') ? '\n' : '\n\n';
       writeFileSync(fullPath, existing + separator + block + '\n');
       log.step(`Added bwf instructions to ${filePath}`);
@@ -2611,8 +2593,8 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
       'init: The --git/--no-git options are not available when adding a package to an existing monorepo.',
     );
   }
-  // Say what init will do before its first question. `.git` is allowed in an
-  // empty project, so detecting before `git init` gives the same result.
+  // Decision: Say what init will do before its first question. `.git` is allowed in an empty project, so
+  // detecting before `git init` gives the same result.
   const scaffoldStarter = !targeted && isScaffoldableEmptyProject(root);
   if (scaffoldStarter) {
     log.info('Empty project detected. Creating a React starter.');
@@ -2639,8 +2621,8 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
     }
     scaffoldedFramework = detectedFramework ?? initArgs?.framework ?? 'react';
     const starterMode = await promptStarterMode(initArgs?.starter);
-    // A partial starter takes the existing-project path on retry, so ask every
-    // question before creating its files. The deployment choice is saved below.
+    // Decision: A partial starter takes the existing-project path on retry, so ask all questions before creating
+    // its files. The deployment choice is saved below.
     starterDeploymentPlatform = await askDeploymentPlatform(root, initArgs?.deploy);
     const existingPackageJson = readPackageJson(root);
     const hasPackageManager =
@@ -2660,15 +2642,14 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
       scaffoldToolchain,
     );
 
-    // A workspace member installs from the workspace root: a leaf install would
-    // leave a stray lockfile or reject `workspace:` specs, and drizzle-kit needs
-    // the installed deps for the starter migration.
+    // Decision: A workspace member installs from the workspace root: a leaf install would leave a stray lockfile
+    // or reject `workspace:` specs, and drizzle-kit needs the installed deps for the starter migration.
     const deferral = resolveWorkspaceDeferral(root, readPackageJson(root));
     const bwfResolvable = isBwfResolvableFrom(root);
     if (deferral && (!bwfResolvable || scaffoldWroteDeps)) {
       workspaceSubpackageSkip = true;
       const relRoot = relative(deferral.workspaceRoot, root) || '.';
-      // The SPA-only starter has no database schema to generate from.
+      // Decision: The SPA-only starter has no database schema to generate from.
       const dbFollowUp =
         starterMode === 'spa'
           ? ''
@@ -2715,7 +2696,6 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
     setupTsconfig(root, state, scaffoldFramework);
   }
 
-  // Generate .bwf/tsconfig.json so the root tsconfig can extend it
   if (state.typescriptWanted) {
     const hasSchema = hasDrizzleSchema(root);
     ensureProjectTsconfig(root, undefined, hasSchema, hasSchema);
@@ -2731,7 +2711,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
     applyDatabaseSetup(root, await promptDatabaseSetup(root));
   }
 
-  // Agent instructions and skills are part of every init.
+  // Decision: Agent instructions and skills are part of each init.
   await injectAgentBlock(root, newProject);
 
   const agents = detectAgents(root);
@@ -2742,8 +2722,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
     log.info('Bundled bwf docs: node_modules/@builtbyfriends/bwf/docs/');
   }
 
-  // Demo code only in the full flow, and not for a new starter, which already
-  // has its own routes.
+  // Decision: Demo code only in the full flow, and not for a new starter, which already has its own routes.
   if (!targeted && !didScaffoldStarter) {
     const existingDemoFiles = Object.values(demoFiles(root)).filter((file) => existsSync(file));
     if (state.hasRoutes || state.hasMigrations) {
@@ -2762,10 +2741,10 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
         process.exit(0);
       }
       if (scaffold) {
-        // Read the dialect from config, as later `bwf db` commands do.
+        // Decision: Read the dialect from config, as later `bwf db` commands do.
         const demoDialect = getDatabaseDialect(readConfig(root));
         scaffoldDemo(root, demoDialect);
-        // The existing-project step already queued any install or workspace deferral the demo needs.
+        // Decision: The existing-project step already queued any install or workspace deferral the demo needs.
         const bwfResolvable = isBwfResolvableFrom(root);
         const deferral = resolveWorkspaceDeferral(root, readPackageJson(root));
         if (deferral && !bwfResolvable) {
@@ -2784,7 +2763,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
 
   let deploymentPlatform: DeploymentPlatform | null;
   if (targeted) {
-    // Targeted runs keep the saved deployment preference without prompting.
+    // Decision: Targeted runs keep the saved deployment preference without prompting.
     deploymentPlatform = readDeploymentPlatform(root);
   } else {
     deploymentPlatform =
@@ -2800,8 +2779,8 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
     bwfPlatformDiscovery = await ensureBwfPlatformConnection(root);
   }
 
-  // GitHub reads workflows only from the repository root, so skip every
-  // workspace member, even one that manages its own install.
+  // Decision: GitHub reads workflows only from the repository root, so skip all workspace members, even one
+  // that manages its own install.
   let shouldSetupGithub = targeted ? initArgs?.github === true : deploymentPlatform !== 'none';
   if (
     shouldSetupGithub &&
@@ -2824,7 +2803,6 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
   }
   if (shouldSetupGithub && !workspaceSubpackage) {
     if (targeted) {
-      // --github flag: run directly without prompting
       setupGithubActions(
         root,
         state,
@@ -2875,7 +2853,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
 
   if (!targeted && deploymentPlatform === 'platform') {
     const linked = await maybeSetupDeployProject(root);
-    // The workflow was written before linking, with a placeholder slug.
+    // Decision: The workflow was written before linking, with a placeholder slug.
     if (linked?.slug) {
       patchWorkflowProjectSlug(root, linked.slug);
     }
@@ -2886,7 +2864,7 @@ export async function runInitCommand(root: string, initArgs?: InitArgs): Promise
   }
 
   if (workspaceSubpackageSkip) {
-    // The dev command cannot run before the workspace install.
+    // Decision: The dev command can't run before the workspace install.
     if (scaffoldedStarterMode) {
       printSuccess(
         'Project initialized. Run your workspace install, then `bwf db generate` to finish setup.',

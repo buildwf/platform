@@ -80,8 +80,8 @@ export function savedPlanAiLogging(value: unknown): PlanAiLoggingSettings {
     console.error('[ai-logging] invalid saved plan defaults', error);
     throw new OperatorError(
       500,
-      // Plan commands read this value first, so they cannot repair it. The likely cause
-      // is a downgrade after a newer release saved a mode this one does not know.
+      // Decision: Plan commands read this value first, so they can't repair it. The likely cause is a
+      // downgrade after a newer release saved a mode this one doesn't know.
       'The saved plan AI logging defaults are not valid for this platform version. If a newer platform release saved them, upgrade to that release again.',
       'invalid_saved_plan_ai_logging',
     );
@@ -380,9 +380,9 @@ export async function saveProjectAiLogging(
       });
     } catch (error) {
       if (error instanceof AiLoggingPublishError) {
-        // Only this change rolls back. A setting saved earlier (after
-        // ai_logging_publish_pending) stays saved, and the hourly sweep publishes it,
-        // so name what is saved instead of saying nothing changed.
+        // Decision: Only this change rolls back. A setting saved earlier (after ai_logging_publish_pending)
+        // stays saved, and the hourly sweep publishes it, so name what's saved instead of saying
+        // nothing changed.
         throw new OperatorError(
           503,
           `The AI logging setting could not be published, so this change was not saved. The saved project setting is still "${before.mode}"; if it is not published yet, the hourly repair publishes it. Retry the command.`,
@@ -541,7 +541,7 @@ export async function readProjectAiLoggingStatus(
     const state = aiLoggingState({
       effective: inputs.effective,
       source: inputs.source,
-      // An unfinished account plan change publish is a plan publish for this project.
+      // Decision: An unfinished account plan change publish is a plan publish for this project.
       planPublishPending: planPublishPending(inputs.publish, inputs) || inputs.userPublishPending,
       published,
       clearedAt,

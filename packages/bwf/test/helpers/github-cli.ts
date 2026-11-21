@@ -33,7 +33,6 @@ export function makeConnection(overrides: Partial<GithubConnection> = {}): Githu
   };
 }
 
-/** Makes `process.exit` throw so a test can assert the exit without stopping the runner. */
 export function throwOnProcessExit(): MockInstance<typeof process.exit> {
   return vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
     throw new Error(`process.exit(${code})`);
@@ -42,15 +41,9 @@ export function throwOnProcessExit(): MockInstance<typeof process.exit> {
 
 export interface BrowserCallback {
   authUrl: Mock<(redirect: string) => Promise<{ url: string }>>;
-  /** Settles with the command, after the simulated redirect has finished. */
   settle: <T>(run: Promise<T>) => Promise<T>;
 }
 
-/**
- * Fakes the platform endpoint that returns a GitHub authorize URL. When the
- * command requests it, `query` turns the command's localhost callback URL into
- * the redirect a browser would send back.
- */
 export function browserCallback(query?: (callbackUrl: URL) => URL): BrowserCallback {
   let resolveCallback!: (url: URL) => void;
   const callbackReady = new Promise<URL>((resolve) => {
@@ -60,7 +53,7 @@ export function browserCallback(query?: (callbackUrl: URL) => URL): BrowserCallb
     resolveCallback(new URL(redirect));
     return { url: 'https://github.com/login/oauth/authorize?client_id=x' };
   });
-  // Error paths close the callback server mid-response, so the redirect may reject.
+  // Decision: Error paths close the callback server mid-response, so the redirect may reject.
   const fired = query
     ? callbackReady.then(async (callbackUrl) => {
         await realFetch(query(callbackUrl)).catch(() => {});

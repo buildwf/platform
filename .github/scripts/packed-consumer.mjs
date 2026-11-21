@@ -28,7 +28,7 @@ const vitePlusManifest = JSON.parse(
   readFileSync(join(root, 'node_modules/vite-plus/package.json'), 'utf8'),
 );
 const vitePlusVersion = vitePlusManifest.version;
-// vite-plus pins its own core and refuses any other, so init must write that alias.
+// Decision: vite-plus pins its own core and refuses any other, so init has to write that alias.
 const vitePlusCore = vitePlusManifest.dependencies.vite;
 const work = mkdtempSync(join(tmpdir(), 'platform-packed-consumer-'));
 const archiveDir = join(work, 'archives');
@@ -86,15 +86,11 @@ function launch(command, args, cwd, env = environment) {
       if (child.exitCode === null) {
         try {
           process.kill(-child.pid, 'SIGTERM');
-        } catch {
-          /* already exited */
-        }
+        } catch {}
         const force = setTimeout(() => {
           try {
             process.kill(-child.pid, 'SIGKILL');
-          } catch {
-            /* already exited */
-          }
+          } catch {}
         }, 5000);
         await completion.finally(() => clearTimeout(force));
       }
@@ -131,8 +127,8 @@ for (const entry of readdirSync(join(root, 'packages'), { withFileTypes: true })
   packages.push(inspectPackage(archive));
 }
 const registry = await startPackedRegistry(packages);
-// Packed tests must install new local builds, even when the matching npm release
-// is less than a day old. Keep this policy inside the temporary fixture config.
+// Decision: Packed tests have to install new local builds, even when the matching npm release is less than
+// a day old. Keep this policy inside the temporary fixture config.
 environment.XDG_CONFIG_HOME = join(work, 'config');
 const pnpmConfigDirectory = join(environment.XDG_CONFIG_HOME, 'pnpm');
 mkdirSync(pnpmConfigDirectory, { recursive: true });
@@ -276,7 +272,8 @@ try {
           join(fixture, 'routes/api/packed.ts'),
           `import { defineHandler } from '@builtbyfriends/bwf';\nimport { kv } from '@builtbyfriends/bwf/kv';\nexport const GET = defineHandler(async () => { await kv.put('packed', 'ok'); return { value: await kv.get('packed') }; });\n`,
         );
-        // bwf/email pulls a CommonJS dependency into the Worker; only an installed package shows whether dev serves it.
+        // Decision: bwf/email pulls a CommonJS dependency into the Worker. Only an installed package shows whether
+        // dev serves it.
         writeFileSync(
           join(fixture, 'routes/api/packed-email.ts'),
           `import { defineHandler } from '@builtbyfriends/bwf';\nimport { sendEmail } from '@builtbyfriends/bwf/email';\nexport const GET = defineHandler(async () => { return sendEmail({ from: 'packed@example.com', to: 'inbox@example.com', subject: 'Packed', text: 'ok' }); });\n`,
@@ -294,8 +291,8 @@ try {
           fixture,
         );
         if (useVitePlus) {
-          // Vitest loads the app's Vite config, bwf's plugin included, and runs the tests in
-          // Node.js. The test from docs/guide/testing.md replaces the KV module it uses.
+          // Decision: Vitest loads the app's Vite config, bwf's plugin included, and runs the tests in Node.js.
+          // The test comes from docs/guide/testing.md and replaces the KV module it uses.
           mkdirSync(join(fixture, 'src'), { recursive: true });
           writeFileSync(
             join(fixture, 'src/visits.ts'),
@@ -309,7 +306,6 @@ try {
           rmSync(join(fixture, 'src/visits.ts'));
           rmSync(join(fixture, 'src/visits.test.ts'));
         }
-        // The installed package must find and verify every bundled runtime artifact.
         await run(
           process.execPath,
           [
@@ -340,9 +336,9 @@ if (runtime.manifest.platformVersion !== ${JSON.stringify(version)}) throw new E
               if (task.child.exitCode !== null) {
                 throw new Error(task.failure());
               }
-              // Let Vite bind port 0 and report the actual port. Reserving then
-              // releasing an ephemeral port lets workerd's RPC listener claim
-              // it during config loading; probing it sends HTTP to that RPC.
+              // Decision: Let Vite bind port 0 and report the actual port. If we reserve and then release an ephemeral
+              // port, workerd's RPC listener can claim it during config loading, and probing it sends HTTP to
+              // that RPC.
               base ??= packedServerUrl(task.output());
               if (base) {
                 try {
@@ -350,9 +346,7 @@ if (runtime.manifest.platformVersion !== ${JSON.stringify(version)}) throw new E
                   if (response.ok) {
                     break;
                   }
-                } catch {
-                  /* server is starting */
-                }
+                } catch {}
               }
               await new Promise((resolve) => setTimeout(resolve, 200));
             }
@@ -366,7 +360,7 @@ if (runtime.manifest.platformVersion !== ${JSON.stringify(version)}) throw new E
             const emailResponse = await fetch(`${base}/api/packed-email`);
             const emailBody = await emailResponse.text();
             assert.equal(emailResponse.status, 200, `${emailBody}\n${task.failure()}`);
-            // Preview runs the built Worker: no dev inbox and no send binding.
+            // Decision: Preview runs the built Worker: it has no dev inbox and no send binding.
             const email = JSON.parse(emailBody);
             if (mode === 'dev') {
               assert.equal(email.ok, true, emailBody);

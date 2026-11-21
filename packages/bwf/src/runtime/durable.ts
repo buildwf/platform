@@ -257,7 +257,7 @@ export function defineDurableState<
       }
 
       let value: unknown = stored.value;
-      // assertMigrations() guarantees a migration for every version in 1..version.
+      // Decision: assertMigrations() guarantees a migration for every version in 1..version.
       for (let nextVersion = stored.version + 1; nextVersion <= version; nextVersion++) {
         value = await migrations.get(nextVersion)!.migrate(value);
       }

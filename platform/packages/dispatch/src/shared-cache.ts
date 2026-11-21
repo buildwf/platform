@@ -18,9 +18,8 @@ export function hasCurrentSharedCachePolicy(response: Response): boolean {
   return response.headers.get(SHARED_CACHE_POLICY_HEADER) === String(SHARED_CACHE_POLICY_VERSION);
 }
 
-/** Return whether a response explicitly forbids storage in a shared cache. */
 export function hasSharedCacheOptOut(response: Response): boolean {
-  // Every header-dependent response must be served live, including Vary: *.
+  // Decision: Each header-dependent response has to be served live, including Vary: *.
   if (
     response.headers
       .get('Vary')
@@ -63,7 +62,6 @@ export function isEventStreamResponse(response: Response): boolean {
  */
 const LIVE_ONLY_MEDIA_TYPES = ['text/event-stream', 'text/markdown'] as const;
 
-/** Return whether credentials or negotiated media types require bypassing shared caches. */
 export function bypassesSharedCache(request: Request): boolean {
   const accept = request.headers.get('Accept')?.toLowerCase();
   return (

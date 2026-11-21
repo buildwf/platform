@@ -15,7 +15,7 @@ export async function openMigrationValidationDatabase(
   migrations: Array<{ name: string; sql: string }>,
 ): Promise<DatabaseSync> {
   const { DatabaseSync } = await import('node:sqlite');
-  // Reject double-quoted missing columns rather than silently copying string literals.
+  // Decision: Reject double-quoted missing columns rather than silently copying string literals.
   const db = new DatabaseSync(':memory:', { enableDoubleQuotedStringLiterals: false });
   try {
     for (const migration of migrations) {

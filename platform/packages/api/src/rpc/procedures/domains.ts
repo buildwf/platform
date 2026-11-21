@@ -70,8 +70,8 @@ function cloudflareRefusal(error: unknown): Refusal | null {
       429: 'CLOUDFLARE_RATE_LIMITED',
     } as const
   )[error.status as 400 | 409 | 422 | 429];
-  // 401, 403, 404 and 5xx are the platform's own token or Cloudflare faults, which the caller
-  // cannot fix and whose messages would leak internal state: they stay generic server errors.
+  // Decision: 401, 403, 404 and 5xx are the platform's own token or Cloudflare faults. The caller can't fix
+  // them and their messages would leak internal state, so they stay generic server errors.
   return code ? { code, message: error.message } : null;
 }
 
@@ -152,11 +152,10 @@ export const add = procedure('domains.add')
       return fail('DOMAIN_LIMIT');
     }
 
-    // The duplicate-hostname case can be a Cloudflare object left behind after an earlier
-    // post-create DB failure. Only adopt still-pending objects with an outstanding ownership
-    // challenge; a verified or active hostname must not become claimable by another project.
-    // Creation is a reversible first phase: the durable second phase takes the project lock and
-    // rechecks access, and if it loses, the created object is handed back before returning.
+    // Decision: A duplicate hostname can be a Cloudflare object left by an earlier post-create DB failure. Adopt
+    // only still-pending objects with an open ownership challenge; a verified or active hostname mustn't
+    // become claimable by another project. Creation is a reversible first phase: the second phase takes
+    // the project lock and rechecks access, and if it loses, the created object is handed back.
     let cfHostname: CustomHostnameInfo;
     let createdCfHostname: CustomHostnameInfo | undefined;
     try {
@@ -219,15 +218,15 @@ export const add = procedure('domains.add')
         if (refused) {
           return refused;
         }
-        // Recheck after waiting for the lock: a prior request may have committed meanwhile.
+        // Decision: Recheck after waiting for the lock: an earlier request may have committed meanwhile.
         if (await getDomainByHostname(tx, hostname)) {
           return { code: 'HOSTNAME_IN_USE' } as const;
         }
         if (await protectedProjectReachedDomainLimit(tx, projectId)) {
           return { code: 'DOMAIN_LIMIT' } as const;
         }
-        // Under HTTP-DCV the certificate is validated at the edge once the hostname proxies, so
-        // Cloudflare never emits `ssl.validation_records`: keep the ownership challenge instead.
+        // Decision: Under HTTP-DCV the certificate is validated at the edge once the hostname proxies, so Cloudflare
+        // doesn't send `ssl.validation_records`; keep the ownership challenge instead.
         const verification: DomainVerificationData = {
           ownership_verification: cfHostname.ownership_verification,
           ssl_validation_records: cfHostname.ssl.validation_records,
@@ -241,8 +240,8 @@ export const add = procedure('domains.add')
         };
       });
     } catch (error) {
-      // The create can succeed even when the transaction later fails. Hand back only the object
-      // this request created; an adopted one belongs to the recovery path.
+      // Decision: The create can succeed even when the transaction later fails. Hand back only the object this
+      // request created; an adopted one belongs to the recovery path.
       await rollbackCreatedHostname();
       throw error;
     }
@@ -349,10 +348,10 @@ export const remove = procedure('domains.remove')
     const warnings: Array<string> = [];
     const describe = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
-    // Cloudflare cleanup is best-effort. KV and DB deletion serialize with deploy, rollback,
-    // activation and failed-cutover compensation through the project row, so none can resurrect
-    // this hostname from a stale snapshot. The shared Zero Trust lock comes first: when it
-    // refuses during uninstall, nothing outside the database has been removed yet.
+    // Decision: Cloudflare cleanup is best effort. KV and DB deletion serialize with deploy, rollback, activation
+    // and failed-cutover compensation through the project row, so none can bring back this hostname from
+    // a stale snapshot. The shared Zero Trust lock comes first: when it refuses during uninstall, nothing
+    // outside the database has been removed yet.
     const refused = await ctx.db.transaction(async (tx) => {
       await tx.execute(sql`SELECT id FROM projects WHERE id = ${projectId} FOR UPDATE`);
       try {
@@ -377,8 +376,8 @@ export const remove = procedure('domains.remove')
       await env.ROUTING.delete(`domain:${found.hostname}`).catch((error) =>
         warnings.push(`Failed to delete routing entry: ${describe(error)}`),
       );
-      // The project's custom-domain application still lists this hostname. Record that with the
-      // deletion, so the hostname is never freed while no retry would remove it from there.
+      // Decision: The project's custom-domain application still lists this hostname. Record that with the deletion,
+      // so the hostname isn't freed while no retry would remove it from there.
       await markProjectCustomDomainsChanged(tx, projectId);
       await deleteDomain(tx, found.id);
       return null;

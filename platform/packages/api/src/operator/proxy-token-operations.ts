@@ -14,8 +14,8 @@ import {
 import { projectCleanupJobs, projects } from '../schema.ts';
 import { OperatorError, preview } from './common.ts';
 
-// Inline work per request stays well under the CLI's 5 minute request timeout;
-// the scheduled run finishes whatever is left.
+// Decision: Inline work per request stays well under the CLI's 5-minute request timeout; the scheduled run
+// finishes the rest.
 const APPLY_MAX_CF_CALLS = 150;
 const APPLY_MAX_MS = 60_000;
 const LISTED_JOBS = 50;

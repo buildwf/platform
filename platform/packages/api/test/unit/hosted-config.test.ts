@@ -42,8 +42,8 @@ function routingId(worker: WorkerConfig): string | undefined {
   return worker.kv_namespaces?.find((namespace) => namespace.binding === 'ROUTING')?.id;
 }
 
-// The API publishes `ai-logging:<projectId>` and the proxy reads it, so both must
-// bind the same ROUTING namespace in every environment.
+// Decision: The API publishes `ai-logging:<projectId>` and the proxy reads it, so both have to bind the same
+// ROUTING namespace in each environment.
 it.each([
   ['default', config, proxyConfig],
   ['production', config.env.production, proxyConfig.env.production],

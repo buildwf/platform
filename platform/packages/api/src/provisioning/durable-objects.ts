@@ -88,9 +88,8 @@ async function readBindings(
       env.CF_API_TOKEN,
       { signal },
     );
-    // Dispatch can return an empty binding list for a script without a Worker.
-    // Confirm absence before provisioning; an existing unmarked Worker must
-    // still fail the ownership check.
+    // Decision: Dispatch can return an empty binding list for a script without a Worker. Confirm absence before
+    // provisioning; an existing unmarked Worker must still fail the ownership check.
     if (confirmWorkerExists && bindings.length === 0) {
       await cfFetch(`${url(env, worker)}/settings`, env.CF_API_TOKEN, { signal });
     }
@@ -159,14 +158,13 @@ async function upload(
   create = false,
   runDeadline?: number,
 ): Promise<void> {
-  // A release sends the application's modules again in one attempt, so it
-  // gets as long as the application upload had, but never past the end of a
-  // queued deployment run's uploads. A stalled one is still cut by the idle
-  // and response limits.
+  // Decision: A release sends the application's modules again in one attempt, so it gets as long as the
+  // application upload had, but not past the end of a queued run's uploads. A stalled one is still cut
+  // by the idle and response limits.
   const deadline = workerUploadDeadline(runDeadline);
   const runLimited = deadline === runDeadline;
-  // A release replays the application's modules; stream them like the
-  // application upload so the whole bundle is never held in memory.
+  // Decision: A release replays the application's modules; stream them like the application upload so the whole
+  // bundle isn't held in memory.
   const body = workerUploadBody(metadata, modules);
   const watchdog = uploadWatchdog(body.progress, {
     idleMs: WORKER_UPLOAD_IDLE_MS,
@@ -349,8 +347,8 @@ export function managedDurableObjectBindings(manifest: DeployManifest): Array<Bi
     if (!namespaceId) {
       throw new Error('Custom Durable Object storage has not been verified.');
     }
-    // Bind the verified namespace directly: cross-script names in a dispatch namespace
-    // are not resolved like ordinary Worker names.
+    // Decision: Bind the verified namespace directly: cross-script names in a dispatch namespace aren't resolved
+    // like ordinary Worker names.
     return {
       type: 'durable_object_namespace',
       name: binding.bindingName,
@@ -378,8 +376,8 @@ export async function verifyManagedDurableObjectApplicationBindings(
       return binding?.type === expected.type && binding.namespace_id === expected.namespace_id;
     });
 
-  // Keep queued verification inside the same deadline as the uploads so a
-  // slow series of reads cannot spend the time reserved for cleanup.
+  // Decision: Keep queued verification inside the same deadline as the uploads so a slow series of reads can't
+  // spend the time reserved for cleanup.
   const remaining = deadline === undefined ? undefined : deadline - Date.now();
   const timeout = new Error(
     'The deployment reached its time limit while verifying application Durable Object bindings.',
@@ -451,8 +449,8 @@ export async function storeDurableObjectSnapshot(
     );
   }
   for (const module of modules) {
-    // Stored input modules carry their verified digest; inline modules are
-    // hashed from memory. The bytes then stream into the release copy.
+    // Decision: Stored input modules carry their verified digest; inline modules are hashed from memory. The bytes
+    // then stream into the release copy.
     const sha256 = module.sha256 ?? (await streamSha256(await module.open()));
     files.push({ name: module.name, contentType: module.type, sha256 });
     await putDurableSnapshotModule(
@@ -492,9 +490,8 @@ async function loadSnapshot(
   const snapshot = JSON.parse(
     await decryptPlatformCredential(env, projectId, `durable:${deploymentId}`, credential),
   ) as Snapshot;
-  // One listing gives every module's size, which the streamed upload
-  // declares before it starts. Bytes are checked against the recorded
-  // digest as they stream.
+  // Decision: One listing gives each module's size, which the streamed upload declares before it starts. Bytes
+  // are checked against the recorded digest as they stream.
   const prefix = snapshotModulePrefix(projectId, deploymentId);
   const stored = await listR2Objects(env.STATIC_ASSETS_R2, prefix);
   const errors = {
@@ -590,8 +587,8 @@ async function restoreObject(
       logProject: _logProject,
       ...base
     } = snapshot.metadata;
-    // Asset upload tokens belong to a script and expire. Recreate the asset
-    // attachment for this Worker, including when replaying an old release.
+    // Decision: Asset upload tokens belong to a script and expire. Recreate the asset attachment for this Worker,
+    // including when replaying an old release.
     let assets: ReturnType<typeof buildAssetMetadata> | undefined;
     if (bindings.some((binding) => binding.type === 'assets')) {
       const assetManifest = originalAssetManifest as Record<string, AssetManifestEntry>;
@@ -635,8 +632,8 @@ async function restoreObject(
       resource.cf_id,
       {
         ...base,
-        // A saved release keeps the Workers Logs setting it was deployed with;
-        // the installation's current setting wins.
+        // Decision: A saved release keeps the Workers Logs setting it was deployed with; the installation's current
+        // setting wins.
         observability: projectObservability(env),
         ...(assets ? { assets } : {}),
         main_module: ENTRY,
@@ -694,9 +691,8 @@ export async function reconcileManagedDurableObjects(
   const desired = new Set(
     manifest?.durableObjects?.bindings.map((binding) => binding.className) ?? [],
   );
-  // Undoing a move replays a release onto the host again, which takes about as
-  // long as the move did. So each upload may use half of what is left before
-  // `deadline` once the hosts this pass already moved are paid for.
+  // Decision: Undoing a move replays a release onto the host, which takes about as long as the move did. So each
+  // upload may use half of what's left before `deadline` after paying for the hosts already moved.
   let movedMs = 0;
   for (const resource of await getProjectResources(db, projectId)) {
     if (resource.type !== 'durable-object') {

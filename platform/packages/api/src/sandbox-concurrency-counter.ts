@@ -26,8 +26,8 @@ type Entry = {
 };
 
 type EntriesMap = Record<string, Entry>;
-// The previous tenant-controlled lease namespace is deliberately never adopted.
-// The upgrade drain removes its containers before this protocol is admitted.
+// Decision: The previous tenant-controlled lease namespace is deliberately not adopted. The upgrade drain
+// removes its containers before this protocol is admitted.
 const STORAGE_KEY = 'controlled-entries-v1';
 const COMPLETIONS_KEY = 'controlled-completions-v1';
 const COMPLETION_RETENTION_MS = 24 * 60 * 60 * 1000;
@@ -40,8 +40,8 @@ export class SandboxConcurrencyCounter extends DurableObject<ApiEnv['Bindings']>
   private operationTail: Promise<void> = Promise.resolve();
 
   private serialize<T>(operation: () => Promise<T>): Promise<T> {
-    // Queue/network I/O releases the DO input gate. Hold application ordering
-    // through persistence so delayed heartbeats cannot resurrect released runs.
+    // Decision: Queue and network I/O release the DO input gate. Keep application ordering through persistence so
+    // delayed heartbeats can't bring back released runs.
     const result = this.operationTail.then(operation);
     this.operationTail = result.then(
       () => {},
@@ -99,8 +99,8 @@ export class SandboxConcurrencyCounter extends DurableObject<ApiEnv['Bindings']>
   }
 
   private withinLimit(entries: EntriesMap, id: string, limit: number): boolean {
-    // A plan downgrade deterministically preserves at most the new capacity.
-    // Stopping reservations still consume capacity until their receipt commits.
+    // Decision: A plan downgrade keeps at most the new capacity, chosen deterministically. Stopping reservations
+    // still use capacity until their receipt commits.
     return limit === 0 || Object.keys(entries).sort().indexOf(id) < limit;
   }
 
@@ -114,7 +114,7 @@ export class SandboxConcurrencyCounter extends DurableObject<ApiEnv['Bindings']>
     if (meteredThrough <= (entry.meteredThrough ?? from)) {
       return entry;
     }
-    // Include the random run generation, not just its millisecond start time.
+    // Decision: Include the random run generation, not only its millisecond start time.
     const instance = JSON.stringify([id, entry.generation]);
     const event: UsageEvent = {
       ...entry.attribution,
@@ -156,7 +156,7 @@ export class SandboxConcurrencyCounter extends DurableObject<ApiEnv['Bindings']>
           ? { ok: true }
           : { ok: false, reason: 'concurrency' };
       }
-      // A timed-out reserve can finish after stop. Never admit that run again.
+      // Decision: A timed-out reserve can finish after stop. Don't admit that run again.
       if (await this.hasCompletion(id, generation)) {
         return unavailable;
       }
@@ -210,7 +210,7 @@ export class SandboxConcurrencyCounter extends DurableObject<ApiEnv['Bindings']>
       const entries = await this.getEntries();
       const current = entries[id];
       if (!current || current.generation !== generation) {
-        // Stop may overtake a reserve request whose transport timed out.
+        // Decision: Stop may overtake a reserve request whose transport timed out.
         await this.recordCompletion(id, generation);
         return;
       }
@@ -218,7 +218,7 @@ export class SandboxConcurrencyCounter extends DurableObject<ApiEnv['Bindings']>
         entries[id] = { ...current, stoppedAt };
         await this.saveEntries(entries);
       }
-      // Retry final usage even if the controller is subsequently deleted.
+      // Decision: Retry final usage even if the controller is deleted later.
       await this.ensureAlarm();
       await this.finishStopped(entries, id);
     });
@@ -259,7 +259,7 @@ export class SandboxConcurrencyCounter extends DurableObject<ApiEnv['Bindings']>
   private async finishStopped(entries: EntriesMap, id: string): Promise<void> {
     const entry = entries[id]!;
     await this.meterThrough(id, entry, entry.stoppedAt!);
-    // Receipt precedes capacity release; any partial failure is safe to retry.
+    // Decision: Write the receipt before releasing capacity; a partial failure is then safe to retry.
     await this.recordCompletion(id, entry.generation);
     delete entries[id];
     await this.saveEntries(entries);
@@ -273,8 +273,8 @@ export class SandboxConcurrencyCounter extends DurableObject<ApiEnv['Bindings']>
           await this.finishStopped(entries, id);
         }
       }
-      // Never infer stop from age or meter unverified time. The controller's
-      // own alarm verifies liveness and destroys denied containers.
+      // Decision: Don't infer a stop from age or meter time that isn't verified. The controller's own alarm checks
+      // liveness and destroys denied containers.
     });
   }
 }

@@ -17,12 +17,10 @@ export function isAllowedRedirect(
     return true;
   }
 
-  // Localhost: allow any port, require exact hostname and http protocol
   if (isLocalhostRedirect(parsed)) {
     return true;
   }
 
-  // Dashboard: compare exact origin (protocol + hostname + port)
   const origin = dashboardUrl ?? (platformInstallationId ? null : DEFAULT_DASHBOARD_URL);
   if (!origin) {
     return false;

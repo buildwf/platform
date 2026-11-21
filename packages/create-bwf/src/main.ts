@@ -42,8 +42,8 @@ async function main() {
     }
   }
 
-  // The release publishes the scaffolder and CLI at the same version. Preserve
-  // that exact version, including prereleases, instead of switching to latest.
+  // Decision: The release publishes the scaffolder and CLI at the same version. Keep that exact version,
+  // including prereleases, instead of switching to latest.
   const { version: bwfVersion } = JSON.parse(
     readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
   ) as { version: string };
@@ -55,16 +55,16 @@ async function main() {
     private: true,
     type: 'module',
     devDependencies: {
-      // The CLI is published under the @builtbyfriends scope. The unscoped
-      // `bwf` package on npm is someone else's; only the bin is named `bwf`.
+      // Decision: The CLI is published under the @builtbyfriends scope. The unscoped `bwf` package on npm
+      // is someone else's; only the bin is named `bwf`.
       '@builtbyfriends/bwf': bwfVersion,
     },
   };
 
   writeFileSync(resolve(targetDir, 'package.json'), JSON.stringify(pkg, null, 2) + '\n');
-  // pnpm 12 fails the first install when a dependency has an unapproved build
-  // script. Write bwf's narrow policy before installing the CLI so a fresh
-  // project can bootstrap without disabling pnpm's build-script protection.
+  // Decision: pnpm 12 fails the first install when a dependency has an unapproved build script. Write
+  // bwf's narrow policy before installing the CLI so a fresh project can bootstrap without
+  // turning off pnpm's build-script protection.
   writePnpmBuildPolicy(targetDir, pm);
 
   p.log.step('Installing bwf...');

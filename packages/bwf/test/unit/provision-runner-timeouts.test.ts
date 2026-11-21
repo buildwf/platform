@@ -37,7 +37,6 @@ describe('createDefaultRunWrangler — hard timeout kills the REAL process', () 
   });
 
   it('a DIRECT hung CLI is SIGKILLed and the runner REJECTS-as-hard-failure within the timeout', async () => {
-    // A direct CLI entry that ignores SIGTERM and hangs forever.
     const hungCli = join(TIMEOUT_TMP, 'hung-cli.cjs');
     writeFileSync(
       hungCli,
@@ -54,49 +53,48 @@ describe('createDefaultRunWrangler — hard timeout kills the REAL process', () 
     const start = Date.now();
     const result = await run({ type: 'd1.list' }, { accountId: 'acct' });
     const elapsed = Date.now() - start;
-    // A loose bound: the 400ms timer can fire late on a busy machine.
+    // Decision: A loose bound: the 400ms timer can fire late on a busy machine.
     expect(elapsed).toBeLessThan(15_000);
     expect(result.signal).toBe('SIGKILL');
     expect(result.status).not.toBe(0);
     expect(result.stderr).toMatch(/exceeded the 400ms command timeout/);
-    // The SIGKILL reached the real CLI.
     expect(pid).toBeTypeOf('number');
     expect(await waitForDead(pid!, 10_000)).toBe(true);
   }, 20_000);
 
   it('a WRAPPER that re-spawns a hung grandchild: runner still settles in time AND the grandchild is reaped', async () => {
-    // A `bin/wrangler.js`-style wrapper forwards only SIGTERM and reports a signal death as
-    // exit 0, while its grandchild holds the pipes open. Only a process-group kill ends it.
+    // Decision: A `bin/wrangler.js`-style wrapper forwards only SIGTERM and reports a signal death as exit 0,
+    // while its grandchild holds the pipes open. Only a process-group kill ends it.
     const gcPidFile = join(TIMEOUT_TMP, 'grandchild.pid');
     const grandchild = join(TIMEOUT_TMP, 'grandchild.cjs');
     writeFileSync(
       grandchild,
       `require('fs').writeFileSync(${JSON.stringify(gcPidFile)}, String(process.pid));\n` +
-        `process.on('SIGTERM', () => {});\n` + // ignore the wrapper's forwarded SIGTERM
+        `process.on('SIGTERM', () => {});\n` +
         `setInterval(() => {}, 1 << 30);\n`,
     );
     const wrapper = join(TIMEOUT_TMP, 'wrapper.cjs');
     writeFileSync(
       wrapper,
       `const { spawn } = require('child_process');\n` +
-        // A spawn can fail with EAGAIN under load. Retry, and keep the wrapper alive so the
-        // timeout path still runs instead of a normal close.
+        // Decision: A spawn can fail with EAGAIN under load. Retry, and keep the wrapper alive so the timeout
+        // path still runs instead of a normal close.
         `let child;\n` +
         `function launch() {\n` +
         `  try {\n` +
         `    child = spawn(process.execPath, [${JSON.stringify(grandchild)}], { stdio: ['inherit','inherit','inherit'] });\n` +
         `    child.on('error', () => { child = undefined; setTimeout(launch, 50); });\n` +
-        `    child.on('exit', (code) => process.exit(code === null ? 0 : code));\n` + // mask signal death as exit 0
+        `    child.on('exit', (code) => process.exit(code === null ? 0 : code));\n` +
         `  } catch { setTimeout(launch, 50); }\n` +
         `}\n` +
         `launch();\n` +
-        `process.on('SIGTERM', () => { if (child) child.kill(); });\n` + // forward only SIGTERM (default)
+        `process.on('SIGTERM', () => { if (child) child.kill(); });\n` +
         `process.on('SIGINT', () => { if (child) child.kill(); });\n` +
-        `setInterval(() => {}, 1 << 30);\n`, // keep the wrapper alive until the group is killed
+        `setInterval(() => {}, 1 << 30);\n`,
     );
     const run = createDefaultRunWrangler(TIMEOUT_TMP, {
       launcher: [process.execPath, wrapper],
-      // Long enough for the wrapper and grandchild to start under load.
+      // Decision: Long enough for the wrapper and grandchild to start under load.
       timeoutMs: 1_500,
     });
     const start = Date.now();
@@ -105,7 +103,6 @@ describe('createDefaultRunWrangler — hard timeout kills the REAL process', () 
     expect(elapsed).toBeLessThan(20_000);
     expect(result.signal).toBe('SIGKILL');
     expect(result.status).not.toBe(0);
-    // The process-group kill reaped the grandchild too.
     const gcPid = Number(readFileSync(gcPidFile, 'utf-8'));
     expect(Number.isInteger(gcPid)).toBe(true);
     expect(await waitForDead(gcPid, 10_000)).toBe(true);
@@ -123,8 +120,8 @@ describe('withListerDeadline — the deadline holds in a real process', () => {
   });
 
   it('a never-settling lister REJECTS after the deadline — the process does NOT exit 0 early, lock released', async () => {
-    // Nothing else keeps the event loop alive while the lister hangs, and Vitest's own
-    // handles would hide that, so this runs in a separate process.
+    // Decision: Nothing else keeps the event loop alive while the lister hangs, and Vitest's own handles
+    // would hide that, so this runs in a separate process.
     const appRoot = join(LISTER_DEADLINE_TMP, 'app');
     const probe = join(LISTER_DEADLINE_TMP, 'probe.mjs');
     const provisionUrl = `file://${join(import.meta.dirname, '../../src/cli/provision.ts')}`;
@@ -176,9 +173,7 @@ describe('withListerDeadline — the deadline holds in a real process', () => {
       clearTimeout(killTimer);
       try {
         child.kill('SIGKILL');
-      } catch {
-        // already gone
-      }
+      } catch {}
     }
   }, 20_000);
 });
@@ -212,10 +207,10 @@ describe('provisionCloudflareResources — Hyperdrive lister deadline', () => {
 });
 
 describe('createDefaultRunWrangler — confirmed child termination + kill classification', () => {
-  // A unique directory per test: a pid file left by another run may name a reused pid.
+  // Decision: A unique directory per test: a pid file left by another run may name a reused pid.
   let killClassifyTmp = '';
-  // Windows keeps a dead child's cwd and files busy for a moment, so retry the removal. A
-  // leftover fails the test only while a recorded pid is still alive. Never kill by pid here.
+  // Decision: Windows keeps a dead child's cwd and files busy for a moment, so retry the removal. A
+  // leftover fails the test only while a recorded pid is still alive. Don't kill by pid here.
   const rmTmp = (): void => {
     if (killClassifyTmp === '') {
       return;
@@ -243,7 +238,7 @@ describe('createDefaultRunWrangler — confirmed child termination + kill classi
       if (live.length > 0) {
         throw new Error(`could not remove ${killClassifyTmp}: ${detail}`);
       }
-      // Nothing of ours is running, so warn instead of failing on temp-file cleanup.
+      // Decision: Nothing of ours is running, so warn instead of failing on temp-file cleanup.
       console.warn(`warn: leaving ${killClassifyTmp} behind — ${detail}`);
     }
   };
@@ -276,13 +271,12 @@ describe('createDefaultRunWrangler — confirmed child termination + kill classi
         spawnedPid = child.pid;
       },
       timeoutMs: 300,
-      // Simulate a kill that FAILS for a non-ESRCH reason (the child is still alive).
       killProcessGroup: () => {
         throw Object.assign(new Error('EPERM: operation not permitted'), { code: 'EPERM' });
       },
     });
-    // The child may still run, so the runner rejects: resolving would let the caller release
-    // the lock under a live child.
+    // Decision: The child may still run, so the runner rejects: resolving would let the caller release the
+    // lock under a live child.
     let rejected: unknown;
     try {
       await run({ type: 'd1.list' }, { accountId: 'acct' });
@@ -295,15 +289,12 @@ describe('createDefaultRunWrangler — confirmed child termination + kill classi
     expect(err.message).toMatch(/could not be killed: EPERM/);
     expect(err.message).toMatch(/intentionally RETAINED/);
     expect(err.message).toMatch(/pid \d+/);
-    // The child is still alive; prove it, then clean up.
     const pid = spawnedPid!;
     expect(pid).toBeTypeOf('number');
     expect(() => process.kill(pid, 0)).not.toThrow();
     try {
       process.kill(pid, 'SIGKILL');
-    } catch {
-      // already gone
-    }
+    } catch {}
     expect(await waitForDead(pid, 10_000)).toBe(true);
   }, 15_000);
 
@@ -323,8 +314,8 @@ describe('createDefaultRunWrangler — confirmed child termination + kill classi
       },
       timeoutMs: 250,
       confirmKillGraceMs: 500,
-      // A killer that CLAIMS success but kills nothing: the group stays alive, so
-      // close/group-gone can never both be confirmed → quarantine at the grace expiry.
+      // Decision: A killer that claims success but kills nothing: the group stays alive, so close and
+      // group-gone can't both be confirmed, and it quarantines at the grace expiry.
       killProcessGroup: () => {},
     });
     let rejected: unknown;
@@ -336,14 +327,11 @@ describe('createDefaultRunWrangler — confirmed child termination + kill classi
     expect(rejected).toBeInstanceOf(WranglerQuarantineError);
     expect((rejected as Error).message).toMatch(/could not be confirmed terminated within 500ms/);
     expect((rejected as Error).message).toMatch(/intentionally RETAINED/);
-    // Clean up the real child the fake killer left alive.
     const pid = spawnedPid!;
     expect(pid).toBeTypeOf('number');
     try {
       process.kill(pid, 'SIGKILL');
-    } catch {
-      // already gone
-    }
+    } catch {}
     expect(await waitForDead(pid, 10_000)).toBe(true);
   }, 15_000);
 
@@ -362,7 +350,8 @@ describe('createDefaultRunWrangler — confirmed child termination + kill classi
         spawnedPid = child.pid;
       },
       timeoutMs: 300,
-      // Kill FOR REAL, then report ESRCH (the child exited in the race window) → treated as gone.
+      // Decision: Kill for real, then report ESRCH (the child exited in the race window), which is treated as
+      // gone.
       killProcessGroup: (target, signal) => {
         process.kill(target, signal);
         throw Object.assign(new Error('ESRCH: no such process'), { code: 'ESRCH' });
@@ -371,7 +360,6 @@ describe('createDefaultRunWrangler — confirmed child termination + kill classi
     const result = await run({ type: 'd1.list' }, { accountId: 'acct' });
     expect(result.signal).toBe('SIGKILL');
     expect(result.status).not.toBe(0);
-    // ESRCH is NOT a kill failure — no "could not be killed" surfaced.
     expect(result.stderr).not.toMatch(/could not be killed/);
     expect(result.error).toBeNull();
     const pid = spawnedPid!;

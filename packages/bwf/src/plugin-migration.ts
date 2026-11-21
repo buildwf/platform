@@ -34,7 +34,7 @@ export function migrationPlugin(
 ): Plugin {
   return {
     name: 'platform:migrations',
-    // Not in Vitest's server: tests run in Node.js without the app's database bindings, and
+    // Decision: Not in Vitest's server: tests run in Node.js without the app's database bindings, and
     // running them must not change the local database or the one in `.env`.
     apply: (config, { command }) => command === 'serve' && !isVitestServer(config),
 
@@ -58,14 +58,14 @@ export function migrationPlugin(
           devAuthConfigImporter(server),
         );
       };
-      // MySQL runs Better Auth's migrations under the migration lock of the database they change.
+      // Decision: MySQL runs Better Auth's migrations under the migration lock of the database they change.
       const mysqlAuth = dialect === 'mysql' && auth?.enabled === true;
       const logApplied = (applied: Array<string>) => {
         if (applied.length > 0) {
           bwfLog(`Applied ${applied.length} migration(s): ${applied.join(', ')}`);
         }
       };
-      // A pending migration that fails validation stops every migration for this start, as
+      // Decision: A pending migration that fails validation stops every migration for this start, as
       // `bwf db migrate` does, so files never apply out of order. The dev server still starts.
       const refuse = (err: unknown) => {
         afterServerReady(server, () => {
@@ -80,9 +80,9 @@ export function migrationPlugin(
         if (dialect !== 'sqlite') {
           const { collectMigrations } = await import('./migrations/collect.ts');
           const allMigrations = collectMigrations(migrationsDir);
-          // For MySQL an empty migrations folder has nothing to apply.
+          // Decision: For MySQL an empty migrations folder has nothing to apply.
           const runFiles = dialect === 'mysql' ? allMigrations.length > 0 : hasSqlMigrations;
-          // Migration files apply to the database in .env, as `bwf db migrate` does. Better
+          // Decision: Migration files apply to the database in .env, as `bwf db migrate` does. Better
           // Auth's migrations read DATABASE_URL from the shell before .env, and each step holds
           // the lock of the database it changes.
           const url = runFiles ? readDatabaseUrl(root) : undefined;
@@ -96,7 +96,7 @@ export function migrationPlugin(
             });
             return;
           }
-          // One lock covers both steps when they change the same database.
+          // Decision: One lock covers both steps when they change the same database.
           const authWithFiles = authUrl !== undefined && authUrl === url;
 
           if (url) {
@@ -126,7 +126,7 @@ export function migrationPlugin(
                     runner.runMySqlMigrations(
                       migrationsDir,
                       url,
-                      // Report the applied files before Better Auth's step, which can still fail.
+                      // Decision: Report the applied files before Better Auth's step, which can still fail.
                       authWithFiles
                         ? async (names) => {
                             logApplied(names);

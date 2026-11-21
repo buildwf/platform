@@ -10,8 +10,8 @@ import {
   timestamp,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
-// Ownership IDs remain as audit identities after a user or project is deleted;
-// authorization always joins the current user/project records.
+// Decision: Ownership IDs stay as audit identities after a user or project is deleted; authorization joins
+// the current user and project records.
 
 /** Retained provider ownership, including ambiguous writes and project deletion. */
 export const emailSharedRecipients = pgTable(
@@ -139,8 +139,8 @@ export const emailDomainRoutes = pgTable(
       .notNull()
       .default('active')
       .$type<'active' | 'disabled' | 'removed'>(),
-    // 'none': outbound only. Inbound mail stays with the domain's own MX provider, so setup
-    // never touches Email Routing and the route never becomes inbound-ready.
+    // Decision: 'none' means outbound only. Inbound mail stays with the domain's own MX provider, so setup doesn't
+    // touch Email Routing and the route doesn't become inbound-ready.
     inbound_mode: text('inbound_mode').notNull().default('managed').$type<EmailInboundMode>(),
     inbound_status: text('inbound_status')
       .notNull()

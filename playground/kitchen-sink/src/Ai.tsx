@@ -119,9 +119,7 @@ export default function AiPage() {
               }
               const text = textFromAiResult(parsed);
               setResponse((current) => current + text);
-            } catch {
-              // skip unparseable chunks
-            }
+            } catch {}
           }
         }
       }

@@ -124,8 +124,8 @@ export const set = procedure('secrets.set')
     if (name.length > MAX_SECRET_NAME_LENGTH) {
       return fail('NAME_TOO_LONG');
     }
-    // Reject before we encrypt and persist: the deploy pipeline rejects the same set, but only at
-    // the next deploy. Delete stays unguarded so a row stored before this guard can be cleaned up.
+    // Decision: Reject before encrypting and storing: the deploy pipeline rejects the same names, but only at the
+    // next deploy. Delete stays unguarded so a row stored before this guard can be cleaned up.
     if (isReservedBindingName(name)) {
       return fail('RESERVED_NAME');
     }

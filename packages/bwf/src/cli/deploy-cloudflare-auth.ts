@@ -76,7 +76,7 @@ export async function prepareExistingCloudflareDeployWithAuth(
       session.accounts.length > 0 &&
       !session.accounts.some((account) => account.id === options.accountId);
     if (session && !wrongAccount) {
-      // Authentication works. Preserve the original Worker/permission error.
+      // Decision: Authentication works. Keep the original Worker or permission error.
       throw error;
     }
     const loggedOut = (identity.data as { loggedIn?: unknown } | undefined)?.loggedIn === false;
@@ -207,7 +207,7 @@ export async function readWranglerAuthToken(
     stderr: string,
   ): WranglerAuthTokenResult => ({
     ok: false,
-    // A clean status here would read as a successful upload.
+    // Decision: A clean status here would read as a successful upload.
     failure: {
       status: status === 0 ? 1 : status,
       ...(signal ? { signal } : {}),
@@ -229,7 +229,7 @@ export async function readWranglerAuthToken(
   }
   const parsed = result.data as { type?: unknown; token?: unknown } | null | undefined;
   if (!isCleanCloudflareExit(result)) {
-    // A Global API Key session has no bearer; the child marks it so the next step can be named.
+    // Decision: A Global API Key session has no bearer; the child marks it so the next step can be named.
     if (parsed?.type === 'api_key' && !result.error && !result.signal) {
       return fail(result.status, null, GLOBAL_API_KEY_SESSION);
     }
@@ -309,8 +309,8 @@ export async function ensureCloudflareAuthSecret(options: {
 
   const secret = randomBytes(32).toString('hex');
   if (workerWasMissing) {
-    // cf uploads secrets with the initial Worker version. The API's standalone
-    // secret endpoints reject a Worker that has not been created yet.
+    // Decision: cf uploads secrets with the initial Worker version. The API's standalone secret endpoints reject a
+    // Worker that hasn't been created yet.
     return { created: true, workerWasMissing: true, candidateSecret: secret };
   }
   beforeRun();

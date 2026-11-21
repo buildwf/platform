@@ -51,10 +51,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/**
- * A login JWT signs `header.body` with the same key and algorithm as the
- * project token, so its parts look like a project id and its token.
- */
+// Decision: A login JWT signs `header.body` with the same key and algorithm as the project token, so its
+// parts look like a project id and its token.
 async function loginJwtAsProjectToken(): Promise<{ projectId: string; token: string }> {
   const jwt = await signJwt({ sub: 'user_attacker', login: 'attacker', aud: 'api' }, JWT_SECRET);
   const [header, body, signature] = jwt.split('.');

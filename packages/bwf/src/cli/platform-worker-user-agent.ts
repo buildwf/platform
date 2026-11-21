@@ -25,10 +25,10 @@ export function platformWorkerUploadAttribution(
       return undefined;
     }
     const version = typeof vars.PLATFORM_VERSION === 'string' ? vars.PLATFORM_VERSION : 'unknown';
-    // Keep each field one token. Never include the ownership nonce in request headers.
+    // Decision: Keep each field one token. Never include the ownership nonce in request headers.
     return `platform-install/${encodeURIComponent(version)} platform-role/${marker.resourceKey} platform-installation/${encodeURIComponent(marker.installationId)}`;
   } catch {
-    // Attribution cannot make an otherwise valid upload fail.
+    // Decision: Attribution cannot make an otherwise valid upload fail.
     return undefined;
   }
 }

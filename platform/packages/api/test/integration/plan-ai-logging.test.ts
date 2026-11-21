@@ -54,8 +54,7 @@ import {
   type TestEnv,
 } from './helpers.ts';
 
-// Hosted Platform does not set PLATFORM_AUTH_DATABASE_UNCACHED. Nothing here may
-// depend on it.
+// Decision: Hosted Platform doesn't set PLATFORM_AUTH_DATABASE_UNCACHED, so nothing here can depend on it.
 let env: TestEnv;
 let token: string;
 let logins = 0;
@@ -84,7 +83,6 @@ function operator(
   return operatorFetch(env, token, path, body, overrides);
 }
 
-/** Previews a plan change, then applies it with the preview's revision; expects 200. */
 async function planChange(
   path: string,
   body: Record<string, unknown>,
@@ -105,7 +103,6 @@ async function sync(overrides?: Partial<ApiEnv['Bindings']>) {
   return operator('/config/plans/sync', { expectedRevision: catalog.revision }, overrides);
 }
 
-/** Runs `plans sync` until the publish is complete; fails after `limit` calls. */
 async function syncUntilComplete(limit: number): Promise<void> {
   for (let calls = 1; calls <= limit; calls++) {
     const body = (await (await sync()).json()) as { aiLoggingPublish: { complete: boolean } };
@@ -125,7 +122,6 @@ async function seedProject(plan: string) {
   return { user, project: await createTestProject(env.db, user.id) };
 }
 
-/** Bulk projects for one owner, so paging tests do not pay one insert per project. */
 async function seedProjects(userId: string, count: number, prefix = 'bulk') {
   const values = Array.from({ length: count }, (_, index) => ({
     id: `proj_${prefix}${String(index).padStart(8, '0')}`,
@@ -136,7 +132,6 @@ async function seedProjects(userId: string, count: number, prefix = 'bulk') {
   return values.map((value) => value.id);
 }
 
-/** Saves the same project override on every project in `ids`. */
 async function saveModes(ids: ReadonlyArray<string>, mode: 'off' | 'metadata' | 'full') {
   await env.db.insert(projectAiLogging).values(ids.map((id) => ({ project_id: id, mode })));
 }
@@ -149,10 +144,8 @@ async function planDefaults() {
   return getPlatformSetting(env.db, PLAN_AI_LOGGING_SETTING);
 }
 
-/**
- * The test database, but `hook` runs once before the first transaction that starts
- * after `arm()`, while no transaction of the caller is open.
- */
+// Decision: The test database, but `hook` runs once before the first transaction that starts after `arm()`,
+// while no transaction of the caller is open.
 function hookNextTransaction(hook: () => Promise<void>) {
   let armed = false;
   const db = new Proxy(env.db, {
@@ -173,7 +166,6 @@ function hookNextTransaction(hook: () => Promise<void>) {
   return { db, arm: () => (armed = true) };
 }
 
-/** Starts a plan publish whose first page failed, so its cursor is still null. */
 async function stalledPlanPublish(path: string, body: Record<string, unknown>) {
   const failing = failAiLoggingWrites(env.ROUTING, 'put');
   await planChange(path, body);
@@ -181,12 +173,11 @@ async function stalledPlanPublish(path: string, body: Record<string, unknown>) {
   return (await planDefaults()) as PlanAiLoggingSettings;
 }
 
-/** Runs one publish page; `during` commits while the page is between projects. */
 async function pageWithConcurrentChange(during: () => Promise<void>) {
   const hooked = hookNextTransaction(during);
   let writes = 0;
   const spy = beforeKvWrite(env.ROUTING, 'put', (key) => {
-    // After the first project's write, the next transaction is the second project's.
+    // Decision: After the first project's write, the next transaction is the second project's.
     if (key.startsWith('ai-logging:') && ++writes === 1) {
       hooked.arm();
     }
@@ -198,7 +189,6 @@ async function pageWithConcurrentChange(during: () => Promise<void>) {
   }
 }
 
-/** A usage counter that fails every call, to prove a path never reaches it. */
 function forbiddenUsageCounter() {
   const get = vi.fn(() => {
     throw new Error('usage counter must not be called');
@@ -207,7 +197,6 @@ function forbiddenUsageCounter() {
 }
 
 describe('plan routes', () => {
-  // Which edits set, keep or clear a default is unit tested (proposePlanAiLogging).
   test('set saves the default, bumps the catalog revision and publishes it', async () => {
     const { project } = await seedProject('free');
     const before = await readPlanCatalog(env.db);
@@ -215,7 +204,7 @@ describe('plan routes', () => {
     const set = await planChange('/free/set', { aiLogging: 'off' });
     expect(await set.json()).toMatchObject({
       ok: true,
-      // free is the default plan, so accounts on unknown plans follow it too.
+      // Decision: free is the default plan, so accounts on unknown plans follow it too.
       aiLogging: { modes: { free: 'off' }, planIds: ['free'], includeUnknown: true },
       aiLoggingPublish: { complete: true, processed: 1, remaining: 0 },
     });
@@ -246,12 +235,10 @@ describe('plan routes', () => {
     });
     expect(await planDefaults()).toBeNull();
 
-    // A change that moves no default publishes nothing.
     const rename = await operator('/config/plans/pro/set', { name: 'Pro+', dryRun: true });
     expect(await rename.json()).toMatchObject({
       aiLoggingPublish: { complete: true, remaining: 0 },
     });
-    // The rules for which edits may set it are unit tested; the route maps a refusal to 400.
     const bad = await operator('/config/plans/pro/set', { aiLogging: 'bogus', dryRun: true });
     expect(bad.status).toBe(400);
   });
@@ -259,7 +246,6 @@ describe('plan routes', () => {
   test('publishes in pages of 100 through sync, without the usage counter', async () => {
     const user = await owner('pro');
     const ids = await seedProjects(user.id, 250);
-    // A project with its own setting keeps it and is not part of the fan-out.
     await saveModes([ids[0]!], 'full');
     const counter = forbiddenUsageCounter();
     const overrides = { USAGE_COUNTER: counter.namespace };
@@ -326,7 +312,6 @@ describe('plan routes', () => {
     const proIds = await seedProjects(pro.id, 150, 'pro');
     const [freeId] = await seedProjects(free.id, 1, 'free');
     await planChange('/pro/set', { aiLogging: 'off' });
-    // pro still has 50 projects to go; a free change folds into the same run.
     const second = await planChange('/free/set', { aiLogging: 'metadata' });
     expect(await second.json()).toMatchObject({ aiLoggingPublish: { complete: false } });
     expect(await planDefaults()).toMatchObject({
@@ -355,7 +340,6 @@ describe('plan routes', () => {
       setPlatformSetting(env.db, PLAN_AI_LOGGING_SETTING, newer),
     );
     expect(page).toMatchObject({ complete: false, processed: PLAN_AI_LOGGING_PAGE_SIZE });
-    // The old page must not move the newer run's cursor past the free project.
     expect(await planDefaults()).toEqual(newer);
     await syncUntilComplete(5);
     expect(await published(freeId!)).toBe('metadata');
@@ -381,8 +365,8 @@ describe('plan routes', () => {
   });
 
   test('a plan change and its publish page read settings through writes, not cacheable reads', async () => {
-    // The new catalog revision names the publish run, so a cached older revision
-    // would give two plan changes the same run. The route runs the same page as sync.
+    // Decision: The new catalog revision names the publish run, so a cached older revision would give two plan
+    // changes the same run. The route runs the same page as sync.
     await seedProject('pro');
     const preview = await operator('/config/plans/pro/set', { aiLogging: 'off', dryRun: true });
     const { expectedRevision } = (await preview.json()) as { expectedRevision: number };
@@ -414,10 +398,8 @@ describe('plan routes', () => {
     const pro = await owner('pro');
     const ids = await seedProjects(pro.id, PLAN_AI_LOGGING_PAGE_SIZE + 20, 'pro');
     await planChange('/free/set', { aiLogging: 'off' });
-    // Stops after the first page, so the last 20 pro projects are not published yet.
     await planChange('/pro/set', { aiLogging: 'off' });
     expect(await published(ids.at(-1)!)).toBeNull();
-    // free has the same default, so the removal itself changes no account's mode.
     await planChange('/pro/remove', { replacementPlanId: 'free' });
     await syncUntilComplete(3);
     expect(await published(ids.at(-1)!)).toBe('off');
@@ -426,10 +408,8 @@ describe('plan routes', () => {
   test('adding a plan during an unfinished unknown-plan publish keeps its accounts in the run', async () => {
     const legacy = await owner('legacy-x');
     const ids = await seedProjects(legacy.id, PLAN_AI_LOGGING_PAGE_SIZE + 20, 'legacy');
-    // free is the default plan, so accounts on unknown plans follow it; one page runs.
     await planChange('/free/set', { aiLogging: 'off' });
     expect(await published(ids.at(-1)!)).toBeNull();
-    // legacy-x gets the same default, so adding it changes no account's mode.
     await planChange('/add', { id: 'legacy-x', copyFrom: 'free', name: 'Legacy' });
     await syncUntilComplete(3);
     expect(await published(ids.at(-1)!)).toBe('off');
@@ -460,7 +440,7 @@ describe('plan routes', () => {
 
   test('an old-style catalog write leaves plan defaults intact', async () => {
     await planChange('/pro/set', { aiLogging: 'metadata' });
-    // Older APIs rebuild the catalog from known keys and save it on every write.
+    // Decision: Older APIs rebuild the catalog from known keys and save it on each write.
     const catalog = await readPlanCatalog(env.db);
     await writePlanCatalog(env.db, parsePlatformPlanCatalog(JSON.parse(JSON.stringify(catalog))));
     await setPlatformSetting(env.db, PLAN_CATALOG_SETTING, {
@@ -526,12 +506,10 @@ describe('account changes', () => {
       message: `Plan changed. AI logging was published to ${PLAN_AI_LOGGING_PAGE_SIZE} projects; 20 remain. Run the same plan change again to continue.`,
       details: { aiLoggingComplete: false, aiLoggingRemaining: 20, cleanupComplete: true },
     });
-    // Limits follow the new plan at once, before the last page.
     expect(get).toHaveBeenCalled();
     expect(writes()).toHaveLength(PLAN_AI_LOGGING_PAGE_SIZE);
     expect(await published(ids[PLAN_AI_LOGGING_PAGE_SIZE - 1]!)).toBe('off');
     expect(await published(ids.at(-1)!)).toBeNull();
-    // A project the unfinished change has not reached yet is pending, not drift.
     expect(await (await operator(`/projects/${ids.at(-1)!}/ai-logging`)).json()).toMatchObject({
       effective: 'off',
       published: 'inherit',
@@ -542,12 +520,10 @@ describe('account changes', () => {
     writes = recordAiLoggingWrites(env.ROUTING);
     const second = await operator(`/users/${user.id}/plan`, { plan: 'pro' });
     expect(second.status).toBe(200);
-    // Only the rest: the retry does not start again from the first project.
     expect(writes()).toEqual(ids.slice(PLAN_AI_LOGGING_PAGE_SIZE).map(aiLoggingKey));
     expect(await published(ids.at(-1)!)).toBe('off');
     expect(await getPlatformSetting(env.db, `ai-logging:user-publish:${user.id}`)).toBeNull();
 
-    // Once finished, the same change publishes every project again.
     vi.restoreAllMocks();
     writes = recordAiLoggingWrites(env.ROUTING);
     expect((await operator(`/users/${user.id}/plan`, { plan: 'pro' })).status).toBe(500);
@@ -575,7 +551,6 @@ describe('account changes', () => {
     await planChange('/pro/set', { aiLogging: 'off' });
     const { user, project } = await seedProject('free');
     await env.db.transaction((tx) => startUserAiLoggingPublish(tx, user.id, 'free', 'pro'));
-    // A newer change to solo took over before the pro page ran.
     await env.db.transaction((tx) => startUserAiLoggingPublish(tx, user.id, 'pro', 'solo'));
     const writes = recordAiLoggingWrites(env.ROUTING);
     expect(
@@ -592,11 +567,10 @@ describe('account changes', () => {
     const { user, project } = await seedProject('pro');
     await env.db.transaction((tx) => startUserAiLoggingPublish(tx, user.id, 'free', 'pro'));
     const hooked = hookNextTransaction(async () => {
-      // pro -> solo -> pro while the first pro page is still running.
       await env.db.transaction((tx) => startUserAiLoggingPublish(tx, user.id, 'pro', 'solo'));
       await env.db.transaction((tx) => startUserAiLoggingPublish(tx, user.id, 'solo', 'pro'));
     });
-    // The next transaction after the write is the page's last one, which saves its progress.
+    // Decision: The next transaction after the write is the page's last one, which saves its progress.
     const spy = beforeKvWrite(env.ROUTING, 'put', (key) => {
       if (key.startsWith('ai-logging:')) {
         hooked.arm();
@@ -607,7 +581,6 @@ describe('account changes', () => {
       await runUserAiLoggingPublishPage(hooked.db, env.ROUTING, user.id, 'pro', options),
     ).toMatchObject({ processed: 1 });
     spy.mockRestore();
-    // The newer run still starts from the first project.
     expect(await getPlatformSetting(env.db, `ai-logging:user-publish:${user.id}`)).toMatchObject({
       plan: 'pro',
       cursor: null,
@@ -622,7 +595,6 @@ describe('account changes', () => {
     const { user, project } = await seedProject('free');
     const own = await createTestProject(env.db, user.id);
     await saveModes([own.id], 'full');
-    // A key left from an earlier plan default.
     await putAiLoggingKey(env.ROUTING, project.id, 'off');
     const writes = recordAiLoggingWrites(env.ROUTING);
     expect((await operator(`/users/${user.id}/plan`, { plan: 'pro' })).status).toBe(200);
@@ -640,7 +612,6 @@ describe('account changes', () => {
     expect(await failed.json()).toMatchObject({ error: 'partial_failure' });
     expect(await published(project.id)).toBe('off');
     failing.mockRestore();
-    // The plan is already saved, so the retry moves free -> free.
     const retried = await operator(`/users/${user.id}/plan`, { plan: 'free' });
     expect(retried.status).toBe(200);
     expect(await published(project.id)).toBeNull();
@@ -653,7 +624,7 @@ describe('account changes', () => {
     );
     expect(result).toEqual([project.id]);
     expect(expectNoCacheableReads(queries)).toEqual(['update']);
-    // The subquery takes the row locks in id order, like the installer projection.
+    // Decision: The subquery takes the row locks in id order, like the installer projection.
     expect(queries[0]).toContain('order by "projects"."id" asc for no key update of "projects"');
   });
 
@@ -693,10 +664,8 @@ describe('hourly sweep', () => {
     const missing = await seedProject('pro');
     const bare = await seedProject('pro');
     const nowInherit = await seedProject('free');
-    // Publish the expected keys, then damage some of them.
     await planChange('/pro/set', { aiLogging: 'off' });
     await putAiLoggingKey(env.ROUTING, wrong.project.id, 'full', Date.now());
-    // The right value without publish metadata did not come from the platform.
     await env.ROUTING.put(aiLoggingKey(bare.project.id), 'off');
     await env.ROUTING.delete(aiLoggingKey(missing.project.id));
     await putAiLoggingKey(env.ROUTING, nowInherit.project.id, 'off', Date.now());
@@ -725,7 +694,7 @@ describe('hourly sweep', () => {
     });
     expect(await published(nowInherit.project.id)).toBeNull();
     expect(await published('proj_gone0000001')).toBeNull();
-    // A create writes its key before it commits; a young key may still get its row.
+    // Decision: A create writes its key before it commits, so a young key may still get its row.
     expect(await published('proj_young000001')).toBe('off');
 
     expect(await sweepAiLogging(env.db, env.ROUTING, 'free')).toMatchObject({ mismatched: 0 });
@@ -738,7 +707,7 @@ describe('hourly sweep', () => {
     for (const id of ids) {
       await putAiLoggingKey(env.ROUTING, id, 'off');
     }
-    // Sorts after every project key, so it is on the second list page.
+    // Decision: Sorts after each project key, so it's on the second list page.
     const gone = 'proj_zzgone000001';
     await putAiLoggingKey(env.ROUTING, gone, 'off');
     expect(await sweepAiLogging(env.db, env.ROUTING, 'free')).toEqual({
@@ -754,7 +723,6 @@ describe('hourly sweep', () => {
     const user = await owner('free');
     const count = AI_LOGGING_SWEEP_STATUS_PAGE + 100;
     const ids = await seedProjects(user.id, count);
-    // The last 100 sit on the second status page; a project being deleted is left alone.
     const deleting = ids.slice(AI_LOGGING_SWEEP_STATUS_PAGE);
     await env.db.update(projects).set({ status: 'deleting' }).where(inArray(projects.id, deleting));
     for (const id of ids) {
@@ -800,7 +768,6 @@ describe('hourly sweep', () => {
     const user = await owner('free');
     const ids = await seedProjects(user.id, 600);
     await saveModes(ids, 'off');
-    // One list page, then one write per repair.
     const repairs = AI_LOGGING_SWEEP_KV_BUDGET - 1;
     expect(await sweepAiLogging(env.db, env.ROUTING, 'free')).toEqual({
       listed: 0,
@@ -823,7 +790,7 @@ describe('hourly sweep', () => {
     await stalledPlanPublish('/pro/set', { aiLogging: 'off' });
     const other = await owner('free');
     await saveModes(await seedProjects(other.id, 300, 'drift'), 'off');
-    // 400 minus one list page minus 200 kept for the plan page.
+    // Decision: 400 minus one list page minus 200 kept for the plan page.
     expect(await sweepAiLogging(env.db, env.ROUTING, 'free')).toMatchObject({ repaired: 199 });
     expect(await planDefaults()).toMatchObject({ publish: { complete: false } });
     await sweepAiLogging(env.db, env.ROUTING, 'free');

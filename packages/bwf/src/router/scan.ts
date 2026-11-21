@@ -29,7 +29,6 @@ export type ScanResult = {
 export type MiddlewareDefinition = {
   /** Numeric order prefix (e.g. 1 for "01.logger.ts") */
   order: number;
-  /** Original filename */
   filePath: string;
 };
 
@@ -56,7 +55,7 @@ export async function scanRoutes(options: {
   const routes = inventory.routes
     .map((route) => {
       const methods = detectHttpExports(join(paths.routesDir, route.filePath));
-      // Hono runs the GET handler for HEAD requests and has no way to register a HEAD one.
+      // Decision: Hono runs the GET handler for HEAD requests and has no way to register a HEAD one.
       if (methods.includes('HEAD')) {
         throw new Error(
           `routes: '${route.filePath}' exports HEAD. HEAD requests are answered by the GET handler; remove the HEAD export.`,

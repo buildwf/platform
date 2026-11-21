@@ -12,7 +12,6 @@ import {
 } from '../../src/runtime/env-public.ts';
 import { getRuntimeBinding, requireRuntimeBinding, withRuntimeEnv } from '../../src/runtime/env.ts';
 
-// Reset schema between tests so order doesn't leak state.
 function resetSchema() {
   defineEnv({});
 }
@@ -165,12 +164,8 @@ describe('defineEnv + env proxy', () => {
   });
 
   it('_hasRegisteredSchema distinguishes defineEnv({}) from never-called', () => {
-    // resetSchema() already called defineEnv({}) in beforeEach.
     expect(_hasRegisteredSchema()).toBe(true);
-    // Registered schema is still an empty object — not null — but the
-    // presence flag tells us defineEnv was explicitly invoked.
     expect(_getRegisteredSchema()).toEqual({});
-    // Calling with a real schema also keeps the flag on.
     defineEnv({ FOO: string() });
     expect(_hasRegisteredSchema()).toBe(true);
   });
@@ -199,7 +194,7 @@ describe('redaction', () => {
       } catch (e) {
         const msg = (e as Error).message;
         expect(msg).not.toContain('sk_live_abc_not_a_url');
-        expect(msg).toContain('STRIPE_KEY'); // key name survives
+        expect(msg).toContain('STRIPE_KEY');
         expect(msg).toContain('<redacted>');
       }
     });
@@ -232,7 +227,6 @@ describe('validateAllEnv (used by dev plugin and CLI)', () => {
   });
 
   it('returns valid=true when no schema registered', async () => {
-    // After resetSchema(), the schema is empty {} — still counts as registered.
     const report = await validateAllEnv({});
     expect(report.valid).toBe(true);
   });
@@ -256,7 +250,6 @@ describe('validateAllEnv (used by dev plugin and CLI)', () => {
     expect(good.valid).toBe(true);
     expect(good.values.get('TOKEN')).toBe('value');
 
-    // Reset the boot state before re-registering to avoid stale caching.
     defineEnv({ TOKEN: asyncValidator });
     const bad = await validateAllEnv({ TOKEN: 'nope' });
     expect(bad.valid).toBe(false);
@@ -330,7 +323,6 @@ describe('_validateEnvOnce (boot-time worker check)', () => {
   it('is reset by a new defineEnv call (HMR semantics)', async () => {
     defineEnv({ A: string() });
     await expect(_validateEnvOnce({})).rejects.toBeInstanceOf(EnvValidationError);
-    // Re-import / HMR: schema swaps, boot state resets, new env satisfies new schema
     defineEnv({ B: string() });
     await expect(_validateEnvOnce({ B: 'value' })).resolves.toBeUndefined();
   });
@@ -350,7 +342,6 @@ describe('_validateEnvOnce (boot-time worker check)', () => {
     };
     defineEnv({ TOKEN: asyncUpper });
     const rawEnv = { TOKEN: 'sk_test' };
-    // Pre-validate seeds the cache so subsequent sync reads are free.
     await withRuntimeEnv(rawEnv, async () => {
       await _validateEnvOnce(rawEnv);
       expect(env.TOKEN).toBe('SK_TEST');
@@ -386,7 +377,7 @@ describe('_validateEnvOnce (boot-time worker check)', () => {
       },
     };
 
-    // bwf's Worker entry validates before it opens the request scope that reads run in.
+    // Decision: bwf's Worker entry validates before it opens the request scope that reads run in.
     it('serves them in a request scope opened after validation', async () => {
       defineEnv({ TOKEN: upper });
       const rawEnv = { TOKEN: 'sk_test' };
@@ -396,7 +387,7 @@ describe('_validateEnvOnce (boot-time worker check)', () => {
       });
     });
 
-    // Reads can use an object that validation never received, such as the remote dev copy.
+    // Decision: Reads can use an object that validation never received, such as the remote dev copy.
     it('serves them to another env object that holds the same values', async () => {
       defineEnv({ TOKEN: upper });
       await _validateEnvOnce({ TOKEN: 'sk_test' });
@@ -408,18 +399,15 @@ describe('_validateEnvOnce (boot-time worker check)', () => {
     it('serves each key by its own raw value', async () => {
       defineEnv({ PLAIN: string(), TOKEN: upper });
       await _validateEnvOnce({ PLAIN: 'a', TOKEN: 'a' });
-      // TOKEN holds another value: the validated one is not served, and it has no async value.
       withRuntimeEnv({ PLAIN: 'a', TOKEN: 'b' }, () => {
         expect(env.PLAIN).toBe('a');
         expect(() => env.TOKEN).toThrow(/Async validator for 'TOKEN'/);
       });
-      // Only PLAIN holds another value: TOKEN's raw value is the validated one.
       withRuntimeEnv({ PLAIN: 'b', TOKEN: 'a' }, () => {
         expect([env.PLAIN, env.TOKEN]).toEqual(['b', 'A']);
       });
     });
 
-    // A validation is reused only for an env with the same values.
     it('validates an env with other values again', async () => {
       defineEnv({ PLAIN: string(), TOKEN: upper });
       for (const value of ['a', 'b']) {
@@ -431,12 +419,11 @@ describe('_validateEnvOnce (boot-time worker check)', () => {
       }
     });
 
-    // Cloudflare can keep an isolate running when only its bindings change, so a request that
-    // holds the old values can still run when one with the new values validates.
+    // Decision: Cloudflare can keep an isolate running when only its bindings change, so a request that holds
+    // the old values can still run when one with the new values validates.
     it('keeps serving an env after an env with other values validates', async () => {
       defineEnv({ TOKEN: upper });
       const before = { TOKEN: 'a' };
-      // Another object with the same values reuses the validation of the first.
       const reused = { TOKEN: 'a' };
       const after = { TOKEN: 'b' };
       await _validateEnvOnce(before);
@@ -462,8 +449,8 @@ describe('_validateEnvOnce (boot-time worker check)', () => {
       });
     });
 
-    // Reads outside a request scope use an env of their own: in workerd, the
-    // `cloudflare:workers` env, which is not the object that handlers receive.
+    // Decision: Reads outside a request scope use an env of their own: in workerd, the `cloudflare:workers`
+    // env, which isn't the object that handlers receive.
     describe('outside a request scope', () => {
       const globalScope = globalThis as { __env__?: unknown };
 
@@ -519,7 +506,7 @@ describe('_validateEnvOnce (boot-time worker check)', () => {
     expect(calls).toBe(2);
   });
 
-  // In workerd, a validation that waits on the I/O of a canceled request never settles.
+  // Decision: In workerd, a validation that waits on the I/O of a canceled request never settles.
   it('does not wait on a validation that another call left unfinished', async () => {
     let calls = 0;
     const stalls = {
@@ -539,7 +526,7 @@ describe('_validateEnvOnce (boot-time worker check)', () => {
     );
   });
 
-  // HMR can register a new schema while a validation awaits.
+  // Decision: HMR can register a new schema while a validation awaits.
   it('validates with a schema registered while it waited', async () => {
     let release = () => {};
     const gate = new Promise<void>((resolve) => {
@@ -567,7 +554,6 @@ describe('_validateEnvOnce (boot-time worker check)', () => {
   });
 });
 
-/** Rejects when `promise` is still pending after `ms`, rather than at the test timeout. */
 async function settlesWithin<T>(promise: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {

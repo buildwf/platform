@@ -42,7 +42,6 @@ type FakePoolRecord = {
 type FakeDatabaseState = {
   nextId: number;
   pools: Array<FakePoolRecord>;
-  // drizzle configs of the databases built on a client that bwf/db passes in.
   instances: Array<Record<string, unknown>>;
   clients: Array<unknown>;
 };
@@ -206,7 +205,6 @@ export const withEnv = (env, callback) => withRuntimeEnv(env, callback);
 
 type DriverQuery = { toSQL(): { sql: string } };
 
-/** Load bwf/db with drizzle's own driver and record each pool it builds. */
 async function loadDriverDbModule(dialect: 'postgresql' | 'mysql'): Promise<{
   db: { select(): { from(table: unknown): DriverQuery } };
   clients: Array<{ end(): unknown }>;
@@ -246,7 +244,6 @@ type MySqlDb = {
   execute(query: unknown): Promise<unknown>;
 };
 
-/** Load the MySQL bwf/db module with drizzle's own driver and mysql2. */
 async function loadMySqlDbModule(): Promise<{
   db: MySqlDb;
   createDb(connectionString: string): MySqlDb;
@@ -374,7 +371,7 @@ describe('drizzlePlugin db typing generation', () => {
               ? { connectionString: 'postgresql://hyperdrive', max: 1, idleTimeoutMillis: 1000 }
               : { uri: 'mysql://hyperdrive', connectionLimit: 1, disableEval: true },
           );
-          // mysql2 would start a timer when it builds a pool with these.
+          // Decision: mysql2 would start a timer when it builds a pool with these.
           expect(pool.options).not.toHaveProperty('maxIdle');
           expect(pool.options).not.toHaveProperty('idleTimeout');
         }
@@ -397,8 +394,8 @@ describe('drizzlePlugin db typing generation', () => {
           ? pgTable('users', { id: serial('id') })
           : mysqlTable('users', { id: int('id') });
 
-      // A module-level query is built in global scope: no env exists there, and workerd
-      // rejects the timer a mysql2 pool may start.
+      // Decision: A module-level query is built in global scope: no env exists there, and workerd rejects the
+      // timer a mysql2 pool may start.
       const query = db.select().from(users);
 
       expect(query.toSQL().sql).toMatch(/^select .id. from .users.$/);
@@ -416,7 +413,7 @@ describe('drizzlePlugin db typing generation', () => {
         ? pgTable('users', { id: serial('id') })
         : mysqlTable('users', { id: int('id') });
 
-    // drizzle reports an error from a running query as "Failed query: ...".
+    // Decision: drizzle reports an error from a running query as "Failed query: ...".
     await expect(withRuntimeEnv({}, async () => await db.select().from(users))).rejects.toThrow(
       `db: ${name} is not configured.`,
     );
@@ -452,7 +449,7 @@ export const profile = sqliteTable('profile', { id: integer('id').primaryKey() }
       );
     }
     drizzlePlugin(root, false, 'sqlite', { forceVirtualDb: true });
-    // pnpm keeps @types/node out of the root node_modules, so link its hoisted store.
+    // Decision: pnpm keeps @types/node out of the root node_modules, so link its hoisted store.
     symlinkSync(
       fileURLToPath(new URL('../../../../node_modules/.pnpm/node_modules', import.meta.url)),
       join(root, 'node_modules'),
@@ -666,7 +663,7 @@ createDb(binding, { session: { bookmark: null } });
       );
       expect(await background).toBe(responseInstance);
 
-      // MySQL createDb() builds its own pool through drizzle; the other pools are per request.
+      // Decision: MySQL createDb() builds its own pool through drizzle; the other pools are per request.
       const requestPools = state.pools.filter((pool) => pool.options.uri !== explicitOwner);
       expect(requestPools).toHaveLength(6);
       for (const pool of requestPools) {
@@ -679,7 +676,6 @@ createDb(binding, { session: { bookmark: null } });
           expect(pool.options).not.toHaveProperty('idleTimeout');
         }
       }
-      // Every request shares one drizzle database, which carries the schema.
       expect(state.instances).toEqual([
         dialect === 'postgresql'
           ? { schema: expect.anything() }
@@ -711,8 +707,8 @@ createDb(binding, { session: { bookmark: null } });
       (match) => JSON.parse(match[1]!) as string,
     );
 
-    // The worker optimizer serves drizzle's bare driver import from a prebundle. A bare import
-    // here resolves from the app root, and an import by file path reaches workerd as CommonJS.
+    // Decision: The worker optimizer serves drizzle's bare driver import from a prebundle. A bare import here
+    // resolves from the app root, and an import by file path reaches workerd as CommonJS.
     const driverPath = new RegExp(`(^|[\\\\/])${driver}([\\\\/]|$)`);
     expect(
       specifiers.filter(
@@ -773,11 +769,10 @@ export const requestPoolConfig = (env) =>
     const url = `mysql://void@127.0.0.1:${server.port}/app`;
     const { db, createDb, sql } = await loadMySqlDbModule();
     const previousEnv = (globalThis as Record<string, unknown>).__env__;
-    /** Run queries, then expect their connection to close once idle for `idleTimeout`. */
     const expectClosedWhenIdle = async (queries: () => Promise<unknown>, idleTimeout: number) => {
       await queries();
       expect(server.openConnections()).toBe(1);
-      // The pool releases a connection before the query resolves.
+      // Decision: The pool releases a connection before the query resolves.
       expect(vi.getTimerCount()).toBe(1);
       vi.advanceTimersByTime(idleTimeout - 1);
       expect(server.openConnections()).toBe(1);
@@ -786,7 +781,7 @@ export const requestPoolConfig = (env) =>
     };
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     try {
-      // workerd rejects a timer started outside a request, and a pool can be built there.
+      // Decision: workerd rejects a timer started outside a request, and a pool can be built there.
       await withRuntimeEnv({ DATABASE_URL: url }, async () => {
         void db.$client;
         expect(vi.getTimerCount()).toBe(0);
@@ -796,8 +791,8 @@ export const requestPoolConfig = (env) =>
         }, 1000);
       });
 
-      // A framework entry that bwf does not wrap runs outside its request scope, where each
-      // use builds a pool.
+      // Decision: A framework entry that bwf doesn't wrap runs outside its request scope, where each use builds
+      // a pool.
       (globalThis as Record<string, unknown>).__env__ = { DATABASE_URL: url };
       void db.$client.config;
       expect(vi.getTimerCount()).toBe(0);
@@ -807,7 +802,6 @@ export const requestPoolConfig = (env) =>
       try {
         expect(vi.getTimerCount()).toBe(0);
         await expectClosedWhenIdle(() => own.execute(sql`select 1`), 60_000);
-        // The pool connects again for the next query.
         await own.execute(sql`select 1`);
         expect(server.openConnections()).toBe(1);
       } finally {
@@ -899,8 +893,8 @@ export const requestPoolOptions = (env) =>
   it.each(['sqlite', 'postgresql', 'mysql'] as const)(
     'exports the %s SQL helpers before bwf/db imports the schema',
     (dialect) => {
-      // A table file that db/schema.ts re-exports from outside db/ imports this module while
-      // it loads the schema. Vite SSR runs imports in source order (#472).
+      // Decision: A table file that db/schema.ts re-exports from outside db/ imports this module while it loads
+      // the schema. Vite SSR runs imports in source order.
       const root = createProjectRoot();
       const plugin = drizzlePlugin(root, false, dialect);
       const load = getHookHandler(plugin.load) as (this: object, id: string) => string;
@@ -913,7 +907,7 @@ export const requestPoolOptions = (env) =>
   );
 
   it('treats files in db/schema/ beside db/schema.ts as schema files', () => {
-    // `bwf gen model` writes db/schema/<name>.ts and re-exports it from db/schema.ts.
+    // Decision: `bwf gen model` writes db/schema/<name>.ts and re-exports it from db/schema.ts.
     const root = createProjectRoot();
     const plugin = drizzlePlugin(root, false, 'sqlite');
     const resolveId = getHookHandler(plugin.resolveId) as (
@@ -966,7 +960,7 @@ export const requestPoolOptions = (env) =>
     expect(code).not.toMatch(/\bschema\b/);
   });
 
-  // The package's own bwf/db is a D1 client, which never fits these dialects.
+  // Decision: The package's own bwf/db is a D1 client, which doesn't fit these dialects.
   it.each(['postgresql', 'mysql'] as const)('serves the %s bwf/db without a schema', (dialect) => {
     const root = createProjectRoot({ schema: false });
     const plugin = drizzlePlugin(root, false, dialect);

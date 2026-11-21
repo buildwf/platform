@@ -1,6 +1,6 @@
 import type { PlatformInstallPlan } from './platform-plan.ts';
 
-// Type-only imports keep this module cheap to load from the setup prompts.
+// Decision: Type-only imports keep this module cheap to load from the setup prompts.
 
 export function planCreatesZone(plan: Pick<PlatformInstallPlan, 'actions'>): boolean {
   return plan.actions.some((action) => action.kind === 'zone' && action.action === 'create');

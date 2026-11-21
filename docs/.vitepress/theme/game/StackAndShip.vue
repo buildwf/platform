@@ -55,9 +55,7 @@ function saveBest() {
   best.value = game.value.score;
   try {
     localStorage.setItem(STORAGE_KEY, String(best.value));
-  } catch {
-    /* Play also works without storage. */
-  }
+  } catch {}
 }
 
 function animate(now: number) {
@@ -108,7 +106,7 @@ function drop(event?: KeyboardEvent | MouseEvent) {
   if (phase.value !== 'playing' || performance.now() < nextTileAt) {
     return;
   }
-  // Sample at the input time, rather than relying on the previous rendered frame.
+  // Decision: Sample at the input time, rather than relying on the previous rendered frame.
   const now = performance.now();
   game.value = advanceStackGame(game.value, Math.min(0.05, (now - lastFrame) / 1000));
   lastFrame = now;
@@ -164,9 +162,7 @@ onMounted(() => {
     if (Number.isSafeInteger(stored) && stored >= 0) {
       best.value = stored;
     }
-  } catch {
-    /* Storage is optional. */
-  }
+  } catch {}
   observer = new IntersectionObserver(
     (entries) => {
       if (!entries[0]?.isIntersecting) {

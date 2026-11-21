@@ -91,7 +91,7 @@ export async function getAppliedMigrations(dbPath: string): Promise<Array<Applie
   const db = await openSqliteDatabase(dbPath, { readonly: true });
 
   try {
-    // Check for current table name, fall back to legacy `_migrations` for
+    // Decision: Check for current table name, fall back to legacy `_migrations` for
     // projects that haven't run `bwf db migrate` yet (which auto-upgrades).
     let tableName: string | null = null;
     for (const candidate of ['_void_migrations', '_migrations']) {
@@ -275,7 +275,7 @@ export async function runMigrations(
 
     for (const migration of pending) {
       const tx = db.transaction(() => {
-        // Re-check under the write lock: a concurrent local runner may have applied it already.
+        // Decision: Re-check under the write lock: a concurrent local runner may have applied it already.
         if (checkStmt.get(migration.name)) {
           return false;
         }
@@ -284,7 +284,7 @@ export async function runMigrations(
         return true;
       });
 
-      // A throw inside the transaction rolls the whole file back.
+      // Decision: A throw inside the transaction rolls the whole file back.
       let applied: boolean;
       try {
         applied = tx.immediate();

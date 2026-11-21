@@ -408,13 +408,12 @@ describe('Zero Trust operation completion', () => {
           ? reconcilePlatformZeroTrust(platform, env.db)
           : disablePlatformZeroTrust(platform, env.db);
       await entered.promise;
-      // The pending operation does not choose existing-project protection.
       const { existingProjects: _existingProjects, ...nextInput } = configurationInput({
         identityProviderIds: ['idp-2'],
         policyIds: ['policy-2'],
       });
-      // Simulate a slow provider call outliving the lease without writing through
-      // the transaction whose claim lock this test expects to remain held.
+      // Decision: Simulate a slow provider call that outlives the lease, without writing through the transaction
+      // whose claim lock this test expects to stay held.
       vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 16 * 60 * 1000);
       let contenderSettled = false;
       const contender = configurePlatformZeroTrust(platform, env.db, nextInput)
@@ -427,8 +426,8 @@ describe('Zero Trust operation completion', () => {
           return result;
         });
       try {
-        // This assertion also fails deterministically when provider I/O happens
-        // outside the configuration transaction, before the scheduling check.
+        // Decision: This assertion also fails when provider I/O happens outside the configuration transaction,
+        // before the scheduling check.
         expect(transactionDepth).toBe(1);
         await new Promise<void>((resolve) => setTimeout(resolve, 25));
         expect(contenderSettled).toBe(false);
@@ -439,8 +438,6 @@ describe('Zero Trust operation completion', () => {
       const result = await contender;
       transactionSpy.mockRestore();
       if (result.error) {
-        // After a completed disable, configuring enables again and needs the
-        // existing-project choice that the pending operation did not allow.
         expect(String(result.error)).toMatch(
           /already running|operation.*changed|operation.*pending|choice for existing projects/,
         );

@@ -11,7 +11,7 @@ export async function runRollbackCommand(
 ): Promise<void> {
   console.log();
 
-  // A one-off `deploy --platform cloudflare` keeps the saved platform, so its rollback names
+  // Decision: A one-off `deploy --platform cloudflare` keeps the saved platform, so its rollback names
   // the platform explicitly.
   const platform = readDeploymentPlatform(root);
   if (explicitPlatform === 'cloudflare' || platform === 'cloudflare') {
@@ -36,7 +36,6 @@ export async function runRollbackCommand(
   const client = new PlatformClient(token, { root });
   const { deployments, activeDeploymentId } = await client.listDeployments(linked.projectId);
 
-  // Filter to retained deployments that aren't the active one
   const candidates = deployments.filter(
     (d) => d.retained && d.status === 'live' && d.id !== activeDeploymentId,
   );
@@ -75,7 +74,6 @@ export async function runRollbackCommand(
     targetId = result as string;
   }
 
-  // Compute migration diff client-side for warning
   const active = deployments.find((d) => d.id === activeDeploymentId);
   const target = candidates.find((d) => d.id === targetId)!;
   const currentMigrations: Array<string> = active?.applied_migrations
@@ -91,7 +89,7 @@ export async function runRollbackCommand(
   s.start('Rolling back...');
 
   try {
-    // Echo the confirmed diff so the server can reject if `currentActive`
+    // Decision: Echo the confirmed diff so the server can reject if `currentActive`
     // drifted between our preflight and its in-lock re-read.
     const result = await client.rollback(linked.projectId, targetId, {
       allowDestructive: migrationDiff.length > 0 ? migrationDiff : undefined,

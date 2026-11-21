@@ -32,7 +32,6 @@ export async function runStaticDeploy(
   log.info(`${typeLabel} deploy`);
   cliLog?.info('deploy_mode', { mode: 'static', appType: preset.appType });
 
-  // Build (if needed)
   if (preset.buildCommand && !skipBuild) {
     log.step('Building...');
     cliLog?.info('build_start', { command: preset.buildCommand });
@@ -60,9 +59,8 @@ export async function runStaticDeploy(
   const s = createSpinner();
   const onProgress = (msg: string) => s.message(msg);
 
-  // Preflight: hash assets and check which ones changed.
-  // `assetFiles` carries the in-memory buffer cache so the upload step
-  // consumes the same bytes that were hashed.
+  // Decision: `assetFiles` carries the in-memory buffer cache so the upload step uses the same bytes that were
+  // hashed.
   s.start('Checking for changes...');
   cliLog?.info('preflight_start', { dir: preset.outputDir });
   const { assetManifest, assetFiles } = await collectAndHashAssets(preset.outputDir, onProgress);

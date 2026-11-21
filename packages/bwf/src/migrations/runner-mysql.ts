@@ -67,7 +67,7 @@ async function acquireMySqlMigrationLock(client: MySqlClient): Promise<string> {
     'SELECT GET_LOCK(?, ?) AS acquired',
     [name, MIGRATION_LOCK_TIMEOUT_SECONDS],
   );
-  // Vitess names the column after the call and ignores the alias.
+  // Decision: Vitess names the column after the call and ignores the alias.
   if (Number(Object.values(lock ?? {})[0]) !== 1) {
     throw mySqlMigrationLockError(database, 'run the command again');
   }
@@ -102,7 +102,7 @@ async function isTransactionOpen(client: MySqlClient): Promise<boolean> {
   }
 }
 
-// ER_LOCK_DEADLOCK and ER_TRANSACTION_ROLLBACK_DURING_COMMIT: MySQL has rolled back the whole
+// Decision: ER_LOCK_DEADLOCK and ER_TRANSACTION_ROLLBACK_DURING_COMMIT: MySQL has rolled back the whole
 // transaction itself, which also closes it, so the savepoint probe cannot tell it from a DDL commit.
 const ROLLED_BACK_BY_SERVER_ERRNOS = new Set([1213, 3101]);
 
@@ -171,10 +171,10 @@ export async function applyPendingMySqlMigrations(
 
   for (const migration of pending) {
     let ran = 0;
-    // Data changes commit with the tracking row. MySQL commits DDL, and anything before it, on its own.
+    // Decision: Data changes commit with the tracking row. MySQL commits DDL, and anything before it, on its own.
     await client.query('BEGIN');
     try {
-      // One statement per query, so `ran` tells whether earlier statements of the file ran.
+      // Decision: One statement per query, so `ran` tells whether earlier statements of the file ran.
       for (const statement of splitMySqlMigrationSql(migration.sql)) {
         await client.query(statement);
         ran++;
@@ -187,7 +187,7 @@ export async function applyPendingMySqlMigrations(
     } catch (error) {
       const committed =
         ran > 0 && !isRolledBackByServer(error) && !(await isTransactionOpen(client));
-      // A failed ROLLBACK means the session is gone, and MySQL rolls back with it.
+      // Decision: A failed ROLLBACK means the session is gone, and MySQL rolls back with it.
       await client.query('ROLLBACK').catch(() => {});
       throw mySqlMigrationError(migration.name, error, committed);
     }

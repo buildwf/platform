@@ -22,20 +22,13 @@ import {
 import * as output from '../../src/cli/output.ts';
 import { withPlatformDiscovery } from '../helpers/platform-discovery.ts';
 
-/**
- * `bwf email domain …`.
- * Every browser, clipboard, DNS and stdin touch is a seam; credential values
- * here are inert placeholders and are never printed.
- */
-
 vi.mock('@voidzero-dev/vite-plus-prompts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@voidzero-dev/vite-plus-prompts')>();
   return { ...actual, note: vi.fn() };
 });
 
-const LEGACY_TOKEN = `Lgcy-${'a1'.repeat(17)}B`; // 40 chars, [A-Za-z0-9_-]
-const CFUT_TOKEN = `cfut_${'c0'.repeat(20)}${'deed'.repeat(2)}`; // 40-char core + checksum tail
-/** The default platform: owners register their own domains. */
+const LEGACY_TOKEN = `Lgcy-${'a1'.repeat(17)}B`;
+const CFUT_TOKEN = `cfut_${'c0'.repeat(20)}${'deed'.repeat(2)}`;
 const selfServeSettings = async (): Promise<{
   domains: { management: 'self-serve' | 'admin'; projectSlug?: string };
 }> => ({ domains: { management: 'self-serve' } });
@@ -53,7 +46,7 @@ beforeEach(() => {
   infoSpy = vi.spyOn(log, 'info').mockImplementation(() => {});
   warnSpy = vi.spyOn(log, 'warn').mockImplementation(() => {});
   errorSpy = vi.spyOn(log, 'error').mockImplementation(() => {});
-  // Silenced, never asserted: the CI-mode spinner writes through log.step.
+  // Decision: Silenced, not asserted: the CI-mode spinner writes through log.step.
   vi.spyOn(log, 'step').mockImplementation(() => {});
   vi.mocked(note).mockClear();
 });
@@ -97,7 +90,6 @@ function domainRow(overrides: Partial<EmailDomainResponse> = {}): EmailDomainRes
   };
 }
 
-/** exit seam: throws so the command stops the way process.exit would. */
 function exitSpy(): (code: number) => never {
   return vi.fn((code: number): never => {
     throw new Error(`exit ${code}`);
@@ -121,7 +113,6 @@ describe('buildCfApiTokenTemplateUrl', () => {
     ]);
     expect(url.searchParams.get('accountId')).toBe('*');
     expect(url.searchParams.get('zoneId')).toBe('all');
-    // The em dash survives the round trip through percent-encoding.
     expect(url.searchParams.get('name')).toBe('bwf email — acme.com');
   });
 });
@@ -129,7 +120,7 @@ describe('buildCfApiTokenTemplateUrl', () => {
 describe('classifyCfApiTokenShape', () => {
   it('accepts the cfut_ format (prefix + 40 chars + checksum)', () => {
     expect(classifyCfApiTokenShape(CFUT_TOKEN)).toBe('cfut');
-    // Checksum length is bounded loosely — the docs pin the 40, not the tail.
+    // Decision: The checksum length is bounded loosely: the docs pin the 40, not the tail.
     expect(classifyCfApiTokenShape(`cfut_${'a'.repeat(44)}`)).toBe('cfut');
     expect(classifyCfApiTokenShape(`cfut_${'a'.repeat(64)}`)).toBe('cfut');
   });
@@ -157,14 +148,13 @@ describe('classifyCfApiTokenShape', () => {
     expect(classifyCfApiTokenShape('')).toBe('unknown');
     expect(classifyCfApiTokenShape('   ')).toBe('unknown');
     expect(classifyCfApiTokenShape('hello world')).toBe('unknown');
-    expect(classifyCfApiTokenShape(`cfut_${'a'.repeat(43)}`)).toBe('unknown'); // core + no checksum
+    expect(classifyCfApiTokenShape(`cfut_${'a'.repeat(43)}`)).toBe('unknown');
     expect(classifyCfApiTokenShape(`cfut_${'a'.repeat(65)}`)).toBe('unknown');
     expect(classifyCfApiTokenShape('a'.repeat(39))).toBe('unknown');
     expect(classifyCfApiTokenShape('a'.repeat(41))).toBe('unknown');
-    // An account-token prefix is not accepted — the shape check only passes
-    // user tokens; anything else is the platform's to refuse.
+    // Decision: An account-token prefix isn't accepted: the shape check passes only user tokens; anything
+    // else is the platform's to refuse.
     expect(classifyCfApiTokenShape(`cfat_${'a'.repeat(48)}`)).toBe('unknown');
-    // Legacy shape tolerates no whitespace inside.
     expect(classifyCfApiTokenShape(`${'a'.repeat(20)} ${'a'.repeat(19)}`)).toBe('unknown');
   });
 });
@@ -379,8 +369,8 @@ describe('emailDomainAdd', () => {
       .mockReturnValueOnce('ghp_ignored')
       .mockReturnValue(CFUT_TOKEN);
     const deps = addDeps({ readClipboard });
-    // Fake time keeps the 40 ms watch window from closing on a slow machine
-    // before the third read; the token arrives on the second 1 ms poll.
+    // Decision: Fake time keeps the 40 ms watch window from closing on a slow machine before the third read;
+    // the token arrives on the second 1 ms poll.
     vi.useFakeTimers();
     const added = emailDomainAdd(api, 'prj_1', 'acme.com', deps);
     await vi.advanceTimersByTimeAsync(deps.watchTimeoutMs!);

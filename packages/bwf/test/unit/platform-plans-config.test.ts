@@ -362,7 +362,6 @@ describe('platform config plans AI logging defaults', () => {
   const catalog = { ...createDefaultPlanCatalog('free'), revision: 7 };
   const aiLogging = { modes: { pro: 'metadata' }, publish: null, remaining: 0 };
 
-  /** A platform that answers each request from `answer`, recording request bodies. */
   function platform(answer: (url: string, body?: Record<string, unknown>) => unknown) {
     const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = input.toString();
@@ -408,7 +407,7 @@ describe('platform config plans AI logging defaults', () => {
             expectedRevision: 7,
             catalog: { ...catalog, revision: 8 },
             affectedAccounts: 3,
-            // Newer than the cached listing, which still says metadata.
+            // Decision: Newer than the cached listing, which still says metadata.
             aiLogging: {
               modes: {},
               modesBefore: { pro: 'off' },
@@ -518,7 +517,7 @@ describe('platform config plans AI logging defaults', () => {
               catalog: { ...catalog, revision: 8 },
               reconciliation: { complete: true, processed: 0 },
               aiLoggingPublish: { complete: false, processed: 0, remaining: 3, error: 'KV failed' },
-              // The API marks a failed publish page this way; the CLI must still name plans sync.
+              // Decision: The API marks a failed publish page this way; the CLI still has to name plans sync.
               ok: false,
             },
     );

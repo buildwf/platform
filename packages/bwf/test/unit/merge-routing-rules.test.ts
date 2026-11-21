@@ -40,9 +40,9 @@ describe('mergeRoutingRules', () => {
   });
 
   it('skips file reads when dir is null but still merges config rules', () => {
-    // `dir: null` corresponds to Vite `publicDir: false` — file-based
-    // `_redirects`/`_headers` must not be read even if they exist at the
-    // default `<root>/public`, but config-based rules still apply.
+    // Decision: `dir: null` corresponds to Vite `publicDir: false`: file-based `_redirects` and `_headers`
+    // mustn't be read even if they exist at the default `<root>/public`, but config-based rules
+    // still apply.
     setup({
       redirects: '/from-file /to-file 301',
       headers: '/file-scope\n  X-File: 1',
@@ -67,14 +67,12 @@ describe('mergeRoutingRules', () => {
     });
     const result = mergeRoutingRules({ dir: tmpDir, routing: undefined });
 
-    // Pre-asset phase has the 301 and the force-rewrite, but not the plain 200.
     const preAssetSources = result.redirectRules.map((r) => r.source);
     expect(preAssetSources).toEqual(['/old', '/docs/*']);
     expect(result.redirectRules[0].status).toBe(301);
     expect(result.redirectRules[1].status).toBe(200);
     expect(result.redirectRules[1].force).toBe(true);
 
-    // Post-asset phase has only the plain 200.
     expect(result.fallbackRules).toBeDefined();
     expect(result.fallbackRules).toHaveLength(1);
     expect(result.fallbackRules![0]).toMatchObject({
@@ -135,17 +133,14 @@ describe('mergeRoutingRules', () => {
     });
     const result = mergeRoutingRules({ dir: tmpDir, routing: undefined });
     expect(result.redundantForceOn3xx).toBe(2);
-    // `!` on a 3xx is silently stripped — the rules stay in the pre-asset bucket.
     expect(result.redirectRules).toHaveLength(2);
   });
 
-  // Documented at docs/guide/edge/rewrites.md §"Precedence: _redirects vs
-  // bwf.json" — within the pre-asset phase the order is always
-  //   routing.redirects → routing.rewrites → _redirects
-  // so when the same source appears in both `routing.redirects` and
-  // `routing.rewrites`, the redirect wins under first-match-wins. Pin the
-  // ordering here so a refactor of `mergeRoutingRules` can't silently flip
-  // which entry takes precedence.
+  // Decision: Documented at docs/guide/edge/rewrites.md "Precedence: _redirects vs bwf.json": within the
+  // pre-asset phase the order is routing.redirects, then routing.rewrites, then _redirects, so
+  // when the same source is in both `routing.redirects` and `routing.rewrites`, the redirect wins
+  // under first-match-wins. Pin the order so a refactor of `mergeRoutingRules` can't silently
+  // flip which entry takes precedence.
   it('orders routing.redirects before routing.rewrites so same-source redirects override rewrites', () => {
     setup();
     const result = mergeRoutingRules({

@@ -57,16 +57,14 @@ describe('evaluateRequestLimit (real implementation)', () => {
   });
 
   it('returns true when exceeding the limit', () => {
-    // free plan has 3_000_000 requests/month
     const state = makeState({ totalRequests: 3_000_000 });
     expect(evaluateRequestLimit(state, 1)).toBe(true);
   });
 
   it('accounts for incoming requests in the check', () => {
-    // limit is strictly less-than: 2_999_999 + 1 = 3_000_000 which equals limit → exceeds
     const state = makeState({ totalRequests: 2_999_998 });
-    expect(evaluateRequestLimit(state, 1)).toBe(false); // 2_999_999 < 3_000_000
-    expect(evaluateRequestLimit(state, 2)).toBe(true); // 3_000_000 >= 3_000_000
+    expect(evaluateRequestLimit(state, 1)).toBe(false);
+    expect(evaluateRequestLimit(state, 2)).toBe(true);
   });
 });
 
@@ -97,7 +95,6 @@ describe('evaluateAiLimit (real implementation)', () => {
   });
 
   it('returns true when exceeding the AI limit', () => {
-    // free plan has 100_000 neurons/month
     const state = makeState({ totalNeurons: 100_001 });
     expect(evaluateAiLimit(state)).toBe(true);
   });

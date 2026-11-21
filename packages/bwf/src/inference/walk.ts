@@ -17,7 +17,7 @@ export type InferredBindings = {
   needsEmail?: boolean;
 };
 
-// SEND_EMAIL is intentionally absent from inferred bindings: bwf owns that binding
+// Decision: SEND_EMAIL is intentionally absent from inferred bindings: bwf owns that binding
 // (managed sends go through __PLATFORM_PROXY/email/send; native Cloudflare deploys
 // add SEND_EMAIL themselves), so the `@builtbyfriends/bwf/email` import (below) is the
 // sole driver of `needsEmail`.
@@ -98,7 +98,7 @@ export function inferBindingsFromSource(code: string, filename: string): Inferre
   }
 
   for (const reference of parsed.module.dynamicImports) {
-    // Parse just the argument so literal decoding does not materialize the whole file's AST.
+    // Decision: Parse just the argument so literal decoding does not materialize the whole file's AST.
     const argument = code.slice(reference.moduleRequest.start, reference.moduleRequest.end);
     const expression = parseSync(filename, `(${argument})`).program.body[0];
     const source =
@@ -202,9 +202,6 @@ export function inferBindingsFromSource(code: string, filename: string): Inferre
   return result;
 }
 
-/**
- * Merge multiple InferredBindings into a single result (union).
- */
 export function mergeBindings(bindings: Array<InferredBindings>): InferredBindings {
   return {
     needsD1: bindings.some((b) => b.needsD1),

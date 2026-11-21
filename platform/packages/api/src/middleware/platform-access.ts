@@ -21,7 +21,7 @@ function internallyAuthenticated(method: string, path: string): boolean {
           path,
         ) ||
         path === '/internal/github-webhook' ||
-        // Stripe signs this itself; the handler checks the signature.
+        // Decision: Stripe signs this itself; the handler checks the signature.
         path === '/billing/stripe'))
   );
 }
@@ -43,8 +43,8 @@ export const platformAccessProtection: MiddlewareHandler<ApiEnv> = async (contex
     }
     return next();
   }
-  // Runtime service-binding calls carry their own scoped credentials, not a human session.
-  // Do not exempt a whole /internal prefix or an external installer health probe.
+  // Decision: Runtime service-binding calls carry their own scoped credentials, not a human session. Don't
+  // exempt a whole /internal prefix or an external installer health probe.
   if (internallyAuthenticated(context.req.method, context.req.path)) {
     return next();
   }
@@ -60,9 +60,9 @@ export const platformAccessProtection: MiddlewareHandler<ApiEnv> = async (contex
     }
     const path = context.req.path;
     const method = context.req.method;
-    // These routes independently authenticate the client or its scoped grant.
-    // Browser consent records the human Access identity; grant validation also
-    // checks its underlying session, including during queued execution.
+    // Decision: These routes authenticate the client or its scoped grant themselves. Browser consent records the
+    // human Access identity; grant validation also checks its underlying session, including during
+    // queued execution.
     if (
       (method === 'POST' &&
         [
@@ -87,7 +87,7 @@ export const platformAccessProtection: MiddlewareHandler<ApiEnv> = async (contex
           (path === '/internal/platform/sandbox-drain' && method === 'GET') ||
           (path === '/__platform/platform/deployment-execution' && method === 'GET') ||
           (path === '/internal/platform/email-bootstrap' && method === 'POST') ||
-          // These handlers also require their installation-specific setup HMAC.
+          // Decision: These handlers also require their installation-specific setup HMAC.
           (path === '/internal/platform/app-access' && method === 'POST') ||
           (path === '/internal/platform/app-access/turn-off' && method === 'POST') ||
           (path === '/internal/platform/domain-preflight' && method === 'POST') ||
@@ -96,15 +96,15 @@ export const platformAccessProtection: MiddlewareHandler<ApiEnv> = async (contex
       return next();
     }
     if (path === '/auth/github-oidc' && method === 'POST') {
-      // The route additionally verifies GitHub's scoped workload identity.
+      // Decision: The route also verifies GitHub's scoped workload identity.
       return next();
     }
     if (path === '/internal/platform/auth-initialize' && method === 'POST') {
-      // This route also requires its own installation-specific setup HMAC, never a health token.
+      // Decision: This route also requires its own installation-specific setup HMAC, not a health token.
       return next();
     }
-    // Scoped deploy credentials call procedures (`POST /rpc/<name>`) since the
-    // deploy routes moved there; the REST project paths stay for older callers.
+    // Decision: Scoped deploy credentials call procedures (`POST /rpc/<name>`); the REST project paths stay for
+    // older callers.
     if (
       path === '/projects' ||
       path.startsWith('/projects/') ||
@@ -115,7 +115,7 @@ export const platformAccessProtection: MiddlewareHandler<ApiEnv> = async (contex
         ? await verifyJwt(authorization.slice(7), context.env.JWT_SECRET)
         : null;
       if (payload?.project && ['deploy', 'oauth-deploy', 'oauth-preview'].includes(payload.aud)) {
-        // Normal API middleware still enforces the exact project/build/endpoint scope.
+        // Decision: Normal API middleware still enforces the exact project, build and endpoint scope.
         return next();
       }
     }

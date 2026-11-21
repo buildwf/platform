@@ -181,10 +181,10 @@ describe('Cloudflare v2 compatibility', () => {
     const metadataPath = join(dirname(getRootConfigPath(root)), 'platform-containers.json');
     writeFileSync(metadataPath, JSON.stringify({ workerDirectory: '../outside' }));
     await expect(prepareCfBuildOutput(root)).rejects.toThrow('Invalid bwf Container');
-    // Two real Vite builds take about four seconds, near the default timeout.
+    // Decision: Two real Vite builds take about four seconds, near the default timeout.
   }, 15_000);
 
-  // The plugin does not support local Containers on Windows.
+  // Decision: The plugin does not support local Containers on Windows.
   it.skipIf(process.platform === 'win32')(
     'binds Container Durable Objects in the dev server and keeps their upload form in builds',
     async () => {
@@ -208,7 +208,7 @@ export default {
 `,
       );
       writeFileSync(join(root, 'Dockerfile'), 'FROM scratch\n');
-      // The dev server prepares images at startup but starts no Container until one is
+      // Decision: The dev server prepares images at startup but starts no Container until one is
       // used, so a stub lets this test run the real plugin and Miniflare without Docker.
       // `docker build -f -` receives the Dockerfile on stdin. The stub reads it, because
       // a stub that exits first makes that write fail with an uncaught EPIPE.
@@ -242,7 +242,6 @@ export default {
             ],
             unsafe: {
               bindings: [
-                // Another Worker's class, named like a local Container class.
                 {
                   name: 'REMOTE',
                   type: 'durable_object_namespace',
@@ -392,7 +391,7 @@ export default {
       (await resolveConfig({ root, configFile: false, ...config }, 'serve')).plugins.map(
         (plugin) => plugin.name,
       );
-    // Vitest adds plugins of its own to the server that runs the tests.
+    // Decision: Vitest adds plugins of its own to the server that runs the tests.
     const vitest = { name: 'vitest:config' };
     for (const mode of ['test', 'staging']) {
       const names = await pluginNames({ mode, plugins: [vitest, plugins()] });
@@ -405,7 +404,7 @@ export default {
 
   it('builds native output and the existing dist layout, then previews the native artifact', async () => {
     const root = project();
-    // Upgrading a checkout must replace v0 instead of leaving two versions that
+    // Decision: Upgrading a checkout must replace v0 instead of leaving two versions that
     // the RC CLI refuses to publish.
     const oldOutput = join(root, '.cloudflare/output/v0');
     mkdirSync(oldOutput, { recursive: true });
@@ -446,7 +445,6 @@ export default {
       '"main": "index.js"',
     );
     writeFileSync(join(root, '.env'), 'PREVIEW_VALUE=local-preview-only');
-    // Exercise the native plugin's Worker runtime as well as its build output.
     const server = await preview({
       root,
       configFile: false,

@@ -18,7 +18,6 @@ export function isPublicDashboardPath(path: string): boolean {
   return PUBLIC_PATHS.has(path) || PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
-/** Signed-in pages and the SPA's data endpoints; scripts, styles and other assets stay public. */
 export function isProtectedDashboardPath(path: string): boolean {
   return path === '/' || path === '/account' || path.startsWith('/api/');
 }
@@ -30,7 +29,7 @@ export default defineMiddleware(async (context, next) => {
     return next();
   }
 
-  // The SPA's data requests get a status it can act on instead of a redirect to an HTML page.
+  // Decision: The SPA's data requests get a status it can act on, not a redirect to an HTML page.
   const signIn = () =>
     path.startsWith('/api/')
       ? context.json({ error: 'Sign in required' }, 401)

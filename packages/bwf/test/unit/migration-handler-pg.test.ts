@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vite-plus/test';
 import { createMigrationHandler } from '../../src/runtime/migration-handler-pg.ts';
 import { disablePgPassFallback } from '../../src/runtime/pg.ts';
 
-// The names in `_void_migrations`, kept in memory by the fake client below.
 const pgApplied = vi.hoisted((): Array<string> => []);
 
 vi.mock('pg', () => ({

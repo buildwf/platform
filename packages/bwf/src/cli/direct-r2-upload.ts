@@ -90,9 +90,8 @@ export async function uploadAssetsToR2(
   let firstError: unknown = null;
   let nextIndex = 0;
 
-  // Bounded-pool worker pattern: each worker pulls the next index until
-  // exhausted or a sibling worker captured an error. We surface the
-  // first error so concurrent failures don't race the message.
+  // Decision: Bounded-pool worker pattern: each worker pulls the next index until exhausted or a sibling worker
+  // captured an error. We surface the first error so concurrent failures don't race the message.
   const workerCount = Math.min(R2_PUT_CONCURRENCY, items.length);
   const workers: Array<Promise<void>> = [];
   for (let w = 0; w < workerCount; w++) {
@@ -111,10 +110,6 @@ export async function uploadAssetsToR2(
             }
             return;
           }
-          // Drop refs to the asset bytes now that R2 has them. Both the
-          // local `body` ref on the item and any caller-side ref (via
-          // `onAfterPut`) are released so the buffer becomes eligible
-          // for GC under bounded concurrency.
           items[i].body = undefined;
           onAfterPut?.(items[i]);
         }
@@ -132,9 +127,6 @@ async function uploadOne(
   cliLog: CliLogger | undefined,
   fetchImpl: typeof fetch,
 ): Promise<void> {
-  // Capture the body up-front. The pool only clears `item.body` AFTER
-  // `uploadOne` returns successfully, so it is guaranteed defined here for
-  // all attempts of this single PUT.
   if (!item.body) {
     throw new Error(`internal: uploadOne invoked for ${item.path} with no body`);
   }
@@ -152,15 +144,12 @@ async function uploadOne(
     try {
       res = await fetchImpl(item.url, {
         method: 'PUT',
-        // Clone the buffer into a fresh Uint8Array view so each retry sees
-        // an independent body. Reusing the same Buffer across retries is
-        // safe with `fetch` (it consumes once), but explicit here.
         body: new Uint8Array(body) as unknown as BodyInit,
         headers: item.headers,
       });
     } catch (err) {
-      // Network-level error: behave like a 5xx for retry purposes (transient
-      // by nature) but exhaustion still throws.
+      // Decision: A network-level error is treated like a 5xx for retries (it's transient by nature), but
+      // exhaustion still throws.
       if (attempt < MAX_R2_PUT_RETRIES) {
         cliLog?.warn('r2_put_retry', {
           hash: item.hash,
@@ -197,8 +186,8 @@ async function uploadOne(
       return;
     }
 
-    // Drain the body so the connection is reusable. Truncate for log
-    // correlation — full R2 error bodies can be verbose.
+    // Decision: Drain the body so the connection is reusable. Truncate for log correlation: full R2 error bodies
+    // can be verbose.
     const errBody = await safeReadText(res);
 
     if ((res.status === 429 || res.status >= 500) && attempt < MAX_R2_PUT_RETRIES) {
@@ -209,7 +198,7 @@ async function uploadOne(
         status: res.status,
         body: truncate(errBody),
       });
-      // R2 permits one write per second to the same object key.
+      // Decision: R2 permits one write per second to the same object key.
       await sleep(
         res.status === 429 ? Math.max(1000, RETRY_BACKOFF_MS[attempt]) : RETRY_BACKOFF_MS[attempt],
       );

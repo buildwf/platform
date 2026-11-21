@@ -49,7 +49,7 @@ export const PLAN_LIMITS: Record<BuiltinPlanId, PlanLimits> = {
     kvStorageBytes: 1 * GB,
     aiNeuronsPerMonth: 100_000,
     retainedDeployments: 1,
-    // Two sandbox hours a month, so a bot on Free can run code (DED-248).
+    // Decision: Two sandbox hours a month, so a bot on Free can run code.
     sandboxRuntimeSecondsPerMonth: 2 * 3600,
     sandboxMaxConcurrentInstances: 1,
     concurrentBuilds: 1,

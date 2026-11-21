@@ -35,24 +35,19 @@ export class ConcurrentDeployError extends Error {
   }
 }
 
-// Race guard against concurrent project teardown (design-doc 0067 §7).
-// Teardown takes a project-row lock and flips `projects.status='deleting'`
-// before tearing down CF state. A concurrent deploy that has already passed
-// `assertDeploymentNotCanceled` could still race the route flip and recreate
-// routing for a deleted project. Calling this alongside every cancellation
-// check (and re-checking under FOR UPDATE at the final commit) closes that
-// window. The atomic precheck-and-claim transaction holds the same
-// FOR UPDATE lock teardown uses, serializing the two flows.
+// Decision: Race guard against concurrent project teardown (design doc 0067 §7). Teardown takes a project-row
+// lock and sets `projects.status='deleting'` before tearing down CF state. A deploy that already
+// passed `assertDeploymentNotCanceled` could still race the route flip and recreate routing for a
+// deleted project. Call this with each cancellation check, and re-check under FOR UPDATE at the final
+// commit. The precheck-and-claim transaction holds the same lock teardown uses.
 export const PROJECT_DELETING_ERROR_MESSAGE = 'project deletion in progress';
 
 async function assertProjectNotDeleting(db: Db, projectId: string): Promise<void> {
   const project = await getProject(db, projectId);
-  // Fail closed: a missing project row is treated the same as `status='deleting'`.
-  // After teardown flips status='deleting' and `deleteProjectCascade` removes the
-  // project row, an in-flight deploy that observes the missing row would otherwise
-  // sail past this guard and recreate routing/worker state for an already-deleted
-  // project. Throwing here funnels both cases into the same catch-path branch
-  // (PROJECT_DELETING_ERROR_MESSAGE) which rolls back KV writes and the worker.
+  // Decision: Fail closed: treat a missing project row like `status='deleting'`. After teardown sets 'deleting'
+  // and `deleteProjectCascade` removes the row, an in-flight deploy that sees no row would pass this
+  // guard and recreate routing and worker state for a deleted project. Throwing sends both cases to
+  // the same catch branch (PROJECT_DELETING_ERROR_MESSAGE), which rolls back KV writes and the worker.
   if (!project || project.status === 'deleting') {
     throw new Error(PROJECT_DELETING_ERROR_MESSAGE);
   }
@@ -68,16 +63,12 @@ export async function assertDeploymentCanProceed(
   await assertProjectNotDeleting(db, projectId);
 }
 
-// Sentinel thrown by the final-publish transaction when the deploy token's
-// bound build is no longer active. The up-front guard in
-// `handleManifestOnlyDeploy` checks the build once at request entry, but the
-// request then spends minutes parsing the body, prechecking, uploading assets
-// to R2, and provisioning. During that window a newer GitHub Actions run's
-// OIDC exchange can mark the OLD bound build `cancelled` (the "superseded by
-// newer run" UPDATE in `createGithubActionsBuildWithinLimit`). Without a
-// re-check the superseded runner would still publish stale code. This message
-// is routed through the SAME rollback branch as PROJECT_DELETING_ERROR_MESSAGE
-// so the deployment never goes live.
+// Decision: Thrown by the final-publish transaction when the deploy token's bound build is no longer active.
+// `handleManifestOnlyDeploy` checks the build once at entry, but the request then spends minutes
+// parsing, prechecking, uploading and provisioning. In that window a newer GitHub Actions run's OIDC
+// exchange can cancel the old build (`createGithubActionsBuildWithinLimit`), and without a re-check
+// the superseded runner would still publish stale code. It goes through the same rollback branch
+// as PROJECT_DELETING_ERROR_MESSAGE so the deployment doesn't go live.
 export const SUPERSEDED_BUILD_ERROR_MESSAGE = 'bound build was superseded';
 
 /**

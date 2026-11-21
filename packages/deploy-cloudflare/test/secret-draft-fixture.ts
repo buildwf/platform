@@ -1,4 +1,4 @@
-/** Sanitized beta shape observed on an immutable cf-created secret placeholder. */
+// Decision: Sanitized beta shape observed on an immutable cf-created secret placeholder.
 export function bwfSecretDraftVersion(): Record<string, unknown> & {
   id: string;
   annotations: Record<string, string>;
@@ -32,7 +32,7 @@ export function bwfSecretDraftVersion(): Record<string, unknown> & {
   };
 }
 
-/** Sanitized shape of the placeholder that bwf's transport uploads and deploys in one request. */
+// Decision: Sanitized shape of the placeholder that bwf's transport uploads and deploys in one request.
 export function apiSecretDraftVersion(): ReturnType<typeof bwfSecretDraftVersion> {
   return {
     ...bwfSecretDraftVersion(),

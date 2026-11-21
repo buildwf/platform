@@ -69,13 +69,13 @@ describe('platform PostgreSQL SSL mode', () => {
   it('retains certificate and hostname verification without emitting the driver warning', async () => {
     const warning = vi.spyOn(process, 'emitWarning').mockImplementation(() => {});
     const { Client } = await vi.importActual<typeof import('pg')>('pg');
-    // Constructing a real pg client parses SSL options, but does not open a connection.
+    // Decision: Constructing a real pg client parses SSL options but doesn't open a connection.
     const client = new Client({
       connectionString: platformDatabaseClientUrl(
         'postgresql://owner:pw@db.example.com/platform?sslmode=require',
       ),
     });
-    expect(client.ssl).toEqual({}); // Node TLS verification defaults remain enabled.
+    expect(client.ssl).toEqual({});
     expect(warning).not.toHaveBeenCalled();
   });
 

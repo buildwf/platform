@@ -41,8 +41,6 @@ import { type TerminatedBuild } from './builds.ts';
 import { type Db } from './client.ts';
 import { invalidateGitHubConnectionAuthorizedBy } from './github.ts';
 
-// --- Projects ---
-
 export async function createProject(db: Db, userId: string, slug: string): Promise<Project> {
   const id = generateId('proj');
   return db.transaction(async (tx) => {
@@ -151,8 +149,6 @@ export async function getAccessibleProjectBySlug(
     owner: row.owner,
   };
 }
-
-// --- Project team membership and invitations ---
 
 const PROJECT_INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_PENDING_PROJECT_INVITATIONS = 100;
@@ -312,8 +308,8 @@ export async function addProjectMember(
       throw new ProjectTeamMutationError('member-conflict');
     }
 
-    // A direct grant supersedes an invitation. The project lock also serializes
-    // this with an attempt to accept that invitation.
+    // Decision: A direct grant supersedes an invitation. The project lock also serializes this with an attempt
+    // to accept that invitation.
     const [pending] = await tx
       .select()
       .from(projectInvitations)
@@ -544,7 +540,7 @@ async function requireLockedProjectInvitationCapacity(
         eq(projectInvitations.project_id, projectId),
         eq(projectInvitations.status, 'pending'),
         gt(projectInvitations.expires_at, sql`now()`),
-        // A live invitation already occupies its slot; an expired one needs a free slot.
+        // Decision: A live invitation already takes its slot; an expired one needs a free slot.
         existingInvitationId ? ne(projectInvitations.id, existingInvitationId) : undefined,
       ),
     );
@@ -790,10 +786,9 @@ export async function respondToProjectInvitation(
         args.response === 'accept'
           ? await getProjectMember(tx, project.id, args.actorUserId)
           : null;
-      // Acceptance is idempotent only while the access it created still
-      // exists. Once an administrator removes that member, replaying the old
-      // invitation must not produce a 500 or recreate access; a fresh invite
-      // is required.
+      // Decision: Acceptance is idempotent only while the access it created still exists. Once an administrator
+      // removes that member, replaying the old invitation must not return a 500 or recreate access; a
+      // fresh invite is needed.
       if (args.response === 'accept' && !member) {
         throw new ProjectTeamMutationError('invitation-not-pending');
       }
@@ -852,8 +847,6 @@ export async function respondToProjectInvitation(
   }
   return result;
 }
-
-// --- Project ownership history ---
 
 export async function getProjectOwnershipPeriodsByProjectIds(
   db: Db,

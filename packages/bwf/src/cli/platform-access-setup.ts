@@ -67,7 +67,7 @@ export async function selectCompanyAccessPolicies(
     const available = new Set(options.map((option) => option.value));
     selectedIds = selectedIds.filter((id) => available.has(id));
     const actions = [
-      // Existing applications are managed elsewhere and need policies attached there.
+      // Decision: Existing applications are managed elsewhere, so their policies get attached there.
       ...(mode === 'create'
         ? [
             {
@@ -120,7 +120,7 @@ export async function selectCompanyAccessPolicies(
       )!;
       const name = `Emails ending in @${domains[0]}${domains.length > 1 ? ` and ${domains.length - 1} more` : ''}`;
       try {
-        // A lost response can lead to a second policy with the same name on retry. It
+        // Decision: A lost response can lead to a second policy with the same name on retry. It
         // admits the same people, so the installer does not track or remove it.
         const created = (await client.create('policies', {
           name,
@@ -700,7 +700,7 @@ export async function preparePlatformAccessSetup(input: {
     if (!(error instanceof PlatformAccessPolicyRejectedError)) {
       throw error;
     }
-    // A resume reuses saved picks, so a rejected pick would fail the same way every
+    // Decision: A resume reuses saved picks, so a rejected pick would fail the same way every
     // time. Forget it so the next interactive run asks again, unless a configuration
     // file owns the pick or Access resources already depend on it.
     if (!input.spec && process.stdin.isTTY && !Object.keys(provisioning.resources).length) {

@@ -7,7 +7,6 @@ function createClient() {
   return new ProxyClient('https://proxy.void.cloud', 'jwt-token', 'proj_1');
 }
 
-/** Send ProxyClient requests to the binding handler that a deployed worker runs. */
 function connectBucket(bucket: Partial<Record<keyof R2Bucket, unknown>>) {
   const handler = createBindingHandler({ __PLATFORM_PROXY_TOKEN: 'internal', STORAGE: bucket });
   globalThis.fetch = vi.fn(async (input, init) =>
@@ -314,7 +313,7 @@ describe('ProxyR2Bucket', () => {
     it('sends ArrayBuffer value as base64', async () => {
       mockFetch({ success: true });
 
-      const data = new Uint8Array([72, 101, 108, 108, 111]); // "Hello"
+      const data = new Uint8Array([72, 101, 108, 108, 111]);
       const r2 = new ProxyR2Bucket(createClient(), 'STORAGE');
       await r2.put('binary.bin', data.buffer as ArrayBuffer);
 

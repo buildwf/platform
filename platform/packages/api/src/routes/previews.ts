@@ -63,8 +63,8 @@ async function ownedPreview(
   return project;
 }
 
-// A stable, isolated destination. Serializing on the owner bounds creation even
-// across different clients and overlapping requests; it also fences uninstall.
+// Decision: A stable, isolated destination. Serializing on the owner bounds creation across different
+// clients and overlapping requests, and it also fences uninstall.
 export type PreviewScope = {
   db: Db;
   env: ApiEnv['Bindings'];
@@ -130,8 +130,7 @@ export async function createPreview(
       })
       .where(eq(projects.id, created.id))
       .returning();
-    // A plan AI logging default applies from the first request; a KV failure
-    // rolls the preview back.
+    // Decision: A plan's AI logging default applies from the first request; a KV failure rolls the preview back.
     await publishProjectAiLogging(tx, env.ROUTING, created.id, {
       trigger: 'preview_create',
       initialPlanDefault: initialPlanDefaultFor(env),
@@ -197,7 +196,6 @@ export async function requestPreviewDeployment(
   }
   const id = crypto.randomUUID();
   await db.transaction(async (tx) => {
-    // At most 60 builds per workspace per hour, enforced before upload or provisioning.
     await tx.select().from(projects).where(eq(projects.id, project.id)).for('update');
     const [recent] = await tx
       .select({ count: count() })
@@ -333,7 +331,8 @@ app.all('/preview-serve/:id', async (context) => {
       context.env.JWT_SECRET,
       { ttlSeconds: seconds },
     );
-    // No credential-bearing URL is served to generated code or kept in history.
+    // Decision: No credential-bearing URL is served to generated code or kept in history, so the token goes in
+    // a cookie.
     context.header(
       'Set-Cookie',
       `${cookieName}=${token}; Path=/; HttpOnly; Secure; SameSite=None; Partitioned; Max-Age=${seconds}`,

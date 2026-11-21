@@ -618,7 +618,7 @@ export function parseOperatorArgs(args: Array<string>): OperatorArgs {
     'json',
     'plan',
     'yes',
-    // No command declares `--force`; parsing it as a boolean reports it as an unknown flag.
+    // Decision: No command declares `--force`; parsing it as a boolean reports it as an unknown flag.
     'force',
     ...operatorCommands.flatMap((command) => Object.keys(command.booleans ?? {})),
   ]);
@@ -798,8 +798,8 @@ export function parseOperatorArgs(args: Array<string>): OperatorArgs {
   if (parsed.body.type && !['github', 'email', 'identity'].includes(String(parsed.body.type))) {
     throw new Error('platform: Signup grant type must be github, email, or identity.');
   }
-  // Command-specific booleans other than the session's own `--token-stdin`
-  // ride the body, where the server reads them as JSON booleans.
+  // Decision: Command-specific booleans other than the session's own `--token-stdin` ride the body, where the
+  // server reads them as JSON booleans.
   for (const name of Object.keys(command.booleans ?? {})) {
     if (name !== 'token-stdin' && flags.has(name)) {
       parsed.body[name] = true;
@@ -835,7 +835,7 @@ export function parseOperatorArgs(args: Array<string>): OperatorArgs {
         'platform: zero-trust configure requires --identity-providers and --policies.',
       );
     }
-    // Required only when enabling; the platform rejects it once enabled.
+    // Decision: Required only when enabling; the platform rejects it once enabled.
     if (
       existingProjects !== undefined &&
       existingProjects !== 'protected' &&
@@ -851,7 +851,7 @@ export function parseOperatorArgs(args: Array<string>): OperatorArgs {
       protectNewProjects: flags.has('protect-new-projects'),
     };
   } else if (group === 'zero-trust' && action === 'status') {
-    // A GET carries its options in the query string.
+    // Decision: A GET carries its options in the query string.
     delete parsed.body.check;
     if (flags.has('check')) {
       parsed.query.check = 'true';

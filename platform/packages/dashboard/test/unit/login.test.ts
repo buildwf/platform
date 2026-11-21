@@ -31,7 +31,6 @@ describe('dashboard login discovery', () => {
     });
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(platformPageTitle('Sign in', 'Example Platform')).toBe('Sign in · Example Platform');
-    // A name that doesn't say "platform" gets it added once.
     expect(platformPageTitle('Sign in', 'Example Cloud')).toBe(
       'Sign in · Example Cloud · Platform',
     );

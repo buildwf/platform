@@ -35,7 +35,7 @@ export const loader = defineHandler<Props>(async (context) => {
   }
 });
 export const action = defineHandler(async (context) => {
-  // Cookie-authenticated mutations must originate in this dashboard.
+  // Decision: Cookie-authenticated mutations have to come from this dashboard.
   if (context.req.header('Origin') !== dashboardRequestOrigin(context)) {
     return context.text(
       'This request could not be verified. Refresh the account page and try again.',

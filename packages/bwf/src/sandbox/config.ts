@@ -180,7 +180,7 @@ function resolveSandboxMigrationStorage(
       storage.delete(rename.from);
       storage.set(rename.to, sqlite ?? 'unknown');
     }
-    // A transferred class's source storage is not established by this local history.
+    // Decision: A transferred class's source storage is not established by this local history.
     for (const transfer of migration.transferred_classes ?? []) {
       storage.set(transfer.to, 'unknown');
     }

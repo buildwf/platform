@@ -9,12 +9,11 @@ import {
 } from '../../src/asset-routing.ts';
 import { createAssetFallback } from '../../src/runtime/routing-worker.ts';
 
-// `not_found_handling: 'none'` → asset binding 404s on unmatched paths,
-// worker (run_worker_first) owns HTML responses.
-//
-// `not_found_handling: 'single-page-application'` → CF shortcuts browser
-// navigations to the SPA shell before the worker runs. Acceptable when the
-// worker does not need to inspect document navigations.
+// Decision: `not_found_handling: 'none'`: the asset binding 404s on unmatched paths, and the worker
+// (run_worker_first) owns HTML responses.
+// `not_found_handling: 'single-page-application'`: Cloudflare sends browser navigations to the
+// SPA shell before the worker runs. That's fine when the worker doesn't need to inspect
+// document navigations.
 describe('resolveAssetConfig', () => {
   const NONE = { not_found_handling: 'none' as const, run_worker_first: ['/**'] };
   const SPA = {
@@ -167,7 +166,6 @@ describe('resolveAssetConfig', () => {
   });
 });
 
-// `routing.notFound` overrides only `not_found_handling`; worker-first routing stays inferred.
 describe('resolveAssetRoutingPolicy — routing.notFound override', () => {
   const SPA_API_WORKER_FIRST = ['/api', '/api/*', '/__platform', '/__platform/*'];
 
@@ -197,7 +195,6 @@ describe('resolveAssetRoutingPolicy — routing.notFound override', () => {
     expect(overridden.assetConfig.run_worker_first).toEqual(inferred.assetConfig.run_worker_first);
     expect(overridden.apiWorkerFirst).toBe(inferred.apiWorkerFirst);
     expect(overridden.workerFirst).toBe(inferred.workerFirst);
-    // Asset-first shape: no worker-side shell fallback either way.
     expect(inferred.workerSpaFallback).toBe(false);
     expect(overridden.workerSpaFallback).toBe(false);
   });
@@ -225,9 +222,7 @@ describe('resolveAssetRoutingPolicy — routing.notFound override', () => {
   });
 });
 
-// Worker-first without SSR or pages/: the worker itself serves the SPA shell for unmatched pages.
 describe('resolveAssetRoutingPolicy — notFound on the worker-first SPA-fallback shape', () => {
-  // middleware/ → workerOwnsHtmlRouting, no pages/, no SSR.
   const ssgWithMiddleware = {
     hasDocumentRoutes: false,
     hasMiddleware: true,
@@ -244,7 +239,6 @@ describe('resolveAssetRoutingPolicy — notFound on the worker-first SPA-fallbac
     const policy = resolveAssetRoutingPolicy({ ...ssgWithMiddleware, notFound: '404-page' });
     expect(policy.assetConfig.not_found_handling).toBe('404-page');
     expect(policy.workerSpaFallback).toBe(false);
-    // Which layer sees the request first is still unchanged.
     expect(policy.workerFirst).toBe(true);
     expect(policy.assetConfig.run_worker_first).toEqual(['/**']);
   });
@@ -256,7 +250,6 @@ describe('resolveAssetRoutingPolicy — notFound on the worker-first SPA-fallbac
   });
 
   it('keeps it for an explicit notFound: "single-page-application"', () => {
-    // The override names the shell, so the shell is what it gets.
     expect(
       resolveAssetRoutingPolicy({
         ...ssgWithMiddleware,
@@ -280,9 +273,7 @@ describe('resolveAssetRoutingPolicy — notFound on the worker-first SPA-fallbac
   });
 });
 
-// Runs createAssetFallback with the resolved policy against a fake asset binding.
 describe('generated serveWithAssets — routing.notFound end to end', () => {
-  /** Stand-in for CF's asset binding, implementing `not_found_handling`. */
   function makeAssets(handling: string | undefined, opts?: { has404Page?: boolean }) {
     return {
       async fetch(req: Request): Promise<Response> {
@@ -310,17 +301,11 @@ describe('generated serveWithAssets — routing.notFound end to end', () => {
     };
   }
 
-  /**
-   * Runs the asset fallback and hands back the raw `Response`, so a caller can
-   * assert on headers and not just status/body. `path`, `accept` and the worker
-   * response default to a browser navigation to an unmatched document path.
-   */
   async function serveRaw(
     inputs: Parameters<typeof resolveAssetRoutingPolicy>[0],
     opts?: {
       has404Page?: boolean;
       path?: string;
-      /** `null` omits the header entirely. */
       accept?: string | null;
       workerResponse?: () => Response;
     },
@@ -371,7 +356,6 @@ describe('generated serveWithAssets — routing.notFound end to end', () => {
   });
 
   it('keeps the worker response when 404-page finds no 404.html to serve', async () => {
-    // A bodyless platform 404 is strictly worse than whatever the worker said.
     expect(
       await serveUnmatched({ ...ssgWithMiddleware, notFound: '404-page' }, { has404Page: false }),
     ).toEqual({ status: 404, body: 'worker 404' });
@@ -410,9 +394,8 @@ describe('generated serveWithAssets — routing.notFound end to end', () => {
     });
   }
 
-  // serveWithAssets sees every worker 404, so a deliberate API 404 must pass through intact.
+  // Decision: serveWithAssets sees each worker 404, so a deliberate API 404 has to pass through intact.
   describe('an API 404 is not replaced by the HTML 404 page', () => {
-    /** A handler deliberately answering 404 with JSON, plus a CORS header. */
     const apiJson404 = () =>
       new Response(JSON.stringify({ error: 'not found' }), {
         status: 404,
@@ -445,8 +428,8 @@ describe('generated serveWithAssets — routing.notFound end to end', () => {
     });
 
     it('preserves it for a curl-style accept: */*', async () => {
-      // `*/*` does not literally contain `text/html`, and it must not be widened
-      // to match: a wildcard is what every non-browser client sends by default.
+      // Decision: `*/*` doesn't literally contain `text/html`, and it mustn't be widened to match: a wildcard
+      // is what non-browser clients send by default.
       expect(await serveApi('*/*')).toEqual({
         status: 404,
         contentType: 'application/json',
@@ -465,9 +448,9 @@ describe('generated serveWithAssets — routing.notFound end to end', () => {
     });
 
     it('keeps a middleware-set CORS header on an HTML-accepting API 404 too', async () => {
-      // Rebuilding the response from the asset would drop it, and a browser
-      // `fetch()` would then see a CORS failure instead of a 404. Only the
-      // document-navigation shape below is allowed to swap in the 404 page.
+      // Decision: Rebuilding the response from the asset would drop it, and a browser `fetch()` would then see
+      // a CORS failure instead of a 404. Only the document-navigation shape below may swap in the
+      // 404 page.
       const res = await serveRaw(
         { ...ssgWithMiddleware, notFound: '404-page' },
         { path: '/api/thing', accept: 'application/json, text/plain', workerResponse: apiJson404 },
@@ -475,8 +458,8 @@ describe('generated serveWithAssets — routing.notFound end to end', () => {
       expect(res.headers.get('access-control-allow-origin')).toBe('https://client.test');
     });
 
-    // The extension-less document is covered above. Also check `.html`, because
-    // VitePress defaults to `cleanUrls: false` and keeps the extension.
+    // Decision: The extension-less document is covered above. Also check `.html`, because VitePress
+    // defaults to `cleanUrls: false` and keeps the extension.
 
     it('still serves the HTML 404 page for a browser navigation to a .html path', async () => {
       const res = await serveRaw(

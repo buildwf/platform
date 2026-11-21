@@ -6,7 +6,7 @@ const UPLOAD_CONFLICT =
 const OUTSIDE_CHANGE_ADVICE =
   ' This Worker was changed outside bwf. Run the same command in a terminal. bwf then lists the changes and asks you before it replaces them.';
 
-// cf 1.0.0-beta.21 and later print upload messages on stderr, earlier releases on stdout.
+// Decision: cf 1.0.0-beta.21 and later print upload messages on stderr, earlier releases on stdout.
 it.each(['stdout', 'stderr'] as const)(
   'explains the cf upload conflict after a Workers API change without binding values (%s)',
   (stream) => {
@@ -94,8 +94,7 @@ describe('cf upload conflicts that do not show a change outside bwf', () => {
     }
     return null;
   };
-  // The Cloudflare CLI stopped, so its sentence about the replacement of the
-  // secrets is not true.
+  // Decision: The Cloudflare CLI stopped, so its sentence about replacing the secrets isn't true.
   const SECRET_REPLACEMENT = /This deployment will replace|--strict|Wrangler|outside bwf/;
 
   it('names the variables that have the name of a secret on the Worker', () => {
@@ -184,7 +183,7 @@ it('reports structured provider errors when stderr is empty using existing crede
 it('replaces the Analytics Engine APIError token advice with account activation and recovery steps', () => {
   const accountId = '0123456789abcdef0123456789abcdef';
   const dashboard = `https://dash.cloudflare.com/${accountId}/workers/analytics-engine`;
-  // The provider appended token advice to this account-activation error on Workers Free.
+  // Decision: On Workers Free, the provider appends token advice to this account-activation error.
   const message = `You need to enable Analytics Engine. Head to the Cloudflare Dashboard to enable: ${dashboard} [code: 10089]`;
   const upload = () =>
     assertCleanPlatformWrangler(

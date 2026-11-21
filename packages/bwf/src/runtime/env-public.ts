@@ -59,7 +59,7 @@ type EnvRegistryState = {
   validation?: EnvValidation | null;
 };
 
-// Tooling can load `@builtbyfriends/bwf/env` through a different module instance than the Vite
+// Decision: Tooling can load `@builtbyfriends/bwf/env` through a different module instance than the Vite
 // plugin (source workspace, built package, or cache-busted HMR import). Keep the
 // registry process-global so every instance observes the same schema.
 const ENV_REGISTRY_SYMBOL = Symbol.for('bwf.env.registry');
@@ -70,7 +70,7 @@ const registry = (registryGlobal[ENV_REGISTRY_SYMBOL] ??= {
   schema: null,
   hasDefineEnvBeenCalled: false,
 });
-// Replaced, not cleared, by defineEnv, so the cache of an env holds no reference once the env
+// Decision: Replaced, not cleared, by defineEnv, so the cache of an env holds no reference once the env
 // is gone.
 let validatedCache = new WeakMap<object, Map<string, unknown>>();
 
@@ -118,12 +118,12 @@ type InferEnv<S extends AnySchema> = {
  */
 export function defineEnv<S extends AnySchema>(schema: S): InferEnv<S> {
   registry.schema = schema;
-  // Flip the presence flag once and leave it on — even if a future call
+  // Decision: Flip the presence flag once and leave it on — even if a future call
   // swaps in an empty schema, we still know defineEnv was declared.
   registry.hasDefineEnvBeenCalled = true;
-  // Drop any cached entries from a prior schema (HMR / re-import).
+  // Decision: Drop any cached entries from a prior schema (HMR / re-import).
   validatedCache = new WeakMap();
-  // Reset boot-time validation state so a re-imported schema is re-checked.
+  // Decision: Reset boot-time validation state so a re-imported schema is re-checked.
   registry.validation = null;
   return env as unknown as InferEnv<S>;
 }
@@ -147,11 +147,11 @@ export async function _validateEnvOnce(envValues: unknown): Promise<void> {
   if (last && sameInputs(last.inputs, inputs)) {
     state = last.state;
   } else {
-    // Each call awaits its own validation until one completes. In workerd, a promise that
+    // Decision: Each call awaits its own validation until one completes. In workerd, a promise that
     // waits on another request's I/O never settles once that request is canceled.
     state = await validateSchema(schema, inputs);
     if (registry.schema !== schema) {
-      // defineEnv registered another schema while this call waited.
+      // Decision: defineEnv registered another schema while this call waited.
       return _validateEnvOnce(envValues);
     }
     registry.validation = { inputs, state };
@@ -159,7 +159,7 @@ export async function _validateEnvOnce(envValues: unknown): Promise<void> {
   if (!state.ok) {
     throw state.error;
   }
-  // Keep the values with the env that passed. The registry holds the latest validation only,
+  // Decision: Keep the values with the env that passed. The registry holds the latest validation only,
   // and an env with other values can validate while requests with this env still run:
   // Cloudflare may keep an isolate running when only its bindings change.
   seedValidated(envValues, state.values);
@@ -171,7 +171,7 @@ function readSchemaInputs(schema: AnySchema, envValues: unknown): Map<string, un
     string,
     unknown
   >;
-  // Public values belong to this build, not to the remote secret store. Keep
+  // Decision: Public values belong to this build, not to the remote secret store. Keep
   // server rendering and boot validation consistent with the browser bundle.
   const clientValues = getClientEnvValues();
   return new Map(
@@ -207,7 +207,7 @@ async function validateSchema(
     lines.push(`  • ${key} is required but missing`);
   }
   for (const { key, messages } of report.invalid) {
-    // Messages are already redacted inside validateAllEnvWithValues.
+    // Decision: Messages are already redacted inside validateAllEnvWithValues.
     lines.push(`  • ${key}: ${messages.join('; ')}`);
   }
   return {
@@ -223,7 +223,7 @@ function seedValidated(rawEnv: unknown, values: Map<string, unknown>): void {
   }
   const cache = getValidatedCache(rawEnv);
   for (const [key, value] of values) {
-    // Internal bindings stay hidden even when the schema declares them. A value that a read
+    // Decision: Internal bindings stay hidden even when the schema declares them. A value that a read
     // already returned stays the same object.
     if (!isInternalBinding(key) && !cache.has(key)) {
       cache.set(key, value);
@@ -290,7 +290,7 @@ export class EnvValidationError extends Error {
   readonly issues: Array<StandardSchemaV1.Issue>;
 
   constructor(key: string, issues: Array<StandardSchemaV1.Issue>) {
-    // Callers redact messages first; the raw value is not known here.
+    // Decision: Callers redact messages first; the raw value is not known here.
     super(`Invalid env "${key}": ${issues.map((i) => i.message).join(', ')}`);
     this.name = 'EnvValidationError';
     this.key = key;
@@ -299,7 +299,7 @@ export class EnvValidationError extends Error {
 }
 
 function readKey(key: string): unknown {
-  // Internal bindings stay hidden even when the schema declares them.
+  // Decision: Internal bindings stay hidden even when the schema declares them.
   const rawEnv = getRawRuntimeEnv();
   if (isInternalBinding(key)) {
     return undefined;
@@ -310,18 +310,18 @@ function readKey(key: string): unknown {
   if (!registry.schema) {
     return rawValue;
   }
-  // `env.hasOwnProperty` and the like come from Object.prototype, not from the schema.
+  // Decision: `env.hasOwnProperty` and the like come from Object.prototype, not from the schema.
   const validator = Object.hasOwn(registry.schema, key) ? registry.schema[key] : undefined;
   if (!validator) {
     return rawValue;
   }
-  // Cache identity must be the underlying env object. `getRuntimeEnv()`
+  // Decision: Cache identity must be the underlying env object. `getRuntimeEnv()`
   // returns a fresh Proxy on every call, so keying by it would miss.
   const cache = getValidatedCache(rawEnv);
   if (cache.has(key)) {
     return cache.get(key);
   }
-  // Validation seeds only the env object it receives. Reads also use objects it never
+  // Decision: Validation seeds only the env object it receives. Reads also use objects it never
   // received: the `cloudflare:workers` env outside a request scope, the remote dev copy. A
   // validated value belongs to the raw value it came from, so the latest validation serves
   // such an env while it holds that raw value. The value is not cached: this env can come to
@@ -460,7 +460,7 @@ async function validateAllEnvWithValues(
 
 export { string, number, boolean, url, email, oneOf, json, type EnvSchema } from './env-helpers.ts';
 
-// Ambient Cloudflare.Env declarations so user tsconfigs that include
+// Decision: Ambient Cloudflare.Env declarations so user tsconfigs that include
 // `types: ["@builtbyfriends/bwf/env"]` expose D1/KV/R2 globals plus the auto-inferred bwf
 // framework bindings.
 declare global {

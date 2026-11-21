@@ -20,9 +20,9 @@ function isProjectModeMigrationApplied(rows) {
 function assertSchemaFixturePreserved(original, rows, projectModeMigrationApplied = false) {
   for (const [table, row] of Object.entries(original)) {
     for (const [key, value] of Object.entries(row)) {
-      // 0054 deliberately normalizes the obsolete Worker mode to the public
-      // bwf mode. Permit only this exact conversion after its immutable SQL
-      // was applied; every other pre-existing value must remain identical.
+      // Decision: Migration 0054 deliberately normalizes the obsolete Worker mode to the public bwf mode. Allow
+      // only this exact conversion after its immutable SQL was applied; all other existing values have to
+      // stay identical.
       const expected =
         projectModeMigrationApplied &&
         table === 'projects' &&
@@ -52,8 +52,8 @@ async function runSchemaFixture(command) {
   if (command !== 'seed' && command !== 'verify') {
     throw new Error('Use seed or verify.');
   }
-  // Resolve the driver from the checkout being tested, even when this script
-  // was saved in RUNNER_TEMP before checking out another immutable revision.
+  // Decision: Resolve the driver from the checkout under test, even when this script was saved in RUNNER_TEMP
+  // before checking out another immutable revision.
   const { Pool } = createRequire(
     pathToFileURL(`${process.cwd()}/platform/packages/api/package.json`),
   )('pg');
@@ -66,7 +66,7 @@ async function runSchemaFixture(command) {
       await pool.query(
         "INSERT INTO projects (id, user_id, slug) VALUES ('proj_compat', 'user_compat', 'schema-compat-fixture')",
       );
-      // Test-only key and nonce; match the platform's AES-GCM storage format.
+      // Decision: Test-only key and nonce, matching the platform's AES-GCM storage format.
       const iv = Buffer.alloc(12, 1);
       const cipher = createCipheriv('aes-256-gcm', Buffer.alloc(32, 7), iv);
       const ciphertext = Buffer.concat([

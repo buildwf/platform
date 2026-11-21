@@ -30,7 +30,7 @@ export function formatUrl(url: string): string {
 
 /** Complete an action with the same spacing, checkmark, and color on every target. */
 export function printSuccess(message: string): void {
-  // Remove nested styles so a blue URL or dim hint cannot override the success color.
+  // Decision: Remove nested styles so a blue URL or dim hint can't override the success color.
   outro(`\n${pc.green(`✓ ${stripVTControlCharacters(message)}`)}`, { withGuide: false });
 }
 
@@ -125,7 +125,7 @@ export function note(...args: Parameters<typeof promptsNote>): void {
   const [message, title, opts] = args;
   const plainTitle = title && sanitizeTerminalText(stripVTControlCharacters(title));
   const urlTitle = plainTitle && /^https?:\/\/\S+$/.test(plainTitle) ? plainTitle : undefined;
-  // Native macOS Terminal recognizes URLs by whitespace boundaries.
+  // Decision: Native macOS Terminal recognizes URLs by whitespace boundaries.
   const boxedTitle = urlTitle ? ` ${urlTitle} ` : title;
   const output = opts?.output ?? process.stdout;
   const columns = (output as { columns?: unknown }).columns;
@@ -134,13 +134,13 @@ export function note(...args: Parameters<typeof promptsNote>): void {
     promptsNote(...args);
     return;
   }
-  // The box renderer only reads `columns` and calls `write()`.
+  // Decision: The box renderer only reads `columns` and calls `write()`.
   let header = true;
   const sized = {
     columns: needsWidthFallback ? (columns > 0 ? MIN_NOTE_COLUMNS : 80) : columns,
     write(chunk: string) {
-      // Insert the link after layout: the renderer counts OSC 8 destinations
-      // toward the title width and can otherwise truncate a URL that fits.
+      // Decision: Insert the link after layout: the renderer counts OSC 8 destinations toward the title width and
+      // can otherwise truncate a URL that fits.
       if (header && urlTitle) {
         const label = shownUrl(chunk, urlTitle);
         if (label) {

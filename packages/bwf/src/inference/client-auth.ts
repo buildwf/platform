@@ -46,7 +46,7 @@ export function inferClientAuth(parsed: ReturnType<typeof parseSync>, code: stri
       }
     }
   }
-  // Named imports/re-exports are fully described by module metadata. Keep the
+  // Decision: Named imports/re-exports are fully described by module metadata. Keep the
   // parser's AST lazy unless a namespace or dynamic import could read auth.
   // Escaped names and string line continuations need the AST, but ordinary
   // regex escapes such as \\s must not materialize an otherwise unused namespace.
@@ -144,7 +144,7 @@ function inferNamespaceAuth(program: AstProgram): boolean {
         found = cached;
         break;
       }
-      // Mark before following the initializer to terminate cycles. Cache the
+      // Decision: Mark before following the initializer to terminate cycles. Cache the
       // completed chain so repeated reads don't traverse every alias again.
       namespaceValues.set(binding, false);
       aliases.push(binding);

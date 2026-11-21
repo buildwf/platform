@@ -52,7 +52,7 @@ export function AdminProviders({ children }: { children: ReactNode }) {
       client.hydrate(shared.adminFateSnapshot);
     }
     return client;
-    // The snapshot bootstraps SSR once; a client survives navigations until the session changes.
+    // Decision: The snapshot bootstraps SSR once; a client survives navigations until the session changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
   return (

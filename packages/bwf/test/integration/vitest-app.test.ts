@@ -9,7 +9,7 @@ import {
 
 const repository = join(import.meta.dirname, '../../../..');
 
-// Run the app's tests as `vp test` runs them in the app's own terminal, not as part of this run.
+// Decision: Run the app's tests as `vp test` runs them in the app's own terminal, not as part of this run.
 const appTestEnv = Object.fromEntries(
   Object.entries(process.env).filter(
     ([key]) => !key.startsWith('VITEST') && key !== 'TEST' && key !== 'NODE_ENV',

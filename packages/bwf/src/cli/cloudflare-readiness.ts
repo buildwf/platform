@@ -83,7 +83,7 @@ export async function readCloudflareWorkersDevSubdomain(options: {
   runWrangler: DeployWranglerRun;
   verifyUploader: () => boolean;
 }): Promise<CloudflareWorkersDevSubdomainLookup> {
-  // The authenticated read runs in the pinned transport, keeping credentials in its process.
+  // Decision: The authenticated read runs in the pinned transport, keeping credentials in its process.
   if (!options.verifyUploader()) {
     return { ok: false, reason: 'uploader-changed' };
   }

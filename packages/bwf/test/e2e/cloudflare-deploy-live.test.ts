@@ -7,11 +7,11 @@ import { createIsolatedPlayground } from '../../../../test/integration-helpers.t
 import { renderBwfConfig } from '../../src/config-write.ts';
 import { readConfig } from '../../src/config.ts';
 
-// Gated live-account e2e for the `bwf deploy --platform cloudflare` path. Runs only when
+// Decision: Gated live-account e2e for the `bwf deploy --platform cloudflare` path. Runs only when
 // PLATFORM_E2E_CF_TOKEN and PLATFORM_E2E_CF_ACCOUNT_ID are set, and skips each test otherwise. See
 // README.md in this directory for prerequisites, CI wiring, and resource naming and retention.
 
-// Read env inside hooks and tests, never at module load: Vitest collects this file before the
+// Decision: Read env inside hooks and tests, never at module load: Vitest collects this file before the
 // runner injects the job env, so a top-level read sees empty credentials.
 function cfToken(): string {
   return process.env.PLATFORM_E2E_CF_TOKEN ?? '';
@@ -19,7 +19,7 @@ function cfToken(): string {
 function cfAccountId(): string {
   return process.env.PLATFORM_E2E_CF_ACCOUNT_ID ?? '';
 }
-// Live cf calls are unverified on Windows; cloudflare-deploy-build.test.ts covers the build there.
+// Decision: Live cf calls are unverified on Windows; cloudflare-deploy-build.test.ts covers the build there.
 function e2eEnabled(): boolean {
   return cfToken().length > 0 && cfAccountId().length > 0 && process.platform !== 'win32';
 }
@@ -29,7 +29,7 @@ const NO_CREDS_NOTE =
 const ROOT = join(import.meta.dirname, '..', '..', '..', '..');
 const PACKAGE_ROOT = join(ROOT, 'packages', 'platform');
 const CLI_ENTRY = join(PACKAGE_ROOT, 'dist', 'cli', 'cli.mjs');
-// `spawn.sync` blocks the event loop, so Vitest cannot time out a hung call.
+// Decision: `spawn.sync` blocks the event loop, so Vitest cannot time out a hung call.
 // Bound every spawn below its hook timeout.
 const DEPLOY_TIMEOUT_MS = 480_000;
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -44,7 +44,7 @@ let createdEmail = '';
 let kvKey = '';
 let kvValue = '';
 
-// Randomness belongs in test records, never in retained remote resource names.
+// Decision: Randomness belongs in test records, never in retained remote resource names.
 function uniqueRecordSuffix(): string {
   return `${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
 }
@@ -60,16 +60,15 @@ function resourceIds() {
   };
 }
 
-/** The credentialed env every real Cloudflare call shares. */
 function cloudEnv(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     CLOUDFLARE_API_TOKEN: cfToken(),
     CLOUDFLARE_ACCOUNT_ID: cfAccountId(),
   };
-  // The CLI receives only its standard token variable, which it strips from app builds.
+  // Decision: The CLI receives only its standard token variable, which it strips from app builds.
   delete env.PLATFORM_E2E_CF_TOKEN;
-  // The direct fetches and the CLI must use the same public Cloudflare API.
+  // Decision: The direct fetches and the CLI must use the same public Cloudflare API.
   delete env.CLOUDFLARE_API_BASE_URL;
   delete env.CF_API_BASE_URL;
   delete env.WRANGLER_API_ENVIRONMENT;
@@ -77,14 +76,11 @@ function cloudEnv(): NodeJS.ProcessEnv {
   return env;
 }
 
-/** Extract the deployed workers.dev URL the CLI prints on a successful deploy. */
 function extractWorkerUrl(output: string): string | undefined {
-  // The host has two labels before workers.dev: `<worker>.<account-subdomain>`.
+  // Decision: The host has two labels before workers.dev: `<worker>.<account-subdomain>`.
   return output.match(/https:\/\/[a-z0-9.-]+\.workers\.dev(?:\/[^\s]*)?/)?.[0];
 }
 
-/** A `setTimeout` delay that also resolves immediately when `signal` aborts, so a pending retry wait
- * never outlives a timed-out test. */
 function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
     if (signal?.aborted) {
@@ -103,10 +99,8 @@ function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-/**
- * Poll until a 200, retrying any other status: a new workers.dev host can 404 while its route
- * propagates. Returns the last response, or throws when no attempt got a response.
- */
+// Decision: Poll until a 200, retrying any other status: a new workers.dev host can 404 while its route
+// propagates. Returns the last response, or throws when no attempt got a response.
 async function fetchWithRetry(
   url: string,
   init: RequestInit = {},
@@ -117,7 +111,6 @@ async function fetchWithRetry(
   let lastResponse: Response | undefined;
   let lastError: unknown;
   for (let i = 0; i < attempts; i++) {
-    // Stop once the test times out, so retries do not leak into later tests.
     if (signal?.aborted) {
       break;
     }
@@ -149,7 +142,6 @@ async function fetchWithRetry(
   throw lastError ?? new Error(`worker at ${url} never answered`);
 }
 
-/** Report whether the worker's workers.dev route is enabled, to diagnose a persistent 404. */
 async function workersDevEnabled(): Promise<string> {
   try {
     const res = await fetch(
@@ -166,7 +158,6 @@ async function workersDevEnabled(): Promise<string> {
   }
 }
 
-/** Authenticated GET against the Cloudflare API for THIS deployed worker (Bearer `cfToken()`). */
 async function cfWorkerApi(path: string, signal?: AbortSignal): Promise<Response> {
   return fetch(
     `https://api.cloudflare.com/client/v4/accounts/${cfAccountId()}/workers/scripts/${workerName}${path}`,
@@ -194,7 +185,7 @@ describe('bwf deploy --platform cloudflare (live account)', () => {
     d1Name = `${workerName}-db`;
     kvTitle = `${workerName}-kv`;
     app = createIsolatedPlayground(ROOT, 'playground/spa').root;
-    // Start from fixture source, not an operator's environment or old provider identity.
+    // Decision: Start from fixture source, not an operator's environment or old provider identity.
     for (const name of readdirSync(app)) {
       if (
         name === '.env' ||
@@ -213,7 +204,7 @@ describe('bwf deploy --platform cloudflare (live account)', () => {
       }
     }
 
-    // The explicit account-local namespace is reserved for this suite. The production provisioner
+    // Decision: The explicit account-local namespace is reserved for this suite. The production provisioner
     // discovers and pins its actual D1/KV IDs, including on retry after a partial deployment.
     const config = readConfig(app);
     writeFileSync(
@@ -240,7 +231,7 @@ describe('bwf deploy --platform cloudflare (live account)', () => {
 
   afterAll(() => {
     if (app) {
-      // Keep the lockfile and remote resources for the next run and any failure investigation.
+      // Decision: Keep the lockfile and remote resources for the next run and any failure investigation.
       console.info(
         `Live E2E targets retained when created: ${workerName}, ${d1Name}, ${kvTitle}. Fixture: ${app}`,
       );
@@ -275,7 +266,7 @@ describe('bwf deploy --platform cloudflare (live account)', () => {
     const base = extractWorkerUrl(deployOutput);
     expect(base, deployOutput).toBeDefined();
     const root = base!.replace(/\/$/, '');
-    // Submit once: a failed response does not establish that the insert was rejected.
+    // Decision: Submit once: a failed response does not establish that the insert was rejected.
     const email = `e2e-${uniqueRecordSuffix()}@example.com`;
     createdEmail = email;
     const created = await fetch(`${root}/api/users`, {
@@ -315,7 +306,7 @@ describe('bwf deploy --platform cloudflare (live account)', () => {
       ctx.signal,
     );
     expect(put.status, `PUT /api/kv/${key}`).toBe(200);
-    // KV can cache a first-read miss for ~60s, so poll past that window.
+    // Decision: KV can cache a first-read miss for ~60s, so poll past that window.
     const got = await fetchWithRetry(`${root}/api/kv/${key}`, {}, 40, 2000, ctx.signal);
     const gotBody = await got.text();
     expect(got.status, gotBody).toBe(200);
@@ -324,7 +315,7 @@ describe('bwf deploy --platform cloudflare (live account)', () => {
 
   it('registers the cron trigger on the deployed worker', async (ctx) => {
     ctx.skip(!e2eEnabled(), NO_CREDS_NOTE);
-    // Check the registered schedule through the CF API instead of waiting for the hourly run.
+    // Decision: Check the registered schedule through the CF API instead of waiting for the hourly run.
     let crons: Array<string | undefined> = [];
     let diag = 'no response';
     for (let attempt = 0; attempt < 8; attempt++) {
@@ -355,7 +346,7 @@ describe('bwf deploy --platform cloudflare (live account)', () => {
 
   it('re-deploys idempotently to the same worker', async (ctx) => {
     ctx.skip(!e2eEnabled(), NO_CREDS_NOTE);
-    // Runs last: redeploys with the config the first deploy wrote, reusing the worker, D1 and KV.
+    // Decision: Runs last: redeploys with the config the first deploy wrote, reusing the worker, D1 and KV.
     const res = spawn.sync('node', [CLI_ENTRY, 'deploy', '--platform', 'cloudflare'], {
       cwd: app,
       encoding: 'utf8',
@@ -365,13 +356,11 @@ describe('bwf deploy --platform cloudflare (live account)', () => {
     });
     const output = `${res.stdout ?? ''}${res.stderr ?? ''}${res.error ? `\n${res.error}` : ''}`;
     expect(res.status, output).toBe(0);
-    // Read the URL from this deploy's own output, not the first deploy's.
     const base = extractWorkerUrl(output);
     expect(base, output).toBeDefined();
     expect(new URL(base!).hostname.split('.')[0], output).toBe(workerName);
     const root = base!.replace(/\/$/, '');
     expect(resourceIds()).toEqual(firstResourceIds);
-    // Verify the records survive the update, not only that the bindings answer.
     const served = await fetchWithRetry(`${root}/api/hello`, {}, 15, 2000, ctx.signal);
     expect(served.status).toBe(200);
     const dbRoute = await fetchWithRetry(`${root}/api/users`, {}, 15, 2000, ctx.signal);

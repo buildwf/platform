@@ -31,8 +31,8 @@ let fixture: ReturnType<typeof prepareKitchenSinkPlatformFixture>;
 let app: Hono<CloudEnv>;
 beforeAll(async () => {
   fixture = prepareKitchenSinkPlatformFixture({ email: true, sandbox: true, runtime: true });
-  // These handler tests use mocked bindings before `bwf init` has generated
-  // .bwf/tsconfig.json. The separate fixture build test checks generated types.
+  // Decision: These handler tests use mocked bindings before `bwf init` has generated .bwf/tsconfig.json.
+  // The separate fixture build test checks the generated types.
   writeFileSync(join(fixture.root, 'tsconfig.json'), '{}');
   const email = await import(join(fixture.root, 'routes/api/acceptance/email.ts'));
   const sandbox = await import(join(fixture.root, 'routes/api/acceptance/sandbox.ts'));

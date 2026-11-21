@@ -9,7 +9,7 @@ import { drizzle as _drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
 import { createD1SessionAccess, resolveD1SessionStart, type DbSessionStart } from './db-session.ts';
 import { getRuntimeBinding, getRuntimeRequestResource, requireRuntimeBinding } from './env.ts';
 
-// Re-export commonly used Drizzle utilities so consumers never need
+// Decision: Re-export commonly used Drizzle utilities so consumers never need
 // to depend on drizzle-orm directly.
 export {
   sql,
@@ -84,9 +84,9 @@ export function getBookmark<TSchema extends Record<string, unknown>>(
 const requestDbKey = {};
 
 function requireD1(): D1Database {
-  // Vite serves a PostgreSQL or MySQL app's own `@builtbyfriends/bwf/db` to an installed package only when the
-  // package is an ES module that depends on void and the app lists it or reaches it through such
-  // packages.
+  // Decision: Vite serves a PostgreSQL or MySQL app's own `@builtbyfriends/bwf/db` to an installed package
+  // only when the package is an ES module that depends on void and the app lists it or reaches it
+  // through such packages.
   if (
     getRuntimeBinding(DEFAULT_BINDING) == null &&
     (getRuntimeBinding('HYPERDRIVE') != null || getRuntimeBinding('DATABASE_URL') != null)
@@ -110,7 +110,7 @@ function d1Init() {
  */
 export const db: DrizzleD1Database = new Proxy({} as DrizzleD1Database, {
   get(_, prop) {
-    // Promise assimilation and inspection are not database use.
+    // Decision: Promise assimilation and inspection are not database use.
     if (
       prop === 'then' ||
       prop === 'toJSON' ||
@@ -122,7 +122,7 @@ export const db: DrizzleD1Database = new Proxy({} as DrizzleD1Database, {
     const instance = getRuntimeRequestResource(
       requestDbKey,
       d1Init,
-      // Outside bwf's request scope, create an uncached client.
+      // Decision: Outside bwf's request scope, create an uncached client.
       d1Init,
     );
     return Reflect.get(instance, prop);

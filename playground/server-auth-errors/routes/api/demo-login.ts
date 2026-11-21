@@ -2,7 +2,7 @@ import { defineHandler } from '@builtbyfriends/bwf';
 import { getAuth } from '@builtbyfriends/bwf/auth';
 import { demoUser } from '../../src/demo-user.ts';
 
-// This demo always signs in the same user, regardless of the submitted fields.
+// Decision: This demo signs in the same user whatever fields are submitted.
 export const POST = defineHandler(async (c) => {
   const auth = getAuth(c);
   const options = { body: demoUser, headers: c.req.raw.headers, asResponse: true } as const;
@@ -11,10 +11,9 @@ export const POST = defineHandler(async (c) => {
     return response;
   }
 
-  // Initialize the demo account on the first login to a fresh database.
   const created = await auth.api.signUpEmail(options);
   if (created.status === 422) {
-    // Another first login may have created the account concurrently.
+    // Decision: Another first login may have created the account at the same time.
     return auth.api.signInEmail(options);
   }
   return created;

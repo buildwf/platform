@@ -113,7 +113,6 @@ describe('rendered help advertises the flags the parser honours', () => {
     expect(page).toContain('--git');
     expect(page).toContain('--no-git');
   });
-  /** The page as handed to clack's `note` (mocked above), ANSI stripped, so an assertion reads like the terminal. */
   function render(path: Array<string>): string {
     vi.mocked(note).mockClear();
     printHelpPage(path);
@@ -162,7 +161,7 @@ describe('rendered help advertises the flags the parser honours', () => {
     const model = render(['gen', 'model']);
     expect(model).not.toContain('migration');
     expect(model).not.toContain('CRUD');
-    // The gen page lists `gen migration` on its own, so check only the CRUD claim there.
+    // Decision: The gen page lists `gen migration` on its own, so check only the CRUD claim there.
     expect(render(['gen'])).not.toContain('CRUD');
   });
 
@@ -203,7 +202,7 @@ describe('rendered help advertises the flags the parser honours', () => {
     expect(page).not.toContain('--platform');
   });
 
-  // `status` / `setup` read the local project + wrangler session, never a bwf project,
+  // Decision: `status` / `setup` read the local project + wrangler session, never a bwf project,
   // so their pages carry `--platform cloudflare` and no `--project`.
   it('shows --platform cloudflare, and no --project, on `email status` and `email setup`', () => {
     for (const sub of ['status', 'setup']) {
@@ -218,7 +217,7 @@ describe('rendered help advertises the flags the parser honours', () => {
     expect(group).toContain('setup --platform cloudflare');
   });
 
-  // The nested `domain` group is the one email command with its own verbs; the
+  // Decision: The nested `domain` group is the one email command with its own verbs; the
   // group entry is on the email page, and every verb keeps its own page so the
   // printed `bwf help email domain <command>` hint actually resolves.
   it('lists `email domain` on the email page and resolves the domain help pages', () => {

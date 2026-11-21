@@ -125,7 +125,7 @@ export async function createPlatformInstallPlan(
     allowStorageLocationChange?: boolean;
   },
 ): Promise<PlatformInstallPlan> {
-  // Validate before even the first provider read; omission retains recorded intent.
+  // Decision: Validate before even the first provider read; omission retains recorded intent.
   const dashboardUrl =
     input.dashboardUrl !== undefined
       ? normalizePlatformDashboardUrl(input.dashboardUrl)
@@ -212,7 +212,7 @@ export async function createPlatformInstallPlan(
     ...(enableEmail ? { email: true } : {}),
     ...(input.customDomains ? { customDomains: true } : {}),
   };
-  // Custom hostnames reach dispatch through the dedicated zone's catch-all routes.
+  // Decision: Custom hostnames reach dispatch through the dedicated zone's catch-all routes.
   if (capabilities.customDomains && (testing || !input.dedicatedZone)) {
     throw new Error(
       'platform: Custom domains need a dedicated application zone. Install with a domain and --dedicated-zone.',
@@ -293,7 +293,7 @@ export async function createPlatformInstallPlan(
       : existingWithoutEmailZone;
   const existingWithDashboard = {
     ...existingWithSandbox,
-    // The dashboard is separately deployed. Only the explicit option or the
+    // Decision: The dashboard is separately deployed. Only the explicit option or the
     // normalized recorded origin can update this configuration during maintenance.
     controlPlane: {
       ...existingWithSandbox.controlPlane,
@@ -319,7 +319,7 @@ export async function createPlatformInstallPlan(
           capabilities: { ...existingWithCustomDomains.capabilities, email: true },
         }
       : existingWithCustomDomains;
-  // Upgrade may change runtime logs. The setting also moves the schema version,
+  // Decision: Upgrade may change runtime logs. The setting also moves the schema version,
   // so leave both out of the comparison.
   const comparable = (
     value: Omit<PlatformDeploymentManifest, 'emailSharedZoneId' | 'emailSenderDomain'>,
@@ -334,7 +334,7 @@ export async function createPlatformInstallPlan(
     if (options?.allowStorageLocationChange) {
       delete comparableValue.storageLocationHint;
     }
-    // The schema version follows the optional settings.
+    // Decision: The schema version follows the optional settings.
     return JSON.stringify({ ...comparableValue, schemaVersion: undefined });
   };
   if (
@@ -805,7 +805,7 @@ export async function revalidatePlatformInstallAction(
     stableWorkerUpdate?: boolean;
   },
 ): Promise<void> {
-  // The installed-platform upgrade already planned and verified every shared
+  // Decision: The installed-platform upgrade already planned and verified every shared
   // resource under its lifecycle lock. Recheck the Worker immediately before
   // deployment; deployPlatformWorker independently proves the active version
   // and deployment lineage. Keep full replanning for recovery and provisioning.
@@ -911,7 +911,7 @@ export async function revalidatePlatformInstallAction(
 
 function resourceSlugForManifest(manifest: PlatformInstallationManifest): string {
   const apiWorker = manifest.deployment.resources.apiWorker;
-  // Installations made before the rename named their resources void-<slug>-<role>.
+  // Decision: Installations made before the rename named their resources void-<slug>-<role>.
   const prefix = ['platform-', 'void-'].find((candidate) => apiWorker.startsWith(candidate));
   if (!prefix || !apiWorker.endsWith('-api')) {
     return manifest.deployment.installationSlug;
@@ -1067,7 +1067,7 @@ function addNamedPlan(
       !markedProvision &&
       !ambiguousProvision
     ) {
-      // When this installation asked for the resource before it stopped, its
+      // Decision: When this installation asked for the resource before it stopped, its
       // failed create may have made it, or someone else may have taken the
       // name. Without a matching marker only the user can tell which.
       throw new Error(
@@ -1159,7 +1159,6 @@ function hasAmbiguousProvisionIntent(
   return hasProvisionIntentStep(manifest, key, kind, name, recorded?.id ?? null);
 }
 
-/** Whether the manifest records an intent to provision this resource. */
 export function hasProvisionIntentStep(
   manifest: Pick<PlatformInstallationManifest, 'ownershipNonce' | 'steps'>,
   key: string,
@@ -1188,7 +1187,7 @@ function interruptedProvisionRetryName(
   return `${name.slice(0, 63 - suffix.length).replace(/-+$/, '')}${suffix}`;
 }
 
-// Installation manifests store these config hashes, so their JSON shape must not change.
+// Decision: Installation manifests store these config hashes, so their JSON shape must not change.
 
 /** Name-only config hash, recorded for resources without a live fingerprint. */
 export function legacyResourceConfigHash(kind: InstallationResourceKind, name: string): string {
@@ -1255,7 +1254,7 @@ export function resourceMarkerProblem(
     : 'belongs to another installation';
 }
 
-// Preserve recovery for previously installed, suffixed namespaces. New platforms
+// Decision: Preserve recovery for previously installed, suffixed namespaces. New platforms
 // use readable names and stop on ambiguous ownership instead of renaming resources.
 function isLegacyUniqueProvisionAttempt(
   manifest: PlatformInstallationManifest,
@@ -1327,7 +1326,7 @@ function assertApplicationRoutesPreserveWorkerDomains(
       if (!workerRouteHostMatches(planned.host, hostname)) {
         continue;
       }
-      // Routes run before Custom Domain origins. Only more-specific routes covering every
+      // Decision: Routes run before Custom Domain origins. Only more-specific routes covering every
       // path and both schemes preserve the origin; a no-Worker route is also an exclusion.
       // https://developers.cloudflare.com/workers/configuration/routing/routes/#matching-behavior
       const protectedByExistingRoutes = ['http', 'https'].every((scheme) =>

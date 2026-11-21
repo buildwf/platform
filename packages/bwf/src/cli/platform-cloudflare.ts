@@ -255,7 +255,7 @@ export async function verifyPlatformRuntimeTokenEmailPermissions(
     try {
       await client.request(path);
     } catch (error) {
-      // Only an authorization answer shows a missing permission. A rate limit,
+      // Decision: Only an authorization answer shows a missing permission. A rate limit,
       // a Cloudflare outage or a network failure does not stop the command.
       if (
         error instanceof PlatformCloudflareApiError &&
@@ -263,7 +263,7 @@ export async function verifyPlatformRuntimeTokenEmailPermissions(
       ) {
         missing.push(permission);
         denial ??= error;
-        // A token that is not valid gets 403 on the zone read, but 401 on
+        // Decision: A token that is not valid gets 403 on the zone read, but 401 on
         // the Email Routing reads. A valid token without access gets 403.
         tokenNotValid ||= error.status === 401;
       }
@@ -340,7 +340,7 @@ export class PlatformCloudflareClient {
       headers: {
         Accept: 'application/json',
         Authorization: `Bearer ${this.#token}`,
-        // FormData sets its own multipart boundary.
+        // Decision: Only a string body gets a JSON Content-Type: FormData sets its own multipart boundary.
         ...(typeof init?.body === 'string' ? { 'Content-Type': 'application/json' } : {}),
         ...init?.headers,
       },
@@ -747,7 +747,7 @@ export class PlatformCloudflareClient {
       id: requiredString(entry.id, 'KV namespace id'),
       name: requiredString(entry.title, 'KV namespace title'),
     }));
-    // The KV API lists all namespaces; it does not filter by a `title` parameter.
+    // Decision: The KV API lists all namespaces; it does not filter by a `title` parameter.
     // Filter only after pagination and validation, without hiding real duplicates.
     return title ? namespaces.filter((namespace) => namespace.name === title) : namespaces;
   }
@@ -1246,7 +1246,7 @@ export class PlatformCloudflareClient {
     if (kind === 'ai-gateway' && this.#aiGatewayClient) {
       return this.#aiGatewayClient.deleteResource(accountId, resource, zoneId);
     }
-    // Cloudflare addresses dispatch namespaces and Workers by name; every
+    // Decision: Cloudflare addresses dispatch namespaces and Workers by name; every
     // other kind by id.
     const encoded = encodeURIComponent(
       kind === 'dispatch-namespace' || kind === 'worker' ? resource.name : resource.id,
@@ -1277,7 +1277,6 @@ export class PlatformCloudflareClient {
     try {
       envelope = (await response.json()) as CloudflareEnvelope<unknown>;
     } catch {
-      // Judge an empty body by its status alone.
       envelope = { success: response.ok };
     }
     if (!response.ok || envelope.success !== true) {
@@ -1310,7 +1309,7 @@ export class PlatformCloudflareClient {
     );
     return result.map((entry) => ({
       id: requiredString(entry.consumer_id, 'Queue consumer id'),
-      // The API documents `script_name`; Wrangler still reads `script` and
+      // Decision: The API documents `script_name`; Wrangler still reads `script` and
       // `service`. A Worker consumer without a name would keep its Worker
       // and Queue from being deleted, so refuse it instead of skipping it.
       script:
@@ -1342,7 +1341,7 @@ export class PlatformCloudflareClient {
       requiredString(reference?.script ?? reference?.service, 'Dependent Worker name');
     const workers = [
       ...(references.services?.incoming ?? []).map(name),
-      // A Worker lists the Durable Object namespaces it implements itself.
+      // Decision: A Worker lists the Durable Object namespaces it implements itself, so leave its own name out.
       ...(references.durable_objects ?? []).map(name).filter((entry) => entry !== workerName),
       ...(references.dispatch_outbounds ?? []).map(name),
       ...tails.map((tail) => name(tail.producer)),
@@ -1460,7 +1459,7 @@ export class PlatformCloudflareClient {
           ),
       )
       .map((entry) => ({
-        // `tag` is the deprecated name of `id`.
+        // Decision: Cloudflare's `tag` is the deprecated name of `id`.
         id: requiredString(entry.id ?? entry.tag, 'Email Routing rule id'),
         ...parseEmailRoutingTarget(entry),
       }));
@@ -1686,7 +1685,7 @@ export function parsePostgresConnectionString(value: string): {
         'platform: Unsupported sslmode. Cloudflare Hyperdrive supports "require", "verify-ca", or "verify-full".',
       );
     }
-    // Hyperdrive accepts its verify modes only with an uploaded CA certificate ID, which a
+    // Decision: Hyperdrive accepts its verify modes only with an uploaded CA certificate ID, which a
     // connection URL cannot carry. `require` is Hyperdrive's TLS mode that validates the server
     // certificate against public CAs; bwf's own database connections still use the URL's mode.
     mtls = { sslmode: 'require' };

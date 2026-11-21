@@ -205,7 +205,7 @@ export function assertWorkerMainUploaded(
 }
 
 export function assertProjectDeployAccess(project: ProjectResponse | undefined): void {
-  // The API remains authoritative for every deploy.
+  // Decision: The API stays authoritative for all deploys; this check only fails early.
   if (project?.role === 'reader') {
     throw new Error(
       `deploy: You have reader access to "${project.slug}" and cannot deploy. ` +
@@ -238,7 +238,7 @@ export async function promptDeployProjectConfig(
     });
   }
 
-  // Project names are only shown after the user opts into linking.
+  // Decision: Project names are only shown after the user opts into linking.
   const result = await promptProjectSelection(
     deployableProjects,
     'Select a project to deploy to:',
@@ -318,7 +318,7 @@ export function resolveStaticDeployPreset(
       appType,
     };
 
-    // Re-detect build command (config stores app type, not command).
+    // Decision: Detect the build command again: the config stores the app type, not the command.
     const detectedPreset = detectPreset(root, { spa: options?.spa });
     if (detectedPreset) {
       preset.buildCommand = detectedPreset.buildCommand;
@@ -358,13 +358,11 @@ export function getGitCommit(root: string): string | null {
       return githubSha;
     }
 
-    // `git status` can run a repo-configured `core.fsmonitor` hook, so scrub
-    // credentials like the build spawns. No `localBinRoot`: `git` must never
-    // resolve to a binary shipped in the project's node_modules/.bin.
+    // Decision: `git status` can run a repo-configured `core.fsmonitor` hook, so scrub credentials like the build
+    // spawns. No `localBinRoot`: `git` mustn't resolve to a binary shipped in the project's
+    // node_modules/.bin.
     const gitEnv = buildEnv();
-    // Check if in a git repo
     execSync('git rev-parse --is-inside-work-tree', { cwd: root, stdio: 'ignore', env: gitEnv });
-    // Check if working tree is clean
     const status = execSync('git status --porcelain', {
       cwd: root,
       encoding: 'utf-8',
@@ -373,7 +371,6 @@ export function getGitCommit(root: string): string | null {
     if (status !== '') {
       return null;
     }
-    // Get current commit hash
     return execSync('git rev-parse HEAD', { cwd: root, encoding: 'utf-8', env: gitEnv }).trim();
   } catch {
     return null;
@@ -421,7 +418,7 @@ export async function ensureManagedHyperdrive(
   try {
     resources = await client.getResources(projectId);
   } catch {
-    // Best effort: the platform checks Hyperdrive again during the deploy.
+    // Decision: A failed read is ignored: the platform checks Hyperdrive again during the deploy.
   }
   if (!resources || resources.some((resource) => resource.type === 'hyperdrive')) {
     return;
@@ -482,7 +479,6 @@ export async function assertEnvSchemaValid(
   projectId: string,
   workerVars: Record<string, string> | undefined,
 ): Promise<void> {
-  // Skip the remote secret round-trip when the project has no typed env schema.
   if (findEnvFile(root) == null) {
     return;
   }

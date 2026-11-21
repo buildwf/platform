@@ -28,7 +28,7 @@ vi.mock('node:child_process', () => ({
 }));
 
 vi.mock('pg', async (importOriginal) => {
-  // Keep pg's own connection-string parsing; stub only the network calls.
+  // Decision: Keep pg's own connection-string parsing; stub only the network calls.
   class Client extends (await importOriginal<typeof import('pg')>()).Client {}
   Object.assign(Client.prototype, {
     async connect() {},
@@ -40,7 +40,6 @@ vi.mock('pg', async (importOriginal) => {
 
 const mysqlQueries = vi.hoisted((): Array<string> => []);
 const mysqlConnectOptions = vi.hoisted((): Array<Record<string, unknown>> => []);
-// Runs after each query is recorded, so a test can make one statement fail.
 const mockMySqlQuery = vi.hoisted(() => vi.fn<(sql: string) => void>());
 
 vi.mock('mysql2/promise', () => ({
@@ -51,19 +50,18 @@ vi.mock('mysql2/promise', () => ({
       async query(sql: string) {
         mysqlQueries.push(sql);
         mockMySqlQuery(sql);
-        // MySQL 8 labels an unaliased information_schema column in upper case.
+        // Decision: MySQL 8 labels an unaliased information_schema column in upper case.
         const tables =
           /^SELECT table_name(?: AS (\w+))?(, table_type(?: AS (\w+))?)? FROM information_schema\.tables/.exec(
             sql,
           );
         if (tables) {
           const key = tables[1] ?? 'TABLE_NAME';
-          // `_drafts` is an app table whose name starts with an underscore.
+          // Decision: `_drafts` is an app table whose name starts with an underscore, unlike the migration tables.
           const names = ['_drafts', '_void_migration_lock', '_void_migrations', 'users'];
           if (!tables[2]) {
             return [names.map((name) => ({ [key]: name })), []];
           }
-          // A query that reads table_type also sees views.
           const typeKey = tables[3] ?? 'TABLE_TYPE';
           return [
             [
@@ -220,7 +218,6 @@ function createRenameProjectRoot(options: {
     );
   }
 
-  // Minimal bwf.json so readConfig / getDatabaseDialect default cleanly.
   writeFileSync(join(root, 'bwf.json'), JSON.stringify({}));
 
   return root;
@@ -379,7 +376,6 @@ describe('bwf db reset', () => {
 
     const migrationsDir = join(root, 'db', 'migrations');
     mkdirSync(join(migrationsDir, 'meta'), { recursive: true });
-    // The journal names a .sql file that is not on disk.
     writeFileSync(
       join(migrationsDir, 'meta', '_journal.json'),
       JSON.stringify({
@@ -438,7 +434,6 @@ describe('bwf db reset', () => {
 
       Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: true });
       mockConfirm.mockResolvedValue(false);
-      // Seed checks its file before the prompt.
       writeFileSync(join(root, 'db', 'seed.sql'), '');
       await expect(runDbCommand(root, { action: 'seed' })).rejects.toThrow('process.exit:0');
       expect(mockConfirm).toHaveBeenCalledOnce();
@@ -465,11 +460,11 @@ describe('bwf db reset', () => {
 
     expect(mysqlQueries).toContain('DROP TABLE IF EXISTS `_void_migrations`');
     expect(mysqlQueries).toContain('DROP TABLE IF EXISTS `users`');
-    // A view stays when its tables are dropped, so reset drops it as a view.
+    // Decision: MySQL keeps a view when its tables are dropped, so reset drops it as a view.
     expect(mysqlQueries).toContain('DROP VIEW IF EXISTS `user_names`');
     expect(mysqlQueries).not.toContain('DROP TABLE IF EXISTS `user_names`');
     expect(mysqlQueries).toContain('CREATE TABLE `users` (id INT);');
-    // The migration lock covers the drops and the new run, and deploys keep their lease table.
+    // Decision: The migration lock covers the drops and the new run, and deploys keep their lease table.
     const lock = mysqlQueries.findIndex((sql) => sql.startsWith('SELECT GET_LOCK'));
     const firstDrop = mysqlQueries.findIndex((sql) => sql.startsWith('DROP TABLE'));
     expect(lock).toBeGreaterThanOrEqual(0);
@@ -548,7 +543,7 @@ describe('bwf db export', () => {
       supportBigNumbers: true,
       bigNumberStrings: true,
     });
-    // TIMESTAMP text follows the session time zone, so the dump pins it for the restore.
+    // Decision: MySQL TIMESTAMP text follows the session time zone, so the dump pins it for the restore.
     expect(mysqlQueries).toContain("SET time_zone = '+00:00'");
     expect(stdout).toContain("SET time_zone = '+00:00';");
   });
@@ -567,7 +562,6 @@ describe('bwf db export', () => {
   });
 });
 
-/** A project whose local D1 database is a real SQLite file, opened by the unmocked runner. */
 async function createLocalSqliteProject(): Promise<string> {
   const root = mkdtempSync(join(tmpdir(), 'void-execute-sqlite-'));
   rootsToClean.push(root);
@@ -603,7 +597,6 @@ describe('bwf db execute', () => {
     }
   });
 
-  // `runDbCommand` opens with a blank line, so only non-empty calls carry a table.
   function tableOutput(): string {
     return vi
       .mocked(console.log)
@@ -732,7 +725,7 @@ describe('bwf db execute', () => {
     const db = await openSqliteDatabase(join(root, '.void', 'local.sqlite'));
     try {
       const rows = db.prepare('SELECT id, hits, label FROM counters ORDER BY id').all();
-      // FAIL keeps the row it already updated, and the failed statement is not replayed.
+      // Decision: FAIL keeps the row it already updated, and the failed statement isn't replayed.
       expect(rows).toEqual([
         { id: 1, hits: 1, label: 'done;x' },
         { id: 2, hits: 0, label: 'two' },
@@ -878,7 +871,6 @@ describe('bwf db status', () => {
   });
 
   it('counts remote pending files, not tracked names, in the status summary', async () => {
-    // Another branch applied 0001 and 0002 remotely, which are not on disk here.
     const root = createRenameProjectRoot({
       files: { '0000_a.sql': 'SELECT 1;', '0003_d.sql': 'SELECT 1;' },
     });
@@ -909,14 +901,13 @@ describe('bwf db rename-migrations', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    // Return a path that does NOT exist so the SQLite tracking branch no-ops.
+    // Decision: Return a path that doesn't exist so the SQLite tracking branch does nothing.
     mockGetMiniflareDatabasePath.mockReturnValue(
       join(tmpdir(), 'nonexistent-platform-rename.sqlite'),
     );
-    // afterEach resets these mocks, so reinstall the defaults.
+    // Decision: afterEach resets these mocks, so reinstall the defaults.
     mockGetToken.mockImplementation(() => null);
     mockReadProjectConfig.mockImplementation(() => null);
-    // A project that was never deployed has no saved deployment platform.
     mockReadDeploymentPlatform.mockImplementation(() => null);
     mockRenameMigrations.mockReset();
     vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -976,7 +967,7 @@ describe('bwf db rename-migrations', () => {
     expect(journal.entries[0].when).toBe(1_700_000_000_000);
     expect(journal.entries[1].when).toBe(1_700_000_000_001);
 
-    // Drizzle-kit names a snapshot after the tag's part before the first underscore.
+    // Decision: Drizzle-kit names a snapshot after the part of the tag before the first underscore.
     const [prefixA, prefixB] = tagsOnDisk.map((tag) => tag.split('_')[0]);
     const snapshots = readdirSync(metaDir).filter((f) => f.endsWith('_snapshot.json'));
     expect(snapshots.sort()).toEqual([`${prefixA}_snapshot.json`, `${prefixB}_snapshot.json`]);
@@ -1058,7 +1049,7 @@ describe('bwf db rename-migrations', () => {
     const journalPathOnDisk = join(migrationsDir, 'meta', '_journal.json');
     const originalJournalBytes = readFileSync(journalPathOnDisk);
 
-    // The SQLite tracking branch runs only when the database file exists.
+    // Decision: The SQLite tracking branch runs only when the database file exists.
     const fakeDbPath = join(root, '.bwf', 'fake.sqlite');
     mkdirSync(join(root, '.bwf'), { recursive: true });
     writeFileSync(fakeDbPath, '');
@@ -1089,7 +1080,7 @@ describe('bwf db rename-migrations', () => {
     mkdirSync(join(migrationsDir, 'meta'), { recursive: true });
     writeFileSync(join(migrationsDir, '0000_foo.sql'), '-- foo\n');
     writeFileSync(join(migrationsDir, '0001_bar.sql'), '-- bar\n');
-    // An empty placeholder journal counts as bare legacy, so the snapshot check is skipped.
+    // Decision: An empty placeholder journal counts as bare legacy, so the snapshot check is skipped.
     writeFileSync(
       join(migrationsDir, 'meta', '_journal.json'),
       JSON.stringify({ version: '7', dialect: 'sqlite', entries: [] }, null, 2) + '\n',
@@ -1114,7 +1105,6 @@ describe('bwf db rename-migrations', () => {
   });
 
   it('refuses to rename when db/migrations has journal/file drift (missing .sql)', async () => {
-    // The journal lists 0002_second, which is not on disk.
     const root = createRenameProjectRoot({
       files: {
         '0001_first.sql': '-- first\n',
@@ -1156,7 +1146,7 @@ describe('bwf db rename-migrations', () => {
   });
 
   it('refuses to rename when db/migrations/migrations.js is present (bundled mode)', async () => {
-    // The journal is coherent, so only the bundled-mode guard can stop this rename.
+    // Decision: The journal is coherent, so only the bundled-mode guard can stop this rename.
     const root = createRenameProjectRoot({
       files: {
         '0001_a.sql': '-- a\n',
@@ -1248,7 +1238,6 @@ describe('bwf db rename-migrations', () => {
 
     const migrationsDir = join(root, 'db', 'migrations');
     const metaDir = join(migrationsDir, 'meta');
-    // 0001_snapshot.json is missing.
     writeFileSync(join(metaDir, '0000_snapshot.json'), '{"id":"snap-0000","prevId":null}');
 
     const journalPathOnDisk = join(metaDir, '_journal.json');
@@ -1274,7 +1263,7 @@ describe('bwf db rename-migrations', () => {
 
   it('refuses direct Cloudflare deploys before renaming anything', async () => {
     mockReadDeploymentPlatform.mockReturnValue('cloudflare');
-    // A project that moved from bwf keeps its old link, so the hosted rename must not run either.
+    // Decision: A project that moved from bwf keeps its old link, so the hosted rename must not run either.
     mockGetToken.mockReturnValue('test-token');
     mockReadProjectConfig.mockReturnValue({ projectId: 'proj-under-test', slug: 'under-test' });
     const root = createRenameProjectRoot({
@@ -1294,7 +1283,8 @@ describe('bwf db rename-migrations', () => {
     expect(errorMessages).toContain('direct Cloudflare');
   });
 
-  // `.bwf/project.json` is not checked in, so a fresh checkout of a deployed app has no saved platform.
+  // Decision: `.bwf/project.json` isn't checked in, so a fresh checkout of a deployed app has no saved
+  // platform.
   it.each([
     {
       name: 'a root Wrangler config with a D1 database id',
@@ -1346,7 +1336,7 @@ describe('bwf db rename-migrations', () => {
     expect(errorMessages).toContain('direct Cloudflare');
   });
 
-  // Deploy creates the Hyperdrive and replaces any id that is not a real one.
+  // Decision: Deploy creates the Hyperdrive and replaces any id that isn't a real one.
   it('renames a fresh checkout whose Hyperdrive id is a placeholder', async () => {
     const root = createRenameProjectRoot({
       files: { '0001_a.sql': '-- a\n', '0002_b.sql': '-- b\n' },

@@ -129,7 +129,7 @@ export function ensurePlatformAccessToken(
   }
   rememberOriginToken(origin, token);
   keyringTokens.set(origin, token);
-  // Keychain failure keeps the credential only in process memory, never in a plaintext file.
+  // Decision: If the keychain fails, the credential stays only in process memory, not in a plaintext file.
   writeKeyringPassword(ACCESS_KEYRING_SERVICE, account, token);
 }
 

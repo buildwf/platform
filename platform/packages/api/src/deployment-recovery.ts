@@ -34,8 +34,8 @@ async function committedEvent(
     url: urls[0]!,
     urls,
     assets: deployment.asset_hashes ? Object.keys(JSON.parse(deployment.asset_hashes)).length : 0,
-    // The operation journal retains the original module count. This describes
-    // the serving target when a crash happened before its result was recorded.
+    // Decision: The operation journal keeps the original module count. This describes the serving target when a
+    // crash came before its result was recorded.
     workers: manifest?.type === 'static' || manifest?.type === 'spa' ? 0 : 1,
   };
 }
@@ -71,8 +71,8 @@ export async function settleExpiredDeployment(
     }
   }
 
-  // Commit cancellation before external cleanup so a failure or lost response
-  // retains an in-flight fence rather than allowing another deployment to race.
+  // Decision: Commit cancellation before external cleanup so a failure or lost response keeps an in-flight
+  // fence instead of letting another deployment race.
   progress('fencing interrupted execution');
   await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT id FROM projects WHERE id = ${initial.project_id} FOR UPDATE`);
@@ -98,7 +98,7 @@ export async function settleExpiredDeployment(
     }
     const project = await getProject(tx, deployment.project_id);
     if (!project || project.status === 'deleting') {
-      // Project teardown owns its resources and cleanup jobs.
+      // Decision: Project teardown owns its resources and cleanup jobs.
       return { terminal: false };
     }
     if (deployment.status === 'live') {
@@ -117,9 +117,9 @@ export async function settleExpiredDeployment(
       const manifest = deployment.manifest
         ? (JSON.parse(deployment.manifest) as DeployManifest)
         : null;
-      // An upload can land before its acknowledgement or local uploaded flag.
-      // The manifest is committed before upload; null/static manifests cannot
-      // have uploaded a Worker and need no dispatch provider permissions.
+      // Decision: An upload can land before its acknowledgement or the local uploaded flag. The manifest is
+      // committed before upload; null or static manifests can't have uploaded a Worker and need no
+      // dispatch provider permissions.
       if (manifest && manifest.type !== 'static' && manifest.type !== 'spa') {
         progress('deleting candidate worker');
         const namespace = env.DISPATCH_NAMESPACE ?? DEFAULT_DISPATCH_NAMESPACE;
@@ -136,7 +136,7 @@ export async function settleExpiredDeployment(
           throw new Error(`Interrupted deployment cleanup failed (HTTP ${response.status}).`);
         }
       }
-      // Remove the tenant service binding before deleting its controller.
+      // Decision: Remove the tenant service binding before deleting its controller.
       if (manifest?.sandbox) {
         progress('deleting sandbox controller');
         await deleteSandboxController(
@@ -159,8 +159,8 @@ export async function settleExpiredDeployment(
         .where(eq(deployments.id, deployment.id));
     }
 
-    // Do not undo remotely committed SQL or delete project-scoped resources.
-    // Only this candidate's private artifacts have been confirmed cleaned up.
+    // Decision: Don't undo remotely committed SQL or delete project-scoped resources. Only this candidate's private
+    // artifacts are confirmed cleaned up.
     const canceled =
       deployment.status === 'canceled' ||
       (deployment.status === 'canceling' && deployment.error_message !== INTERRUPTED_MESSAGE);

@@ -140,8 +140,8 @@ function verifiedStream(
   sha256: string,
   message: string,
 ): ReadableStream<Uint8Array> {
-  // node:crypto hashes incrementally in both workerd (nodejs_compat) and the
-  // Node integration tests; crypto.DigestStream exists only in workerd.
+  // Decision: node:crypto hashes incrementally in both workerd (nodejs_compat) and the Node integration tests;
+  // crypto.DigestStream exists only in workerd.
   const hash = createHash('sha256');
   let received = 0;
   return body.pipeThrough(
@@ -198,7 +198,6 @@ function sequence(
   let releaseReason: unknown;
   let index = 0;
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
-  // Sources opened before their turn, in order.
   const ahead: Array<{ index: number; size: number; opened: Promise<ReadableStream<Uint8Array>> }> =
     [];
   let aheadBytes = 0;
@@ -232,7 +231,7 @@ function sequence(
         return;
       }
       const opened = piece.open();
-      // Its failure is thrown when the stream reaches it.
+      // Decision: Mark the early rejection handled; the failure is thrown when the stream reaches this source.
       opened.catch(noop);
       ahead.push({ index: nextToOpen, size: piece.size, opened });
       aheadBytes += piece.size;
@@ -326,7 +325,7 @@ function sequence(
               }
               const stream = await waitFor(opened);
               if (canceled) {
-                // Released while it opened: nothing else will cancel it.
+                // Decision: Released while it opened: nothing else will cancel it.
                 stream.cancel(releaseReason).catch(noop);
                 throw released();
               }
@@ -335,7 +334,7 @@ function sequence(
             }
           }
         } catch (error) {
-          // A canceled reader's own errors are not source failures.
+          // Decision: A canceled reader's own errors aren't source failures.
           if (!canceled) {
             failure ??= error;
           }
@@ -484,7 +483,7 @@ export function withKnownLength(
   }
   const fixed = new FixedLengthStream(length);
   stream.pipeTo(fixed.writable).catch(() => {
-    // The readable side reports the failed pipe to whoever reads it.
+    // Decision: The readable side reports the failed pipe to whoever reads it.
   });
   return fixed.readable as ReadableStream<Uint8Array>;
 }

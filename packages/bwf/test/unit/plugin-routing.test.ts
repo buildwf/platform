@@ -260,7 +260,8 @@ describe('routingPlugin', () => {
         compilerOptions?: { paths?: Record<string, Array<string>> };
       };
 
-    // The Drizzle plugin wrote this tsconfig at startup, before auth.ts existed: no db.d.ts.
+    // Decision: The Drizzle plugin wrote this tsconfig at startup, before auth.ts existed, so there's no
+    // db.d.ts.
     ensureProjectTsconfig(root, true, false);
     const withAuth = createRoutingPlugin(root, { isAuthEnabled: () => true });
     resolveConfig(withAuth, 'serve');
@@ -269,7 +270,7 @@ describe('routingPlugin', () => {
     expect(existsSync(join(root, '.bwf', 'auth.d.ts'))).toBe(true);
     expect(readTsconfig().files).toEqual(['routes.d.ts', 'auth.d.ts']);
 
-    // A pg app keeps db.d.ts and its bwf/db path after auth is turned off.
+    // Decision: A pg app keeps db.d.ts and its bwf/db path after auth is turned off.
     ensureProjectTsconfig(root, true, true);
     expect(readTsconfig().files).toEqual(['routes.d.ts', 'db.d.ts', 'auth.d.ts']);
     rmSync(join(root, 'auth.ts'));
@@ -527,7 +528,6 @@ describe('routingPlugin', () => {
     await emit('change', envPath);
     expect(invalidated).toEqual(['virtual:platform-routes']);
 
-    // A later body save is back on the fast path.
     writeFileSync(routePath, 'export const GET = () => new Response("updated");');
     await emit('change', routePath);
     expect(invalidated).toEqual(['virtual:platform-routes']);
@@ -556,8 +556,8 @@ describe('routingPlugin', () => {
     await emit('change', routePath);
     expect(logError).toHaveBeenCalledTimes(1);
 
-    // Back to the scan of the last good checkpoint: the files written for POST
-    // must still be replaced.
+    // Decision: Back to the scan of the last good checkpoint: the files written for POST still have to be
+    // replaced.
     writeFileSync(routePath, get);
     await emit('change', routePath);
     expect(readFileSync(join(root, '.bwf', 'routes.d.ts'), 'utf8')).not.toContain('POST: {');
@@ -576,7 +576,7 @@ describe('routingPlugin', () => {
     const typesPath = join(root, '.bwf', 'routes.d.ts');
     const types = readFileSync(typesPath, 'utf8');
 
-    // For example `bwf build` in another terminal, which writes production routes.
+    // Decision: For example `bwf build` in another terminal, which writes production routes.
     writeFileSync(typesPath, '// written by another process\n');
     writeFileSync(routePath, 'export const GET = () => new Response("updated");');
     await emit('change', routePath);
@@ -624,10 +624,9 @@ describe('routingPlugin', () => {
     writeFileSync(routePath, remove);
     const second = emit('change', routePath);
     try {
-      // Give the second event every chance to start: a queue that only defers
-      // by a microtask would rescan here.
+      // Decision: Give the second event every chance to start: a queue that only defers by a microtask would
+      // rescan here.
       await new Promise((resolve) => setImmediate(resolve));
-      // The second event must not replace the shared scan while the first writer awaits auth.
       expect(getApplicationAnalysis).toHaveBeenCalledTimes(1);
     } finally {
       resume();
@@ -748,12 +747,12 @@ describe('routingPlugin', () => {
         (await server.environments.client.pluginContainer.resolveId(specifier, importer))?.id;
       const fileOf = (specifier: string) =>
         normalizePath(fileURLToPath(import.meta.resolve(specifier)));
-      // The app has no better-auth of its own, so these resolve only through the aliases.
+      // Decision: The app has no better-auth of its own, so these resolve only through the aliases.
       const appFile = join(root, 'routes', 'health.ts');
       for (const specifier of ['better-auth/client', 'better-auth/react']) {
         expect(await resolve(specifier, appFile)).toBe(fileOf(specifier));
       }
-      // A deeper subpath passes the aliases and resolves where better-auth is installed.
+      // Decision: A deeper subpath passes the aliases and resolves where better-auth is installed.
       expect(await resolve('better-auth/client/plugins', fileURLToPath(import.meta.url))).toBe(
         fileOf('better-auth/client/plugins'),
       );
@@ -763,7 +762,7 @@ describe('routingPlugin', () => {
   });
 
   it('regenerates auth files when the auth config or a file it imports changes', async () => {
-    // Vite's module graph keys files by real path, as the watcher reports them for a real root;
+    // Decision: Vite's module graph keys files by real path, as the watcher reports them for a real root;
     // `.native` also expands Windows short names, as Vite does.
     const root = realpathSync.native(createTempRoot());
     const routePath = join(root, 'routes', 'health.ts');
@@ -771,7 +770,7 @@ describe('routingPlugin', () => {
     const authPath = readProjectPaths(root).authConfigCandidates[0]!;
     const helperPath = join(dirname(authPath), 'auth-fields.ts');
     const extraPath = join(dirname(authPath), 'auth-extra.ts');
-    // The type-only export makes the file an auth config without loading bwf/auth.
+    // Decision: The type-only export makes the file an auth config without loading bwf/auth.
     const authSource = (imports: string, fields: string) =>
       "export type {} from '@builtbyfriends/bwf/auth';\n" +
       imports +
@@ -783,15 +782,15 @@ describe('routingPlugin', () => {
     writeFileSync(authPath, authSource(helperImport, "[field]: { type: 'string' }"));
 
     const plugin = createRoutingPlugin(root, { isAuthEnabled: () => true });
-    // A real dev server, so Vite runs its own watcher handling for the auth
-    // environment; events are sent by hand.
+    // Decision: A real dev server, so Vite runs its own watcher handling for the auth environment; events
+    // are sent by hand.
     const server = await createServer({
       root,
       configFile: false,
       logLevel: 'silent',
       plugins: [
         plugin,
-        // Holds back Vite's own handling of each save, so recovery cannot rely on it.
+        // Decision: Holds back Vite's own handling of each save, so recovery can't rely on it.
         {
           name: 'slow-watch-change',
           async watchChange() {
@@ -825,20 +824,17 @@ describe('routingPlugin', () => {
       await vi.waitFor(() => expect(schema()).toContain('"displayName"'));
       expect(schema()).not.toContain('"nickname"');
 
-      // A save outside the config's files does not load it again.
       const loads = imports.mock.calls.length;
       writeFileSync(routePath, 'export const GET = () => new Response("updated");');
       server.watcher.emit('change', routePath);
       await new Promise((resolve) => setTimeout(resolve, 100));
       expect(imports).toHaveBeenCalledTimes(loads);
 
-      // A syntax error in a helper is reported, and fixing it regenerates.
       save('change', helperPath, 'export const field =');
       await vi.waitFor(() => expect(logError).toHaveBeenCalledTimes(1));
       save('change', helperPath, "export const field = 'avatar';");
       await vi.waitFor(() => expect(schema()).toContain('"avatar"'));
 
-      // A load that fails on a missing file retries once the file is created.
       save(
         'change',
         authPath,
@@ -875,9 +871,9 @@ describe('routingPlugin', () => {
     );
   });
 
-  // Manual trigger auth is baked into the route table: dev accepts only the
-  // dev trigger header. `vite preview` reports `command: 'serve'` but runs
-  // the built bundle, so it must keep the build rule.
+  // Decision: Manual trigger auth is baked into the route table: dev accepts only the dev trigger header.
+  // `vite preview` reports `command: 'serve'` but runs the built bundle, so it has to keep the
+  // build rule.
   it.each([
     { command: 'serve' as const, isPreview: false, serve: true },
     { command: 'serve' as const, isPreview: true, serve: false },
@@ -908,7 +904,7 @@ describe('routingPlugin', () => {
     },
   );
 
-  // bwf/live sends the real error message only from the dev server's entry.
+  // Decision: bwf/live sends the real error message only from the dev server's entry.
   it.each([
     { command: 'serve' as const, isPreview: false, dev: true },
     { command: 'serve' as const, isPreview: true, dev: false },
@@ -960,7 +956,7 @@ describe('routingPlugin', () => {
 
       const entry = readFileSync(join(root, '.bwf', 'entry.ts'), 'utf-8');
       expect(entry.includes('alwaysUseHttps: true')).toBe(emitted);
-      // The app itself never redirects, so in-process `fetch` stays on HTTP.
+      // Decision: The app itself doesn't redirect, so in-process `fetch` stays on HTTP.
       const load = getHookHandler(plugin.load) as (id: string) => Promise<string | undefined>;
       expect(await load('virtual:platform-routes')).not.toContain('alwaysUseHttps');
     } finally {

@@ -101,7 +101,7 @@ async function userSession(context: Context<ApiEnv>): Promise<OAuthSession | nul
 function requireBrowserOrigin(context: Context<ApiEnv>) {
   const expected = origin(context);
   const requestOrigin = new URL(context.req.url).origin;
-  // Wrangler's local proxy strips the port from same-origin browser headers.
+  // Decision: Wrangler's local proxy strips the port from same-origin browser headers.
   const localProxy = isDevBypass(context.env) && new URL(requestOrigin).hostname === 'localhost';
   if (
     context.req.header('Origin') !== expected &&
@@ -233,8 +233,8 @@ async function consentPage(context: Context<ApiEnv>, request: typeof oauthReques
   const summary = artifact
     ? `<p>Resources: ${h(Object.keys(artifact.manifest.bindings).join(', ') || 'none')}. ${Object.keys(artifact.assetManifest).length} assets; ${request.data.workerModules?.length ?? 0} Worker modules.</p><details><summary>Deployment details</summary><pre>${h(JSON.stringify(artifact.manifest, null, 2))}</pre><p>Artifact: ${h(request.data.artifactDigest!)}</p></details>`
     : '';
-  // Chrome makes same-origin form Origin opaque under no-referrer. Keep the
-  // strict Origin check while suppressing referrers to every external client.
+  // Decision: Chrome sends an opaque Origin on same-origin forms under no-referrer. Keep the strict Origin
+  // check and still hide referrers from external clients.
   context.header('Referrer-Policy', 'same-origin');
   return platformBrowserPage(
     context,
@@ -577,11 +577,10 @@ app.post('/approve', async (context) => {
   return context.redirect(redirect.href);
 });
 
-// Redeem and rotate a refresh token. Locks follow the documented order and take
-// the grant FOR UPDATE before the token row, the same order as the cascade when
-// a grant is deleted. A request rejected by a later check (scope, grant,
-// session) rolls back and leaves the token usable; only a committed rotation
-// marks it used.
+// Decision: Redeem and rotate a refresh token. Locks follow the documented order: the grant FOR UPDATE
+// before the token row, the same order as the cascade when a grant is deleted. A request rejected by
+// a later check (scope, grant, session) rolls back and leaves the token usable; only a committed
+// rotation marks it used.
 async function refreshAccessToken(
   context: Context<ApiEnv>,
   clientId: string,
@@ -598,7 +597,8 @@ async function refreshAccessToken(
       .update(oauthGrants)
       .set({ revoked_at: new Date().toISOString() })
       .where(eq(oauthGrants.id, grantId));
-  // A token's grant, hash and expiry never change, and used_at is set once.
+  // Decision: A token's grant, hash and expiry don't change, and used_at is set once, so this read can run
+  // outside the lock.
   const [found] = await db
     .select({ token: oauthRefreshTokens, clientId: oauthGrants.client_id })
     .from(oauthRefreshTokens)
@@ -608,7 +608,7 @@ async function refreshAccessToken(
     throw invalid();
   }
   if (found.token.used_at) {
-    // A rotated-out token came back: treat it as stolen and end the grant.
+    // Decision: A rotated-out token came back: treat it as stolen and end the grant.
     await revoke(db, found.token.grant_id);
     throw invalid();
   }
@@ -624,7 +624,7 @@ async function refreshAccessToken(
         true,
       ));
     } catch (error) {
-      // RFC 6749 section 5.2: a revoked or unusable grant is invalid_grant.
+      // Decision: RFC 6749 section 5.2: a revoked or unusable grant is invalid_grant.
       if (error instanceof OAuthError && error.code === 'invalid_token') {
         throw new OAuthError('invalid_grant', error.message);
       }
@@ -636,7 +636,7 @@ async function refreshAccessToken(
       .where(eq(oauthRefreshTokens.id, token.id))
       .for('update');
     if (current?.usedAt) {
-      // Another request redeemed this token first: the same reuse rule applies.
+      // Decision: Another request redeemed this token first: the same reuse rule applies.
       await revoke(tx, grant.id);
       return null;
     }
@@ -664,7 +664,7 @@ async function refreshAccessToken(
       id: crypto.randomUUID(),
       grant_id: grant.id,
       token_hash: await hashLoginProof(refreshToken),
-      // Copied unchanged: rotation never extends the family's lifetime.
+      // Decision: Copied unchanged: rotation doesn't extend the family's lifetime.
       expires_at: token.expires_at,
     });
     const accessToken = randomLoginProof();
@@ -767,7 +767,7 @@ app.post('/token', async (context) => {
       id: crypto.randomUUID(),
       grant_id: grant.id,
       token_hash: await hashLoginProof(refreshToken),
-      // The family ends with the login session the user approved it from.
+      // Decision: The family ends with the login session the user approved it from.
       expires_at: new Date(grant.session.exp * 1000).toISOString(),
     });
     return context.json({

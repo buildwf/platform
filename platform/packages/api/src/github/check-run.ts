@@ -15,16 +15,13 @@ import { GITHUB_API_BASE, GITHUB_API_VERSION, getInstallationToken } from './ins
  * executor-agnostic (plain args only) so both build executors can call it.
  */
 
-// GitHub's full terminal set. The container path uses success/failure/cancelled
-// and the Actions path maps `workflow_run.conclusion === 'timed_out'` faithfully.
-//
-// The rest exist so a REFUSED rerun can echo a run's EXISTING conclusion back
-// verbatim. That matters for more than tidiness: GitHub treats `neutral` and
-// `skipped` as passing for a required status check, so completing a run we did
-// not actually run with a passing conclusion would let anyone with rerun rights
-// clear branch protection on a commit that never built. A refusal therefore
-// re-states what the run already said, and only an authoritatively complete and
-// live build is allowed to write `success`.
+// Decision: GitHub's full terminal set. The container path uses success/failure/cancelled, and the Actions
+// path maps `workflow_run.conclusion === 'timed_out'` as is.
+// The rest exist so a refused rerun can echo a run's existing conclusion back. GitHub treats
+// `neutral` and `skipped` as passing for a required status check, so completing a run we didn't run
+// with a passing conclusion would let anyone with rerun rights clear branch protection on a commit
+// that never built. A refusal restates what the run already said; only a complete, live build may
+// write `success`.
 export type CheckRunConclusion =
   | 'success'
   | 'failure'
@@ -74,9 +71,8 @@ export function preservedCheckRunConclusion(raw: unknown): CheckRunConclusion {
  */
 export const PLATFORM_BUILD_CHECK_RUN_NAME = 'Platform Build';
 
-// Same retry shape as `getBranchHeadComparisonStatus` (compare): up to 2 extra
-// attempts with a short fixed delay on transient 5xx/network/token-mint. A 4xx
-// is definitive and returns immediately.
+// Decision: Same retry shape as `getBranchHeadComparisonStatus`: up to 2 extra attempts with a short fixed
+// delay on transient 5xx, network or token-mint failures. A 4xx is definitive and returns at once.
 const CHECK_RUN_RETRY_ATTEMPTS = 2;
 const CHECK_RUN_RETRY_DELAY_MS = 250;
 
@@ -97,8 +93,6 @@ function errInfo(err: unknown): { name?: string; message: string } {
   return { message: String(err) };
 }
 
-// area:'github' distinguishes from the deploy-pipeline logger (area:'deploy').
-// `phase` differentiates create vs complete.
 function logFailure(
   phase: 'check-run-create' | 'check-run-complete',
   reason: FailureReason,
@@ -190,8 +184,8 @@ export async function createCheckRun(
       if (res.ok) {
         const data = (await res.json().catch(() => ({}))) as CheckRunCreateResponse;
         if (data.id === undefined || data.id === null) {
-          // 2xx without a usable id — definitive (not worth retrying), but the
-          // run can't be tracked, so report null.
+          // Decision: A 2xx without a usable id is definitive (not worth retrying), but the run can't be tracked, so
+          // report null.
           logFailure('check-run-create', 'http-4xx', {
             installationId,
             repoFullName,
@@ -204,7 +198,7 @@ export async function createCheckRun(
         }
         return String(data.id);
       }
-      // Never retry the POST (not idempotent — see the function doc).
+      // Decision: Don't retry the POST: it isn't idempotent (see the function doc).
       const errBody = (await res.text().catch(() => '<unreadable>')).slice(0, 500);
       logFailure('check-run-create', res.status < 500 ? 'http-4xx' : 'http-5xx', {
         installationId,
@@ -264,8 +258,7 @@ export async function completeCheckRun(
     text?: string;
   },
 ): Promise<boolean> {
-  // Cleared by the one-shot 422 fallback below, which rebuilds `body` without
-  // `output.text`.
+  // Decision: Cleared by the one-shot 422 fallback below, which rebuilds `body` without `output.text`.
   let includeText = Boolean(opts.text);
   const makeBody = (): string =>
     JSON.stringify({
@@ -319,9 +312,8 @@ export async function completeCheckRun(
       const errBody = (await res.text().catch(() => '<unreadable>')).slice(0, 500);
       if (res.status < 500) {
         if (res.status === 422 && includeText) {
-          // `includeText` gates this to a single fire, and `attempt` is rewound
-          // so the fallback body gets a full attempt even when the 422 landed
-          // on the last one.
+          // Decision: `includeText` limits this to one fire, and `attempt` is rewound so the fallback body gets a full
+          // attempt even when the 422 landed on the last one.
           logFailure('check-run-complete', 'text-rejected-retry', {
             installationId,
             repoFullName,

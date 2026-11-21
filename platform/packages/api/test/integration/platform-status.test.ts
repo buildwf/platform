@@ -209,7 +209,6 @@ it('allows administrator sign-in callbacks without allowing other login attempts
   const login = await request('/admin/login/github', '');
   expect(login.status).toBe(302);
   const state = new URL(login.headers.get('Location')!).searchParams.get('state')!;
-  // Missing browser proof is still rejected by normal authentication after the gate.
   expect(
     (await request(`/auth/callback?state=${encodeURIComponent(state)}&code=fixture`, '')).status,
   ).toBe(400);
@@ -327,6 +326,6 @@ it.each([390, 1280])(
       await browser.close();
     }
   },
-  // Launching Chromium alone can take longer than the default under a full parallel run.
+  // Decision: Launching Chromium alone can take longer than the default timeout under a full parallel run.
   30_000,
 );

@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
-// Capture what the alert email would be sent with, without touching the binding.
 const emailCalls: Array<{
   slug: string;
   count: number;
@@ -20,7 +19,6 @@ vi.mock('../../src/email.ts', () => ({
   ),
 }));
 
-// Mock db.ts so fireAlert resolves an owner + canonical slug without Postgres.
 vi.mock('../../src/db.ts', () => ({
   createDb: () => ({ __mock: 'db' }),
   getUser: vi.fn(async () => ({ email: 'owner@example.com' })),
@@ -148,7 +146,6 @@ describe('ErrorAlertMonitor window stamping', () => {
   });
 
   it('keeps the accumulated count and original window start across an expired cooldown', async () => {
-    // Recreates recappi: a burst days ago whose tail accumulated during cooldown.
     const burstStart = Date.parse('2026-07-16T16:30:00Z');
     const burstEnd = Date.parse('2026-07-16T17:30:00Z');
     const { mon } = makeMonitor({
@@ -156,7 +153,7 @@ describe('ErrorAlertMonitor window stamping', () => {
       projectId: 'p1',
       userId: 'u1',
       slug: 'recappi',
-      lastAlertAt: burstStart, // >24h before "now" => cooldown expired
+      lastAlertAt: burstStart,
       firstErrorAt: burstStart,
       lastErrorAt: burstEnd,
     });
@@ -166,14 +163,13 @@ describe('ErrorAlertMonitor window stamping', () => {
     await mon.fetch(record({ projectId: 'p1', count: 4, userId: 'u1', slug: 'recappi' }));
 
     expect(emailCalls).toHaveLength(1);
-    expect(emailCalls[0].count).toBe(1256); // keep-count: 1252 + 4
+    expect(emailCalls[0].count).toBe(1256);
     expect(emailCalls[0].window).toEqual({ start: burstStart, end: now });
   });
 
   it('stamps the window from the edge times in the record body, not from ingest time', async () => {
-    // Queue backlog: the errors were metered at 10:00-10:10 but this DO only
-    // sees them at 13:00. Stamping 13:00 would report a wrong window AND size
-    // the emailed `--range` so it excludes the very rows it points at.
+    // Decision: Queue backlog: the errors were metered at 10:00-10:10 but the DO sees them at 13:00. Stamping
+    // 13:00 would report the wrong window and size the emailed `--range` so it misses those rows.
     vi.setSystemTime(new Date('2026-07-23T13:00:00Z'));
     const firstAt = Date.parse('2026-07-23T10:00:00Z');
     const lastAt = Date.parse('2026-07-23T10:10:00Z');
@@ -205,7 +201,7 @@ describe('ErrorAlertMonitor window stamping', () => {
         lastAt: mid,
       }),
     );
-    // Queues do not guarantee ordering — an older batch can land second.
+    // Decision: Queues don't guarantee ordering, so an older batch can arrive second.
     await mon.fetch(
       record({
         projectId: 'p1',
@@ -237,7 +233,6 @@ describe('ErrorAlertMonitor window stamping', () => {
   it('passes a null window (recently fallback) when legacy state lacks window fields', async () => {
     vi.setSystemTime(new Date('2026-07-21T10:00:00Z'));
     const { mon } = makeMonitor({
-      // legacy pre-migration state: no firstErrorAt / lastErrorAt keys
       count: 99,
       projectId: 'p1',
       userId: 'u1',

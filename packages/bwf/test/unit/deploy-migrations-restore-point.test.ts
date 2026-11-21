@@ -188,7 +188,6 @@ describe('the D1 restore point a deploy takes before migrating', () => {
   });
 
   it('names only the migrations still pending after the restore point', async () => {
-    // An overlapping deploy applied 0001 between the first read and the bookmark.
     const runner = recordingRunner({
       'd1.migrations.list': [
         pending(['0001_add_column.sql', '0002_add_index.sql']),
@@ -219,7 +218,7 @@ describe('the D1 restore point a deploy takes before migrating', () => {
       () => true,
     );
 
-    // The bookmark is later than those migrations, so restoring it would not undo them.
+    // Decision: The bookmark is later than those migrations, so restoring it wouldn't undo them.
     expect(applied).toBe(false);
     expect(vi.mocked(log.info)).not.toHaveBeenCalled();
     expect(errorText()).not.toContain('bwf db restore');

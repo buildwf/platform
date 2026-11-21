@@ -432,7 +432,8 @@ describe('platform Cloudflare client', () => {
         scheme: 'postgresql',
         user: 'void-user',
       });
-      // Existing installation manifests retain the public-origin fingerprint.
+      // Decision: Existing installation manifests keep the public-origin fingerprint, so this hash mustn't
+      // change.
       expect(hyperdriveOriginConfigHash(config.origin)).toBe(
         '42174d71533f2c756129f46b5136972989ad67eb145ee62b7786ebc329c0ea61',
       );
@@ -755,8 +756,8 @@ describe('platform Cloudflare client', () => {
     });
 
     it('marks a token that Cloudflare does not accept', async () => {
-      // Cloudflare's answers to a token that is not valid: 403 on the zone
-      // read and 401 on the Email Routing reads.
+      // Decision: Cloudflare's answers to a token that isn't valid: 403 on the zone read and 401 on the Email
+      // Routing reads.
       const { client } = emailClient((pathname) =>
         pathname.endsWith('/hyperdrive/configs')
           ? Response.json({ success: true, result: [] })
@@ -783,8 +784,8 @@ describe('platform Cloudflare client', () => {
     });
 
     it('says that it checked the token saved on this machine', async () => {
-      // The run does not send the saved token to the platform Workers, so
-      // they can use a different token.
+      // Decision: The run doesn't send the saved token to the platform Workers, so they can use a different
+      // token.
       const { client } = emailClient((pathname) =>
         pathname.endsWith('/email/routing/rules')
           ? Response.json({ success: false, errors: [] }, { status: 403 })
@@ -800,8 +801,6 @@ describe('platform Cloudflare client', () => {
       await expect(check(true)).resolves.toBe(
         'platform: The runtime API token saved on this machine cannot use platform email. Cloudflare denied: Zone → Email Routing Rules → Edit (HTTP 403). bwf checked this token because PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN is not set. If the platform uses a different runtime token, set PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to that token, and bwf checks that token instead. Otherwise, check that the zone permissions of the saved token include the email zone mail-zone. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Then run the command again.',
       );
-      // A token from PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN, or one that
-      // the run sends to the Workers, keeps the message.
       for (const savedToken of [undefined, false]) {
         await expect(check(savedToken)).resolves.toBe(
           'platform: The runtime API token cannot use platform email. Cloudflare denied: Zone → Email Routing Rules → Edit (HTTP 403). Check that the token is valid and that its zone permissions include the email zone mail-zone. To add a missing permission, edit the token in the Cloudflare dashboard. The token value stays the same. Or set PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to a valid token that has these permissions. Then run the command again.',
@@ -1200,7 +1199,7 @@ describe('platform Cloudflare client', () => {
           );
         }
         if (method === 'DELETE') {
-          // Some Cloudflare DELETE endpoints answer without a result field.
+          // Decision: Some Cloudflare DELETE endpoints answer without a result field.
           return Response.json({ success: true, errors: [], messages: [] });
         }
         if (url.pathname.endsWith('/consumers')) {
@@ -1286,7 +1285,6 @@ describe('platform Cloudflare client', () => {
         const url = new URL(String(input));
         requests.push(`${init?.method ?? 'GET'} ${url.pathname}${url.search}`);
         if (url.pathname.endsWith('/references')) {
-          // The shape Cloudflare returned for a platform API Worker.
           return Response.json({
             success: true,
             result: {
@@ -1334,7 +1332,7 @@ describe('platform Cloudflare client', () => {
         fetcher: async () => Response.json({ success: true, result: rows }),
       }).listQueueConsumers('account', 'queue-id');
 
-    // Wrangler still reads these older names for the same Worker.
+    // Decision: Wrangler still reads these older names for the same Worker.
     await expect(
       respond([
         { consumer_id: 'c1', script: 'platform-team-api', type: 'worker' },
@@ -1385,7 +1383,7 @@ describe('platform Cloudflare client', () => {
                       enabled: true,
                       actions: [{ type: 'forward', value: ['a@example.com'] }],
                     })),
-                    // The catch-all has its own endpoint.
+                    // Decision: The catch-all has its own Cloudflare endpoint.
                     { id: 'all', enabled: true, matchers: [{ type: 'all' }], actions: [] },
                   ]
                 : [
@@ -1461,7 +1459,7 @@ describe('platform Cloudflare client', () => {
         Response.json({
           success: true,
           result: [
-            // The live API answers in this form.
+            // Decision: The live API answers in this form.
             { id: 'platform-team', created_at: '2026-10-05 18:29:14' },
             { id: 'zoned', created_at: '2026-09-14T00:00:01.400Z' },
             { id: 'odd', created_at: 'not a time' },

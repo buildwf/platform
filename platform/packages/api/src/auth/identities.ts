@@ -127,7 +127,7 @@ export async function resolvePlatformLogin(
         ? connection.kind
         : `oidc:${connection.id}`;
     if (!user) {
-      // Matching email is not proof of control of an existing platform account.
+      // Decision: Matching email isn't proof of control of an existing platform account.
       if (
         identity.emailVerified &&
         identity.email &&

@@ -128,7 +128,7 @@ function client(
     try {
       return await call(operation, args);
     } catch (error) {
-      // Admission and validation can fail before the receiver reads the channel.
+      // Decision: Admission and validation can fail before the receiver reads the channel.
       encoded.finish();
       throw error;
     }

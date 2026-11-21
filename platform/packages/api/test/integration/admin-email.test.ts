@@ -69,11 +69,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/**
- * Records the Cloudflare Email Routing calls the route makes and answers each
- * one with a success envelope, so a test can assert whether the account-level
- * destination was deleted upstream.
- */
 function recordCfCalls(): Array<string> {
   const calls: Array<string> = [];
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
@@ -84,7 +79,7 @@ function recordCfCalls(): Array<string> {
   return calls;
 }
 
-/** UTC `YYYY-MM`, the bucket `admin/routes/email.tsx` and the proxy both use. */
+// Decision: UTC `YYYY-MM`, the bucket that `admin/routes/email.tsx` and the proxy both use.
 function monthBucket(): string {
   const now = new Date();
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
@@ -100,11 +95,8 @@ async function get(path: string, cookie: string): Promise<Response> {
   );
 }
 
-/**
- * A same-origin admin form post. `Origin` is what a real browser sends and what
- * the admin auth middleware checks, so every legitimate write in these tests
- * carries it — the cross-origin cases below build their requests by hand.
- */
+// Decision: A same-origin admin form post. Real browsers send `Origin` and the admin auth middleware checks it,
+// so each legitimate write here carries it; the cross-origin cases build their requests by hand.
 async function post(
   path: string,
   cookie: string,
@@ -215,7 +207,6 @@ describe('admin write guard (cross-origin)', () => {
       error: 'cross-site request blocked',
       message: 'Refresh the dashboard and try again.',
     });
-    // The guard must run before the handler, not merely alongside it.
     expect(await env.ROUTING.get(`email-suspended:${projectId}`)).toBeNull();
   });
 

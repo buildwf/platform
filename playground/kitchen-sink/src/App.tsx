@@ -30,7 +30,6 @@ function lazyPage(Page: ComponentType) {
   );
 }
 
-/** Load JSON from an API route, reloading whenever `reload()` is called. */
 function useApi<T>(path: string, initial: T): [T, () => void] {
   const [data, setData] = useState(initial);
   const [version, setVersion] = useState(0);
@@ -51,7 +50,6 @@ async function post(path: string, body: unknown, method = 'POST') {
   });
 }
 
-/** Client-side navigation: the layout stays mounted between sections. */
 function Link({ href, children }: { href: string; children: ReactNode }) {
   return (
     <a
@@ -72,7 +70,7 @@ export default function App() {
   useEffect(() => {
     const update = () => setPath(location.pathname);
     addEventListener('popstate', update);
-    // The hosted smoke test waits for this marker before it interacts with the page.
+    // Decision: The hosted smoke test waits for this marker before it uses the page.
     document.getElementById('app')!.dataset.hydrated = 'true';
     return () => removeEventListener('popstate', update);
   }, []);

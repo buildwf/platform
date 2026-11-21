@@ -59,7 +59,7 @@ export function serializeEmailRoute(
     projectId: route.project_id,
     managed_by: route.managed_by,
     inboundMode: route.inbound_mode,
-    // An outbound-only route is as ready as its sending.
+    // Decision: An outbound-only route is as ready as its sending.
     status:
       route.desired_state !== 'active'
         ? 'disabled'
@@ -194,7 +194,7 @@ export async function getEmailDomainStatusForProject(
       const client = createCfCustomerClient(
         await credentialFor(context.env, db, snapshot.connection),
       );
-      // An outbound-only apex keeps its own MX, so there is no inbound route to inspect.
+      // Decision: An outbound-only apex keeps its own MX, so there's no inbound route to inspect.
       if (snapshot.route.inbound_mode !== 'none') {
         inboundIssue = await inspectEmailInboundRoute(
           client,
@@ -205,8 +205,8 @@ export async function getEmailDomainStatusForProject(
       }
       try {
         const senders = await client.listSendingSubdomains(snapshot.connection.zone_id);
-        // Verified-only sending works from Email Routing domains, which an outbound-only
-        // route is not, so a domain without Sending cannot send at all.
+        // Decision: Verified-only sending works from Email Routing domains, which an outbound-only route isn't, so a
+        // domain without Sending can't send at all.
         outbound = senders.some(
           (sender) => sender.enabled && sender.name.toLowerCase() === snapshot.route.domain,
         )
@@ -230,9 +230,9 @@ export async function getEmailDomainStatusForProject(
       }
     }
     await db.transaction(async (tx) => {
-      // Keep every route/connection mutation on the same lock order as setup,
-      // removal and recovery. The provider reads above may have raced a route
-      // transition, so validate that exact route before recording observations.
+      // Decision: Keep route and connection changes on the same lock order as setup, removal and recovery. The
+      // provider reads above may have raced a route transition, so validate that exact route before
+      // recording observations.
       const currentRoute = (
         await tx
           .select()
@@ -278,15 +278,15 @@ export async function getEmailDomainStatusForProject(
           ),
         )
         .returning({ id: emailZoneConnections.id });
-      // A failed credential probe does not revoke independently authenticated ingress.
+      // Decision: A failed credential probe doesn't revoke separately authenticated ingress.
       if (updated.length && managementStatus === 'healthy') {
-        // Routing reads cannot replace the setup operation's ingress identity proof.
+        // Decision: Routing reads can't replace the setup operation's ingress identity proof.
         const revalidateInbound =
           snapshot.connection.inbound_status === 'ready' &&
           (snapshot.route.inbound_status === 'ready' ||
             snapshot.route.inbound_status === 'drifted');
-        // A setup step may have recorded a newer Sending result after the read above.
-        // Keep it: for an outbound-only route a stale 'blocked' would stop all sending.
+        // Decision: A setup step may have recorded a newer Sending result after the read above. Keep it: for an
+        // outbound-only route a stale 'blocked' would stop all sending.
         const outboundUnchanged =
           currentRoute.outbound_status === snapshot.route.outbound_status &&
           currentRoute.outbound_observed_at === snapshot.route.outbound_observed_at;

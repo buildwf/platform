@@ -96,8 +96,7 @@ app.post('/:projectId', async (context) => {
   try {
     await requireProjectCapability(context.get('db'), projectId, userId, 'deploy');
   } catch {
-    // This internal authorization oracle deliberately does not disclose
-    // whether the project or membership exists.
+    // Decision: This internal authorization oracle doesn't reveal whether the project or membership exists.
     return context.json({ error: 'forbidden' }, 403);
   }
 

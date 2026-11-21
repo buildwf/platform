@@ -45,7 +45,6 @@ describe('matchPattern', () => {
   });
 
   it('rejects dot as regex wildcard', () => {
-    // The . in the pattern is a literal dot, not regex wildcard
     expect(matchPattern('/foo.html', '/fooXhtml')).toBe(false);
   });
 });
@@ -141,30 +140,20 @@ describe('matchPatternCaptures', () => {
 
 describe('matchLiteralPattern', () => {
   it('treats `:` as a literal character (no named capture)', () => {
-    // `:health` would be a named capture in `matchPattern`, but the literal
-    // matcher must keep the pre-feat/rewrites semantics where `:` was just a
-    // regex-safe literal. Existing tenant header/revalidate configs may rely
-    // on this (e.g. `/api/v1:health`, `:batchGet`-style URLs).
+    // Decision: `:health` would be a named capture in matchPattern, but the literal matcher keeps `:` literal.
+    // Existing tenant header and revalidate configs may rely on that (`/api/v1:health`, `:batchGet`).
     expect(matchLiteralPattern('/api/v1:health', '/api/v1:health')).toBe(true);
     expect(matchLiteralPattern('/api/v1:health', '/api/v1foo')).toBe(false);
   });
 
   it('does NOT anchor a whole-segment `:name` — it stays a literal (regression guard)', () => {
-    // REGRESSION (3282937e): `matchLiteralPattern` briefly treated a
-    // whole-segment `:name` as a single-segment wildcard, so a user header rule
-    // or revalidateQueryAllowlist key like `/:batchGet` over-matched every
-    // single-segment path (`/foo`, `/about`, …). The literal matcher must treat
-    // `:batchGet` as a literal so it matches ONLY the literal `/:batchGet`.
     expect(matchLiteralPattern('/:batchGet', '/foo')).toBe(false);
     expect(matchLiteralPattern('/:batchGet', '/:batchGet')).toBe(true);
-    // A whole-segment `:name` inside a longer path is likewise literal.
     expect(matchLiteralPattern('/blog/:slug', '/blog/hello')).toBe(false);
     expect(matchLiteralPattern('/blog/:slug', '/blog/:slug')).toBe(true);
   });
 
   it('keeps a mid-segment literal `:` a literal (Google custom-method form)', () => {
-    // `/api/v1:health`, `/api/documents:batchGet` — the `:` is mid-segment, so
-    // it matches only itself.
     expect(matchLiteralPattern('/api/v1:health', '/api/v1:health')).toBe(true);
     expect(matchLiteralPattern('/api/v1:health', '/api/v1anything')).toBe(false);
     expect(matchLiteralPattern('/api/v1:health', '/api/v1/health')).toBe(false);
@@ -237,7 +226,7 @@ describe('large and adversarial patterns', () => {
   });
 
   it('returns quickly for many wildcards on a long path that does not match', () => {
-    // A backtracking matcher takes seconds or more on each of these.
+    // Decision: A backtracking matcher takes seconds or more on each of these.
     expect(matchLiteralPattern('/' + '*'.repeat(20) + 'x', '/' + 'a'.repeat(13) + '\nx')).toBe(
       false,
     );

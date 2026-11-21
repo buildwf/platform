@@ -46,8 +46,8 @@ async function checkUrl(
   try {
     const res = await request(url, {
       headers,
-      // Do not forward probe credentials to a login redirect or treat its HTML
-      // login page as a successful health check.
+      // Decision: Don't forward probe credentials to a login redirect, or treat its HTML login page as a healthy
+      // response.
       redirect: 'manual',
       signal: AbortSignal.timeout(5000),
     });
@@ -153,7 +153,7 @@ export async function systemHealth(
   let dispatchUrl: string | null = `https://test.${siteDomain}/health`;
   if (installed) {
     const application = readPlatformApplication(env);
-    // Project Zero Trust covers every other project-domain hostname with Access.
+    // Decision: Project Zero Trust covers each other project-domain hostname with Access.
     const healthHostname = platformHealthHostname(application);
     if (healthHostname) {
       dispatchUrl = `https://${healthHostname}/health`;

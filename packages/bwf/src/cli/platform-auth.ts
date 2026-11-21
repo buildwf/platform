@@ -176,7 +176,7 @@ export async function resolvePlatformCloudflareCredentialWithInput<T>(
     controller.signal.throwIfAborted();
     return runner(args, capture);
   };
-  // Handle failures immediately: a rejected background check must neither
+  // Decision: Handle failures immediately: a rejected background check must neither
   // interrupt the active prompt nor become an unhandled rejection.
   const pending = readExistingCredential(dependencies, runWrangler).then(
     (credential) => ({ ok: true as const, credential }),
@@ -190,7 +190,7 @@ export async function resolvePlatformCloudflareCredentialWithInput<T>(
   };
   try {
     const input = await readInput();
-    // The prompt handles Ctrl+C while reading. Once it restores cooked input,
+    // Decision: The prompt handles Ctrl+C while reading. Once it restores cooked input,
     // handle SIGINT ourselves so cancelling auth prints a useful message.
     process.once('SIGINT', cancel);
     const result = await pending;
@@ -215,7 +215,7 @@ export async function resolvePlatformCloudflareCredentialWithInput<T>(
     return { input, credential };
   } finally {
     process.removeListener('SIGINT', cancel);
-    // Cancelling the input also stops the child process. The background work
+    // Decision: Cancelling the input also stops the child process. The background work
     // cannot launch a browser, even if it settles after this function exits.
     controller.abort();
   }

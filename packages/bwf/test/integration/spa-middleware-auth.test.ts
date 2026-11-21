@@ -153,7 +153,6 @@ function readBuiltAssetConfig(): {
   return emittedWrangler.assets ?? {};
 }
 
-/** Apps that keep the Worker in front of their assets get no generated `_headers`. */
 function expectNoGeneratedAssetHeaders(): void {
   const headers = join(dist, 'client/_headers');
   if (existsSync(headers)) {

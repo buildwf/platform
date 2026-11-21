@@ -26,28 +26,23 @@ describe('playground/pg-test', () => {
   let BASE: string;
 
   beforeAll(async () => {
-    // 1. Start PGlite + TCP server
     pglite = new PGlite();
     await pglite.waitReady;
 
-    // Run migrations
     const migrationSql = readFileSync(
       join(ROOT, 'playground/pg-test/db/migrations/0000_initial.sql'),
       'utf-8',
     );
     await pglite.exec(migrationSql);
 
-    // Start wire protocol server
     pgServer = createServer(pglite);
     pgServer.listen(0);
     await once(pgServer, 'listening');
     pgPort = (pgServer.address() as import('node:net').AddressInfo).port;
 
-    // 2. Write the single local .env with the dynamic DATABASE_URL.
     const databaseUrl = `postgresql://postgres@127.0.0.1:${pgPort}/postgres`;
     writeFileSync(ENV_PATH, `DATABASE_URL=${databaseUrl}\n`);
 
-    // 3. Start vite dev server
     const server = await startServer((port) => {
       devChild = spawn(
         'vp',
@@ -89,9 +84,7 @@ describe('playground/pg-test', () => {
     }
     try {
       unlinkSync(ENV_PATH);
-    } catch {
-      // Ignore missing cleanup files between test runs.
-    }
+    } catch {}
   });
 
   it('serves the SPA shell', async () => {
@@ -151,7 +144,6 @@ describe('playground/pg-test', () => {
   });
 
   it('API routes: create and list users', async () => {
-    // Create user via API
     const createRes = await fetch(BASE + '/api/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -161,7 +153,6 @@ describe('playground/pg-test', () => {
     const created = (await createRes.json()) as User;
     expect(created.name).toBe('Bob');
 
-    // List users via API
     const listRes = await fetch(BASE + '/api/users');
     expect(listRes.status).toBe(200);
     const users = (await listRes.json()) as Array<User>;
@@ -169,7 +160,6 @@ describe('playground/pg-test', () => {
       expect.arrayContaining([expect.objectContaining({ name: 'Bob', email: 'bob@test.com' })]),
     );
 
-    // Get single user
     const getRes = await fetch(BASE + `/api/users/${created.id}`);
     expect(getRes.status).toBe(200);
     const user = (await getRes.json()) as User;

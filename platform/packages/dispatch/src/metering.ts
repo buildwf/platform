@@ -63,14 +63,10 @@ export function splitWorkerName(
   return { projectKey: workerName, deployId: '' };
 }
 
-// Analytics Engine caps the SUM of a data point's blobs at 16 KB. There is no
-// per-blob limit, and a data point over the cap is DROPPED — which
-// `recordPlatformLog` would then swallow, silently losing the row it exists to
-// write. Neither budget is a guess: the longest URL already in `platform_logs` is
-// 6,703 bytes against a p99 of 195, and this row would otherwise carry the URL
-// TWICE (raw in blob4, and as the pathname inside the blob2 message). Together
-// these two caps hold every blob set under ~3.5 KB no matter the input, which
-// is a deterministic bound rather than an average-case one.
+// Decision: Analytics Engine caps the sum of a data point's blobs at 16 KB, with no per-blob limit, and drops
+// a data point over the cap (recordPlatformLog would swallow that). The longest URL seen in
+// platform_logs is 6,703 bytes (p99 195), and the row carries the URL twice. These two caps keep
+// each blob set under about 3.5 KB whatever the input.
 const MAX_LOG_URL_BYTES = 2048;
 const MAX_LOG_PATH_BYTES = 1024;
 
@@ -90,19 +86,13 @@ export function truncateUtf8(value: string, maxBytes: number): string {
     return value;
   }
 
-  const ellipsis = '…'; // 3 bytes in UTF-8
+  const ellipsis = '…';
   if (maxBytes < 3) {
     return '';
   }
 
-  // Provisional cut, leaving room for the ellipsis. `encoded.length > maxBytes`
-  // here, so this index is always in range.
   let end = maxBytes - 3;
 
-  // If the byte AT the cut is a continuation byte (0b10xxxxxx) then the cut
-  // falls inside a character — walk back to that character's lead byte, which
-  // `slice(0, end)` then excludes. A cut already on a boundary stops at once,
-  // so a whole character is never dropped needlessly.
   while (end > 0 && (encoded[end]! & 0xc0) === 0x80) {
     end--;
   }
@@ -156,7 +146,7 @@ export function recordPlatformLog(
     try {
       pathname = new URL(data.url).pathname;
     } catch {
-      // Keep the raw string — a message is worth more than a thrown URL parse.
+      // Decision: The raw string is kept: a message is worth more than a thrown URL parse.
     }
     target = ` ${truncateUtf8(pathname, MAX_LOG_PATH_BYTES)}`;
   }
@@ -169,10 +159,9 @@ export function recordPlatformLog(
 
   try {
     env.LOGS.writeDataPoint({
-      // `projectKey` is NOT truncated. It is the read key, so a shortened one
-      // would produce a row `GET /projects/:id/logs` can never select — worse
-      // than no row. It is bounded upstream by the project slug, and the tail
-      // worker writes the same value whole.
+      // Decision: `projectKey` isn't truncated. It's the read key, so a shortened one would make a row that
+      // GET /projects/:id/logs can't select. The project slug bounds it, and the tail worker writes the
+      // same value whole.
       indexes: [parsed.projectKey],
       blobs: [
         'canceled',
@@ -186,7 +175,7 @@ export function recordPlatformLog(
       doubles: [Date.now(), data.status],
     });
   } catch {
-    // See the doc comment: never turn the 503 being explained into a 500.
+    // Decision: The 503 being explained mustn't turn into a 500.
   }
 }
 
@@ -204,9 +193,8 @@ export async function sendUsageEvent(
 ): Promise<void> {
   const key = await readUsageSigningKey(env.ROUTING);
   if (!key) {
-    // The API health check creates the key before installation traffic is
-    // enabled. During a staged upgrade, fail closed rather than emitting an
-    // unsigned frame the hardened consumer would (correctly) reject.
+    // Decision: The API health check creates the key before installation traffic is enabled. During a staged
+    // upgrade this fails closed instead of sending an unsigned frame the consumer would reject.
     throw new Error('Usage metering is not initialized. Check the platform API /health endpoint.');
   }
   const eventId = crypto.randomUUID();

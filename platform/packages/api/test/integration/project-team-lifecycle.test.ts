@@ -253,9 +253,7 @@ describe('project team lifecycle', () => {
         last_error: null,
       });
     }
-    // A job that has not started covers the request as it is.
     expect(jobs.get(queued.id)).toEqual(before.get(queued.id));
-    // A started job finishes and runs once more, on its own schedule.
     const startedBefore = before.get(started.id)!;
     expect(jobs.get(started.id)).toEqual({
       ...startedBefore,

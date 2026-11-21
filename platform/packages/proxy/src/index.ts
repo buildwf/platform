@@ -40,7 +40,6 @@ app.use('/*', async (context, next) => {
   await next();
 });
 
-// CORS
 app.use(
   '/*',
   cors({
@@ -50,7 +49,6 @@ app.use(
   }),
 );
 
-// Health check
 app.get('/health', (context) =>
   context.json({
     ok: true,
@@ -65,7 +63,6 @@ app.get('/health', (context) =>
   }),
 );
 
-// Reject non-POST for all other routes
 app.all('/*', async (context, next) => {
   if (context.req.method !== 'POST') {
     return context.json({ error: 'method not allowed' }, 405);
@@ -73,8 +70,8 @@ app.all('/*', async (context, next) => {
   await next();
 });
 
-// The tenant calls this over its internal service binding. EMAIL_SIGNING_SECRET never
-// enters the tenant, so a project token cannot mint a gateway receipt.
+// Decision: The tenant calls this over its internal service binding. EMAIL_SIGNING_SECRET never enters the
+// tenant, so a project token can't mint a gateway receipt.
 app.post('/email/verify-receipt', async (context) => {
   let body: unknown;
   try {
@@ -120,20 +117,18 @@ app.post('/email/verify-receipt', async (context) => {
   return context.json({ valid: claims !== null, receiptId: claims?.receiptId });
 });
 
-// The former relay endpoint is gone. Reject it before the generic JSON auth
-// middleware so an untrusted MIME stream is never parsed or buffered here.
+// Decision: The old relay endpoint is gone. It's rejected before the JSON auth middleware, so an untrusted
+// MIME stream is never parsed or buffered here.
 app.post('/email/relay', (context) => context.json({ error: 'not found' }, 404));
 
-// Auth middleware — parses body, authenticates, sets projectId
 app.post('/*', async (context, next) => {
   const url = new URL(context.req.url);
   const path = url.pathname;
 
-  // Check credentials before buffering up to 8 MiB of JSON. Header tokens are
-  // verified here. Body tokens (projectId + aiToken) come only from deployed
-  // Workers over the __PLATFORM_PROXY service binding, which calls bare hosts
-  // (https://ai-proxy, https://proxy, https://email-proxy). Public hostnames
-  // always contain a dot, so a public request without a header is refused unread.
+  // Decision: Credentials are checked before buffering up to 8 MiB of JSON. Body tokens come only from
+  // deployed Workers over the __PLATFORM_PROXY service binding, which calls bare hosts
+  // (https://ai-proxy, https://proxy, https://email-proxy). Public hostnames contain a dot, so a
+  // public request without a header is refused unread.
   const authHeader = context.req.header('authorization');
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : '';
   const payload = token ? await verifyJwt(token, context.env.JWT_SECRET) : null;
@@ -159,7 +154,7 @@ app.post('/*', async (context, next) => {
 
   let body: ProxyBody;
   try {
-    // Five MiB of MIME expands to about seven MiB of base64, plus JSON metadata.
+    // Decision: Five MiB of MIME expands to about seven MiB of base64, plus JSON metadata.
     const maxBytes =
       path === '/email' || path.startsWith('/email/') ? 8 * 1024 * 1024 : requestBodyMaxBytes(path);
     const json = await readRequestJson(context.req.raw, maxBytes);
@@ -177,12 +172,10 @@ app.post('/*', async (context, next) => {
 
   let revalidateHuman: (() => Promise<boolean>) | undefined;
   if (payload) {
-    // HTTPS path (local dev) — JWT verified above
     const projectId = asString(body.projectId);
     if (!projectId) {
       return context.json({ error: 'projectId required' }, 400);
     }
-    // Local-development ownership lookup.
     const checkOwner = () =>
       verifyProjectDeployAccess(
         context.env.API,
@@ -206,7 +199,6 @@ app.post('/*', async (context, next) => {
     }
     context.set('projectId', projectId);
   } else {
-    // Service binding path (production) — verify the project token
     const projectId = asString(body.projectId);
     const aiToken = asString(body.aiToken);
     if (!projectId || !aiToken) {
@@ -240,7 +232,7 @@ app.post('/*', async (context, next) => {
   }
 });
 
-// Check the installation capability before spending quota or calling AI.
+// Decision: The installation capability is checked before spending quota or calling AI.
 app.post('/ai/*', async (context, next) => {
   if (!proxyCapabilityEnabled(context.env.PLATFORM_CAPABILITIES, 'ai')) {
     return context.json(
@@ -263,11 +255,9 @@ app.post('/ai/*', async (context, next) => {
   await next();
 });
 
-// Same gate for the email group. A deployed worker on a platform without
-// the email module still holds `__PLATFORM_PROXY` and a valid project token, so
-// an explicit-`from` `sendEmail()` reaches `/email/send` and would otherwise
-// answer with the sender-domain / send-binding configuration failures — or
-// send, if the operator left the bindings in place.
+// Decision: A deployed worker on a platform without the email module still holds __PLATFORM_PROXY and a
+// valid token, so `sendEmail()` with an explicit `from` reaches /email/send. Without this gate it
+// would hit configuration errors, or send if the bindings were left in place.
 app.post('/email/*', async (context, next) => {
   if (!proxyCapabilityEnabled(context.env.PLATFORM_CAPABILITIES, 'email')) {
     return context.json(
@@ -282,7 +272,6 @@ app.post('/email/*', async (context, next) => {
   await next();
 });
 
-// Route groups
 app.route('/ai', ai);
 app.route('/d1', d1);
 app.route('/kv', kv);
@@ -291,8 +280,6 @@ app.route('/email', email);
 app.route('/github', github);
 
 export default { fetch: app.fetch };
-
-// --- JWT verification ---
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();

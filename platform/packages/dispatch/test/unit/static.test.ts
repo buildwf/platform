@@ -164,11 +164,6 @@ describe('resolveStaticPath', () => {
   });
 
   describe('percent-encoded request paths', () => {
-    // Manifest keys are the asset's decoded on-disk path, but `url.pathname`
-    // arrives percent-encoded (WHATWG URL never decodes it). A filename with a
-    // space is stored as a literal space yet requested as `%20`, so the raw
-    // lookup misses. Regression: the oxc.rs hero `.riv` (a file literally named
-    // `640_x_630_oxc masthead_.B7dLtkJB.riv`) 404'd because `%20` != ' '.
     const m: Record<string, string> = {
       '/assets/640_x_630_oxc masthead_.B7dLtkJB.riv': 'hash_riv',
       '/files/a#b.txt': 'hash_hash',
@@ -244,7 +239,6 @@ describe('resolveStaticPath', () => {
     });
 
     it('still prefers an exact raw match over the decoded key', () => {
-      // A file whose name literally contains "%20" must win on the raw path.
       const literal: Record<string, string> = {
         '/x%20y.txt': 'raw_hit',
         '/x y.txt': 'decoded_hit',
@@ -260,33 +254,25 @@ describe('resolveStaticPath', () => {
     });
 
     it('rejects encoded separators, ordinary path text, and dot segments', () => {
-      // Apart from square brackets, the decoded fallback only accepts encodings
-      // a URL requires (space, #, UTF-8, …). An over-encoded spelling of
-      // ordinary path text — %2F for '/', %61 for 'a', %5F for '_', %2e%2e for
-      // '..' — must be rejected: otherwise a request could reconstruct a guarded
-      // path (`/assets%2Fapp.js`, `/%61ssets/app.js`, `/%5F%5Fvoid/secret.js`)
-      // and serve the manifest entry while the raw-`url.pathname` policy gates
-      // — the `/__platform/*` reserved-route block, the hashed-asset prefix gate,
-      // and the header/redirect rules — never fire.
+      // Decision: Apart from square brackets, the decoded fallback only accepts encodings a URL needs (space, #,
+      // UTF-8). Over-encoded ordinary text (%2F, %61, %5F, %2e%2e) is rejected, or a request could
+      // rebuild a guarded path and skip the raw-pathname gates: the /__platform/* block, the
+      // hashed-asset prefix gate, and header and redirect rules.
       const guarded: Record<string, string> = {
         '/assets/app.js': 'hash_app',
         '/__platform/secret.js': 'hash_secret',
       };
       const cfg = { html_handling: 'none' } as const;
-      // encoded slash (both cases)
       expect(resolveStaticPath('/assets%2Fapp.js', guarded, cfg)).toBeNull();
       expect(resolveStaticPath('/assets%2fapp.js', guarded, cfg)).toBeNull();
       expect(resolveStaticPath('/__platform%2Fsecret.js', guarded, cfg)).toBeNull();
-      // over-encoded ordinary characters
       expect(resolveStaticPath('/%61ssets/app.js', guarded, cfg)).toBeNull();
       expect(resolveStaticPath('/%5F%5Fvoid/secret.js', guarded, cfg)).toBeNull();
-      // reconstructed dot-segments
       expect(resolveStaticPath('/assets/%2e%2e/app.js', guarded, cfg)).toBeNull();
     });
 
     it('resolves a UTF-8 (non-ASCII) filename requested percent-encoded', () => {
       const m: Record<string, string> = { '/assets/café.png': 'hash_cafe' };
-      // "café" → the é is C3 A9 in UTF-8
       expect(resolveStaticPath('/assets/caf%C3%A9.png', m, { html_handling: 'none' })).toEqual({
         path: '/assets/café.png',
         hash: 'hash_cafe',
@@ -302,10 +288,8 @@ describe('resolveStaticPath', () => {
     });
 
     it('re-encodes a redirect Location produced from a decoded match', () => {
-      // force-trailing-slash: `/docs/a#b` (requested `%23`) is backed by
-      // `/docs/a#b/index.html`, so it redirects to the trailing-slash form. The
-      // Location must be URL-safe (`/docs/a%23b/`), not the decoded `/docs/a#b/`
-      // — otherwise the browser reads `#b/` as a fragment.
+      // Decision: With force-trailing-slash, the Location has to stay URL-safe (`/docs/a%23b/`), not decoded
+      // (`/docs/a#b/`), or the browser reads `#b/` as a fragment.
       const m: Record<string, string> = { '/docs/a#b/index.html': 'hash_idx' };
       expect(
         resolveStaticPath('/docs/a%23b', m, { html_handling: 'force-trailing-slash' }),
@@ -313,11 +297,8 @@ describe('resolveStaticPath', () => {
     });
 
     it('does not support a literal % in a filename (known limitation, not a regression)', () => {
-      // A file literally named `logo%20.svg` is requested as `logo%2520.svg`.
-      // decodeURIComponent yields the key, but re-encoding can't reproduce the
-      // double-escaped request (the URL path encoder leaves `%` alone), so it
-      // misses — same as before this change. Locked here so the behavior is
-      // intentional, not an accidental regression.
+      // Decision: A file named `logo%20.svg` requested as `logo%2520.svg` misses: re-encoding can't reproduce
+      // the double escape, since the URL path encoder leaves `%` alone. The miss is intended.
       const m: Record<string, string> = { '/assets/logo%20.svg': 'hash_logo' };
       expect(resolveStaticPath('/assets/logo%2520.svg', m, { html_handling: 'none' })).toBeNull();
     });

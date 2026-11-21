@@ -10,7 +10,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
-// The link must use native filesystem paths so Windows launchers and symlink targets stay valid.
+// Decision: The link uses native filesystem paths so Windows launchers and symlink targets stay valid.
 // oxlint-disable-next-line no-restricted-imports
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
