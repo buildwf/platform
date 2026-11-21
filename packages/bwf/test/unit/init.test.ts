@@ -1462,8 +1462,8 @@ describe('isScaffoldableEmptyProject', () => {
       expect(pkg.dependencies.react).toBeDefined();
       expect(pkg.dependencies['react-dom']).toBeDefined();
       expect(pkg.dependencies.hono).toBeDefined();
-      expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
+      expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@8.3.8000');
+      expect(pkg.devDependencies['vite-plus']).toBe('^1.7.0');
       expect(pkg.devDependencies['@builtbyfriends/bwf']).toBeDefined();
       expect(pkg.devDependencies.typescript).toBeDefined();
       expect(pkg.devDependencies['@vitejs/plugin-react']).toBeDefined();
@@ -1559,8 +1559,8 @@ describe('isScaffoldableEmptyProject', () => {
       expect(pkg.dependencies.hono).toBeDefined();
       expect(pkg.devDependencies['@builtbyfriends/bwf']).toBeDefined();
       expect(pkg.devDependencies['@vitejs/plugin-react']).toBeDefined();
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
-      expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
+      expect(pkg.devDependencies['vite-plus']).toBe('^1.7.0');
+      expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@8.3.8000');
       expect(pkg.packageManager).toBeUndefined();
       expectPnpmAllowBuilds(root);
       expect(detectProjectState(root).packageManager).toBe('pnpm');
@@ -1615,13 +1615,13 @@ describe('isScaffoldableEmptyProject', () => {
         );
         expect(installerOf(installCalls()[0]!)).toBe('vp');
         const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-        expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
+        expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@8.3.8000');
         if (packageManager.startsWith('npm@')) {
           expect(pkg.overrides.vite).toBe('$vite');
         } else if (packageManager.startsWith('bun@')) {
-          expect(pkg.overrides.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
+          expect(pkg.overrides.vite).toBe('npm:@voidzero-dev/vite-plus-core@8.3.8000');
         } else if (packageManager.startsWith('yarn@')) {
-          expect(pkg.resolutions.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
+          expect(pkg.resolutions.vite).toBe('npm:@voidzero-dev/vite-plus-core@8.3.8000');
         }
       } finally {
         rmSync(root, { recursive: true, force: true });
@@ -1693,7 +1693,7 @@ describe('isScaffoldableEmptyProject', () => {
 
       const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
       expect(pkg.scripts.dev).toBe('vp dev');
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
+      expect(pkg.devDependencies['vite-plus']).toBe('^1.7.0');
       expect(pkg.devDependencies['@builtbyfriends/bwf']).toBe('^0.8.9');
       expect(readFileSync(join(root, 'vite.config.ts'), 'utf-8')).toContain(
         'plugins: [react(), bwfPlugin()]',
@@ -1728,7 +1728,7 @@ describe('isScaffoldableEmptyProject', () => {
 
       const appRoot = join(root, 'my-new-app');
       const pkg = JSON.parse(readFileSync(join(appRoot, 'package.json'), 'utf-8'));
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
+      expect(pkg.devDependencies['vite-plus']).toBe('^1.7.0');
       expect(pkg.scripts.dev).toBe('vp dev');
       expect(readFileSync(join(appRoot, 'src', 'App.tsx'), 'utf-8')).toContain('Welcome to bwf');
 
@@ -2710,8 +2710,8 @@ export default config;
 
       const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
       expect(pkg.scripts.dev).toBe('vp dev');
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.6.0');
-      expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@^1.6.0');
+      expect(pkg.devDependencies['vite-plus']).toBe('^1.7.0');
+      expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@8.3.8000');
       expect(pkg.devDependencies['@builtbyfriends/bwf']).toBe('^0.2.3');
       expectPnpmAllowBuilds(root);
 
