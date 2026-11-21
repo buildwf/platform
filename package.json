@@ -22,7 +22,8 @@
     "test:platform": "vp test run --project 'platform-*'",
     "test:profile": "vp test run --reporter=default --experimental.importDurations.print --experimental.importDurations.limit=20",
     "test:unit": "vp test run --project unit --project unit-pglite --project cli-unit",
-    "uninstall:bwf-dev": "node scripts/bwf-dev-link.mjs uninstall"
+    "uninstall:bwf-dev": "node scripts/bwf-dev-link.mjs uninstall",
+    "upstream:sync": "node scripts/upstream-sync.ts"
   },
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",

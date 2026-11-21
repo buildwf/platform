@@ -1,0 +1,3 @@
+# Last upstream Void commit this fork has reviewed. scripts/upstream-sync.ts reads it.
+upstream https://github.com/voidzero-dev/void main
+commit 26163c8247471dd02626649c548d983b81a4b8f9
