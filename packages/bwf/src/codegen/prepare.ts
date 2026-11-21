@@ -15,6 +15,7 @@ import { generateProcedureTypes } from './procedure-types.ts';
 import { ensureProjectTsconfig } from './project-tsconfig.ts';
 import { generateQueueTypes } from './queue-types.ts';
 import { generateRouteTypes } from './route-types.ts';
+import { writeWireProcedureTypes } from './wire-procedure-types.ts';
 import { writeFileIfChanged } from './write-if-changed.ts';
 
 export type PrepareProjectResult = {
@@ -97,6 +98,22 @@ export async function prepareProject(root: string): Promise<PrepareProjectResult
     writeGeneratedFile(outDir, 'procedures.d.ts', dts, written);
   } else {
     removeGeneratedFile(outDir, 'procedures.d.ts', removed);
+  }
+
+  // A web workspace without procedures/ includes this types-only copy instead.
+  if (config.procedureTypes) {
+    const wire = await writeWireProcedureTypes({
+      root,
+      target: config.procedureTypes,
+      proceduresDir: paths.proceduresDir,
+      files: scan.procedures ?? [],
+    });
+    if (wire.changed) {
+      written.push(config.procedureTypes);
+    }
+    for (const problem of wire.problems) {
+      console.warn(`bwf: ${config.procedureTypes} has an unresolved type in ${problem}`);
+    }
   }
 
   const schema = discoverSchema(root, paths);

@@ -182,6 +182,11 @@ type CloudflareConfig = Record<string, unknown> & {
 export type BwfConfig = {
   storage?: StorageConfig;
   sourceDir?: string;
+  /**
+   * Where `bwf prepare` writes a types-only copy of the procedure types, relative to the project
+   * root, for a web workspace that doesn't contain `procedures/`.
+   */
+  procedureTypes?: string;
   auth?: AuthConfig;
   routing?: RoutingConfig;
   inference?: InferenceConfig;
@@ -450,6 +455,18 @@ function validateConfigObject(obj: unknown): BwfConfig {
       throw new Error(`config: "sourceDir" in ${CONFIG_FILE} must be a string.`);
     }
     validateSourceDir(obj.sourceDir, CONFIG_FILE);
+  }
+
+  if (obj.procedureTypes !== undefined) {
+    if (
+      typeof obj.procedureTypes !== 'string' ||
+      obj.procedureTypes.trim() === '' ||
+      !/\.d\.[cm]?ts$/.test(obj.procedureTypes)
+    ) {
+      throw new Error(
+        `config: "procedureTypes" in ${CONFIG_FILE} must be a path to a .d.ts file, such as "../web/src/procedures.d.ts".`,
+      );
+    }
   }
 
   if (obj.storage !== undefined) {

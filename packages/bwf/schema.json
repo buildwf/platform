@@ -24,6 +24,11 @@
       "pattern": "^(?!/)(?!\\.\\.?$)(?!\\./$)(?!\\.\\./)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\s$)(?!\\s).+$",
       "description": "Directory containing bwf source conventions such as routes, middleware, crons, queues, db, auth.ts, and env.ts. Omit to use the project root."
     },
+    "procedureTypes": {
+      "type": "string",
+      "pattern": "\\.d\\.[cm]?ts$",
+      "description": "Path, relative to the project root, of a types-only .d.ts file that `bwf prepare` writes with the input, output and error types of every procedure. Include it in a web workspace that has no procedures/ folder so `rpc` is typed there. Needs TypeScript 7 or later. Omit to write nothing."
+    },
     "auth": {
       "type": "object",
       "description": "High-level Better Auth configuration. Use this to select built-in auth providers; use auth.ts for advanced Better Auth options.",

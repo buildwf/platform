@@ -618,6 +618,7 @@ export function bwfPlugin(options?: {
     remoteMode,
     // Merged with `public/_redirects` and `_headers`; managed builds omit them (dispatch owns them).
     routing: config.routing,
+    procedureTypes: config.procedureTypes,
     bindingNames,
     get hasSandbox() {
       return bindings.needsSandbox && !isSandboxAttached(sandboxConfig);

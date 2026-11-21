@@ -78,6 +78,8 @@ type RoutingPluginOptions = {
   bindingNames?: { d1?: string; kv?: string; r2?: string };
   /** Merged with `_redirects` / `_headers` under Vite's `publicDir`; config rules take precedence. */
   routing?: import('./config.ts').RoutingConfig;
+  /** `procedureTypes` from the config: where to keep the types-only procedures file current. */
+  procedureTypes?: string;
   hasSandbox?: boolean;
   sandboxBindingName?: string;
   sandboxClassName?: string;
@@ -189,6 +191,38 @@ export function routingPlugin(
     }
     const dts = generateProcedureTypes(scan.procedures ?? [], proceduresDir, outDir);
     writeFileIfChanged(join(outDir, 'procedures.d.ts'), dts);
+  }
+
+  // A web workspace's copy of the procedure types depends on schema contents, so it is
+  // rewritten on any procedure edit. Edits that land while a run is going share one more run.
+  let wireTypesRun: Promise<void> | undefined;
+  let wireTypesAgain = false;
+  function scheduleWireProcedureTypes(logger: { error: (message: string) => void }) {
+    const target = options.procedureTypes;
+    if (!target || !scan) {
+      return;
+    }
+    if (wireTypesRun) {
+      wireTypesAgain = true;
+      return;
+    }
+    wireTypesRun = (async () => {
+      do {
+        wireTypesAgain = false;
+        try {
+          const { writeWireProcedureTypes } = await import('./codegen/wire-procedure-types.ts');
+          await writeWireProcedureTypes({
+            root,
+            target,
+            proceduresDir,
+            files: scan?.procedures ?? [],
+          });
+        } catch (error) {
+          logger.error(`bwf: could not update ${target}: ${(error as Error).message}`);
+        }
+      } while (wireTypesAgain);
+      wireTypesRun = undefined;
+    })();
   }
 
   async function rescan(refresh = false) {
@@ -863,6 +897,9 @@ export function routingPlugin(
             return;
           }
           resolveAuthCompileOptions();
+          if (isInDirectory(normalizedPath, normalizedProceduresDir)) {
+            scheduleWireProcedureTypes(devServer.config.logger);
+          }
           const nextRouteInputs = routeInputsKey();
 
           // Saving a handler usually changes nothing the scan reports.
