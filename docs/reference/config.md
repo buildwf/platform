@@ -67,9 +67,9 @@ With that config, bwf reads `src/routes`, `src/db/schema.ts`, `src/db/migrations
 Path, relative to the project root, of a types-only `.d.ts` file that `bwf prepare` writes with the input, output and error codes of every procedure. Include it in a web workspace that has no `procedures/` folder so `rpc` is typed there. Needs TypeScript 7 or later. See [Typing `rpc` in a separate web workspace](../guide/procedures.md#typing-rpc-in-a-separate-web-workspace).
 
 ```ts
-{
-  procedureTypes: '../web/src/procedures.d.ts';
-}
+export default defineConfig({
+  procedureTypes: '../web/src/procedures.d.ts',
+});
 ```
 
 ### `ai`
