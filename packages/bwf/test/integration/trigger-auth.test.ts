@@ -46,8 +46,6 @@ async function buildWorker(name: string, dev: boolean): Promise<Worker> {
   writeFileSync(
     routeTablePath,
     compileRouteTable(scan, dir, dir, cronsDir, queuesDir, {
-      honoPath: import.meta.resolve('hono'),
-      honoRoutePath: import.meta.resolve('hono/route'),
       runtimeEnvPath,
       projectRoot: dir,
       homeDir: dir,

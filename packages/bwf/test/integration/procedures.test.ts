@@ -87,8 +87,6 @@ async function buildWorker(name: string, sources: Record<string, string>): Promi
   writeFileSync(
     routeTablePath,
     compileRouteTable(scan, root, middlewareDir, root, root, {
-      honoPath: import.meta.resolve('hono'),
-      honoRoutePath: import.meta.resolve('hono/route'),
       runtimeEnvPath,
       projectRoot: root,
       homeDir: root,

@@ -77,8 +77,6 @@ export default ${helper}({
         join(root, 'crons'),
         join(root, 'queues'),
         {
-          honoPath: import.meta.resolve('hono'),
-          honoRoutePath: import.meta.resolve('hono/route'),
           runtimeEnvPath,
           webSocketRuntimePath: join(repository, 'packages/bwf/src/runtime/ws-server.ts'),
           projectRoot: root,

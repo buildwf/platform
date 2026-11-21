@@ -254,7 +254,11 @@ describe('bwfPlugin dev asset routing', () => {
     const workerdOptimizer = {
       optimizeDeps: {
         exclude: ['@builtbyfriends/bwf', 'better-auth'],
-        include: ['@builtbyfriends/bwf > email-validator'],
+        include: [
+          '@builtbyfriends/bwf > email-validator',
+          '@builtbyfriends/bwf > hono',
+          '@builtbyfriends/bwf > hono/route',
+        ],
       },
     };
     const nodeOptimizer = { optimizeDeps: { exclude: ['@builtbyfriends/bwf'] } };
@@ -295,7 +299,12 @@ describe('bwfPlugin dev asset routing', () => {
         optimizeDeps: drivers
           ? {
               exclude: ['@builtbyfriends/bwf', 'better-auth'],
-              include: ['@builtbyfriends/bwf > email-validator', ...drivers],
+              include: [
+                '@builtbyfriends/bwf > email-validator',
+                '@builtbyfriends/bwf > hono',
+                '@builtbyfriends/bwf > hono/route',
+                ...drivers,
+              ],
             }
           : { exclude: ['@builtbyfriends/bwf'] },
       });

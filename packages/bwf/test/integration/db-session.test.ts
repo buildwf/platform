@@ -135,8 +135,6 @@ export async function GET(c) {
           join(directory, 'crons'),
           join(directory, 'queues'),
           {
-            honoPath: fileURLToPath(import.meta.resolve('hono')),
-            honoRoutePath: fileURLToPath(import.meta.resolve('hono/route')),
             runtimeEnvPath: source('env.ts'),
             projectRoot: directory,
             homeDir: tmpdir(),

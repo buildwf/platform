@@ -200,7 +200,15 @@ export function createServerRuntimeOptimizerPlugin(
           exclude: ['@builtbyfriends/bwf', 'better-auth'],
           // Excluding void also skips converting its CommonJS dependencies, which workerd cannot
           // evaluate: an installed bwf/email fails with "exports is not defined".
-          include: ['@builtbyfriends/bwf > email-validator', ...DATABASE_DRIVER_DEPS[dialect]],
+          //
+          // bwf's routing runtime imports Hono for itself and for the generated routes. Naming
+          // it here prebundles it before the Worker starts, not on its first request.
+          include: [
+            '@builtbyfriends/bwf > email-validator',
+            '@builtbyfriends/bwf > hono',
+            '@builtbyfriends/bwf > hono/route',
+            ...DATABASE_DRIVER_DEPS[dialect],
+          ],
         },
       };
     },
