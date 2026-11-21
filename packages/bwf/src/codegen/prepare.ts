@@ -100,7 +100,6 @@ export async function prepareProject(root: string): Promise<PrepareProjectResult
     removeGeneratedFile(outDir, 'procedures.d.ts', removed);
   }
 
-  // A web workspace without procedures/ includes this types-only copy instead.
   if (config.procedureTypes) {
     const wire = await writeWireProcedureTypes({
       root,

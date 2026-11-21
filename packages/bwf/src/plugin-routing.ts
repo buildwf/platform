@@ -193,7 +193,7 @@ export function routingPlugin(
     writeFileIfChanged(join(outDir, 'procedures.d.ts'), dts);
   }
 
-  // A web workspace's copy of the procedure types depends on schema contents, so it is
+  // Decision: A web workspace's copy of the procedure types depends on schema contents, so it is
   // rewritten on any procedure edit. Edits that land while a run is going share one more run.
   let wireTypesRun: Promise<void> | undefined;
   let wireTypesAgain = false;

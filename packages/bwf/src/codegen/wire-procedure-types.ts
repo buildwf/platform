@@ -63,9 +63,7 @@ async function loadTypeScript(root: string): Promise<TypeScriptApi> {
     try {
       const resolved = createRequire(base).resolve(specifier);
       return (await import(pathToFileURL(resolved).href)) as TypeScriptApi;
-    } catch {
-      // Try the next place.
-    }
+    } catch {}
   }
   throw new Error(
     `"procedureTypes" needs TypeScript 7 or later, which provides "${specifier}". Install it with \`bun add -d typescript@^7\`.`,
@@ -75,7 +73,7 @@ async function loadTypeScript(root: string): Promise<TypeScriptApi> {
 /** Prints a checker type as self-contained TypeScript: named types are written out in full. */
 function createPrinter(ts: TypeScriptApi, checker: Checker, problems: Array<string>) {
   const { TypeFlags, SymbolFlags, SignatureKind, ElementFlags } = ts;
-  // Checked in order: `boolean` is a union too, and must match before it.
+  // Decision: Checked in order: `boolean` is a union too, so it has to match first.
   const simple: Array<[number, string]> = [
     [TypeFlags.Any, 'any'],
     [TypeFlags.Unknown, 'unknown'],
@@ -132,7 +130,7 @@ function createPrinter(ts: TypeScriptApi, checker: Checker, problems: Array<stri
       }
     }
     if (separator === ' | ') {
-      // Union order follows the checker's type ids, which shift with unrelated edits.
+      // Decision: Union order follows the checker's type ids, which shift with unrelated edits.
       const rank = (text: string) => (text === 'undefined' ? 2 : text === 'null' ? 1 : 0);
       parts.sort((a, b) => rank(a) - rank(b) || (a < b ? -1 : a > b ? 1 : 0));
     }
@@ -260,7 +258,7 @@ export async function resolveWireProcedureTypes(options: {
   }
   const ts = await loadTypeScript(root);
 
-  // A project of its own that reads the app's tsconfig (for paths and module settings) but
+  // Decision: A project of its own that reads the app's tsconfig (for paths and module settings) but
   // checks only the procedures, so it doesn't depend on what the app's tsconfig includes.
   const outDir = join(root, '.bwf');
   const base = existsSync(join(root, 'tsconfig.json')) ? '../tsconfig.json' : './tsconfig.json';
