@@ -116,7 +116,9 @@ describe('parseEmailArgs', () => {
     expect(parseEmailArgs(['status', '--platform=platform']).platform).toBe('platform');
     // The platform-only subcommands are the platform already, so naming it is a no-op
     // there — unlike `cloudflare`, which they reject.
-    expect(parseEmailArgs(['usage', '--platform', 'platform', '--project', 'my-app'])).toMatchObject({
+    expect(
+      parseEmailArgs(['usage', '--platform', 'platform', '--project', 'my-app']),
+    ).toMatchObject({
       subcommand: 'usage',
       projectSlug: 'my-app',
       platform: 'platform',
@@ -217,9 +219,9 @@ describe('parseEmailArgs', () => {
     expect(() =>
       parseEmailArgs(['setup', '--platform', 'cloudflare', '--platform', 'cloudflare']),
     ).toThrow('email: --platform can only be specified once.');
-    expect(() => parseEmailArgs(['setup', '--platform', 'other', '--platform', 'platform'])).toThrow(
-      'email: --platform can only be specified once.',
-    );
+    expect(() =>
+      parseEmailArgs(['setup', '--platform', 'other', '--platform', 'platform']),
+    ).toThrow('email: --platform can only be specified once.');
   });
 
   it('rejects --platform cloudflare on the platform-only subcommands', () => {

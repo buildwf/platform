@@ -3356,7 +3356,10 @@ describe('foreground worker duration', () => {
         },
         workerFetchImpl: async () => {
           if (++calls === 1) {
-            return new Response('missing', { status: 404, headers: { 'X-Platform-No-Match': '1' } });
+            return new Response('missing', {
+              status: 404,
+              headers: { 'X-Platform-No-Match': '1' },
+            });
           }
           await new Promise((resolve) => setTimeout(resolve, 11_000));
           return new Response('fallback', { headers: { 'Content-Type': 'text/html' } });

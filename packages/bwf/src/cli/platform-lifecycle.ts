@@ -561,8 +561,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
       );
     }
     const externalHyperdriveHost = process.env.PLATFORM_HYPERDRIVE_ORIGIN_HOST?.trim() || '';
-    const serviceId =
-      process.env.PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID?.trim().toLowerCase() || '';
+    const serviceId = process.env.PLATFORM_HYPERDRIVE_ORIGIN_SERVICE_ID?.trim().toLowerCase() || '';
     const externalHyperdriveUser = process.env.PLATFORM_HYPERDRIVE_ORIGIN_USER?.trim() || '';
     if (externalHyperdriveHost && serviceId) {
       throw new Error(
@@ -1041,8 +1040,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
 
     const savedRuntimeToken = checkpoint?.cloudflareApiToken ?? '';
     const usingSavedRuntimeToken =
-      !process.env.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN &&
-      Boolean(values.cloudflareApiToken);
+      !process.env.PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN && Boolean(values.cloudflareApiToken);
     let runtimeCloudflareApiToken = await collect(
       'cloudflareApiToken',
       'PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN',
@@ -1294,8 +1292,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
                 : undefined,
             )),
       projectSecretKeysJson: process.env.PLATFORM_PROJECT_SECRET_KEYS_JSON || '',
-      projectSecretActiveKeyVersion:
-        process.env.PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION || '',
+      projectSecretActiveKeyVersion: process.env.PLATFORM_PROJECT_SECRET_ACTIVE_KEY_VERSION || '',
     });
     if (generatedKeys.length) {
       log.info(
@@ -1498,9 +1495,7 @@ export async function runPlatformLifecycleCommand(commandArgs: PlatformArgs): Pr
         `Continue with: ${cliCommandName()} platform install --resume --name ${existing.id}`,
       );
       if (usingUnboundDatabase) {
-        log.info(
-          'To use another PostgreSQL database, set PLATFORM_DATABASE_URL to its URL first.',
-        );
+        log.info('To use another PostgreSQL database, set PLATFORM_DATABASE_URL to its URL first.');
       }
     }
     throw error;

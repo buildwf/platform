@@ -485,7 +485,8 @@ describe('provider-independent first administrator setup', () => {
     expect(
       (
         await app.fetch(
-          new Request(`${origin}/projects`, {
+          new Request(`${origin}/rpc/projects.list`, {
+            method: 'POST',
             headers: { Authorization: `Bearer ${scopedDeployToken}` },
           }),
           bindings(),
@@ -815,7 +816,7 @@ describe('provider-independent first administrator setup', () => {
       PLATFORM_DISPLAY_NAME: '<Example Platform>',
     });
     expect(await adminHtml(setupPage)).toContain(
-      '<title>Set up administrator · &lt;Example Platform&gt; · Platform</title>',
+      '<title>Set up administrator · &lt;Example Platform&gt;</title>',
     );
     expect((await form('/auth/bootstrap', { code: randomLoginProof() })).status).toBe(403);
     expect(

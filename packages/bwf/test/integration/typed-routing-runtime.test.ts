@@ -230,8 +230,10 @@ export { get as "GET", post as "POST", DELETE as "helper" };
     const missing = await runtime.dispatchFetch('https://app.test/unknown');
     expect(missing.status).toBe(404);
     expect(missing.headers.get('X-Platform-No-Match')).toBe('1');
-    expect(await (await runtime.dispatchFetch('https://app.test/__platform/ready')).json()).toEqual({
-      ready: true,
-    });
+    expect(await (await runtime.dispatchFetch('https://app.test/__platform/ready')).json()).toEqual(
+      {
+        ready: true,
+      },
+    );
   });
 });

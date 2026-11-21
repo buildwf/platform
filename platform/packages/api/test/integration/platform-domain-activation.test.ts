@@ -283,7 +283,7 @@ describe('installer domain activation', () => {
     const wildcard = (await readZeroTrustConfigurationStrict(env.db))?.wildcardApplication;
     expect(wildcard?.destinations).toContain('*.apps.example.com');
     expect(wildcard?.destinations).toContain(
-      'platform-123456abcdef-*.' + original.workersDev.subdomain + '.workers.dev',
+      'void-123456abcdef-*.' + original.workersDev.subdomain + '.workers.dev',
     );
     expect(await zeroTrustStatus(bindings(), env.db, { check: true })).toMatchObject({
       live: { present: true, drifted: false },

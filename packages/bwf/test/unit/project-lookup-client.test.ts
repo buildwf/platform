@@ -23,25 +23,26 @@ const project = { id: 'proj_1', slug: 'my-app', role: 'collaborator' };
 
 describe('targeted project lookup', () => {
   it('lists interactive choices without requesting deployment and traffic summaries', async () => {
-    fetchMock.mockResolvedValueOnce(Response.json([project]));
+    fetchMock.mockResolvedValueOnce(Response.json({ data: [project] }));
     await expect(client().listProjectChoices()).resolves.toEqual([project]);
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      'https://api.example.test/projects/choices',
+      'https://api.example.test/rpc/projects.choices',
     ]);
   });
 
   it('resolves a slug without loading the project list', async () => {
-    fetchMock.mockResolvedValueOnce(Response.json({ project }));
+    fetchMock.mockResolvedValueOnce(Response.json({ data: { project } }));
 
     await expect(client().findProjectBySlug('my app')).resolves.toEqual(project);
     expect(fetchMock).toHaveBeenCalledOnce();
-    expect(fetchMock.mock.calls[0][0]).toBe(
-      'https://api.example.test/projects/resolve?slug=my+app',
-    );
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://api.example.test/rpc/projects.resolve');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({ slug: 'my app' });
   });
 
   it('returns null for a missing slug', async () => {
-    fetchMock.mockResolvedValueOnce(Response.json({ project: null }));
+    fetchMock.mockResolvedValueOnce(Response.json({ data: { project: null } }));
     await expect(client().findProjectBySlug('missing')).resolves.toBeNull();
     expect(fetchMock).toHaveBeenCalledOnce();
   });
@@ -58,16 +59,21 @@ describe('targeted project lookup', () => {
     },
   );
 
-  it('loads a linked project by ID and treats 404 as unavailable', async () => {
-    fetchMock.mockResolvedValueOnce(Response.json(project));
-    fetchMock.mockResolvedValueOnce(Response.json({ error: 'not found' }, { status: 404 }));
+  it('loads a linked project by ID and treats a refused one (403) as unavailable', async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ data: project }));
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ error: { code: 'FORBIDDEN', message: 'No access' } }, { status: 403 }),
+    );
 
     const api = client();
     await expect(api.getProject('proj_1')).resolves.toEqual(project);
     await expect(api.getProject('missing')).resolves.toBeNull();
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      'https://api.example.test/projects/proj_1',
-      'https://api.example.test/projects/missing',
+      'https://api.example.test/rpc/projects.get',
+      'https://api.example.test/rpc/projects.get',
     ]);
+    expect(
+      fetchMock.mock.calls.map(([, init]) => JSON.parse((init as RequestInit).body as string)),
+    ).toEqual([{ projectId: 'proj_1' }, { projectId: 'missing' }]);
   });
 });

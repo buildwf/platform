@@ -434,6 +434,13 @@ describe('playground/kitchen-sink', () => {
   });
 });
 
+const PREVIEW_SECRETS = {
+  BETTER_AUTH_SECRET: 'platform-preview-test-secret-1234567890',
+  APP_NAME: 'Kitchen Sink',
+  SECRET_KEY: 'platform-preview-test-secret-key',
+  API_URL: 'https://api.example.com',
+};
+
 // Preview runs without Cloudflare credentials: containers need a local Docker build and Workers AI
 // is remote-only, so turn both off. kitchen-sink-build.test.ts covers them.
 function preparePreviewWranglerConfig(pg: string): string {
@@ -454,17 +461,17 @@ function preparePreviewWranglerConfig(pg: string): string {
     ...(wranglerConfig.dev ?? {}),
     enable_containers: false,
   };
-  // Preview executes the production build, which requires an auth secret.
-  wranglerConfig.vars = {
-    ...(wranglerConfig.vars ?? {}),
-    BETTER_AUTH_SECRET: 'platform-preview-test-secret-1234567890',
-  };
+  // Preview runs the production build, which has no .env: give it the auth secret and the
+  // server keys that env.ts requires, or the Worker fails env validation at boot.
+  wranglerConfig.vars = { ...(wranglerConfig.vars ?? {}), ...PREVIEW_SECRETS };
   delete wranglerConfig.ai;
   writeFileSync(wranglerPath, `${JSON.stringify(wranglerConfig, null, 2)}\n`);
   // v2 preview reads the native artifact, while the CLI still uses the validated dist build.
   const nativePath = getWorkerConfigPath(pg);
   const native = JSON.parse(readFileSync(nativePath, 'utf8'));
-  native.env.BETTER_AUTH_SECRET = { type: 'text', value: 'platform-preview-test-secret-1234567890' };
+  for (const [name, value] of Object.entries(PREVIEW_SECRETS)) {
+    native.env[name] = { type: 'text', value };
+  }
   delete native.env.AI;
   writeFileSync(nativePath, JSON.stringify(native));
   return databaseId;

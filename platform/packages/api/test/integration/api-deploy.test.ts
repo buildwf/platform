@@ -790,7 +790,7 @@ describe('POST /projects/:id/deploy', () => {
     const events = await readAllEvents(res);
     const done = requireEvent<DoneEvent>(events, 'done');
     expect(done.deployment).toMatch(/^dpl_/);
-    expect(done.url).toBe('https://minimal-app.void.app');
+    expect(done.url).toBe('https://minimal-app.buildwf.dev');
 
     // Verify deployment is marked live in DB
     const [dpl] = await env.db
@@ -1645,7 +1645,7 @@ describe('POST /projects/:id/deploy', () => {
     const done = requireEvent<DoneEvent>(events, 'done');
     expect(done.url).toBe('https://deploy.example.com');
     expect(done.urls).toContain('https://deploy.example.com');
-    expect(done.urls).toContain('https://domain-deploy.void.app');
+    expect(done.urls).toContain('https://domain-deploy.buildwf.dev');
 
     // Verify domain KV routing was written
     const domainRouting = await env.ROUTING.get('domain:deploy.example.com', 'json');
@@ -4679,7 +4679,7 @@ describe('POST /projects/:id/deploy (static)', () => {
     const events = await readAllEvents(res);
     const done = requireEvent<DoneEvent>(events, 'done');
     expect(done.deployment).toMatch(/^dpl_/);
-    expect(done.url).toBe('https://spa-site.void.app');
+    expect(done.url).toBe('https://spa-site.buildwf.dev');
     expect(done.assets).toBe(2);
     expect(done.workers).toBe(0);
   });

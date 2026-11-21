@@ -1,5 +1,8 @@
 import { spawnSync } from 'node:child_process';
-import type { CloudflareCommandResult, CloudflareOperation } from '@builtbyfriends/deploy-cloudflare';
+import type {
+  CloudflareCommandResult,
+  CloudflareOperation,
+} from '@builtbyfriends/deploy-cloudflare';
 import { CF_VERSION_SOURCE_MAX_OUTPUT_BYTES } from './cf-command-values.ts';
 import { resolveCloudflareOperationArgv } from './preset.ts';
 

@@ -176,7 +176,7 @@
     {
       "name": "EMAIL",
       "remote": true,
-      "allowed_sender_addresses": ["no-reply@buildwf.dev", "noreply@buildwf.dev"],
+      "allowed_sender_addresses": ["no-reply@buildwf.dev", "noreply@mail.buildwf.dev"],
     },
   ],
   "triggers": {
@@ -193,7 +193,7 @@
     "REQUESTS_DATASET": "platform_requests",
     "TAIL_SERVICE_NAME": "platform-tail",
     // Must match packages/proxy/wrangler.jsonc — the proxy validates senders against its own copy.
-    "EMAIL_SENDER_DOMAIN": "buildwf.dev",
+    "EMAIL_SENDER_DOMAIN": "mail.buildwf.dev",
     "EMAIL_GATEWAY_ORIGIN": "https://platform-email-gateway.voidzer0.workers.dev",
     "EMAIL_SHARED_ACCOUNT_ID": "f721b8e515fbab226f41e2807edaece7",
     "EMAIL_SHARED_ZONE_ID": "5b66f5cb84fd7dcfdd0170515e622181",
@@ -339,7 +339,7 @@
         {
           "name": "EMAIL",
           "remote": true,
-          "allowed_sender_addresses": ["no-reply@buildwf.dev", "noreply@buildwf.dev"],
+          "allowed_sender_addresses": ["no-reply@buildwf.dev", "noreply@mail.buildwf.dev"],
         },
       ],
       "routes": [{ "pattern": "api.void.cloud", "custom_domain": true }],
@@ -352,7 +352,7 @@
         "PROXY_URL": "https://proxy.void.cloud",
         "REQUESTS_DATASET": "platform_requests",
         "TAIL_SERVICE_NAME": "platform-tail",
-        "EMAIL_SENDER_DOMAIN": "buildwf.dev",
+        "EMAIL_SENDER_DOMAIN": "mail.buildwf.dev",
         "EMAIL_GATEWAY_ORIGIN": "https://platform-email-gateway.voidzer0.workers.dev",
         "EMAIL_SHARED_ACCOUNT_ID": "f721b8e515fbab226f41e2807edaece7",
         "EMAIL_SHARED_ZONE_ID": "5b66f5cb84fd7dcfdd0170515e622181",

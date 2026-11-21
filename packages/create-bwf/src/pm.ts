@@ -5,6 +5,9 @@ import { join } from 'pathslash';
 export type PM = 'npm' | 'pnpm' | 'yarn' | 'bun';
 
 const PLATFORM_PNPM_ALLOWED_BUILDS = ['esbuild', 'sharp', 'workerd'] as const;
+// Builds bwf's dependencies don't need. Keep this in step with
+// PNPM_BUILD_DEFAULTS in packages/bwf/src/cli/init.ts.
+const PLATFORM_PNPM_DENIED_BUILDS = ['better-sqlite3', 'core-js-pure'] as const;
 
 /** Write the explicit build-script policy required by a new pnpm project. */
 export function writePnpmBuildPolicy(root: string, pm: PM): void {
@@ -15,7 +18,11 @@ export function writePnpmBuildPolicy(root: string, pm: PM): void {
     join(root, 'pnpm-workspace.yaml'),
     // better-sqlite3 13 ships Node-API binaries and declares gypfile:false.
     // Match the repository policy instead of invoking pnpm's implicit rebuild.
-    `allowBuilds:\n  better-sqlite3: false\n${PLATFORM_PNPM_ALLOWED_BUILDS.map((name) => `  ${name}: true`).join('\n')}\n`,
+    // core-js-pure's install script only prints a message.
+    `allowBuilds:\n${[
+      ...PLATFORM_PNPM_DENIED_BUILDS.map((name) => `  ${name}: false`),
+      ...PLATFORM_PNPM_ALLOWED_BUILDS.map((name) => `  ${name}: true`),
+    ].join('\n')}\n`,
   );
 }
 
@@ -37,8 +44,12 @@ export function detectPM(): PM {
 
 export function pmInstall(pm: PM): ReadonlyArray<string> {
   // Scaffolding changes package.json, so CI's default frozen install cannot
-  // be used until the initializer has generated the final lockfile.
-  return pm === 'pnpm' ? [pm, 'install', '--no-frozen-lockfile'] : [pm, 'install'];
+  // be used until the initializer has generated the final lockfile. When init
+  // has already installed with Vite+, pnpm wants to rebuild node_modules and
+  // would stop to ask first, so answer that question up front.
+  return pm === 'pnpm'
+    ? [pm, 'install', '--no-frozen-lockfile', '--config.confirm-modules-purge=false']
+    : [pm, 'install'];
 }
 
 export function pmExec(pm: PM): ReadonlyArray<string> {

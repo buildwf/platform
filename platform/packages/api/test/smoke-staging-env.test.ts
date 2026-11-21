@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vite-plus/test';
+import { platformDiscoveryResponse } from '../../../../packages/bwf/test/helpers/platform-discovery.ts';
 import { initializeStagingEnv } from '../../../scripts/kitchen-sink-staging-env-setup.ts';
 
 function apiError(status: number, body: unknown) {
@@ -192,25 +193,37 @@ describe('staging kitchen-sink fixture env', () => {
 
   it.each([200, 500, 502])(
     'validates the real schema and keeps API response %i values private',
-    (status) => {
+    async (status) => {
+      // The CLI checks the platform version before its first request.
+      const discovery = await platformDiscoveryResponse('https://api.staging.void.cloud').text();
       const script = fileURLToPath(
         new URL('../../../scripts/kitchen-sink-staging-env.ts', import.meta.url),
       );
       // Exercise the real entrypoint and API client while preventing all live I/O.
       const preload = `const stored = new Set(); globalThis.fetch = async (url, options) => {
-      if (url === 'https://api.staging.void.cloud/projects') {
-        return Response.json([{ id: 'fake', slug: 'kitchen-sink' }]);
+      if (url === 'https://api.staging.void.cloud/.well-known/platform') {
+        return new Response(${JSON.stringify(discovery)}, { headers: { 'Content-Type': 'application/json' } });
       }
-      if (url === 'https://api.staging.void.cloud/projects/fake/secrets') {
-        return Response.json([...stored].map(name => ({name})));
+      if (url === 'https://api.staging.void.cloud/rpc/projects.list') {
+        return Response.json({ data: [{ id: 'fake', slug: 'kitchen-sink' }] });
       }
-      const name = url.split('/').at(-1);
+      if (url === 'https://api.staging.void.cloud/rpc/secrets.list') {
+        return Response.json({ data: [...stored].map(name => ({name})) });
+      }
+      if (url !== 'https://api.staging.void.cloud/rpc/secrets.set') {
+        return new Response('not found', { status: 404 });
+      }
+      const { name } = JSON.parse(options.body);
       if (${status} === 502) {
         stored.add(name);
         return Response.json({ error: 'secret stored but live propagation failed', name, liveUpdated: false, details: 'MUST_NOT_LOG_' + options.body }, {status: 502});
       }
+      if (${status} === 200) {
+        stored.add(name);
+        return Response.json({ data: { ok: true } });
+      }
       return Response.json(
-        { ok: ${status === 200}, error: 'MUST_NOT_LOG_' + options.body },
+        { ok: false, error: 'MUST_NOT_LOG_' + options.body },
         { status: ${status} }
       );
     };`;

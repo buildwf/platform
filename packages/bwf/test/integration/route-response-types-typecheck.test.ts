@@ -43,7 +43,7 @@ it('preserves tuples and JSON omissions in generated typed fetch responses', () 
         skipLibCheck: true,
         allowImportingTsExtensions: true,
         paths: {
-          bwf: [join(bwfDist, 'index.d.mts')],
+          '@builtbyfriends/bwf': [join(bwfDist, 'index.d.mts')],
           '@builtbyfriends/bwf/client': [join(bwfDist, 'runtime/client.d.mts')],
           '@builtbyfriends/bwf/routes': [join(root, '.bwf/routes.d.ts')],
           zod: [

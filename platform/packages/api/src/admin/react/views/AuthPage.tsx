@@ -15,7 +15,10 @@ export function AuthPage({
       <style>{browserPageStyles}</style>
       <div className="platform-auth-container">
         <div className="platform-auth-brand">
-          <span className="platform-auth-logo" dangerouslySetInnerHTML={{ __html: browserPageLogo }} />
+          <span
+            className="platform-auth-logo"
+            dangerouslySetInnerHTML={{ __html: browserPageLogo }}
+          />
           <span className="platform-auth-divider" aria-hidden="true" />
           <span>{platformName}</span>
         </div>

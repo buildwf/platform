@@ -20,7 +20,9 @@ function usableToken(token: string): boolean {
 function readOriginCredentials(raw: string): Record<string, unknown> {
   const parsed = JSON.parse(raw) as unknown;
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('platform: PLATFORM_ACCESS_CREDENTIALS must contain an origin-keyed JSON object.');
+    throw new Error(
+      'platform: PLATFORM_ACCESS_CREDENTIALS must contain an origin-keyed JSON object.',
+    );
   }
   return parsed as Record<string, unknown>;
 }

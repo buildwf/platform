@@ -26,6 +26,7 @@ import {
 } from '../../src/cli/init.ts';
 import { savePlatformConnection } from '../../src/cli/platform-registry.ts';
 import { readDeploymentPlatform } from '../../src/cli/project.ts';
+import { SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES } from '../../src/cli/template.ts';
 import { LATEST_KNOWN_COMPAT_DATE } from '../../src/cli/wrangler.ts';
 import { buildDrizzleKitSpawnEnv } from '../../src/cli/yarn-pnp.ts';
 import { readConfig } from '../../src/config.ts';
@@ -395,7 +396,7 @@ describe('GitHub Actions deployment workflows', () => {
 function expectPnpmAllowBuilds(root: string): void {
   const yaml = readFileSync(join(root, 'pnpm-workspace.yaml'), 'utf-8');
   expect(yaml.match(/^allowBuilds:\n(?: {2}.*\n)*/m)?.[0]).toBe(
-    'allowBuilds:\n  better-sqlite3: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
+    'allowBuilds:\n  better-sqlite3: false\n  core-js-pure: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
   );
   expect(yaml).not.toContain('onlyBuiltDependencies:');
 }
@@ -1462,8 +1463,10 @@ describe('isScaffoldableEmptyProject', () => {
       expect(pkg.dependencies.react).toBeDefined();
       expect(pkg.dependencies['react-dom']).toBeDefined();
       expect(pkg.dependencies.hono).toBeDefined();
-      expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@8.3.8000');
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.7.0');
+      expect(pkg.devDependencies.vite).toBe(SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES.vite);
+      expect(pkg.devDependencies['vite-plus']).toBe(
+        SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES['vite-plus'],
+      );
       expect(pkg.devDependencies['@builtbyfriends/bwf']).toBeDefined();
       expect(pkg.devDependencies.typescript).toBeDefined();
       expect(pkg.devDependencies['@vitejs/plugin-react']).toBeDefined();
@@ -1559,8 +1562,10 @@ describe('isScaffoldableEmptyProject', () => {
       expect(pkg.dependencies.hono).toBeDefined();
       expect(pkg.devDependencies['@builtbyfriends/bwf']).toBeDefined();
       expect(pkg.devDependencies['@vitejs/plugin-react']).toBeDefined();
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.7.0');
-      expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@8.3.8000');
+      expect(pkg.devDependencies['vite-plus']).toBe(
+        SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES['vite-plus'],
+      );
+      expect(pkg.devDependencies.vite).toBe(SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES.vite);
       expect(pkg.packageManager).toBeUndefined();
       expectPnpmAllowBuilds(root);
       expect(detectProjectState(root).packageManager).toBe('pnpm');
@@ -1615,13 +1620,13 @@ describe('isScaffoldableEmptyProject', () => {
         );
         expect(installerOf(installCalls()[0]!)).toBe('vp');
         const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-        expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@8.3.8000');
+        expect(pkg.devDependencies.vite).toBe(SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES.vite);
         if (packageManager.startsWith('npm@')) {
           expect(pkg.overrides.vite).toBe('$vite');
         } else if (packageManager.startsWith('bun@')) {
-          expect(pkg.overrides.vite).toBe('npm:@voidzero-dev/vite-plus-core@8.3.8000');
+          expect(pkg.overrides.vite).toBe(SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES.vite);
         } else if (packageManager.startsWith('yarn@')) {
-          expect(pkg.resolutions.vite).toBe('npm:@voidzero-dev/vite-plus-core@8.3.8000');
+          expect(pkg.resolutions.vite).toBe(SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES.vite);
         }
       } finally {
         rmSync(root, { recursive: true, force: true });
@@ -1693,7 +1698,9 @@ describe('isScaffoldableEmptyProject', () => {
 
       const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
       expect(pkg.scripts.dev).toBe('vp dev');
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.7.0');
+      expect(pkg.devDependencies['vite-plus']).toBe(
+        SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES['vite-plus'],
+      );
       expect(pkg.devDependencies['@builtbyfriends/bwf']).toBe('^0.8.9');
       expect(readFileSync(join(root, 'vite.config.ts'), 'utf-8')).toContain(
         'plugins: [react(), bwfPlugin()]',
@@ -1728,7 +1735,9 @@ describe('isScaffoldableEmptyProject', () => {
 
       const appRoot = join(root, 'my-new-app');
       const pkg = JSON.parse(readFileSync(join(appRoot, 'package.json'), 'utf-8'));
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.7.0');
+      expect(pkg.devDependencies['vite-plus']).toBe(
+        SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES['vite-plus'],
+      );
       expect(pkg.scripts.dev).toBe('vp dev');
       expect(readFileSync(join(appRoot, 'src', 'App.tsx'), 'utf-8')).toContain('Welcome to bwf');
 
@@ -2710,8 +2719,10 @@ export default config;
 
       const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
       expect(pkg.scripts.dev).toBe('vp dev');
-      expect(pkg.devDependencies['vite-plus']).toBe('^1.7.0');
-      expect(pkg.devDependencies.vite).toBe('npm:@voidzero-dev/vite-plus-core@8.3.8000');
+      expect(pkg.devDependencies['vite-plus']).toBe(
+        SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES['vite-plus'],
+      );
+      expect(pkg.devDependencies.vite).toBe(SCAFFOLD_VITE_PLUS_DEV_DEPENDENCIES.vite);
       expect(pkg.devDependencies['@builtbyfriends/bwf']).toBe('^0.2.3');
       expectPnpmAllowBuilds(root);
 
@@ -3612,10 +3623,10 @@ export default config;
           'allowBuilds:\n  "@parcel/watcher": true\n  better-sqlite3: true\nonlyBuiltDependencies:\n  - bcrypt\n',
         ),
       ).toBe(
-        'allowBuilds:\n  "@parcel/watcher": true\n  better-sqlite3: true\n  bcrypt: true\n  esbuild: true\n  sharp: true\n  workerd: true\n',
+        'allowBuilds:\n  "@parcel/watcher": true\n  better-sqlite3: true\n  bcrypt: true\n  core-js-pure: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
       );
       expect(await initWithWorkspaceYaml('onlyBuiltDependencies:\n- bcrypt\n')).toBe(
-        'allowBuilds:\n  bcrypt: true\n  better-sqlite3: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
+        'allowBuilds:\n  bcrypt: true\n  better-sqlite3: false\n  core-js-pure: false\n  esbuild: true\n  sharp: true\n  workerd: true\n',
       );
 
       const flow = 'allowBuilds: {"@parcel/watcher": true}\n';

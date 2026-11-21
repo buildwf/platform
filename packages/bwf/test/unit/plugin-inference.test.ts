@@ -28,9 +28,15 @@ describe('inferProjectBindings', () => {
   it('infers namespace auth use across the project without mistaking fetch aliases for auth', () => {
     const root = createTempRoot();
     const file = join(root, 'src/client.ts');
-    writeFileSync(file, 'import { type auth, fetch as authFetch } from "@builtbyfriends/bwf/client";');
+    writeFileSync(
+      file,
+      'import { type auth, fetch as authFetch } from "@builtbyfriends/bwf/client";',
+    );
     expect(inferProjectBindings(root).needsAuth).toBe(false);
-    writeFileSync(file, 'import * as client from "@builtbyfriends/bwf/client"; client.auth.signOut();');
+    writeFileSync(
+      file,
+      'import * as client from "@builtbyfriends/bwf/client"; client.auth.signOut();',
+    );
     expect(inferProjectBindings(root).needsAuth).toBe(true);
   });
 
@@ -179,7 +185,10 @@ describe('inferProjectBindings', () => {
       join(root, 'queues', 'sync.dev.ts'),
       "import { storage } from '@builtbyfriends/bwf/storage';",
     );
-    writeFileSync(join(root, 'src', 'helper.dev.ts'), "import { kv } from '@builtbyfriends/bwf/kv';");
+    writeFileSync(
+      join(root, 'src', 'helper.dev.ts'),
+      "import { kv } from '@builtbyfriends/bwf/kv';",
+    );
 
     const result = inferProjectBindings(root, { environment: 'prod' });
     expect(result.needsR2).toBe(true);

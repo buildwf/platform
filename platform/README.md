@@ -40,14 +40,14 @@ relative to `platform/` unless they begin with `../`.
 
 ## Quick Reference
 
-| Command                                       | Purpose                                                   |
-| --------------------------------------------- | --------------------------------------------------------- |
-| `vp run build:core`                           | Build shared packages, CLI, and packaged platform runtime |
-| `vp run build:platform`                       | Build the platform source apps                            |
+| Command                                             | Purpose                                                   |
+| --------------------------------------------------- | --------------------------------------------------------- |
+| `vp run build:core`                                 | Build shared packages, CLI, and packaged platform runtime |
+| `vp run build:platform`                             | Build the platform source apps                            |
 | `vp run --filter @platform-service/platform dev`    | Start the dashboard development server                    |
-| `vp run build:all`                            | Build all packages, platform apps, and playgrounds        |
-| `vp test run --project 'platform-*'`          | Run platform tests                                        |
-| `vp run check`                                | Typecheck the workspace                                   |
+| `vp run build:all`                                  | Build all packages, platform apps, and playgrounds        |
+| `vp test run --project 'platform-*'`                | Run platform tests                                        |
+| `vp run check`                                      | Typecheck the workspace                                   |
 | `vp run --filter @platform-service/platform health` | Check the selected platform using operator authentication |
 
 The workspace `dev` and `build` scripts in `platform/package.json` apply to the

@@ -98,7 +98,9 @@ function compatibilityTemplate(value: string): URL {
     url.search ||
     url.hash
   ) {
-    throw new Error('Use the disposable platform_schema_compat database on loopback as platform_ci.');
+    throw new Error(
+      'Use the disposable platform_schema_compat database on loopback as platform_ci.',
+    );
   }
   return url;
 }

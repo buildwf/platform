@@ -311,10 +311,12 @@ describe('inferBindingsFromSource', () => {
 
   it('ignores type-only AI re-exports but keeps runtime re-exports', () => {
     expect(
-      inferBindingsFromSource("export type { AI } from '@builtbyfriends/bwf/ai';", 'types.ts').needsAI,
+      inferBindingsFromSource("export type { AI } from '@builtbyfriends/bwf/ai';", 'types.ts')
+        .needsAI,
     ).toBe(false);
     expect(
-      inferBindingsFromSource("export { type AI } from '@builtbyfriends/bwf/ai';", 'types.ts').needsAI,
+      inferBindingsFromSource("export { type AI } from '@builtbyfriends/bwf/ai';", 'types.ts')
+        .needsAI,
     ).toBe(false);
     expect(
       inferBindingsFromSource("export { ai } from '@builtbyfriends/bwf/ai';", 'index.ts').needsAI,

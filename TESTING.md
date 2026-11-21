@@ -52,7 +52,7 @@ The runner adds coverage that imports cannot describe:
 Affected selection is conservative, not a proof that all behavior is covered: computed imports,
 filesystem reads, generated artifacts, and external services can introduce additional dependencies.
 Explicitly run a known consumer when changing one of those boundaries. Changes to packaging still
-need the packed checks below; changes to metaframework output still need `build:all` and the
+need the packed checks below; changes to playground build output still need `build:all` and the
 artifact check.
 
 For a leaf-module edit with known import-based consumers, Vitest's native related command is useful:
@@ -147,7 +147,7 @@ shards build the public packages and then only the fixtures their tests use; the
 on generated output from another job. The `done` check requires both the tests and build/type
 checks. Linux and Windows coverage and the credentialed live-deploy gate are unchanged.
 The build job runs `test/check-playground-build-artifacts.mjs` after `build:all` to verify the
-metaframework worker entries and inferred bindings. Their dev-server integration suites do not
+SPA playgrounds' Worker entries, client output and inferred bindings. Their dev-server integration suites do not
 repeat those production builds. `vpr test:all` runs the same artifact check locally.
 
 Integration sharding uses [measured duration estimates](test/integration-timings.ts), rather than

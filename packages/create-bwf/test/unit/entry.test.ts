@@ -1,5 +1,13 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -53,4 +61,35 @@ registerHooks({
     );
     expect(readdirSync(root)).not.toContain('my-app');
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'installs the scoped CLI package and runs its bwf bin',
+    () => {
+      // The unscoped `bwf` package on npm belongs to someone else, so the new
+      // project must depend on @builtbyfriends/bwf. Stub npm and npx to record
+      // what create-bwf asks them to do.
+      const bin = join(root, 'bin');
+      const log = join(root, 'calls.log');
+      mkdirSync(bin, { recursive: true });
+      for (const name of ['npm', 'npx']) {
+        const stub = join(bin, name);
+        writeFileSync(stub, `#!/bin/sh\necho "${name} $*" >> ${JSON.stringify(log)}\n`);
+        chmodSync(stub, 0o755);
+      }
+      const result = spawnSync(process.execPath, [ENTRY, 'scoped-app'], {
+        cwd: root,
+        encoding: 'utf8',
+        env: { PATH: `${bin}:${process.env.PATH}` },
+      });
+
+      expect(result.status, result.stderr).toBe(0);
+      const pkg = JSON.parse(readFileSync(join(root, 'scoped-app', 'package.json'), 'utf8'));
+      expect(Object.keys(pkg.devDependencies)).toEqual(['@builtbyfriends/bwf']);
+      expect(readFileSync(log, 'utf8').trim().split('\n')).toEqual([
+        'npm install',
+        'npx bwf init',
+        'npm install',
+      ]);
+    },
+  );
 });

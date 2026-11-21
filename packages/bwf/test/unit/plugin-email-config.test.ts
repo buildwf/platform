@@ -146,7 +146,9 @@ describe('mergeBindings email config (bwf dev)', () => {
 
     const result = await resolveCloudflareConfig(root, { assets: { binding: 'ASSETS' } }, SERVE);
 
-    expect((result.vars as Record<string, string> | undefined)?.__PLATFORM_EMAIL_FROM).toBeUndefined();
+    expect(
+      (result.vars as Record<string, string> | undefined)?.__PLATFORM_EMAIL_FROM,
+    ).toBeUndefined();
   });
 
   it('strips send_email under serve even when email.from is unset', async () => {
@@ -286,6 +288,8 @@ describe('mergeBindings email config (build)', () => {
 
     const result = await resolveCloudflareConfig(root, { assets: { binding: 'ASSETS' } }, BUILD);
 
-    expect((result.vars as Record<string, string> | undefined)?.__PLATFORM_EMAIL_FROM).toBeUndefined();
+    expect(
+      (result.vars as Record<string, string> | undefined)?.__PLATFORM_EMAIL_FROM,
+    ).toBeUndefined();
   });
 });

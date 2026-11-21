@@ -182,6 +182,8 @@ export default defineConfig({
         // Dependency-free; bundled so the CLI interactivity gate (`isWranglerNonInteractiveOrCI`)
         // adds no runtime dependency.
         'ci-info',
+        // Only vite-plus/package.json, for the versions `bwf init` scaffolds.
+        'vite-plus',
       ],
     },
   },

@@ -15,7 +15,7 @@
     },
     "migrations": [
       {
-        "tag": "void-ws-v1",
+        "tag": "platform-ws-v1",
         "new_sqlite_classes": ["WsChatRoomWs", "WsNotificationsWs"]
       }
     ]
@@ -35,10 +35,10 @@
     },
     "migrations": [
       {
-        "tag": "void-ws-v1",
+        "tag": "platform-ws-v1",
         "new_sqlite_classes": ["WsChatRoomWs", "WsNotificationsWs"]
       }
     ]
   },
-  "text": "{\n  \"durable_objects\": {\n    \"bindings\": [\n      {\n        \"name\": \"WsChatRoomWs\",\n        \"class_name\": \"WsChatRoomWs\"\n      },\n      {\n        \"name\": \"WsNotificationsWs\",\n        \"class_name\": \"WsNotificationsWs\"\n      }\n    ]\n  },\n  \"migrations\": [\n    {\n      \"tag\": \"void-ws-v1\",\n      \"new_sqlite_classes\": [\n        \"WsChatRoomWs\",\n        \"WsNotificationsWs\"\n      ]\n    }\n  ]\n}\n"
+  "text": "{\n  \"durable_objects\": {\n    \"bindings\": [\n      {\n        \"name\": \"WsChatRoomWs\",\n        \"class_name\": \"WsChatRoomWs\"\n      },\n      {\n        \"name\": \"WsNotificationsWs\",\n        \"class_name\": \"WsNotificationsWs\"\n      }\n    ]\n  },\n  \"migrations\": [\n    {\n      \"tag\": \"platform-ws-v1\",\n      \"new_sqlite_classes\": [\n        \"WsChatRoomWs\",\n        \"WsNotificationsWs\"\n      ]\n    }\n  ]\n}\n"
 }

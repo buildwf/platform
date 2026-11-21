@@ -20,7 +20,9 @@ export function AdminLoginPage({
           <a
             key={id}
             className={
-              index === 0 ? 'platform-auth-button platform-auth-button-primary' : 'platform-auth-button'
+              index === 0
+                ? 'platform-auth-button platform-auth-button-primary'
+                : 'platform-auth-button'
             }
             href={`/admin/login/${encodeURIComponent(id)}`}
           >

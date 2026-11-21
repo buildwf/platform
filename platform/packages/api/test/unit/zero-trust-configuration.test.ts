@@ -29,7 +29,7 @@ describe('Zero Trust wildcard destinations', () => {
 
   it('protects project forwarders without covering other account Workers', () => {
     const destinations = zeroTrustWildcardDestinations(application);
-    expect(destinations).toEqual(['platform-123456abcdef-*.my-account.workers.dev']);
+    expect(destinations).toEqual(['void-123456abcdef-*.my-account.workers.dev']);
     const routing = {
       teamDomain: 'https://team.cloudflareaccess.com',
       audiences: destinations.map((hostname) => ({ hostname, audience: 'project-aud' })),
@@ -44,8 +44,8 @@ describe('Zero Trust wildcard destinations', () => {
       'platform-team-api.my-account.workers.dev',
       'platform-team-proxy.my-account.workers.dev',
       'unrelated-worker.my-account.workers.dev',
-      'platform-fedcba654321-blog-123abc.my-account.workers.dev',
-      'nested.platform-123456abcdef-blog-123abc.my-account.workers.dev',
+      'void-fedcba654321-blog-123abc.my-account.workers.dev',
+      'nested.void-123456abcdef-blog-123abc.my-account.workers.dev',
     ]) {
       expect(resolveAccessAudience(hostname, routing)).toBeNull();
     }
@@ -56,7 +56,7 @@ describe('Zero Trust wildcard destinations', () => {
     const destinations = zeroTrustWildcardDestinations(attached);
     expect(destinations).toEqual([
       '*.apps.example.com',
-      'platform-123456abcdef-*.my-account.workers.dev',
+      'void-123456abcdef-*.my-account.workers.dev',
     ]);
     const routing = {
       teamDomain: 'https://team.cloudflareaccess.com',
@@ -65,7 +65,7 @@ describe('Zero Trust wildcard destinations', () => {
     const hostnames = platformProjectHostnames({ id: 'proj_123abc', slug: 'blog' }, attached);
     expect(hostnames).toEqual([
       'blog.apps.example.com',
-      'platform-123456abcdef-blog-123abc.my-account.workers.dev',
+      'void-123456abcdef-blog-123abc.my-account.workers.dev',
     ]);
     expect(hostnames.map((hostname) => resolveAccessAudience(hostname, routing))).toEqual([
       'project-aud',

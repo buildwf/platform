@@ -61,16 +61,16 @@ vp run --filter ./packages/vue typecheck # Typecheck a specific package
 
 pnpm workspaces managed through Vite+. Shared dependency versions use the **pnpm catalog** in `pnpm-workspace.yaml` (`typescript`, `vite-plus`, Vite+/Vitest aliases, `@cloudflare/workers-types`, wrangler). Make sure to run `vp install` after making package structure changes.
 
-| Package                                                      | npm name                     | Purpose                                                           |
-| ------------------------------------------------------------ | ---------------------------- | ----------------------------------------------------------------- |
+| Package                                                      | npm name                            | Purpose                                                           |
+| ------------------------------------------------------------ | ----------------------------------- | ----------------------------------------------------------------- |
 | [`packages/deploy-core`](./packages/deploy-core)             | `@builtbyfriends/deploy-core`       | Shared deployment manifests, events, and target-neutral contracts |
 | [`packages/deploy-cloudflare`](./packages/deploy-cloudflare) | `@builtbyfriends/deploy-cloudflare` | Direct Cloudflare config and verified upload primitives           |
 | [`packages/edge`](./packages/edge)                           | `@builtbyfriends/edge`              | Shared routing, headers, and static edge runtime                  |
 | [`packages/platform`](./packages/platform/README.md)         | `@builtbyfriends/platform`          | Self-hosted installation contracts and packaged platform runtime  |
-| [`packages/bwf`](./packages/bwf/AGENTS.md)                   | `bwf`                        | Core Vite plugin — routing, inference, migrations, CLI            |
-| [`docs`](./docs)                                             | (private)                    | Documentation site (VitePress)                                    |
-| [`platform`](./platform/README.md)                           | (private)                    | Self-hosted platform source, routing, proxy, logs, and dashboard  |
-| `playground/*`                                               | (private)                    | local apps for testing                                            |
+| [`packages/bwf`](./packages/bwf/AGENTS.md)                   | `bwf`                               | Core Vite plugin — routing, inference, migrations, CLI            |
+| [`docs`](./docs)                                             | (private)                           | Documentation site (VitePress)                                    |
+| [`platform`](./platform/README.md)                           | (private)                           | Self-hosted platform source, routing, proxy, logs, and dashboard  |
+| `playground/*`                                               | (private)                           | local apps for testing                                            |
 
 The platform source is part of this repository. Its workspace-only packages keep `private: true` to prevent accidental npm publication; this does not mean the platform source is private. Use `docs/guide/platform-development.md` for contributor/fork setup and `docs/guide/self-hosted-platform.md` for installation.
 

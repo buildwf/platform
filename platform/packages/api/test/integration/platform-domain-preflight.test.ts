@@ -51,7 +51,9 @@ describe('deployed runtime domain preflight', () => {
       expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer private-runtime-token');
       const body = JSON.parse(String(init?.body));
       expect(body.files).toHaveLength(1);
-      expect(body.files[0]).toMatch(/^https:\/\/example.com\/\.well-known\/platform-domain-check\//);
+      expect(body.files[0]).toMatch(
+        /^https:\/\/example.com\/\.well-known\/platform-domain-check\//,
+      );
       return Response.json({ success: true });
     });
     vi.stubGlobal('fetch', fetcher);

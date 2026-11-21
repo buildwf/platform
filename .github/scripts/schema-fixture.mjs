@@ -43,7 +43,9 @@ function assertSchemaFixturePreserved(original, rows, projectModeMigrationApplie
 async function runSchemaFixture(command) {
   const snapshot =
     process.env.COMPAT_FIXTURE_PATH ??
-    (process.env.RUNNER_TEMP ? `${process.env.RUNNER_TEMP}/platform-schema-fixture.json` : undefined);
+    (process.env.RUNNER_TEMP
+      ? `${process.env.RUNNER_TEMP}/platform-schema-fixture.json`
+      : undefined);
   if (!snapshot || !process.env.COMPAT_DATABASE_URL) {
     throw new Error('A disposable compatibility database and fixture path are required.');
   }

@@ -1,7 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createJiti } from 'jiti';
-import { join } from 'pathslash';
+import { dirname, join } from 'pathslash';
 import { aliasHint } from './host/alias-hint.ts';
 
 const LEGACY_CONFIG_FILE = 'bwf.json';
@@ -14,12 +14,69 @@ export function getConfigFileName(root: string): string {
   return existsSync(join(root, LEGACY_CONFIG_FILE)) ? LEGACY_CONFIG_FILE : TYPED_CONFIG_FILE;
 }
 
+/**
+ * The file `@builtbyfriends/bwf/config` loads from: this CLI's own copy when it's
+ * still on disk, otherwise the project's. An install during `bwf init` can move
+ * the running CLI's package, because pnpm puts the resolved peers in the folder
+ * name, so switching a project to Vite+ removes the folder the CLI started from.
+ */
+function configEntryPath(configPath: string): string {
+  const sourceEntry = fileURLToPath(new URL('./config-entry.ts', import.meta.url));
+  if (existsSync(sourceEntry)) {
+    return sourceEntry;
+  }
+  let ownEntry: string | undefined;
+  try {
+    ownEntry = fileURLToPath(import.meta.resolve('@builtbyfriends/bwf/config'));
+  } catch {
+    // The package folder this CLI started from is gone.
+  }
+  if (ownEntry && existsSync(ownEntry)) {
+    return ownEntry;
+  }
+  const projectEntry = projectConfigEntryPath(dirname(configPath));
+  if (projectEntry) {
+    return projectEntry;
+  }
+  if (ownEntry) {
+    return ownEntry;
+  }
+  throw new Error(
+    'Cannot find @builtbyfriends/bwf/config. Install @builtbyfriends/bwf in this project.',
+  );
+}
+
+/**
+ * Finds the project's installed `@builtbyfriends/bwf/config` by hand. Node's
+ * resolver keeps the folder it found before the install in its caches, so it
+ * would return the removed path again.
+ */
+function projectConfigEntryPath(start: string): string | undefined {
+  for (let directory = start; ; directory = dirname(directory)) {
+    const packageDirectory = join(directory, 'node_modules', '@builtbyfriends', 'bwf');
+    const manifestPath = join(packageDirectory, 'package.json');
+    if (existsSync(manifestPath)) {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
+        exports?: Record<string, { import?: string; default?: string } | string>;
+      };
+      const target = manifest.exports?.['./config'];
+      const file = typeof target === 'string' ? target : (target?.import ?? target?.default);
+      if (file) {
+        const entry = join(realpathSync.native(packageDirectory), file);
+        if (existsSync(entry)) {
+          return entry;
+        }
+      }
+    }
+    if (dirname(directory) === directory) {
+      return undefined;
+    }
+  }
+}
+
 /** Evaluate a TypeScript config without requiring bwf to be installed in the target project. */
 export function loadTypedBwfConfigFile(path: string): unknown {
-  const sourceEntry = fileURLToPath(new URL('./config-entry.ts', import.meta.url));
-  const configEntry = existsSync(sourceEntry)
-    ? sourceEntry
-    : fileURLToPath(import.meta.resolve('@builtbyfriends/bwf/config'));
+  const configEntry = configEntryPath(path);
   const jiti = createJiti(import.meta.url, {
     fsCache: false,
     moduleCache: false,

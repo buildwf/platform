@@ -48,7 +48,11 @@ Inputs, outputs and the error codes of a failed call are typed from the procedur
 Pass options as a third argument to `useCall`. `enabled: false` makes no request yet, for example while the input is still loading, and reports `loading: false`. `refetchOn` is a value that changes when the data may be stale, such as a counter a live stream bumps. Each change calls the procedure again and keeps the current data on screen.
 
 ```tsx
-const { data } = useCall(rpc.contacts.get, { id }, { enabled: id !== undefined, refetchOn: version });
+const { data } = useCall(
+  rpc.contacts.get,
+  { id },
+  { enabled: id !== undefined, refetchOn: version },
+);
 ```
 
 For a procedure that takes `{ cursor, numItems }` and answers `{ page, isDone, continueCursor }`, use `useCallPages`:
@@ -56,7 +60,11 @@ For a procedure that takes `{ cursor, numItems }` and answers `{ page, isDone, c
 ```tsx
 import { useCallPages } from '@builtbyfriends/bwf/rpc/react';
 
-const { results, loadMore, canLoadMore, loading } = useCallPages(rpc.inbox.list, { folder }, { pageSize: 20 });
+const { results, loadMore, canLoadMore, loading } = useCallPages(
+  rpc.inbox.list,
+  { folder },
+  { pageSize: 20 },
+);
 ```
 
 `loadMore` adds the next page. `refetch`, or a `refetchOn` change, asks again for every loaded page from its own start cursor. Rows that slide between pages show once, matched by their `id` or `_id`, or by `getKey`.

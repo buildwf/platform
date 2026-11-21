@@ -131,7 +131,7 @@ describe('trusted Sandbox lifecycle', () => {
     );
     expect(f.control.reserve).toHaveBeenCalledOnce();
     expect(f.control.started).toHaveBeenCalledWith('namespace-instance', expect.any(String));
-    expect(f.data.get('__platformSandboxLease')).toMatchObject({ phase: 'running' });
+    expect(f.data.get('__voidSandboxLease')).toMatchObject({ phase: 'running' });
   });
   it('installs the matching helper into the managed Node image before admitting operations', async () => {
     const f = fixture();
@@ -242,18 +242,18 @@ describe('trusted Sandbox lifecycle', () => {
   it('persists a stopped generation until final accounting succeeds', async () => {
     const f = fixture();
     await f.start();
-    const generation = (f.data.get('__platformSandboxLease') as { generation: string }).generation;
+    const generation = (f.data.get('__voidSandboxLease') as { generation: string }).generation;
     f.container.running = false;
     f.control.stopped.mockRejectedValueOnce(new Error('unavailable'));
     await expect(f.controller.destroy()).rejects.toThrow('unavailable');
-    expect(f.data.get('__platformSandboxLease')).toEqual({ generation, phase: 'stopped' });
+    expect(f.data.get('__voidSandboxLease')).toEqual({ generation, phase: 'stopped' });
     await f.controller.alarm();
     expect(f.control.stopped).toHaveBeenLastCalledWith('namespace-instance', generation);
     expect(f.data.size).toBe(0);
   });
   it('reconciles interrupted startup before granting another lease', async () => {
     const f = fixture();
-    f.data.set('__platformSandboxLease', { generation: 'orphan', phase: 'pending' });
+    f.data.set('__voidSandboxLease', { generation: 'orphan', phase: 'pending' });
     f.container.running = true;
     await f.start();
     expect(f.container.destroy).toHaveBeenCalledOnce();
@@ -285,12 +285,12 @@ describe('trusted Sandbox lifecycle', () => {
     const f = fixture();
     await f.controller.configure({ inactivityTimeoutMs: 120_000 });
     await f.start();
-    const activity = structuredClone(f.data.get('__platformSandboxActivity'));
+    const activity = structuredClone(f.data.get('__voidSandboxActivity'));
     for (let check = 0; check < 3; check++) {
       await vi.advanceTimersByTimeAsync(30_000);
       await f.controller.alarm();
       expect(f.container.running).toBe(true);
-      expect(f.data.get('__platformSandboxActivity')).toEqual(activity);
+      expect(f.data.get('__voidSandboxActivity')).toEqual(activity);
     }
     await vi.advanceTimersByTimeAsync(30_000);
     await f.controller.alarm();

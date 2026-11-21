@@ -32,7 +32,9 @@ export default { plugins: [] };
 export default defineConfig({});
 `;
     const updated = patchViteConfigWithBwfPlugin('vite.config.ts', source)!;
-    expect(updated).toContain('} from \'vite\';\nimport { bwfPlugin } from "@builtbyfriends/bwf";\n');
+    expect(updated).toContain(
+      '} from \'vite\';\nimport { bwfPlugin } from "@builtbyfriends/bwf";\n',
+    );
     expect(updated).toContain('plugins: [bwfPlugin()]');
   });
 

@@ -80,7 +80,9 @@ describe('compileRouteTable auth integration', () => {
     });
 
     expect(code).toContain('from "/resolved/platform/runtime/better-auth.mjs"');
-    expect(code).toContain('import { __platformAuthDatabase } from "/project/.bwf/better-auth-db.ts"');
+    expect(code).toContain(
+      'import { __platformAuthDatabase } from "/project/.bwf/better-auth-db.ts"',
+    );
     expect(code).toContain(
       'import { migrationSchema as __platformAuthMigrationSchema } from "/project/.bwf/better-auth-schema.ts"',
     );
@@ -89,7 +91,9 @@ describe('compileRouteTable auth integration', () => {
     expect(code).toContain(
       'runBwfAuthMiddleware(c, next, __platformAuthOptions, __platformAuthDatabase)',
     );
-    expect(code).toContain('handleBwfAuthRequest(c, __platformAuthOptions, __platformAuthDatabase)');
+    expect(code).toContain(
+      'handleBwfAuthRequest(c, __platformAuthOptions, __platformAuthDatabase)',
+    );
     expect(code).toContain('app.all("/api/auth", async (c) =>');
     expect(code).toContain('app.all("/api/auth/*", async (c) =>');
     expect(code).not.toContain('app.post("/auth/register"');
@@ -175,7 +179,9 @@ describe('compileRouteTable auth integration', () => {
       'runBwfAuthMigrations(__platformGetMigrationEnv(), __platformAuthOptions, __platformAuthMigrationSchema)',
     );
     expect(code).toContain('export async function __platformHandleInternalRoute(request)');
-    expect(code).toContain('if (request.method === "POST" && url.pathname === "/__platform/migrate")');
+    expect(code).toContain(
+      'if (request.method === "POST" && url.pathname === "/__platform/migrate")',
+    );
     expect(code).toContain('app.post("/__platform/migrate"');
   });
 

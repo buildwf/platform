@@ -20,7 +20,7 @@ describe('canonical application URLs', () => {
     const testing = { PLATFORM_APPLICATION: JSON.stringify(application) } as never;
     expect(projectWithUrl(project, testing)).toEqual({
       ...project,
-      url: 'https://platform-123456abcdef-kitchen-sink-123456abcdef.test.workers.dev',
+      url: 'https://void-123456abcdef-kitchen-sink-123456abcdef.test.workers.dev',
     });
     expect(
       projectUrl(project, {

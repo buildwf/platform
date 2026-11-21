@@ -131,7 +131,11 @@ describe('runDeploy auth failures', () => {
       new Error('platform does not support --skip-migrations'),
     );
     await expect(
-      runDeploy(process.cwd(), { platform: 'platform', projectSlug: 'my-app', skipMigrations: true }),
+      runDeploy(process.cwd(), {
+        platform: 'platform',
+        projectSlug: 'my-app',
+        skipMigrations: true,
+      }),
     ).rejects.toThrow('does not support --skip-migrations');
     expect(mockProjectLookup).not.toHaveBeenCalled();
   });
@@ -262,9 +266,9 @@ describe('runDeploy project access', () => {
     async (role) => {
       mockProjectLookup.mockResolvedValue([{ id: 'proj_1', slug: 'my-app', role }]);
 
-      await expect(runDeploy(root, { platform: 'platform', projectSlug: 'my-app' })).rejects.toThrow(
-        'migrate: Invalid JSON in bwf.json. Fix it before migrating.',
-      );
+      await expect(
+        runDeploy(root, { platform: 'platform', projectSlug: 'my-app' }),
+      ).rejects.toThrow('migrate: Invalid JSON in bwf.json. Fix it before migrating.');
 
       expect(mockProjectLookup).toHaveBeenCalledOnce();
     },
@@ -362,9 +366,9 @@ describe('runDeploy GitHub Actions OIDC exchange', () => {
       });
       mockGetToken.mockImplementation((tokenRoot: string) => realGetToken(tokenRoot));
 
-      await expect(runDeploy(root, { platform: 'platform', projectSlug: 'my-app' })).rejects.toThrow(
-        'Set BWF_API_URL alongside BWF_TOKEN',
-      );
+      await expect(
+        runDeploy(root, { platform: 'platform', projectSlug: 'my-app' }),
+      ).rejects.toThrow('Set BWF_API_URL alongside BWF_TOKEN');
 
       expect(mockGetToken).toHaveBeenCalledWith(root);
       expect(mockClientCtor).not.toHaveBeenCalled();

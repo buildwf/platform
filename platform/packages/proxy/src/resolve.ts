@@ -1,4 +1,7 @@
-import { deriveProxyInternalAuth, PROXY_INTERNAL_AUTH_HEADER } from '@platform-service/api/proxy-token';
+import {
+  deriveProxyInternalAuth,
+  PROXY_INTERNAL_AUTH_HEADER,
+} from '@platform-service/api/proxy-token';
 import { hmacSign } from './hmac.ts';
 
 // In-memory cache: resource mappings are stable (only change on deploy).
