@@ -72,3 +72,28 @@ const { results, loadMore, canLoadMore, loading } = useCallPages(
 Types come from `.bwf/procedures.d.ts`, which `bwf dev`, `bwf build` and `bwf prepare` keep current. It imports only types, so no server code reaches the browser.
 
 To call procedures from another origin or a script, create a client with `createRpc({ baseUrl, token })` from `@builtbyfriends/bwf/rpc`.
+
+## Typing `rpc` in a separate web workspace
+
+In a monorepo where the browser app is its own workspace and a different one owns `procedures/`, the web workspace can't see `.bwf/procedures.d.ts`, and including it would typecheck Worker code under browser settings. Name a types-only file in the config instead:
+
+```ts
+// bwf.config.ts, in the workspace that owns procedures/
+import { defineConfig } from '@builtbyfriends/bwf/config';
+
+export default defineConfig({
+  procedureTypes: '../web/src/procedures.d.ts',
+});
+```
+
+`bwf prepare` writes the file, and `bwf dev` keeps it current as you edit procedures. It holds the input, output and error codes of every procedure, written out in full, and imports only `WireProcedure` from `@builtbyfriends/bwf/rpc`. Commit it, or generate it before the web workspace typechecks.
+
+The web workspace includes the file in its `tsconfig.json` and calls `rpc` as usual, with no `procedures/` folder and no Worker modules in its typecheck:
+
+```ts
+import { rpc } from '@builtbyfriends/bwf/rpc';
+
+await rpc.invitations.accept({ token });
+```
+
+Types that a procedure takes from another module, such as a row type, are written out as plain object types. This needs TypeScript 7 or later in the workspace that owns `procedures/`.

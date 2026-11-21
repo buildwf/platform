@@ -62,6 +62,16 @@ When set, those conventions move under the configured directory:
 
 With that config, bwf reads `src/routes`, `src/db/schema.ts`, `src/db/migrations`, `src/auth.ts`, and `src/env.ts`. Project files such as `bwf.config.ts`, `vite.config.ts`, `package.json`, `tsconfig.json`, `public/`, and the local-only `.env` stay at the project root. bwf does not scan both locations; if source conventions exist in both places during dev/build, remove one copy so the active source tree is unambiguous.
 
+### `procedureTypes`
+
+Path, relative to the project root, of a types-only `.d.ts` file that `bwf prepare` writes with the input, output and error codes of every procedure. Include it in a web workspace that has no `procedures/` folder so `rpc` is typed there. Needs TypeScript 7 or later. See [Typing `rpc` in a separate web workspace](../guide/procedures.md#typing-rpc-in-a-separate-web-workspace).
+
+```ts
+export default defineConfig({
+  procedureTypes: '../web/src/procedures.d.ts',
+});
+```
+
 ### `ai`
 
 Set `ai.gateway` to the Cloudflare AI Gateway used by `ai.provider().fetch()` on your own Cloudflare account. `ai.run()`, `ai.stream()`, and `ai.image()` use the Workers AI binding. On a bwf platform, the platform selects the gateway.
